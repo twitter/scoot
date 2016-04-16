@@ -9,9 +9,9 @@ import "testing"
 func TestCreateEmptyDynamicCluster(t *testing.T) {
 
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
+	dc := DynamicClusterFactory(emptyNodes)
+	members := dc.GetMembers()
 
-	var members = dc.GetMembers()
 	if len(members) != 0 {
 		t.Error("Empty Dynamic Cluster should have 0 nodes")
 	}
@@ -21,15 +21,15 @@ func TestCreateEmptyDynamicCluster(t *testing.T) {
  * Verify Creating a Dynamic Cluster
  */
 func TestCreateDynamicCluster(t *testing.T) {
-	var testNodes = generateTestNodes(10)
-	var dc = DynamicClusterFactory(testNodes)
+	testNodes := generateTestNodes(10)
+	dc := DynamicClusterFactory(testNodes)
+	members := dc.GetMembers()
 
-	var members = dc.GetMembers()
 	if len(members) != len(testNodes) {
 		t.Error("number of nodes supplied at creation differs from the number of nodes in dynamic cluster")
 	}
 
-	var testNodeMap = make(map[string]Node)
+	testNodeMap := make(map[string]Node)
 	for _, node := range testNodes {
 		testNodeMap[node.GetId()] = node
 	}
@@ -50,14 +50,14 @@ func TestCreateDynamicCluster(t *testing.T) {
 func TestAddNodesToDynamicCluster(t *testing.T) {
 
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
+	dc := DynamicClusterFactory(emptyNodes)
+	members := dc.GetMembers()
 
-	var members = dc.GetMembers()
 	if len(members) != 0 {
 		t.Error("Empty Dynamic Cluster should have 0 nodes")
 	}
 
-	var tNode = testNode{
+	tNode := testNode{
 		id: "testNode1",
 	}
 
@@ -71,7 +71,7 @@ func TestAddNodesToDynamicCluster(t *testing.T) {
 		t.Error(fmt.Sprintf("Dynamic Cluster should have 1 node with id %s", tNode.GetId()))
 	}
 
-	var tNode2 = testNode{
+	tNode2 := testNode{
 		id: "testNode2",
 	}
 	dc.AddNode(&tNode2)
@@ -95,13 +95,13 @@ func TestAddNodesToDynamicCluster(t *testing.T) {
  */
 func TestSendMessageToAddedNode(t *testing.T) {
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
-	var tNode = testNode{
+	dc := DynamicClusterFactory(emptyNodes)
+	tNode := testNode{
 		id: "testNode1",
 	}
 
 	dc.AddNode(&tNode)
-	var err = dc.SendMessage("Hello Test", tNode.GetId())
+	err := dc.SendMessage("Hello Test", tNode.GetId())
 
 	if err != nil {
 		t.Error("Failed to Send Message to Added Node in Dynamic Cluster")
@@ -114,10 +114,10 @@ func TestSendMessageToAddedNode(t *testing.T) {
  */
 func TestAddNodeToClusterThatAlreadyExists(t *testing.T) {
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
+	dc := DynamicClusterFactory(emptyNodes)
 
-	var members = dc.GetMembers()
-	var tNode = testNode{
+	members := dc.GetMembers()
+	tNode := testNode{
 		id: "testNode1",
 	}
 
@@ -140,7 +140,7 @@ func TestAddNodeToClusterThatAlreadyExists(t *testing.T) {
  */
 func TestDeleteNodeFromEmptyCluster(t *testing.T) {
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
+	dc := DynamicClusterFactory(emptyNodes)
 
 	dc.RemoveNode("node_X")
 	if len(dc.GetMembers()) != 0 {
@@ -152,13 +152,13 @@ func TestDeleteNodeFromEmptyCluster(t *testing.T) {
  * Verify that nodes can successfully be removed from the cluster
  */
 func TestDeleteNodeFromCluster(t *testing.T) {
-	var tNode = testNode{
+	tNode := testNode{
 		id: "testNode1",
 	}
 
-	var nodes = make([]Node, 1)
+	nodes := make([]Node, 1)
 	nodes[0] = &tNode
-	var dc = DynamicClusterFactory(nodes)
+	dc := DynamicClusterFactory(nodes)
 
 	if len(dc.GetMembers()) != 1 {
 		t.Error("Dynamic Cluster should have 1 node")
@@ -175,17 +175,17 @@ func TestDeleteNodeFromCluster(t *testing.T) {
  * Verify that messages cannot be sent to deleted nodes
  */
 func TestCanNotSendMessageToDeletedNode(t *testing.T) {
-	var tNode = testNode{
+	tNode := testNode{
 		id: "testNode1",
 	}
 
-	var nodes = make([]Node, 1)
+	nodes := make([]Node, 1)
 	nodes[0] = &tNode
-	var dc = DynamicClusterFactory(nodes)
+	dc := DynamicClusterFactory(nodes)
 
 	//verify that we can send message to node in the cluster
-	var testMsg = "Hello Test"
-	var err = dc.SendMessage(testMsg, tNode.GetId())
+	testMsg := "Hello Test"
+	err := dc.SendMessage(testMsg, tNode.GetId())
 
 	if err != nil {
 		t.Error("Failed to Send Message to Node in Dynamic Cluster")
@@ -205,9 +205,9 @@ func TestCanNotSendMessageToDeletedNode(t *testing.T) {
  */
 func TestDynamicClusterSendMessageToNodeNotInCluster(t *testing.T) {
 	var emptyNodes []Node
-	var dc = DynamicClusterFactory(emptyNodes)
+	dc := DynamicClusterFactory(emptyNodes)
 
-	var err = dc.SendMessage("Hello Test", "Node_X")
+	err := dc.SendMessage("Hello Test", "Node_X")
 	if err == nil {
 		t.Error("Dynamic Cluster should return error if message sent to node not in cluster")
 	}
@@ -218,16 +218,16 @@ func TestDynamicClusterSendMessageToNodeNotInCluster(t *testing.T) {
  */
 func TestDynamicClusterSendMessageToNodeInCluster(t *testing.T) {
 
-	var tNode = testNode{
+	tNode := testNode{
 		id: "testNode1",
 	}
 
-	var nodes = make([]Node, 1)
+	nodes := make([]Node, 1)
 	nodes[0] = &tNode
-	var dc = DynamicClusterFactory(nodes)
+	dc := DynamicClusterFactory(nodes)
 
-	var testMsg = "Hello Test"
-	var err = dc.SendMessage(testMsg, tNode.GetId())
+	testMsg := "Hello Test"
+	err := dc.SendMessage(testMsg, tNode.GetId())
 
 	if err != nil {
 		t.Error("Dynamic Cluster Should SendMessage to node in it successfully")

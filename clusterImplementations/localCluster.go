@@ -26,7 +26,7 @@ func (n localNode) GetId() string {
  * Number of Nodes in it.
  */
 func StaticLocalNodeClusterFactory(size int) cm.Cluster {
-	var nodes = make([]cm.Node, size)
+	nodes := make([]cm.Node, size)
 
 	for s := 0; s < size; s++ {
 		nodes[s] = localNode{
@@ -42,7 +42,7 @@ func StaticLocalNodeClusterFactory(size int) cm.Cluster {
  * number of Nodes in it.
  */
 func DynamicLocalNodeClusterFactory(initialSize int) cm.Cluster {
-	var nodes = make([]cm.Node, initialSize)
+	nodes := make([]cm.Node, initialSize)
 
 	for s := 0; s < initialSize; s++ {
 		nodes[s] = localNode{

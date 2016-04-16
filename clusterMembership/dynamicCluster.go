@@ -16,8 +16,8 @@ type dynamicCluster struct {
  */
 func (c dynamicCluster) GetMembers() []string {
 
-	var nodes = make([]string, len(c.members))
-	var index = 0
+	nodes := make([]string, len(c.members))
+	index := 0
 
 	for _, n := range c.members {
 		nodes[index] = n.GetId()
@@ -60,7 +60,7 @@ func (c dynamicCluster) SendMessage(msg string, nodeId string) error {
  * Dynamic Cluster can be moodified by adding or removing nodes.
  */
 func DynamicClusterFactory(initialNodes []Node) dynamicCluster {
-	var membersMap = make(map[string]Node)
+	membersMap := make(map[string]Node)
 
 	for _, node := range initialNodes {
 		membersMap[node.GetId()] = node

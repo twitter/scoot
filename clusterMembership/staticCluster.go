@@ -16,7 +16,6 @@ type staticCluster struct {
 }
 
 func (c staticCluster) GetMembers() []string {
-
 	return c.members
 }
 
@@ -39,12 +38,12 @@ func (c staticCluster) SendMessage(msg string, nodeId string) error {
 func StaticClusterFactory(nodes []Node) staticCluster {
 
 	// make a copy to return, so users see a snapshot of cluster state
-	var members = make([]string, len(nodes))
+	members := make([]string, len(nodes))
 	for i, n := range nodes {
 		members[i] = n.GetId()
 	}
 
-	var membersMap = make(map[string]Node)
+	membersMap := make(map[string]Node)
 
 	for _, node := range nodes {
 		membersMap[node.GetId()] = node

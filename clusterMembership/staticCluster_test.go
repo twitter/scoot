@@ -18,7 +18,7 @@ func (n *testNode) SendMessage(msg string) error {
 }
 
 func generateTestNodes(size int) []Node {
-	var nodes = make([]Node, size)
+	nodes := make([]Node, size)
 
 	for s := 0; s < size; s++ {
 		nodes[s] = &testNode{
@@ -34,9 +34,9 @@ func generateTestNodes(size int) []Node {
  */
 func TestCreateEmptyStaticCluster(t *testing.T) {
 	var emptySlice []Node
-	var sc = StaticClusterFactory(emptySlice)
+	sc := StaticClusterFactory(emptySlice)
 
-	var members = sc.GetMembers()
+	members := sc.GetMembers()
 	if len(members) != 0 {
 		t.Error(fmt.Sprintf("Empty Static Cluster should have 0 nodes"))
 	}
@@ -47,15 +47,15 @@ func TestCreateEmptyStaticCluster(t *testing.T) {
  */
 func TestCreateStaticCluster(t *testing.T) {
 
-	var testNodes = generateTestNodes(10)
-	var sc = StaticClusterFactory(testNodes)
-	var members = sc.GetMembers()
+	testNodes := generateTestNodes(10)
+	sc := StaticClusterFactory(testNodes)
+	members := sc.GetMembers()
 
 	if len(members) != len(testNodes) {
 		t.Error("number of nodes supplied at creation differs from number of nodes in created staticCluster")
 	}
 
-	var testNodeMap = make(map[string]Node)
+	testNodeMap := make(map[string]Node)
 	for _, node := range testNodes {
 		testNodeMap[node.GetId()] = node
 	}
@@ -75,9 +75,9 @@ func TestCreateStaticCluster(t *testing.T) {
  */
 func TestStaticClusterSendMessageToNodeNotInCluster(t *testing.T) {
 	var emptySlice []Node
-	var sc = StaticClusterFactory(emptySlice)
+	sc := StaticClusterFactory(emptySlice)
 
-	var err = sc.SendMessage("Hello Test", "Node_X")
+	err := sc.SendMessage("Hello Test", "Node_X")
 	if err == nil {
 		t.Error("Static Cluster should return error if message sent to node not in the cluster")
 	}
@@ -88,16 +88,16 @@ func TestStaticClusterSendMessageToNodeNotInCluster(t *testing.T) {
  */
 func TestStaticClusterSendMessageToNodeInCluster(t *testing.T) {
 
-	var tNode = testNode{
+	tNode := testNode{
 		id: "testNode1",
 	}
 
-	var nodes = make([]Node, 1)
+	nodes := make([]Node, 1)
 	nodes[0] = &tNode
-	var sc = StaticClusterFactory(nodes)
+	sc := StaticClusterFactory(nodes)
 
-	var testMsg = "Hello Test"
-	var err = sc.SendMessage(testMsg, tNode.GetId())
+	testMsg := "Hello Test"
+	err := sc.SendMessage(testMsg, tNode.GetId())
 
 	if err != nil {
 		t.Error("Static Cluster Should SendMessage to node in it successfully")
