@@ -1,6 +1,5 @@
 package clusterMembership
 
-
 type Node interface {
 	GetId() string
 	SendMessage(msg string) error
@@ -17,5 +16,5 @@ type Cluster interface {
 	 * Returns an Error if the Node is not in the cluster or sending
 	 * the message fails
 	 */
-	SendMessage(msg string, nodeId string) (error)
+	SendMessage(msg string, nodeId string) error
 }
