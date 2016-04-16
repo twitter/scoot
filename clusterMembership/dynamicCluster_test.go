@@ -1,4 +1,4 @@
-package clusterMembership
+package cluster_membership
 
 import "fmt"
 import "testing"

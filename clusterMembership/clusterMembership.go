@@ -1,4 +1,4 @@
-package clusterMembership
+package cluster_membership
 
 type Node interface {
 	GetId() string

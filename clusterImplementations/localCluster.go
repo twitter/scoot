@@ -1,7 +1,7 @@
-package clusterImplementations
+package cluster_implementations
 
 import "fmt"
-import cm "scoot/clusterMembership"
+import cm "scootdev/scoot/clustermembership"
 
 /*
  * localNode ClusterMember are for test purposes.

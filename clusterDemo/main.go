@@ -1,7 +1,7 @@
 package main
 
 import "fmt"
-import ci "scoot/clusterImplementations"
+import ci "scootdev/scoot/clusterimplementations"
 
 func main() {
 
