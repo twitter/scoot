@@ -1,15 +1,10 @@
 package cluster_membership
 
-type Node interface {
-	GetId() string
-	SendMessage(msg string) error
-}
-
 type Cluster interface {
 	/*
 	 * Returns a Slice of Node Ids in the Cluster
 	 */
-	GetMembers() []string
+	Members() []string
 
 	/*
 	 * Sends a Message to the specified Node in the Cluster,

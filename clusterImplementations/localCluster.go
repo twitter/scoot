@@ -17,7 +17,7 @@ func (n localNode) SendMessage(msg string) error {
 	return nil
 }
 
-func (n localNode) GetId() string {
+func (n localNode) Id() string {
 	return n.name
 }
 

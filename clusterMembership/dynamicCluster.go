@@ -14,13 +14,13 @@ type dynamicCluster struct {
 /*
  * Returns a Snapshot of the Cluster Membership state
  */
-func (c dynamicCluster) GetMembers() []string {
+func (c dynamicCluster) Members() []string {
 
 	nodes := make([]string, len(c.members))
 	index := 0
 
 	for _, n := range c.members {
-		nodes[index] = n.GetId()
+		nodes[index] = n.Id()
 		index++
 	}
 
@@ -31,7 +31,7 @@ func (c dynamicCluster) GetMembers() []string {
  * Adds A Node from the Cluster
  */
 func (c dynamicCluster) AddNode(n Node) {
-	c.members[n.GetId()] = n
+	c.members[n.Id()] = n
 }
 
 /*
@@ -63,7 +63,7 @@ func DynamicClusterFactory(initialNodes []Node) dynamicCluster {
 	membersMap := make(map[string]Node)
 
 	for _, node := range initialNodes {
-		membersMap[node.GetId()] = node
+		membersMap[node.Id()] = node
 	}
 
 	return dynamicCluster{

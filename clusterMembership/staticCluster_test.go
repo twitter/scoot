@@ -8,7 +8,7 @@ type testNode struct {
 	msgsReceived []string
 }
 
-func (n *testNode) GetId() string {
+func (n *testNode) Id() string {
 	return n.id
 }
 
@@ -36,7 +36,7 @@ func TestCreateEmptyStaticCluster(t *testing.T) {
 	var emptySlice []Node
 	sc := StaticClusterFactory(emptySlice)
 
-	members := sc.GetMembers()
+	members := sc.Members()
 	if len(members) != 0 {
 		t.Error(fmt.Sprintf("Empty Static Cluster should have 0 nodes"))
 	}
@@ -49,7 +49,7 @@ func TestCreateStaticCluster(t *testing.T) {
 
 	testNodes := generateTestNodes(10)
 	sc := StaticClusterFactory(testNodes)
-	members := sc.GetMembers()
+	members := sc.Members()
 
 	if len(members) != len(testNodes) {
 		t.Error("number of nodes supplied at creation differs from number of nodes in created staticCluster")
@@ -57,7 +57,7 @@ func TestCreateStaticCluster(t *testing.T) {
 
 	testNodeMap := make(map[string]Node)
 	for _, node := range testNodes {
-		testNodeMap[node.GetId()] = node
+		testNodeMap[node.Id()] = node
 	}
 
 	//Ensure all nodes passed into factory are present in the cluster
@@ -97,7 +97,7 @@ func TestStaticClusterSendMessageToNodeInCluster(t *testing.T) {
 	sc := StaticClusterFactory(nodes)
 
 	testMsg := "Hello Test"
-	err := sc.SendMessage(testMsg, tNode.GetId())
+	err := sc.SendMessage(testMsg, tNode.Id())
 
 	if err != nil {
 		t.Error("Static Cluster Should SendMessage to node in it successfully")
