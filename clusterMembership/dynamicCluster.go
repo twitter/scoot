@@ -1,8 +1,5 @@
 package cluster_membership
 
-import "fmt"
-import "errors"
-
 /*
  * Represents a Cluster of nodes that can change over time.
  * Keeps a Map of the nodeId to Node for fast lookup of nodes.
@@ -14,13 +11,13 @@ type dynamicCluster struct {
 /*
  * Returns a Snapshot of the Cluster Membership state
  */
-func (c dynamicCluster) Members() []string {
+func (c dynamicCluster) Members() []Node {
 
-	nodes := make([]string, len(c.members))
+	nodes := make([]Node, len(c.members))
 	index := 0
 
 	for _, n := range c.members {
-		nodes[index] = n.Id()
+		nodes[index] = n
 		index++
 	}
 
@@ -39,20 +36,6 @@ func (c dynamicCluster) AddNode(n Node) {
  */
 func (c dynamicCluster) RemoveNode(nodeId string) {
 	delete(c.members, nodeId)
-}
-
-/*
- * Sends a Message to the specified node
- */
-func (c dynamicCluster) SendMessage(msg string, nodeId string) error {
-	n, exists := c.members[nodeId]
-
-	if exists {
-		n.SendMessage(msg)
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("dynamicCluster: node %s is not in the cluster", nodeId))
-	}
 }
 
 /*
