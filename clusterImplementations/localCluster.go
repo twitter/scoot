@@ -13,7 +13,7 @@ type localNode struct {
 }
 
 func (n localNode) SendMessage(msg string) error {
-	fmt.Println(n.name, "received message", msg)
+	fmt.Println(n.name, "received message: ", msg)
 	return nil
 }
 
