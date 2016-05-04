@@ -1,6 +1,9 @@
 package cluster_implementations
 
 import "fmt"
+import "math/rand"
+import "time"
+
 import cm "scootdev/scoot/clustermembership"
 
 /*
@@ -13,7 +16,12 @@ type localNode struct {
 }
 
 func (n localNode) SendMessage(msg string) error {
-	fmt.Println(n.name, "received message", msg)
+
+	//delay message to mimic network call for a
+	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
+	time.Sleep(delayMS)
+
+	fmt.Println(n.name, "received message: ", msg)
 	return nil
 }
 

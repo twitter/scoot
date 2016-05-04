@@ -1,8 +1,5 @@
 package cluster_membership
 
-import "fmt"
-import "errors"
-
 /*
  * Represents a Cluster of nodes that is defined statically
  * Once created the nodes in the cluster never change
@@ -11,24 +8,11 @@ import "errors"
  * Keeps a Map of the nodeId to Node for fast lookup of nodes.
  */
 type staticCluster struct {
-	members    []string
-	membersMap map[string]Node
+	members []Node
 }
 
-func (c staticCluster) Members() []string {
+func (c staticCluster) Members() []Node {
 	return c.members
-}
-
-func (c staticCluster) SendMessage(msg string, nodeId string) error {
-
-	n, exists := c.membersMap[nodeId]
-
-	if exists {
-		n.SendMessage(msg)
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("staticCluster: node %s is not in the cluster", nodeId))
-	}
 }
 
 /*
@@ -36,21 +20,7 @@ func (c staticCluster) SendMessage(msg string, nodeId string) error {
  * Defined the list of nodes in a static cluster can never be changed
  */
 func StaticClusterFactory(nodes []Node) staticCluster {
-
-	// make a copy to return, so users see a snapshot of cluster state
-	members := make([]string, len(nodes))
-	for i, n := range nodes {
-		members[i] = n.Id()
-	}
-
-	membersMap := make(map[string]Node)
-
-	for _, node := range nodes {
-		membersMap[node.Id()] = node
-	}
-
 	return staticCluster{
-		members:    members,
-		membersMap: membersMap,
+		members: nodes,
 	}
 }
