@@ -12,19 +12,19 @@ func main() {
 	cluster := ci.StaticLocalNodeClusterFactory(10)
 	fmt.Println("clusterMembers:", cluster.Members())
 
-	work := make(chan string)
+	workCh := make(chan string)
 	distributor := distributor.RoundRobin{}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		generateTasks(work, 100)
+		generateTasks(workCh, 100)
 		wg.Done()
 	}()
 
 	go func() {
-		scheduleWork(work, cluster, &distributor)
+		scheduleWork(workCh, cluster, &distributor)
 		wg.Done()
 	}()
 
@@ -33,14 +33,23 @@ func main() {
 }
 
 func scheduleWork(
-	work <-chan string,
+	workCh <-chan string,
 	cluster cm.Cluster,
 	distributor distributor.Distributor) {
-	for w := range work {
-		node := distributor.DistributeWork(w, cluster)
-		//Todo: error handling, what if request fails
-		node.SendMessage(w)
+
+	var wg sync.WaitGroup
+	for work := range workCh {
+		node := distributor.DistributeWork(work, cluster)
+
+		wg.Add(1)
+		go func(w string, n cm.Node) {
+			defer wg.Done()
+			//Todo: error handling, what if request fails
+			n.SendMessage(w)
+		}(work, node)
 	}
+
+	wg.Wait()
 }
 
 /*
