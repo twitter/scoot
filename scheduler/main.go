@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("clusterMembers:", cluster.Members())
 
 	workCh := make(chan string)
-	distributor := distributor.RoundRobin{}
+	distributor := &distributor.RoundRobin{}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -24,7 +24,7 @@ func main() {
 	}()
 
 	go func() {
-		scheduleWork(workCh, cluster, &distributor)
+		scheduleWork(workCh, cluster, distributor)
 		wg.Done()
 	}()
 
