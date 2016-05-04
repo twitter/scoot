@@ -10,7 +10,7 @@ type RoundRobin struct {
 	currentIndex int
 }
 
-func (r *RoundRobin) DistributeWork(cluster cm.Cluster) cm.Node {
+func (r *RoundRobin) DistributeWork(work string, cluster cm.Cluster) cm.Node {
 	nodes := cluster.Members()
 
 	r.currentIndex++

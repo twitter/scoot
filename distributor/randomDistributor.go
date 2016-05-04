@@ -8,7 +8,7 @@ import cm "scootdev/scoot/clustermembership"
  */
 type Random struct{}
 
-func (r *Random) DistributeWork(cluster cm.Cluster) cm.Node {
+func (r *Random) DistributeWork(work string, cluster cm.Cluster) cm.Node {
 	nodes := cluster.Members()
 	index := rand.Intn(len(nodes))
 

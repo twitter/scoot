@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("clusterMembers:", cluster.Members())
 
 	work := make(chan string)
-	distributor := distributor.Random{}
+	distributor := distributor.RoundRobin{}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -37,7 +37,7 @@ func scheduleWork(
 	cluster cm.Cluster,
 	distributor distributor.Distributor) {
 	for w := range work {
-		node := distributor.DistributeWork(cluster)
+		node := distributor.DistributeWork(w, cluster)
 		//Todo: error handling, what if request fails
 		node.SendMessage(w)
 	}
@@ -48,7 +48,8 @@ func scheduleWork(
  * Unbuffered channel because we only want to pull
  * more work when we can process it.
  *
- * For now just generates dummy tasks up to numTasks
+ * For now just generates dummy tasks up to numTasks,
+ * In reality this will pull off of work queue.
  */
 func generateTasks(work chan<- string, numTasks int) {
 
