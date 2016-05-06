@@ -11,7 +11,7 @@ type staticCluster struct {
 	members []Node
 }
 
-func (c staticCluster) Members() []Node {
+func (c *staticCluster) Members() []Node {
 	return c.members
 }
 
@@ -19,8 +19,8 @@ func (c staticCluster) Members() []Node {
  * Creates a Static Cluster with the specified nodes.  Once
  * Defined the list of nodes in a static cluster can never be changed
  */
-func StaticClusterFactory(nodes []Node) staticCluster {
-	return staticCluster{
+func StaticClusterFactory(nodes []Node) *staticCluster {
+	return &staticCluster{
 		members: nodes,
 	}
 }
