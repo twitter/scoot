@@ -3,9 +3,9 @@ package main
 import "fmt"
 import "sync"
 
-import ci "scootdev/scoot/sched/clusterimplementations"
-import cm "scootdev/scoot/sched/clustermembership"
-import distributor "scootdev/scoot/sched/distributor"
+import ci "github.com/scootdev/scoot/sched/clusterimplementations"
+import cm "github.com/scootdev/scoot/sched/clustermembership"
+import distributor "github.com/scootdev/scoot/sched/distributor"
 
 func main() {
 

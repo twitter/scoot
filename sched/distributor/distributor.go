@@ -1,6 +1,6 @@
 package distributor
 
-import cm "scootdev/scoot/sched/clustermembership"
+import cm "github.com/scootdev/scoot/sched/clustermembership"
 
 /*
  * Interface for choosing a node in a cluster to send

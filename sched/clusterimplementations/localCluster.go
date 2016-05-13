@@ -4,7 +4,7 @@ import "fmt"
 import "math/rand"
 import "time"
 
-import cm "scootdev/scoot/sched/clustermembership"
+import cm "github.com/scootdev/scoot/sched/clustermembership"
 
 /*
  * localNode ClusterMember are for test purposes.

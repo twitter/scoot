@@ -5,7 +5,7 @@ import "math/rand"
 import "sync"
 import "time"
 
-import cm "scootdev/scoot/sched/clustermembership"
+import cm "github.com/scootdev/scoot/sched/clustermembership"
 
 type TestNode struct {
 	id           string
