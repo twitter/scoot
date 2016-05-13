@@ -9,8 +9,7 @@ before_install:
   - go get golang.org/x/tools/cmd/cover
 
 script:
-  - go test -coverprofile=coverage.txt -covermode=atomic ./sched
-  - go test -coverprofile=coverage.txt -covermode=atomic ./sched/clustermembership
+  sh testCoverage.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
