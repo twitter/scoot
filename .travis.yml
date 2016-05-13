@@ -1,0 +1,3 @@
+language: go
+
+# default travis file runs go test -v ./...
