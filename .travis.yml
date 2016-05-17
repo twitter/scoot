@@ -9,6 +9,9 @@ before_install:
   - go get golang.org/x/tools/cmd/cover
 
 script:
+  go fmt ./...
+  go vet ./...
+  go test -race ./...
   sh testCoverage.sh
 
 after_success:
