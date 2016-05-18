@@ -1,5 +1,7 @@
 language: go
 
+sudo: false
+
 go:
   - 1.6
 
@@ -8,8 +10,13 @@ before_install:
   - go get github.com/onsi/ginkgo
   - go get golang.org/x/tools/cmd/cover
 
+before_script:
+  - go fmt ./...
+  - go vet $(go list ./...)
+
 script:
-  sh testCoverage.sh
+  - go test -v -race ./...
+  - sh testCoverage.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
