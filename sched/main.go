@@ -3,6 +3,7 @@ package main
 import "fmt"
 import "sync"
 
+import msg "github.com/scootdev/scoot/messages"
 import ci "github.com/scootdev/scoot/sched/clusterimplementations"
 import cm "github.com/scootdev/scoot/sched/clustermembership"
 import distributor "github.com/scootdev/scoot/sched/distributor"
@@ -12,7 +13,7 @@ func main() {
 	cluster := ci.StaticLocalNodeClusterFactory(10)
 	fmt.Println("clusterMembers:", cluster.Members())
 
-	workCh := make(chan string)
+	workCh := make(chan msg.Job)
 	distributor := &distributor.RoundRobin{}
 
 	var wg sync.WaitGroup
@@ -33,7 +34,7 @@ func main() {
 }
 
 func scheduleWork(
-	workCh <-chan string,
+	workCh <-chan msg.Job,
 	cluster cm.Cluster,
 	distributor distributor.Distributor) {
 
@@ -42,10 +43,12 @@ func scheduleWork(
 		node := distributor.DistributeWork(work, cluster)
 
 		wg.Add(1)
-		go func(w string, n cm.Node) {
+		go func(w msg.Job, n cm.Node) {
 			defer wg.Done()
 			//Todo: error handling, what if request fails
-			n.SendMessage(w)
+			for _, task := range w.Tasks {
+				n.SendMessage(task)
+			}
 		}(work, node)
 	}
 
@@ -60,10 +63,20 @@ func scheduleWork(
  * For now just generates dummy tasks up to numTasks,
  * In reality this will pull off of work queue.
  */
-func generateTasks(work chan<- string, numTasks int) {
+func generateTasks(work chan<- msg.Job, numTasks int) {
 
 	for x := 0; x < numTasks; x++ {
-		work <- fmt.Sprintf("Task %d", x)
+
+		work <- msg.Job{
+			Id:      fmt.Sprintf("Job %d", x),
+			Jobtype: "testTask",
+			Tasks: []msg.Task{
+				msg.Task{
+					Id:       fmt.Sprintf("Job %d, Task 1", x),
+					Commands: []string{"testcmd", "testcmd2"},
+				},
+			},
+		}
 	}
 	close(work)
 }

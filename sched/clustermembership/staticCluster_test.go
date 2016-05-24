@@ -3,32 +3,6 @@ package cluster_membership
 import "fmt"
 import "testing"
 
-type testNode struct {
-	id           string
-	msgsReceived []string
-}
-
-func (n *testNode) Id() string {
-	return n.id
-}
-
-func (n *testNode) SendMessage(msg string) error {
-	n.msgsReceived = append(n.msgsReceived, msg)
-	return nil
-}
-
-func generateTestNodes(size int) []Node {
-	nodes := make([]Node, size)
-
-	for s := 0; s < size; s++ {
-		nodes[s] = &testNode{
-			id: fmt.Sprintf("test_node_%d", s),
-		}
-	}
-
-	return nodes
-}
-
 /*
  * Verify Creating an Empty Static Cluster
  */
@@ -47,7 +21,7 @@ func TestCreateEmptyStaticCluster(t *testing.T) {
  */
 func TestCreateStaticCluster(t *testing.T) {
 
-	testNodes := generateTestNodes(10)
+	testNodes := GenerateTestNodes(10)
 	sc := StaticClusterFactory(testNodes)
 	members := sc.Members()
 

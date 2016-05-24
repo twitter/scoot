@@ -1,6 +1,7 @@
 package distributor
 
 import "math/rand"
+import msg "github.com/scootdev/scoot/messages"
 import cm "github.com/scootdev/scoot/sched/clustermembership"
 
 /*
@@ -8,7 +9,7 @@ import cm "github.com/scootdev/scoot/sched/clustermembership"
  */
 type Random struct{}
 
-func (r *Random) DistributeWork(work string, cluster cm.Cluster) cm.Node {
+func (r *Random) DistributeWork(work msg.Job, cluster cm.Cluster) cm.Node {
 	nodes := cluster.Members()
 	index := rand.Intn(len(nodes))
 

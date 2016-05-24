@@ -1,6 +1,8 @@
 package cluster_membership
 
+import msg "github.com/scootdev/scoot/messages"
+
 type Node interface {
 	Id() string
-	SendMessage(msg string) error
+	SendMessage(task msg.Task) error
 }

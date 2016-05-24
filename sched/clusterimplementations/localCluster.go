@@ -4,6 +4,7 @@ import "fmt"
 import "math/rand"
 import "time"
 
+import msg "github.com/scootdev/scoot/messages"
 import cm "github.com/scootdev/scoot/sched/clustermembership"
 
 /*
@@ -15,13 +16,15 @@ type localNode struct {
 	name string
 }
 
-func (n localNode) SendMessage(msg string) error {
+func (n localNode) SendMessage(task msg.Task) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
 	time.Sleep(delayMS)
 
-	fmt.Println(n.name, "received message: ", msg)
+	for _, cmd := range task.Commands {
+		fmt.Println(fmt.Sprintf("%s, received command: %s: %s", n.name, task.Id, cmd))
+	}
 	return nil
 }
 
