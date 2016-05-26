@@ -8,6 +8,7 @@ import ci "github.com/scootdev/scoot/sched/clusterimplementations"
 import cm "github.com/scootdev/scoot/sched/clustermembership"
 import distributor "github.com/scootdev/scoot/sched/distributor"
 
+/* demo code */
 func main() {
 
 	cluster := ci.StaticLocalNodeClusterFactory(10)
