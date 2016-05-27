@@ -1,11 +1,11 @@
-package cluster_implementations
+package cluster_membership
 
 import "fmt"
 import "math/rand"
 import "sync"
 import "time"
 
-import cm "github.com/scootdev/scoot/sched/clustermembership"
+import msg "github.com/scootdev/scoot/messages"
 
 type TestNode struct {
 	id           string
@@ -17,21 +17,23 @@ func (n *TestNode) Id() string {
 	return n.id
 }
 
-func (n *TestNode) SendMessage(msg string) error {
+func (n *TestNode) SendMessage(task msg.Task) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
 	time.Sleep(delayMS)
 
 	n.mutex.Lock()
-	n.MsgsReceived = append(n.MsgsReceived, msg)
+	for _, cmd := range task.Commands {
+		n.MsgsReceived = append(n.MsgsReceived, cmd)
+	}
 	n.mutex.Unlock()
 
 	return nil
 }
 
-func GenerateTestNodes(size int) []cm.Node {
-	nodes := make([]cm.Node, size)
+func GenerateTestNodes(size int) []Node {
+	nodes := make([]Node, size)
 
 	for s := 0; s < size; s++ {
 		nodes[s] = &TestNode{
@@ -46,8 +48,8 @@ func GenerateTestNodes(size int) []cm.Node {
  * Creates a Static LocalNode Cluster with the specified
  * Number of Nodes in it.
  */
-func StaticTestNodeClusterFactory(size int) cm.Cluster {
-	nodes := make([]cm.Node, size)
+func StaticTestNodeClusterFactory(size int) Cluster {
+	nodes := make([]Node, size)
 
 	for s := 0; s < size; s++ {
 		nodes[s] = &TestNode{
@@ -55,5 +57,5 @@ func StaticTestNodeClusterFactory(size int) cm.Cluster {
 		}
 	}
 
-	return cm.StaticClusterFactory(nodes)
+	return StaticClusterFactory(nodes)
 }

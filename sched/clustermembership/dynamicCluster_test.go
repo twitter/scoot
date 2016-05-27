@@ -21,7 +21,7 @@ func TestCreateEmptyDynamicCluster(t *testing.T) {
  * Verify Creating a Dynamic Cluster
  */
 func TestCreateDynamicCluster(t *testing.T) {
-	testNodes := generateTestNodes(10)
+	testNodes := GenerateTestNodes(10)
 	dc := DynamicClusterFactory(testNodes)
 	members := dc.Members()
 
@@ -57,7 +57,7 @@ func TestAddNodesToDynamicCluster(t *testing.T) {
 		t.Error("Empty Dynamic Cluster should have 0 nodes")
 	}
 
-	tNode := testNode{
+	tNode := TestNode{
 		id: "testNode1",
 	}
 
@@ -71,7 +71,7 @@ func TestAddNodesToDynamicCluster(t *testing.T) {
 		t.Error(fmt.Sprintf("Dynamic Cluster should have 1 node with id %s", tNode.Id()))
 	}
 
-	tNode2 := testNode{
+	tNode2 := TestNode{
 		id: "testNode2",
 	}
 	dc.AddNode(&tNode2)
@@ -99,7 +99,7 @@ func TestAddNodeToClusterThatAlreadyExists(t *testing.T) {
 	dc := DynamicClusterFactory(emptyNodes)
 
 	members := dc.Members()
-	tNode := testNode{
+	tNode := TestNode{
 		id: "testNode1",
 	}
 
@@ -134,7 +134,7 @@ func TestDeleteNodeFromEmptyCluster(t *testing.T) {
  * Verify that nodes can successfully be removed from the cluster
  */
 func TestDeleteNodeFromCluster(t *testing.T) {
-	tNode := testNode{
+	tNode := TestNode{
 		id: "testNode1",
 	}
 
