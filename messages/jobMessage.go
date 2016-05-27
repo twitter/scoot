@@ -1,8 +1,5 @@
 package messages
 
-//generate uuid
-// import github.com/nu7hatch/gouuid
-
 /*
  * Message representing a Job, Scoot can Schedule
  */
