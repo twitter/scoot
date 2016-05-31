@@ -22,9 +22,9 @@ func (n localNode) SendMessage(task msg.Task) error {
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
 	time.Sleep(delayMS)
 
-	for _, cmd := range task.Commands {
+	/*for _, cmd := range task.Commands {
 		fmt.Println(fmt.Sprintf("%s, received command: %s: %s", n.name, task.Id, cmd))
-	}
+	}*/
 	return nil
 }
 
