@@ -14,14 +14,14 @@ type inMemorySagaLog struct {
 }
 
 /*
- * Returns an Instance of a Saga based on an InMemorySagaLog
+ * Returns an Instance of a SagaCoordinator based on an InMemorySagaLog
  */
-func InMemorySagaFactory() Saga {
+func InMemorySagaFactory() *Saga {
 	inMemLog := inMemorySagaLog{
 		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
 	}
-	return Saga{
+	return &Saga{
 		log: &inMemLog,
 	}
 }
@@ -68,4 +68,12 @@ func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
 	} else {
 		return nil, nil
 	}
+}
+
+/*
+ * Since this is an in memory only implementation alwawys
+ * return empty list of in progress SagaIds, no durable storage
+ */
+func (log *inMemorySagaLog) Startup() ([]string, error) {
+	return nil, nil
 }

@@ -20,6 +20,7 @@ type SagaState struct {
 
 	sagaAborted   bool
 	sagaCompleted bool
+	version       int
 }
 
 /*
@@ -37,6 +38,7 @@ func initializeSagaState() *SagaState {
 		compTaskResults:   make(map[string][]byte),
 		sagaAborted:       false,
 		sagaCompleted:     false,
+		version:           0,
 	}
 }
 
@@ -105,13 +107,19 @@ func (state *SagaState) IsSagaCompleted() bool {
 }
 
 /*
- * Updates a SagaState with the specified SagaMessage.
+ * Applies the supplied message to the supplied sagaState.  Does not mutate supplied Saga State
+ * Instead returns a new SagaState which has the update applied
+ *
  * Returns an InvalidSagaState Error if applying the message would result in an invalid Saga State
  * Returns an InvalidSagaMessage Error if the message is Invalid
  */
-func (state *SagaState) updateSagaState(msg sagaMessage) error {
+func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
+
+	//first copy current state, and then apply update so we don't mutate the passed in SagaState
+	state := copySagaState(s)
+
 	if msg.sagaId != state.sagaId {
-		return errors.New(fmt.Sprintf("InvalidSagaState: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId))
+		return nil, errors.New(fmt.Sprintf("InvalidSagaState: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId))
 	}
 
 	switch msg.msgType {
@@ -127,11 +135,11 @@ func (state *SagaState) updateSagaState(msg sagaMessage) error {
 
 			if state.sagaAborted {
 				if !(state.compTaskStarted[taskId] && state.compTaskCompleted[taskId]) {
-					return errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
+					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
 				}
 			} else {
 				if !state.taskCompleted[taskId] {
-					return errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to a Saga where Task %s has not completed", taskId))
+					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to a Saga where Task %s has not completed", taskId))
 				}
 			}
 		}
@@ -144,7 +152,7 @@ func (state *SagaState) updateSagaState(msg sagaMessage) error {
 	case StartTask:
 		err := validateTaskId(msg.taskId)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		state.taskStarted[msg.taskId] = true
@@ -152,12 +160,12 @@ func (state *SagaState) updateSagaState(msg sagaMessage) error {
 	case EndTask:
 		err := validateTaskId(msg.taskId)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// All EndTask Messages must have a preceding StartTask Message
 		if !state.taskStarted[msg.taskId] {
-			return errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a EndTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a EndTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
 		}
 
 		state.taskCompleted[msg.taskId] = true
@@ -165,17 +173,17 @@ func (state *SagaState) updateSagaState(msg sagaMessage) error {
 	case StartCompTask:
 		err := validateTaskId(msg.taskId)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		//In order to apply compensating transactions a saga must first be aborted
 		if !state.sagaAborted {
-			return errors.New(fmt.Sprintf("Invalid SagaState: Cannot have a StartCompTask %s Message when Saga has not been Aborted", msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid SagaState: Cannot have a StartCompTask %s Message when Saga has not been Aborted", msg.taskId))
 		}
 
 		// All StartCompTask Messages must have a preceding StartTask Message
 		if !state.taskStarted[msg.taskId] {
-			return errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
 		}
 
 		state.compTaskStarted[msg.taskId] = true
@@ -183,28 +191,67 @@ func (state *SagaState) updateSagaState(msg sagaMessage) error {
 	case EndCompTask:
 		err := validateTaskId(msg.taskId)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		//in order to apply compensating transactions a saga must first be aborted
 		if !state.sagaAborted {
-			return errors.New(fmt.Sprintf("Invalid SagaState: Cannot have a EndCompTask %s Message when Saga has not been Aborted", msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid SagaState: Cannot have a EndCompTask %s Message when Saga has not been Aborted", msg.taskId))
 		}
 
 		// All EndCompTask Messages must have a preceding StartTask Message
 		if !state.taskStarted[msg.taskId] {
-			return errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId))
 		}
 
 		// All EndCompTask Messages must have a preceding StartCompTask Message
 		if !state.compTaskStarted[msg.taskId] {
-			return errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId))
+			return nil, errors.New(fmt.Sprintf("Invalid Saga State: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId))
 		}
 
 		state.compTaskCompleted[msg.taskId] = true
 	}
 
-	return nil
+	return state, nil
+}
+
+/*
+ * Creates a deep copy of mutable saga state.  Does not Deepcopy
+ * Job field since this is never mutated after creation
+ */
+func copySagaState(s *SagaState) *SagaState {
+
+	newS := &SagaState{
+		sagaId:        s.sagaId,
+		sagaAborted:   s.sagaAborted,
+		sagaCompleted: s.sagaCompleted,
+		version:       s.version + 1,
+	}
+
+	newS.taskStarted = make(map[string]bool)
+	for key, value := range s.taskStarted {
+		newS.taskStarted[key] = value
+	}
+
+	newS.taskCompleted = make(map[string]bool)
+	for key, value := range s.taskCompleted {
+		newS.taskCompleted[key] = value
+	}
+
+	newS.compTaskStarted = make(map[string]bool)
+	for key, value := range s.compTaskStarted {
+		newS.compTaskStarted[key] = value
+	}
+
+	newS.compTaskCompleted = make(map[string]bool)
+	for key, value := range s.compTaskCompleted {
+		newS.compTaskCompleted[key] = value
+	}
+
+	//don't need to deep copy job, since its only set on create.
+	newS.job = s.job
+
+	return newS
 }
 
 /*
