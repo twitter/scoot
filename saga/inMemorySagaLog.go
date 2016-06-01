@@ -27,7 +27,7 @@ func InMemorySagaFactory() Saga {
 }
 
 func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
-	fmt.Println(fmt.Sprintf("Saga %s: %s %s", msg.sagaId, msg.msgType, msg.taskId))
+	fmt.Println(fmt.Sprintf("Saga %s: %s %s", msg.sagaId, msg.msgType.String(), msg.taskId))
 
 	sagaId := msg.sagaId
 	var err error
@@ -38,7 +38,7 @@ func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
 	if ok {
 		err = sagaState.UpdateSagaState(msg)
 	} else {
-		err = errors.New(fmt.Sprintf("Cannot Log Saga Message %i, Never Started Saga %s", msg.msgType, sagaId))
+		err = errors.New(fmt.Sprintf("Cannot Log Saga Message %s, Never Started Saga %s", msg.msgType.String(), sagaId))
 	}
 
 	log.mutex.Unlock()

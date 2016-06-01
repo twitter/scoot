@@ -29,7 +29,7 @@ func TestSagaState_AbortSaga(t *testing.T) {
 
 	err := state.UpdateSagaState(AbortSagaMessageFactory(sagaId))
 	if err != nil {
-		t.Error("AbortSaga Failed Unexpected %s", err)
+		t.Error(fmt.Sprintf("AbortSaga Failed Unexpected %s", err))
 	}
 
 	if !state.IsSagaAborted() {
@@ -48,7 +48,7 @@ func TestSagaState_StartTask(t *testing.T) {
 
 	err := state.UpdateSagaState(StartTaskMessageFactory(sagaId, taskId))
 	if err != nil {
-		t.Error("StartTask Failed Unexpected %s", err)
+		t.Error(fmt.Sprintf("StartTask Failed Unexpected %s", err))
 	}
 
 	if !state.IsTaskStarted(taskId) {
@@ -73,7 +73,7 @@ func TestSagaState_EndTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err))
 		}
 	}
 
@@ -103,7 +103,7 @@ func TestSagaState_EndSaga(t *testing.T) {
 
 	err := state.UpdateSagaState(EndSagaMessageFactory(sagaId))
 	if err != nil {
-		t.Error("EndSaga Failed Unexpected %s", err)
+		t.Error(fmt.Sprintf("EndSaga Failed Unexpected %s", err))
 	}
 
 	if !state.IsSagaCompleted() {
@@ -126,7 +126,7 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err))
 		}
 	}
 
@@ -149,7 +149,7 @@ func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -177,7 +177,7 @@ func TestSagaState_StartCompTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -199,7 +199,7 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -220,7 +220,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -249,7 +249,7 @@ func TestSagaState_EndCompTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -269,7 +269,7 @@ func TestSagaState_EndCompTaskNoStartTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -291,7 +291,7 @@ func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -312,7 +312,7 @@ func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -339,7 +339,7 @@ func TestSagaState_SuccessfulSaga(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
@@ -370,7 +370,7 @@ func TestSagaState_AbortedSaga(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error(fmt.Sprintf("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err))
 		}
 	}
 
