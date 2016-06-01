@@ -9,7 +9,7 @@ import "sync"
  * This is for local testing purposes.
  */
 type inMemorySagaLog struct {
-	sagas map[string]*SagaState
+	sagas map[string][]sagaMessage
 	mutex *sync.RWMutex
 }
 
@@ -18,7 +18,7 @@ type inMemorySagaLog struct {
  */
 func InMemorySagaFactory() Saga {
 	inMemLog := inMemorySagaLog{
-		sagas: make(map[string]*SagaState),
+		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
 	}
 	return Saga{
@@ -33,14 +33,12 @@ func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
 	var err error
 
 	log.mutex.Lock()
-	sagaState, ok := log.sagas[sagaId]
-
-	if ok {
-		err = sagaState.UpdateSagaState(msg)
-	} else {
-		err = errors.New(fmt.Sprintf("Cannot Log Saga Message %s, Never Started Saga %s", msg.msgType.String(), sagaId))
+	msgs, ok := log.sagas[sagaId]
+	if !ok {
+		return errors.New(fmt.Sprintf("Saga: %s is not Started yet.", msg.sagaId))
 	}
 
+	log.sagas[sagaId] = append(msgs, msg)
 	log.mutex.Unlock()
 	return err
 }
@@ -50,23 +48,24 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 	log.mutex.Lock()
 
 	fmt.Println(fmt.Sprintf("Start Saga %s", sagaId))
-	sagaState, _ := SagaStateFactory(sagaId, job)
-	log.sagas[sagaId] = sagaState
+
+	startMsg := StartSagaMessageFactory(sagaId, job)
+	log.sagas[sagaId] = []sagaMessage{startMsg}
 
 	log.mutex.Unlock()
 
 	return nil
 }
 
-func (log *inMemorySagaLog) GetSagaState(sagaId string) (*SagaState, error) {
+func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
 
 	log.mutex.RLock()
-	sagaState, ok := log.sagas[sagaId]
+	msgs, ok := log.sagas[sagaId]
 	log.mutex.RUnlock()
 
 	if ok {
-		return sagaState, nil
+		return msgs, nil
 	} else {
-		return nil, errors.New(fmt.Sprintf("Saga %s Does Not Exist", sagaId))
+		return nil, nil
 	}
 }

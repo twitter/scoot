@@ -9,10 +9,43 @@ type Saga struct {
 	log SagaLog
 }
 
+/*
+ * Get the State of the specified saga at this current moment.
+ * Modifying this pointer does not update the Saga.
+ * Returns nil if Saga has not been started, or does not exist.
+ * Returns an error if it fails
+ */
 func (s Saga) GetSagaState(sagaId string) (*SagaState, error) {
-	return s.log.GetSagaState(sagaId)
+	messages, error := s.log.GetMessages(sagaId)
+
+	if error != nil {
+		return nil, error
+	}
+
+	if len(messages) == 0 {
+		return nil, nil
+	}
+
+	startmsg := messages[0]
+	state, err := SagaStateFactory(startmsg.sagaId, startmsg.data)
+	if err != nil {
+		return nil, nil
+	}
+
+	for _, msg := range messages {
+		err := state.updateSagaState(msg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return state, nil
 }
 
+/*
+ * Log a Start Saga Message message to the log.
+ * Returns an error if it fails.
+ */
 func (s Saga) StartSaga(sagaId string, job []byte) error {
 	return s.log.StartSaga(sagaId, job)
 }

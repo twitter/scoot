@@ -18,11 +18,8 @@ type SagaLog interface {
 	LogMessage(message sagaMessage) error
 
 	/*
-	 * Get the State of the specified saga.
-	 * Retuns a SagaState struct.  Modifying this struct
-	 * does not update the Saga.  Returns nil if Saga
-	 * has not been started, or does not exist.
-	 * Returns an error if it fails
+	 * Returns all of the messages logged so far for the
+	 * specified saga.
 	 */
-	GetSagaState(sagaId string) (*SagaState, error)
+	GetMessages(sagaId string) ([]sagaMessage, error)
 }

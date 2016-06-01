@@ -109,7 +109,7 @@ func (state *SagaState) IsSagaCompleted() bool {
  * Returns an InvalidSagaState Error if applying the message would result in an invalid Saga State
  * Returns an InvalidSagaMessage Error if the message is Invalid
  */
-func (state *SagaState) UpdateSagaState(msg sagaMessage) error {
+func (state *SagaState) updateSagaState(msg sagaMessage) error {
 	if msg.sagaId != state.sagaId {
 		return errors.New(fmt.Sprintf("InvalidSagaState: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId))
 	}

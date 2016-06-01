@@ -275,22 +275,82 @@ func TestEndCompTaskLogError(t *testing.T) {
 	}
 }
 
-func TestGetSagaState(t *testing.T) {
-	var job []byte
-
+func TestGetSagaState_EmptyState(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
-	sagaState, _ := SagaStateFactory("1", job)
-	sagaLogMock.EXPECT().GetSagaState("1").Return(sagaState, nil)
+	sagaLogMock.EXPECT().GetMessages("testSaga").Return(nil, nil)
 
 	s := Saga{
 		log: sagaLogMock,
 	}
 
-	_, err := s.GetSagaState("1")
+	state, err := s.GetSagaState("testSaga")
+	if state != nil {
+		t.Error("Expected Empty Saga to be Returned")
+	}
 	if err != nil {
-		t.Error(fmt.Sprintf("Expected GetSagaState to not return an erorr"))
+		t.Error("Expected GetSagaState to not return an erorr")
+	}
+}
+
+func TestGetSagaState_Error(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages("testSaga").Return(nil, errors.New("InvalidSagaState"))
+
+	s := Saga{
+		log: sagaLogMock,
+	}
+
+	state, err := s.GetSagaState("testSaga")
+	if err == nil {
+		t.Error("Expected GetSagaState to return an erorr")
+	}
+	if state != nil {
+		t.Error("Expectd SagaState to be nil when error returned")
+	}
+}
+
+func TestGetSagaState_InProgressSaga(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages("testSaga").Return(
+		[]sagaMessage{
+			StartSagaMessageFactory("testSaga", nil),
+			StartTaskMessageFactory("testSaga", "task1"),
+		}, nil)
+
+	s := Saga{
+		log: sagaLogMock,
+	}
+
+	state, err := s.GetSagaState("testSaga")
+	if err != nil {
+		t.Error("Expected GetSagaState to not return an erorr")
+	}
+	if state == nil {
+		t.Error("Expected GetSagaState to return state for saga with messages")
+	}
+
+	if state.IsSagaCompleted() == true {
+		t.Error("Expected Saga to not be completed")
+	}
+
+	if state.IsSagaAborted() == true {
+		t.Error("Expected Saga to not be aborted")
+	}
+
+	if state.IsTaskCompleted("task1") == true {
+		t.Error("Expected Saga task1 to not be completed")
+	}
+
+	if state.IsTaskStarted("task1") != true {
+		t.Error("Expected Saga task1 to be started")
 	}
 }
