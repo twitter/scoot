@@ -16,7 +16,7 @@ func TestStartSaga(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(id, job)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 
@@ -27,10 +27,6 @@ func TestStartSaga(t *testing.T) {
 
 	if state.SagaId() != id {
 		t.Error(fmt.Sprintf("Expected state.SagaId to equal 'testSaga'"))
-	}
-
-	if s.currState == nil {
-		t.Error(fmt.Sprintf("Internal State should not be null"))
 	}
 }
 
@@ -44,7 +40,7 @@ func TestStartSagaLogError(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(id, job).Return(errors.New("Failed to Log StartSaga"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga(id, job)
@@ -67,7 +63,7 @@ func TestEndSaga(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 
@@ -89,7 +85,7 @@ func TestEndSagaLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndSaga Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -110,7 +106,7 @@ func TestAbortSaga(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -131,7 +127,7 @@ func TestAbortSagaLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log AbortSaga Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -152,7 +148,7 @@ func TestStartTask(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -173,7 +169,7 @@ func TestStartTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartTask Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -195,7 +191,7 @@ func TestEndTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -218,7 +214,7 @@ func TestEndTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndTask Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -242,7 +238,7 @@ func TestStartCompTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -267,7 +263,7 @@ func TestStartCompTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartCompTask Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -293,7 +289,7 @@ func TestEndCompTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(StartCompTaskMessageFactory("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
@@ -320,7 +316,7 @@ func TestEndCompTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(StartCompTaskMessageFactory("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndCompTask Message"))
 
-	s := &Saga{
+	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)

@@ -40,52 +40,32 @@ func scheduleWork(
 	cluster cm.Cluster,
 	distributor distributor.Distributor) {
 
-	saga := saga.InMemorySagaFactory()
-	workIds := make([]string, 0)
-
 	var wg sync.WaitGroup
+	saga := saga.InMemorySagaFactory()
+
 	for work := range workCh {
 		node := distributor.DistributeWork(work, cluster)
-		workIds = append(workIds, work.Id)
 
 		wg.Add(1)
 		go func(w msg.Job, n cm.Node) {
-			sagaId := w.Id
-			saga.StartSaga(sagaId, nil)
-
 			defer wg.Done()
+
+			sagaId := w.Id
+			state, _ := saga.StartSaga(sagaId, nil)
+
 			//Todo: error handling, what if request fails
 			for _, task := range w.Tasks {
-				saga.StartTask(sagaId, task.Id)
+				state, _ = saga.StartTask(state, task.Id)
 				n.SendMessage(task)
-				saga.EndTask(sagaId, task.Id, nil)
+				state, _ = saga.EndTask(state, task.Id, nil)
 			}
 
-			saga.EndSaga(sagaId)
+			state, _ = saga.EndSaga(state)
 		}(work, node)
 
 	}
 
 	wg.Wait()
-
-	//Verify all work completed
-	errs := 0
-	for _, id := range workIds {
-		state, err := saga.GetSagaState(id)
-		if err != nil {
-			fmt.Println("Error Processing Saga: ", id, "never scheduled")
-			errs++
-		}
-
-		if !state.IsSagaCompleted() {
-			fmt.Println("Error Processing Saga: ", id, "schedulded but never finished")
-			errs++
-		}
-	}
-
-	if errs == 0 {
-		fmt.Println("\nTerminating Program All Work Completed")
-	}
 }
 
 /*

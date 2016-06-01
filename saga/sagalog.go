@@ -22,11 +22,4 @@ type SagaLog interface {
 	 * specified saga.
 	 */
 	GetMessages(sagaId string) ([]sagaMessage, error)
-
-	/*
-	 * Called at SagaCoordinator Startup.
-	 * returns a list of all in progress Sagas (Start Saga log but
-	 * no corresponding End Saga).  May also include completed Sagas
-	 */
-	Startup() ([]string, error)
 }

@@ -1,8 +1,5 @@
 package saga
 
-import "errors"
-import "fmt"
-
 type SagaRecoveryType int
 
 /*
@@ -26,15 +23,14 @@ const (
  * which returns a saga based on its implementation.
  */
 type Saga struct {
-	log       SagaLog
-	currState (*SagaState)
+	log SagaLog
 }
 
 /*
- * Log a Start Saga Message message to the log.
+ * Start Saga. Logs Message message to the log.
  * Returns an error if it fails.
  */
-func (s *Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
+func (s Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 
 	//Create new SagaState
 	state, err := SagaStateFactory(sagaId, job)
@@ -48,23 +44,13 @@ func (s *Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 		return nil, err
 	}
 
-	//successfully stored StartSaga to Log, Update local state
-	//return pointer copy of SagaState to calller
-	s.currState = state
-	return *&state, nil
+	return state, nil
 }
 
 /*
  * logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
  */
-func (s *Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) {
-
-	sagaId := state.sagaId
-
-	//check that there are not concurrent writers to the same saga.
-	if s.currState.version != state.version {
-		return nil, errors.New(fmt.Sprintf("Concurrent Writers for Saga %s Detected. Stored Version Does not Match Supplied Version", sagaId))
-	}
+func (s Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) {
 
 	//verify that the applied message results in a valid state
 	newState, err := updateSagaState(state, msg)
@@ -78,16 +64,14 @@ func (s *Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error)
 		return nil, err
 	}
 
-	//if msg durably stored update local state machine & return new state
-	s.currState = newState
-	return *&newState, nil
+	return newState, nil
 }
 
 /*
  * Log an End Saga Message to the log.  Returns
  * an error if it fails
  */
-func (s *Saga) EndSaga(state *SagaState) (*SagaState, error) {
+func (s Saga) EndSaga(state *SagaState) (*SagaState, error) {
 	return s.logMessage(state, EndSagaMessageFactory(state.sagaId))
 }
 
@@ -96,7 +80,7 @@ func (s *Saga) EndSaga(state *SagaState) (*SagaState, error) {
  * Saga has failed and all execution should be stopped
  * and compensating transactions should be applied.
  */
-func (s *Saga) AbortSaga(state *SagaState) (*SagaState, error) {
+func (s Saga) AbortSaga(state *SagaState) (*SagaState, error) {
 
 	return s.logMessage(state, AbortSagaMessageFactory(state.sagaId))
 }
@@ -105,7 +89,7 @@ func (s *Saga) AbortSaga(state *SagaState) (*SagaState, error) {
  * Log a StartTask Message to the log.  Returns
  * an error if it fails
  */
-func (s *Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
+func (s Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
 	return s.logMessage(state, StartTaskMessageFactory(state.sagaId, taskId))
 }
 
@@ -113,7 +97,7 @@ func (s *Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
  * Log an EndTask Message to the log.  Indicates that this task
  * has been successfully completed. Returns an error if it fails.
  */
-func (s *Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
+func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
 	return s.logMessage(state, EndTaskMessageFactory(state.sagaId, taskId, results))
 }
 
@@ -121,7 +105,7 @@ func (s *Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaSt
  * Log a Start a Compensating Task if Saga is aborted, and rollback
  * Is necessary (not using forward recovery).
  */
-func (s *Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState, error) {
+func (s Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState, error) {
 	return s.logMessage(state, StartCompTaskMessageFactory(state.sagaId, taskId))
 }
 
@@ -129,6 +113,6 @@ func (s *Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaStat
  * Log an End Compensating Task message when Compensating task
  * has been successfully completed. Returns an error if it fails.
  */
-func (s *Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
+func (s Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
 	return s.logMessage(state, EndCompTaskMessageFactory(state.sagaId, taskId, results))
 }

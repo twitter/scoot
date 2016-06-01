@@ -14,14 +14,14 @@ type inMemorySagaLog struct {
 }
 
 /*
- * Returns an Instance of a SagaCoordinator based on an InMemorySagaLog
+ * Returns an Instance of a Saga based on an InMemorySagaLog
  */
-func InMemorySagaFactory() *Saga {
+func InMemorySagaFactory() Saga {
 	inMemLog := inMemorySagaLog{
 		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
 	}
-	return &Saga{
+	return Saga{
 		log: &inMemLog,
 	}
 }
