@@ -32,7 +32,7 @@ func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
 	sagaId := msg.sagaId
 	var err error
 
-	log.mutex.RLock()
+	log.mutex.Lock()
 	sagaState, ok := log.sagas[sagaId]
 
 	if ok {
@@ -41,7 +41,7 @@ func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
 		err = errors.New(fmt.Sprintf("Cannot Log Saga Message %i, Never Started Saga %s", msg.msgType, sagaId))
 	}
 
-	log.mutex.RUnlock()
+	log.mutex.Unlock()
 	return err
 }
 
@@ -67,6 +67,6 @@ func (log *inMemorySagaLog) GetSagaState(sagaId string) (*SagaState, error) {
 	if ok {
 		return sagaState, nil
 	} else {
-		return sagaState, errors.New(fmt.Sprintf("Saga %s Does Not Exist", sagaId))
+		return nil, errors.New(fmt.Sprintf("Saga %s Does Not Exist", sagaId))
 	}
 }

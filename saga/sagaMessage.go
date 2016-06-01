@@ -48,7 +48,7 @@ type sagaMessage struct {
 
 /*
  * StartSaga SagaMessageType
- * 	- sagaId - id of the Saga
+ *  - sagaId - id of the Saga
  *  - data - data needed to execute the saga
  */
 func StartSagaMessageFactory(sagaId string, job []byte) sagaMessage {

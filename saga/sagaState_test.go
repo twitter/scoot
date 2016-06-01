@@ -65,14 +65,16 @@ func TestSagaState_EndTask(t *testing.T) {
 		t.Error("TaskCompleted should return false")
 	}
 
-	err := state.UpdateSagaState(StartTaskMessageFactory(sagaId, taskId))
-	if err != nil {
-		t.Error("StartTask Failed Unexpected %s", err)
+	msgs := []sagaMessage{
+		StartTaskMessageFactory(sagaId, taskId),
+		EndTaskMessageFactory(sagaId, taskId, nil),
 	}
 
-	err = state.UpdateSagaState(EndTaskMessageFactory(sagaId, taskId, nil))
-	if err != nil {
-		t.Error("EndTask Failed Unexpected %s", err)
+	for _, msg := range msgs {
+		err := state.UpdateSagaState(msg)
+		if err != nil {
+			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err)
+		}
 	}
 
 	if !state.IsTaskCompleted(taskId) {
@@ -124,7 +126,7 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	for _, msg := range msgs {
 		err := state.UpdateSagaState(msg)
 		if err != nil {
-			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType.String(), err)
 		}
 	}
 
@@ -166,19 +168,17 @@ func TestSagaState_StartCompTask(t *testing.T) {
 		t.Error("IsCompTaskStarted should return false")
 	}
 
-	err := state.UpdateSagaState(StartTaskMessageFactory(sagaId, taskId))
-	if err != nil {
-		t.Error("StartTask Failed Unexpectedly")
+	msgs := []sagaMessage{
+		StartTaskMessageFactory(sagaId, taskId),
+		AbortSagaMessageFactory(sagaId),
+		StartCompTaskMessageFactory(sagaId, taskId),
 	}
 
-	err = state.UpdateSagaState(AbortSagaMessageFactory(sagaId))
-	if err != nil {
-		t.Error("AbortSaga Failed Unexpectedly")
-	}
-
-	err = state.UpdateSagaState(StartCompTaskMessageFactory(sagaId, taskId))
-	if err != nil {
-		t.Error("StartCompTask Failed Unexpectedly")
+	for _, msg := range msgs {
+		err := state.UpdateSagaState(msg)
+		if err != nil {
+			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+		}
 	}
 
 	if !state.IsCompTaskStarted(taskId) {
@@ -239,24 +239,18 @@ func TestSagaState_EndCompTask(t *testing.T) {
 		t.Error("IsCompTaskCompleted should return false")
 	}
 
-	err := state.UpdateSagaState(StartTaskMessageFactory(sagaId, taskId))
-	if err != nil {
-		t.Error("StartTask Failed Unexpectedly")
+	msgs := []sagaMessage{
+		StartTaskMessageFactory(sagaId, taskId),
+		AbortSagaMessageFactory(sagaId),
+		StartCompTaskMessageFactory(sagaId, taskId),
+		EndCompTaskMessageFactory(sagaId, taskId, nil),
 	}
 
-	err = state.UpdateSagaState(AbortSagaMessageFactory(sagaId))
-	if err != nil {
-		t.Error("AbortSaga Failed Unexpectedly")
-	}
-
-	err = state.UpdateSagaState(StartCompTaskMessageFactory(sagaId, taskId))
-	if err != nil {
-		t.Error("StartCompTask Failed Unexpectedly")
-	}
-
-	err = state.UpdateSagaState(EndCompTaskMessageFactory(sagaId, taskId, nil))
-	if err != nil {
-		t.Error("EndCompTask Failed Unexpectedly")
+	for _, msg := range msgs {
+		err := state.UpdateSagaState(msg)
+		if err != nil {
+			t.Error("Applying Saga Message %s Failed Unexpectedly %s", msg.msgType, err)
+		}
 	}
 
 	if !state.IsCompTaskCompleted(taskId) {

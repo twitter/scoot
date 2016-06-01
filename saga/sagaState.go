@@ -43,23 +43,23 @@ func initializeSagaState() *SagaState {
 /*
  * Returns the Id of the Saga this state represents
  */
-func (s *SagaState) SagaId() string {
-	return s.sagaId
+func (state *SagaState) SagaId() string {
+	return state.sagaId
 }
 
 /*
  * Returns the Job associated with this Saga
  */
-func (s *SagaState) Job() []byte {
-	return s.job
+func (state *SagaState) Job() []byte {
+	return state.job
 }
 
 /*
  * Returns true if the specified Task has been started,
  * fasle otherwise
  */
-func (s *SagaState) IsTaskStarted(taskId string) bool {
-	started, ok := s.taskStarted[taskId]
+func (state *SagaState) IsTaskStarted(taskId string) bool {
+	started, ok := state.taskStarted[taskId]
 	return started && ok
 }
 
@@ -67,8 +67,8 @@ func (s *SagaState) IsTaskStarted(taskId string) bool {
  * Returns true if the specified Task has been completed,
  * fasle otherwise
  */
-func (s *SagaState) IsTaskCompleted(taskId string) bool {
-	completed, ok := s.taskCompleted[taskId]
+func (state *SagaState) IsTaskCompleted(taskId string) bool {
+	completed, ok := state.taskCompleted[taskId]
 	return completed && ok
 }
 
@@ -76,8 +76,8 @@ func (s *SagaState) IsTaskCompleted(taskId string) bool {
  * Returns true if the specified Compensating Task has been started,
  * fasle otherwise
  */
-func (s *SagaState) IsCompTaskStarted(taskId string) bool {
-	started, ok := s.compTaskStarted[taskId]
+func (state *SagaState) IsCompTaskStarted(taskId string) bool {
+	started, ok := state.compTaskStarted[taskId]
 	return started && ok
 }
 
@@ -85,23 +85,23 @@ func (s *SagaState) IsCompTaskStarted(taskId string) bool {
  * Returns true if the specified Compensating Task has been completed,
  * fasle otherwise
  */
-func (s *SagaState) IsCompTaskCompleted(taskId string) bool {
-	completed, ok := s.compTaskCompleted[taskId]
+func (state *SagaState) IsCompTaskCompleted(taskId string) bool {
+	completed, ok := state.compTaskCompleted[taskId]
 	return completed && ok
 }
 
 /*
  * Returns true if this Saga has been Aborted, false otherwise
  */
-func (s *SagaState) IsSagaAborted() bool {
-	return s.sagaAborted
+func (state *SagaState) IsSagaAborted() bool {
+	return state.sagaAborted
 }
 
 /*
  * Returns true if this Saga has been Completed, false otherwise
  */
-func (s *SagaState) IsSagaCompleted() bool {
-	return s.sagaCompleted
+func (state *SagaState) IsSagaCompleted() bool {
+	return state.sagaCompleted
 }
 
 /*
