@@ -1,7 +1,9 @@
 package saga
 
-import "errors"
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 /*
  * Data Structure representation of the current state of the Saga.

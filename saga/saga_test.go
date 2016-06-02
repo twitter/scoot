@@ -1,9 +1,11 @@
 package saga
 
-import "errors"
-import "fmt"
-import "testing"
-import "github.com/golang/mock/gomock"
+import (
+	"errors"
+	"fmt"
+	"github.com/golang/mock/gomock"
+	"testing"
+)
 
 func TestStartSaga(t *testing.T) {
 

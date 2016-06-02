@@ -1,8 +1,10 @@
 package saga
 
-import "errors"
-import "fmt"
-import "sync"
+import (
+	"errors"
+	"fmt"
+	"sync"
+)
 
 /*
  * In Memory Implementation of a Saga Log, DOES NOT durably persist messages.
