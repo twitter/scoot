@@ -1,12 +1,14 @@
 package main
 
-import "fmt"
-import "sync"
+import (
+	"fmt"
+	"sync"
 
-import msg "github.com/scootdev/scoot/messages"
-import ci "github.com/scootdev/scoot/sched/clusterimplementations"
-import cm "github.com/scootdev/scoot/sched/clustermembership"
-import distributor "github.com/scootdev/scoot/sched/distributor"
+	msg "github.com/scootdev/scoot/messages"
+	ci "github.com/scootdev/scoot/sched/clusterimplementations"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
+	distributor "github.com/scootdev/scoot/sched/distributor"
+)
 
 /* demo code */
 func main() {

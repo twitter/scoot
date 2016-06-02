@@ -1,9 +1,11 @@
 package cluster_membership
 
-import "fmt"
-import "math/rand"
-import "sync"
-import "time"
+import (
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+)
 
 import msg "github.com/scootdev/scoot/messages"
 

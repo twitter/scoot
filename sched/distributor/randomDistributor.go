@@ -1,8 +1,10 @@
 package distributor
 
-import "math/rand"
-import msg "github.com/scootdev/scoot/messages"
-import cm "github.com/scootdev/scoot/sched/clustermembership"
+import (
+	msg "github.com/scootdev/scoot/messages"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
+	"math/rand"
+)
 
 /*
  * RandomDistributor, randomly selects a node from the cluster
