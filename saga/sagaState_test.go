@@ -4,24 +4,24 @@ import "bytes"
 import "fmt"
 import "testing"
 
-func TestSagaStateFactory(t *testing.T) {
+func TestsagaStateFactory(t *testing.T) {
 
 	sagaId := "testSaga"
 	job := []byte{0, 1, 2, 3, 4, 5}
 
-	state, _ := SagaStateFactory("testSaga", job)
+	state, _ := sagaStateFactory("testSaga", job)
 	if state.sagaId != sagaId {
 		t.Error(fmt.Sprintf("SagaState SagaId should be the same as the SagaId passed to Factory Method"))
 	}
 
-	if !bytes.Equal(state.job, job) {
+	if !bytes.Equal(state.Job(), job) {
 		t.Error(fmt.Sprintf("SagaState Job should be the same as the supplied Job passed to Factory Method"))
 	}
 }
 
 func TestSagaState_AbortSaga(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	if state.IsSagaAborted() {
 		t.Error("IsSagaAborted should return false")
@@ -40,7 +40,7 @@ func TestSagaState_AbortSaga(t *testing.T) {
 func TestSagaState_StartTask(t *testing.T) {
 	sagaId := "testSaga"
 	taskId := "task1"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	if state.IsTaskStarted(taskId) {
 		t.Error("TaskStarted should return false")
@@ -59,7 +59,7 @@ func TestSagaState_StartTask(t *testing.T) {
 func TestSagaState_EndTask(t *testing.T) {
 	sagaId := "testSaga"
 	taskId := "task1"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	if state.IsTaskCompleted(taskId) {
 		t.Error("TaskCompleted should return false")
@@ -86,7 +86,7 @@ func TestSagaState_EndTask(t *testing.T) {
 func TestSagaState_EndTaskBeforeStartTaskFails(t *testing.T) {
 	sagaId := "testSaga"
 	taskId := "task1"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	var err error
 	state, err = updateSagaState(state, EndTaskMessageFactory(sagaId, taskId, nil))
@@ -97,7 +97,7 @@ func TestSagaState_EndTaskBeforeStartTaskFails(t *testing.T) {
 
 func TestSagaState_EndSaga(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	if state.IsSagaCompleted() {
 		t.Error("IsSagaCompleted should return false")
@@ -116,7 +116,7 @@ func TestSagaState_EndSaga(t *testing.T) {
 
 func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -143,7 +143,7 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 
 func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -168,7 +168,7 @@ func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 
 func TestSagaState_StartCompTask(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 	taskId := "task1"
 
 	if state.IsCompTaskStarted(taskId) {
@@ -196,7 +196,7 @@ func TestSagaState_StartCompTask(t *testing.T) {
 
 func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -221,7 +221,7 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 
 func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -244,7 +244,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 
 func TestSagaState_EndCompTask(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 	taskId := "task1"
 
 	if state.IsCompTaskCompleted(taskId) {
@@ -273,7 +273,7 @@ func TestSagaState_EndCompTask(t *testing.T) {
 
 func TestSagaState_EndCompTaskNoStartTask(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		AbortSagaMessageFactory(sagaId),
@@ -296,7 +296,7 @@ func TestSagaState_EndCompTaskNoStartTask(t *testing.T) {
 
 func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task2"),
@@ -320,7 +320,7 @@ func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 
 func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task2"),
@@ -343,7 +343,7 @@ func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 
 func TestSagaState_SuccessfulSaga(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -370,7 +370,7 @@ func TestSagaState_SuccessfulSaga(t *testing.T) {
 
 func TestSagaState_AbortedSaga(t *testing.T) {
 	sagaId := "testSaga"
-	state, _ := SagaStateFactory(sagaId, nil)
+	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
 		StartTaskMessageFactory(sagaId, "task1"),
@@ -397,5 +397,19 @@ func TestSagaState_AbortedSaga(t *testing.T) {
 
 	if !state.IsSagaCompleted() {
 		t.Error("Expected Saga to be Completed")
+	}
+}
+
+func TestSagaState_ValidateSagaId(t *testing.T) {
+	err := validateSagaId("")
+	if err == nil {
+		t.Error(fmt.Sprintf("Invalid Saga Id Should Return Error"))
+	}
+}
+
+func TestSagaState_ValidateTaskId(t *testing.T) {
+	err := validateTaskId("")
+	if err == nil {
+		t.Error(fmt.Sprintf("Invalid Task Id Should Return Error"))
 	}
 }

@@ -33,7 +33,7 @@ type Saga struct {
 func (s Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 
 	//Create new SagaState
-	state, err := SagaStateFactory(sagaId, job)
+	state, err := sagaStateFactory(sagaId, job)
 	if err != nil {
 		return nil, err
 	}

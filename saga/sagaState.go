@@ -124,9 +124,6 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 	switch msg.msgType {
 
-	case StartSaga:
-		state.job = msg.data
-
 	case EndSaga:
 
 		//A Successfully Completed Saga must have StartTask/EndTask pairs for all messages or
@@ -279,7 +276,7 @@ func validateTaskId(taskId string) error {
 /*
  * Initialize a SagaState for the specified saga, and default data.
  */
-func SagaStateFactory(sagaId string, job []byte) (*SagaState, error) {
+func sagaStateFactory(sagaId string, job []byte) (*SagaState, error) {
 
 	state := initializeSagaState()
 

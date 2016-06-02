@@ -69,11 +69,3 @@ func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
 		return nil, nil
 	}
 }
-
-/*
- * Since this is an in memory only implementation alwawys
- * return empty list of in progress SagaIds, no durable storage
- */
-func (log *inMemorySagaLog) Startup() ([]string, error) {
-	return nil, nil
-}
