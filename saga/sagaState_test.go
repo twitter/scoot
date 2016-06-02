@@ -1,8 +1,10 @@
 package saga
 
-import "bytes"
-import "fmt"
-import "testing"
+import (
+	"bytes"
+	"fmt"
+	"testing"
+)
 
 func TestsagaStateFactory(t *testing.T) {
 
@@ -27,7 +29,7 @@ func TestSagaState_AbortSaga(t *testing.T) {
 		t.Error("IsSagaAborted should return false")
 	}
 
-	state, err := updateSagaState(state, AbortSagaMessageFactory(sagaId))
+	state, err := updateSagaState(state, MakeAbortSagaMessage(sagaId))
 	if err != nil {
 		t.Error(fmt.Sprintf("AbortSaga Failed Unexpected %s", err))
 	}
@@ -46,7 +48,7 @@ func TestSagaState_StartTask(t *testing.T) {
 		t.Error("TaskStarted should return false")
 	}
 
-	state, err := updateSagaState(state, StartTaskMessageFactory(sagaId, taskId))
+	state, err := updateSagaState(state, MakeStartTaskMessage(sagaId, taskId))
 	if err != nil {
 		t.Error(fmt.Sprintf("StartTask Failed Unexpected %s", err))
 	}
@@ -66,8 +68,8 @@ func TestSagaState_EndTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, taskId),
-		EndTaskMessageFactory(sagaId, taskId, nil),
+		MakeStartTaskMessage(sagaId, taskId),
+		MakeEndTaskMessage(sagaId, taskId, nil),
 	}
 
 	for _, msg := range msgs {
@@ -89,7 +91,7 @@ func TestSagaState_EndTaskBeforeStartTaskFails(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	var err error
-	state, err = updateSagaState(state, EndTaskMessageFactory(sagaId, taskId, nil))
+	state, err = updateSagaState(state, MakeEndTaskMessage(sagaId, taskId, nil))
 	if err == nil {
 		t.Error("EndTask Should Fail When Written Before Start Task")
 	}
@@ -104,7 +106,7 @@ func TestSagaState_EndSaga(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndSagaMessageFactory(sagaId))
+	state, err = updateSagaState(state, MakeEndSagaMessage(sagaId))
 	if err != nil {
 		t.Error(fmt.Sprintf("EndSaga Failed Unexpected %s", err))
 	}
@@ -119,11 +121,11 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
-		StartTaskMessageFactory(sagaId, "task2"),
-		StartTaskMessageFactory(sagaId, "task3"),
-		EndTaskMessageFactory(sagaId, "task2", nil),
-		EndTaskMessageFactory(sagaId, "task1", nil),
+		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task3"),
+		MakeEndTaskMessage(sagaId, "task2", nil),
+		MakeEndTaskMessage(sagaId, "task1", nil),
 	}
 
 	for _, msg := range msgs {
@@ -135,7 +137,7 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndSagaMessageFactory(sagaId))
+	state, err = updateSagaState(state, MakeEndSagaMessage(sagaId))
 	if err == nil {
 		t.Error("EndSaga Should Fail when not all tasks completed")
 	}
@@ -146,9 +148,9 @@ func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
-		AbortSagaMessageFactory(sagaId),
-		StartCompTaskMessageFactory(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1"),
+		MakeAbortSagaMessage(sagaId),
+		MakeStartCompTaskMessage(sagaId, "task1"),
 	}
 
 	for _, msg := range msgs {
@@ -160,7 +162,7 @@ func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndSagaMessageFactory(sagaId))
+	state, err = updateSagaState(state, MakeEndSagaMessage(sagaId))
 	if err == nil {
 		t.Error("EndSaga Should Fail when not all comp tasks completed")
 	}
@@ -176,9 +178,9 @@ func TestSagaState_StartCompTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, taskId),
-		AbortSagaMessageFactory(sagaId),
-		StartCompTaskMessageFactory(sagaId, taskId),
+		MakeStartTaskMessage(sagaId, taskId),
+		MakeAbortSagaMessage(sagaId),
+		MakeStartCompTaskMessage(sagaId, taskId),
 	}
 
 	for _, msg := range msgs {
@@ -199,9 +201,9 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
-		AbortSagaMessageFactory(sagaId),
-		StartCompTaskMessageFactory(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1"),
+		MakeAbortSagaMessage(sagaId),
+		MakeStartCompTaskMessage(sagaId, "task1"),
 	}
 
 	for _, msg := range msgs {
@@ -213,7 +215,7 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, StartCompTaskMessageFactory(sagaId, "task2"))
+	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task2"))
 	if err == nil {
 		t.Error("StartCompTask Should Fail when not all comp tasks completed")
 	}
@@ -224,7 +226,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1"),
 	}
 
 	for _, msg := range msgs {
@@ -236,7 +238,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, StartCompTaskMessageFactory(sagaId, "task1"))
+	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task1"))
 	if err == nil {
 		t.Error("EndSaga Should Fail when not all comp tasks completed")
 	}
@@ -252,10 +254,10 @@ func TestSagaState_EndCompTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, taskId),
-		AbortSagaMessageFactory(sagaId),
-		StartCompTaskMessageFactory(sagaId, taskId),
-		EndCompTaskMessageFactory(sagaId, taskId, nil),
+		MakeStartTaskMessage(sagaId, taskId),
+		MakeAbortSagaMessage(sagaId),
+		MakeStartCompTaskMessage(sagaId, taskId),
+		MakeEndCompTaskMessage(sagaId, taskId, nil),
 	}
 
 	for _, msg := range msgs {
@@ -276,7 +278,7 @@ func TestSagaState_EndCompTaskNoStartTask(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		AbortSagaMessageFactory(sagaId),
+		MakeAbortSagaMessage(sagaId),
 	}
 
 	for _, msg := range msgs {
@@ -288,7 +290,7 @@ func TestSagaState_EndCompTaskNoStartTask(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndCompTaskMessageFactory(sagaId, "task2", nil))
+	state, err = updateSagaState(state, MakeEndCompTaskMessage(sagaId, "task2", nil))
 	if err == nil {
 		t.Error("StartCompTask Should Fail when not all comp tasks completed")
 	}
@@ -299,8 +301,8 @@ func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task2"),
-		AbortSagaMessageFactory(sagaId),
+		MakeStartTaskMessage(sagaId, "task2"),
+		MakeAbortSagaMessage(sagaId),
 	}
 
 	for _, msg := range msgs {
@@ -312,7 +314,7 @@ func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndCompTaskMessageFactory(sagaId, "task2", nil))
+	state, err = updateSagaState(state, MakeEndCompTaskMessage(sagaId, "task2", nil))
 	if err == nil {
 		t.Error("StartCompTask Should Fail when not all comp tasks completed")
 	}
@@ -323,7 +325,7 @@ func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task2"),
 	}
 
 	for _, msg := range msgs {
@@ -335,7 +337,7 @@ func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, EndCompTaskMessageFactory(sagaId, "task2", nil))
+	state, err = updateSagaState(state, MakeEndCompTaskMessage(sagaId, "task2", nil))
 	if err == nil {
 		t.Error("StartCompTask Should Fail when not all comp tasks completed")
 	}
@@ -346,13 +348,13 @@ func TestSagaState_SuccessfulSaga(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
-		StartTaskMessageFactory(sagaId, "task2"),
-		StartTaskMessageFactory(sagaId, "task3"),
-		EndTaskMessageFactory(sagaId, "task2", nil),
-		EndTaskMessageFactory(sagaId, "task3", nil),
-		EndTaskMessageFactory(sagaId, "task1", nil),
-		EndSagaMessageFactory(sagaId),
+		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task3"),
+		MakeEndTaskMessage(sagaId, "task2", nil),
+		MakeEndTaskMessage(sagaId, "task3", nil),
+		MakeEndTaskMessage(sagaId, "task1", nil),
+		MakeEndSagaMessage(sagaId),
 	}
 
 	for _, msg := range msgs {
@@ -373,18 +375,18 @@ func TestSagaState_AbortedSaga(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		StartTaskMessageFactory(sagaId, "task1"),
-		StartTaskMessageFactory(sagaId, "task2"),
-		StartTaskMessageFactory(sagaId, "task3"),
-		EndTaskMessageFactory(sagaId, "task2", nil),
-		AbortSagaMessageFactory(sagaId),
-		StartCompTaskMessageFactory(sagaId, "task1"),
-		StartCompTaskMessageFactory(sagaId, "task2"),
-		EndCompTaskMessageFactory(sagaId, "task2", nil),
-		EndCompTaskMessageFactory(sagaId, "task1", nil),
-		StartCompTaskMessageFactory(sagaId, "task3"),
-		EndCompTaskMessageFactory(sagaId, "task3", nil),
-		EndSagaMessageFactory(sagaId),
+		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task3"),
+		MakeEndTaskMessage(sagaId, "task2", nil),
+		MakeAbortSagaMessage(sagaId),
+		MakeStartCompTaskMessage(sagaId, "task1"),
+		MakeStartCompTaskMessage(sagaId, "task2"),
+		MakeEndCompTaskMessage(sagaId, "task2", nil),
+		MakeEndCompTaskMessage(sagaId, "task1", nil),
+		MakeStartCompTaskMessage(sagaId, "task3"),
+		MakeEndCompTaskMessage(sagaId, "task3", nil),
+		MakeEndSagaMessage(sagaId),
 	}
 
 	for _, msg := range msgs {

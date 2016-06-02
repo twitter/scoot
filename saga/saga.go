@@ -72,7 +72,7 @@ func (s Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) 
  * an error if it fails
  */
 func (s Saga) EndSaga(state *SagaState) (*SagaState, error) {
-	return s.logMessage(state, EndSagaMessageFactory(state.sagaId))
+	return s.logMessage(state, MakeEndSagaMessage(state.sagaId))
 }
 
 /*
@@ -82,7 +82,7 @@ func (s Saga) EndSaga(state *SagaState) (*SagaState, error) {
  */
 func (s Saga) AbortSaga(state *SagaState) (*SagaState, error) {
 
-	return s.logMessage(state, AbortSagaMessageFactory(state.sagaId))
+	return s.logMessage(state, MakeAbortSagaMessage(state.sagaId))
 }
 
 /*
@@ -90,7 +90,7 @@ func (s Saga) AbortSaga(state *SagaState) (*SagaState, error) {
  * an error if it fails
  */
 func (s Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
-	return s.logMessage(state, StartTaskMessageFactory(state.sagaId, taskId))
+	return s.logMessage(state, MakeStartTaskMessage(state.sagaId, taskId))
 }
 
 /*
@@ -98,7 +98,7 @@ func (s Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
  * has been successfully completed. Returns an error if it fails.
  */
 func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
-	return s.logMessage(state, EndTaskMessageFactory(state.sagaId, taskId, results))
+	return s.logMessage(state, MakeEndTaskMessage(state.sagaId, taskId, results))
 }
 
 /*
@@ -106,7 +106,7 @@ func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaSta
  * Is necessary (not using forward recovery).
  */
 func (s Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState, error) {
-	return s.logMessage(state, StartCompTaskMessageFactory(state.sagaId, taskId))
+	return s.logMessage(state, MakeStartCompTaskMessage(state.sagaId, taskId))
 }
 
 /*
@@ -114,5 +114,5 @@ func (s Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState
  * has been successfully completed. Returns an error if it fails.
  */
 func (s Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
-	return s.logMessage(state, EndCompTaskMessageFactory(state.sagaId, taskId, results))
+	return s.logMessage(state, MakeEndCompTaskMessage(state.sagaId, taskId, results))
 }

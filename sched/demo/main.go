@@ -43,7 +43,7 @@ func scheduleWork(
 	distributor distributor.Distributor) {
 
 	var wg sync.WaitGroup
-	saga := saga.InMemorySagaFactory()
+	saga := saga.MakeInMemorySaga()
 
 	for work := range workCh {
 		node := distributor.DistributeWork(work, cluster)

@@ -56,7 +56,7 @@ func TestStartSagaLogError(t *testing.T) {
 }
 
 func TestEndSaga(t *testing.T) {
-	entry := EndSagaMessageFactory("testSaga")
+	entry := MakeEndSagaMessage("testSaga")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -78,7 +78,7 @@ func TestEndSaga(t *testing.T) {
 }
 
 func TestEndSagaLogError(t *testing.T) {
-	entry := EndSagaMessageFactory("testSaga")
+	entry := MakeEndSagaMessage("testSaga")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -99,7 +99,7 @@ func TestEndSagaLogError(t *testing.T) {
 }
 
 func TestAbortSaga(t *testing.T) {
-	entry := AbortSagaMessageFactory("testSaga")
+	entry := MakeAbortSagaMessage("testSaga")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -120,7 +120,7 @@ func TestAbortSaga(t *testing.T) {
 }
 
 func TestAbortSagaLogError(t *testing.T) {
-	entry := AbortSagaMessageFactory("testSaga")
+	entry := MakeAbortSagaMessage("testSaga")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -141,7 +141,7 @@ func TestAbortSagaLogError(t *testing.T) {
 }
 
 func TestStartTask(t *testing.T) {
-	entry := StartTaskMessageFactory("testSaga", "task1")
+	entry := MakeStartTaskMessage("testSaga", "task1")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -162,7 +162,7 @@ func TestStartTask(t *testing.T) {
 }
 
 func TestStartTaskLogError(t *testing.T) {
-	entry := StartTaskMessageFactory("testSaga", "task1")
+	entry := MakeStartTaskMessage("testSaga", "task1")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -183,14 +183,14 @@ func TestStartTaskLogError(t *testing.T) {
 }
 
 func TestEndTask(t *testing.T) {
-	entry := EndTaskMessageFactory("testSaga", "task1", nil)
+	entry := MakeEndTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
 	s := Saga{
@@ -206,14 +206,14 @@ func TestEndTask(t *testing.T) {
 }
 
 func TestEndTaskLogError(t *testing.T) {
-	entry := EndTaskMessageFactory("testSaga", "task1", nil)
+	entry := MakeEndTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndTask Message"))
 
 	s := Saga{
@@ -229,15 +229,15 @@ func TestEndTaskLogError(t *testing.T) {
 }
 
 func TestStartCompTask(t *testing.T) {
-	entry := StartCompTaskMessageFactory("testSaga", "task1")
+	entry := MakeStartCompTaskMessage("testSaga", "task1")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
-	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
 	s := Saga{
@@ -254,15 +254,15 @@ func TestStartCompTask(t *testing.T) {
 }
 
 func TestStartCompTaskLogError(t *testing.T) {
-	entry := StartCompTaskMessageFactory("testSaga", "task1")
+	entry := MakeStartCompTaskMessage("testSaga", "task1")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
-	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartCompTask Message"))
 
 	s := Saga{
@@ -279,16 +279,16 @@ func TestStartCompTaskLogError(t *testing.T) {
 }
 
 func TestEndCompTask(t *testing.T) {
-	entry := EndCompTaskMessageFactory("testSaga", "task1", nil)
+	entry := MakeEndCompTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
-	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
-	sagaLogMock.EXPECT().LogMessage(StartCompTaskMessageFactory("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
 	s := Saga{
@@ -306,16 +306,16 @@ func TestEndCompTask(t *testing.T) {
 }
 
 func TestEndCompTaskLogError(t *testing.T) {
-	entry := EndCompTaskMessageFactory("testSaga", "task1", nil)
+	entry := MakeEndCompTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(StartTaskMessageFactory("testSaga", "task1"))
-	sagaLogMock.EXPECT().LogMessage(AbortSagaMessageFactory("testSaga"))
-	sagaLogMock.EXPECT().LogMessage(StartCompTaskMessageFactory("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndCompTask Message"))
 
 	s := Saga{

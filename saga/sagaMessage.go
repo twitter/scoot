@@ -51,7 +51,7 @@ type sagaMessage struct {
  *  - sagaId - id of the Saga
  *  - data - data needed to execute the saga
  */
-func StartSagaMessageFactory(sagaId string, job []byte) sagaMessage {
+func MakeStartSagaMessage(sagaId string, job []byte) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: StartSaga,
@@ -63,7 +63,7 @@ func StartSagaMessageFactory(sagaId string, job []byte) sagaMessage {
  * EndSaga SagaMessageType
  *  - sagaId - id of the Saga
  */
-func EndSagaMessageFactory(sagaId string) sagaMessage {
+func MakeEndSagaMessage(sagaId string) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: EndSaga,
@@ -74,7 +74,7 @@ func EndSagaMessageFactory(sagaId string) sagaMessage {
  * AbortSaga SagaMessageType
  *  - sagaId - id of the Saga
  */
-func AbortSagaMessageFactory(sagaId string) sagaMessage {
+func MakeAbortSagaMessage(sagaId string) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: AbortSaga,
@@ -86,7 +86,7 @@ func AbortSagaMessageFactory(sagaId string) sagaMessage {
  *  - sagaId - id of the Saga
  *  - taskId - id of the started Task
  */
-func StartTaskMessageFactory(sagaId string, taskId string) sagaMessage {
+func MakeStartTaskMessage(sagaId string, taskId string) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: StartTask,
@@ -100,7 +100,7 @@ func StartTaskMessageFactory(sagaId string, taskId string) sagaMessage {
  *  - taskId - id of the completed Task
  *  - data - any results from task completion
  */
-func EndTaskMessageFactory(sagaId string, taskId string, results []byte) sagaMessage {
+func MakeEndTaskMessage(sagaId string, taskId string, results []byte) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: EndTask,
@@ -115,7 +115,7 @@ func EndTaskMessageFactory(sagaId string, taskId string, results []byte) sagaMes
  *  - taskId - id of the started compensating task.  Should
  *             be the same as the original taskId
  */
-func StartCompTaskMessageFactory(sagaId string, taskId string) sagaMessage {
+func MakeStartCompTaskMessage(sagaId string, taskId string) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: StartCompTask,
@@ -130,7 +130,7 @@ func StartCompTaskMessageFactory(sagaId string, taskId string) sagaMessage {
  *             be the same as the original taskId
  *  - data - any results from compensating task completion
  */
-func EndCompTaskMessageFactory(sagaId string, taskId string, results []byte) sagaMessage {
+func MakeEndCompTaskMessage(sagaId string, taskId string, results []byte) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: EndCompTask,

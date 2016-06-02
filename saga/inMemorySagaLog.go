@@ -18,7 +18,7 @@ type inMemorySagaLog struct {
 /*
  * Returns an Instance of a Saga based on an InMemorySagaLog
  */
-func InMemorySagaFactory() Saga {
+func MakeInMemorySaga() Saga {
 	inMemLog := inMemorySagaLog{
 		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
@@ -51,7 +51,7 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 	fmt.Println(fmt.Sprintf("Start Saga %s", sagaId))
 
-	startMsg := StartSagaMessageFactory(sagaId, job)
+	startMsg := MakeStartSagaMessage(sagaId, job)
 	log.sagas[sagaId] = []sagaMessage{startMsg}
 
 	log.mutex.Unlock()
