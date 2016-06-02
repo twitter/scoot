@@ -23,9 +23,7 @@ func MakeInMemorySaga() Saga {
 		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
 	}
-	return Saga{
-		log: &inMemLog,
-	}
+	return MakeSaga(&inMemLog)
 }
 
 func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {

@@ -27,6 +27,15 @@ type Saga struct {
 }
 
 /*
+ * Make a Saga which uses the specied SagaLog interface for durable storage
+ */
+func MakeSaga(log SagaLog) Saga {
+	return Saga{
+		log: log,
+	}
+}
+
+/*
  * Start Saga. Logs Message message to the log.
  * Returns an error if it fails.
  */
