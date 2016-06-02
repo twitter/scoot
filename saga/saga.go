@@ -111,15 +111,16 @@ func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaSta
 }
 
 /*
- * Log a Start a Compensating Task if Saga is aborted, and rollback
- * Is necessary (not using forward recovery).
+ * Log a Start Compensating Task Message to the log. Should only be logged after a Saga
+ * has been avoided and in Rollback Recovery Mode. Should not be used in ForwardRecovery Mode
+ * returns an error if it fails
  */
 func (s Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState, error) {
 	return s.logMessage(state, MakeStartCompTaskMessage(state.sagaId, taskId))
 }
 
 /*
- * Log an End Compensating Task message when Compensating task
+ * Log an End Compensating Task Message to the log when a Compensating Task
  * has been successfully completed. Returns an error if it fails.
  */
 func (s Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
