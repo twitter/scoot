@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	msg "github.com/scootdev/scoot/messages"
+	saga "github.com/scootdev/scoot/saga"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	distributor "github.com/scootdev/scoot/sched/distributor"
@@ -15,6 +16,7 @@ func main() {
 
 	cluster := ci.StaticLocalNodeClusterFactory(10)
 	fmt.Println("clusterMembers:", cluster.Members())
+	fmt.Println("")
 
 	workCh := make(chan msg.Job)
 	distributor := &distributor.RoundRobin{}
@@ -33,7 +35,6 @@ func main() {
 	}()
 
 	wg.Wait()
-	fmt.Println("\nTerminating Program All Work Completed")
 }
 
 func scheduleWork(
@@ -42,17 +43,28 @@ func scheduleWork(
 	distributor distributor.Distributor) {
 
 	var wg sync.WaitGroup
+	saga := saga.MakeInMemorySaga()
+
 	for work := range workCh {
 		node := distributor.DistributeWork(work, cluster)
 
 		wg.Add(1)
 		go func(w msg.Job, n cm.Node) {
 			defer wg.Done()
+
+			sagaId := w.Id
+			state, _ := saga.StartSaga(sagaId, nil)
+
 			//Todo: error handling, what if request fails
 			for _, task := range w.Tasks {
+				state, _ = saga.StartTask(state, task.Id)
 				n.SendMessage(task)
+				state, _ = saga.EndTask(state, task.Id, nil)
 			}
+
+			state, _ = saga.EndSaga(state)
 		}(work, node)
+
 	}
 
 	wg.Wait()
@@ -71,11 +83,11 @@ func generateTasks(work chan<- msg.Job, numTasks int) {
 	for x := 0; x < numTasks; x++ {
 
 		work <- msg.Job{
-			Id:      fmt.Sprintf("Job %d", x),
+			Id:      fmt.Sprintf("Job_%d", x),
 			Jobtype: "testTask",
 			Tasks: []msg.Task{
 				msg.Task{
-					Id:       fmt.Sprintf("Job %d, Task 1", x),
+					Id:       fmt.Sprintf("Task_1"),
 					Commands: []string{"testcmd", "testcmd2"},
 				},
 			},
