@@ -1,7 +1,9 @@
 package distributor
 
-import cm "github.com/scootdev/scoot/sched/clustermembership"
-import msg "github.com/scootdev/scoot/messages"
+import (
+	msg "github.com/scootdev/scoot/messages"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
+)
 
 /*
  * Interface for choosing a node in a cluster to send

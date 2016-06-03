@@ -1,7 +1,9 @@
 package distributor
 
-import msg "github.com/scootdev/scoot/messages"
-import cm "github.com/scootdev/scoot/sched/clustermembership"
+import (
+	msg "github.com/scootdev/scoot/messages"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
+)
 
 /*
  * RoundRobinDistributor, evenly distributes load throughout the

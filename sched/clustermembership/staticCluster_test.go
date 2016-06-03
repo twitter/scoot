@@ -1,7 +1,9 @@
 package cluster_membership
 
-import "fmt"
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 /*
  * Verify Creating an Empty Static Cluster

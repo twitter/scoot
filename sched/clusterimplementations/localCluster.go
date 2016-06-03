@@ -1,11 +1,12 @@
 package cluster_implementations
 
-import "fmt"
-import "math/rand"
-import "time"
-
-import msg "github.com/scootdev/scoot/messages"
-import cm "github.com/scootdev/scoot/sched/clustermembership"
+import (
+	"fmt"
+	msg "github.com/scootdev/scoot/messages"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
+	"math/rand"
+	"time"
+)
 
 /*
  * localNode ClusterMember are for test purposes.
