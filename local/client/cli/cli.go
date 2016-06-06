@@ -16,7 +16,9 @@ func (c *CliClient) Exec() error {
 }
 
 func (c *CliClient) Close() error {
-	return c.conn.Close()
+	conn := c.conn
+	c.conn = nil
+	return conn.Close()
 }
 
 func (c *CliClient) openConn() (conn.Conn, error) {
@@ -34,9 +36,6 @@ func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
 	rootCmd := &cobra.Command{
 		Use:   "scootcl",
 		Short: "Scootcl is a command-line client to Scoot",
-		// Run: func(cmd *cobra.Command, args []string) {
-		// 	log.Println("Scoot does nothing")
-		// },
 	}
 
 	r := &CliClient{rootCmd, dialer, nil}

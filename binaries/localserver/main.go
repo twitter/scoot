@@ -8,7 +8,7 @@ import (
 
 // A Local Scoot server.
 func main() {
-	scootdir, err := protocol.Locate()
+	scootdir, err := protocol.LocateScootDir()
 	if err != nil {
 		log.Fatal("Error locating Scoot instance: ", err)
 	}

@@ -11,8 +11,8 @@ import (
 // read from $SCOOTDIR
 // create scootdir if it doesn't exist (w/correct permissions)
 
-// Locate locates a Scoot instance.
-func Locate() (string, error) {
+// LocateScootDir locates a Scoot instance.
+func LocateScootDir() (string, error) {
 	homedir := os.Getenv("HOME")
 	if homedir == "" {
 		return "", fmt.Errorf("Cannot find home directory; $HOME unset")
@@ -22,7 +22,7 @@ func Locate() (string, error) {
 
 // LocateSocket locates the path to the socket of a Scoot instance
 func LocateSocket() (string, error) {
-	scootdir, err := Locate()
+	scootdir, err := LocateScootDir()
 	if err != nil {
 		return "", err
 	}

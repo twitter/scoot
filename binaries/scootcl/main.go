@@ -4,7 +4,6 @@ import (
 	"github.com/scootdev/scoot/local/client/cli"
 	"github.com/scootdev/scoot/local/client/conn"
 	"log"
-	"os"
 )
 
 // A Scoot command-line client
@@ -20,7 +19,6 @@ func main() {
 	err = cli.Exec()
 	if err != nil {
 		log.Fatal("error running scootcl", err)
-		os.Exit(1)
 	}
 	cli.Close()
 }
