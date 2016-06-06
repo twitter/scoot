@@ -15,8 +15,7 @@ before_script:
   - go vet $(go list ./...)
 
 script:
-  - go test -v -race ./...
-  - sh testCoverage.sh
+  - make test
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
