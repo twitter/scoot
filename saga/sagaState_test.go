@@ -48,13 +48,17 @@ func TestSagaState_StartTask(t *testing.T) {
 		t.Error("TaskStarted should return false")
 	}
 
-	state, err := updateSagaState(state, MakeStartTaskMessage(sagaId, taskId))
+	state, err := updateSagaState(state, MakeStartTaskMessage(sagaId, taskId, []byte{1, 3, 4}))
 	if err != nil {
 		t.Error(fmt.Sprintf("StartTask Failed Unexpected %s", err))
 	}
 
 	if !state.IsTaskStarted(taskId) {
 		t.Error("TaskStarted should return true")
+	}
+
+	if !bytes.Equal(state.GetStartTaskData(taskId), []byte{1, 3, 4}) {
+		t.Error("StartCompTaskData Expected to be Equal to Value supplied")
 	}
 }
 
@@ -68,8 +72,8 @@ func TestSagaState_EndTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, taskId),
-		MakeEndTaskMessage(sagaId, taskId, nil),
+		MakeStartTaskMessage(sagaId, taskId, nil),
+		MakeEndTaskMessage(sagaId, taskId, []byte{1, 3, 4}),
 	}
 
 	for _, msg := range msgs {
@@ -82,6 +86,10 @@ func TestSagaState_EndTask(t *testing.T) {
 
 	if !state.IsTaskCompleted(taskId) {
 		t.Error("TaskCompleted should return true")
+	}
+
+	if !bytes.Equal(state.GetEndTaskData(taskId), []byte{1, 3, 4}) {
+		t.Error("EndTaskData Expected to be Equal to Value supplied")
 	}
 }
 
@@ -121,9 +129,9 @@ func TestSagaState_EndSagaBeforeAllTasksCompleted(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
-		MakeStartTaskMessage(sagaId, "task2"),
-		MakeStartTaskMessage(sagaId, "task3"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
+		MakeStartTaskMessage(sagaId, "task2", nil),
+		MakeStartTaskMessage(sagaId, "task3", nil),
 		MakeEndTaskMessage(sagaId, "task2", nil),
 		MakeEndTaskMessage(sagaId, "task1", nil),
 	}
@@ -148,9 +156,9 @@ func TestSagaState_EndSagaBeforeAllCompTasksCompleted(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
 		MakeAbortSagaMessage(sagaId),
-		MakeStartCompTaskMessage(sagaId, "task1"),
+		MakeStartCompTaskMessage(sagaId, "task1", nil),
 	}
 
 	for _, msg := range msgs {
@@ -178,9 +186,9 @@ func TestSagaState_StartCompTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, taskId),
+		MakeStartTaskMessage(sagaId, taskId, nil),
 		MakeAbortSagaMessage(sagaId),
-		MakeStartCompTaskMessage(sagaId, taskId),
+		MakeStartCompTaskMessage(sagaId, taskId, []byte{4, 5, 6}),
 	}
 
 	for _, msg := range msgs {
@@ -194,6 +202,10 @@ func TestSagaState_StartCompTask(t *testing.T) {
 	if !state.IsCompTaskStarted(taskId) {
 		t.Error("IsCompTaskStarted should return true")
 	}
+
+	if !bytes.Equal(state.GetStartCompTaskData(taskId), []byte{4, 5, 6}) {
+		t.Error("StartCompTaskData Expected to be Equal to Value supplied")
+	}
 }
 
 func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
@@ -201,9 +213,9 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
 		MakeAbortSagaMessage(sagaId),
-		MakeStartCompTaskMessage(sagaId, "task1"),
+		MakeStartCompTaskMessage(sagaId, "task1", nil),
 	}
 
 	for _, msg := range msgs {
@@ -215,7 +227,7 @@ func TestSagaState_StartCompTaskNoStartTask(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task2"))
+	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task2", nil))
 	if err == nil {
 		t.Error("StartCompTask Should Fail when not all comp tasks completed")
 	}
@@ -226,7 +238,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
 	}
 
 	for _, msg := range msgs {
@@ -238,7 +250,7 @@ func TestSagaState_StartCompTaskNoAbort(t *testing.T) {
 	}
 
 	var err error
-	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task1"))
+	state, err = updateSagaState(state, MakeStartCompTaskMessage(sagaId, "task1", nil))
 	if err == nil {
 		t.Error("EndSaga Should Fail when not all comp tasks completed")
 	}
@@ -254,10 +266,10 @@ func TestSagaState_EndCompTask(t *testing.T) {
 	}
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, taskId),
+		MakeStartTaskMessage(sagaId, taskId, nil),
 		MakeAbortSagaMessage(sagaId),
-		MakeStartCompTaskMessage(sagaId, taskId),
-		MakeEndCompTaskMessage(sagaId, taskId, nil),
+		MakeStartCompTaskMessage(sagaId, taskId, nil),
+		MakeEndCompTaskMessage(sagaId, taskId, []byte{1, 3, 4}),
 	}
 
 	for _, msg := range msgs {
@@ -270,6 +282,10 @@ func TestSagaState_EndCompTask(t *testing.T) {
 
 	if !state.IsCompTaskCompleted(taskId) {
 		t.Error("IsCompTaskCompleted should return true")
+	}
+
+	if !bytes.Equal(state.GetEndCompTaskData(taskId), []byte{1, 3, 4}) {
+		t.Error("EndCompTaskData Expected to be Equal to Value supplied")
 	}
 }
 
@@ -301,7 +317,7 @@ func TestSagaState_EndCompTaskNoStartCompTask(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task2", nil),
 		MakeAbortSagaMessage(sagaId),
 	}
 
@@ -325,7 +341,7 @@ func TestSagaState_EndCompTaskNoAbort(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task2"),
+		MakeStartTaskMessage(sagaId, "task2", nil),
 	}
 
 	for _, msg := range msgs {
@@ -348,9 +364,9 @@ func TestSagaState_SuccessfulSaga(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
-		MakeStartTaskMessage(sagaId, "task2"),
-		MakeStartTaskMessage(sagaId, "task3"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
+		MakeStartTaskMessage(sagaId, "task2", nil),
+		MakeStartTaskMessage(sagaId, "task3", nil),
 		MakeEndTaskMessage(sagaId, "task2", nil),
 		MakeEndTaskMessage(sagaId, "task3", nil),
 		MakeEndTaskMessage(sagaId, "task1", nil),
@@ -375,16 +391,16 @@ func TestSagaState_AbortedSaga(t *testing.T) {
 	state, _ := sagaStateFactory(sagaId, nil)
 
 	msgs := []sagaMessage{
-		MakeStartTaskMessage(sagaId, "task1"),
-		MakeStartTaskMessage(sagaId, "task2"),
-		MakeStartTaskMessage(sagaId, "task3"),
+		MakeStartTaskMessage(sagaId, "task1", nil),
+		MakeStartTaskMessage(sagaId, "task2", nil),
+		MakeStartTaskMessage(sagaId, "task3", nil),
 		MakeEndTaskMessage(sagaId, "task2", nil),
 		MakeAbortSagaMessage(sagaId),
-		MakeStartCompTaskMessage(sagaId, "task1"),
-		MakeStartCompTaskMessage(sagaId, "task2"),
+		MakeStartCompTaskMessage(sagaId, "task1", nil),
+		MakeStartCompTaskMessage(sagaId, "task2", nil),
 		MakeEndCompTaskMessage(sagaId, "task2", nil),
 		MakeEndCompTaskMessage(sagaId, "task1", nil),
-		MakeStartCompTaskMessage(sagaId, "task3"),
+		MakeStartCompTaskMessage(sagaId, "task3", nil),
 		MakeEndCompTaskMessage(sagaId, "task3", nil),
 		MakeEndSagaMessage(sagaId),
 	}
@@ -413,5 +429,38 @@ func TestSagaState_ValidateTaskId(t *testing.T) {
 	err := validateTaskId("")
 	if err == nil {
 		t.Error(fmt.Sprintf("Invalid Task Id Should Return Error"))
+	}
+}
+
+func TestSagaState_Copy(t *testing.T) {
+	s1, _ := sagaStateFactory("sagaId", nil)
+	s2 := copySagaState(s1)
+
+	if s1.SagaId() != s2.SagaId() {
+		t.Error(fmt.Sprintf("Copy Should Preserve SagaId"))
+	}
+}
+
+func TestSagaState_SagaStateNotMutatedDuringUpdate(t *testing.T) {
+
+	s1, _ := sagaStateFactory("sagaId", nil)
+	s2, _ := updateSagaState(s1, MakeStartTaskMessage("sagaId", "task1", []byte{1, 2, 3}))
+
+	if s1.IsTaskStarted("task1") {
+		t.Error(fmt.Sprintf("StartTaskMessage Should Not Mutate SagaState"))
+	}
+
+	if s1.GetStartTaskData("task1") != nil {
+		t.Error(fmt.Sprintf("StartTaskMessage Should Not Mutate SagaState"))
+	}
+
+	updateSagaState(s2, MakeEndTaskMessage("sagaId", "task1", []byte{4, 5, 6}))
+
+	if s2.IsTaskCompleted("task1") {
+		t.Error(fmt.Sprintf("EndTaskMessage Should Not Mutate SagaState"))
+	}
+
+	if s2.GetEndTaskData("task1") != nil {
+		t.Error(fmt.Sprintf("EndTaskMessage Should Not Mutate SagaState"))
 	}
 }
