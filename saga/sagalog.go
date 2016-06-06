@@ -1,5 +1,7 @@
 package saga
 
+//go:generate mockgen -source=sagalog.go -package=saga -destination=sagalog_mock.go
+
 /*
  *  SagaLog Interface, Implemented
  */

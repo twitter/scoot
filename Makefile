@@ -8,15 +8,13 @@ PROJECT_URL := "https://github.com/scootdev/scoot"
 default: 
 	go build ./...
 
-test: mockgen
+test: 
+	go generate ./...
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
-mockgen:
-	mockgen -source=saga/sagalog.go -package=saga -destination=saga/sagalog_mock.go
-
 clean-mockgen:
-	rm saga/sagalog_mock.go
+	rm */*_mock.go
 
 clean: clean-mockgen
 	go clean ./...
