@@ -6,17 +6,18 @@ go:
   - 1.6
 
 before_install:
+  - go get github.com/golang/mock/gomock
+  - go get github.com/golang/mock/mockgen
   - go get github.com/onsi/gomega
   - go get github.com/onsi/ginkgo
   - go get golang.org/x/tools/cmd/cover
-
+  
 before_script:
   - go fmt ./...
   - go vet $(go list ./...)
 
 script:
-  - go test -v -race ./...
-  - sh testCoverage.sh
+  - make test
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
