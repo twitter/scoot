@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+// TODO(dbentley): integrate this into our go build
+// For now, to compile into local.pb.go, you need to:
+// install a protoc with libproto version >= 3.0.0 from https://github.com/google/protobuf
+// install protoc-gen-go from https://github.com/golang/protobuf (you need this to be on your $PATH, not your GOPATH)
+// in this directory (github.com/scootdev/scoot/local/protocol), run:
+// protoc -I . local.proto --go_out=plugins=grpc:.
+
+
+// Protocol for talking to a Local Scoot Server.
+
+package protocol;
+
+service LocalScoot {
+  rpc Echo (EchoRequest) returns (EchoReply) {}
+}
+
+message EchoRequest {
+  string ping = 1;
+}
+
+message EchoReply {
+  string pong = 1;
+}
