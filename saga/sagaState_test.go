@@ -442,7 +442,6 @@ func TestSagaState_Copy(t *testing.T) {
 }
 
 func TestSagaState_SagaStateNotMutatedDuringUpdate(t *testing.T) {
-
 	s1, _ := makeSagaState("sagaId", nil)
 	s2, _ := updateSagaState(s1, MakeStartTaskMessage("sagaId", "task1", []byte{1, 2, 3}))
 
