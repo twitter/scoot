@@ -5,6 +5,15 @@ import (
 	"fmt"
 )
 
+type flag byte
+
+const (
+	TaskStarted flag = 1 << iota
+	TaskCompleted
+	CompTaskStarted
+	CompTaskCompleted
+)
+
 /*
  * Additional data about tasks to be committed to the log
  * This is Opaque to SagaState, but useful data to persist for
@@ -28,17 +37,8 @@ type SagaState struct {
 	// startTask, endTask, startCompTask, endCompTask messages
 	taskData map[string]*taskData
 
-	//map of taskId to StartTask message logged
-	taskStarted map[string]bool
-
-	//map of taskId to EndTask message logged
-	taskCompleted map[string]bool
-
-	//map of taskId to StartCompTask message logged
-	compTaskStarted map[string]bool
-
-	//map of taskId to EndCompTask message logged
-	compTaskCompleted map[string]bool
+	// map of taskId to Flag specifying task progress
+	taskState map[string]flag
 
 	//bool if AbortSaga message logged
 	sagaAborted bool
@@ -52,15 +52,12 @@ type SagaState struct {
  */
 func initializeSagaState() *SagaState {
 	return &SagaState{
-		sagaId:            "",
-		job:               nil,
-		taskStarted:       make(map[string]bool),
-		taskCompleted:     make(map[string]bool),
-		compTaskStarted:   make(map[string]bool),
-		compTaskCompleted: make(map[string]bool),
-		taskData:          make(map[string]*taskData),
-		sagaAborted:       false,
-		sagaCompleted:     false,
+		sagaId:        "",
+		job:           nil,
+		taskState:     make(map[string]flag),
+		taskData:      make(map[string]*taskData),
+		sagaAborted:   false,
+		sagaCompleted: false,
 	}
 }
 
@@ -83,8 +80,8 @@ func (state *SagaState) Job() []byte {
  * fasle otherwise
  */
 func (state *SagaState) IsTaskStarted(taskId string) bool {
-	started, _ := state.taskStarted[taskId]
-	return started
+	flags, _ := state.taskState[taskId]
+	return flags&TaskStarted != 0
 }
 
 /*
@@ -105,8 +102,8 @@ func (state *SagaState) GetStartTaskData(taskId string) []byte {
  * fasle otherwise
  */
 func (state *SagaState) IsTaskCompleted(taskId string) bool {
-	completed, _ := state.taskCompleted[taskId]
-	return completed
+	flags, _ := state.taskState[taskId]
+	return flags&TaskCompleted != 0
 }
 
 /*
@@ -127,8 +124,8 @@ func (state *SagaState) GetEndTaskData(taskId string) []byte {
  * fasle otherwise
  */
 func (state *SagaState) IsCompTaskStarted(taskId string) bool {
-	started, _ := state.compTaskStarted[taskId]
-	return started
+	flags, _ := state.taskState[taskId]
+	return flags&CompTaskStarted != 0
 }
 
 /*
@@ -149,8 +146,8 @@ func (state *SagaState) GetStartCompTaskData(taskId string) []byte {
  * fasle otherwise
  */
 func (state *SagaState) IsCompTaskCompleted(taskId string) bool {
-	completed, _ := state.compTaskCompleted[taskId]
-	return completed
+	flags, _ := state.taskState[taskId]
+	return flags&CompTaskCompleted != 0
 }
 
 /*
@@ -210,10 +207,9 @@ func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data
 
 /*
  * Applies the supplied message to the supplied sagaState.  Does not mutate supplied Saga State
- * Instead returns a new SagaState which has the update applied
+ * Instead returns a new SagaState which has the update applied to it
  *
- * Returns an InvalidSagaState Error if applying the message would result in an invalid Saga State
- * Returns an InvalidSagaMessage Error if the message is Invalid
+ * Returns an Error if applying the message would result in an invalid Saga State
  */
 func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
@@ -221,7 +217,7 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 	state := copySagaState(s)
 
 	if msg.sagaId != state.sagaId {
-		return nil, fmt.Errorf("InvalidSagaState: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId)
+		return nil, fmt.Errorf("InvalidSagaMessage: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId)
 	}
 
 	switch msg.msgType {
@@ -230,14 +226,14 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 		//A Successfully Completed Saga must have StartTask/EndTask pairs for all messages or
 		//an aborted Saga must have StartTask/StartCompTask/EndCompTask pairs for all messages
-		for taskId := range state.taskStarted {
+		for taskId := range state.taskState {
 
 			if state.sagaAborted {
-				if !(state.compTaskStarted[taskId] && state.compTaskCompleted[taskId]) {
+				if !(state.IsCompTaskStarted(taskId) && state.IsCompTaskCompleted(taskId)) {
 					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
 				}
 			} else {
-				if !state.taskCompleted[taskId] {
+				if !state.IsTaskCompleted(taskId) {
 					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to a Saga where Task %s has not completed", taskId))
 				}
 			}
@@ -254,10 +250,11 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 			return nil, err
 		}
 
-		state.taskStarted[msg.taskId] = true
 		if msg.data != nil {
 			state.addTaskData(msg.taskId, msg.msgType, msg.data)
 		}
+
+		state.taskState[msg.taskId] = TaskStarted
 
 	case EndTask:
 		err := validateTaskId(msg.taskId)
@@ -266,11 +263,11 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		// All EndTask Messages must have a preceding StartTask Message
-		if !state.taskStarted[msg.taskId] {
-			return nil, fmt.Errorf("Invalid Saga State: Cannot have a EndTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+		if !state.IsTaskStarted(msg.taskId) {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
 		}
 
-		state.taskCompleted[msg.taskId] = true
+		state.taskState[msg.taskId] = state.taskState[msg.taskId] | TaskCompleted
 
 		if msg.data != nil {
 			state.addTaskData(msg.taskId, msg.msgType, msg.data)
@@ -283,16 +280,16 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		//In order to apply compensating transactions a saga must first be aborted
-		if !state.sagaAborted {
-			return nil, fmt.Errorf("Invalid SagaState: Cannot have a StartCompTask %s Message when Saga has not been Aborted", msg.taskId)
+		if !state.IsSagaAborted() {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message when Saga has not been Aborted", msg.taskId)
 		}
 
 		// All StartCompTask Messages must have a preceding StartTask Message
-		if !state.taskStarted[msg.taskId] {
-			return nil, fmt.Errorf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+		if !state.IsTaskStarted(msg.taskId) {
+			return nil, fmt.Errorf("InvalidSaga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
 		}
 
-		state.compTaskStarted[msg.taskId] = true
+		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskStarted
 
 		if msg.data != nil {
 			state.addTaskData(msg.taskId, msg.msgType, msg.data)
@@ -305,25 +302,26 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		//in order to apply compensating transactions a saga must first be aborted
-		if !state.sagaAborted {
-			return nil, fmt.Errorf("Invalid SagaState: Cannot have a EndCompTask %s Message when Saga has not been Aborted", msg.taskId)
+		if !state.IsSagaAborted() {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndCompTask %s Message when Saga has not been Aborted", msg.taskId)
 		}
 
 		// All EndCompTask Messages must have a preceding StartTask Message
-		if !state.taskStarted[msg.taskId] {
-			return nil, fmt.Errorf("Invalid Saga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+		if !state.IsTaskStarted(msg.taskId) {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
 		}
 
 		// All EndCompTask Messages must have a preceding StartCompTask Message
-		if !state.compTaskStarted[msg.taskId] {
-			return nil, fmt.Errorf("Invalid Saga State: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId)
+		if !state.IsCompTaskStarted(msg.taskId) {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId)
 		}
-
-		state.compTaskCompleted[msg.taskId] = true
 
 		if msg.data != nil {
 			state.addTaskData(msg.taskId, msg.msgType, msg.data)
 		}
+
+		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskCompleted
+
 	}
 
 	return state, nil
@@ -341,24 +339,9 @@ func copySagaState(s *SagaState) *SagaState {
 		sagaCompleted: s.sagaCompleted,
 	}
 
-	newS.taskStarted = make(map[string]bool)
-	for key, value := range s.taskStarted {
-		newS.taskStarted[key] = value
-	}
-
-	newS.taskCompleted = make(map[string]bool)
-	for key, value := range s.taskCompleted {
-		newS.taskCompleted[key] = value
-	}
-
-	newS.compTaskStarted = make(map[string]bool)
-	for key, value := range s.compTaskStarted {
-		newS.compTaskStarted[key] = value
-	}
-
-	newS.compTaskCompleted = make(map[string]bool)
-	for key, value := range s.compTaskCompleted {
-		newS.compTaskCompleted[key] = value
+	newS.taskState = make(map[string]flag)
+	for key, value := range s.taskState {
+		newS.taskState[key] = value
 	}
 
 	newS.taskData = make(map[string]*taskData)
