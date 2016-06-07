@@ -37,7 +37,7 @@ func MakeSaga(log SagaLog) Saga {
 
 /*
  * Start Saga. Logs Message message to the log.
- * Returns an error if it fails.
+ * Returns the resulting SagaState or an error if it fails.
  */
 func (s Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 
@@ -77,8 +77,8 @@ func (s Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) 
 }
 
 /*
- * Log an End Saga Message to the log.  Returns
- * an error if it fails
+ * Log an End Saga Message to the log, returns updated SagaState
+ * Returns the resulting SagaState or an error if it fails
  */
 func (s Saga) EndSaga(state *SagaState) (*SagaState, error) {
 	return s.logMessage(state, MakeEndSagaMessage(state.sagaId))
@@ -88,6 +88,8 @@ func (s Saga) EndSaga(state *SagaState) (*SagaState, error) {
  * Log an AbortSaga message.  This indicates that the
  * Saga has failed and all execution should be stopped
  * and compensating transactions should be applied.
+ *
+ * Returns the resulting SagaState or an error if it fails
  */
 func (s Saga) AbortSaga(state *SagaState) (*SagaState, error) {
 
@@ -96,15 +98,25 @@ func (s Saga) AbortSaga(state *SagaState) (*SagaState, error) {
 
 /*
  * Log a StartTask Message to the log.  Returns
- * an error if it fails
+ * an error if it fails.
+ *
+ * StartTask is idempotent with respect to sagaId & taskId.  If
+ * the data passed changes the last written StartTask message will win
+ *
+ * Returns the resulting SagaState or an error if it fails
  */
-func (s Saga) StartTask(state *SagaState, taskId string) (*SagaState, error) {
-	return s.logMessage(state, MakeStartTaskMessage(state.sagaId, taskId))
+func (s Saga) StartTask(state *SagaState, taskId string, data []byte) (*SagaState, error) {
+	return s.logMessage(state, MakeStartTaskMessage(state.sagaId, taskId, data))
 }
 
 /*
  * Log an EndTask Message to the log.  Indicates that this task
  * has been successfully completed. Returns an error if it fails.
+ *
+ * EndTask is idempotent with respect to sagaId & taskId.  If
+ * the data passed changes the last written EndTask message will win
+ *
+ * Returns the resulting SagaState or an error if it fails
  */
 func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
 	return s.logMessage(state, MakeEndTaskMessage(state.sagaId, taskId, results))
@@ -114,14 +126,24 @@ func (s Saga) EndTask(state *SagaState, taskId string, results []byte) (*SagaSta
  * Log a Start Compensating Task Message to the log. Should only be logged after a Saga
  * has been avoided and in Rollback Recovery Mode. Should not be used in ForwardRecovery Mode
  * returns an error if it fails
+ *
+ * StartCompTask is idempotent with respect to sagaId & taskId.  If
+ * the data passed changes the last written StartCompTask message will win
+ *
+ * Returns the resulting SagaState or an error if it fails
  */
-func (s Saga) StartCompensatingTask(state *SagaState, taskId string) (*SagaState, error) {
-	return s.logMessage(state, MakeStartCompTaskMessage(state.sagaId, taskId))
+func (s Saga) StartCompensatingTask(state *SagaState, taskId string, data []byte) (*SagaState, error) {
+	return s.logMessage(state, MakeStartCompTaskMessage(state.sagaId, taskId, data))
 }
 
 /*
  * Log an End Compensating Task Message to the log when a Compensating Task
  * has been successfully completed. Returns an error if it fails.
+ *
+ * EndCompTask is idempotent with respect to sagaId & taskId.  If
+ * the data passed changes the last written EndCompTask message will win
+ *
+ * Returns the resulting SagaState or an error if it fails
  */
 func (s Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
 	return s.logMessage(state, MakeEndCompTaskMessage(state.sagaId, taskId, results))

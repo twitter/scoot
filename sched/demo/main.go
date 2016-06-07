@@ -57,7 +57,7 @@ func scheduleWork(
 
 			//Todo: error handling, what if request fails
 			for _, task := range w.Tasks {
-				state, _ = saga.StartTask(state, task.Id)
+				state, _ = saga.StartTask(state, task.Id, nil)
 				n.SendMessage(task)
 				state, _ = saga.EndTask(state, task.Id, nil)
 			}

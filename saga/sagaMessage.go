@@ -85,12 +85,15 @@ func MakeAbortSagaMessage(sagaId string) sagaMessage {
  * StartTask SagaMessageType
  *  - sagaId - id of the Saga
  *  - taskId - id of the started Task
+ *  - data   - data that is persisted to the log, useful for
+ *             diagnostic information
  */
-func MakeStartTaskMessage(sagaId string, taskId string) sagaMessage {
+func MakeStartTaskMessage(sagaId string, taskId string, data []byte) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: StartTask,
 		taskId:  taskId,
+		data:    data,
 	}
 }
 
@@ -114,12 +117,15 @@ func MakeEndTaskMessage(sagaId string, taskId string, results []byte) sagaMessag
  *  - sagaId - id of the Saga
  *  - taskId - id of the started compensating task.  Should
  *             be the same as the original taskId
+ *  - data   - data that is persisted to the log, useful for
+ *             diagnostic information
  */
-func MakeStartCompTaskMessage(sagaId string, taskId string) sagaMessage {
+func MakeStartCompTaskMessage(sagaId string, taskId string, data []byte) sagaMessage {
 	return sagaMessage{
 		sagaId:  sagaId,
 		msgType: StartCompTask,
 		taskId:  taskId,
+		data:    data,
 	}
 }
 

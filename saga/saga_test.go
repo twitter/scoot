@@ -141,7 +141,7 @@ func TestAbortSagaLogError(t *testing.T) {
 }
 
 func TestStartTask(t *testing.T) {
-	entry := MakeStartTaskMessage("testSaga", "task1")
+	entry := MakeStartTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -155,14 +155,14 @@ func TestStartTask(t *testing.T) {
 	}
 	state, err := s.StartSaga("testSaga", nil)
 
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	if err != nil {
 		t.Error(fmt.Sprintf("Expected StartTask to not return an error"))
 	}
 }
 
 func TestStartTaskLogError(t *testing.T) {
-	entry := MakeStartTaskMessage("testSaga", "task1")
+	entry := MakeStartTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -176,7 +176,7 @@ func TestStartTaskLogError(t *testing.T) {
 	}
 	state, err := s.StartSaga("testSaga", nil)
 
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	if err == nil {
 		t.Error(fmt.Sprintf("Expected StartTask to not return an error when write to SagaLog Fails"))
 	}
@@ -190,14 +190,14 @@ func TestEndTask(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
 	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 
 	state, err = s.EndTask(state, "task1", nil)
 	if err != nil {
@@ -213,14 +213,14 @@ func TestEndTaskLogError(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndTask Message"))
 
 	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 
 	state, err = s.EndTask(state, "task1", nil)
 	if err == nil {
@@ -229,14 +229,14 @@ func TestEndTaskLogError(t *testing.T) {
 }
 
 func TestStartCompTask(t *testing.T) {
-	entry := MakeStartCompTaskMessage("testSaga", "task1")
+	entry := MakeStartCompTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
@@ -244,24 +244,24 @@ func TestStartCompTask(t *testing.T) {
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	state, err = s.AbortSaga(state)
 
-	state, err = s.StartCompensatingTask(state, "task1")
+	state, err = s.StartCompensatingTask(state, "task1", nil)
 	if err != nil {
 		t.Error(fmt.Sprintf("Expected StartCompensatingTask to not return an error"))
 	}
 }
 
 func TestStartCompTaskLogError(t *testing.T) {
-	entry := MakeStartCompTaskMessage("testSaga", "task1")
+	entry := MakeStartCompTaskMessage("testSaga", "task1", nil)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartCompTask Message"))
 
@@ -269,10 +269,10 @@ func TestStartCompTaskLogError(t *testing.T) {
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	state, err = s.AbortSaga(state)
 
-	state, err = s.StartCompensatingTask(state, "task1")
+	state, err = s.StartCompensatingTask(state, "task1", nil)
 	if err == nil {
 		t.Error(fmt.Sprintf("Expected StartCompTask to not return an error when write to SagaLog Fails"))
 	}
@@ -286,18 +286,18 @@ func TestEndCompTask(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
-	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
 	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	state, err = s.AbortSaga(state)
-	state, err = s.StartCompensatingTask(state, "task1")
+	state, err = s.StartCompensatingTask(state, "task1", nil)
 
 	state, err = s.EndCompensatingTask(state, "task1", nil)
 	if err != nil {
@@ -313,18 +313,18 @@ func TestEndCompTaskLogError(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
-	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
-	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1"))
+	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndCompTask Message"))
 
 	s := Saga{
 		log: sagaLogMock,
 	}
 	state, err := s.StartSaga("testSaga", nil)
-	state, err = s.StartTask(state, "task1")
+	state, err = s.StartTask(state, "task1", nil)
 	state, err = s.AbortSaga(state)
-	state, err = s.StartCompensatingTask(state, "task1")
+	state, err = s.StartCompensatingTask(state, "task1", nil)
 
 	state, err = s.EndCompensatingTask(state, "task1", nil)
 	if err == nil {

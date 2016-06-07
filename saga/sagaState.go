@@ -15,20 +15,30 @@ const (
 )
 
 /*
+ * Additional data about tasks to be committed to the log
+ * This is Opaque to SagaState, but useful data to persist for
+ * results or debugging
+ */
+type taskData struct {
+	taskStart     []byte
+	taskEnd       []byte
+	compTaskStart []byte
+	compTaskEnd   []byte
+}
+
+/*
  * Data Structure representation of the current state of the Saga.
  */
 type SagaState struct {
 	sagaId string
 	job    []byte
 
-	//map of taskId to Flag specifying task progress
+	// map of taskID to task data supplied when committing
+	// startTask, endTask, startCompTask, endCompTask messages
+	taskData map[string]*taskData
+
+	// map of taskId to Flag specifying task progress
 	taskState map[string]flag
-
-	//map of taskId to results in EndTask message
-	taskResults map[string][]byte
-
-	//map of taskId to reulst returned as part of EndCompTask message
-	compTaskResults map[string][]byte
 
 	//bool if AbortSaga message logged
 	sagaAborted bool
@@ -42,13 +52,12 @@ type SagaState struct {
  */
 func initializeSagaState() *SagaState {
 	return &SagaState{
-		sagaId:          "",
-		job:             nil,
-		taskState:       make(map[string]flag),
-		taskResults:     make(map[string][]byte),
-		compTaskResults: make(map[string][]byte),
-		sagaAborted:     false,
-		sagaCompleted:   false,
+		sagaId:        "",
+		job:           nil,
+		taskState:     make(map[string]flag),
+		taskData:      make(map[string]*taskData),
+		sagaAborted:   false,
+		sagaCompleted: false,
 	}
 }
 
@@ -76,12 +85,38 @@ func (state *SagaState) IsTaskStarted(taskId string) bool {
 }
 
 /*
+ * Get Data Associated with Start Task, supplied as
+ * Part of the StartTask Message
+ */
+func (state *SagaState) GetStartTaskData(taskId string) []byte {
+	data, ok := state.taskData[taskId]
+	if ok {
+		return data.taskStart
+	} else {
+		return nil
+	}
+}
+
+/*
  * Returns true if the specified Task has been completed,
  * fasle otherwise
  */
 func (state *SagaState) IsTaskCompleted(taskId string) bool {
 	flags, _ := state.taskState[taskId]
 	return flags&TaskCompleted != 0
+}
+
+/*
+ * Get Data Associated with End Task, supplied as
+ * Part of the EndTask Message
+ */
+func (state *SagaState) GetEndTaskData(taskId string) []byte {
+	data, ok := state.taskData[taskId]
+	if ok {
+		return data.taskEnd
+	} else {
+		return nil
+	}
 }
 
 /*
@@ -94,12 +129,38 @@ func (state *SagaState) IsCompTaskStarted(taskId string) bool {
 }
 
 /*
+ * Get Data Associated with Starting Comp Task, supplied as
+ * Part of the StartCompTask Message
+ */
+func (state *SagaState) GetStartCompTaskData(taskId string) []byte {
+	data, ok := state.taskData[taskId]
+	if ok {
+		return data.compTaskStart
+	} else {
+		return nil
+	}
+}
+
+/*
  * Returns true if the specified Compensating Task has been completed,
  * fasle otherwise
  */
 func (state *SagaState) IsCompTaskCompleted(taskId string) bool {
 	flags, _ := state.taskState[taskId]
 	return flags&CompTaskCompleted != 0
+}
+
+/*
+ * Get Data Associated with End Comp Task, supplied as
+ * Part of the EndCompTask Message
+ */
+func (state *SagaState) GetEndCompTaskData(taskId string) []byte {
+	data, ok := state.taskData[taskId]
+	if ok {
+		return data.compTaskEnd
+	} else {
+		return nil
+	}
 }
 
 /*
@@ -114,6 +175,34 @@ func (state *SagaState) IsSagaAborted() bool {
  */
 func (state *SagaState) IsSagaCompleted() bool {
 	return state.sagaCompleted
+}
+
+/*
+ * Add the data for the specified message type to the task metadata fields.
+ * This Data is stored in the SagaState and persisted to durable saga log, so it
+ * can be recovered.  It is opaque to sagas but useful to persist for applications.
+ */
+func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data []byte) {
+
+	tData, ok := state.taskData[taskId]
+	if !ok {
+		tData = &taskData{}
+		state.taskData[taskId] = tData
+	}
+
+	switch msgType {
+	case StartTask:
+		state.taskData[taskId].taskStart = data
+
+	case EndTask:
+		state.taskData[taskId].taskEnd = data
+
+	case StartCompTask:
+		state.taskData[taskId].compTaskStart = data
+
+	case EndCompTask:
+		state.taskData[taskId].compTaskEnd = data
+	}
 }
 
 /*
@@ -161,6 +250,10 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 			return nil, err
 		}
 
+		if msg.data != nil {
+			state.addTaskData(msg.taskId, msg.msgType, msg.data)
+		}
+
 		state.taskState[msg.taskId] = TaskStarted
 
 	case EndTask:
@@ -175,6 +268,10 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | TaskCompleted
+
+		if msg.data != nil {
+			state.addTaskData(msg.taskId, msg.msgType, msg.data)
+		}
 
 	case StartCompTask:
 		err := validateTaskId(msg.taskId)
@@ -193,6 +290,10 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskStarted
+
+		if msg.data != nil {
+			state.addTaskData(msg.taskId, msg.msgType, msg.data)
+		}
 
 	case EndCompTask:
 		err := validateTaskId(msg.taskId)
@@ -215,15 +316,20 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId)
 		}
 
+		if msg.data != nil {
+			state.addTaskData(msg.taskId, msg.msgType, msg.data)
+		}
+
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskCompleted
+
 	}
 
 	return state, nil
 }
 
 /*
- * Creates a deep copy of mutable saga state.  Does not Deepcopy
- * Job field since this is never mutated after creation
+ * Creates a copy of mutable saga state.  Does not copy
+ * binary data, only pointers to it.
  */
 func copySagaState(s *SagaState) *SagaState {
 
@@ -238,7 +344,16 @@ func copySagaState(s *SagaState) *SagaState {
 		newS.taskState[key] = value
 	}
 
-	//don't need to deep copy job, since its only set on create.
+	newS.taskData = make(map[string]*taskData)
+	for key, value := range s.taskData {
+		newS.taskData[key] = &taskData{
+			taskStart:     value.taskStart,
+			taskEnd:       value.taskEnd,
+			compTaskStart: value.compTaskStart,
+			compTaskEnd:   value.compTaskEnd,
+		}
+	}
+
 	newS.job = s.job
 
 	return newS
