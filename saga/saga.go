@@ -42,7 +42,7 @@ func MakeSaga(log SagaLog) Saga {
 func (s Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 
 	//Create new SagaState
-	state, err := sagaStateFactory(sagaId, job)
+	state, err := makeSagaState(sagaId, job)
 	if err != nil {
 		return nil, err
 	}
