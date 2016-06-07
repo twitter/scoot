@@ -2,6 +2,7 @@ package conn
 
 import (
 	"github.com/scootdev/scoot/local/protocol"
+	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -19,6 +20,12 @@ type Dialer interface {
 
 type Conn interface {
 	Echo(arg string) (string, error)
+
+	// TODO(dbentley): this feels weird. We shouldn't expose our internal
+	// API to the client. But it also feels weird to copy everything.
+	// A Conn is also a Runner
+	runner.Runner
+
 	Close() error
 }
 
@@ -59,6 +66,27 @@ func (c *conn) Echo(arg string) (string, error) {
 		return "", err
 	}
 	return r.Pong, nil
+}
+
+func (c *conn) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
+	req := &protocol.Command{}
+	req.Argv = cmd.Argv
+	req.Env = cmd.EnvVars
+	req.Timeout = int64(cmd.Timeout)
+
+	r, err := c.client.Run(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+	return protocol.ToRunnerStatus(r), nil
+}
+
+func (c *conn) Status(run runner.RunId) (*runner.ProcessStatus, error) {
+	r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
+	if err != nil {
+		return nil, err
+	}
+	return protocol.ToRunnerStatus(r), nil
 }
 
 func (c *conn) Close() error {

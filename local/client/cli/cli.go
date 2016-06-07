@@ -40,5 +40,7 @@ func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
 
 	r := &CliClient{rootCmd, dialer, nil}
 	rootCmd.AddCommand(makeEchoCmd(r))
+	rootCmd.AddCommand(makeRunCmd(r))
+	rootCmd.AddCommand(makeStatusCmd(r))
 	return r, nil
 }
