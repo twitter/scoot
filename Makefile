@@ -8,6 +8,12 @@ PROJECT_URL := "https://github.com/scootdev/scoot"
 default: 
 	go build ./...
 
+dependencies: 
+	go get -t github.com/scootdev/scoot/...
+
+	# mockgen is only referenced for code gen, not imported directly
+	go get github.com/golang/mock/mockgen 
+
 test: 
 	go generate ./...
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
