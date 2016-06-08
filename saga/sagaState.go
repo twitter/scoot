@@ -384,7 +384,7 @@ func validateTaskId(taskId string) error {
 /*
  * Initialize a SagaState for the specified saga, and default data.
  */
-func sagaStateFactory(sagaId string, job []byte) (*SagaState, error) {
+func makeSagaState(sagaId string, job []byte) (*SagaState, error) {
 
 	state := initializeSagaState()
 
