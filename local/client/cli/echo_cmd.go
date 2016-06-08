@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-func makeEchoCmd(cli *CliClient) *cobra.Command {
+func makeEchoCmd(c *CliClient) *cobra.Command {
 	return &cobra.Command{
 		Use:   "echo",
 		Short: "echo a command through the Scoot server",
-		RunE:  cli.echo,
+		RunE:  c.echo,
 	}
 }
 

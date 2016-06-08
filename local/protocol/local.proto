@@ -14,6 +14,9 @@ package protocol;
 
 service LocalScoot {
   rpc Echo (EchoRequest) returns (EchoReply) {}
+
+  rpc Run(Command) returns (ProcessStatus) {}
+  rpc Status(StatusQuery) returns (ProcessStatus) {}
 }
 
 message EchoRequest {
@@ -22,4 +25,33 @@ message EchoRequest {
 
 message EchoReply {
   string pong = 1;
+}
+
+enum ProcessState {
+  UNKNOWN = 0;
+  PENDING = 1;
+  RUNNING = 2;
+
+  COMPLETED = 3;
+  FAILED = 4;
+}
+
+message Command {
+  repeated string argv = 1;
+  map<string, string> env = 2;
+  // Timeout in nanoseconds
+  int64 timeout = 3;
+}
+
+message ProcessStatus {
+  string run_id = 1;
+  ProcessState state = 2;
+  string stdout_ref = 3;
+  string stderr_ref = 4;
+  int32 exit_code = 5;
+  string error = 6;
+}
+
+message StatusQuery {
+  string run_id = 1;
 }
