@@ -12,8 +12,5 @@ test:
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
-clean-mockgen:
-	rm */*_mock.go
-
-clean: clean-mockgen
+clean:
 	go clean ./...
