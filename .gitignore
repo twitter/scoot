@@ -23,9 +23,6 @@ _testmain.go
 *.test
 *.prof
 
-#ignore all mock files
-*/*_mock.go
-
 #Files
 .DS_Store
 coverage.txt

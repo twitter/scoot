@@ -6,8 +6,9 @@ go:
   - 1.6
 
 before_install:
-  - make dependencies
-  
+  - go get -t github.com/scootdev/scoot/...
+
+
 before_script:
   - go fmt ./...
   - go vet $(go list ./...)
