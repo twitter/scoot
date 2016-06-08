@@ -9,15 +9,8 @@ default:
 	go build ./...
 
 dependencies: 
-	go get github.com/golang/mock/gomock
-	go get github.com/golang/mock/mockgen
-	go get github.com/onsi/gomega
-	go get github.com/onsi/ginkgo
-	go get github.com/spf13/cobra
-	go get golang.org/x/net/context
-	go get golang.org/x/tools/cmd/cover
-	go get google.golang.org/grpc
-
+	go get -t github.com/scootdev/scoot/...
+	
 test: 
 	go generate ./...
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
