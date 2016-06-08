@@ -9,7 +9,14 @@ default:
 	go build ./...
 
 dependencies: 
-	go get -t $(go list ./...)
+	go get github.com/golang/mock/gomock
+	go get github.com/golang/mock/mockgen
+	go get github.com/onsi/gomega
+	go get github.com/onsi/ginkgo
+	go get github.com/spf13/cobra
+	go get golang.org/x/net/context
+	go get golang.org/x/tools/cmd/cover
+	go get google.golang.org/grpc
 
 test: 
 	go generate ./...

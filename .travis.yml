@@ -6,7 +6,7 @@ go:
   - 1.6
 
 before_install:
-  - go get -t $(go list ./...)
+  - make dependencies
   
 before_script:
   - go fmt ./...
