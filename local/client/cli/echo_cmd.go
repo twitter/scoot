@@ -1,8 +1,8 @@
 package cli
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
-	"log"
 	"strings"
 )
 
@@ -16,7 +16,6 @@ func makeEchoCmd(c *CliClient) *cobra.Command {
 
 func (c *CliClient) echo(cmd *cobra.Command, args []string) error {
 	arg := strings.Join(args, " ")
-	log.Println("Echoing to server", arg)
 	conn, err := c.openConn()
 	if err != nil {
 		return err
@@ -25,6 +24,6 @@ func (c *CliClient) echo(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Scoot server: ", result)
+	fmt.Println(result)
 	return nil
 }
