@@ -20,16 +20,16 @@ func (d *errorDialer) Dial() (conn.Conn, error) {
 }
 
 func clientErrorDialer(t *testing.T) *cli.CliClient {
-	cl, err := cli.NewCliClient(&errorDialer{})
+	cl, err := cli.NewCliClient(conn.NewComms(&errorDialer{}))
 	if err != nil {
 		t.Fatalf("Error constructing Cli Client: %v", err)
 	}
 	return cl
 }
 
-func clientForConn(t *testing.T, conn conn.Conn) *cli.CliClient {
-	dialer := &connDialer{conn}
-	cl, err := cli.NewCliClient(dialer)
+func clientForConn(t *testing.T, connection conn.Conn) *cli.CliClient {
+	dialer := &connDialer{connection}
+	cl, err := cli.NewCliClient(conn.NewComms(dialer))
 	if err != nil {
 		t.Fatalf("Error constructing Cli Client: %v", err)
 	}

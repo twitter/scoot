@@ -19,11 +19,11 @@ func (c *CliClient) status(cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("Must pass exactly one arg of RunId to query; got %v", len(args))
 	}
-	conn, err := c.openConn()
+	err := c.comms.Open()
 	if err != nil {
 		return err
 	}
-	process, err := conn.Status(runner.RunId(args[0]))
+	process, err := c.comms.Status(runner.RunId(args[0]))
 	if err != nil {
 		return err
 	}

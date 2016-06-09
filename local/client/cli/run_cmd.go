@@ -16,12 +16,12 @@ func makeRunCmd(c *CliClient) *cobra.Command {
 
 func (c *CliClient) run(cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
-	conn, err := c.openConn()
+	err := c.comms.Open()
 	if err != nil {
 		return err
 	}
 	command := runner.NewCommand(args, map[string]string{}, 0)
-	process, err := conn.Run(command)
+	process, err := c.comms.Run(command)
 	if err != nil {
 		return err
 	}

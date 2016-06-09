@@ -7,8 +7,7 @@ import (
 
 type CliClient struct {
 	rootCmd *cobra.Command
-	dialer  conn.Dialer
-	conn    conn.Conn
+	comms   conn.Comms
 }
 
 func (c *CliClient) Exec() error {
@@ -16,27 +15,11 @@ func (c *CliClient) Exec() error {
 }
 
 func (c *CliClient) Close(*cobra.Command, []string) error {
-	if c.conn == nil {
-		return nil
-	}
-	conn := c.conn
-	c.conn = nil
-	return conn.Close()
+	return c.comms.Close()
 }
 
-func (c *CliClient) openConn() (conn.Conn, error) {
-	if c.conn == nil {
-		conn, err := c.dialer.Dial()
-		if err != nil {
-			return nil, err
-		}
-		c.conn = conn
-	}
-	return c.conn, nil
-}
-
-func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
-	r := &CliClient{nil, dialer, nil}
+func NewCliClient(comms conn.Comms) (*CliClient, error) {
+	r := &CliClient{nil, comms}
 
 	rootCmd := &cobra.Command{
 		Use:                "scootcl",

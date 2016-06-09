@@ -1,6 +1,7 @@
 package conn
 
 import (
+	"fmt"
 	"github.com/scootdev/scoot/local/protocol"
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
@@ -27,6 +28,60 @@ type Conn interface {
 	runner.Runner
 
 	Close() error
+}
+
+type Comms interface {
+	Conn
+	Open() error
+}
+
+func NewComms(dialer Dialer) Comms {
+	return &comms{dialer, nil}
+}
+
+type comms struct {
+	dialer Dialer
+	conn   Conn
+}
+
+func (c *comms) Open() error {
+	if c.conn != nil {
+		return nil
+	}
+	conn, err := c.dialer.Dial()
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+	return nil
+}
+
+func (c *comms) Echo(arg string) (string, error) {
+	if c.conn == nil {
+		return "", fmt.Errorf("Comms is closed")
+	}
+	return c.conn.Echo(arg)
+}
+
+func (c *comms) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
+	if c.conn == nil {
+		return nil, fmt.Errorf("Comms is closed")
+	}
+	return c.conn.Run(cmd)
+}
+
+func (c *comms) Status(run runner.RunId) (*runner.ProcessStatus, error) {
+	if c.conn == nil {
+		return nil, fmt.Errorf("Comms is closed")
+	}
+	return c.conn.Status(run)
+}
+
+func (c *comms) Close() error {
+	if c.conn == nil {
+		return nil
+	}
+	return c.conn.Close()
 }
 
 func UnixDialer() (Dialer, error) {
