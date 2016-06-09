@@ -35,6 +35,6 @@ service Proc {
     3: required list<Task> tasks
   ) throws (
     1: InvalidRequest ir,
-    2: ScootTooBusy stb
+    2: CanNotScheduleNow cnsn,
   )
 }
