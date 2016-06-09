@@ -19,8 +19,12 @@ func (d *errorDialer) Dial() (conn.Conn, error) {
 	return nil, fmt.Errorf("errorDialer.Dial is error")
 }
 
+func (d *errorDialer) Close() error {
+	return nil
+}
+
 func clientErrorDialer(t *testing.T) *cli.CliClient {
-	cl, err := cli.NewCliClient(conn.NewComms(&errorDialer{}))
+	cl, err := cli.NewCliClient(conn.NewCachingDialer(&errorDialer{}))
 	if err != nil {
 		t.Fatalf("Error constructing Cli Client: %v", err)
 	}
@@ -29,7 +33,7 @@ func clientErrorDialer(t *testing.T) *cli.CliClient {
 
 func clientForConn(t *testing.T, connection conn.Conn) *cli.CliClient {
 	dialer := &connDialer{connection}
-	cl, err := cli.NewCliClient(conn.NewComms(dialer))
+	cl, err := cli.NewCliClient(conn.NewCachingDialer(dialer))
 	if err != nil {
 		t.Fatalf("Error constructing Cli Client: %v", err)
 	}
@@ -42,6 +46,10 @@ type connDialer struct {
 
 func (d *connDialer) Dial() (conn.Conn, error) {
 	return d.conn, nil
+}
+
+func (d *connDialer) Close() error {
+	return nil
 }
 
 func newFakeConn() conn.Conn {

@@ -16,11 +16,11 @@ func makeEchoCmd(c *CliClient) *cobra.Command {
 
 func (c *CliClient) echo(cmd *cobra.Command, args []string) error {
 	arg := strings.Join(args, " ")
-	err := c.comms.Open()
+	conn, err := c.comms.Dial()
 	if err != nil {
 		return err
 	}
-	result, err := c.comms.Echo(arg)
+	result, err := conn.Echo(arg)
 	if err != nil {
 		return err
 	}

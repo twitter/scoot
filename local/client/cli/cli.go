@@ -7,7 +7,7 @@ import (
 
 type CliClient struct {
 	rootCmd *cobra.Command
-	comms   conn.Comms
+	comms   conn.Dialer
 }
 
 func (c *CliClient) Exec() error {
@@ -18,8 +18,8 @@ func (c *CliClient) Close(*cobra.Command, []string) error {
 	return c.comms.Close()
 }
 
-func NewCliClient(comms conn.Comms) (*CliClient, error) {
-	r := &CliClient{nil, comms}
+func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
+	r := &CliClient{nil, dialer}
 
 	rootCmd := &cobra.Command{
 		Use:                "scootcl",

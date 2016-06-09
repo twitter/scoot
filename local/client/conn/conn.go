@@ -1,11 +1,11 @@
 package conn
 
 import (
-	"fmt"
 	"github.com/scootdev/scoot/local/protocol"
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -17,6 +17,7 @@ import (
 // only operations (e.g., printing help) without erroring if the server is down.
 type Dialer interface {
 	Dial() (Conn, error)
+	io.Closer
 }
 
 type Conn interface {
@@ -30,58 +31,31 @@ type Conn interface {
 	Close() error
 }
 
-type Comms interface {
-	Conn
-	Open() error
+func NewCachingDialer(dialer Dialer) Dialer {
+	return &cachingDialer{dialer, nil}
 }
 
-func NewComms(dialer Dialer) Comms {
-	return &comms{dialer, nil}
-}
-
-type comms struct {
+type cachingDialer struct {
 	dialer Dialer
 	conn   Conn
 }
 
-func (c *comms) Open() error {
-	if c.conn != nil {
+func (d *cachingDialer) Dial() (Conn, error) {
+	if d.conn == nil {
+		conn, err := d.dialer.Dial()
+		if err != nil {
+			return nil, err
+		}
+		d.conn = conn
+	}
+	return d.conn, nil
+}
+
+func (d *cachingDialer) Close() error {
+	if d.conn == nil {
 		return nil
 	}
-	conn, err := c.dialer.Dial()
-	if err != nil {
-		return err
-	}
-	c.conn = conn
-	return nil
-}
-
-func (c *comms) Echo(arg string) (string, error) {
-	if c.conn == nil {
-		return "", fmt.Errorf("Comms is closed")
-	}
-	return c.conn.Echo(arg)
-}
-
-func (c *comms) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
-	if c.conn == nil {
-		return nil, fmt.Errorf("Comms is closed")
-	}
-	return c.conn.Run(cmd)
-}
-
-func (c *comms) Status(run runner.RunId) (*runner.ProcessStatus, error) {
-	if c.conn == nil {
-		return nil, fmt.Errorf("Comms is closed")
-	}
-	return c.conn.Status(run)
-}
-
-func (c *comms) Close() error {
-	if c.conn == nil {
-		return nil
-	}
-	return c.conn.Close()
+	return d.conn.Close()
 }
 
 func UnixDialer() (Dialer, error) {
@@ -108,6 +82,10 @@ func (d *dialer) Dial() (Conn, error) {
 	}
 	client := protocol.NewLocalScootClient(c)
 	return &conn{c, client}, nil
+}
+
+func (d *dialer) Close() error {
+	return nil
 }
 
 type conn struct {
