@@ -1,5 +1,5 @@
 service Proc {
-  
+
   exception InvalidRequest {
     1: optional string message
   }
@@ -7,14 +7,14 @@ service Proc {
   exception CanNotScheduleNow {
     1: optional i64 retryAfterMs
   }
-  
+
   enum JobType {
-    UNKNOWN=1, 
+    UNKNOWN=1,
     IRON_TESTS=2,
   }
 
   struct Command {
-    1: list<string> cmds
+    1: list<string> args
   }
 
   struct Task {
