@@ -141,7 +141,7 @@ func run(cl *cli.CliClient, args ...string) (string, string, error) {
 	}()
 
 	output := captureOutput()
-	defer output.ResetIfNecessary()
+	defer output.Reset()
 
 	err := cl.Exec()
 	stdout, stderr := output.WaitAndReset() // Reset early so we can use stdout/stderr and write to uncaptured stdout/stderr
@@ -188,14 +188,10 @@ func (o *output) WaitAndReset() (string, string) {
 	return <-stdoutCh, <-stderrCh
 }
 
-func (o *output) ResetIfNecessary() {
+func (o *output) Reset() {
 	if o.stdout == nil {
 		return
 	}
-	o.Reset()
-}
-
-func (o *output) Reset() {
 	o.stdout.Close()
 	o.stderr.Close()
 	os.Stdout, os.Stderr = o.oldStdout, o.oldStderr
