@@ -4,13 +4,13 @@ service Proc {
     1: optional string message
   }
 
-  exception ScootTooBusy {
+  exception CanNotScheduleNow {
     1: optional i64 retryAfterMs
   }
   
   enum JobType {
-    IRON_TESTS=1,
-    DEFAULT=2,
+    UNKNOWN=1, 
+    IRON_TESTS=2,
   }
 
   struct Command {
