@@ -5,6 +5,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -16,6 +17,7 @@ import (
 // only operations (e.g., printing help) without erroring if the server is down.
 type Dialer interface {
 	Dial() (Conn, error)
+	io.Closer
 }
 
 type Conn interface {
@@ -27,6 +29,33 @@ type Conn interface {
 	runner.Runner
 
 	Close() error
+}
+
+func NewCachingDialer(dialer Dialer) Dialer {
+	return &cachingDialer{dialer, nil}
+}
+
+type cachingDialer struct {
+	dialer Dialer
+	conn   Conn
+}
+
+func (d *cachingDialer) Dial() (Conn, error) {
+	if d.conn == nil {
+		conn, err := d.dialer.Dial()
+		if err != nil {
+			return nil, err
+		}
+		d.conn = conn
+	}
+	return d.conn, nil
+}
+
+func (d *cachingDialer) Close() error {
+	if d.conn == nil {
+		return nil
+	}
+	return d.conn.Close()
 }
 
 func UnixDialer() (Dialer, error) {
@@ -53,6 +82,10 @@ func (d *dialer) Dial() (Conn, error) {
 	}
 	client := protocol.NewLocalScootClient(c)
 	return &conn{c, client}, nil
+}
+
+func (d *dialer) Close() error {
+	return nil
 }
 
 type conn struct {

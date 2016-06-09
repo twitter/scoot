@@ -16,7 +16,7 @@ func makeEchoCmd(c *CliClient) *cobra.Command {
 
 func (c *CliClient) echo(cmd *cobra.Command, args []string) error {
 	arg := strings.Join(args, " ")
-	conn, err := c.openConn()
+	conn, err := c.comms.Dial()
 	if err != nil {
 		return err
 	}

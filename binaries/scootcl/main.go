@@ -12,7 +12,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot determine Scoot address", err)
 	}
-	cli, err := cli.NewCliClient(dialer)
+	cli, err := cli.NewCliClient(conn.NewCachingDialer(dialer))
 	if err != nil {
 		log.Fatal("Cannot initalize Scoot CLI: ", err)
 	}
