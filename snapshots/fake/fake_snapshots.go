@@ -3,7 +3,8 @@ package fake
 import (
 	"path/filepath"
 	"sort"
-	"twitter.biz/scoot/snapshots"
+
+	"github.com/scootdev/scoot/snapshots"
 )
 
 type FakeFile interface {

@@ -12,7 +12,8 @@ import (
 	"log"
 	"os"
 	"path"
-	"twitter.biz/scoot/snapshots"
+
+	"github.com/scootdev/scoot/snapshots"
 )
 
 type checkoutContext struct {

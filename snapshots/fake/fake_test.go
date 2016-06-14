@@ -3,8 +3,9 @@ package fake_test
 import (
 	"bytes"
 	"testing"
-	"twitter.biz/scoot/snapshots"
-	"twitter.biz/scoot/snapshots/fake"
+
+	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshots/fake"
 )
 
 const (

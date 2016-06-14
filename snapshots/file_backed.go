@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"twitter.biz/scoot/fs/utils"
+	"github.com/scootdev/scoot/fs/utils"
 )
 
 var Trace bool
