@@ -88,7 +88,7 @@ func assertStat(expectedErr error, expectedType snapshots.FileType, exec bool, s
 		t.Fatalf("Unexpected IsDir for %v: %v (expected %v)", path, fi.IsDir(), expectedType == dir)
 	}
 	if fi.IsExec() != exec {
-		t.Fatalf("Unexpected IsExec for %v: %v (expected %v)", path, fi.IsExec, exec)
+		t.Fatalf("Unexpected IsExec for %v: %v (expected %v)", path, fi.IsExec(), exec)
 	}
 	if size != -1 {
 		if fi.Size() != size {
