@@ -1,4 +1,4 @@
-package utils
+package perf
 
 import (
 	"reflect"

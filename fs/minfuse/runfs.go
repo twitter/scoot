@@ -1,0 +1,142 @@
+package minfuse
+
+import (
+	"errors"
+	"flag"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+
+	_ "net/http/pprof"
+
+	"github.com/scootdev/fuse"
+	"github.com/scootdev/scoot/fs/min"
+	"github.com/scootdev/scoot/snapshots"
+)
+
+type Options struct {
+	src          string
+	mountpoint   string
+	strategyList []string
+	async        bool
+	trace        bool
+	threadUnsafe bool
+	maxReadahead uint32
+}
+
+func SetupLog() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+}
+
+func InitFlags() (*Options, error) {
+	// Note on serial vs threadpool option:
+	// Serial means that no locking will be done at all and we will serve from a single goroutine.
+	// Threadpool means that we will lock where necessary and serve from multiple goroutines.
+	src := flag.String("src_root", "", "source directory to mirror")
+	mountpoint := flag.String("mountpoint", "", "directory to mount at")
+	trace := flag.Bool("trace", false, "whether to trace execution")
+	serveStrategy := flag.String("serve_strategy", "",
+		"Options are any of async|sync;serial|threadpool;readahead_mb=N. Default is 'async;serial;readahead_mb=4'")
+
+	flag.Parse()
+	if *src == "" || *mountpoint == "" {
+		return nil, errors.New("Both src_root and mountpoint must be set")
+	}
+
+	opts := Options{
+		src:          *src,
+		mountpoint:   *mountpoint,
+		trace:        *trace,
+		strategyList: strings.Split(*serveStrategy, ";"),
+		async:        true,
+		threadUnsafe: true,
+		maxReadahead: uint32(4 * 1024 * 1024),
+	}
+	for _, strategy := range opts.strategyList {
+		switch {
+		case strategy == "async":
+			opts.async = true
+		case strategy == "sync":
+			opts.async = false
+		case strategy == "serial":
+			opts.threadUnsafe = true
+		case strategy == "threadpool":
+			opts.threadUnsafe = false
+		case strings.HasPrefix(strategy, "readahead_mb="):
+			readaheadStr := strings.Split(strategy, "=")[1]
+			if readahead, err := strconv.ParseFloat(readaheadStr, 32); err == nil {
+				opts.maxReadahead = uint32(readahead * 1024 * 1024)
+				break
+			}
+			fallthrough
+		default:
+			log.Fatal("Unrecognized strategy", strategy)
+		}
+	}
+	log.Print(opts)
+	return &opts, nil
+}
+
+func Runfs(opts *Options) {
+	snap := snapshots.NewFileBackedSnapshot(opts.src, "only")
+	minfs := NewSlimMinFs(snap)
+
+	if opts.trace {
+		fuse.Trace = true
+		snapshots.Trace = true
+		min.Trace = true
+	}
+
+	options := []fuse.MountOption{
+		fuse.DefaultPermissions(),
+		fuse.MaxReadahead(opts.maxReadahead),
+		fuse.FSName("slimfs"),
+		fuse.Subtype("fs"),
+		fuse.VolumeName("slimfs"),
+	}
+	if opts.async {
+		options = append(options, fuse.AsyncRead())
+	}
+
+	log.Print("About to Mount")
+	fuse.Unmount(opts.mountpoint)
+	conn, err := fuse.Mount(opts.mountpoint, fuse.MakeAlloc(), options...)
+	if err != nil {
+		log.Fatal("Couldn't mount", err)
+	}
+
+	var done chan error
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigchan
+		log.Printf("Canceling")
+		if done != nil {
+			done <- errors.New("Caller canceled")
+		}
+	}()
+
+	go func() {
+		log.Println("pprof exit: ", http.ListenAndServe("localhost:6060", nil))
+	}()
+
+	defer func() {
+		if err := fuse.Unmount(opts.mountpoint); err != nil {
+			log.Printf("error in call to Unmount(%s): %s", opts.mountpoint, err)
+			return
+		}
+		log.Printf("called Umount on %s", opts.mountpoint)
+	}()
+
+	// Serve returns immediately and we wait for the first entry from the done channel before exiting main.
+	// We only care about the first error from either the signal handler or from the first serve thread to return.
+	// Exiting main will cause the remaining read threads to exit.
+	log.Print("About to Serve")
+	done = min.Serve(conn, minfs, opts.threadUnsafe)
+	err = <-done
+	log.Printf("Returning (might take a few seconds), err=%v", err)
+}

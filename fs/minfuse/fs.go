@@ -9,7 +9,7 @@ import (
 
 	"github.com/scootdev/fuse"
 	fs "github.com/scootdev/scoot/fs/min/interface"
-	"github.com/scootdev/scoot/fs/utils"
+	"github.com/scootdev/scoot/fs/perf"
 	"github.com/scootdev/scoot/snapshots"
 )
 
@@ -60,7 +60,7 @@ func (n *minNode) Lookup(name string) (fs.Node, error) {
 	}
 
 	// minNode stores the joined path so pass discards=false.
-	p := utils.UnsafePathJoin(false, n.p, name)
+	p := perf.UnsafePathJoin(false, n.p, name)
 	fi, err := n.fs.snap.Lstat(p)
 	if err != nil {
 		if _, ok := err.(snapshots.PathError); ok {

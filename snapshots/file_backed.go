@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/scootdev/scoot/fs/utils"
+	"github.com/scootdev/scoot/fs/perf"
 )
 
 var Trace bool
@@ -38,7 +38,7 @@ func (s *fileBackedSnapshot) Id() string {
 }
 
 func (s *fileBackedSnapshot) Lstat(name string) (FileInfo, error) {
-	fi, err := os.Lstat(utils.UnsafePathJoin(true, s.root, name))
+	fi, err := os.Lstat(perf.UnsafePathJoin(true, s.root, name))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, &pathError{err}
@@ -49,7 +49,7 @@ func (s *fileBackedSnapshot) Lstat(name string) (FileInfo, error) {
 }
 
 func (s *fileBackedSnapshot) Stat(name string) (FileInfo, error) {
-	fi, err := os.Stat(utils.UnsafePathJoin(true, s.root, name))
+	fi, err := os.Stat(perf.UnsafePathJoin(true, s.root, name))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, &pathError{err}
@@ -97,7 +97,7 @@ func (s *fileBackedSnapshot) Readdirents(name string) ([]Dirent, error) {
 	}
 
 	// TODO(dbentley): find a way to keep the file open instead of opening it here
-	f, err := os.Open(utils.UnsafePathJoin(true, s.root, name))
+	f, err := os.Open(perf.UnsafePathJoin(true, s.root, name))
 	defer f.Close()
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -109,7 +109,7 @@ func (s *fileBackedSnapshot) Readdirents(name string) ([]Dirent, error) {
 }
 
 func (s *fileBackedSnapshot) Readlink(name string) (string, error) {
-	r, err := os.Readlink(utils.UnsafePathJoin(true, s.root, name))
+	r, err := os.Readlink(perf.UnsafePathJoin(true, s.root, name))
 	if err != nil {
 		return "", &pathError{err}
 	}
@@ -118,7 +118,7 @@ func (s *fileBackedSnapshot) Readlink(name string) (string, error) {
 
 func (s *fileBackedSnapshot) Open(name string) (File, error) {
 	// Flag that the joined string is not discarded because callers will almost certainly store it.
-	f, err := os.Open(utils.UnsafePathJoin(false, s.root, name))
+	f, err := os.Open(perf.UnsafePathJoin(false, s.root, name))
 	if err != nil {
 		return nil, &pathError{err}
 	}
