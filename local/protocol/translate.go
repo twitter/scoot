@@ -4,6 +4,8 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
+// TODO(dbentley): we should go generate with command protoc local.proto --go_out=plugins=grpc:.
+
 func FromRunnerStatus(status *runner.ProcessStatus) *ProcessStatus {
 	return &ProcessStatus{
 		string(status.RunId),
