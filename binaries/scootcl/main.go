@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-// A Scoot command-line client
+// A Local Scoot command-line client
 func main() {
 	dialer, err := conn.UnixDialer()
 	if err != nil {

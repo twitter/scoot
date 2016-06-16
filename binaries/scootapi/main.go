@@ -6,6 +6,7 @@ import (
 	"log"
 )
 
+// Binary to talk to Cloud Scoot API
 func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
