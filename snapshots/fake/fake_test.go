@@ -14,15 +14,14 @@ const (
 )
 
 func TestFakes(t *testing.T) {
-	snap := &fake.FakeSnapshot{
-		&fake.FakeDir{
+	snap := fake.NewSnapshot(
+		fake.NewDir(
 			map[string]fake.FakeFile{
-				"foo.txt": &fake.FakeContents{"foo text", false},
-				"foo.py":  &fake.FakeContents{"foo code", true},
+				"foo.txt": fake.NewContents("foo text", false),
+				"foo.py":  fake.NewContents("foo code", true),
 			},
-		},
-		"",
-	}
+		),
+		"")
 
 	assertDirents(
 		[]snapshots.Dirent{
@@ -50,7 +49,7 @@ func assertOpen(expectedErr error, snap snapshots.Snapshot, path string, t *test
 func assertReadAll(expected []byte, expectedErr error, f snapshots.File, t *testing.T) {
 	data, err := f.ReadAll()
 	if err != expectedErr {
-		t.Fatalf("Unexpected err reading all: %v (expected %v)")
+		t.Fatalf("Unexpected err reading all: %v (expected %v)", err, expectedErr)
 	}
 	if err != nil {
 		return
@@ -64,7 +63,7 @@ func assertReadAt(expected []byte, expectedErr error, f snapshots.File, offset i
 	bs := make([]byte, l)
 	n, err := f.ReadAt(bs, offset)
 	if err != expectedErr {
-		t.Fatalf("Unexpected err reading all: %v (expected %v)")
+		t.Fatalf("Unexpected err reading all: %v (expected %v)", err, expectedErr)
 	}
 	if err != nil {
 		return
@@ -89,7 +88,7 @@ func assertStat(expectedErr error, expectedType snapshots.FileType, exec bool, s
 		t.Fatalf("Unexpected IsDir for %v: %v (expected %v)", path, fi.IsDir(), expectedType == dir)
 	}
 	if fi.IsExec() != exec {
-		t.Fatalf("Unexpected IsExec for %v: %v (expected %v)", path, fi.IsExec, exec)
+		t.Fatalf("Unexpected IsExec for %v: %v (expected %v)", path, fi.IsExec(), exec)
 	}
 	if size != -1 {
 		if fi.Size() != size {

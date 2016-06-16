@@ -15,6 +15,10 @@ type FakeFile interface {
 	IsDir() bool
 }
 
+func NewDir(children map[string]FakeFile) *FakeDir {
+	return &FakeDir{children}
+}
+
 type FakeDir struct {
 	Children map[string]FakeFile
 }
@@ -34,6 +38,10 @@ func (f *FakeDir) Type() snapshots.FileType {
 
 func (f *FakeDir) IsDir() bool {
 	return true
+}
+
+func NewContents(contents string, exec bool) *FakeContents {
+	return &FakeContents{contents, exec}
 }
 
 type FakeContents struct {
@@ -70,6 +78,10 @@ func (f *FakeContents) ReadAll() ([]byte, error) {
 
 func (f *FakeContents) Close() error {
 	return nil
+}
+
+func NewSnapshot(root *FakeDir, id string) *FakeSnapshot {
+	return &FakeSnapshot{root, id}
 }
 
 type FakeSnapshot struct {
