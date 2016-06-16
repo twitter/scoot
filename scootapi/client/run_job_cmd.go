@@ -31,7 +31,7 @@ func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = append(jobDef.Tasks, task)
-	_, err := client.RunJob(jobDef)
+	_, err = client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
