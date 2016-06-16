@@ -22,7 +22,6 @@ func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Defining")
 	task := scoot.NewTask()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
@@ -40,8 +39,6 @@ func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 		default:
 			return err
 		}
-		return err
 	}
-	log.Println("Running: ", job)
 	return nil
 }
