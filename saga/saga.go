@@ -1,22 +1,5 @@
 package saga
 
-type SagaRecoveryType int
-
-/*
- * Saga Recovery Types define how to interpret SagaState in RecoveryMode.
- *
- * ForwardRecovery: all tasks in the saga must be executed at least once.
- *                  tasks MUST BE idempotent
- *
- * RollbackRecovery: if Saga is Aborted or in unsafe state, compensating
- *                   tasks for all started tasks need to be executed.
- *                   compensating tasks MUST BE idempotent.
- */
-const (
-	BackwardRecovery SagaRecoveryType = iota
-	ForwardRecovery
-)
-
 /*
  * Saga Object which provides all Saga Functionality
  * Implementations of SagaLog should provide a factory method
@@ -54,26 +37,6 @@ func (s Saga) StartSaga(sagaId string, job []byte) (*SagaState, error) {
 	}
 
 	return state, nil
-}
-
-/*
- * logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
- */
-func (s Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) {
-
-	//verify that the applied message results in a valid state
-	newState, err := updateSagaState(state, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	//try durably storing the message
-	err = s.log.LogMessage(msg)
-	if err != nil {
-		return nil, err
-	}
-
-	return newState, nil
 }
 
 /*
@@ -147,4 +110,56 @@ func (s Saga) StartCompensatingTask(state *SagaState, taskId string, data []byte
  */
 func (s Saga) EndCompensatingTask(state *SagaState, taskId string, results []byte) (*SagaState, error) {
 	return s.logMessage(state, MakeEndCompTaskMessage(state.sagaId, taskId, results))
+}
+
+/*
+ * Should be called at Saga Creation time.
+ * Returns a Slice of In Progress SagaIds
+ */
+func (s Saga) Startup() ([]string, error) {
+
+	ids, err := s.log.GetActiveSagas()
+	if err != nil {
+		return nil, err
+	}
+
+	return ids, nil
+}
+
+/*
+ * Recovers SagaState by reading all logged messages from the log.
+ * Utilizes the specified recoveryType to determine if Saga needs to be
+ * Aborted or can proceed safely.
+ *
+ * Returns the current SagaState
+ */
+func (s Saga) RecoverSagaState(sagaId string, recoveryType SagaRecoveryType) (*SagaState, error) {
+	return recoverState(sagaId, s, recoveryType)
+}
+
+/*
+ * Returns a list of active SagaIds or an error
+ */
+func (s Saga) GetActiveSagas() ([]string, error) {
+	return s.log.GetActiveSagas()
+}
+
+/*
+ * logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
+ */
+func (s Saga) logMessage(state *SagaState, msg sagaMessage) (*SagaState, error) {
+
+	//verify that the applied message results in a valid state
+	newState, err := updateSagaState(state, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//try durably storing the message
+	err = s.log.LogMessage(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return newState, nil
 }

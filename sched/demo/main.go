@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
-	"sync"
 
 	msg "github.com/scootdev/scoot/messages"
-	saga "github.com/scootdev/scoot/saga"
+	s "github.com/scootdev/scoot/saga"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	distributor "github.com/scootdev/scoot/sched/distributor"
+
+	"os"
+	"sync"
 )
 
 /* demo code */
@@ -20,6 +22,7 @@ func main() {
 
 	workCh := make(chan msg.Job)
 	distributor := &distributor.RoundRobin{}
+	saga := s.MakeInMemorySaga()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -30,21 +33,50 @@ func main() {
 	}()
 
 	go func() {
-		scheduleWork(workCh, cluster, distributor)
+		scheduleWork(workCh, cluster, distributor, saga)
 		wg.Done()
 	}()
 
 	wg.Wait()
+
+	ids, err := saga.GetActiveSagas()
+
+	// we are using an in memory saga here if we can't get the active sagas something is
+	// very wrong just exit the program.
+	if err != nil {
+		fmt.Println("ERROR getting active sagas ", err)
+		os.Exit(2)
+	}
+
+	completedSagas := 0
+
+	for _, sagaId := range ids {
+
+		sagaState, err := saga.RecoverSagaState(sagaId, s.ForwardRecovery)
+		if err != nil {
+			// For now just print error in actual scheduler we'd want to retry multiple times,
+			// before putting it on a deadletter queue
+			fmt.Println(fmt.Sprintf("ERROR recovering saga state for %s: %s", sagaId, err))
+		}
+
+		// all Sagas are expected to be completed
+		if !sagaState.IsSagaCompleted() {
+			fmt.Println(fmt.Sprintf("Expected all Sagas to be Completed %s is not", sagaId))
+		} else {
+			completedSagas++
+		}
+	}
+
+	fmt.Println("Jobs Completed:", completedSagas)
 }
 
 func scheduleWork(
 	workCh <-chan msg.Job,
 	cluster cm.Cluster,
-	distributor distributor.Distributor) {
+	distributor distributor.Distributor,
+	saga s.Saga) {
 
 	var wg sync.WaitGroup
-	saga := saga.MakeInMemorySaga()
-
 	for work := range workCh {
 		node := distributor.DistributeWork(work, cluster)
 
