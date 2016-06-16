@@ -24,4 +24,12 @@ type SagaLog interface {
 	 * specified saga.
 	 */
 	GetMessages(sagaId string) ([]sagaMessage, error)
+
+	/*
+	 * Returns a list of all in progress sagaIds.
+	 * This MUST include all not completed sagaIds.
+	 * It may also included completed sagas
+	 * Returns an error if it fails.
+	 */
+	GetActiveSagas() ([]string, error)
 }

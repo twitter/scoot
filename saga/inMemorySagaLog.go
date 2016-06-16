@@ -27,32 +27,31 @@ func MakeInMemorySaga() Saga {
 }
 
 func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
-	fmt.Println(fmt.Sprintf("Saga %s: %s %s", msg.sagaId, msg.msgType.String(), msg.taskId))
-
-	sagaId := msg.sagaId
-	var err error
 
 	log.mutex.Lock()
+	defer log.mutex.Unlock()
+
+	fmt.Println(fmt.Sprintf("Saga %s: %s %s", msg.sagaId, msg.msgType.String(), msg.taskId))
+	sagaId := msg.sagaId
+
 	msgs, ok := log.sagas[sagaId]
 	if !ok {
 		return errors.New(fmt.Sprintf("Saga: %s is not Started yet.", msg.sagaId))
 	}
 
 	log.sagas[sagaId] = append(msgs, msg)
-	log.mutex.Unlock()
-	return err
+	return nil
 }
 
 func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 	log.mutex.Lock()
+	defer log.mutex.Unlock()
 
 	fmt.Println(fmt.Sprintf("Start Saga %s", sagaId))
 
 	startMsg := MakeStartSagaMessage(sagaId, job)
 	log.sagas[sagaId] = []sagaMessage{startMsg}
-
-	log.mutex.Unlock()
 
 	return nil
 }
@@ -60,12 +59,29 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
 
 	log.mutex.RLock()
+	defer log.mutex.RUnlock()
+
 	msgs, ok := log.sagas[sagaId]
-	log.mutex.RUnlock()
 
 	if ok {
 		return msgs, nil
 	} else {
 		return nil, nil
 	}
+}
+
+/*
+ * Returns all Sagas Started since this InMemory Saga was created
+ */
+func (log *inMemorySagaLog) GetActiveSagas() ([]string, error) {
+	log.mutex.RLock()
+	defer log.mutex.RUnlock()
+
+	keys := make([]string, 0, len(log.sagas))
+
+	for key, _ := range log.sagas {
+		keys = append(keys, key)
+	}
+
+	return keys, nil
 }
