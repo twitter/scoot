@@ -10,14 +10,14 @@ import (
 func main() {
 	dialer, err := conn.UnixDialer()
 	if err != nil {
-		log.Fatal("Cannot determine Scoot address", err)
+		log.Fatal("Cannot determine Local Scoot address", err)
 	}
 	cli, err := cli.NewCliClient(conn.NewCachingDialer(dialer))
 	if err != nil {
-		log.Fatal("Cannot initalize Scoot CLI: ", err)
+		log.Fatal("Cannot initalize Local Scoot CLI: ", err)
 	}
 	err = cli.Exec()
 	if err != nil {
-		log.Fatal("error running scootcl", err)
+		log.Fatal("error running scootcl ", err)
 	}
 }

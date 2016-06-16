@@ -23,7 +23,7 @@ func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
 
 	rootCmd := &cobra.Command{
 		Use:                "scootcl",
-		Short:              "Scootcl is a command-line client to Scoot",
+		Short:              "Scootcl is a command-line client to Local Scoot",
 		Run:                func(*cobra.Command, []string) {},
 		PersistentPostRunE: r.Close,
 	}
