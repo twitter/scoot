@@ -9,6 +9,8 @@ default:
 	go build ./...
 
 dependencies: 
+	# get all dependencies needed to run scoot / check if there have
+	# been updates since they were first installed
 	go get -t -u github.com/scootdev/scoot/...
 
 	# mockgen is only referenced for code gen, not imported directly
