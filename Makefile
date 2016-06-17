@@ -14,7 +14,7 @@ dependencies:
 	go get -t -u github.com/scootdev/scoot/...
 
 	# mockgen is only referenced for code gen, not imported directly
-	go get github.com/golang/mock/mockgen
+	go get -u github.com/golang/mock/mockgen
 
 generate: 
 	go generate ./...
@@ -30,3 +30,5 @@ clean-mockgen:
 
 clean: clean-mockgen
 	go clean ./...
+
+fullbuild: dependencies generate test
