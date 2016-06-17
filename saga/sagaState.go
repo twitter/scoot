@@ -76,6 +76,19 @@ func (state *SagaState) Job() []byte {
 }
 
 /*
+ * Returns a lists of task ids associated with this Saga
+ */
+func (state *SagaState) GetTaskIds() []string {
+	taskIds := make([]string, 0, len(state.taskState))
+
+	for id, _ := range state.taskState {
+		taskIds = append(taskIds, id)
+	}
+
+	return taskIds
+}
+
+/*
  * Returns true if the specified Task has been started,
  * fasle otherwise
  */
