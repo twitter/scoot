@@ -1,6 +1,7 @@
 package saga
 
 import (
+	"bytes"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
@@ -47,7 +48,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 		func(state *SagaState) bool {
 
 			msg := MakeEndSagaMessage(state.SagaId())
-
 			newState, err := updateSagaState(state, msg)
 
 			validTransition := true
@@ -71,7 +71,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsSagaCompleted()
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
@@ -89,7 +90,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsSagaAborted()
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
@@ -100,70 +102,81 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	// StartTask messages are valid unless a Saga has been Completed or Aborted
 	properties.Property("StartTask message is valid or returns an Error", prop.ForAll(
 
-		func(state *SagaState, taskId string) bool {
+		func(state *SagaState, taskId string, data []byte) bool {
 
 			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted()
 
-			msg := MakeStartTaskMessage(state.SagaId(), taskId, nil)
+			msg := MakeStartTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsTaskStarted(taskId) &&
+				bytes.Equal(newState.GetStartTaskData(taskId), data)
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
 		},
 		GenSagaState(),
 		GenId(),
+		gen.SliceOf(gen.UInt8()),
 	))
 
 	// EndTask messages are valid if there is a corresponding StartTask message and a Saga
 	// has not been aborted or completed
 	properties.Property("EndTask message is valid or returns an Error", prop.ForAll(
-		func(pair StateTaskPair) bool {
+		func(pair StateTaskPair, data []byte) bool {
 
 			state := &pair.state
 			taskId := pair.taskId
 
-			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() && state.IsTaskStarted(taskId)
+			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() &&
+				state.IsTaskStarted(taskId)
 
-			msg := MakeEndTaskMessage(state.SagaId(), taskId, nil)
+			msg := MakeEndTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsTaskCompleted(taskId) &&
+				bytes.Equal(newState.GetEndTaskData(taskId), data)
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
 		},
 		GenSagaStateAndTaskId(),
+		gen.SliceOf(gen.UInt8()),
 	))
 
 	properties.Property("StartCompTask message is valid or returns an Error", prop.ForAll(
-		func(pair StateTaskPair) bool {
+		func(pair StateTaskPair, data []byte) bool {
 
 			state := &pair.state
 			taskId := pair.taskId
 
-			validTransition := state.IsSagaAborted() && state.IsTaskStarted(taskId) && !state.IsSagaCompleted()
+			validTransition := state.IsSagaAborted() && state.IsTaskStarted(taskId) &&
+				!state.IsSagaCompleted()
 
-			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, nil)
+			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsCompTaskStarted(taskId) &&
+				bytes.Equal(newState.GetStartCompTaskData(taskId), data)
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
 		},
 		GenSagaStateAndTaskId(),
+		gen.SliceOf(gen.UInt8()),
 	))
 
 	properties.Property("EndCompTask message is valid or returns an Error", prop.ForAll(
-		func(pair StateTaskPair) bool {
+		func(pair StateTaskPair, data []byte) bool {
 
 			state := &pair.state
 			taskId := pair.taskId
@@ -171,17 +184,20 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			validTransition := state.IsSagaAborted() && !state.IsSagaCompleted() &&
 				state.IsTaskStarted(taskId) && state.IsCompTaskStarted(taskId)
 
-			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, nil)
+			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
-			validUpdate := validTransition && err == nil && newState != nil
+			validUpdate := validTransition && err == nil &&
+				newState != nil && newState.IsCompTaskCompleted(taskId) &&
+				bytes.Equal(newState.GetEndCompTaskData(taskId), data)
 			errorReturned := !validTransition && err != nil && newState == nil
 
 			return validUpdate || errorReturned
 		},
 		GenSagaStateAndTaskId(),
+		gen.SliceOf(gen.UInt8()),
 	))
 
 	properties.TestingRun(t)
