@@ -41,6 +41,17 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	parameters.MinSuccessfulTests = 1000
 	properties := gopter.NewProperties(parameters)
 
+	properties.Property("StartSaga message is never valid on an already started saga", prop.ForAll(
+		func(state *SagaState, data []byte) bool {
+			msg := MakeStartSagaMessage(state.SagaId(), data)
+			newState, err := updateSagaState(state, msg)
+
+			return err != nil && newState == nil
+		},
+		GenSagaState(),
+		gen.SliceOf(gen.UInt8()),
+	))
+
 	// EndSaga messages are valid if a saga has not been Aborted and all StartTask have EndTask messages
 	// If a saga has been aborted all StartTask messages must have corresponding StartCompTask / EndCompTask messages
 	// for an EndSaga message to be valid.

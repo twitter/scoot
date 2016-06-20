@@ -235,6 +235,9 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 	switch msg.msgType {
 
+	case StartSaga:
+		return nil, errors.New("InvalidSagaState: Cannot apply a StartSaga Message to an already existing Saga")
+
 	case EndSaga:
 
 		//A Successfully Completed Saga must have StartTask/EndTask pairs for all messages or
