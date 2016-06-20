@@ -1,82 +1,11 @@
 package saga
 
 import (
-	//"fmt"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"testing"
 )
-
-func genSagaState() gopter.Gen {
-
-	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-
-		sId, _ := gen.AnyString().Sample()
-		sagaId := sId.(string)
-
-		data, _ := gen.SliceOf(gen.UInt8()).Sample()
-		job := data.([]byte)
-
-		state, _ := makeSagaState(sagaId, job)
-
-		// is saga aborted or not
-		isAborted := genParams.NextBool()
-		state.sagaAborted = isAborted
-
-		//number of tasks to run in this saga
-		numTasks := int(genParams.NextUint64() % 100)
-
-		for i := 0; i < numTasks; i++ {
-			tId, _ := gen.AnyString().Sample()
-			taskId := tId.(string)
-			flags := TaskStarted
-
-			// randomly decide if task has been completed
-			if genParams.NextBool() {
-				flags = flags | TaskCompleted
-			}
-
-			if isAborted {
-				// randomly decide if comp tasks have started/completed
-				if genParams.NextBool() {
-					flags = flags | CompTaskStarted
-					if genParams.NextBool() {
-						flags = flags | CompTaskCompleted
-					}
-				}
-			}
-
-			state.taskState[taskId] = flags
-		}
-
-		// check if saga is in completed state then coin flip to decide if we actually log
-		// the end complete message
-		isCompleted := true
-		for _, id := range state.GetTaskIds() {
-			if state.IsSagaAborted() {
-				if !(state.IsTaskStarted(id) && state.IsCompTaskStarted(id) && state.IsCompTaskCompleted(id)) {
-					isCompleted = false
-					break
-				}
-			} else {
-				if !(state.IsTaskStarted(id) && state.IsTaskCompleted(id)) {
-					isCompleted = false
-					break
-				}
-			}
-		}
-
-		if isCompleted && genParams.NextBool() {
-			state.sagaCompleted = true
-		}
-
-		//fmt.Println("Generated Saga with %s tasks", numTasks)
-
-		genResult := gopter.NewGenResult(state, gopter.NoShrinker)
-		return genResult
-	}
-}
 
 func Test_ValidSagaId(t *testing.T) {
 	properties := gopter.NewProperties(nil)
@@ -107,8 +36,13 @@ func Test_ValidTaskId(t *testing.T) {
 }
 
 func Test_ValidateUpdateSagaState(t *testing.T) {
-	properties := gopter.NewProperties(nil)
+	parameters := gopter.DefaultTestParameters()
+	parameters.MinSuccessfulTests = 10000
+	properties := gopter.NewProperties(parameters)
 
+	// EndSaga messages are valid if a saga has not been Aborted and all StartTask have EndTask messages
+	// If a saga has been aborted all StartTask messages must have corresponding StartCompTask / EndCompTask messages
+	// for an EndSaga message to be valid.
 	properties.Property("EndSaga message is Valid or returns an error", prop.ForAll(
 		func(state *SagaState) bool {
 
@@ -135,64 +69,114 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				}
 			}
 
-			return (validTransition && err == nil && newState != nil) ||
-				(!validTransition && err != nil && newState == nil)
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
 		},
-		genSagaState(),
+		GenSagaState(),
+	))
+
+	// Abort messages are valid unless a Saga has been Completed
+	properties.Property("AbortSaga message is valid or returns an error", prop.ForAll(
+		func(state *SagaState) bool {
+			validTransition := !state.IsSagaCompleted()
+
+			msg := MakeAbortSagaMessage(state.SagaId())
+			newState, err := updateSagaState(state, msg)
+
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
+		},
+		GenSagaState(),
+	))
+
+	// StartTask messages are valid unless a Saga has been Completed or Aborted
+	properties.Property("StartTask message is valid or returns an Error", prop.ForAll(
+
+		func(state *SagaState, taskId string) bool {
+
+			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted()
+
+			msg := MakeStartTaskMessage(state.SagaId(), taskId, nil)
+			newState, err := updateSagaState(state, msg)
+
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
+		},
+		GenSagaState(),
+		GenId(),
+	))
+
+	// EndTask messages are valid if there is a corresponding StartTask message and a Saga
+	// has not been aborted or completed
+	properties.Property("EndTask message is valid or returns an Error", prop.ForAll(
+		func(pair StateTaskPair) bool {
+
+			state := &pair.state
+			taskId := pair.taskId
+
+			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() && state.IsTaskStarted(taskId)
+
+			msg := MakeEndTaskMessage(state.SagaId(), taskId, nil)
+			newState, err := updateSagaState(state, msg)
+
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
+		},
+		GenSagaStateAndTaskId(),
+	))
+
+	properties.Property("StartCompTask message is valid or returns an Error", prop.ForAll(
+		func(pair StateTaskPair) bool {
+
+			state := &pair.state
+			taskId := pair.taskId
+
+			validTransition := state.IsSagaAborted() && state.IsTaskStarted(taskId) && !state.IsSagaCompleted()
+
+			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, nil)
+			newState, err := updateSagaState(state, msg)
+
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
+		},
+		GenSagaStateAndTaskId(),
+	))
+
+	properties.Property("EndCompTask message is valid or returns an Error", prop.ForAll(
+		func(pair StateTaskPair) bool {
+
+			state := &pair.state
+			taskId := pair.taskId
+
+			validTransition := state.IsSagaAborted() && !state.IsSagaCompleted() &&
+				state.IsTaskStarted(taskId) && state.IsCompTaskStarted(taskId)
+
+			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, nil)
+			newState, err := updateSagaState(state, msg)
+
+			validUpdate := validTransition && err == nil && newState != nil
+			errorReturned := !validTransition && err != nil && newState == nil
+
+			return validUpdate || errorReturned
+		},
+		GenSagaStateAndTaskId(),
 	))
 
 	properties.TestingRun(t)
 }
-
-//todo a successful saga state transition should always be able to be recovered
-
-/*switch err {
-  case nil:
-    switch msg.msgType {
-
-      // you can always log a Start Saga Message
-    case StartSaga:
-      return true
-
-      // can only end a saga if all tasks & compensating tasks have been completed
-    case EndSaga:
-
-      for _, id := range state.GetTaskIds {
-        if(state.isAborted) {
-          if !(state.IsTaskStarted(id) &&
-              state.IsCompTaskStarted(id) &&
-              state.isCompTaskCompleted(id)) {
-            return false
-          }
-        } else {
-          if !(state.IsTaskStarted(id) &&
-            state.IsTaskCompleted(id)) {
-            return false
-          }
-        }
-      }
-      return true
-
-      // you can always log an Abort Saga Message
-    case AbortSaga:
-      return true
-
-      // you can't start a task if a saga is aborted : TODO Caitie fix in code
-    case StartTask:
-      return true
-
-      // you can't end a task if the saga is aborted : TODO Caitie fix
-      // you can't end a task if the task has not been started
-    case EndTask:
-      id := msg.taskId
-
-      if !state.IsTaskStarted(id) {
-        return false
-      }
-
-    case StartCompTask:
-    case EndCompTask:
-    }
-  default:
-  }
-}*/
