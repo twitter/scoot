@@ -37,7 +37,7 @@ func Test_ValidTaskId(t *testing.T) {
 
 func Test_ValidateUpdateSagaState(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 10000
+	parameters.MinSuccessfulTests = 1000
 	properties := gopter.NewProperties(parameters)
 
 	// EndSaga messages are valid if a saga has not been Aborted and all StartTask have EndTask messages
@@ -131,6 +131,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeEndTaskMessage(state.SagaId(), taskId, nil)
 			newState, err := updateSagaState(state, msg)
 
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil && newState != nil
 			errorReturned := !validTransition && err != nil && newState == nil
 
@@ -150,6 +152,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, nil)
 			newState, err := updateSagaState(state, msg)
 
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil && newState != nil
 			errorReturned := !validTransition && err != nil && newState == nil
 
@@ -170,6 +174,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, nil)
 			newState, err := updateSagaState(state, msg)
 
+			// either we made a valid transition and had a valid update or applying
+			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil && newState != nil
 			errorReturned := !validTransition && err != nil && newState == nil
 

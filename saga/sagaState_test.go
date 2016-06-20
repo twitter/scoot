@@ -21,7 +21,7 @@ func TestsagaStateFactory(t *testing.T) {
 	}
 }
 
-func TestSagaState_AbortSaga(t *testing.T) {
+/*func TestSagaState_AbortSaga(t *testing.T) {
 	sagaId := "testSaga"
 	state, _ := makeSagaState(sagaId, nil)
 
@@ -423,7 +423,7 @@ func TestSagaState_ValidateTaskId(t *testing.T) {
 	if err == nil {
 		t.Error(fmt.Sprintf("Invalid Task Id Should Return Error"))
 	}
-}
+}*/
 
 func TestSagaState_Copy(t *testing.T) {
 	s1, _ := makeSagaState("sagaId", nil)
