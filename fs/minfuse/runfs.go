@@ -19,13 +19,13 @@ import (
 )
 
 type Options struct {
-	src          string
-	mountpoint   string
-	strategyList []string
-	async        bool
-	trace        bool
-	threadUnsafe bool
-	maxReadahead uint32
+	Src          string
+	Mountpoint   string
+	StrategyList []string
+	Async        bool
+	Trace        bool
+	ThreadUnsafe bool
+	MaxReadahead uint32
 }
 
 func SetupLog() {
@@ -48,28 +48,31 @@ func InitFlags() (*Options, error) {
 	}
 
 	opts := Options{
-		src:          *src,
-		mountpoint:   *mountpoint,
-		trace:        *trace,
-		strategyList: strings.Split(*serveStrategy, ";"),
-		async:        true,
-		threadUnsafe: true,
-		maxReadahead: uint32(4 * 1024 * 1024),
+		Src:          *src,
+		Mountpoint:   *mountpoint,
+		Trace:        *trace,
+		StrategyList: strings.Split(*serveStrategy, ";"),
+		Async:        true,
+		ThreadUnsafe: true,
+		MaxReadahead: uint32(4 * 1024 * 1024),
 	}
-	for _, strategy := range opts.strategyList {
+	for _, strategy := range opts.StrategyList {
+		if strategy == "" {
+			continue
+		}
 		switch {
 		case strategy == "async":
-			opts.async = true
+			opts.Async = true
 		case strategy == "sync":
-			opts.async = false
+			opts.Async = false
 		case strategy == "serial":
-			opts.threadUnsafe = true
+			opts.ThreadUnsafe = true
 		case strategy == "threadpool":
-			opts.threadUnsafe = false
+			opts.ThreadUnsafe = false
 		case strings.HasPrefix(strategy, "readahead_mb="):
 			readaheadStr := strings.Split(strategy, "=")[1]
 			if readahead, err := strconv.ParseFloat(readaheadStr, 32); err == nil {
-				opts.maxReadahead = uint32(readahead * 1024 * 1024)
+				opts.MaxReadahead = uint32(readahead * 1024 * 1024)
 				break
 			}
 			fallthrough
@@ -82,10 +85,10 @@ func InitFlags() (*Options, error) {
 }
 
 func Runfs(opts *Options) {
-	snap := snapshots.NewFileBackedSnapshot(opts.src, "only")
+	snap := snapshots.NewFileBackedSnapshot(opts.Src, "only")
 	minfs := NewSlimMinFs(snap)
 
-	if opts.trace {
+	if opts.Trace {
 		fuse.Trace = true
 		snapshots.Trace = true
 		min.Trace = true
@@ -93,18 +96,18 @@ func Runfs(opts *Options) {
 
 	options := []fuse.MountOption{
 		fuse.DefaultPermissions(),
-		fuse.MaxReadahead(opts.maxReadahead),
+		fuse.MaxReadahead(opts.MaxReadahead),
 		fuse.FSName("slimfs"),
 		fuse.Subtype("fs"),
 		fuse.VolumeName("slimfs"),
 	}
-	if opts.async {
+	if opts.Async {
 		options = append(options, fuse.AsyncRead())
 	}
 
 	log.Print("About to Mount")
-	fuse.Unmount(opts.mountpoint)
-	conn, err := fuse.Mount(opts.mountpoint, fuse.MakeAlloc(), options...)
+	fuse.Unmount(opts.Mountpoint)
+	conn, err := fuse.Mount(opts.Mountpoint, fuse.MakeAlloc(), options...)
 	if err != nil {
 		log.Fatal("Couldn't mount", err)
 	}
@@ -125,18 +128,18 @@ func Runfs(opts *Options) {
 	}()
 
 	defer func() {
-		if err := fuse.Unmount(opts.mountpoint); err != nil {
-			log.Printf("error in call to Unmount(%s): %s", opts.mountpoint, err)
+		if err := fuse.Unmount(opts.Mountpoint); err != nil {
+			log.Printf("error in call to Unmount(%s): %s", opts.Mountpoint, err)
 			return
 		}
-		log.Printf("called Umount on %s", opts.mountpoint)
+		log.Printf("called Umount on %s", opts.Mountpoint)
 	}()
 
 	// Serve returns immediately and we wait for the first entry from the done channel before exiting main.
 	// We only care about the first error from either the signal handler or from the first serve thread to return.
 	// Exiting main will cause the remaining read threads to exit.
 	log.Print("About to Serve")
-	done = min.Serve(conn, minfs, opts.threadUnsafe)
+	done = min.Serve(conn, minfs, opts.ThreadUnsafe)
 	err = <-done
 	log.Printf("Returning (might take a few seconds), err=%v", err)
 }
