@@ -279,6 +279,10 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 			return nil, errors.New("InvalidSagaState: Cannot StartTask after Saga has been aborted")
 		}
 
+		if state.IsTaskCompleted(msg.taskId) {
+			return nil, errors.New("InvalidSagaState: Cannot StartTask after it has been completed")
+		}
+
 		if msg.data != nil {
 			state.addTaskData(msg.taskId, msg.msgType, msg.data)
 		}
@@ -327,7 +331,11 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 		// All StartCompTask Messages must have a preceding StartTask Message
 		if !state.IsTaskStarted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSaga State: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+		}
+
+		if state.IsCompTaskCompleted(msg.taskId) {
+			return nil, fmt.Errorf("InvalidSagaState: Cannot StartCompTask after it has been completed.  taskId: %s", msg.taskId)
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskStarted

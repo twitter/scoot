@@ -6,6 +6,11 @@ import (
 	"github.com/leanovate/gopter/gen"
 )
 
+//
+// Saga Generators contains Generator methods that are useful
+// when doing property based testing
+//
+
 // Randomly generates an Id that is valid for
 // use as a sagaId or taskId
 func genId(genParams *gopter.GenParameters) string {

@@ -21,6 +21,20 @@ func TestsagaStateFactory(t *testing.T) {
 	}
 }
 
+func TestSagaState_ValidateSagaId(t *testing.T) {
+	err := validateSagaId("")
+	if err == nil {
+		t.Error(fmt.Sprintf("Invalid Saga Id Should Return Error"))
+	}
+}
+
+func TestSagaState_ValidateTaskId(t *testing.T) {
+	err := validateTaskId("")
+	if err == nil {
+		t.Error(fmt.Sprintf("Invalid Task Id Should Return Error"))
+	}
+}
+
 func TestSagaState_Copy(t *testing.T) {
 	s1, _ := makeSagaState("sagaId", nil)
 	s2 := copySagaState(s1)

@@ -8,34 +8,6 @@ import (
 	"testing"
 )
 
-func Test_ValidSagaId(t *testing.T) {
-	properties := gopter.NewProperties(nil)
-	properties.Property("Empty String is Invalid SagaId", prop.ForAll(
-		func(id string) bool {
-			err := validateSagaId(id)
-
-			return (err != nil && id == "") || err == nil
-		},
-		gen.AnyString(),
-	))
-
-	properties.TestingRun(t)
-}
-
-func Test_ValidTaskId(t *testing.T) {
-	properties := gopter.NewProperties(nil)
-	properties.Property("Empty String is Invalid TaskId", prop.ForAll(
-		func(id string) bool {
-			err := validateTaskId(id)
-
-			return (err != nil && id == "") || err == nil
-		},
-		gen.AnyString(),
-	))
-
-	properties.TestingRun(t)
-}
-
 func Test_ValidateUpdateSagaState(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 1000
@@ -113,9 +85,12 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	// StartTask messages are valid unless a Saga has been Completed or Aborted
 	properties.Property("StartTask message is valid or returns an Error", prop.ForAll(
 
-		func(state *SagaState, taskId string, data []byte) bool {
+		func(pair StateTaskPair, data []byte) bool {
 
-			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted()
+			state := &pair.state
+			taskId := pair.taskId
+
+			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() && !state.IsTaskCompleted(taskId)
 
 			msg := MakeStartTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
@@ -129,8 +104,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			return validUpdate || errorReturned
 		},
-		GenSagaState(),
-		GenId(),
+		GenSagaStateAndTaskId(),
 		gen.SliceOf(gen.UInt8()),
 	))
 
@@ -167,8 +141,8 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			state := &pair.state
 			taskId := pair.taskId
 
-			validTransition := state.IsSagaAborted() && state.IsTaskStarted(taskId) &&
-				!state.IsSagaCompleted()
+			validTransition := state.IsSagaAborted() && !state.IsSagaCompleted() &&
+				state.IsTaskStarted(taskId) && !state.IsCompTaskCompleted(taskId)
 
 			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
