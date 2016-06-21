@@ -231,7 +231,7 @@ func TestStartCompTask(t *testing.T) {
 
 	state, err = s.StartCompensatingTask(state, "task1", nil)
 	if err != nil {
-		t.Error("Expected StartCompensatingTask to not return an error")
+		t.Error(fmt.Sprintf("Expected StartCompensatingTask to not return an error: %s", err))
 	}
 }
 

@@ -48,6 +48,12 @@ func recoverState(sagaId string, saga Saga, recoveryType SagaRecoveryType) (*Sag
 	}
 
 	for _, msg := range msgs {
+		// skip applying StartSaga message we already did this
+		// duplicate messages are just ignored since msgs are idempotent
+		if msg.msgType == StartSaga {
+			continue
+		}
+
 		state, err = updateSagaState(state, msg)
 		if err != nil {
 			return nil, err
