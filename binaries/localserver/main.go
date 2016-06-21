@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/scootdev/scoot/local/protocol"
 	"github.com/scootdev/scoot/local/server"
-	"github.com/scootdev/scoot/runner/fake"
+	"github.com/scootdev/scoot/runner/local"
 	"log"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error locating Scoot instance: ", err)
 	}
-	r := fake.NewRunner()
+	r := local.NewSimpleRunner(nil)
 	s, err := server.NewServer(r)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

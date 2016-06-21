@@ -79,8 +79,10 @@ type Runner interface {
 	// enqueue cmd (leading to state PENDING)
 	// run cmd immediately (leading to state RUNNING)
 	// check if cmd is well-formed, and reject it if not (leading to state FAILED)
-	Run(cmd *Command) (*ProcessStatus, error)
+	// wait a very short period of time for cmd to finish
+	// Run may not wait indefinitely for cmd to finish. This is an async API.
+	Run(cmd *Command) (ProcessStatus, error)
 
 	// Status checks the status of run.
-	Status(run RunId) (*ProcessStatus, error)
+	Status(run RunId) (ProcessStatus, error)
 }
