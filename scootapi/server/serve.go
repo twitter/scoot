@@ -27,7 +27,7 @@ func NewHandler() scoot.Proc {
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.Job, error) {
-	log.Println("Running job %v", def)
+	log.Println("Running job", def)
 	r := scoot.NewInvalidRequest()
 	msg := "Scoot is working by saying it won't work"
 	r.Message = &msg
