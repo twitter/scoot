@@ -11,7 +11,7 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
-	dialer := client.NewDialer("localhost:9090", transportFactory, protocolFactory)
+	dialer := client.NewDialer(transportFactory, protocolFactory)
 	client, err := client.NewClient(dialer)
 	if err != nil {
 		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)

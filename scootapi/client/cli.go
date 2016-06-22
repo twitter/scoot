@@ -32,8 +32,8 @@ func NewClient(dialer *Dialer) (*Client, error) {
 	return r, nil
 }
 
-func NewDialer(addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) *Dialer {
-	return &Dialer{addr, transportFactory, protocolFactory, nil}
+func NewDialer(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) *Dialer {
+	return &Dialer{"", transportFactory, protocolFactory, nil}
 }
 
 type Dialer struct {
@@ -45,6 +45,9 @@ type Dialer struct {
 
 func (d *Dialer) Dial() (*scoot.ProcClient, error) {
 	if d.client == nil {
+		if d.addr == "" {
+			return nil, fmt.Errorf("Cannot dial: no address")
+		}
 		log.Println("Dialing", d.addr)
 		var transport thrift.TTransport
 		transport, err := thrift.NewTSocket(d.addr)
