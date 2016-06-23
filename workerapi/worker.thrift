@@ -1,15 +1,24 @@
+//Questions:
+//  Should the worker or the scheduler generate taskID?
+//  Will we want to support batching of tasks?
+//  Do we need a way to restart workers?
+//  What else would be useful in WorkerStatus? Load info?
+
 enum Status {
   UNKNOWN = 0
   READY = 1
   PENDING = 2
-  FAILURE = 3
-  RUNNING = 4
-  SUCCESS = 5
-  ABORTED = 6
-  TIMEOUT = 7
+  RUNNING = 3
+  COMPLETED = 4
+  ABORTED = 5
+  TIMEOUT = 6
 }
 
 struct WorkerStatus {
+  1: required list<string> taskIds
+}
+
+struct TaskStatus {
   1: required Status status
   2: optional string taskId
   3: optional string outUri
@@ -20,19 +29,14 @@ struct WorkerStatus {
 
 struct Task {
   1: required list<string> argv
-  2: optional list<string> env
-  3: optional string dir
-  4: optional string taskId
-  5: optional string sourceId //Allows snapshotId or patchId
-  6: optional i32 timeout_ms
+  2: optional string taskId
+  3: optional string snapshotId
+  4: optional i32 timeoutMs
 }
 
 service Worker {
-  WorkerStatus QueryStatus()
-  WorkerStatus Run(1: Task task)
-  WorkerStatus Abort(
-    1: string taskId
-    2: bool force
-  )
-  // Do we need a func to restart workers?
+  WorkerStatus QueryWorker()
+  TaskStatus RunTask(1: Task task)
+  TaskStatus QueryTask(1: string taskId)
+  TaskStatus AbortTask(1: string taskId)
 }
