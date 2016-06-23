@@ -37,7 +37,7 @@ func NewDialer(transportFactory thrift.TTransportFactory, protocolFactory thrift
 }
 
 type Dialer struct {
-	addr             string
+	addr             string // modified by flag parsing
 	transportFactory thrift.TTransportFactory
 	protocolFactory  thrift.TProtocolFactory
 	client           *scoot.ProcClient
