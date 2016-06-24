@@ -55,6 +55,8 @@ func (q *simpleQueue) Enqueue(job sched.Job) (string, error) {
 }
 
 func (q *simpleQueue) Close() error {
+	close(q.inCh)
+	close(q.outCh)
 	return nil
 }
 

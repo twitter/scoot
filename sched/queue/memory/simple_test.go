@@ -2,6 +2,7 @@ package memory_test
 
 import (
 	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
 	"testing"
 )
@@ -59,5 +60,29 @@ func TestEnqueue(t *testing.T) {
 	}
 	if outTask.SnapshotId != task.SnapshotId {
 		t.Fatalf("Unequal task.SnapshotId %v %v", outTask.SnapshotId, task.SnapshotId)
+	}
+}
+
+func TestBackpressure(t *testing.T) {
+	q, _ := memory.NewSimpleQueue()
+	job := sched.Job{}
+	task := sched.Task{}
+	task.Id = "1"
+	task.Command = []string{"echo", "foo"}
+	task.SnapshotId = "snapshot-id"
+	job.Tasks = []sched.Task{task}
+	_, err := q.Enqueue(job)
+	if err != nil {
+		t.Fatalf("Error enqueueing %v", err)
+	}
+	_, err = q.Enqueue(job)
+	if err == nil {
+		t.Fatalf("No error enqueueing a second job")
+	}
+	switch err := err.(type) {
+	case *queue.CanNotScheduleNow:
+		// All good!
+	default:
+		t.Fatalf("Unexpected error when enqueueing a second job %v", err)
 	}
 }

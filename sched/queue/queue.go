@@ -5,7 +5,11 @@ import (
 	"time"
 )
 
+// Note: queued jobs can be read straight out of a channel that should
+// be returned along with the creator of a Queue
 type Queue interface {
+	// Enqueue enqueues a job and assigns it an ID. Errors may be
+	// an *InvalidJobRequest or a *CanNotScheduleNow
 	Enqueue(job sched.Job) (string, error)
 	Close() error
 }
