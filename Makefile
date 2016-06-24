@@ -29,6 +29,12 @@ update-dependencies:
 generate: 
 	go generate $$(go list ./... | grep -v /vendor/)
 
+format:
+	go fmt $$(go list ./... | grep -v /vendor/)
+
+vet:
+	go vet $$(go list ./... | grep -v /vendor/)
+
 test:
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh

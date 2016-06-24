@@ -9,8 +9,8 @@ before_install:
   - git submodule update --init --recursive
 
 before_script:
-  - go fmt ./...
-  - go vet $(go list ./...)
+  - make fmt
+  - make vet
 
 script:
   - make test
