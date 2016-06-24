@@ -1,4 +1,4 @@
-package messages
+package sched
 
 /*
  * Message representing a Job, Scoot can Schedule
