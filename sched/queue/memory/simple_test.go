@@ -85,4 +85,6 @@ func TestBackpressure(t *testing.T) {
 	default:
 		t.Fatalf("Unexpected error when enqueueing a second job %v", err)
 	}
+
+	q.Close()
 }
