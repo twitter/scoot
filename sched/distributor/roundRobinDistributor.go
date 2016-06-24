@@ -1,7 +1,7 @@
 package distributor
 
 import (
-	msg "github.com/scootdev/scoot/messages"
+	"github.com/scootdev/scoot/sched"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 )
 
@@ -13,7 +13,7 @@ type RoundRobin struct {
 	currentIndex int
 }
 
-func (r *RoundRobin) DistributeWork(work msg.Job, cluster cm.Cluster) cm.Node {
+func (r *RoundRobin) DistributeWork(work sched.Job, cluster cm.Cluster) cm.Node {
 	nodes := cluster.Members()
 
 	r.currentIndex++

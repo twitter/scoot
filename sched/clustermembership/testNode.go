@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-)
 
-import msg "github.com/scootdev/scoot/messages"
+	"github.com/scootdev/scoot/sched"
+)
 
 type TestNode struct {
 	id           string
@@ -19,15 +19,15 @@ func (n *TestNode) Id() string {
 	return n.id
 }
 
-func (n *TestNode) SendMessage(task msg.Task) error {
+func (n *TestNode) SendMessage(task sched.Task) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
 	time.Sleep(delayMS)
 
 	n.mutex.Lock()
-	for _, cmd := range task.Commands {
-		n.MsgsReceived = append(n.MsgsReceived, cmd)
+	for _, arg := range task.Command {
+		n.MsgsReceived = append(n.MsgsReceived, arg)
 	}
 	n.mutex.Unlock()
 

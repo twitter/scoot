@@ -4,10 +4,9 @@ package sched
  * Message representing a Job, Scoot can Schedule
  */
 type Job struct {
-	Id        string
-	Jobtype   string
-	Tasks     []Task
-	ContextId string
+	Id      string
+	JobType string
+	Tasks   []Task
 }
 
 /*
@@ -15,7 +14,6 @@ type Job struct {
  */
 type Task struct {
 	Id         string
-	Commands   []string
+	Command    []string // Argv to run
 	SnapshotId string
-	ContextId  string
 }

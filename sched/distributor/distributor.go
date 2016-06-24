@@ -1,7 +1,7 @@
 package distributor
 
 import (
-	msg "github.com/scootdev/scoot/messages"
+	"github.com/scootdev/scoot/sched"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 )
 
@@ -15,5 +15,5 @@ import (
  * cluster is the Cluster to schedule the work on
  */
 type Distributor interface {
-	DistributeWork(work msg.Job, cluster cm.Cluster) cm.Node
+	DistributeWork(work sched.Job, cluster cm.Cluster) cm.Node
 }
