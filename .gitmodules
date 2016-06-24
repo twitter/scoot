@@ -1,0 +1,30 @@
+[submodule "vendor/github.com/apache/thrift"]
+	path = vendor/github.com/apache/thrift
+	url = https://github.com/apache/thrift
+[submodule "vendor/github.com/scootdev/fuse"]
+	path = vendor/github.com/scootdev/fuse
+	url = https://github.com/scootdev/fuse
+[submodule "vendor/github.com/spf13/cobra"]
+	path = vendor/github.com/spf13/cobra
+	url = https://github.com/spf13/cobra
+[submodule "vendor/github.com/spf13/pflag"]
+	path = vendor/github.com/spf13/pflag
+	url = https://github.com/spf13/pflag
+[submodule "vendor/golang.org/x/net"]
+	path = vendor/golang.org/x/net
+	url = https://go.googlesource.com/net
+[submodule "vendor/google.golang.org/grpc"]
+	path = vendor/google.golang.org/grpc
+	url = https://github.com/grpc/grpc-go
+[submodule "vendor/github.com/golang/protobuf"]
+	path = vendor/github.com/golang/protobuf
+	url = https://github.com/golang/protobuf
+[submodule "vendor/github.com/golang/mock"]
+	path = vendor/github.com/golang/mock
+	url = https://github.com/golang/mock
+[submodule "vendor/github.com/leanovate/gopter"]
+	path = vendor/github.com/leanovate/gopter
+	url = https://github.com/leanovate/gopter
+[submodule "vendor/golang.org/x/sys"]
+	path = vendor/golang.org/x/sys
+	url = https://go.googlesource.com/sys
