@@ -6,7 +6,7 @@ go:
   - 1.6
 
 before_install:
-  - go get -t github.com/scootdev/scoot/...
+  - git submodule update --init --recursive
 
 before_script:
   - go fmt ./...

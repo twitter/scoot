@@ -5,19 +5,29 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
+GO15VENDOREXPERIMENT := 1
+export GO15VENDOREXPERIMENT
+
 default:
 	go build ./...
 
-dependencies: 
-	# get all dependencies needed to run scoot / check if there have
-	# been updates since they were first installed
-	go get -t -u github.com/scootdev/scoot/...
+dependencies:
+    # Checkout our vendored direct dependencies.
+    # It's up to the library maintainers to vendor their dependencies (our transitive dependencies).
+    # In the event that nested vendor dirs causes conflicts, we can flatten it / rewrite imports.
+    # This approach is subject to change if golang ever formally blesses a different practice.
+	git submodule update --init --recursive
 
-	# mockgen is only referenced for code gen, not imported directly
+    # Install mockgen binary (it's only referenced for code gen, not imported directly.)
+    # Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
+	go get github.com/golang/mock/mockgen
+
+update-dependencies:
+	vendetta -u -p # Requires calling 'go get github.com/dpw/vendetta'
 	go get -u github.com/golang/mock/mockgen
 
 generate: 
-	go generate ./...
+	go generate $$(go list ./... | grep -v /vendor/)
 
 test:
 	go test -v -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
