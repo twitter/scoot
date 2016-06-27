@@ -9,21 +9,22 @@ GO15VENDOREXPERIMENT := 1
 export GO15VENDOREXPERIMENT
 
 default:
-	go build ./...
+	go build $$(go list ./... | grep -v /vendor/)
 
 dependencies:
-    # Checkout our vendored direct dependencies.
-    # It's up to the library maintainers to vendor their dependencies (our transitive dependencies).
-    # In the event that nested vendor dirs causes conflicts, we can flatten it / rewrite imports.
-    # This approach is subject to change if golang ever formally blesses a different practice.
+	# Checkout our vendored dependencies.
+	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
+	#       When used as a library, the vendor folder will be empty by default (if 'go get'd). 
 	git submodule update --init --recursive
 
-    # Install mockgen binary (it's only referenced for code gen, not imported directly.)
-    # Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
+	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
+	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
 	go get github.com/golang/mock/mockgen
 
 update-dependencies:
-	vendetta -u -p # Requires calling 'go get github.com/dpw/vendetta'
+	# TODO: some tools like pants (and glide?) require *all* transitive deps.
+	#vendetta -u -p # Requires calling 'go get github.com/dpw/vendetta', only does direct deps.
+	./deps.sh
 	go get -u github.com/golang/mock/mockgen
 
 generate: 
