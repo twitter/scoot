@@ -6,7 +6,7 @@ go:
   - 1.6
 
 before_install:
-  - git submodule update --init --recursive
+  - make dependencies
 
 before_script:
   - make format
