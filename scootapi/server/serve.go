@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"log"
 )
 
 func Serve(handler scoot.Proc, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
@@ -26,6 +27,7 @@ func NewHandler() scoot.Proc {
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.Job, error) {
+	log.Println("Running job", def)
 	r := scoot.NewInvalidRequest()
 	msg := "Scoot is working by saying it won't work"
 	r.Message = &msg
