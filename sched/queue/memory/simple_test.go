@@ -44,7 +44,8 @@ func TestEnqueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error enqueueing %v", err)
 	}
-	outJob := <-ch
+	out := <-ch
+	outJob := out.Job()
 	if outJob.Id != id {
 		t.Fatalf("Unexpected jobId %v (expected %v)", outJob.Id, id)
 	}
@@ -61,6 +62,7 @@ func TestEnqueue(t *testing.T) {
 	if outTask.SnapshotId != task.SnapshotId {
 		t.Fatalf("Unequal task.SnapshotId %v %v", outTask.SnapshotId, task.SnapshotId)
 	}
+	out.Dequeue()
 }
 
 func TestBackpressure(t *testing.T) {

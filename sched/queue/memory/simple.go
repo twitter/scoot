@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func NewSimpleQueue() (queue.Queue, chan sched.Job) {
+func NewSimpleQueue() (queue.Queue, chan queue.WorkItem) {
 	q := &simpleQueue{}
-	q.outCh = make(chan sched.Job, 1)
+	q.outCh = make(chan queue.WorkItem, 1)
 	q.inCh = make(chan enqueueReq)
 	go q.loop()
 	return q, q.outCh
@@ -20,7 +20,16 @@ func NewSimpleQueue() (queue.Queue, chan sched.Job) {
 type simpleQueue struct {
 	nextID int
 	inCh   chan enqueueReq
-	outCh  chan sched.Job
+	outCh  chan queue.WorkItem
+}
+
+type simpleWorkItem sched.Job
+
+func (i simpleWorkItem) Job() sched.Job {
+	return sched.Job(i)
+}
+
+func (i simpleWorkItem) Dequeue() {
 }
 
 type enqueueReq struct {
@@ -34,19 +43,9 @@ type enqueueResult struct {
 }
 
 func (q *simpleQueue) Enqueue(job sched.Job) (string, error) {
-	if job.Id != "" {
-		return "", queue.NewInvalidJobRequest(fmt.Sprintf("job.Id must be unset; was %v", job.Id))
-	}
-	if len(job.Tasks) == 0 {
-		return "", queue.NewInvalidJobRequest("job must have at least 1 task")
-	}
-	for _, task := range job.Tasks {
-		if task.Id == "" {
-			return "", queue.NewInvalidJobRequest("task.Id must be set")
-		}
-		if len(task.Command) == 0 {
-			return "", queue.NewInvalidJobRequest("task.Commands must be set")
-		}
+	err := queue.ValidateJob(job)
+	if err != nil {
+		return "", err
 	}
 	resultCh := make(chan enqueueResult)
 	q.inCh <- enqueueReq{job, resultCh}
@@ -72,7 +71,7 @@ func (q *simpleQueue) loop() {
 		q.nextID++
 		job.Id = id
 		select {
-		case q.outCh <- job:
+		case q.outCh <- simpleWorkItem(job):
 			req.resultCh <- enqueueResult{id, nil}
 		default:
 			req.resultCh <- enqueueResult{"", queue.NewCanNotScheduleNow(1*time.Second, "queue full")}
