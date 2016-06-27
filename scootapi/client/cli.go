@@ -9,21 +9,27 @@ import (
 )
 
 type Client struct {
-	rootCmd *cobra.Command
-	dialer  *Dialer
+	rootCmd          *cobra.Command
+	addr             string // modified by flag parsing
+	transportFactory thrift.TTransportFactory
+	protocolFactory  thrift.TProtocolFactory
+	client           *scoot.ProcClient
 }
 
 func (c *Client) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func NewClient(dialer *Dialer) (*Client, error) {
-	r := &Client{nil, dialer}
+func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) (*Client, error) {
+	r := &Client{}
+	r.transportFactory = transportFactory
+	r.protocolFactory = protocolFactory
 
 	rootCmd := &cobra.Command{
-		Use:   "scootapi",
-		Short: "scootapi is a command-line client to Cloud Scoot",
-		Run:   func(*cobra.Command, []string) {},
+		Use:                "scootapi",
+		Short:              "scootapi is a command-line client to Cloud Scoot",
+		Run:                func(*cobra.Command, []string) {},
+		PersistentPostRunE: r.Close,
 	}
 
 	r.rootCmd = rootCmd
@@ -32,41 +38,30 @@ func NewClient(dialer *Dialer) (*Client, error) {
 	return r, nil
 }
 
-func NewDialer(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) *Dialer {
-	return &Dialer{"", transportFactory, protocolFactory, nil}
-}
-
-type Dialer struct {
-	addr             string // modified by flag parsing
-	transportFactory thrift.TTransportFactory
-	protocolFactory  thrift.TProtocolFactory
-	client           *scoot.ProcClient
-}
-
-func (d *Dialer) Dial() (*scoot.ProcClient, error) {
-	if d.client == nil {
-		if d.addr == "" {
+func (c *Client) Dial() (*scoot.ProcClient, error) {
+	if c.client == nil {
+		if c.addr == "" {
 			return nil, fmt.Errorf("Cannot dial: no address")
 		}
-		log.Println("Dialing", d.addr)
+		log.Println("Dialing", c.addr)
 		var transport thrift.TTransport
-		transport, err := thrift.NewTSocket(d.addr)
+		transport, err := thrift.NewTSocket(c.addr)
 		if err != nil {
 			return nil, fmt.Errorf("Error opening socket: %v", err)
 		}
-		transport = d.transportFactory.GetTransport(transport)
+		transport = c.transportFactory.GetTransport(transport)
 		err = transport.Open()
 		if err != nil {
 			return nil, fmt.Errorf("Error opening transport: %v", err)
 		}
-		d.client = scoot.NewProcClientFactory(transport, d.protocolFactory)
+		c.client = scoot.NewProcClientFactory(transport, c.protocolFactory)
 	}
-	return d.client, nil
+	return c.client, nil
 }
 
-func (d *Dialer) Close() error {
-	if d.client != nil {
-		return d.client.Transport.Close()
+func (c *Client) Close(cmd *cobra.Command, args []string) error {
+	if c.client != nil {
+		return c.client.Transport.Close()
 	}
 	return nil
 }

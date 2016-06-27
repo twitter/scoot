@@ -13,14 +13,14 @@ func makeRunJobCmd(c *Client) *cobra.Command {
 		Short: "run a job",
 		RunE:  c.runJob,
 	}
-	r.Flags().StringVar(&c.dialer.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
 	return r
 }
 
 func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
-	client, err := c.dialer.Dial()
+	client, err := c.Dial()
 	if err != nil {
 		return err
 	}
