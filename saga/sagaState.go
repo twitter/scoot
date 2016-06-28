@@ -332,7 +332,7 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 		// All EndTask Messages must have a preceding StartTask Message
 		if !state.IsTaskStarted(msg.taskId) {
-			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a EndTask Message Before a StartTask Message, taskId: ", msg.taskId))
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a EndTask Message Before a StartTask Message, taskId: %s", msg.taskId))
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | TaskCompleted
