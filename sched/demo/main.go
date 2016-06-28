@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	msg "github.com/scootdev/scoot/messages"
 	s "github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/sched"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	distributor "github.com/scootdev/scoot/sched/distributor"
@@ -20,7 +20,7 @@ func main() {
 	fmt.Println("clusterMembers:", cluster.Members())
 	fmt.Println("")
 
-	workCh := make(chan msg.Job)
+	workCh := make(chan sched.Job)
 	distributor := &distributor.RoundRobin{}
 	saga := s.MakeInMemorySaga()
 
@@ -71,7 +71,7 @@ func main() {
 }
 
 func scheduleWork(
-	workCh <-chan msg.Job,
+	workCh <-chan sched.Job,
 	cluster cm.Cluster,
 	distributor distributor.Distributor,
 	saga s.Saga) {
@@ -81,7 +81,7 @@ func scheduleWork(
 		node := distributor.DistributeWork(work, cluster)
 
 		wg.Add(1)
-		go func(w msg.Job, n cm.Node) {
+		go func(w sched.Job, n cm.Node) {
 			defer wg.Done()
 
 			sagaId := w.Id
@@ -110,17 +110,17 @@ func scheduleWork(
  * For now just generates dummy tasks up to numTasks,
  * In reality this will pull off of work queue.
  */
-func generateTasks(work chan<- msg.Job, numTasks int) {
+func generateTasks(work chan<- sched.Job, numTasks int) {
 
 	for x := 0; x < numTasks; x++ {
 
-		work <- msg.Job{
+		work <- sched.Job{
 			Id:      fmt.Sprintf("Job_%d", x),
-			Jobtype: "testTask",
-			Tasks: []msg.Task{
-				msg.Task{
-					Id:       fmt.Sprintf("Task_1"),
-					Commands: []string{"testcmd", "testcmd2"},
+			JobType: "testTask",
+			Tasks: []sched.Task{
+				sched.Task{
+					Id:      fmt.Sprintf("Task_1"),
+					Command: []string{"testcmd", "testcmd2"},
 				},
 			},
 		}

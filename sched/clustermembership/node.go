@@ -1,10 +1,10 @@
 package cluster_membership
 
 import (
-	msg "github.com/scootdev/scoot/messages"
+	"github.com/scootdev/scoot/sched"
 )
 
 type Node interface {
 	Id() string
-	SendMessage(task msg.Task) error
+	SendMessage(task sched.Task) error
 }

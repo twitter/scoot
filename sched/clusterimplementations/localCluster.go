@@ -2,7 +2,7 @@ package cluster_implementations
 
 import (
 	"fmt"
-	msg "github.com/scootdev/scoot/messages"
+	"github.com/scootdev/scoot/sched"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	"math/rand"
 	"time"
@@ -17,7 +17,7 @@ type localNode struct {
 	name string
 }
 
-func (n localNode) SendMessage(task msg.Task) error {
+func (n localNode) SendMessage(task sched.Task) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
