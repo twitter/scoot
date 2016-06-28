@@ -12,6 +12,8 @@ default:
 	go build $$(go list ./... | grep -v /vendor/)
 
 dependencies:
+	# Populates the vendor directory to reflect the latest run of check-dependencies.
+
 	# Checkout our vendored dependencies.
 	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
 	#       When used as a library, the vendor folder will be empty by default (if 'go get'd). 
@@ -19,13 +21,13 @@ dependencies:
 
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
 	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
-	go get github.com/golang/mock/mockgen
+	go install github.com/golang/mock/mockgen
 
-update-dependencies:
-	# TODO: some tools like pants (and glide?) require *all* transitive deps.
-	#vendetta -u -p # Requires calling 'go get github.com/dpw/vendetta', only does direct deps.
+check-dependencies:
+	# Run this whenever a dependency is added.
+	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
 	./deps.sh
-	go get -u github.com/golang/mock/mockgen
+	go install github.com/golang/mock/mockgen
 
 generate: 
 	go generate $$(go list ./... | grep -v /vendor/)

@@ -32,7 +32,7 @@ echo "Windows Deps."
 export GOOS=windows GOARCH=amd64
 get_deps "$scootdev/scoot"
 
-HANDLED=$(find $GOPATH -name .git | sort | uniq | sed -E "s,$GOPATH/src/|/\.git,,g")
+HANDLED=$(find $GOPATH -name .git | sort | uniq | sed -E "s,$GOPATH/src/|/\.git,,g" | grep -v scootdev)
 
 cd "$SCOOT_ORIG"
 for dep in $HANDLED; do

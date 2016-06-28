@@ -1,9 +1,6 @@
 [submodule "vendor/github.com/apache/thrift"]
 	path = vendor/github.com/apache/thrift
 	url = https://github.com/apache/thrift
-[submodule "vendor/github.com/scootdev/fuse"]
-	path = vendor/github.com/scootdev/fuse
-	url = https://github.com/scootdev/fuse
 [submodule "vendor/github.com/spf13/cobra"]
 	path = vendor/github.com/spf13/cobra
 	url = https://github.com/spf13/cobra
@@ -28,6 +25,10 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
+#
+# Everything after here is a transitive dependency that is not required to use scoot.
+# See: github.com/pantsbuild/pants/issues/3606
+#
 [submodule "vendor/github.com/BurntSushi/toml"]
 	path = vendor/github.com/BurntSushi/toml
 	url = https://github.com/BurntSushi/toml
@@ -61,9 +62,6 @@
 [submodule "vendor/github.com/russross/blackfriday"]
 	path = vendor/github.com/russross/blackfriday
 	url = https://github.com/russross/blackfriday
-[submodule "vendor/github.com/scootdev/scoot"]
-	path = vendor/github.com/scootdev/scoot
-	url = https://github.com/scootdev/scoot
 [submodule "vendor/github.com/shurcooL/sanitized_anchor_name"]
 	path = vendor/github.com/shurcooL/sanitized_anchor_name
 	url = https://github.com/shurcooL/sanitized_anchor_name
