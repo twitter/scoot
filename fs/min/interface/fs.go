@@ -1,7 +1,7 @@
 package min
 
 import (
-	"github.com/scootdev/fuse"
+	"github.com/scootdev/scoot/fuse"
 )
 
 // The interface for our filesystem.

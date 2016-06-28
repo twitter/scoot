@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scootdev/fuse"
 	fs "github.com/scootdev/scoot/fs/min/interface"
 	"github.com/scootdev/scoot/fs/perf"
+	"github.com/scootdev/scoot/fuse"
 	"github.com/scootdev/scoot/snapshots"
 )
 

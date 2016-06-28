@@ -13,8 +13,8 @@ import (
 
 	_ "net/http/pprof"
 
-	"github.com/scootdev/fuse"
 	"github.com/scootdev/scoot/fs/min"
+	"github.com/scootdev/scoot/fuse"
 	"github.com/scootdev/scoot/snapshots"
 )
 
