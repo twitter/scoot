@@ -52,11 +52,14 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				}
 			}
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsSagaCompleted()
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},
@@ -71,11 +74,14 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeAbortSagaMessage(state.SagaId())
 			newState, err := updateSagaState(state, msg)
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsSagaAborted()
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},
@@ -95,12 +101,15 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeStartTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsTaskStarted(taskId) &&
 				bytes.Equal(newState.GetStartTaskData(taskId), data)
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},
@@ -122,12 +131,15 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeEndTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsTaskCompleted(taskId) &&
 				bytes.Equal(newState.GetEndTaskData(taskId), data)
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},
@@ -147,12 +159,15 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsCompTaskStarted(taskId) &&
 				bytes.Equal(newState.GetStartCompTaskData(taskId), data)
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},
@@ -172,12 +187,15 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, data)
 			newState, err := updateSagaState(state, msg)
 
+			// validate the correct error is returned
+			_, sErrorOk := err.(InvalidSagaStateError)
+
 			// either we made a valid transition and had a valid update or applying
 			// this message is an invalidTransition and an error was returned.
 			validUpdate := validTransition && err == nil &&
 				newState != nil && newState.IsCompTaskCompleted(taskId) &&
 				bytes.Equal(newState.GetEndCompTaskData(taskId), data)
-			errorReturned := !validTransition && err != nil && newState == nil
+			errorReturned := !validTransition && err != nil && sErrorOk && newState == nil
 
 			return validUpdate || errorReturned
 		},

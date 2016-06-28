@@ -1,7 +1,6 @@
 package saga
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -13,6 +12,34 @@ const (
 	CompTaskStarted
 	CompTaskCompleted
 )
+
+type InvalidSagaStateError struct {
+	s string
+}
+
+func (e InvalidSagaStateError) Error() string {
+	return e.s
+}
+
+func NewInvalidSagaStateError(msg string) error {
+	return InvalidSagaStateError{
+		s: msg,
+	}
+}
+
+type InvalidSagaMessageError struct {
+	s string
+}
+
+func (e InvalidSagaMessageError) Error() string {
+	return e.s
+}
+
+func NewInvalidSagaMessageError(msg string) error {
+	return InvalidSagaMessageError{
+		s: msg,
+	}
+}
 
 /*
  * Additional data about tasks to be committed to the log
@@ -230,13 +257,13 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 	state := copySagaState(s)
 
 	if msg.sagaId != state.sagaId {
-		return nil, fmt.Errorf("InvalidSagaMessage: sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId)
+		return nil, NewInvalidSagaMessageError(fmt.Sprintf("sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.sagaId))
 	}
 
 	switch msg.msgType {
 
 	case StartSaga:
-		return nil, errors.New("InvalidSagaState: Cannot apply a StartSaga Message to an already existing Saga")
+		return nil, NewInvalidSagaStateError("Cannot apply a StartSaga Message to an already existing Saga")
 
 	case EndSaga:
 
@@ -246,11 +273,11 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 
 			if state.sagaAborted {
 				if !(state.IsCompTaskStarted(taskId) && state.IsCompTaskCompleted(taskId)) {
-					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
+					return nil, NewInvalidSagaStateError(fmt.Sprintf("End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
 				}
 			} else {
 				if !state.IsTaskCompleted(taskId) {
-					return nil, errors.New(fmt.Sprintf("InvalidSagaState: End Saga Message cannot be applied to a Saga where Task %s has not completed", taskId))
+					return nil, NewInvalidSagaStateError(fmt.Sprintf("End Saga Message cannot be applied to a Saga where Task %s has not completed", taskId))
 				}
 			}
 		}
@@ -260,7 +287,7 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 	case AbortSaga:
 
 		if state.IsSagaCompleted() {
-			return nil, errors.New("InvalidSagaState: AbortSaga Message cannot be applied to a Completed Saga")
+			return nil, NewInvalidSagaStateError("AbortSaga Message cannot be applied to a Completed Saga")
 		}
 
 		state.sagaAborted = true
@@ -272,15 +299,15 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsSagaCompleted() {
-			return nil, errors.New("InvalidSagaState: Cannot StartTask after Saga has been completed")
+			return nil, NewInvalidSagaStateError("Cannot StartTask after Saga has been completed")
 		}
 
 		if state.IsSagaAborted() {
-			return nil, errors.New("InvalidSagaState: Cannot StartTask after Saga has been aborted")
+			return nil, NewInvalidSagaStateError("Cannot StartTask after Saga has been aborted")
 		}
 
 		if state.IsTaskCompleted(msg.taskId) {
-			return nil, errors.New("InvalidSagaState: Cannot StartTask after it has been completed")
+			return nil, NewInvalidSagaStateError("Cannot StartTask after it has been completed")
 		}
 
 		if msg.data != nil {
@@ -296,16 +323,16 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsSagaCompleted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot EndTask after Saga has been completed")
+			return nil, NewInvalidSagaStateError("Cannot EndTask after Saga has been completed")
 		}
 
 		if state.IsSagaAborted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot EndTask after an Abort Saga Message")
+			return nil, NewInvalidSagaStateError("Cannot EndTask after an Abort Saga Message")
 		}
 
 		// All EndTask Messages must have a preceding StartTask Message
 		if !state.IsTaskStarted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a EndTask Message Before a StartTask Message, taskId: ", msg.taskId))
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | TaskCompleted
@@ -321,21 +348,21 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsSagaCompleted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot StartCompTask after Saga has been completed")
+			return nil, NewInvalidSagaStateError("Cannot StartCompTask after Saga has been completed")
 		}
 
 		//In order to apply compensating transactions a saga must first be aborted
 		if !state.IsSagaAborted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message when Saga has not been Aborted", msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a StartCompTask Message when Saga has not been Aborted, taskId: %s", msg.taskId))
 		}
 
 		// All StartCompTask Messages must have a preceding StartTask Message
 		if !state.IsTaskStarted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a StartCompTask Message Before a StartTask Message, taskId: %s", msg.taskId))
 		}
 
 		if state.IsCompTaskCompleted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot StartCompTask after it has been completed.  taskId: %s", msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot StartCompTask after it has been completed, taskId: %s", msg.taskId))
 		}
 
 		state.taskState[msg.taskId] = state.taskState[msg.taskId] | CompTaskStarted
@@ -351,22 +378,22 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsSagaCompleted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot EndCompTask after Saga has been completed")
+			return nil, NewInvalidSagaStateError("Cannot EndCompTask after Saga has been completed")
 		}
 
 		//in order to apply compensating transactions a saga must first be aborted
 		if !state.IsSagaAborted() {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndCompTask %s Message when Saga has not been Aborted", msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a EndCompTask Message when Saga has not been Aborted, taskId: %s", msg.taskId))
 		}
 
 		// All EndCompTask Messages must have a preceding StartTask Message
 		if !state.IsTaskStarted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a StartCompTask %s Message Before a StartTask %s Message", msg.taskId, msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a StartCompTask Message Before a StartTask Message, taskId: %s", msg.taskId))
 		}
 
 		// All EndCompTask Messages must have a preceding StartCompTask Message
 		if !state.IsCompTaskStarted(msg.taskId) {
-			return nil, fmt.Errorf("InvalidSagaState: Cannot have a EndCompTask %s Message Before a StartCompTaks %s Message", msg.taskId, msg.taskId)
+			return nil, NewInvalidSagaStateError(fmt.Sprintf("Cannot have a EndCompTask Message Before a StartCompTaks Message, taskId: %s", msg.taskId))
 		}
 
 		if msg.data != nil {
@@ -417,7 +444,7 @@ func copySagaState(s *SagaState) *SagaState {
  */
 func validateSagaId(sagaId string) error {
 	if sagaId == "" {
-		return fmt.Errorf("Invalid Saga Message: sagaId cannot be the empty string")
+		return NewInvalidSagaMessageError("sagaId cannot be the empty string")
 	} else {
 		return nil
 	}
@@ -428,7 +455,7 @@ func validateSagaId(sagaId string) error {
  */
 func validateTaskId(taskId string) error {
 	if taskId == "" {
-		return fmt.Errorf("Invalid Saga Message: taskId cannot be the empty string")
+		return NewInvalidSagaMessageError("taskId cannot be the empty string")
 	} else {
 		return nil
 	}

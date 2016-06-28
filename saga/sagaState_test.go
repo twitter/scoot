@@ -24,7 +24,13 @@ func TestsagaStateFactory(t *testing.T) {
 func TestSagaState_ValidateSagaId(t *testing.T) {
 	err := validateSagaId("")
 	if err == nil {
-		t.Error(fmt.Sprintf("Invalid Saga Id Should Return Error"))
+		t.Error("Invalid Saga Id Should Return Error")
+	}
+
+	// validate the correct error is returned
+	_, sErrorOk := err.(InvalidSagaMessageError)
+	if !sErrorOk {
+		t.Error("Expected Returned Error to be InvalidSagaMessageError")
 	}
 }
 
@@ -32,6 +38,12 @@ func TestSagaState_ValidateTaskId(t *testing.T) {
 	err := validateTaskId("")
 	if err == nil {
 		t.Error(fmt.Sprintf("Invalid Task Id Should Return Error"))
+	}
+
+	// validate the correct error is returned
+	_, sErrorOk := err.(InvalidSagaMessageError)
+	if !sErrorOk {
+		t.Error("Expected Returned Error to be InvalidSagaMessageError")
 	}
 }
 
