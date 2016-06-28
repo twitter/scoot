@@ -21,13 +21,14 @@ dependencies:
 
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
 	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
-	go install github.com/golang/mock/mockgen
+	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
+	go get github.com/golang/mock/mockgen
 
 check-dependencies:
 	# Run this whenever a dependency is added.
 	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
 	./deps.sh
-	go install github.com/golang/mock/mockgen
+	go get github.com/golang/mock/mockgen
 
 generate: 
 	go generate $$(go list ./... | grep -v /vendor/)
