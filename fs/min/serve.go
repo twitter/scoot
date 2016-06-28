@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/scootdev/fuse"
 	fs "github.com/scootdev/scoot/fs/min/interface"
 	"github.com/scootdev/scoot/fs/min/state"
+	"github.com/scootdev/scoot/fuse"
 )
 
 func Serve(conn *fuse.Conn, rootFs fs.FS, threadUnsafe bool) (done chan error) {

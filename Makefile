@@ -9,22 +9,26 @@ GO15VENDOREXPERIMENT := 1
 export GO15VENDOREXPERIMENT
 
 default:
-	go build ./...
+	go build $$(go list ./... | grep -v /vendor/)
 
 dependencies:
-    # Checkout our vendored direct dependencies.
-    # It's up to the library maintainers to vendor their dependencies (our transitive dependencies).
-    # In the event that nested vendor dirs causes conflicts, we can flatten it / rewrite imports.
-    # This approach is subject to change if golang ever formally blesses a different practice.
+	# Populates the vendor directory to reflect the latest run of check-dependencies.
+
+	# Checkout our vendored dependencies.
+	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
+	#       When used as a library, the vendor folder will be empty by default (if 'go get'd). 
 	git submodule update --init --recursive
 
-    # Install mockgen binary (it's only referenced for code gen, not imported directly.)
-    # Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
+	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
+	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
+	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
 	go get github.com/golang/mock/mockgen
 
-update-dependencies:
-	vendetta -u -p # Requires calling 'go get github.com/dpw/vendetta'
-	go get -u github.com/golang/mock/mockgen
+check-dependencies:
+	# Run this whenever a dependency is added.
+	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
+	./deps.sh
+	go get github.com/golang/mock/mockgen
 
 generate: 
 	go generate $$(go list ./... | grep -v /vendor/)

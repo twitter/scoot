@@ -6,8 +6,8 @@ package state
 import (
 	"sync"
 
-	"github.com/scootdev/fuse"
 	fs "github.com/scootdev/scoot/fs/min/interface"
+	"github.com/scootdev/scoot/fuse"
 )
 
 type inode struct {
