@@ -1,4 +1,6 @@
 coverage:
+  ignore:
+    - fuse/*
   status:
     project:
       default:  # status context
