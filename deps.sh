@@ -8,8 +8,8 @@ trap 'rm -rf ${GOPATH}' EXIT
 SCOOT_ORIG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export GOPATH="$(mktemp -d -t TEMP.XXXXXXX)"
 
-scootdev="$GOPATH/src/github.com/scootdev"
-mkdir -p "$scootdev" && cd "$scootdev"
+scootdev="${GOPATH}/src/github.com/scootdev"
+mkdir -p "${scootdev}" && cd "${scootdev}"
 git clone https://github.com/scootdev/scoot
 
 get_deps() {
@@ -19,25 +19,26 @@ get_deps() {
                   grep "can't load package" | \
                   sed -E 's,[^"]*"([^"]*).*,\1,' | \
                   grep '\..*/'); do
-        go get -t -d "$need" || true
-        get_deps "$GOPATH/src/$need"
+        go get -t -d "${need}" || true
+        get_deps "${GOPATH}/src/${need}"
     done
 }
 
 echo "Darwin Deps."
 export GOOS=darwin GOARCH=amd64
-get_deps "$scootdev/scoot"
+get_deps "${scootdev}/scoot"
 
 echo "Windows Deps."
 export GOOS=windows GOARCH=amd64
-get_deps "$scootdev/scoot"
+get_deps "${scootdev}/scoot"
 
-HANDLED=$(find $GOPATH -name .git | sort | uniq | sed -E "s,$GOPATH/src/|/\.git,,g" | grep -v scootdev)
+HANDLED=$(find ${GOPATH} -name .git | sort | uniq | sed -E "s,${GOPATH}/src/|/\.git,,g" | grep -v scootdev)
 
-cd "$SCOOT_ORIG"
-for dep in $HANDLED; do
-    url=$(cd "$GOPATH/src/$dep" && git config --get remote.origin.url)
-    grep "$dep" ".gitmodules" &>/dev/null && continue || echo "Adding $dep"
-    git submodule add "$url" "vendor/$dep"
-    (cd "vendor/$dep" && git checkout -b scoot)
+cd "${SCOOT_ORIG}"
+for dep in ${HANDLED}; do
+    url=$(cd "${GOPATH}/src/${dep}" && git config --get remote.origin.url)
+    sha1=$(cd "${GOPATH}/src/${dep}" && git rev-parse HEAD)
+    grep "${dep}" ".gitmodules" &>/dev/null && continue || echo "Adding ${dep}"
+    git submodule "${url}" "vendor/${dep}"
+    git config .gitmodules "submodule.vendor/${dep}.branch" "${sha1}"
 done
