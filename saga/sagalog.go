@@ -33,3 +33,37 @@ type SagaLog interface {
 	 */
 	GetActiveSagas() ([]string, error)
 }
+
+// InvalidRequestError should be returned by the SagaLog
+// when the request is invalid and the same request will
+// fail on restart, equivalent to an HTTP 400
+type InvalidRequestError struct {
+	s string
+}
+
+func (e InvalidRequestError) Error() string {
+	return e.s
+}
+
+func NewInvalidRequeustError(msg string) error {
+	return InvalidRequestError{
+		s: msg,
+	}
+}
+
+// InternalLogError should be returned by the SagaLog
+// when the request failed, but may succeed on retry
+// this is equivalent to an HTTP 500
+type InternalLogError struct {
+	s string
+}
+
+func (e InternalLogError) Error() string {
+	return e.s
+}
+
+func NewInternalLogError(msg string) error {
+	return InternalLogError{
+		s: msg,
+	}
+}
