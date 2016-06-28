@@ -1,30 +1,39 @@
 [submodule "vendor/github.com/apache/thrift"]
 	path = vendor/github.com/apache/thrift
 	url = https://github.com/apache/thrift
+	branch = 0e9fed1e12ed066865e46c6903782b2ef95f4650
 [submodule "vendor/github.com/spf13/cobra"]
 	path = vendor/github.com/spf13/cobra
 	url = https://github.com/spf13/cobra
+	branch = 6a8bd97bdb1fc0d08a83459940498ea49d3e8c93
 [submodule "vendor/github.com/spf13/pflag"]
 	path = vendor/github.com/spf13/pflag
 	url = https://github.com/spf13/pflag
+	branch = 367864438f1b1a3c7db4da06a2f55b144e6784e0
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net
+	branch = bc3663df0ac92f928d419e31e0d2af22e683a5a2
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
+	branch = 69420784d409f9ff88b424436f52001b26144e20
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
+	branch = 0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0
 [submodule "vendor/github.com/golang/mock"]
 	path = vendor/github.com/golang/mock
 	url = https://github.com/golang/mock
+	branch = bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
 [submodule "vendor/github.com/leanovate/gopter"]
 	path = vendor/github.com/leanovate/gopter
 	url = https://github.com/leanovate/gopter
+	branch = d466d84be94d3a069168feacdd74ab16dacbe6bb
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
+	branch = 62bee037599929a6e9146f29d10dd5208c43507d
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
 # See: github.com/pantsbuild/pants/issues/3606
@@ -32,66 +41,88 @@
 [submodule "vendor/github.com/BurntSushi/toml"]
 	path = vendor/github.com/BurntSushi/toml
 	url = https://github.com/BurntSushi/toml
+	branch = f0aeabca5a127c4078abb8c8d64298b147264b55
 [submodule "vendor/github.com/armon/consul-api"]
 	path = vendor/github.com/armon/consul-api
 	url = https://github.com/armon/consul-api
+	branch = dcfedd50ed5334f96adee43fc88518a4f095e15c
 [submodule "vendor/github.com/coreos/go-etcd"]
 	path = vendor/github.com/coreos/go-etcd
 	url = https://github.com/coreos/go-etcd
+	branch = 003851be7bb0694fe3cc457a49529a19388ee7cf
 [submodule "vendor/github.com/cpuguy83/go-md2man"]
 	path = vendor/github.com/cpuguy83/go-md2man
 	url = https://github.com/cpuguy83/go-md2man
+	branch = 2724a9c9051aa62e9cca11304e7dd518e9e41599
 [submodule "vendor/github.com/fsnotify/fsnotify"]
 	path = vendor/github.com/fsnotify/fsnotify
 	url = https://github.com/fsnotify/fsnotify
+	branch = 30411dbcefb7a1da7e84f75530ad3abe4011b4f8
 [submodule "vendor/github.com/golang/glog"]
 	path = vendor/github.com/golang/glog
 	url = https://github.com/golang/glog
+	branch = 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 [submodule "vendor/github.com/hashicorp/hcl"]
 	path = vendor/github.com/hashicorp/hcl
 	url = https://github.com/hashicorp/hcl
+	branch = 61f5143284c041681f76a5b63efcb232aaa94737
 [submodule "vendor/github.com/inconshreveable/mousetrap"]
 	path = vendor/github.com/inconshreveable/mousetrap
 	url = https://github.com/inconshreveable/mousetrap
+	branch = 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 [submodule "vendor/github.com/magiconair/properties"]
 	path = vendor/github.com/magiconair/properties
 	url = https://github.com/magiconair/properties
+	branch = c265cfa48dda6474e208715ca93e987829f572f8
 [submodule "vendor/github.com/mitchellh/mapstructure"]
 	path = vendor/github.com/mitchellh/mapstructure
 	url = https://github.com/mitchellh/mapstructure
+	branch = d2dd0262208475919e1a362f675cfc0e7c10e905
 [submodule "vendor/github.com/russross/blackfriday"]
 	path = vendor/github.com/russross/blackfriday
 	url = https://github.com/russross/blackfriday
+	branch = 1d6b8e9301e720b08a8938b8c25c018285885438
 [submodule "vendor/github.com/shurcooL/sanitized_anchor_name"]
 	path = vendor/github.com/shurcooL/sanitized_anchor_name
 	url = https://github.com/shurcooL/sanitized_anchor_name
+	branch = 10ef21a441db47d8b13ebcc5fd2310f636973c77
 [submodule "vendor/github.com/spf13/cast"]
 	path = vendor/github.com/spf13/cast
 	url = https://github.com/spf13/cast
+	branch = 27b586b42e29bec072fe7379259cc719e1289da6
 [submodule "vendor/github.com/spf13/jwalterweatherman"]
 	path = vendor/github.com/spf13/jwalterweatherman
 	url = https://github.com/spf13/jwalterweatherman
+	branch = 33c24e77fb80341fe7130ee7c594256ff08ccc46
 [submodule "vendor/github.com/spf13/viper"]
 	path = vendor/github.com/spf13/viper
 	url = https://github.com/spf13/viper
+	branch = c1ccc378a054ea8d4e38d8c67f6938d4760b53dd
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify
+	branch = d77da356e56a7428ad25149ca77381849a6a5232
 [submodule "vendor/github.com/ugorji/go"]
 	path = vendor/github.com/ugorji/go
 	url = https://github.com/ugorji/go
+	branch = b94837a2404ab90efe9289e77a70694c355739cb
 [submodule "vendor/github.com/xordataexchange/crypt"]
 	path = vendor/github.com/xordataexchange/crypt
 	url = https://github.com/xordataexchange/crypt
+	branch = 749e360c8f236773f28fc6d3ddfce4a470795227
 [submodule "vendor/golang.org/x/crypto"]
 	path = vendor/golang.org/x/crypto
 	url = https://go.googlesource.com/crypto
+	branch = 811831de4c4dd03a0b8737233af3b36852386373
 [submodule "vendor/golang.org/x/oauth2"]
 	path = vendor/golang.org/x/oauth2
 	url = https://go.googlesource.com/oauth2
+	branch = 65a8d08c6292395d47053be10b3c5e91960def76
 [submodule "vendor/google.golang.org/cloud"]
 	path = vendor/google.golang.org/cloud
 	url = https://code.googlesource.com/gocloud
+	branch = a4c7c3139dc2772ad6c3bb73d0a9236a79063f8c
 [submodule "vendor/gopkg.in/yaml.v2"]
 	path = vendor/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
+	branch = b6679148d27038e59d7818facc4d100e677a64ae
