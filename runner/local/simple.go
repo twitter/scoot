@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
-	"log"
 	"sync"
 )
 
@@ -46,8 +45,6 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 
 	go babysit(p, runId, r)
 
-	log.Println("simpleRunner.Run: returning")
-
 	return r.runs[runId], nil
 }
 
@@ -64,27 +61,21 @@ func (r *simpleRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 func (r *simpleRunner) markFinished(p execer.Process, runId runner.RunId, status execer.ProcessStatus) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	log.Println("simpleRunner.markFinished", runId, status)
 	r.running = nil
+
 	switch status.State {
 	case execer.COMPLETE:
-		log.Println("simpleRunner.markFinished complete")
 		r.runs[runId] = runner.CompleteStatus(runId, status.StdoutURI, status.StderrURI, status.ExitCode)
 	case execer.FAILED:
-		log.Println("simpleRunner.markFinished failed")
 		r.runs[runId] = runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", status.Error))
 	default:
-		log.Println("simpleRunner.markFinished error")
 		r.runs[runId] = runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", status.State))
 	}
 }
 
 func babysit(p execer.Process, runId runner.RunId, r *simpleRunner) {
 	// TODO(dbentley): here is where we enforce timeout (calling p.Abort() if we go too long)
-	log.Println("simple.go:babysit about to wait")
 
 	status := p.Wait()
-	log.Println("simple.go:babysit process done")
 	r.markFinished(p, runId, status)
-	log.Println("simple.go:babysit marked finished")
 }

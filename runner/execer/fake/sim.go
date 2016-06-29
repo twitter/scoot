@@ -3,7 +3,6 @@ package fake
 import (
 	"fmt"
 	"github.com/scootdev/scoot/runner/execer"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,7 +30,6 @@ func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 	r := &simProcess{}
 	r.done = sync.NewCond(&r.mu)
 	r.status.State = execer.RUNNING
-	log.Println("simExecer.Exec: about to go run")
 	go run(steps, r)
 	return r, nil
 }
@@ -105,17 +103,13 @@ func (p *simProcess) getStatus() execer.ProcessStatus {
 }
 
 func run(steps []simStep, p *simProcess) {
-	log.Println("sim.go:run begin")
 	for _, step := range steps {
-		log.Println("sim.go:run step", step)
 		status := p.getStatus()
 		if status.State.IsDone() {
-			log.Println("sim.go:run step breaking")
 			break
 		}
 		p.setStatus(step.run(status))
 	}
-	log.Println("sim.go:run done")
 }
 
 type simStep interface {
