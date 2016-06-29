@@ -134,3 +134,5 @@ func (s *pauseStep) run(status execer.ProcessStatus) execer.ProcessStatus {
 	time.Sleep(s.pause)
 	return status
 }
+
+// TODO(dbentley): rethink pausing. Instead of being time-based, it should be based on some other method of communication, like WaitGroups or Channels.

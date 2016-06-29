@@ -15,6 +15,8 @@ func NewSimpleRunner(exec execer.Execer) runner.Runner {
 	return r
 }
 
+// simpleRunner runs one process at a time and keeps
+// results in the map runs
 type simpleRunner struct {
 	exec      execer.Execer
 	runs      map[runner.RunId]runner.ProcessStatus
@@ -75,7 +77,6 @@ func (r *simpleRunner) markFinished(p execer.Process, runId runner.RunId, status
 
 func babysit(p execer.Process, runId runner.RunId, r *simpleRunner) {
 	// TODO(dbentley): here is where we enforce timeout (calling p.Abort() if we go too long)
-
 	status := p.Wait()
 	r.markFinished(p, runId, status)
 }
