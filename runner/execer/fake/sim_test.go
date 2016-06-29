@@ -22,7 +22,7 @@ func assertRun(t *testing.T, expected execer.ProcessStatus, minNS int64, argv ..
 	}
 	st := p.Wait()
 	if st != expected {
-		t.Fatal("Running %v, got %v, expected %v", argv, st, expected)
+		t.Fatalf("Running %v, got %v, expected %v", argv, st, expected)
 	}
 	// TODO(dbentley): make sure it took some time
 }
