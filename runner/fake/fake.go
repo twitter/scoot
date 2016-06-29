@@ -22,7 +22,7 @@ func (r *fakeRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 func success(runId runner.RunId) runner.ProcessStatus {
 	return runner.ProcessStatus{
 		RunId:     runId,
-		State:     runner.COMPLETED,
+		State:     runner.COMPLETE,
 		StdoutRef: "/dev/null",
 		StderrRef: "/dev/null",
 		ExitCode:  0,

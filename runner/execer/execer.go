@@ -15,12 +15,12 @@ type ProcessState int
 const (
 	UNKNOWN ProcessState = iota
 	RUNNING
-	COMPLETED
+	COMPLETE
 	FAILED
 )
 
 func (s ProcessState) IsDone() bool {
-	return s == COMPLETED || s == FAILED
+	return s == COMPLETE || s == FAILED
 }
 
 type Execer interface {

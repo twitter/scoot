@@ -7,8 +7,9 @@ import (
 )
 
 func TestSimExec(t *testing.T) {
-	assertRun(t, completed(0), 0, "complete 0")
-	assertRun(t, completed(1), 0, "complete 1")
+	assertRun(t, complete(0), 0, "complete 0")
+	assertRun(t, complete(1), 0, "complete 1")
+	assertRun(t, complete(0), 0, "pause 1", "complete 0")
 }
 
 func assertRun(t *testing.T, expected execer.ProcessStatus, minNS int64, argv ...string) {
@@ -26,9 +27,9 @@ func assertRun(t *testing.T, expected execer.ProcessStatus, minNS int64, argv ..
 	// TODO(dbentley): make sure it took some time
 }
 
-func completed(exitCode int) execer.ProcessStatus {
+func complete(exitCode int) execer.ProcessStatus {
 	r := execer.ProcessStatus{}
-	r.State = execer.COMPLETED
+	r.State = execer.COMPLETE
 	r.ExitCode = exitCode
 	return r
 }
