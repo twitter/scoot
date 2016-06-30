@@ -11,6 +11,11 @@ type Queue interface {
 	// Enqueue enqueues a job and assigns it an ID. Errors may be
 	// an *InvalidJobRequest or a *CanNotScheduleNow
 	Enqueue(job sched.JobDefinition) (string, error)
+
+	Chan() chan WorkItem
+
+	Status(jobId string) (sched.JobStatus, error)
+
 	Close() error
 }
 
