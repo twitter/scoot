@@ -68,16 +68,16 @@ func (c *fakeConn) Echo(arg string) (string, error) {
 	return arg, nil
 }
 
-func (c *fakeConn) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
+func (c *fakeConn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	if c.err != nil {
-		return nil, c.err
+		return runner.ProcessStatus{}, c.err
 	}
 	return c.runner.Run(cmd)
 }
 
-func (c *fakeConn) Status(run runner.RunId) (*runner.ProcessStatus, error) {
+func (c *fakeConn) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	if c.err != nil {
-		return nil, c.err
+		return runner.ProcessStatus{}, c.err
 	}
 	return c.runner.Status(run)
 }

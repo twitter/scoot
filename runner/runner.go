@@ -20,10 +20,14 @@ const (
 	// a Process in an end state will not change its state
 
 	// Ran to completion
-	COMPLETED
+	COMPLETE
 	// Could not run to completion
 	FAILED
 )
+
+func (p ProcessState) IsDone() bool {
+	return p == COMPLETE || p == FAILED
+}
 
 func (p ProcessState) String() string {
 	switch p {
@@ -33,8 +37,8 @@ func (p ProcessState) String() string {
 		return "PENDING"
 	case RUNNING:
 		return "RUNNING"
-	case COMPLETED:
-		return "COMPLETED"
+	case COMPLETE:
+		return "COMPLETE"
 	case FAILED:
 		return "FAILED"
 	default:
@@ -66,7 +70,7 @@ type ProcessStatus struct {
 	StdoutRef string
 	StderrRef string
 
-	// Only valid if State == COMPLETED
+	// Only valid if State == COMPLETE
 	ExitCode int
 
 	// Only valid if State == FAILED
@@ -79,8 +83,10 @@ type Runner interface {
 	// enqueue cmd (leading to state PENDING)
 	// run cmd immediately (leading to state RUNNING)
 	// check if cmd is well-formed, and reject it if not (leading to state FAILED)
-	Run(cmd *Command) (*ProcessStatus, error)
+	// wait a very short period of time for cmd to finish
+	// Run may not wait indefinitely for cmd to finish. This is an async API.
+	Run(cmd *Command) (ProcessStatus, error)
 
 	// Status checks the status of run.
-	Status(run RunId) (*ProcessStatus, error)
+	Status(run RunId) (ProcessStatus, error)
 }
