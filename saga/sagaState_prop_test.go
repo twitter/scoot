@@ -205,7 +205,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 		gen.SliceOf(gen.UInt8()),
 	))
 
-	properties.Property("String method returns corrrect representation of SagaState", prop.ForAll(
+	properties.Property("String method returns correct representation of SagaState", prop.ForAll(
 		func(state *SagaState) bool {
 
 			str := state.String()
