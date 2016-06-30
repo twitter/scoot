@@ -4,15 +4,6 @@ import (
 	"fmt"
 )
 
-type flag byte
-
-const (
-	TaskStarted flag = 1 << iota
-	TaskCompleted
-	CompTaskStarted
-	CompTaskCompleted
-)
-
 type InvalidSagaStateError struct {
 	s string
 }
@@ -40,6 +31,15 @@ func NewInvalidSagaMessageError(msg string) error {
 		s: msg,
 	}
 }
+
+type flag byte
+
+const (
+	TaskStarted flag = 1 << iota
+	TaskCompleted
+	CompTaskStarted
+	CompTaskCompleted
+)
 
 /*
  * Additional data about tasks to be committed to the log
@@ -477,4 +477,48 @@ func makeSagaState(sagaId string, job []byte) (*SagaState, error) {
 	state.job = job
 
 	return state, nil
+}
+
+/*
+ * Custom ToString function for SagaState
+ */
+func (state *SagaState) String() string {
+
+	fmtString := "{ SagaId: %v, " +
+		"SagaAborted: %v, " +
+		"SagaCompleted: %v, " +
+		"Tasks: [ "
+
+	for _, id := range state.GetTaskIds() {
+
+		taskState := ""
+
+		if state.IsTaskStarted(id) {
+			taskState += "Started|"
+		}
+		if state.IsTaskCompleted(id) {
+			taskState += "Completed|"
+		}
+		if state.IsCompTaskStarted(id) {
+			taskState += "CompTaskStarted|"
+		}
+		if state.IsCompTaskCompleted(id) {
+			taskState += "CompTaskCompleted|"
+		}
+
+		if len(taskState) >= 3 {
+			taskState = taskState[0 : len(taskState)-1]
+		}
+
+		fmtString += fmt.Sprintf("%v: %s, ", id, taskState)
+	}
+
+	fmtString += "]"
+
+	return fmt.Sprintf(
+		fmtString,
+		state.sagaId,
+		state.IsSagaAborted(),
+		state.IsSagaCompleted(),
+	)
 }

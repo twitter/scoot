@@ -110,8 +110,12 @@ func GenSagaState() gopter.Gen {
 // State is a struct object and not a reference for readability
 // when a counter example is produced
 type StateTaskPair struct {
-	state  SagaState
+	state  *SagaState
 	taskId string
+}
+
+func (p StateTaskPair) String() string {
+	return fmt.Sprintf("{ TaskId: %v, SagaState: %s }", p.taskId, p.state)
 }
 
 // Generator for a SagaState and TaskId, returns a StateTaskPair
@@ -135,7 +139,7 @@ func GenSagaStateAndTaskId() gopter.Gen {
 		}
 
 		result := StateTaskPair{
-			state:  *state,
+			state:  state,
 			taskId: id,
 		}
 

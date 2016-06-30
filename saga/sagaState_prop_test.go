@@ -2,9 +2,11 @@ package saga
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+	"strings"
 	"testing"
 )
 
@@ -93,7 +95,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 		func(pair StateTaskPair, data []byte) bool {
 
-			state := &pair.state
+			state := pair.state
 			taskId := pair.taskId
 
 			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() && !state.IsTaskCompleted(taskId)
@@ -122,7 +124,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	properties.Property("EndTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
 
-			state := &pair.state
+			state := pair.state
 			taskId := pair.taskId
 
 			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() &&
@@ -150,7 +152,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	properties.Property("StartCompTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
 
-			state := &pair.state
+			state := pair.state
 			taskId := pair.taskId
 
 			validTransition := state.IsSagaAborted() && !state.IsSagaCompleted() &&
@@ -178,7 +180,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	properties.Property("EndCompTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
 
-			state := &pair.state
+			state := pair.state
 			taskId := pair.taskId
 
 			validTransition := state.IsSagaAborted() && !state.IsSagaCompleted() &&
@@ -201,6 +203,77 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 		},
 		GenSagaStateAndTaskId(),
 		gen.SliceOf(gen.UInt8()),
+	))
+
+	properties.Property("String method returns corrrect representation of SagaState", prop.ForAll(
+		func(state *SagaState) bool {
+
+			str := state.String()
+
+			if !strings.Contains(str, fmt.Sprintf("SagaId: %v", state.SagaId())) {
+				return false
+			}
+
+			if state.IsSagaAborted() && !strings.Contains(str, "SagaAborted: true") {
+				return false
+			}
+
+			if !state.IsSagaAborted() && !strings.Contains(str, "SagaAborted: false") {
+				return false
+			}
+
+			if state.IsSagaCompleted() && !strings.Contains(str, "SagaCompleted: true") {
+				return false
+			}
+
+			if !state.IsSagaCompleted() && !strings.Contains(str, "SagaCompleted: false") {
+				return false
+			}
+
+			if len(state.GetTaskIds()) > 0 {
+				taskSplit := strings.Split(str, "Tasks: [")
+				taskString := strings.Split(taskSplit[1], ",")
+
+				for _, taskStr := range taskString {
+
+					split := strings.Split(taskStr, ": ")
+
+					if len(split) >= 2 {
+						taskId := strings.TrimSpace(split[0])
+						taskStates := strings.Split(split[1], "|")
+
+						for _, taskState := range taskStates {
+
+							ts := strings.TrimSpace(taskState)
+							switch ts {
+							case "Started":
+								if !state.IsTaskStarted(taskId) {
+									return false
+								}
+							case "Completed":
+								if !state.IsTaskCompleted(taskId) {
+									return false
+								}
+							case "CompTaskStarted":
+								if !state.IsCompTaskStarted(taskId) {
+									return false
+								}
+							case "CompTaskCompleted":
+								if !state.IsCompTaskCompleted(taskId) {
+									return false
+								}
+							default:
+								fmt.Println(fmt.Sprintf("Unrecognized state taskId: %s, taskState: %s ", taskId, taskState))
+								return false
+							}
+						}
+					}
+				}
+			}
+
+			return true
+		},
+		GenSagaState(),
 	))
 
 	properties.TestingRun(t)
