@@ -506,7 +506,8 @@ func (state *SagaState) String() string {
 			taskState += "CompTaskCompleted|"
 		}
 
-		if len(taskState) >= 3 {
+		// remove trailing slash
+		if len(taskState) >= 1 {
 			taskState = taskState[0 : len(taskState)-1]
 		}
 
