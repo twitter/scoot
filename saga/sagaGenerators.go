@@ -107,8 +107,6 @@ func GenSagaState() gopter.Gen {
 	}
 }
 
-// State is a struct object and not a reference for readability
-// when a counter example is produced
 type StateTaskPair struct {
 	state  *SagaState
 	taskId string
