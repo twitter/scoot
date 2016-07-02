@@ -9,31 +9,41 @@ import (
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	distributor "github.com/scootdev/scoot/sched/distributor"
 
+	"math/rand"
 	"os"
+	"runtime"
 	"sync"
+	"time"
 )
 
 /* demo code */
 func main() {
 
-	cluster := ci.StaticLocalNodeClusterFactory(10)
+	runtime.GOMAXPROCS(2)
+
+	cluster := ci.DynamicLocalNodeClusterFactory(10)
 	fmt.Println("clusterMembers:", cluster.Members())
 	fmt.Println("")
 
 	workCh := make(chan sched.Job)
-	distributor := &distributor.RoundRobin{}
+	distributor := distributor.NewPoolDistributor(cluster)
 	saga := s.MakeInMemorySaga()
 
+	go func() {
+		generateClusterChurn(cluster)
+	}()
+
 	var wg sync.WaitGroup
+
 	wg.Add(2)
 
 	go func() {
-		generateTasks(workCh, 100)
+		generateTasks(workCh, 100000)
 		wg.Done()
 	}()
 
 	go func() {
-		scheduleWork(workCh, cluster, distributor, saga)
+		scheduleWork(workCh, distributor, saga)
 		wg.Done()
 	}()
 
@@ -72,13 +82,12 @@ func main() {
 
 func scheduleWork(
 	workCh <-chan sched.Job,
-	cluster cm.Cluster,
-	distributor distributor.Distributor,
+	distributor *distributor.PoolDistributor,
 	saga s.Saga) {
 
 	var wg sync.WaitGroup
 	for work := range workCh {
-		node := distributor.DistributeWork(work, cluster)
+		node := distributor.ReserveNode(work)
 
 		wg.Add(1)
 		go func(w sched.Job, n cm.Node) {
@@ -95,6 +104,7 @@ func scheduleWork(
 			}
 
 			state, _ = saga.EndSaga(state)
+			distributor.ReleaseNode(n)
 		}(work, node)
 
 	}
@@ -126,4 +136,45 @@ func generateTasks(work chan<- sched.Job, numTasks int) {
 		}
 	}
 	close(work)
+}
+
+func generateClusterChurn(cluster cm.DynamicCluster) {
+
+	//TODO: Make node removal more random, pick random index to remove instead
+	// of always removing from end
+
+	totalNodes := len(cluster.Members())
+	addedNodes := cluster.Members()
+	removedNodes := make([]cm.Node, 0, len(addedNodes))
+
+	for {
+		// add a node
+		if rand.Intn(3) != 0 {
+			if len(removedNodes) > 0 {
+				var n cm.Node
+				n, removedNodes = removedNodes[len(removedNodes)-1], removedNodes[:len(removedNodes)-1]
+				addedNodes = append(addedNodes, n)
+				cluster.AddNode(n)
+				fmt.Println("ADDED NODE: ", n.Id())
+			} else {
+				n := ci.LocalNode{
+					Name: fmt.Sprintf("dynamic_node_%d", totalNodes),
+				}
+				totalNodes++
+				addedNodes = append(addedNodes, n)
+				cluster.AddNode(n)
+				fmt.Println("ADDED NODE: ", n.Id())
+			}
+		} else {
+			if len(addedNodes) > 0 {
+				var n cm.Node
+				n, addedNodes = addedNodes[len(addedNodes)-1], addedNodes[:len(addedNodes)-1]
+				removedNodes = append(removedNodes, n)
+				cluster.RemoveNode(n.Id())
+				fmt.Println("REMOVED NODE: ", n.Id())
+			}
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
 }
