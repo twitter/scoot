@@ -228,7 +228,7 @@ func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
 	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
 	clusterMock.EXPECT().Members().Return(nodes)
 
-	dist := NewDynamicPoolDistributor(cluster)
+	dist := NewDynamicPoolDistributor(clusterMock)
 
 	// mimic flapping node remove and then add
 	updateCh <- cm.NodeUpdate{
