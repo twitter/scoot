@@ -55,6 +55,7 @@ func TestPoolDistributor_OneNodeCluster(t *testing.T) {
 	job1 := sched.Job{
 		Id: "job1",
 	}
+
 	job2 := sched.Job{
 		Id: "job2",
 	}
