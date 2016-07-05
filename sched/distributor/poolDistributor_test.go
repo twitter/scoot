@@ -227,6 +227,7 @@ func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
 	updateCh := make(chan cm.NodeUpdate)
 	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
 	clusterMock.EXPECT().Members().Return(nodes)
+	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
 	dist := NewDynamicPoolDistributor(clusterMock)
 
