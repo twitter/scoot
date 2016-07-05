@@ -21,19 +21,19 @@ func main() {
 	fmt.Println("")
 
 	workCh := make(chan sched.Job)
-	distributor := &distributor.RoundRobin{}
+	distributor := distributor.NewPoolDistributor(cluster)
 	saga := s.MakeInMemorySaga()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		generateTasks(workCh, 100)
+		generateTasks(workCh, 1000000)
 		wg.Done()
 	}()
 
 	go func() {
-		scheduleWork(workCh, cluster, distributor, saga)
+		scheduleWork(workCh, distributor, saga)
 		wg.Done()
 	}()
 
@@ -72,13 +72,12 @@ func main() {
 
 func scheduleWork(
 	workCh <-chan sched.Job,
-	cluster cm.Cluster,
-	distributor distributor.Distributor,
+	distributor *distributor.PoolDistributor,
 	saga s.Saga) {
 
 	var wg sync.WaitGroup
 	for work := range workCh {
-		node := distributor.DistributeWork(work, cluster)
+		node := distributor.ReserveNode(work)
 
 		wg.Add(1)
 		go func(w sched.Job, n cm.Node) {
@@ -95,6 +94,7 @@ func scheduleWork(
 			}
 
 			state, _ = saga.EndSaga(state)
+			distributor.ReleaseNode(n)
 		}(work, node)
 
 	}
