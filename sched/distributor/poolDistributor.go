@@ -36,9 +36,14 @@ func NewPoolDistributor(cluster cm.Cluster) *PoolDistributor {
 	}
 
 	// allocate the initial cluster size for the free channel
-	// assuming static clusters next update will support
-	// dynamic clusters
-	freeCh := make(chan cm.Node, len(nodes))
+	// intializing the channel size to be 2 * the number of initial
+	// nodes.
+	//
+	// This is currently a bit of a hack for dynamic clusters
+	// adding nodes will just block, no updates will be lost.
+	// Doubling the cluster size is a rare event, and to fix, the scheduler
+	// just needs to be restarted for a larger channel to be allocated.
+	freeCh := make(chan cm.Node, 2*len(nodes))
 
 	// put all the nodes in the freeCh
 	for _, n := range nodes {
@@ -79,12 +84,13 @@ func updateCluster(dist *PoolDistributor, updateCh <-chan cm.NodeUpdate) {
 			case cm.NodeAdded:
 				node := nodeUpdate.Node
 
-				// Check if this node is on the remove watch list
+				// Check if this node is on the remove watch list,
+				// and remove it if it is.  This prevents flapping nodes
+				// from being removed after being re-added.
 				dist.mutex.RLock()
 				_, ok := dist.toRemove[node.Id()]
 				dist.mutex.RUnlock()
 
-				// remove from remove watch list since we are re-adding it
 				if ok {
 					dist.mutex.Lock()
 					// don't need to recheck condition because if the
@@ -94,10 +100,12 @@ func updateCluster(dist *PoolDistributor, updateCh <-chan cm.NodeUpdate) {
 					dist.mutex.Unlock()
 				}
 
+				// add the node to the free queue
 				dist.freeCh <- node
 			case cm.NodeRemoved:
 				node := nodeUpdate.Node
 
+				// add the node to the Remove Watch List
 				dist.mutex.Lock()
 				dist.toRemove[node.Id()] = true
 				dist.mutex.Unlock()

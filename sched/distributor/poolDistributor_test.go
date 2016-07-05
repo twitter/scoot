@@ -218,3 +218,34 @@ func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
 	default:
 	}
 }
+
+func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	nodes := cm.GenerateTestNodes(1)
+	updateCh := make(chan cm.NodeUpdate)
+	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
+	clusterMock.EXPECT().Members().Return(nodes)
+
+	dist := NewDynamicPoolDistributor(cluster)
+
+	// mimic flapping node remove and then add
+	updateCh <- cm.NodeUpdate{
+		Node:       nodes[0],
+		UpdateType: cm.NodeRemoved,
+	}
+
+	updateCh <- cm.NodeUpdate{
+		Node:       nodes[0],
+		UpdateType: cm.NodeAdded,
+	}
+
+	select {
+	case <-dist.freeCh:
+
+	default:
+		t.Error("Expected node to be available after remove then add")
+	}
+
+}
