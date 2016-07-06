@@ -6,24 +6,25 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
-func NewSimExecer() execer.Execer {
-	return &simExecer{}
+func NewSimExecer(wait *sync.WaitGroup) execer.Execer {
+	return &simExecer{wait}
 }
 
-type simExecer struct{}
+type simExecer struct {
+	wait *sync.WaitGroup
+}
 
 // simExecer execs by simulating running argv.
 // each arg in command.argv is simulated in order.
 // valid args are:
 // complete <exitcode int>
 //   complete with exitcode
-// pause <n int>
-//   pause for n milliseconds
+// pause
+//   pause until the simExecer's WaitGroup is Done
 func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
-	steps, err := parse(command.Argv)
+	steps, err := e.parse(command.Argv)
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +36,9 @@ func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 }
 
 // parse parses an argv into sim steps
-func parse(argv []string) (steps []simStep, err error) {
+func (e *simExecer) parse(argv []string) (steps []simStep, err error) {
 	for _, arg := range argv {
-		s, err := parseArg(arg)
+		s, err := e.parseArg(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +47,7 @@ func parse(argv []string) (steps []simStep, err error) {
 	return steps, nil
 }
 
-func parseArg(arg string) (simStep, error) {
+func (e *simExecer) parseArg(arg string) (simStep, error) {
 	splits := strings.SplitN(arg, " ", 2)
 	opcode, rest := splits[0], ""
 	if len(splits) == 2 {
@@ -60,11 +61,7 @@ func parseArg(arg string) (simStep, error) {
 		}
 		return &completeStep{i}, nil
 	case "pause":
-		i, err := strconv.Atoi(rest)
-		if err != nil {
-			return nil, err
-		}
-		return &pauseStep{time.Duration(i) * time.Millisecond}, nil
+		return &pauseStep{e.wait}, nil
 	}
 	return nil, fmt.Errorf("can't simulate arg: %v", arg)
 }
@@ -127,12 +124,10 @@ func (s *completeStep) run(status execer.ProcessStatus) execer.ProcessStatus {
 }
 
 type pauseStep struct {
-	pause time.Duration
+	wait *sync.WaitGroup
 }
 
 func (s *pauseStep) run(status execer.ProcessStatus) execer.ProcessStatus {
-	time.Sleep(s.pause)
+	s.wait.Wait()
 	return status
 }
-
-// TODO(dbentley): rethink pausing. Instead of being time-based, it should be based on some other method of communication, like WaitGroups or Channels.
