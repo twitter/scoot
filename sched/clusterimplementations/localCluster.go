@@ -50,7 +50,7 @@ func StaticLocalNodeClusterFactory(size int) cm.Cluster {
  * Creates a Dynamic LocalNode Cluster with the initial
  * number of Nodes in it.
  */
-func DynamicLocalNodeClusterFactory(initialSize int) cm.DynamicCluster {
+func DynamicLocalNodeClusterFactory(initialSize int) (cm.DynamicCluster, cm.DynamicClusterState) {
 	nodes := make([]cm.Node, initialSize)
 
 	for s := 0; s < initialSize; s++ {

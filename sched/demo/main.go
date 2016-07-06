@@ -21,16 +21,16 @@ func main() {
 
 	runtime.GOMAXPROCS(2)
 
-	cluster := ci.DynamicLocalNodeClusterFactory(10)
+	cluster, clusterState := ci.DynamicLocalNodeClusterFactory(10)
 	fmt.Println("clusterMembers:", cluster.Members())
 	fmt.Println("")
 
 	workCh := make(chan sched.Job)
-	distributor := distributor.NewPoolDistributor(cluster)
+	distributor := distributor.NewDynamicPoolDistributor(clusterState)
 	saga := s.MakeInMemorySaga()
 
 	go func() {
-		generateClusterChurn(cluster)
+		generateClusterChurn(cluster, clusterState)
 	}()
 
 	var wg sync.WaitGroup
@@ -38,7 +38,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		generateTasks(workCh, 100000)
+		generateTasks(workCh, 1000000)
 		wg.Done()
 	}()
 
@@ -138,18 +138,18 @@ func generateTasks(work chan<- sched.Job, numTasks int) {
 	close(work)
 }
 
-func generateClusterChurn(cluster cm.DynamicCluster) {
+func generateClusterChurn(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState) {
 
 	//TODO: Make node removal more random, pick random index to remove instead
 	// of always removing from end
 
-	totalNodes := len(cluster.Members())
-	addedNodes := cluster.Members()
+	totalNodes := len(clusterState.InitialMembers)
+	addedNodes := clusterState.InitialMembers
 	removedNodes := make([]cm.Node, 0, len(addedNodes))
 
 	for {
 		// add a node
-		if rand.Intn(3) != 0 {
+		if rand.Intn(2) != 0 {
 			if len(removedNodes) > 0 {
 				var n cm.Node
 				n, removedNodes = removedNodes[len(removedNodes)-1], removedNodes[:len(removedNodes)-1]

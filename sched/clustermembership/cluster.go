@@ -13,30 +13,24 @@ type Cluster interface {
 }
 
 //
-// Implementations of a Dynamic Cluster
-// Must implement both interfaces
-//
-type DynamicCluster interface {
-	DynamicClusterState
-	UpdatableCluster
-}
-
-//
 // Interface which provides access to
 // the state of a dynamic cluster
 //
-type DynamicClusterState interface {
-	Cluster
-
-	// Returns a Channel which contains Node Updates
-	NodeUpdates() <-chan NodeUpdate
+type DynamicClusterState struct {
+	InitialMembers []Node
+	Updates        <-chan NodeUpdate
 }
 
 //
 // Interface which allows a Dynamic Cluster
 // to be updated
 //
-type UpdatableCluster interface {
+// Implementations of this interface should provide
+// A Factory method, that returns an instance of a
+// DynamicCluster and a ClusterState object
+//
+type DynamicCluster interface {
+	Cluster
 	//
 	// Adds A Node to the Cluster
 	//

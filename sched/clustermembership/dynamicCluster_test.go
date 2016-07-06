@@ -12,7 +12,7 @@ import (
 func TestCreateEmptyDynamicCluster(t *testing.T) {
 
 	var emptyNodes []Node
-	dc := DynamicClusterFactory(emptyNodes)
+	dc, _ := DynamicClusterFactory(emptyNodes)
 	members := dc.Members()
 
 	if len(members) != 0 {
@@ -25,7 +25,7 @@ func TestCreateEmptyDynamicCluster(t *testing.T) {
  */
 func TestCreateDynamicCluster(t *testing.T) {
 	testNodes := GenerateTestNodes(10)
-	dc := DynamicClusterFactory(testNodes)
+	dc, _ := DynamicClusterFactory(testNodes)
 	members := dc.Members()
 
 	if len(members) != len(testNodes) {
@@ -53,9 +53,9 @@ func TestCreateDynamicCluster(t *testing.T) {
 func TestAddNodesToDynamicCluster(t *testing.T) {
 
 	var emptyNodes []Node
-	dc := DynamicClusterFactory(emptyNodes)
-	members := dc.Members()
-	updateCh := dc.NodeUpdates()
+	dc, clusterState := DynamicClusterFactory(emptyNodes)
+	members := clusterState.InitialMembers
+	updateCh := clusterState.Updates
 
 	if len(members) != 0 {
 		t.Error("Empty Dynamic Cluster should have 0 nodes")
@@ -125,8 +125,8 @@ func TestAddNodesToDynamicCluster(t *testing.T) {
  */
 func TestAddNodeToClusterThatAlreadyExists(t *testing.T) {
 	var emptyNodes []Node
-	dc := DynamicClusterFactory(emptyNodes)
-	updateCh := dc.NodeUpdates()
+	dc, clusterState := DynamicClusterFactory(emptyNodes)
+	updateCh := clusterState.Updates
 
 	members := dc.Members()
 	tNode := TestNode{
@@ -158,24 +158,14 @@ func TestAddNodeToClusterThatAlreadyExists(t *testing.T) {
 	}
 }
 
-func TestAddNotBlocked(t *testing.T) {
-	var emptyNodes []Node
-	dc := DynamicClusterFactory(emptyNodes)
-
-	nodes := GenerateTestNodes(5)
-	for _, node := range nodes {
-		dc.AddNode(node)
-	}
-}
-
 /*
  * Verify that Delete is Idempotent, a non existant node can
  * be deleted from an empty cluster
  */
 func TestDeleteNodeFromEmptyCluster(t *testing.T) {
 	var emptyNodes []Node
-	dc := DynamicClusterFactory(emptyNodes)
-	updateCh := dc.NodeUpdates()
+	dc, clusterState := DynamicClusterFactory(emptyNodes)
+	updateCh := clusterState.Updates
 
 	dc.RemoveNode("node_X")
 	if len(dc.Members()) != 0 {
@@ -199,8 +189,8 @@ func TestDeleteNodeFromCluster(t *testing.T) {
 
 	nodes := make([]Node, 1)
 	nodes[0] = &tNode
-	dc := DynamicClusterFactory(nodes)
-	updateCh := dc.NodeUpdates()
+	dc, clusterState := DynamicClusterFactory(nodes)
+	updateCh := clusterState.Updates
 
 	if len(dc.Members()) != 1 {
 		t.Error("Dynamic Cluster should have 1 node")
@@ -219,14 +209,5 @@ func TestDeleteNodeFromCluster(t *testing.T) {
 		}
 	default:
 		t.Error("Expected removed node to be added to channel")
-	}
-}
-
-func TestRemoveNotBlocked(t *testing.T) {
-	nodes := GenerateTestNodes(5)
-	dc := DynamicClusterFactory(nodes)
-
-	for _, node := range nodes {
-		dc.RemoveNode(node.Id())
 	}
 }

@@ -8,7 +8,6 @@ type dynamicCluster struct {
 	memberSet   map[string]bool
 	membersList []Node
 	updateCh    chan NodeUpdate
-	watcher     bool
 }
 
 //
@@ -16,14 +15,6 @@ type dynamicCluster struct {
 //
 func (c *dynamicCluster) Members() []Node {
 	return c.membersList
-}
-
-//
-// Returns a Channel which contains Node Updates
-//
-func (c *dynamicCluster) NodeUpdates() <-chan NodeUpdate {
-	c.watcher = true
-	return c.updateCh
 }
 
 //
@@ -36,12 +27,9 @@ func (c *dynamicCluster) AddNode(n Node) {
 		c.membersList = append(c.membersList, n)
 		c.memberSet[n.Id()] = true
 
-		// don't add to channel and block unless someone is subscribed to updates
-		if c.watcher {
-			c.updateCh <- NodeUpdate{
-				UpdateType: NodeAdded,
-				Node:       n,
-			}
+		c.updateCh <- NodeUpdate{
+			UpdateType: NodeAdded,
+			Node:       n,
 		}
 	}
 }
@@ -65,12 +53,9 @@ func (c *dynamicCluster) RemoveNode(nodeId string) {
 		c.membersList, c.membersList[len(c.membersList)-1] = append(c.membersList[:indexToDelete], c.membersList[indexToDelete+1:]...), nil
 		delete(c.memberSet, nodeId)
 
-		// don't add to channel and block unless someone is subscribed to updates
-		if c.watcher {
-			c.updateCh <- NodeUpdate{
-				UpdateType: NodeRemoved,
-				Node:       nodeToDelete,
-			}
+		c.updateCh <- NodeUpdate{
+			UpdateType: NodeRemoved,
+			Node:       nodeToDelete,
 		}
 	}
 }
@@ -79,20 +64,31 @@ func (c *dynamicCluster) RemoveNode(nodeId string) {
  * Creates a Dynamic Cluster with the an initial list of nodes
  * Dynamic Cluster can be moodified by adding or removing nodes.
  */
-func DynamicClusterFactory(initialNodes []Node) *dynamicCluster {
+func DynamicClusterFactory(initialNodes []Node) (*dynamicCluster, DynamicClusterState) {
 	var membersList []Node
 	memberSet := make(map[string]bool)
 
 	for _, node := range initialNodes {
 		membersList = append(membersList, node)
 		memberSet[node.Id()] = true
-
 	}
 
-	return &dynamicCluster{
+	copyInitialNodes := make([]Node, 0, len(initialNodes))
+	for _, node := range initialNodes {
+		copyInitialNodes = append(copyInitialNodes, node)
+	}
+
+	dc := &dynamicCluster{
 		membersList: membersList,
 		memberSet:   memberSet,
 		updateCh:    make(chan NodeUpdate, 1),
-		watcher:     false,
 	}
+
+	clusterState := DynamicClusterState{
+		InitialMembers: copyInitialNodes,
+		Updates:        dc.updateCh,
+	}
+
+	return dc, clusterState
+
 }

@@ -86,14 +86,15 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	nodes := cm.GenerateTestNodes(2)
+	nodes := cm.GenerateTestNodes(1)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
-	clusterMock.EXPECT().Members().Return([]cm.Node{nodes[0]})
-	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
+	clusterState := cm.DynamicClusterState{
+		InitialMembers: nodes,
+		Updates:        updateCh,
+	}
 
-	dist := NewDynamicPoolDistributor(clusterMock)
+	dist := NewDynamicPoolDistributor(clusterState)
 
 	job1 := sched.Job{
 		Id: "job1",
@@ -110,8 +111,10 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 	default:
 	}
 
+	addedNode := (cm.GenerateTestNodes(1))[0]
+
 	updateCh <- cm.NodeUpdate{
-		Node:       nodes[1],
+		Node:       addedNode,
 		UpdateType: cm.NodeAdded,
 	}
 
@@ -120,8 +123,8 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 	}
 	node2 := dist.ReserveNode(job2)
 
-	if strings.Compare(node2.Id(), nodes[1].Id()) != 0 {
-		t.Error("Unexpected Node Returned", node2.Id(), nodes[1].Id())
+	if strings.Compare(node2.Id(), addedNode.Id()) != 0 {
+		t.Error("Unexpected Node Returned", node2.Id(), addedNode)
 	}
 
 	select {
@@ -138,11 +141,12 @@ func TestDynamicDistributor_RemoveNodesUnReserved(t *testing.T) {
 	nodes := cm.GenerateTestNodes(2)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nodes)
-	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
+	clusterState := cm.DynamicClusterState{
+		InitialMembers: nodes,
+		Updates:        updateCh,
+	}
 
-	dist := NewDynamicPoolDistributor(clusterMock)
+	dist := NewDynamicPoolDistributor(clusterState)
 
 	updateCh <- cm.NodeUpdate{
 		Node:       nodes[0],
@@ -176,11 +180,12 @@ func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
 	nodes := cm.GenerateTestNodes(2)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nodes)
-	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
+	clusterState := cm.DynamicClusterState{
+		InitialMembers: nodes,
+		Updates:        updateCh,
+	}
 
-	dist := NewDynamicPoolDistributor(clusterMock)
+	dist := NewDynamicPoolDistributor(clusterState)
 
 	// fully schedule the cluster
 	job1 := sched.Job{
@@ -225,11 +230,13 @@ func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
 
 	nodes := cm.GenerateTestNodes(1)
 	updateCh := make(chan cm.NodeUpdate)
-	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nodes)
-	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
-	dist := NewDynamicPoolDistributor(clusterMock)
+	clusterState := cm.DynamicClusterState{
+		InitialMembers: nodes,
+		Updates:        updateCh,
+	}
+
+	dist := NewDynamicPoolDistributor(clusterState)
 
 	// mimic flapping node remove and then add
 	updateCh <- cm.NodeUpdate{

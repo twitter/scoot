@@ -36,14 +36,7 @@ func NewPoolDistributor(cluster cm.Cluster) *PoolDistributor {
 	}
 
 	// allocate the initial cluster size for the free channel
-	// intializing the channel size to be 2 * the number of initial
-	// nodes.
-	//
-	// This is currently a bit of a hack for dynamic clusters
-	// adding nodes will just block, no updates will be lost.
-	// Doubling the cluster size is a rare event, and to fix, the scheduler
-	// just needs to be restarted for a larger channel to be allocated.
-	freeCh := make(chan cm.Node, 2*len(nodes))
+	freeCh := make(chan cm.Node, len(nodes))
 
 	// put all the nodes in the freeCh
 	for _, n := range nodes {
@@ -61,13 +54,32 @@ func NewPoolDistributor(cluster cm.Cluster) *PoolDistributor {
 //
 // If the cluster has 0 nodes in it returns nil
 //
-func NewDynamicPoolDistributor(cluster cm.DynamicClusterState) *PoolDistributor {
+func NewDynamicPoolDistributor(clusterState cm.DynamicClusterState) *PoolDistributor {
 
-	dist := NewPoolDistributor(cluster)
-	dist.toRemove = make(map[string]bool)
+	nodes := clusterState.InitialMembers
+
+	// allocate the initial cluster size for the free channel
+	// intializing the channel size to be 5 * the number of initial
+	// nodes.
+	//
+	// This is currently a bit of a hack for dynamic clusters
+	// adding nodes will just block, no updates will be lost.
+	// Doubling the cluster size is a rare event, and to fix, the scheduler
+	// just needs to be restarted for a larger channel to be allocated.
+	freeCh := make(chan cm.Node, 5*len(nodes))
+
+	// put all the nodes in the freeCh
+	for _, n := range nodes {
+		freeCh <- n
+	}
+
+	dist := &PoolDistributor{
+		freeCh:   freeCh,
+		toRemove: make(map[string]bool),
+	}
 
 	// spawn a go routine to deal with cluster updates
-	go updateCluster(dist, cluster.NodeUpdates())
+	go updateCluster(dist, clusterState.Updates)
 
 	return dist
 }
