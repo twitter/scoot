@@ -8,6 +8,8 @@ import (
 
 func TestAll(t *testing.T) {
 	exer := os.NewExecer()
+
+	// TODO(dbentley): factor out an assertRun method
 	cmd := execer.Command{Argv: []string{"true"}}
 	p, err := exer.Exec(cmd)
 	if err != nil {
