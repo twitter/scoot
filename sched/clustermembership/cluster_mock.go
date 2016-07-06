@@ -94,3 +94,81 @@ func (_m *MockDynamicCluster) RemoveNode(nodeId string) {
 func (_mr *_MockDynamicClusterRecorder) RemoveNode(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveNode", arg0)
 }
+
+// Mock of DynamicClusterState interface
+type MockDynamicClusterState struct {
+	ctrl     *gomock.Controller
+	recorder *_MockDynamicClusterStateRecorder
+}
+
+// Recorder for MockDynamicClusterState (not exported)
+type _MockDynamicClusterStateRecorder struct {
+	mock *MockDynamicClusterState
+}
+
+func NewMockDynamicClusterState(ctrl *gomock.Controller) *MockDynamicClusterState {
+	mock := &MockDynamicClusterState{ctrl: ctrl}
+	mock.recorder = &_MockDynamicClusterStateRecorder{mock}
+	return mock
+}
+
+func (_m *MockDynamicClusterState) EXPECT() *_MockDynamicClusterStateRecorder {
+	return _m.recorder
+}
+
+func (_m *MockDynamicClusterState) Members() []Node {
+	ret := _m.ctrl.Call(_m, "Members")
+	ret0, _ := ret[0].([]Node)
+	return ret0
+}
+
+func (_mr *_MockDynamicClusterStateRecorder) Members() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Members")
+}
+
+func (_m *MockDynamicClusterState) NodeUpdates() <-chan NodeUpdate {
+	ret := _m.ctrl.Call(_m, "NodeUpdates")
+	ret0, _ := ret[0].(<-chan NodeUpdate)
+	return ret0
+}
+
+func (_mr *_MockDynamicClusterStateRecorder) NodeUpdates() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "NodeUpdates")
+}
+
+// Mock of UpdatableCluster interface
+type MockUpdatableCluster struct {
+	ctrl     *gomock.Controller
+	recorder *_MockUpdatableClusterRecorder
+}
+
+// Recorder for MockUpdatableCluster (not exported)
+type _MockUpdatableClusterRecorder struct {
+	mock *MockUpdatableCluster
+}
+
+func NewMockUpdatableCluster(ctrl *gomock.Controller) *MockUpdatableCluster {
+	mock := &MockUpdatableCluster{ctrl: ctrl}
+	mock.recorder = &_MockUpdatableClusterRecorder{mock}
+	return mock
+}
+
+func (_m *MockUpdatableCluster) EXPECT() *_MockUpdatableClusterRecorder {
+	return _m.recorder
+}
+
+func (_m *MockUpdatableCluster) AddNode(n Node) {
+	_m.ctrl.Call(_m, "AddNode", n)
+}
+
+func (_mr *_MockUpdatableClusterRecorder) AddNode(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddNode", arg0)
+}
+
+func (_m *MockUpdatableCluster) RemoveNode(nodeId string) {
+	_m.ctrl.Call(_m, "RemoveNode", nodeId)
+}
+
+func (_mr *_MockUpdatableClusterRecorder) RemoveNode(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveNode", arg0)
+}

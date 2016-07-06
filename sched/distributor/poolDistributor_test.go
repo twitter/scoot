@@ -89,7 +89,7 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 	nodes := cm.GenerateTestNodes(2)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
+	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
 	clusterMock.EXPECT().Members().Return([]cm.Node{nodes[0]})
 	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
@@ -138,7 +138,7 @@ func TestDynamicDistributor_RemoveNodesUnReserved(t *testing.T) {
 	nodes := cm.GenerateTestNodes(2)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
+	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
 	clusterMock.EXPECT().Members().Return(nodes)
 	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
@@ -176,7 +176,7 @@ func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
 	nodes := cm.GenerateTestNodes(2)
 	updateCh := make(chan cm.NodeUpdate)
 
-	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
+	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
 	clusterMock.EXPECT().Members().Return(nodes)
 	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
@@ -225,7 +225,7 @@ func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
 
 	nodes := cm.GenerateTestNodes(1)
 	updateCh := make(chan cm.NodeUpdate)
-	clusterMock := cm.NewMockDynamicCluster(mockCtrl)
+	clusterMock := cm.NewMockDynamicClusterState(mockCtrl)
 	clusterMock.EXPECT().Members().Return(nodes)
 	clusterMock.EXPECT().NodeUpdates().Return(updateCh)
 
