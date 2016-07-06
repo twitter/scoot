@@ -61,7 +61,7 @@ func NewPoolDistributor(cluster cm.Cluster) *PoolDistributor {
 //
 // If the cluster has 0 nodes in it returns nil
 //
-func NewDynamicPoolDistributor(cluster cm.DynamicCluster) *PoolDistributor {
+func NewDynamicPoolDistributor(cluster cm.DynamicClusterState) *PoolDistributor {
 
 	dist := NewPoolDistributor(cluster)
 	dist.toRemove = make(map[string]bool)
