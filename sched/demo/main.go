@@ -29,7 +29,6 @@ func main() {
 	saga := s.MakeInMemorySaga()
 
 	scheduler := scheduler.NewScheduler(cluster, clusterState, saga)
-	scheduler.Start()
 
 	go func() {
 		generateClusterChurn(cluster, clusterState)

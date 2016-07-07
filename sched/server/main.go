@@ -20,8 +20,6 @@ func main() {
 
 	scheduler := sched.NewScheduler(cluster, clusterState, saga)
 
-	scheduler.Start()
-
 	// TODO: pull work off of WorkQueue and schedule
 
 }

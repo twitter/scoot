@@ -27,7 +27,7 @@ func NewJobRunner(job sched.Job, saga saga.Saga, sagaState *saga.SagaState, node
 		saga:       saga,
 		sagaState:  sagaState,
 		dist:       dist.NewPoolDistributor(cm.StaticClusterFactory(nodes)),
-		updateChan: make(chan stateUpdate),
+		updateChan: make(chan stateUpdate, 0),
 	}
 
 	go jr.updateSagaState()
@@ -49,11 +49,11 @@ func (jr jobRunner) runJob() {
 
 			if !jr.sagaState.IsTaskCompleted(task.Id) {
 				node := jr.dist.ReserveNode()
+				defer jr.dist.ReleaseNode(node)
+				defer jr.wg.Done()
 
-				jr.updateChan <- stateUpdate{
-					msgType: saga.StartTask,
-					taskId:  task.Id,
-				}
+				// Put StartTask Message on SagaLog
+				jr.logSagaMessage(saga.StartTask, task.Id, nil)
 
 				jr.wg.Add(1)
 				go func(node cm.Node, task sched.Task) {
@@ -69,18 +69,11 @@ func (jr jobRunner) runJob() {
 						}
 					}
 
-					jr.updateChan <- stateUpdate{
-						msgType: saga.EndTask,
-						taskId:  task.Id,
-					}
-					jr.dist.ReleaseNode(node)
-					jr.wg.Done()
+					jr.logSagaMessage(saga.EndTask, task.Id, nil)
 				}(node, task)
 			}
 		}
-	}
-
-	if jr.sagaState.IsSagaAborted() {
+	} else {
 		// TODO: we don't have a way to specify comp tasks yet
 		// Once we do they should be ran here.  Currently the
 		// scheduler only supports ForwardRecovery in Sagas so Panic!
@@ -89,17 +82,35 @@ func (jr jobRunner) runJob() {
 
 	// wait for all tasks to complete
 	jr.wg.Wait()
-	jr.updateChan <- stateUpdate{
-		msgType: saga.EndSaga,
-	}
+
+	// Log EndSaga Message to SagaLog
+	jr.logSagaMessage(saga.EndSaga, "", nil)
 
 	return
 }
 
 type stateUpdate struct {
-	msgType saga.SagaMessageType
-	taskId  string
-	data    []byte
+	msgType  saga.SagaMessageType
+	taskId   string
+	data     []byte
+	loggedCh chan bool
+}
+
+// Logs the message durably to the sagalog and updates the state.  Blocks until the message
+// has been durably logged
+func (jr jobRunner) logSagaMessage(msgType saga.SagaMessageType, taskId string, data []byte) {
+	update := stateUpdate{
+		msgType:  msgType,
+		taskId:   taskId,
+		data:     data,
+		loggedCh: make(chan bool, 0),
+	}
+
+	jr.updateChan <- update
+
+	// wait for update to complete before returning
+	<-update.loggedCh
+	return
 }
 
 // handles all the sagaState updates
@@ -122,11 +133,21 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 
-				// state transition was not successful maxed out retries
-				// TODO: for now just panic eventually implement dead letter queue.
 			} else {
-				panic(fmt.Sprintf("Failed to succeesfully log StartTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
+
+				if attempts > MAX_RETRY {
+					// TODO: Implement deadletter queue.  SagaLog is failing to store this message some reason,
+					// Could be bad message or could be because the log is unavailable.  Put on Deadletter Queue and Move On
+					// For now just panic, for Alpha (all in memory this SHOULD never happen)
+					panic(fmt.Sprintf("Failed to succeesfully log StartTask. sagaId: %v, taskId: %v, this Job should be put on the deadletter queue", jr.sagaState.SagaId(), update.taskId))
+
+				} else {
+					// Something is really wrong.  Either an Invalid State Transition, or we formatted the request to the SagaLog incorrectly
+					// These errors indicate a fatal bug in our code.  So we should panic.
+					panic(fmt.Sprintf("Unrecoverable Error while logging StartTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
+				}
 			}
 
 		case saga.EndTask:
@@ -142,6 +163,7 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 
 				// state transition was not successful maxed out retries
 				// TODO: for now just panic eventually implement dead letter queue.
@@ -162,6 +184,7 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 
 				// state transition was not successful maxed out retries
 				// TODO: for now just panic eventually implement dead letter queue.
@@ -182,6 +205,7 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 
 				// state transition was not successful maxed out retries
 				// TODO: for now just panic eventually implement dead letter queue.
@@ -202,6 +226,7 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 				// close the channel no more messages should be coming
 				close(jr.updateChan)
 
@@ -224,6 +249,7 @@ func (jr jobRunner) updateSagaState() {
 			// if state transition was successful update internal state
 			if state != nil {
 				jr.sagaState = state
+				update.loggedCh <- true
 			} else {
 				panic(fmt.Sprintf("Failed to successfully log AbortSaga. sagaId: %v", jr.sagaState.SagaId()))
 			}
@@ -234,34 +260,29 @@ func (jr jobRunner) updateSagaState() {
 // checks the error returned my updating saga state.
 func retryableErr(err error) bool {
 
+	switch err.(type) {
 	// InvalidSagaState is an unrecoverable error. This indicates a fatal bug in the code
 	// which is asking for an impossible transition.
-	_, ok := err.(saga.InvalidSagaStateError)
-	if ok {
+	case saga.InvalidSagaStateError:
 		return false
-	}
 
 	// InvalidSagaMessage is an unrecoverable error.  This indicates a fatal bug in the code
 	// which is applying invalid parameters to a saga.
-	_, ok2 := err.(saga.InvalidSagaMessageError)
-	if ok2 {
+	case saga.InvalidSagaMessageError:
 		return false
-	}
 
 	// InvalidRequestError is an unrecoverable error.  This indicates a fatal bug in the code
 	// where the SagaLog cannot durably store messages
-	_, ok3 := err.(saga.InvalidRequestError)
-	if ok3 {
+	case saga.InvalidRequestError:
 		return false
-	}
 
 	// InternalLogError is a transient error experienced by the log.  It was not
 	// able to durably store the message but it is ok to retry.
-	_, ok4 := err.(saga.InternalLogError)
-	if ok4 {
+	case saga.InternalLogError:
 		return true
-	}
 
 	// unknown error, default to retryable.
-	return true
+	default:
+		return true
+	}
 }
