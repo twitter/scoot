@@ -23,7 +23,7 @@ func main() {
 	var ex execer.Execer
 	switch *execerType {
 	case "sim":
-		ex = fake.NewSimExecer()
+		ex = fake.NewSimExecer(nil)
 	case "os":
 		ex = os.NewExecer()
 	default:
