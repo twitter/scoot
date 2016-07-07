@@ -49,14 +49,14 @@ func (jr jobRunner) runJob() {
 
 			if !jr.sagaState.IsTaskCompleted(task.Id) {
 				node := jr.dist.ReserveNode()
-				defer jr.dist.ReleaseNode(node)
-				defer jr.wg.Done()
 
 				// Put StartTask Message on SagaLog
 				jr.logSagaMessage(saga.StartTask, task.Id, nil)
 
 				jr.wg.Add(1)
 				go func(node cm.Node, task sched.Task) {
+					defer jr.dist.ReleaseNode(node)
+					defer jr.wg.Done()
 
 					// TODO: After a number of attempts we should stop
 					// Trying to run a task, could be a poison pill
@@ -114,144 +114,47 @@ func (jr jobRunner) logSagaMessage(msgType saga.SagaMessageType, taskId string, 
 }
 
 // handles all the sagaState updates
-// TODO: lots of shared retry code, need either Lambdas(go support?) or some refactor to re-use shared code.
 func (jr jobRunner) updateSagaState() {
+
+	var err error
+	var state *saga.SagaState
 
 	for update := range jr.updateChan {
 		switch update.msgType {
 		case saga.StartTask:
-
-			attempts := 0
-			state, err := jr.saga.StartTask(jr.sagaState, update.taskId, update.data)
-
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.StartTask(jr.sagaState, update.taskId, update.data)
-				attempts++
-			}
-
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
-
-			} else {
-
-				if attempts > MAX_RETRY {
-					// TODO: Implement deadletter queue.  SagaLog is failing to store this message some reason,
-					// Could be bad message or could be because the log is unavailable.  Put on Deadletter Queue and Move On
-					// For now just panic, for Alpha (all in memory this SHOULD never happen)
-					panic(fmt.Sprintf("Failed to succeesfully log StartTask. sagaId: %v, taskId: %v, this Job should be put on the deadletter queue", jr.sagaState.SagaId(), update.taskId))
-
-				} else {
-					// Something is really wrong.  Either an Invalid State Transition, or we formatted the request to the SagaLog incorrectly
-					// These errors indicate a fatal bug in our code.  So we should panic.
-					panic(fmt.Sprintf("Unrecoverable Error while logging StartTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
-				}
-			}
+			state, err = jr.saga.StartTask(jr.sagaState, update.taskId, update.data)
 
 		case saga.EndTask:
-			attempts := 0
-			state, err := jr.saga.EndTask(jr.sagaState, update.taskId, update.data)
-
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.EndTask(jr.sagaState, update.taskId, update.data)
-				attempts++
-			}
-
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
-
-				// state transition was not successful maxed out retries
-				// TODO: for now just panic eventually implement dead letter queue.
-			} else {
-				panic(fmt.Sprintf("Failed to succeesfully log EndTask sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
-			}
+			state, err = jr.saga.EndTask(jr.sagaState, update.taskId, update.data)
 
 		case saga.StartCompTask:
-			attempts := 0
-			state, err := jr.saga.StartCompensatingTask(jr.sagaState, update.taskId, update.data)
-
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.StartCompensatingTask(jr.sagaState, update.taskId, update.data)
-				attempts++
-			}
-
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
-
-				// state transition was not successful maxed out retries
-				// TODO: for now just panic eventually implement dead letter queue.
-			} else {
-				panic(fmt.Sprintf("Failed to succeesfully log StartCompTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
-			}
+			state, err = jr.saga.StartCompensatingTask(jr.sagaState, update.taskId, update.data)
 
 		case saga.EndCompTask:
-			attempts := 0
-			state, err := jr.saga.EndCompensatingTask(jr.sagaState, update.taskId, update.data)
-
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.EndCompensatingTask(jr.sagaState, update.taskId, update.data)
-				attempts++
-			}
-
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
-
-				// state transition was not successful maxed out retries
-				// TODO: for now just panic eventually implement dead letter queue.
-			} else {
-				panic(fmt.Sprintf("Failed to succeesfully log EndCompTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
-			}
+			state, err = jr.saga.EndCompensatingTask(jr.sagaState, update.taskId, update.data)
 
 		case saga.EndSaga:
-			attempts := 0
-			state, err := jr.saga.EndSaga(jr.sagaState)
-
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.EndSaga(jr.sagaState)
-				attempts++
-			}
-
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
-				// close the channel no more messages should be coming
-				close(jr.updateChan)
-
-				// state transition was not successful maxed out retries
-				// TODO: for now just panic eventually implement dead letter queue.
-			} else {
-				panic(fmt.Sprintf("Failed to succeesfully log EndSaga. sagaId: %v", jr.sagaState.SagaId()))
-			}
+			state, err = jr.saga.EndSaga(jr.sagaState)
 
 		case saga.AbortSaga:
-			attempts := 0
-			state, err := jr.saga.AbortSaga(jr.sagaState)
+			state, err = jr.saga.AbortSaga(jr.sagaState)
+		}
 
-			// if the attempt to update didn't succeed retry
-			for err != nil && retryableErr(err) && attempts < MAX_RETRY {
-				state, err = jr.saga.AbortSaga(jr.sagaState)
-				attempts++
-			}
+		// if state transition was successful update internal state
+		if err == nil {
+			jr.sagaState = state
+			update.loggedCh <- true
 
-			// if state transition was successful update internal state
-			if state != nil {
-				jr.sagaState = state
-				update.loggedCh <- true
+		} else {
+			if retryableErr(err) {
+				// TODO: Implement deadletter queue.  SagaLog is failing to store this message some reason,
+				// Could be bad message or could be because the log is unavailable.  Put on Deadletter Queue and Move On
+				// For now just panic, for Alpha (all in memory this SHOULD never happen)
+				panic(fmt.Sprintf("Failed to succeesfully log StartCompTask sagaId: %v, taskId: %v, this Job should be put on the deadletter queue", jr.sagaState.SagaId(), update.taskId))
 			} else {
-				panic(fmt.Sprintf("Failed to successfully log AbortSaga. sagaId: %v", jr.sagaState.SagaId()))
+				// Something is really wrong.  Either an Invalid State Transition, or we formatted the request to the SagaLog incorrectly
+				// These errors indicate a fatal bug in our code.  So we should panic.
+				panic(fmt.Sprintf("Failed to succeesfully log StartCompTask. sagaId: %v, taskId: %v", jr.sagaState.SagaId(), update.taskId))
 			}
 		}
 	}
