@@ -8,7 +8,7 @@ import (
 )
 
 func TestBadDef(t *testing.T) {
-	q, _ := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
 	job := sched.Job{}
 	_, err := q.Enqueue(job)
 	if err == nil {
@@ -33,7 +33,8 @@ func TestBadDef(t *testing.T) {
 }
 
 func TestEnqueue(t *testing.T) {
-	q, ch := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
+	ch := q.Chan()
 	job := sched.Job{}
 	task := sched.Task{}
 	task.Id = "1"
@@ -66,7 +67,7 @@ func TestEnqueue(t *testing.T) {
 }
 
 func TestBackpressure(t *testing.T) {
-	q, _ := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
 	job := sched.Job{}
 	task := sched.Task{}
 	task.Id = "1"
