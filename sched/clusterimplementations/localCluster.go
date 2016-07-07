@@ -13,11 +13,11 @@ import (
  * Simulates a node locally and just prints all
  * received messages
  */
-type localNode struct {
-	name string
+type LocalNode struct {
+	Name string
 }
 
-func (n localNode) SendMessage(task sched.Task) error {
+func (n LocalNode) SendMessage(task sched.Task) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
@@ -26,8 +26,8 @@ func (n localNode) SendMessage(task sched.Task) error {
 	return nil
 }
 
-func (n localNode) Id() string {
-	return n.name
+func (n LocalNode) Id() string {
+	return n.Name
 }
 
 /*
@@ -38,8 +38,8 @@ func StaticLocalNodeClusterFactory(size int) cm.Cluster {
 	nodes := make([]cm.Node, size)
 
 	for s := 0; s < size; s++ {
-		nodes[s] = localNode{
-			name: fmt.Sprintf("static_node_%d", s),
+		nodes[s] = LocalNode{
+			Name: fmt.Sprintf("static_node_%d", s),
 		}
 	}
 
@@ -50,12 +50,12 @@ func StaticLocalNodeClusterFactory(size int) cm.Cluster {
  * Creates a Dynamic LocalNode Cluster with the initial
  * number of Nodes in it.
  */
-func DynamicLocalNodeClusterFactory(initialSize int) cm.Cluster {
+func DynamicLocalNodeClusterFactory(initialSize int) (cm.DynamicCluster, cm.DynamicClusterState) {
 	nodes := make([]cm.Node, initialSize)
 
 	for s := 0; s < initialSize; s++ {
-		nodes[s] = localNode{
-			name: fmt.Sprintf("dynamic_node_%d", s),
+		nodes[s] = LocalNode{
+			Name: fmt.Sprintf("dynamic_node_%d", s),
 		}
 	}
 
