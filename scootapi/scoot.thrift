@@ -21,6 +21,10 @@ struct Task {
   3: optional string snapshotId,
 }
 
+struct JobId {
+  1: required string id
+}
+
 struct Job {
   1: required string id,
   2: required list<Task> tasks,
@@ -31,8 +35,9 @@ struct JobDefinition {
   2: optional JobType jobType,
 }
 
+// TODO(dbentley): rename this to... Exec? CloudExec? CloudScoot?
 service Proc {
-  Job RunJob(1: JobDefinition job) throws (
+   JobId RunJob(1: JobDefinition job) throws (
     1: InvalidRequest ir,
     2: CanNotScheduleNow cnsn,
   )

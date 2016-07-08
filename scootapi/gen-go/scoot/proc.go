@@ -17,7 +17,7 @@ var _ = bytes.Equal
 type Proc interface {
 	// Parameters:
 	//  - Job
-	RunJob(job *JobDefinition) (r *Job, err error)
+	RunJob(job *JobDefinition) (r *JobId, err error)
 }
 
 type ProcClient struct {
@@ -48,7 +48,7 @@ func NewProcClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot th
 
 // Parameters:
 //  - Job
-func (p *ProcClient) RunJob(job *JobDefinition) (r *Job, err error) {
+func (p *ProcClient) RunJob(job *JobDefinition) (r *JobId, err error) {
 	if err = p.sendRunJob(job); err != nil {
 		return
 	}
@@ -77,7 +77,7 @@ func (p *ProcClient) sendRunJob(job *JobDefinition) (err error) {
 	return oprot.Flush()
 }
 
-func (p *ProcClient) recvRunJob() (value *Job, err error) {
+func (p *ProcClient) recvRunJob() (value *JobId, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -192,7 +192,7 @@ func (p *procProcessorRunJob) Process(seqId int32, iprot, oprot thrift.TProtocol
 
 	iprot.ReadMessageEnd()
 	result := ProcRunJobResult{}
-	var retval *Job
+	var retval *JobId
 	var err2 error
 	if retval, err2 = p.handler.RunJob(args.Job); err2 != nil {
 		switch v := err2.(type) {
@@ -335,7 +335,7 @@ func (p *ProcRunJobArgs) String() string {
 //  - Ir
 //  - Cnsn
 type ProcRunJobResult struct {
-	Success *Job               `thrift:"success,0" json:"success,omitempty"`
+	Success *JobId             `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest    `thrift:"ir,1" json:"ir,omitempty"`
 	Cnsn    *CanNotScheduleNow `thrift:"cnsn,2" json:"cnsn,omitempty"`
 }
@@ -344,9 +344,9 @@ func NewProcRunJobResult() *ProcRunJobResult {
 	return &ProcRunJobResult{}
 }
 
-var ProcRunJobResult_Success_DEFAULT *Job
+var ProcRunJobResult_Success_DEFAULT *JobId
 
-func (p *ProcRunJobResult) GetSuccess() *Job {
+func (p *ProcRunJobResult) GetSuccess() *JobId {
 	if !p.IsSetSuccess() {
 		return ProcRunJobResult_Success_DEFAULT
 	}
@@ -424,7 +424,7 @@ func (p *ProcRunJobResult) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *ProcRunJobResult) readField0(iprot thrift.TProtocol) error {
-	p.Success = &Job{}
+	p.Success = &JobId{}
 	if err := p.Success.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
 	}
