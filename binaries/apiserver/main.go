@@ -11,9 +11,13 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
+	// TODO: upgrade to durable queue
 	queue, _ := memory.NewSimpleQueue()
 	handler := server.NewHandler(queue)
-	err := server.Serve(handler, "localhost:9090", transportFactory, protocolFactory)
+
+	// TODO: read from a config
+	addr := "localhost:9090"
+	err := server.Serve(handler, addr, transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Scoot API: ", err)
 	}
