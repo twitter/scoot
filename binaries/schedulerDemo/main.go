@@ -7,7 +7,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
-	distributor "github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/scheduler"
 
 	"math/rand"
 	"os"
@@ -26,8 +26,9 @@ func main() {
 	fmt.Println("")
 
 	workCh := make(chan sched.Job)
-	distributor := distributor.NewDynamicPoolDistributor(clusterState)
 	saga := s.MakeInMemorySaga()
+
+	scheduler := scheduler.NewScheduler(cluster, clusterState, saga)
 
 	go func() {
 		generateClusterChurn(cluster, clusterState)
@@ -38,16 +39,17 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		generateTasks(workCh, 1000000)
+		generateTasks(workCh, 10000)
 		wg.Done()
 	}()
 
-	go func() {
-		scheduleWork(workCh, distributor, saga)
-		wg.Done()
-	}()
+	for work := range workCh {
+		//TODO: Error Handling
+		fmt.Println("Scheduling Job: ", work.Id)
+		scheduler.ScheduleJob(work)
+	}
 
-	wg.Wait()
+	scheduler.BlockUnitlAllJobsCompleted()
 
 	ids, err := saga.Startup()
 
@@ -78,38 +80,6 @@ func main() {
 	}
 
 	fmt.Println("Jobs Completed:", completedSagas)
-}
-
-func scheduleWork(
-	workCh <-chan sched.Job,
-	distributor *distributor.PoolDistributor,
-	saga s.Saga) {
-
-	var wg sync.WaitGroup
-	for work := range workCh {
-		node := distributor.ReserveNode(work)
-
-		wg.Add(1)
-		go func(w sched.Job, n cm.Node) {
-			defer wg.Done()
-
-			sagaId := w.Id
-			state, _ := saga.StartSaga(sagaId, nil)
-
-			//Todo: error handling, what if request fails
-			for _, task := range w.Tasks {
-				state, _ = saga.StartTask(state, task.Id, nil)
-				n.SendMessage(task)
-				state, _ = saga.EndTask(state, task.Id, nil)
-			}
-
-			state, _ = saga.EndSaga(state)
-			distributor.ReleaseNode(n)
-		}(work, node)
-
-	}
-
-	wg.Wait()
 }
 
 /*
@@ -175,6 +145,6 @@ func generateClusterChurn(cluster cm.DynamicCluster, clusterState cm.DynamicClus
 			}
 		}
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }

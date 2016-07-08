@@ -2,7 +2,6 @@ package distributor
 
 import (
 	"github.com/golang/mock/gomock"
-	"github.com/scootdev/scoot/sched"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	"strings"
 	"testing"
@@ -52,15 +51,7 @@ func TestPoolDistributor_OneNodeCluster(t *testing.T) {
 		t.Error("Expected dist to not be nil when 1 or more nodes in Cluster")
 	}
 
-	job1 := sched.Job{
-		Id: "job1",
-	}
-
-	job2 := sched.Job{
-		Id: "job2",
-	}
-
-	node1 := dist.ReserveNode(job1)
+	node1 := dist.ReserveNode()
 
 	select {
 	case <-dist.freeCh:
@@ -69,7 +60,7 @@ func TestPoolDistributor_OneNodeCluster(t *testing.T) {
 	}
 
 	dist.ReleaseNode(node1)
-	node2 := dist.ReserveNode(job2)
+	node2 := dist.ReserveNode()
 
 	if node1.Id() != node2.Id() {
 		t.Error("Expected nodes to be the same Id since there is only one in the cluster")
@@ -95,11 +86,7 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 	}
 
 	dist := NewDynamicPoolDistributor(clusterState)
-
-	job1 := sched.Job{
-		Id: "job1",
-	}
-	node1 := dist.ReserveNode(job1)
+	node1 := dist.ReserveNode()
 
 	if strings.Compare(node1.Id(), nodes[0].Id()) != 0 {
 		t.Error("Unexpected Node Returned", node1.Id(), nodes[0].Id())
@@ -118,10 +105,7 @@ func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
 		UpdateType: cm.NodeAdded,
 	}
 
-	job2 := sched.Job{
-		Id: "job2",
-	}
-	node2 := dist.ReserveNode(job2)
+	node2 := dist.ReserveNode()
 
 	if strings.Compare(node2.Id(), addedNode.Id()) != 0 {
 		t.Error("Unexpected Node Returned", node2.Id(), addedNode)
@@ -153,10 +137,7 @@ func TestDynamicDistributor_RemoveNodesUnReserved(t *testing.T) {
 		UpdateType: cm.NodeRemoved,
 	}
 
-	job1 := sched.Job{
-		Id: "job1",
-	}
-	node1 := dist.ReserveNode(job1)
+	node1 := dist.ReserveNode()
 
 	if strings.Compare(node1.Id(), nodes[0].Id()) == 0 {
 		t.Error("Removed Node Retured", nodes[0].Id())
@@ -188,15 +169,8 @@ func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
 	dist := NewDynamicPoolDistributor(clusterState)
 
 	// fully schedule the cluster
-	job1 := sched.Job{
-		Id: "job1",
-	}
-	node1 := dist.ReserveNode(job1)
-
-	job2 := sched.Job{
-		Id: "job2",
-	}
-	node2 := dist.ReserveNode(job2)
+	node1 := dist.ReserveNode()
+	node2 := dist.ReserveNode()
 
 	// remove node0 from cluster
 	updateCh <- cm.NodeUpdate{
@@ -208,10 +182,7 @@ func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
 	dist.ReleaseNode(node1)
 	dist.ReleaseNode(node2)
 
-	job3 := sched.Job{
-		Id: "job3",
-	}
-	node3 := dist.ReserveNode(job3)
+	node3 := dist.ReserveNode()
 
 	if strings.Compare(node3.Id(), nodes[1].Id()) != 0 {
 		t.Error("Unexpected Node Returned", node3.Id(), nodes[1].Id())
