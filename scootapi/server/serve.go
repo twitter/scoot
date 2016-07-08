@@ -73,7 +73,9 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.Job, err error) {
 		if t == nil {
 			return result, fmt.Errorf("nil task definition")
 		}
-		task.Id = *t.ID
+		if t.ID != nil {
+			task.Id = *t.ID
+		}
 		if t.Command == nil {
 			return result, fmt.Errorf("nil command")
 		}
