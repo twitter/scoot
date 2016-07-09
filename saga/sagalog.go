@@ -45,7 +45,7 @@ func (e InvalidRequestError) Error() string {
 	return e.s
 }
 
-func NewInvalidRequeustError(msg string) error {
+func NewInvalidRequestError(msg string) error {
 	return InvalidRequestError{
 		s: msg,
 	}

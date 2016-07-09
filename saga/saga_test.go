@@ -314,3 +314,31 @@ func TestMessageAfterEndSagaPanics(t *testing.T) {
 
 	t.Errorf("Expected sneding a message after edning a Saga to panic")
 }
+
+func TestFatalError_InvalidSagaState(t *testing.T) {
+	err := NewInvalidSagaStateError("invalid state")
+	if !FatalErr(err) {
+		t.Error("Exepected InvalidSagaState to be a FatalE Error")
+	}
+}
+
+func TestFatalError_InvalidSagaMessage(t *testing.T) {
+	err := NewInvalidSagaMessageError("invalid saga message")
+	if !FatalErr(err) {
+		t.Error("Exepected InvalidSagaState to be a FatalE Error")
+	}
+}
+
+func TestFatalError_InvalidRequestError(t *testing.T) {
+	err := NewInvalidRequestError("invalid request")
+	if !FatalErr(err) {
+		t.Error("Exepected InvalidRequestError to be a FatalE Error")
+	}
+}
+
+func TestFatalError_InternalLogError(t *testing.T) {
+	err := NewInternalLogError("too busy")
+	if FatalErr(err) {
+		t.Error("Exepected InternalLogError to not be a FatalE Error")
+	}
+}
