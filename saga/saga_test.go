@@ -2,7 +2,6 @@ package saga
 
 import (
 	"errors"
-	//"fmt"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

@@ -183,10 +183,6 @@ func (s *Saga) updateSagaState(msg sagaMessage) error {
 	return result
 }
 
-type stateReadReq struct {
-	resultCh chan *SagaState
-}
-
 type sagaUpdate struct {
 	msg      sagaMessage
 	resultCh chan error
