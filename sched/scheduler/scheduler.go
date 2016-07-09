@@ -10,15 +10,15 @@ import (
 
 type scheduler struct {
 	cluster     cm.DynamicCluster
-	saga        saga.Saga
+	sc          saga.SagaCoordinator
 	distributor *dist.PoolDistributor
 	wg          sync.WaitGroup // used to track jobs in progress
 }
 
-func NewScheduler(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState, saga saga.Saga) *scheduler {
+func NewScheduler(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState, sc saga.SagaCoordinator) *scheduler {
 	s := &scheduler{
 		cluster:     cluster,
-		saga:        saga,
+		sc:          sc,
 		distributor: dist.NewDynamicPoolDistributor(clusterState),
 	}
 
@@ -48,7 +48,7 @@ func (s *scheduler) ScheduleJob(job sched.Job) error {
 	// Log StartSaga Message
 	// TODO: need to serialize job into binary and pass in here
 	// so we can recover the job in case of failure
-	sagaState, err := s.saga.StartSaga(job.Id, nil)
+	sagaObj, err := s.sc.MakeSaga(job.Id, nil)
 
 	// If we succssfully started the Saga, ProcssJob
 	if err == nil {
@@ -65,22 +65,18 @@ func (s *scheduler) ScheduleJob(job sched.Job) error {
 
 		// Start Running Job
 		s.wg.Add(1)
-		go s.runJob(job, sagaState, nodes)
+		go func() {
+			defer s.wg.Done()
+			runJob(job, sagaObj, nodes)
+
+			// Release all nodes used for this job
+			for _, node := range nodes {
+				s.distributor.ReleaseNode(node)
+			}
+		}()
 	}
 
 	return err
-}
-
-func (s *scheduler) runJob(job sched.Job, sagaState *saga.SagaState, nodes []cm.Node) {
-	jr := NewJobRunner(job, s.saga, sagaState, nodes)
-	jr.runJob()
-
-	// Release all nodes used for this job
-	for _, node := range nodes {
-		s.distributor.ReleaseNode(node)
-	}
-
-	s.wg.Done()
 }
 
 // Get the Number of Nodes needed to run this job.  Right now this is

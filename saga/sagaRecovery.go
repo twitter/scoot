@@ -24,7 +24,7 @@ const (
 /*
  * Recovers SagaState from SagaLog messages
  */
-func recoverState(sagaId string, saga Saga, recoveryType SagaRecoveryType) (*SagaState, error) {
+func recoverState(sagaId string, saga SagaCoordinator, recoveryType SagaRecoveryType) (*SagaState, error) {
 
 	// Get Logged Messages For this Saga from the Log.
 	msgs, err := saga.log.GetMessages(sagaId)
@@ -58,26 +58,6 @@ func recoverState(sagaId string, saga Saga, recoveryType SagaRecoveryType) (*Sag
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// Check if we can safely proceed forward based on recovery method
-	// RollbackRecovery must check if in a SafeState,
-	// ForwardRecovery can always make progress
-	switch recoveryType {
-
-	case RollbackRecovery:
-
-		// if Saga is not in a safe state we must abort the saga
-		// And compensating tasks should start
-		if !isSagaInSafeState(state) {
-			state, err = saga.AbortSaga(state)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-	case ForwardRecovery:
-
 	}
 
 	return state, nil

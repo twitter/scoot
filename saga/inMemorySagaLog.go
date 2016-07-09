@@ -18,12 +18,12 @@ type inMemorySagaLog struct {
 /*
  * Returns an Instance of a Saga based on an InMemorySagaLog
  */
-func MakeInMemorySaga() Saga {
-	inMemLog := inMemorySagaLog{
+func MakeInMemorySagaCoordinator() SagaCoordinator {
+	inMemLog := &inMemorySagaLog{
 		sagas: make(map[string][]sagaMessage),
 		mutex: &sync.RWMutex{},
 	}
-	return MakeSaga(&inMemLog)
+	return MakeSagaCoordinator(inMemLog)
 }
 
 func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {

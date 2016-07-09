@@ -16,9 +16,8 @@ func main() {
 
 	// Create Saga Log
 	// TODO: Replace with Durable SagaLog, currently In Memory Only
-	saga := saga.MakeInMemorySaga()
-
-	sched.NewScheduler(cluster, clusterState, saga)
+	sagaCoordinator := saga.MakeInMemorySagaCoordinator()
+	sched.NewScheduler(cluster, clusterState, sagaCoordinator)
 
 	// TODO: pull work off of WorkQueue and schedule
 

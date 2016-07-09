@@ -26,9 +26,9 @@ func main() {
 	fmt.Println("")
 
 	workCh := make(chan sched.Job)
-	saga := s.MakeInMemorySaga()
+	sagaCoord := s.MakeInMemorySagaCoordinator()
 
-	scheduler := scheduler.NewScheduler(cluster, clusterState, saga)
+	scheduler := scheduler.NewScheduler(cluster, clusterState, sagaCoord)
 
 	go func() {
 		generateClusterChurn(cluster, clusterState)
@@ -39,7 +39,7 @@ func main() {
 	wg.Add(2)
 
 	go func() {
-		generateTasks(workCh, 10000)
+		generateTasks(workCh, 100000)
 		wg.Done()
 	}()
 
@@ -51,7 +51,7 @@ func main() {
 
 	scheduler.BlockUnitlAllJobsCompleted()
 
-	ids, err := saga.Startup()
+	ids, err := sagaCoord.Startup()
 
 	// we are using an in memory saga here if we can't get the active sagas something is
 	// very wrong just exit the program.
@@ -64,7 +64,7 @@ func main() {
 
 	for _, sagaId := range ids {
 
-		sagaState, err := saga.RecoverSagaState(sagaId, s.ForwardRecovery)
+		saga, err := sagaCoord.RecoverSagaState(sagaId, s.ForwardRecovery)
 		if err != nil {
 			// For now just print error in actual scheduler we'd want to retry multiple times,
 			// before putting it on a deadletter queue
@@ -72,7 +72,7 @@ func main() {
 		}
 
 		// all Sagas are expected to be completed
-		if !sagaState.IsSagaCompleted() {
+		if !saga.GetState().IsSagaCompleted() {
 			fmt.Println(fmt.Sprintf("Expected all Sagas to be Completed %s is not", sagaId))
 		} else {
 			completedSagas++
