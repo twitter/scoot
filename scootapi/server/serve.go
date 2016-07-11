@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func Serve(handler scoot.Proc, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
+func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
 	transport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
 		return err
