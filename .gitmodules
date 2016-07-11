@@ -38,6 +38,10 @@
 	path = vendor/github.com/luci/go-render
 	url = https://github.com/luci/go-render
 	branch = 9a04cc21af0f2e328bfb81741ec9e8967c4f6541
+[submodule "vendor/github.com/rcrowley/go-metrics"]
+	path = vendor/github.com/rcrowley/go-metrics
+	url = https://github.com/rcrowley/go-metrics
+	branch = cfa5a85e9f0abbdf1701b59082c36fc7bff10759
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
 # Note: this division should be curated whenever the dependencies change.
@@ -131,3 +135,7 @@
 	path = vendor/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
 	branch = b6679148d27038e59d7818facc4d100e677a64ae
+[submodule "vendor/github.com/stathat/go"]
+	path = vendor/github.com/stathat/go
+	url = https://github.com/stathat/go
+	branch = c828dca0ee6eadc566bfcbcc00e4a992f12821a3

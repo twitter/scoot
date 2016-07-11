@@ -3,10 +3,13 @@ package server
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/luci/go-render/render"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -25,10 +28,15 @@ func Serve(handler worker.Worker, addr string, transportFactory thrift.TTranspor
 
 type Handler struct {
 	runs map[string]*worker.RunStatus
+	stat stats.StatsReceiver
 }
 
-func NewHandler() worker.Worker {
-	return &Handler{make(map[string]*worker.RunStatus)}
+func NewHandler(stat stats.StatsReceiver) worker.Worker {
+	if stat == nil {
+		stat = stats.NilStatsReceiver()
+	}
+	scopedStat := stat.Scope("handler")
+	return &Handler{make(map[string]*worker.RunStatus), scopedStat}
 }
 
 func (h *Handler) QueryWorker() (*worker.WorkerStatus, error) {
@@ -51,13 +59,22 @@ func makeStatus(status worker.Status, exitCode int32, info string) *worker.RunSt
 }
 
 //TODO: integrate runner lib and remove all this temp test code.
+var dummyGaugeVal int64 = 0
+
 func (h *Handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
+	defer h.stat.Latency("runLatency_ms").Time().Stop()
+	h.stat.Gauge("run%3").Update(dummyGaugeVal % 3)
+	h.stat.Counter("run#").Inc(1)
+	time.Sleep(time.Millisecond * time.Duration(100+(rand.Int()%50)))
+	dummyGaugeVal++
+
 	numRuns := len(h.runs)
 	runId := strconv.Itoa(numRuns)
 	prevRunId := strconv.Itoa(numRuns - 1)
 
 	log.Println("Running", render.Render(cmd), runId)
 	if numRuns > 0 && h.runs[prevRunId].Status == worker.Status_RUNNING {
+		h.stat.Counter("alreadyRunning").Inc(1)
 		return makeStatus(worker.Status_UNKNOWN, -1, "A cmd is already running"), nil
 	}
 
