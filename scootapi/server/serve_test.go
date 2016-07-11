@@ -1,6 +1,8 @@
 package server_test
 
 import (
+	"fmt"
+	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/server"
@@ -63,6 +65,36 @@ func TestRunSimpleJob(t *testing.T) {
 	_, err := handler.RunJob(jobDef)
 	if err != nil {
 		t.Fatalf("Can't enqueue job: %v", err)
+	}
+}
+
+type errQueue struct{}
+
+func (q *errQueue) Enqueue(job sched.JobDefinition) (string, error) {
+	return "", fmt.Errorf("Not connected")
+}
+
+func (q *errQueue) Close() error {
+	return nil
+}
+
+func TestQueueError(t *testing.T) {
+	q := &errQueue{}
+	defer q.Close()
+	handler := server.NewHandler(q)
+
+	task := scoot.NewTaskDefinition()
+	task.Command = scoot.NewCommand()
+	task.Command.Argv = []string{"true"}
+	task.SnapshotId = new(string)
+	jobDef := scoot.NewJobDefinition()
+	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+		"task1": task,
+	}
+
+	_, err := handler.RunJob(jobDef)
+	if err == nil {
+		t.Fatalf("expected enqueue to fail")
 	}
 
 }
