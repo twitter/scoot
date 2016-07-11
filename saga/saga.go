@@ -157,10 +157,6 @@ func (s *Saga) updateSagaStateLoop() {
 		if err == nil {
 			s.state = newState
 
-			if update.msg.msgType == EndSaga {
-				close(s.updateCh)
-			}
-
 			update.resultCh <- nil
 
 		} else {
@@ -180,6 +176,13 @@ func (s *Saga) updateSagaState(msg sagaMessage) error {
 	}
 
 	result := <-resultCh
+
+	// after we successfully log an EndSaga message close the channel
+	// no more messages should be logged
+	if msg.msgType == EndSaga {
+		close(s.updateCh)
+	}
+
 	return result
 }
 

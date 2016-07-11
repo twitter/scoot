@@ -83,7 +83,7 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 }
 
 func handleSagaLogErrors(err error) {
-	if s.FatalErr(err) {
+	if !s.FatalErr(err) {
 		// TODO: Implement deadletter queue.  SagaLog is failing to store this message some reason,
 		// Could be bad message or could be because the log is unavailable.  Put on Deadletter Queue and Move On
 		// For now just panic, for Alpha (all in memory this SHOULD never happen)
