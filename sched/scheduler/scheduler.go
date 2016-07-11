@@ -36,6 +36,8 @@ func (s *scheduler) startUp() {
 }
 
 // Blocks until all scheduled jobs are compeleted
+// Should be used only for testing to verify expected
+// tasks have been completed
 func (s *scheduler) BlockUnitlAllJobsCompleted() {
 	s.wg.Wait()
 }

@@ -12,7 +12,7 @@ type Saga struct {
 	log      SagaLog
 	state    *SagaState
 	updateCh chan sagaUpdate
-	mutex    *sync.RWMutex
+	mutex    sync.RWMutex
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
@@ -36,7 +36,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		log:      log,
 		state:    state,
 		updateCh: updateCh,
-		mutex:    &sync.RWMutex{},
+		mutex:    sync.RWMutex{},
 	}
 
 	go s.updateSagaStateLoop()
@@ -53,7 +53,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 		log:      log,
 		state:    state,
 		updateCh: updateCh,
-		mutex:    &sync.RWMutex{},
+		mutex:    sync.RWMutex{},
 	}
 
 	if !state.IsSagaCompleted() {
@@ -144,28 +144,6 @@ func (s *Saga) EndCompensatingTask(taskId string, results []byte) error {
 	return s.updateSagaState(MakeEndCompTaskMessage(s.id, taskId, results))
 }
 
-// updateSagaStateLoop that is executed inside of a single go routine.  There
-// is one per saga currently executing.  This ensures all updates are applied
-// in order to a saga.  Also controls access to the SagaState so its is
-// updated in a thread safe manner
-func (s *Saga) updateSagaStateLoop() {
-	for update := range s.updateCh {
-		s.mutex.Lock()
-		currState := s.state
-		newState, err := logMessage(currState, update.msg, s.log)
-
-		if err == nil {
-			s.state = newState
-
-			update.resultCh <- nil
-
-		} else {
-			update.resultCh <- err
-		}
-		s.mutex.Unlock()
-	}
-}
-
 // adds a message for updateSagaStateLoop to execute to the channel for the
 // specified saga.  blocks until the message has been applied
 func (s *Saga) updateSagaState(msg sagaMessage) error {
@@ -184,6 +162,32 @@ func (s *Saga) updateSagaState(msg sagaMessage) error {
 	}
 
 	return result
+}
+
+// updateSagaStateLoop that is executed inside of a single go routine.  There
+// is one per saga currently executing.  This ensures all updates are applied
+// in order to a saga.  Also controls access to the SagaState so its is
+// updated in a thread safe manner
+func (s *Saga) updateSagaStateLoop() {
+	for update := range s.updateCh {
+		s.itr(update)
+	}
+}
+
+func (s *Saga) itr(update sagaUpdate) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	currState := s.state
+	newState, err := logMessage(currState, update.msg, s.log)
+
+	if err == nil {
+		s.state = newState
+
+		update.resultCh <- nil
+
+	} else {
+		update.resultCh <- err
+	}
 }
 
 type sagaUpdate struct {

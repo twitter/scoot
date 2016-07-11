@@ -12,7 +12,7 @@ import (
  */
 type inMemorySagaLog struct {
 	sagas map[string][]sagaMessage
-	mutex *sync.RWMutex
+	mutex sync.RWMutex
 }
 
 /*
@@ -21,7 +21,7 @@ type inMemorySagaLog struct {
 func MakeInMemorySagaCoordinator() SagaCoordinator {
 	inMemLog := &inMemorySagaLog{
 		sagas: make(map[string][]sagaMessage),
-		mutex: &sync.RWMutex{},
+		mutex: sync.RWMutex{},
 	}
 	return MakeSagaCoordinator(inMemLog)
 }
