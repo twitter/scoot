@@ -15,7 +15,7 @@ func Serve(handler scoot.Proc, addr string, transportFactory thrift.TTransportFa
 	if err != nil {
 		return err
 	}
-	processor := scoot.NewProcProcessor(handler)
+	processor := scoot.NewCloudScootProcessor(handler)
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
 
 	fmt.Println("About to serve")
@@ -27,7 +27,7 @@ type Handler struct {
 	queue queue.Queue
 }
 
-func NewHandler(queue queue.Queue) scoot.Proc {
+func NewHandler(queue queue.Queue) scoot.CloudScoot {
 	return &Handler{queue}
 }
 
@@ -63,27 +63,26 @@ func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 }
 
 // Translates thrift job definition message to scoot domain object
-func thriftJobToScoot(def *scoot.JobDefinition) (result sched.Job, err error) {
+func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err error) {
 	if def == nil {
 		return result, fmt.Errorf("nil job definition")
 	}
 
-	for _, t := range def.Tasks {
-		var task sched.Task
+	result.Tasks = make(map[string]sched.TaskDefinition)
+
+	for taskId, t := range def.Tasks {
+		var task sched.TaskDefinition
 		if t == nil {
 			return result, fmt.Errorf("nil task definition")
-		}
-		if t.ID != nil {
-			task.Id = *t.ID
 		}
 		if t.Command == nil {
 			return result, fmt.Errorf("nil command")
 		}
-		task.Command = t.Command.Argv
+		task.Command.Argv = t.Command.Argv
 		if t.SnapshotId != nil {
 			task.SnapshotId = *t.SnapshotId
 		}
-		result.Tasks = append(result.Tasks, task)
+		result.Tasks[taskId] = task
 	}
 
 	if def.JobType != nil {

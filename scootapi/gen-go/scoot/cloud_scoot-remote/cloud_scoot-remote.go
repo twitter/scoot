@@ -108,7 +108,7 @@ func main() {
 		Usage()
 		os.Exit(1)
 	}
-	client := scoot.NewProcClientFactory(trans, protocolFactory)
+	client := scoot.NewCloudScootClientFactory(trans, protocolFactory)
 	if err := trans.Open(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error opening socket to ", host, ":", port, " ", err)
 		os.Exit(1)

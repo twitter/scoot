@@ -25,14 +25,14 @@ func TestRunBadJobFails(t *testing.T) {
 		}
 	}
 
-	task := scoot.NewTask()
+	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = []string{}
 	task.SnapshotId = new(string)
-	task.ID = new(string)
-	*task.ID = "task1"
 	jobDef = scoot.NewJobDefinition()
-	jobDef.Tasks = append(jobDef.Tasks, task)
+	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+		"task1": task,
+	}
 
 	_, err = handler.RunJob(jobDef)
 	if err == nil {
@@ -51,14 +51,14 @@ func TestRunSimpleJob(t *testing.T) {
 	defer q.Close()
 	handler := server.NewHandler(q)
 
-	task := scoot.NewTask()
+	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = []string{"true"}
 	task.SnapshotId = new(string)
-	task.ID = new(string)
-	*task.ID = "task1"
 	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = append(jobDef.Tasks, task)
+	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+		"task1": task,
+	}
 
 	_, err := handler.RunJob(jobDef)
 	if err != nil {
@@ -72,14 +72,14 @@ func TestQueueFillsAndEmpties(t *testing.T) {
 	defer q.Close()
 	handler := server.NewHandler(q)
 
-	task := scoot.NewTask()
+	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = []string{"true"}
 	task.SnapshotId = new(string)
-	task.ID = new(string)
-	*task.ID = "task1"
 	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = append(jobDef.Tasks, task)
+	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+		"task1": task,
+	}
 
 	_, err := handler.RunJob(jobDef)
 	if err != nil {

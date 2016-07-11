@@ -6,5 +6,5 @@ import (
 
 type Node interface {
 	Id() string
-	SendMessage(task sched.Task) error
+	SendMessage(task sched.TaskDefinition) error
 }

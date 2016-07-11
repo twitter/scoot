@@ -15,28 +15,21 @@ struct Command {
   1: list<string> argv
 }
 
-struct Task {
-  1: optional string id
-  2: required Command command,
-  3: optional string snapshotId,
+struct TaskDefinition {
+  1: required Command command,
+  2: optional string snapshotId,
+}
+
+struct JobDefinition {
+  1: required map<string, TaskDefinition> tasks,
+  2: optional JobType jobType,
 }
 
 struct JobId {
   1: required string id
 }
 
-struct Job {
-  1: required string id,
-  2: required list<Task> tasks,
-}
-
-struct JobDefinition {
-  1: required list<Task> tasks,
-  2: optional JobType jobType,
-}
-
-// TODO(dbentley): rename this to... Exec? CloudExec? CloudScoot?
-service Proc {
+service CloudScoot {
    JobId RunJob(1: JobDefinition job) throws (
     1: InvalidRequest ir,
     2: CanNotScheduleNow cnsn,

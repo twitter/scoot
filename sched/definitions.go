@@ -1,19 +1,26 @@
 package sched
 
-/*
- * Message representing a Job, Scoot can Schedule
- */
+// Job is the job Scoot can schedule
 type Job struct {
-	Id      string
-	JobType string
-	Tasks   []Task
+	Id  string
+	Def JobDefinition
 }
 
-/*
- * Message representing a Task that is part of a Scoot Job.
- */
-type Task struct {
-	Id         string
-	Command    []string // Argv to run
+// JobDefinition is the definition the client sent us
+type JobDefinition struct {
+	JobType string
+	Tasks   map[string]TaskDefinition
+}
+
+// Task is one task to run
+type TaskDefinition struct {
+	Command    Command
 	SnapshotId string
+}
+
+// Command is the argv to run
+type Command struct {
+	Argv []string
+	// We may extend this with more configuration,
+	// E.g. environment variables
 }
