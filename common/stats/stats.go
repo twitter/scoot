@@ -1,5 +1,16 @@
-// This package borrows from go-metrics so we can avoid exposing dependencies,
-// and to give callers more flexibility in recording and formatting scoped stats.
+// This package provides a set of minimal interfaces which both build on and
+// are by default backed by go-metrics. We wrap go-metrics in order to provide
+// a few pieces of additional functionality and to make sure we don't leak our
+// dependencies to anyone pulling in scoot as a library.
+//
+// Specifically, we provide the following:
+// - Flexibility to override stat recording and formatting, ex: internal Twitter format.
+// - An interface similar in design to Finagle Metrics
+// - A StatsReceiver object that can be passed down a call tree and scoped to each level.
+// - The ability to specify a time.Duration precision when rendering instruments.
+// - A latched update mechanism which takes snapshots at regular intervals.
+// - A new Latency instrument to more easily record callsite latency.
+// - Pretty printing of instrument output.
 //
 // Original license: github.com/rcrowley/go-metrics/blob/master/LICENSE
 //
@@ -129,43 +140,44 @@ func NewCustomStatsReceiver(makeRegistry func() StatsRegistry, latched time.Dura
 	if makeRegistry == nil {
 		makeRegistry = func() StatsRegistry { return metrics.NewRegistry() }
 	}
-	reg := makeRegistry()
+	captured := makeRegistry()
 	defaultStat := &defaultStatsReceiver{
 		makeRegistry: makeRegistry,
-		registry:     reg,
+		registry:     makeRegistry(),
 		latched:      latched,
 		precision:    time.Nanosecond,
-		captured:     &reg,
+		captured:     &captured,
 	}
 	cancel := func() {}
-
 	if latched > 0 {
-		log.Println("Starting latched stat goroutine.")
 		var ctx context.Context
-		ticker := Time.NewTicker(latched)
 		ctx, cancel = context.WithCancel(context.Background())
 		firstSnapshotAt := Time.Now().Add(latched).Truncate(latched)
-
-		go func() {
-			var t time.Time
-		Loop:
-			for {
-				select {
-				case <-ctx.Done():
-					ticker.Stop()
-					return
-				case t = <-ticker.C():
-					if t.Before(firstSnapshotAt) {
-						continue Loop
-					}
-					defaultStat.capture()
-					defaultStat.clear()
-				}
-			}
-		}()
+		go latch(defaultStat, firstSnapshotAt, ctx, true)
 	}
-
 	return defaultStat, cancel
+}
+
+// Called as a goroutine by stats constructor. Loops until ctx is canceled, periodically capturing stats.
+func latch(stat *defaultStatsReceiver, firstSnapshotAt time.Time, ctx context.Context, loop bool) {
+	var t time.Time
+	ticker := Time.NewTicker(stat.latched)
+	stop := false
+Loop:
+	for !stop {
+		stop = !loop
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		case t = <-ticker.C():
+			if t.Before(firstSnapshotAt) {
+				continue Loop
+			}
+			stat.capture()
+			stat.clear()
+		}
+	}
 }
 
 type defaultStatsReceiver struct {
@@ -207,7 +219,7 @@ func (s *defaultStatsReceiver) Histogram(name ...string) Histogram {
 func (s *defaultStatsReceiver) Latency(name ...string) Latency {
 	//nl := func() Latency { return NewLatency().Precision(s.precision) }
 	//return s.registry.GetOrRegister(s.scopedName(name...), nl).(Latency)
-	// Can't do lazy instantiation since we may use metric.Registry and it can't cast lazy derived types.
+	// Can't do lazy instantiation since we may use metric.Registry and it can't cast factory return val.
 	return s.registry.GetOrRegister(s.scopedName(name...), NewLatency().Precision(s.precision)).(Latency)
 }
 
@@ -240,19 +252,19 @@ func (s *defaultStatsReceiver) Render(pretty bool) []byte {
 
 func (s *defaultStatsReceiver) capture() {
 	reg := s.makeRegistry()
-	s.captured = &reg
+	*s.captured = reg
 	s.registry.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
 		case Counter:
-			(*s.captured).GetOrRegister(name, m.Capture())
+			reg.GetOrRegister(name, m.Capture())
 		case Gauge:
-			(*s.captured).GetOrRegister(name, m.Capture())
+			reg.GetOrRegister(name, m.Capture())
 		case GaugeFloat:
-			(*s.captured).GetOrRegister(name, m.Capture())
+			reg.GetOrRegister(name, m.Capture())
 		case Histogram:
-			(*s.captured).GetOrRegister(name, m.Capture())
+			reg.GetOrRegister(name, m.Capture())
 		case Latency:
-			(*s.captured).GetOrRegister(name, m.Capture())
+			reg.GetOrRegister(name, m.Capture())
 		default:
 			log.Println("Unrecognized capture instrument: ", name, i)
 		}

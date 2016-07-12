@@ -37,3 +37,29 @@ var stdlibStatsTime = defaultStatsTime{}
 
 // Returns a StatsTime instance backed by the stdlib 'time' package
 func DefaultStatsTime() StatsTime { return stdlibStatsTime }
+
+// Testing
+//var testTickerChannel <-chan time.Time
+//time.Unix(0, 0)
+//time.Nanosecond
+type testStatsTime struct {
+	now   time.Time
+	since time.Duration
+	ch    <-chan time.Time
+}
+type testStatsTicker struct {
+	*time.Ticker
+	ch <-chan time.Time
+}
+
+func (t testStatsTime) Now() time.Time                      { return t.now }
+func (t testStatsTime) Since(time.Time) time.Duration       { return t.since }
+func (t testStatsTime) NewTicker(time.Duration) StatsTicker { return &testStatsTicker{ch: t.ch} }
+func (t *testStatsTicker) C() <-chan time.Time              { return t.ch }
+
+func DefaultTestTime() StatsTime {
+	return testStatsTime{time.Unix(0, 0), time.Nanosecond, make(chan time.Time)}
+}
+func NewTestTime(now time.Time, since time.Duration, ch <-chan time.Time) StatsTime {
+	return testStatsTime{now, since, ch}
+}
