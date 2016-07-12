@@ -82,6 +82,41 @@ func main() {
 	fmt.Println("Jobs Completed:", completedSagas)
 }
 
+// <<<<<<< fd5b67e8f41c7804994527e660a4d6de69d84e09:binaries/schedulerDemo/main.go
+// =======
+// func scheduleWork(
+// 	workCh <-chan sched.Job,
+// 	distributor *distributor.PoolDistributor,
+// 	saga s.Saga) {
+
+// 	var wg sync.WaitGroup
+// 	for work := range workCh {
+// 		node := distributor.ReserveNode(work)
+
+// 		wg.Add(1)
+// 		go func(w sched.Job, n cm.Node) {
+// 			defer wg.Done()
+
+// 			sagaId := w.Id
+// 			state, _ := saga.StartSaga(sagaId, nil)
+
+// 			//Todo: error handling, what if request fails
+// 			for id, task := range w.Def.Tasks {
+// 				state, _ = saga.StartTask(state, id, nil)
+// 				n.SendMessage(task)
+// 				state, _ = saga.EndTask(state, id, nil)
+// 			}
+
+// 			state, _ = saga.EndSaga(state)
+// 			distributor.ReleaseNode(n)
+// 		}(work, node)
+
+// 	}
+
+// 	wg.Wait()
+// }
+
+// >>>>>>> scootapi: refactor and rename Thrift:sched/demo/main.go
 /*
  * Generates work to send on the channel, using
  * Unbuffered channel because we only want to pull
@@ -95,12 +130,16 @@ func generateTasks(work chan<- sched.Job, numTasks int) {
 	for x := 0; x < numTasks; x++ {
 
 		work <- sched.Job{
-			Id:      fmt.Sprintf("Job_%d", x),
-			JobType: "testTask",
-			Tasks: []sched.Task{
-				sched.Task{
-					Id:      fmt.Sprintf("Task_1"),
-					Command: []string{"testcmd", "testcmd2"},
+			Id: fmt.Sprintf("Job_%d", x),
+			Def: sched.JobDefinition{
+				JobType: "testTask",
+				Tasks: map[string]sched.TaskDefinition{
+					"Task_1": sched.TaskDefinition{
+
+						Command: sched.Command{
+							Argv: []string{"testcmd", "testcmd2"},
+						},
+					},
 				},
 			},
 		}

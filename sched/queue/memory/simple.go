@@ -33,7 +33,7 @@ func (i simpleWorkItem) Dequeue() {
 }
 
 type enqueueReq struct {
-	job      sched.Job
+	def      sched.JobDefinition
 	resultCh chan enqueueResult
 }
 
@@ -42,7 +42,7 @@ type enqueueResult struct {
 	err   error
 }
 
-func (q *simpleQueue) Enqueue(job sched.Job) (string, error) {
+func (q *simpleQueue) Enqueue(job sched.JobDefinition) (string, error) {
 	err := queue.ValidateJob(job)
 	if err != nil {
 		return "", err
@@ -66,10 +66,11 @@ func (q *simpleQueue) loop() {
 			// Channel is cloed
 			return
 		}
-		job := req.job
+		def := req.def
 		id := fmt.Sprintf("%v", q.nextID)
 		q.nextID++
-		job.Id = id
+
+		job := sched.Job{Id: id, Def: def}
 		select {
 		case q.outCh <- simpleWorkItem(job):
 			req.resultCh <- enqueueResult{id, nil}

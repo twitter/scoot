@@ -1,7 +1,6 @@
 package queue
 
 import (
-	"fmt"
 	"github.com/scootdev/scoot/sched"
 	"time"
 )
@@ -11,7 +10,7 @@ import (
 type Queue interface {
 	// Enqueue enqueues a job and assigns it an ID. Errors may be
 	// an *InvalidJobRequest or a *CanNotScheduleNow
-	Enqueue(job sched.Job) (string, error)
+	Enqueue(job sched.JobDefinition) (string, error)
 	Close() error
 }
 
@@ -51,19 +50,16 @@ func (e *CanNotScheduleNow) Error() string {
 }
 
 // Validate a job, returning an *InvalidJobRequest if invalid.
-func ValidateJob(job sched.Job) error {
-	if job.Id != "" {
-		return NewInvalidJobRequest(fmt.Sprintf("invalid job.Id. Must be empty; was %v", job.Id))
-	}
+func ValidateJob(job sched.JobDefinition) error {
 	if len(job.Tasks) == 0 {
 		return NewInvalidJobRequest("invalid job. Must have at least 1 task; was empty")
 	}
-	for _, task := range job.Tasks {
-		if task.Id == "" {
-			return NewInvalidJobRequest("invalid task.Id. Must be set; was empty")
+	for id, task := range job.Tasks {
+		if id == "" {
+			return NewInvalidJobRequest("invalid task id \"\".")
 		}
-		if len(task.Command) == 0 {
-			return NewInvalidJobRequest("invalid task.Command. Must have at least one argument; was empty")
+		if len(task.Command.Argv) == 0 {
+			return NewInvalidJobRequest("invalid task.Command.Argv. Must have at least one argument; was empty")
 		}
 	}
 	return nil

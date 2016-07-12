@@ -19,14 +19,14 @@ func (n *TestNode) Id() string {
 	return n.id
 }
 
-func (n *TestNode) SendMessage(task sched.Task) error {
+func (n *TestNode) SendMessage(task sched.TaskDefinition) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
 	time.Sleep(delayMS)
 
 	n.mutex.Lock()
-	for _, arg := range task.Command {
+	for _, arg := range task.Command.Argv {
 		n.MsgsReceived = append(n.MsgsReceived, arg)
 	}
 	n.mutex.Unlock()
