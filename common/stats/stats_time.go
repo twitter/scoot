@@ -56,6 +56,7 @@ func (t testStatsTime) Now() time.Time                      { return t.now }
 func (t testStatsTime) Since(time.Time) time.Duration       { return t.since }
 func (t testStatsTime) NewTicker(time.Duration) StatsTicker { return &testStatsTicker{ch: t.ch} }
 func (t *testStatsTicker) C() <-chan time.Time              { return t.ch }
+func (t *testStatsTicker) Stop()                            {}
 
 func DefaultTestTime() StatsTime {
 	return testStatsTime{time.Unix(0, 0), time.Nanosecond, make(chan time.Time)}
