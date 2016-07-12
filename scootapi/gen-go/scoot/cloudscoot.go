@@ -14,13 +14,13 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
-type Proc interface {
+type CloudScoot interface {
 	// Parameters:
 	//  - Job
-	RunJob(job *JobDefinition) (r *Job, err error)
+	RunJob(job *JobDefinition) (r *JobId, err error)
 }
 
-type ProcClient struct {
+type CloudScootClient struct {
 	Transport       thrift.TTransport
 	ProtocolFactory thrift.TProtocolFactory
 	InputProtocol   thrift.TProtocol
@@ -28,8 +28,8 @@ type ProcClient struct {
 	SeqId           int32
 }
 
-func NewProcClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ProcClient {
-	return &ProcClient{Transport: t,
+func NewCloudScootClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *CloudScootClient {
+	return &CloudScootClient{Transport: t,
 		ProtocolFactory: f,
 		InputProtocol:   f.GetProtocol(t),
 		OutputProtocol:  f.GetProtocol(t),
@@ -37,8 +37,8 @@ func NewProcClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ProcC
 	}
 }
 
-func NewProcClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ProcClient {
-	return &ProcClient{Transport: t,
+func NewCloudScootClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *CloudScootClient {
+	return &CloudScootClient{Transport: t,
 		ProtocolFactory: nil,
 		InputProtocol:   iprot,
 		OutputProtocol:  oprot,
@@ -48,14 +48,14 @@ func NewProcClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot th
 
 // Parameters:
 //  - Job
-func (p *ProcClient) RunJob(job *JobDefinition) (r *Job, err error) {
+func (p *CloudScootClient) RunJob(job *JobDefinition) (r *JobId, err error) {
 	if err = p.sendRunJob(job); err != nil {
 		return
 	}
 	return p.recvRunJob()
 }
 
-func (p *ProcClient) sendRunJob(job *JobDefinition) (err error) {
+func (p *CloudScootClient) sendRunJob(job *JobDefinition) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -65,7 +65,7 @@ func (p *ProcClient) sendRunJob(job *JobDefinition) (err error) {
 	if err = oprot.WriteMessageBegin("RunJob", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := ProcRunJobArgs{
+	args := CloudScootRunJobArgs{
 		Job: job,
 	}
 	if err = args.Write(oprot); err != nil {
@@ -77,7 +77,7 @@ func (p *ProcClient) sendRunJob(job *JobDefinition) (err error) {
 	return oprot.Flush()
 }
 
-func (p *ProcClient) recvRunJob() (value *Job, err error) {
+func (p *CloudScootClient) recvRunJob() (value *JobId, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -112,7 +112,7 @@ func (p *ProcClient) recvRunJob() (value *Job, err error) {
 		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "RunJob failed: invalid message type")
 		return
 	}
-	result := ProcRunJobResult{}
+	result := CloudScootRunJobResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -130,32 +130,32 @@ func (p *ProcClient) recvRunJob() (value *Job, err error) {
 	return
 }
 
-type ProcProcessor struct {
+type CloudScootProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
-	handler      Proc
+	handler      CloudScoot
 }
 
-func (p *ProcProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+func (p *CloudScootProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
 	p.processorMap[key] = processor
 }
 
-func (p *ProcProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+func (p *CloudScootProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
 	processor, ok = p.processorMap[key]
 	return processor, ok
 }
 
-func (p *ProcProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+func (p *CloudScootProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 	return p.processorMap
 }
 
-func NewProcProcessor(handler Proc) *ProcProcessor {
+func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 
-	self5 := &ProcProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self5.processorMap["RunJob"] = &procProcessorRunJob{handler: handler}
+	self5 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self5.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
 	return self5
 }
 
-func (p *ProcProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
 	name, _, seqId, err := iprot.ReadMessageBegin()
 	if err != nil {
 		return false, err
@@ -174,12 +174,12 @@ func (p *ProcProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, er
 
 }
 
-type procProcessorRunJob struct {
-	handler Proc
+type cloudScootProcessorRunJob struct {
+	handler CloudScoot
 }
 
-func (p *procProcessorRunJob) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := ProcRunJobArgs{}
+func (p *cloudScootProcessorRunJob) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootRunJobArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
@@ -191,8 +191,8 @@ func (p *procProcessorRunJob) Process(seqId int32, iprot, oprot thrift.TProtocol
 	}
 
 	iprot.ReadMessageEnd()
-	result := ProcRunJobResult{}
-	var retval *Job
+	result := CloudScootRunJobResult{}
+	var retval *JobId
 	var err2 error
 	if retval, err2 = p.handler.RunJob(args.Job); err2 != nil {
 		switch v := err2.(type) {
@@ -233,27 +233,27 @@ func (p *procProcessorRunJob) Process(seqId int32, iprot, oprot thrift.TProtocol
 
 // Attributes:
 //  - Job
-type ProcRunJobArgs struct {
+type CloudScootRunJobArgs struct {
 	Job *JobDefinition `thrift:"job,1" json:"job"`
 }
 
-func NewProcRunJobArgs() *ProcRunJobArgs {
-	return &ProcRunJobArgs{}
+func NewCloudScootRunJobArgs() *CloudScootRunJobArgs {
+	return &CloudScootRunJobArgs{}
 }
 
-var ProcRunJobArgs_Job_DEFAULT *JobDefinition
+var CloudScootRunJobArgs_Job_DEFAULT *JobDefinition
 
-func (p *ProcRunJobArgs) GetJob() *JobDefinition {
+func (p *CloudScootRunJobArgs) GetJob() *JobDefinition {
 	if !p.IsSetJob() {
-		return ProcRunJobArgs_Job_DEFAULT
+		return CloudScootRunJobArgs_Job_DEFAULT
 	}
 	return p.Job
 }
-func (p *ProcRunJobArgs) IsSetJob() bool {
+func (p *CloudScootRunJobArgs) IsSetJob() bool {
 	return p.Job != nil
 }
 
-func (p *ProcRunJobArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootRunJobArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -286,7 +286,7 @@ func (p *ProcRunJobArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobArgs) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootRunJobArgs) readField1(iprot thrift.TProtocol) error {
 	p.Job = &JobDefinition{}
 	if err := p.Job.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Job), err)
@@ -294,7 +294,7 @@ func (p *ProcRunJobArgs) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobArgs) Write(oprot thrift.TProtocol) error {
+func (p *CloudScootRunJobArgs) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunJob_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
@@ -310,7 +310,7 @@ func (p *ProcRunJobArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootRunJobArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("job", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:job: ", p), err)
 	}
@@ -323,66 +323,66 @@ func (p *ProcRunJobArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *ProcRunJobArgs) String() string {
+func (p *CloudScootRunJobArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ProcRunJobArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootRunJobArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Success
 //  - Ir
 //  - Cnsn
-type ProcRunJobResult struct {
-	Success *Job               `thrift:"success,0" json:"success,omitempty"`
+type CloudScootRunJobResult struct {
+	Success *JobId             `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest    `thrift:"ir,1" json:"ir,omitempty"`
 	Cnsn    *CanNotScheduleNow `thrift:"cnsn,2" json:"cnsn,omitempty"`
 }
 
-func NewProcRunJobResult() *ProcRunJobResult {
-	return &ProcRunJobResult{}
+func NewCloudScootRunJobResult() *CloudScootRunJobResult {
+	return &CloudScootRunJobResult{}
 }
 
-var ProcRunJobResult_Success_DEFAULT *Job
+var CloudScootRunJobResult_Success_DEFAULT *JobId
 
-func (p *ProcRunJobResult) GetSuccess() *Job {
+func (p *CloudScootRunJobResult) GetSuccess() *JobId {
 	if !p.IsSetSuccess() {
-		return ProcRunJobResult_Success_DEFAULT
+		return CloudScootRunJobResult_Success_DEFAULT
 	}
 	return p.Success
 }
 
-var ProcRunJobResult_Ir_DEFAULT *InvalidRequest
+var CloudScootRunJobResult_Ir_DEFAULT *InvalidRequest
 
-func (p *ProcRunJobResult) GetIr() *InvalidRequest {
+func (p *CloudScootRunJobResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return ProcRunJobResult_Ir_DEFAULT
+		return CloudScootRunJobResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
 
-var ProcRunJobResult_Cnsn_DEFAULT *CanNotScheduleNow
+var CloudScootRunJobResult_Cnsn_DEFAULT *CanNotScheduleNow
 
-func (p *ProcRunJobResult) GetCnsn() *CanNotScheduleNow {
+func (p *CloudScootRunJobResult) GetCnsn() *CanNotScheduleNow {
 	if !p.IsSetCnsn() {
-		return ProcRunJobResult_Cnsn_DEFAULT
+		return CloudScootRunJobResult_Cnsn_DEFAULT
 	}
 	return p.Cnsn
 }
-func (p *ProcRunJobResult) IsSetSuccess() bool {
+func (p *CloudScootRunJobResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *ProcRunJobResult) IsSetIr() bool {
+func (p *CloudScootRunJobResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *ProcRunJobResult) IsSetCnsn() bool {
+func (p *CloudScootRunJobResult) IsSetCnsn() bool {
 	return p.Cnsn != nil
 }
 
-func (p *ProcRunJobResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootRunJobResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -423,15 +423,15 @@ func (p *ProcRunJobResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobResult) readField0(iprot thrift.TProtocol) error {
-	p.Success = &Job{}
+func (p *CloudScootRunJobResult) readField0(iprot thrift.TProtocol) error {
+	p.Success = &JobId{}
 	if err := p.Success.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
 	}
 	return nil
 }
 
-func (p *ProcRunJobResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootRunJobResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -439,7 +439,7 @@ func (p *ProcRunJobResult) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobResult) readField2(iprot thrift.TProtocol) error {
+func (p *CloudScootRunJobResult) readField2(iprot thrift.TProtocol) error {
 	p.Cnsn = &CanNotScheduleNow{}
 	if err := p.Cnsn.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Cnsn), err)
@@ -447,7 +447,7 @@ func (p *ProcRunJobResult) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobResult) Write(oprot thrift.TProtocol) error {
+func (p *CloudScootRunJobResult) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunJob_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
@@ -469,7 +469,7 @@ func (p *ProcRunJobResult) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ProcRunJobResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootRunJobResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
@@ -484,7 +484,7 @@ func (p *ProcRunJobResult) writeField0(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *ProcRunJobResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootRunJobResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -499,7 +499,7 @@ func (p *ProcRunJobResult) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *ProcRunJobResult) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootRunJobResult) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCnsn() {
 		if err := oprot.WriteFieldBegin("cnsn", thrift.STRUCT, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:cnsn: ", p), err)
@@ -514,9 +514,9 @@ func (p *ProcRunJobResult) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *ProcRunJobResult) String() string {
+func (p *CloudScootRunJobResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ProcRunJobResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootRunJobResult(%+v)", *p)
 }

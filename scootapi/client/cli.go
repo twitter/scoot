@@ -13,7 +13,7 @@ type Client struct {
 	addr             string // modified by flag parsing
 	transportFactory thrift.TTransportFactory
 	protocolFactory  thrift.TProtocolFactory
-	client           *scoot.ProcClient
+	client           *scoot.CloudScootClient
 }
 
 func (c *Client) Exec() error {
@@ -38,7 +38,7 @@ func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift
 	return r, nil
 }
 
-func (c *Client) Dial() (*scoot.ProcClient, error) {
+func (c *Client) Dial() (*scoot.CloudScootClient, error) {
 	if c.client == nil {
 		if c.addr == "" {
 			return nil, fmt.Errorf("Cannot dial: no address")
@@ -54,7 +54,7 @@ func (c *Client) Dial() (*scoot.ProcClient, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Error opening transport: %v", err)
 		}
-		c.client = scoot.NewProcClientFactory(transport, c.protocolFactory)
+		c.client = scoot.NewCloudScootClientFactory(transport, c.protocolFactory)
 	}
 	return c.client, nil
 }

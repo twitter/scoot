@@ -17,7 +17,7 @@ type LocalNode struct {
 	Name string
 }
 
-func (n LocalNode) SendMessage(task sched.Task) error {
+func (n LocalNode) SendMessage(task sched.TaskDefinition) error {
 
 	//delay message to mimic network call for a
 	delayMS := time.Duration(rand.Intn(500)) * time.Microsecond
