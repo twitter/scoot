@@ -39,9 +39,6 @@ var stdlibStatsTime = defaultStatsTime{}
 func DefaultStatsTime() StatsTime { return stdlibStatsTime }
 
 // Testing
-//var testTickerChannel <-chan time.Time
-//time.Unix(0, 0)
-//time.Nanosecond
 type testStatsTime struct {
 	now   time.Time
 	since time.Duration

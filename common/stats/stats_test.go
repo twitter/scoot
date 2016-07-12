@@ -3,8 +3,6 @@ package stats
 import (
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 func TestPrecisionChange(t *testing.T) {
@@ -37,44 +35,6 @@ func TestScopeChange(t *testing.T) {
 	}
 	if statp.scopedName("d") != "a_SLASH_b/c/d" {
 		t.Fatal("Invalid scope name: " + statp.scopedName("d"))
-	}
-}
-
-func TestStatCapture(t *testing.T) {
-	stat := DefaultStatsReceiver().(*defaultStatsReceiver)
-	counterName := "counter"
-	counter := stat.Counter(counterName)
-	counter.Inc(1)
-	stat.capture()
-	if stat.captured == nil {
-		t.Fatal("Expected non-nil capture")
-	}
-
-	valid := false
-	numInstr := 0
-	counter.Inc(1)
-	(*stat.captured).Each(func(name string, i interface{}) {
-		numInstr++
-		if name == counterName && numInstr == 1 {
-			valid = i.(Counter).Count() == 1
-		}
-	})
-	if !valid {
-		t.Fatal("Expected registry to contain single copy of counter")
-	}
-}
-
-func TestStatRender(t *testing.T) {
-	stat := DefaultStatsReceiver()
-	rendered := string(stat.Render(true))
-	if rendered != "{}" {
-		t.Fatal("Expected empty render")
-	}
-
-	stat.Counter("counter").Inc(1)
-	rendered = string(stat.Render(true))
-	if rendered == "{}" {
-		t.Fatal("Expected non-empty render", rendered)
 	}
 }
 
@@ -135,14 +95,13 @@ func TestMarshal(t *testing.T) {
 func TestNonLatching(t *testing.T) {
 	stat := DefaultStatsReceiver().(*defaultStatsReceiver)
 	stat.Counter("counter").Inc(1)
-	stat.capture()
 
 	rendered := string(stat.Render(false))
 	if rendered != `{"counter":{"count":1}}` {
 		t.Fatal("Expected current stats in render", rendered)
 	}
 
-	rendered = string(stat.Render(true))
+	rendered = string(stat.Render(false))
 	if rendered != `{"counter":{"count":0}}` {
 		t.Fatal("Expected clearing of stats after render", rendered)
 	}
@@ -153,22 +112,22 @@ func TestLatching(t *testing.T) {
 	Time = NewTestTime(time.Unix(0, 0), time.Nanosecond, ct)
 	defer close(ct)
 
-	statIface, cancelFn := NewLatchedStatsReceiver(time.Nanosecond)
+	// Does first capture only after 5ns has passed.
+	latched := time.Nanosecond * 5
+	statIface, cancelFn := NewLatchedStatsReceiver(latched)
 	stat := statIface.(*defaultStatsReceiver)
-	cancelFn()
+	defer cancelFn()
 
 	// Registry should not be captured until we accrue measurements.
 	stat.Counter("counter")
 	ct <- Time.Now()
-	latch(stat, Time.Now().Add(time.Minute), context.Background(), false)
 	rendered := string(stat.Render(true))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=0: ", rendered)
 	}
 
 	// Captured registry should be updated here and render should pick that up.
-	ct <- Time.Now().Add(time.Millisecond)
-	latch(stat, Time.Now(), context.Background(), false)
+	ct <- Time.Now().Add(time.Minute)
 	rendered = string(stat.Render(true))
 	if rendered == "{}" {
 		t.Fatal("Expected non-empty latch with time=0: ", rendered)
