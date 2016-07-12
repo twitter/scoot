@@ -33,6 +33,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 
 	if r.running != nil {
 		r.runs[runId] = runner.ErrorStatus(runId, fmt.Errorf("Runner is busy"))
+		return r.runs[runId], nil
 	}
 
 	var c execer.Command
