@@ -9,23 +9,14 @@ import (
 
 func TestBadDef(t *testing.T) {
 	q, _ := memory.NewSimpleQueue()
-	job := sched.Job{}
+	job := sched.JobDefinition{}
 	_, err := q.Enqueue(job)
 	if err == nil {
 		t.Fatal("Empty job was accepted")
 	}
 
-	task := sched.Task{}
-	task.Command = []string{"echo", "foo"}
-	job.Tasks = []sched.Task{task}
-	_, err = q.Enqueue(job)
-	if err == nil {
-		t.Fatal("Task with no id accepted")
-	}
-
-	task = sched.Task{}
-	task.Id = "foo"
-	job.Tasks = []sched.Task{task}
+	task := sched.TaskDefinition{}
+	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	_, err = q.Enqueue(job)
 	if err == nil {
 		t.Fatal("Task with no Command accepted")
@@ -34,12 +25,11 @@ func TestBadDef(t *testing.T) {
 
 func TestEnqueue(t *testing.T) {
 	q, ch := memory.NewSimpleQueue()
-	job := sched.Job{}
-	task := sched.Task{}
-	task.Id = "1"
-	task.Command = []string{"echo", "foo"}
+	job := sched.JobDefinition{}
+	task := sched.TaskDefinition{}
+	task.Command = sched.Command{Argv: []string{"echo", "foo"}}
 	task.SnapshotId = "snapshot-id"
-	job.Tasks = []sched.Task{task}
+	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	id, err := q.Enqueue(job)
 	if err != nil {
 		t.Fatalf("Error enqueueing %v", err)
@@ -49,15 +39,15 @@ func TestEnqueue(t *testing.T) {
 	if outJob.Id != id {
 		t.Fatalf("Unexpected jobId %v (expected %v)", outJob.Id, id)
 	}
-	if len(outJob.Tasks) != 1 {
-		t.Fatalf("Unexpected task length %v (expected 1)", len(outJob.Tasks))
+	if len(outJob.Def.Tasks) != 1 {
+		t.Fatalf("Unexpected task length %v (expected 1)", len(outJob.Def.Tasks))
 	}
-	outTask := outJob.Tasks[0]
-	if outTask.Id != task.Id {
-		t.Fatalf("Unequal task.Id %v %v", outTask.Id, task.Id)
+	outTask, ok := outJob.Def.Tasks["task"]
+	if !ok {
+		t.Fatalf("No task \"task\" %v", outJob.Def.Tasks)
 	}
-	if len(outTask.Command) != 2 || outTask.Command[0] != "echo" || outTask.Command[1] != "foo" {
-		t.Fatalf("Unequal task.Command %v %v", outTask.Command, task.Command)
+	if len(outTask.Command.Argv) != 2 || outTask.Command.Argv[0] != "echo" || outTask.Command.Argv[1] != "foo" {
+		t.Fatalf("Unequal task.Command %v %v", outTask.Command.Argv, task.Command.Argv)
 	}
 	if outTask.SnapshotId != task.SnapshotId {
 		t.Fatalf("Unequal task.SnapshotId %v %v", outTask.SnapshotId, task.SnapshotId)
@@ -67,12 +57,11 @@ func TestEnqueue(t *testing.T) {
 
 func TestBackpressure(t *testing.T) {
 	q, _ := memory.NewSimpleQueue()
-	job := sched.Job{}
-	task := sched.Task{}
-	task.Id = "1"
-	task.Command = []string{"echo", "foo"}
+	job := sched.JobDefinition{}
+	task := sched.TaskDefinition{}
+	task.Command = sched.Command{Argv: []string{"echo", "foo"}}
 	task.SnapshotId = "snapshot-id"
-	job.Tasks = []sched.Task{task}
+	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	_, err := q.Enqueue(job)
 	if err != nil {
 		t.Fatalf("Error enqueueing %v", err)

@@ -20,7 +20,7 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
-	fmt.Fprintln(os.Stderr, "  Job RunJob(JobDefinition job)")
+	fmt.Fprintln(os.Stderr, "  JobId RunJob(JobDefinition job)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -108,7 +108,7 @@ func main() {
 		Usage()
 		os.Exit(1)
 	}
-	client := scoot.NewProcClientFactory(trans, protocolFactory)
+	client := scoot.NewCloudScootClientFactory(trans, protocolFactory)
 	if err := trans.Open(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error opening socket to ", host, ":", port, " ", err)
 		os.Exit(1)

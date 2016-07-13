@@ -85,7 +85,7 @@ func (s *scheduler) ScheduleJob(job sched.Job) error {
 // dumb, and just returns min(len(Tasks), 5)
 // TODO: Make this smarter
 func getNumNodes(job sched.Job) int {
-	numTasks := len(job.Tasks)
+	numTasks := len(job.Def.Tasks)
 	if numTasks > 5 {
 		return 5
 	} else {

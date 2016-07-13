@@ -24,15 +24,13 @@ func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	task := scoot.NewTask()
+	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
-	task.SnapshotId = new(string)
-	task.ID = new(string)
-	*task.ID = "task1"
-
 	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = append(jobDef.Tasks, task)
+	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+		"task1": task,
+	}
 	_, err = client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {

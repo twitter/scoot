@@ -28,19 +28,19 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 	// TODO: this can be made smarter to run the next Best Task instead of just
 	// the next one in order etc....
 	if !initialSagaState.IsSagaAborted() {
-		for _, task := range job.Tasks {
+		for id, task := range job.Def.Tasks {
 
-			if !initialSagaState.IsTaskCompleted(task.Id) {
+			if !initialSagaState.IsTaskCompleted(id) {
 				node := dist.ReserveNode()
 
 				// Put StartTask Message on SagaLog
-				err := saga.StartTask(task.Id, nil)
+				err := saga.StartTask(id, nil)
 				if err != nil {
 					handleSagaLogErrors(err)
 				}
 
 				wg.Add(1)
-				go func(node cm.Node, task sched.Task) {
+				go func(node cm.Node, task sched.TaskDefinition) {
 					defer dist.ReleaseNode(node)
 					defer wg.Done()
 
@@ -55,7 +55,7 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 						}
 					}
 
-					err := saga.EndTask(task.Id, nil)
+					err := saga.EndTask(id, nil)
 					if err != nil {
 						handleSagaLogErrors(err)
 					}
