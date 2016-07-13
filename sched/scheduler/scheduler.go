@@ -90,15 +90,3 @@ func getNumNodes(job sched.Job) int {
 		return numTasks
 	}
 }
-
-type InvalidJobError struct {
-	msg string
-}
-
-func newInvalidJobError(msg string) InvalidJobError {
-	return InvalidJobError{msg: msg}
-}
-
-func (e InvalidJobError) Error() string {
-	return e.msg
-}
