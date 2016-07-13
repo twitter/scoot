@@ -152,33 +152,34 @@ func NewCustomStatsReceiver(makeRegistry func() StatsRegistry, latched time.Dura
 		defaultStat.latchCh = make(chan chan StatsRegistry)
 		ctx, cancel = context.WithCancel(context.Background())
 		firstSnapshotAt := Time.Now().Add(latched).Truncate(latched)
-		go latch(defaultStat, defaultStat.capture(), latched, firstSnapshotAt, ctx, true)
+		go latch(
+			defaultStat, defaultStat.capture(), defaultStat.latchCh,
+			Time.NewTicker(latched), firstSnapshotAt, ctx, nil)
 	}
 	return defaultStat, cancel
 }
 
 // Called as a goroutine by stats constructor. Loops until ctx is canceled, periodically capturing stats.
-func latch(stat *defaultStatsReceiver, captured StatsRegistry,
-	latched time.Duration, firstSnapshotAt time.Time, ctx context.Context, loop bool,
+// Note: params are explicit here to make testing easier.
+func latch(stat *defaultStatsReceiver, captured StatsRegistry, latchCh chan chan StatsRegistry,
+	ticker StatsTicker, firstSnapshotAt time.Time, ctx context.Context, testRespCh chan bool,
 ) {
-	ticker := Time.NewTicker(latched)
-	stop := false
-
 Loop:
-	for !stop {
-		stop = !loop
+	for {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
 			return
 		case t := <-ticker.C():
+			if testRespCh != nil {
+				testRespCh <- true
+			}
 			if t.Before(firstSnapshotAt) {
 				continue Loop
 			}
 			captured = stat.capture()
 			stat.clear()
-		case req := <-stat.latchCh:
-
+		case req := <-latchCh:
 			req <- captured
 		}
 	}

@@ -3,6 +3,8 @@ package stats
 import (
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 func TestPrecisionChange(t *testing.T) {
@@ -107,27 +109,47 @@ func TestNonLatching(t *testing.T) {
 	}
 }
 
+//TODO: rewrite
 func TestLatching(t *testing.T) {
-	ct := make(chan time.Time, 2)
-	Time = NewTestTime(time.Unix(0, 0), time.Nanosecond, ct)
-	defer close(ct)
-
-	// Does first capture only after 5ns has passed.
-	latched := time.Nanosecond * 5
-	statIface, cancelFn := NewLatchedStatsReceiver(latched)
+	// Start new latch receiver but cancel its goroutine so we step manually below.
+	Time = DefaultTestTime()
+	statIface, cancelFn := NewLatchedStatsReceiver(time.Hour)
 	stat := statIface.(*defaultStatsReceiver)
-	defer cancelFn()
+	captured := stat.capture()
+	cancelFn()
 
-	// Registry should not be captured until we accrue measurements.
+	// Replace latchCh and construct channel to step through latch()
+	stat.latchCh = make(chan chan StatsRegistry)
+	ct := make(chan time.Time, 2)
+	respCh := make(chan bool)
+	Time = NewTestTime(time.Unix(0, 0), 0, ct)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Don't capture (ticker=0, firstSnapshotAt=1s)
+	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now().Add(time.Second), ctx, respCh)
+
+	// Registry should not be captured in latch() until we accrue measurements.
 	stat.Counter("counter")
 	ct <- Time.Now()
+	<-respCh
 	rendered := string(stat.Render(true))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=0: ", rendered)
 	}
 
+	// Replace latchCh and construct channel to step through latch()
+	cancel()
+	stat.latchCh = make(chan chan StatsRegistry)
+	ct = make(chan time.Time, 2)
+	Time = NewTestTime(time.Unix(0, 0), 0, ct)
+	ctx, cancel = context.WithCancel(context.Background())
+
+	// Captures immediately. (ticker=1m, firstSnapshotAt=0)
+	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now(), ctx, respCh)
+
 	// Captured registry should be updated here and render should pick that up.
 	ct <- Time.Now().Add(time.Minute)
+	<-respCh
 	rendered = string(stat.Render(true))
 	if rendered == "{}" {
 		t.Fatal("Expected non-empty latch with time=0: ", rendered)

@@ -63,10 +63,10 @@ var dummyGaugeVal int64 = 0
 
 func (h *Handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
+	dummyGaugeVal++
 	h.stat.Gauge("run%3").Update(dummyGaugeVal % 3)
 	h.stat.Counter("run#").Inc(1)
 	time.Sleep(time.Millisecond * time.Duration(100+(rand.Int()%50)))
-	dummyGaugeVal++
 
 	numRuns := len(h.runs)
 	runId := strconv.Itoa(numRuns)
