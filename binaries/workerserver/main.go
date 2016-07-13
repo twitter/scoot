@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -15,26 +17,18 @@ var httpPort = flag.Int("http_port", 9091, "port to serve http on")
 
 func main() {
 	flag.Parse()
-	go serveHTTP()
+	stat, _ := stats.NewCustomStatsReceiver(stats.NewFinagleStatsRegistry, 15*time.Second)
+	stat = stat.Precision(time.Millisecond)
+	endpoints.RegisterStats("/admin/metrics.json", stat)
+	endpoints.RegisterHealthCheck("/")
+	go endpoints.Serve(fmt.Sprintf(":%d", *httpPort))
 
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
-	err := server.Serve(server.NewHandler(), fmt.Sprintf(":%d", *thriftPort), transportFactory, protocolFactory)
+	handler := server.NewHandler(stat.Scope("workerserver"))
+	err := server.Serve(handler, fmt.Sprintf(":%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)
 	}
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Handling!", r.URL.Path)
-	// TODO(dbentley): implement the actual health-checking protocol.
-	fmt.Fprintf(w, "OK (health check in golang for %v )", r.URL.Path)
-}
-
-func serveHTTP() {
-	log.Println("Serving http on", *httpPort)
-	http.HandleFunc("/", handler)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", *httpPort), nil)
-	log.Println("Done serving http", err)
 }
