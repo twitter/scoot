@@ -33,33 +33,11 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 			if !initialSagaState.IsTaskCompleted(id) {
 				node := dist.ReserveNode()
 
-				// Put StartTask Message on SagaLog
-				err := saga.StartTask(id, nil)
-				if err != nil {
-					handleSagaLogErrors(err)
-				}
-
 				wg.Add(1)
 				go func(node cm.Node, taskId string, task sched.TaskDefinition) {
 					defer dist.ReleaseNode(node)
 					defer wg.Done()
-
-					// TODO: After a number of attempts we should stop
-					// Trying to run a task, could be a poison pill
-					// Implement deadletter queue
-					taskExecuted := false
-					for !taskExecuted {
-						err := node.SendMessage(task)
-						if err == nil {
-							taskExecuted = true
-						}
-					}
-
-					err := saga.EndTask(taskId, nil)
-					if err != nil {
-						handleSagaLogErrors(err)
-					}
-
+					runTask(saga, node, taskId, task)
 				}(node, id, task)
 			}
 		}
@@ -80,6 +58,32 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 	}
 
 	return
+}
+
+// Logic to execute a single task in a Job.  Ensures Messages are logged to SagaLog
+// Logs StartTask, executes Tasks, Logs EndTask
+func runTask(saga *s.Saga, node cm.Node, taskId string, task sched.TaskDefinition) {
+	// Put StartTask Message on SagaLog
+	stErr := saga.StartTask(taskId, nil)
+	if stErr != nil {
+		handleSagaLogErrors(stErr)
+	}
+
+	// TODO: After a number of attempts we should stop
+	// Trying to run a task, could be a poison pill
+	// Implement deadletter queue
+	taskExecuted := false
+	for !taskExecuted {
+		execErr := node.SendMessage(task)
+		if execErr == nil {
+			taskExecuted = true
+		}
+	}
+
+	etErr := saga.EndTask(taskId, nil)
+	if etErr != nil {
+		handleSagaLogErrors(etErr)
+	}
 }
 
 func handleSagaLogErrors(err error) {

@@ -2,18 +2,42 @@ package scheduler
 
 import (
 	"fmt"
-	//"github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
-	//cm "github.com/scootdev/scoot/sched/clustermembership"
+	cm "github.com/scootdev/scoot/sched/clustermembership"
 	"testing"
 )
 
-func Test_ScheduleJob_PropertyTest(t *testing.T) {
+func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	//nodeMock used to ensure no tasks are executed if StartSaga Fails
+	nodeMock := cm.NewMockNode(mockCtrl)
+	nodeMock.EXPECT().Id().Return("node1")
+	cluster, clusterState := cm.DynamicClusterFactory([]cm.Node{nodeMock})
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", nil).Return(saga.NewInternalLogError("test error"))
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+
+	scheduler := NewScheduler(cluster, clusterState, sagaCoord)
+
+	job := sched.GenJob("job1", 5)
+	err := scheduler.ScheduleJob(job)
+	scheduler.BlockUnitlAllJobsCompleted()
+
+	if err == nil {
+		t.Error("Exepected Error to be Returned")
+	}
+}
+
+func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 10
@@ -27,7 +51,13 @@ func Test_ScheduleJob_PropertyTest(t *testing.T) {
 			scheduler := NewScheduler(cluster, clusterState, sagaCoord)
 
 			job := sched.GenJob(jobId, int(numTasks))
-			scheduler.ScheduleJob(job)
+			err := scheduler.ScheduleJob(job)
+
+			if err != nil {
+				fmt.Println("UnExpected Error Scheduling Job")
+				return false
+			}
+
 			scheduler.BlockUnitlAllJobsCompleted()
 
 			saga, _ := sagaCoord.RecoverSagaState(job.Id, saga.ForwardRecovery)
@@ -68,7 +98,7 @@ func Test_ScheduleJob_PropertyTest(t *testing.T) {
 		},
 		sched.GenJobId(),
 		gen.Int16Range(1, 100),
-		gen.Int16Range(1, 1000),
+		gen.Int16Range(10, 1000),
 	))
 
 	properties.TestingRun(t)
