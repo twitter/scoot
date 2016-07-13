@@ -40,7 +40,7 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 				}
 
 				wg.Add(1)
-				go func(node cm.Node, task sched.TaskDefinition) {
+				go func(node cm.Node, taskId string, task sched.TaskDefinition) {
 					defer dist.ReleaseNode(node)
 					defer wg.Done()
 
@@ -55,12 +55,12 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 						}
 					}
 
-					err := saga.EndTask(id, nil)
+					err := saga.EndTask(taskId, nil)
 					if err != nil {
 						handleSagaLogErrors(err)
 					}
 
-				}(node, task)
+				}(node, id, task)
 			}
 		}
 	} else {
