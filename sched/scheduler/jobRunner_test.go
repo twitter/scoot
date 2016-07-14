@@ -1,11 +1,9 @@
 package scheduler
 
 import (
-	//"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	//ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
 	"testing"
 )

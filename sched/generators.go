@@ -30,7 +30,7 @@ func GenJob(id string, numTasks int) Job {
 func GenTask() TaskDefinition {
 	return TaskDefinition{
 		Command: Command{
-			Argv: []string{"cmd1", "cmd2"},
+			Argv: []string{"cmd1", "arg1", "arg2"},
 		},
 	}
 }
@@ -40,7 +40,7 @@ func GenTask() TaskDefinition {
 func GenJobId() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
 		const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-		length := int(genParams.NextUint64()%20) + 1
+		length := genParams.Rng.Intn(20)
 		result := make([]byte, length)
 		for i := 0; i < length; i++ {
 			result[i] = chars[genParams.Rng.Intn(len(chars))]

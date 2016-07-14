@@ -54,7 +54,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 			err := scheduler.ScheduleJob(job)
 
 			if err != nil {
-				fmt.Println("UnExpected Error Scheduling Job")
+				fmt.Println("Unexpected Error Scheduling Job")
 				return false
 			}
 
