@@ -49,7 +49,9 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 					// Implement deadletter queue
 					taskExecuted := false
 					for !taskExecuted {
-						err := node.SendMessage(task)
+						worker := rpc.NewThriftWorker(node)
+						controller := NewWorkerController(node)
+						err := controller.Run(task)
 						if err == nil {
 							taskExecuted = true
 						}
