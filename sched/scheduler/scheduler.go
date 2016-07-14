@@ -15,7 +15,6 @@ type Scheduler interface {
 }
 
 type scheduler struct {
-	cluster     cm.DynamicCluster
 	sc          saga.SagaCoordinator
 	distributor *dist.PoolDistributor
 	wg          sync.WaitGroup // used to track jobs in progress
@@ -23,7 +22,6 @@ type scheduler struct {
 
 func NewScheduler(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState, sc saga.SagaCoordinator) *scheduler {
 	s := &scheduler{
-		cluster:     cluster,
 		sc:          sc,
 		distributor: dist.NewDynamicPoolDistributor(clusterState),
 	}
@@ -97,16 +95,4 @@ func getNumNodes(job sched.Job) int {
 	} else {
 		return numTasks
 	}
-}
-
-type InvalidJobError struct {
-	msg string
-}
-
-func newInvalidJobError(msg string) InvalidJobError {
-	return InvalidJobError{msg: msg}
-}
-
-func (e InvalidJobError) Error() string {
-	return e.msg
 }
