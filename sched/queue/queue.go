@@ -14,8 +14,6 @@ type Queue interface {
 
 	Chan() chan WorkItem
 
-	Status(jobId string) (sched.JobStatus, error)
-
 	Close() error
 }
 

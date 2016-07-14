@@ -11,23 +11,23 @@ import (
 
 func NewSimpleQueue(capacity int) queue.Queue {
 	q := &simpleQueue{}
-	q.reqCh = make(chan queueReq)
+	q.inCh = make(chan queueReq)
 	q.outCh = make(chan queue.WorkItem)
 
-	st := &simpleQueueState{reqCh: q.reqCh, outCh: q.outCh, capacity: capacity}
+	st := &simpleQueueState{inCh: q.inCh, outCh: q.outCh, capacity: capacity}
 	go st.loop()
 	return q
 }
 
 type simpleQueue struct {
 	// Immutable state, read by many goroutines
-	reqCh chan queueReq
+	inCh  chan queueReq
 	outCh chan queue.WorkItem
 }
 
 type simpleQueueState struct {
 	// Mutable state, only read/written by its goroutine
-	reqCh     chan queueReq
+	inCh      chan queueReq
 	outCh     chan queue.WorkItem
 	dequeueCh chan struct{}
 	items     []*simpleWorkItem
@@ -45,7 +45,7 @@ func (s *simpleQueueState) loop() {
 
 func (s *simpleQueueState) done() bool {
 	// We are done once our inputs are closed and we have no items left to send
-	return s.reqCh == nil && len(s.items) == 0
+	return s.inCh == nil && len(s.items) == 0
 }
 
 func (s *simpleQueueState) iter() {
@@ -59,16 +59,14 @@ func (s *simpleQueueState) iter() {
 	select {
 	case outCh <- item:
 		s.dequeueCh = item.dequeueCh
-	case req, ok := <-s.reqCh:
+	case req, ok := <-s.inCh:
 		if !ok {
-			s.reqCh = nil
+			s.inCh = nil
 			return
 		}
 		switch req := req.(type) {
 		case enqueueReq:
-			req.resultCh <- s.enqueue(req.job)
-		case statusReq:
-			req.resultCh <- s.status(req.jobId)
+			req.resultCh <- s.enqueue(req.def)
 		}
 	case <-s.dequeueCh:
 		// Dequeue the last sent work item
@@ -77,25 +75,16 @@ func (s *simpleQueueState) iter() {
 	}
 }
 
-func (s *simpleQueueState) enqueue(job sched.Job) enqueueResult {
+func (s *simpleQueueState) enqueue(def sched.JobDefinition) enqueueResult {
 	if len(s.items) >= s.capacity {
 		return enqueueResult{"", queue.NewCanNotScheduleNow(1*time.Second, "queue full")}
 	}
 	id := strconv.Itoa(s.nextID)
 	s.nextID++
-	job.Id = id
+	job := sched.Job{Id: id, Def: def}
 	item := &simpleWorkItem{job, make(chan struct{})}
 	s.items = append(s.items, item)
 	return enqueueResult{id, nil}
-}
-
-func (s *simpleQueueState) status(jobId string) statusResult {
-	for _, item := range s.items {
-		if item.job.Id == jobId {
-			return statusResult{sched.PendingStatus(jobId), nil}
-		}
-	}
-	return statusResult{sched.UnknownStatus(jobId), nil}
 }
 
 type simpleWorkItem struct {
@@ -124,13 +113,6 @@ type enqueueReq struct {
 
 func (r enqueueReq) queueReq() {}
 
-type statusReq struct {
-	jobId    string
-	resultCh chan statusResult
-}
-
-func (r statusReq) queueReq() {}
-
 type enqueueResult struct {
 	jobID string
 	err   error
@@ -142,37 +124,9 @@ func (q *simpleQueue) Enqueue(job sched.JobDefinition) (string, error) {
 		return "", err
 	}
 	resultCh := make(chan enqueueResult)
-	q.reqCh <- enqueueReq{job, resultCh}
+	q.inCh <- enqueueReq{job, resultCh}
 	result := <-resultCh
 	return result.jobID, result.err
-}
-
-func (q *simpleQueue) loop() {
-	for {
-		req, ok := <-q.inCh
-		if !ok {
-			// Channel is closed
-			return
-		}
-		def := req.def
-		id := fmt.Sprintf("%v", q.nextID)
-		q.nextID++
-
-		job := sched.Job{Id: id, Def: def}
-		select {
-		case q.outCh <- simpleWorkItem(job):
-			req.resultCh <- enqueueResult{id, nil}
-		default:
-			req.resultCh <- enqueueResult{"", queue.NewCanNotScheduleNow(1*time.Second, "queue full")}
-		}
-	}
-}
-
-func (q *simpleQueue) Status(jobId string) (sched.JobStatus, error) {
-	resultCh := make(chan statusResult)
-	q.reqCh <- statusReq{jobId, resultCh}
-	result := <-resultCh
-	return result.status, result.err
 }
 
 func (q *simpleQueue) Chan() chan queue.WorkItem {
@@ -180,6 +134,6 @@ func (q *simpleQueue) Chan() chan queue.WorkItem {
 }
 
 func (q *simpleQueue) Close() error {
-	close(q.reqCh)
+	close(q.inCh)
 	return nil
 }

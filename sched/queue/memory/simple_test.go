@@ -8,7 +8,7 @@ import (
 )
 
 func TestBadDef(t *testing.T) {
-	q, _ := memory.NewSimpleQueue(1)
+	q := memory.NewSimpleQueue(1)
 	job := sched.JobDefinition{}
 	_, err := q.Enqueue(job)
 	if err == nil {
