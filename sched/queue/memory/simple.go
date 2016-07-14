@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func NewSimpleQueue() (queue.Queue, chan queue.WorkItem) {
+func NewSimpleQueue(capacity int) (queue.Queue, chan queue.WorkItem) {
 	q := &simpleQueue{}
-	q.outCh = make(chan queue.WorkItem, 1)
+	q.outCh = make(chan queue.WorkItem, capacity)
 	q.inCh = make(chan enqueueReq)
 	go q.loop()
 	return q, q.outCh

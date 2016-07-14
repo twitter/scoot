@@ -1,5 +1,7 @@
 package queue
 
+//go:generate mockgen -source=queue.go -package=queue -destination=queue_mock.go
+
 import (
 	"github.com/scootdev/scoot/sched"
 	"time"

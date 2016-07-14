@@ -7,10 +7,11 @@ import (
 	"github.com/scootdev/scoot/sched"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
 	cm "github.com/scootdev/scoot/sched/clustermembership"
+	"github.com/scootdev/scoot/sched/queue"
+	"github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
 
 	"math/rand"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -25,126 +26,58 @@ func main() {
 	fmt.Println("clusterMembers:", cluster.Members())
 	fmt.Println("")
 
-	workCh := make(chan sched.Job)
 	sagaCoord := s.MakeInMemorySagaCoordinator()
+	localSched := scheduler.NewScheduler(cluster, clusterState, sagaCoord)
 
-	scheduler := scheduler.NewScheduler(cluster, clusterState, sagaCoord)
-
-	go func() {
-		generateClusterChurn(cluster, clusterState)
-	}()
+	// always results in a deadlock in a long running process.
+	// because we remove all nodes.  Commenting out for now
+	//go func() {
+	//	generateClusterChurn(cluster, clusterState)
+	//}()
 
 	var wg sync.WaitGroup
-
 	wg.Add(2)
 
+	workQueue, workCh := memory.NewSimpleQueue(1000)
+
 	go func() {
-		generateTasks(workCh, 100000)
-		wg.Done()
+		defer wg.Done()
+		generateTasks(workQueue, 1000)
 	}()
 
-	for work := range workCh {
-		//TODO: Error Handling
-		fmt.Println("Scheduling Job: ", work.Id)
-		scheduler.ScheduleJob(work)
-	}
+	//This go routine will never exit will run forever
+	go func() {
+		defer wg.Done()
+		scheduler.GenerateWork(localSched, workCh)
+	}()
 
-	scheduler.BlockUnitlAllJobsCompleted()
-
-	ids, err := sagaCoord.Startup()
-
-	// we are using an in memory saga here if we can't get the active sagas something is
-	// very wrong just exit the program.
-	if err != nil {
-		fmt.Println("ERROR getting active sagas ", err)
-		os.Exit(2)
-	}
-
-	completedSagas := 0
-
-	for _, sagaId := range ids {
-
-		saga, err := sagaCoord.RecoverSagaState(sagaId, s.ForwardRecovery)
-		if err != nil {
-			// For now just print error in actual scheduler we'd want to retry multiple times,
-			// before putting it on a deadletter queue
-			fmt.Println(fmt.Sprintf("ERROR recovering saga state for %s: %s", sagaId, err))
-		}
-
-		// all Sagas are expected to be completed
-		if !saga.GetState().IsSagaCompleted() {
-			fmt.Println(fmt.Sprintf("Expected all Sagas to be Completed %s is not", sagaId))
-		} else {
-			completedSagas++
-		}
-	}
-
-	fmt.Println("Jobs Completed:", completedSagas)
+	wg.Wait()
 }
 
-// <<<<<<< fd5b67e8f41c7804994527e660a4d6de69d84e09:binaries/schedulerDemo/main.go
-// =======
-// func scheduleWork(
-// 	workCh <-chan sched.Job,
-// 	distributor *distributor.PoolDistributor,
-// 	saga s.Saga) {
-
-// 	var wg sync.WaitGroup
-// 	for work := range workCh {
-// 		node := distributor.ReserveNode(work)
-
-// 		wg.Add(1)
-// 		go func(w sched.Job, n cm.Node) {
-// 			defer wg.Done()
-
-// 			sagaId := w.Id
-// 			state, _ := saga.StartSaga(sagaId, nil)
-
-// 			//Todo: error handling, what if request fails
-// 			for id, task := range w.Def.Tasks {
-// 				state, _ = saga.StartTask(state, id, nil)
-// 				n.SendMessage(task)
-// 				state, _ = saga.EndTask(state, id, nil)
-// 			}
-
-// 			state, _ = saga.EndSaga(state)
-// 			distributor.ReleaseNode(n)
-// 		}(work, node)
-
-// 	}
-
-// 	wg.Wait()
-// }
-
-// >>>>>>> scootapi: refactor and rename Thrift:sched/demo/main.go
 /*
- * Generates work to send on the channel, using
- * Unbuffered channel because we only want to pull
- * more work when we can process it.
- *
- * For now just generates dummy tasks up to numTasks,
- * In reality this will pull off of work queue.
+ * Generates work enqueus to a queue, returns a list of job ids
  */
-func generateTasks(work chan<- sched.Job, numTasks int) {
+func generateTasks(workQueue queue.Queue, numTasks int) []string {
+	ids := make([]string, 0, numTasks)
 
 	for x := 0; x < numTasks; x++ {
+		jobDef := sched.JobDefinition{
+			JobType: "testTask",
+			Tasks: map[string]sched.TaskDefinition{
+				"Task_1": sched.TaskDefinition{
 
-		work <- sched.Job{
-			Id: fmt.Sprintf("Job_%d", x),
-			Def: sched.JobDefinition{
-				JobType: "testTask",
-				Tasks: map[string]sched.TaskDefinition{
-					"Task_1": sched.TaskDefinition{
-
-						Command: sched.Command{
-							Argv: []string{"testcmd", "testcmd2"},
-						},
+					Command: sched.Command{
+						Argv: []string{"testcmd", "testcmd2"},
 					},
 				},
 			},
 		}
+
+		id, _ := workQueue.Enqueue(jobDef)
+		ids = append(ids, id)
 	}
-	close(work)
+
+	return ids
 }
 
 func generateClusterChurn(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState) {
