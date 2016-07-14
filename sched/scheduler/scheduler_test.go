@@ -40,7 +40,7 @@ func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {
 func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 
 	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 10
+	parameters.MinSuccessfulTests = 20
 	properties := gopter.NewProperties(parameters)
 
 	properties.Property("Scheduled Jobs should Update Saga Log Correctly", prop.ForAll(
@@ -54,7 +54,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 			err := scheduler.ScheduleJob(job)
 
 			if err != nil {
-				fmt.Println("Unexpected Error Scheduling Job")
+				fmt.Println("Unexpected Error Scheduling Job", err)
 				return false
 			}
 
@@ -98,7 +98,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 		},
 		sched.GenJobId(),
 		gen.Int16Range(1, 100),
-		gen.Int16Range(10, 1000),
+		gen.Int16Range(100, 1000),
 	))
 
 	properties.TestingRun(t)
