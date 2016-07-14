@@ -4,15 +4,15 @@ import (
 	"fmt"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	cm "github.com/scootdev/scoot/sched/clustermembership"
 	"github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/worker"
 	"sync"
 )
 
 // Run the Job associated with this Saga to completion.  If its a brand new job
 // all tasks will be ran.  If its an in-progress Saga, only uncompleted tasks
 // will be executed
-func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
+func runJob(job sched.Job, saga *s.Saga, workers *distributor.PoolDistributor, workerFactory worker.WorkerFactory) {
 
 	var wg sync.WaitGroup
 
@@ -22,23 +22,21 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 		return
 	}
 
-	dist := distributor.NewPoolDistributor(cm.StaticClusterFactory(nodes))
-
 	// if the saga has not been aborted, just run each task in the saga
 	// TODO: this can be made smarter to run the next Best Task instead of just
 	// the next one in order etc....
 	if !initialSagaState.IsSagaAborted() {
 		for id, task := range job.Def.Tasks {
-
 			if !initialSagaState.IsTaskCompleted(id) {
-				node := dist.ReserveNode()
-
 				wg.Add(1)
-				go func(node cm.Node, taskId string, task sched.TaskDefinition) {
-					defer dist.ReleaseNode(node)
-					defer wg.Done()
-					runTask(saga, node, taskId, task)
-				}(node, id, task)
+				node := <-workers.Reserve
+				worker := workerFactory(node)
+
+				go func(id string, task sched.TaskDefinition) {
+					runTask(saga, worker, id, task)
+					workers.Release <- node
+					wg.Done()
+				}(id, task)
 			}
 		}
 	} else {
@@ -62,7 +60,7 @@ func runJob(job sched.Job, saga *s.Saga, nodes []cm.Node) {
 
 // Logic to execute a single task in a Job.  Ensures Messages are logged to SagaLog
 // Logs StartTask, executes Tasks, Logs EndTask
-func runTask(saga *s.Saga, node cm.Node, taskId string, task sched.TaskDefinition) {
+func runTask(saga *s.Saga, worker worker.WorkerController, taskId string, task sched.TaskDefinition) {
 	// Put StartTask Message on SagaLog
 	stErr := saga.StartTask(taskId, nil)
 	if stErr != nil {
@@ -74,7 +72,7 @@ func runTask(saga *s.Saga, node cm.Node, taskId string, task sched.TaskDefinitio
 	// Implement deadletter queue
 	taskExecuted := false
 	for !taskExecuted {
-		execErr := node.SendMessage(task)
+		execErr := worker.RunAndWait(task)
 		if execErr == nil {
 			taskExecuted = true
 		}
