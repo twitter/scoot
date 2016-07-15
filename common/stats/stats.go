@@ -165,7 +165,6 @@ func latch(stat *defaultStatsReceiver, captured StatsRegistry, latchCh chan chan
 	ticker StatsTicker, firstSnapshotAt time.Time, ctx context.Context,
 ) {
 	captureTime := Time.Now()
-Loop:
 	for {
 		select {
 		case <-ctx.Done():
@@ -173,7 +172,7 @@ Loop:
 			return
 		case t := <-ticker.C():
 			if t.Before(firstSnapshotAt) {
-				continue Loop
+				break
 			}
 			captured = capture(stat.registry, stat.makeRegistry())
 			captureTime = t
@@ -227,7 +226,7 @@ func clear(reg StatsRegistry) {
 
 type CapturedRegistry struct {
 	captured StatsRegistry
-	time     time.Time
+	time     time.Time // This will either be incorporated into health checks or taken out.
 }
 
 type defaultStatsReceiver struct {

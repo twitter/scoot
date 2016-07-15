@@ -58,7 +58,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	ct := make(chan time.Time, 2)
+	ct := make(chan time.Time)
 	Time = NewTestTime(time.Unix(0, 0), time.Nanosecond*5, ct)
 	defer close(ct)
 
@@ -108,7 +108,7 @@ func TestNonLatching(t *testing.T) {
 }
 
 func TestLatching(t *testing.T) {
-	ct := make(chan time.Time, 2)
+	ct := make(chan time.Time)
 	Time = NewTestTime(time.Unix(0, 0), 0, ct)
 	statIface, cancelFn := NewLatchedStatsReceiver(time.Second)
 	stat := statIface.(*defaultStatsReceiver)
@@ -136,21 +136,21 @@ func TestLatching(t *testing.T) {
 	}
 }
 
-// Three sends are required to ensure the first is handled, not just goroutine-queued...
-// This function may seem hacky, but it's the simplest way to do ordered testing when we're
-// select'ing on two+ channels: one channel to trigger updates, another accepting
+// Two sends may be required to be sure the first is handled, not just goroutine-queued...
+// This function may seem hacky, but it's one way to ensure ordered testing when we're
+// receive select'ing on two+ channels: one channel to trigger updates, another accepting
 // requests and immediately responding with a cached update.
 //
 // The Memory Model is light on details regarding select'ing from multiple channels,
-// but testing shows that the following sequence (or something similar) will happen
-// for unbuffered channels:
-// - first send is received/popped but doesn't enter the case statement. The channel is ready again.
-// - second send is is received and blocks further sends as the first send is still pending.
-// - third send blocks until the receive case statement for the first send is fully executed.
+// but the following seems possible:
+// - a receiver goroutine is blocked on unbuffered ChanA and ChanB.
+// - sender goroutine send to ChanA is 'received' but the receiver goroutine isn't scheduled yet.
+// - sender goroutine continues executing and sends to ChanB
+// - receiver goroutine gets scheduled and randomly handles ChanA or ChanB
 //
 // Suggestions or further rationale welcomed.
 func ensureChannelSend(chanCapacity int, sendFn func()) {
-	for i := 0; i < chanCapacity+3; i++ {
+	for i := 0; i < chanCapacity+2; i++ {
 		sendFn()
 	}
 }
