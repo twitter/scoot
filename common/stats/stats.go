@@ -149,46 +149,90 @@ func NewCustomStatsReceiver(makeRegistry func() StatsRegistry, latched time.Dura
 	cancel := func() {}
 	if latched > 0 {
 		var ctx context.Context
-		defaultStat.latchCh = make(chan chan StatsRegistry)
+		defaultStat.latchCh = make(chan chan CapturedRegistry)
 		ctx, cancel = context.WithCancel(context.Background())
 		firstSnapshotAt := Time.Now().Add(latched).Truncate(latched)
+		firstCaptured := capture(defaultStat.registry, makeRegistry())
 		go latch(
-			defaultStat, defaultStat.capture(), defaultStat.latchCh,
-			Time.NewTicker(latched), firstSnapshotAt, ctx, nil)
+			defaultStat, firstCaptured, defaultStat.latchCh,
+			Time.NewTicker(latched), firstSnapshotAt, ctx)
 	}
 	return defaultStat, cancel
 }
 
 // Called as a goroutine by stats constructor. Loops until ctx is canceled, periodically capturing stats.
-// Note: params are explicit here to make testing easier.
-func latch(stat *defaultStatsReceiver, captured StatsRegistry, latchCh chan chan StatsRegistry,
-	ticker StatsTicker, firstSnapshotAt time.Time, ctx context.Context, testRespCh chan bool,
+func latch(stat *defaultStatsReceiver, captured StatsRegistry, latchCh chan chan CapturedRegistry,
+	ticker StatsTicker, firstSnapshotAt time.Time, ctx context.Context,
 ) {
-Loop:
+	captureTime := Time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
 			return
 		case t := <-ticker.C():
-			if testRespCh != nil {
-				testRespCh <- true
-			}
 			if t.Before(firstSnapshotAt) {
-				continue Loop
+				break
 			}
-			captured = stat.capture()
-			stat.clear()
+			captured = capture(stat.registry, stat.makeRegistry())
+			captureTime = t
+			clear(stat.registry)
 		case req := <-latchCh:
-			req <- captured
+			req <- CapturedRegistry{captured, captureTime}
 		}
 	}
+}
+
+// Writes a registry copy to 'captured' and returns that copy. Called by latch().
+func capture(src StatsRegistry, captured StatsRegistry) StatsRegistry {
+	src.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case Counter:
+			captured.GetOrRegister(name, m.Capture())
+		case Gauge:
+			captured.GetOrRegister(name, m.Capture())
+		case GaugeFloat:
+			captured.GetOrRegister(name, m.Capture())
+		case Histogram:
+			captured.GetOrRegister(name, m.Capture())
+		case Latency:
+			captured.GetOrRegister(name, m.Capture())
+		default:
+			log.Println("Unrecognized capture instrument: ", name, i)
+		}
+	})
+	return captured
+}
+
+// Sends capture request to a latched goroutine and returns a StatRegistry copy.
+// Note: it is up the main app to prevent calls to requestCapture after closing a latched receiver.
+func requestCapture(latchCh chan chan CapturedRegistry) CapturedRegistry {
+	resultCh := make(chan CapturedRegistry)
+	latchCh <- resultCh
+	return <-resultCh
+}
+
+// Selectively clear the specified registry.
+func clear(reg StatsRegistry) {
+	reg.Each(func(name string, i interface{}) {
+		switch m := i.(type) {
+		case metrics.Counter:
+			m.Clear()
+		case metrics.Histogram:
+			m.Clear()
+		}
+	})
+}
+
+type CapturedRegistry struct {
+	captured StatsRegistry
+	time     time.Time // This will either be incorporated into health checks or taken out.
 }
 
 type defaultStatsReceiver struct {
 	makeRegistry func() StatsRegistry
 	registry     StatsRegistry
-	latchCh      chan chan StatsRegistry
+	latchCh      chan chan CapturedRegistry
 	precision    time.Duration
 	scope        []string
 }
@@ -234,7 +278,7 @@ func (s *defaultStatsReceiver) Remove(name ...string) {
 func (s *defaultStatsReceiver) Render(pretty bool) []byte {
 	reg := s.registry
 	if s.latchCh != nil {
-		reg = s.requestCapture()
+		reg = requestCapture(s.latchCh).captured
 	}
 
 	var err error
@@ -249,51 +293,9 @@ func (s *defaultStatsReceiver) Render(pretty bool) []byte {
 		panic("StatsRegistry bug, cannot be marshaled")
 	}
 	if s.latchCh == nil {
-		s.clear() // reset on every call to render when not latched.
+		clear(s.registry) // reset on every call to render when not latched.
 	}
 	return bytes
-}
-
-// Sends capture request to a latched goroutine and returns a StatRegistry copy.
-// Note: it is up the main app to prevent calls to requestCapture after closing a latched receiver.
-func (s *defaultStatsReceiver) requestCapture() StatsRegistry {
-	resultCh := make(chan StatsRegistry)
-	s.latchCh <- resultCh
-	return <-resultCh
-}
-
-// Returns a registry copy. Relies on underlying type to provide thread safety.
-func (s *defaultStatsReceiver) capture() StatsRegistry {
-	captured := s.makeRegistry()
-	s.registry.Each(func(name string, i interface{}) {
-		switch m := i.(type) {
-		case Counter:
-			captured.GetOrRegister(name, m.Capture())
-		case Gauge:
-			captured.GetOrRegister(name, m.Capture())
-		case GaugeFloat:
-			captured.GetOrRegister(name, m.Capture())
-		case Histogram:
-			captured.GetOrRegister(name, m.Capture())
-		case Latency:
-			captured.GetOrRegister(name, m.Capture())
-		default:
-			log.Println("Unrecognized capture instrument: ", name, i)
-		}
-	})
-	return captured
-}
-
-// Selectively clear the specified registry. Relies on underlying type to provide thread safety.
-func (s *defaultStatsReceiver) clear() {
-	s.registry.Each(func(name string, i interface{}) {
-		switch m := i.(type) {
-		case metrics.Counter:
-			m.Clear()
-		case metrics.Histogram:
-			m.Clear()
-		}
-	})
 }
 
 // Append to existing scope and scrub slashes
