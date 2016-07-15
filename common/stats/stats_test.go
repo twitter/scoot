@@ -122,35 +122,16 @@ func TestLatching(t *testing.T) {
 	}
 
 	// Captured registry should still be empty.
-	ensureChannelSend(cap(ct), func() { ct <- Time.Now().Add(1) })
+	ct <- Time.Now().Add(1)
 	rendered = string(stat.Render(true))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=1: ", rendered)
 	}
 
 	// Should be captured after enough time has passed.
-	ensureChannelSend(cap(ct), func() { ct <- Time.Now().Add(time.Minute) })
+	ct <- Time.Now().Add(time.Minute)
 	rendered = string(stat.Render(true))
 	if rendered == "{}" {
 		t.Fatal("Expected non-empty latch with time=0: ", rendered)
-	}
-}
-
-// Two sends may be required to be sure the first is handled, not just goroutine-queued...
-// This function may seem hacky, but it's one way to ensure ordered testing when we're
-// receive select'ing on two+ channels: one channel to trigger updates, another accepting
-// requests and immediately responding with a cached update.
-//
-// The Memory Model is light on details regarding select'ing from multiple channels,
-// but the following seems possible:
-// - a receiver goroutine is blocked on unbuffered ChanA and ChanB.
-// - sender goroutine send to ChanA is 'received' but the receiver goroutine isn't scheduled yet.
-// - sender goroutine continues executing and sends to ChanB
-// - receiver goroutine gets scheduled and randomly handles ChanA or ChanB
-//
-// Suggestions or further rationale welcomed.
-func ensureChannelSend(chanCapacity int, sendFn func()) {
-	for i := 0; i < chanCapacity+2; i++ {
-		sendFn()
 	}
 }
