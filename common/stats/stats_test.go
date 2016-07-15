@@ -3,8 +3,6 @@ package stats
 import (
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 func TestPrecisionChange(t *testing.T) {
@@ -109,52 +107,50 @@ func TestNonLatching(t *testing.T) {
 	}
 }
 
-//TODO: rewrite
 func TestLatching(t *testing.T) {
-	// Start new latch receiver but cancel its goroutine so we step manually below.
-	Time = DefaultTestTime()
-	statIface, cancelFn := NewLatchedStatsReceiver(time.Hour)
-	stat := statIface.(*defaultStatsReceiver)
-	captured := stat.capture()
-	cancelFn()
-
-	// Replace latchCh and construct channel to step through latch()
-	stat.latchCh = make(chan chan StatsRegistry)
 	ct := make(chan time.Time, 2)
-	respCh := make(chan bool)
 	Time = NewTestTime(time.Unix(0, 0), 0, ct)
-	ctx, cancel := context.WithCancel(context.Background())
+	statIface, cancelFn := NewLatchedStatsReceiver(time.Second)
+	stat := statIface.(*defaultStatsReceiver)
+	defer cancelFn()
 
-	// Don't capture (ticker=0, firstSnapshotAt=1s)
-	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now().Add(time.Second), ctx, respCh)
-
-	// Registry should not be captured in latch() until we accrue measurements.
+	// Captured registry should initially be empty even though we added a counter.
 	stat.Counter("counter")
-	ct <- Time.Now()
-	<-respCh
 	rendered := string(stat.Render(true))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=0: ", rendered)
 	}
 
-	// Replace latchCh and construct channel to step through latch()
-	cancel()
-	stat.latchCh = make(chan chan StatsRegistry)
-	ct = make(chan time.Time, 2)
-	Time = NewTestTime(time.Unix(0, 0), 0, ct)
-	ctx, cancel = context.WithCancel(context.Background())
+	// Captured registry should still be empty.
+	ensureChannelSend(cap(ct), func() { ct <- Time.Now().Add(1) })
+	rendered = string(stat.Render(true))
+	if rendered != "{}" {
+		t.Fatal("Expected empty latch with time=1: ", rendered)
+	}
 
-	// Captures immediately. (ticker=1m, firstSnapshotAt=0)
-	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now(), ctx, respCh)
-
-	// Captured registry should be updated here and render should pick that up.
-	ct <- Time.Now().Add(time.Minute)
-	<-respCh
+	// Should be captured after enough time has passed.
+	ensureChannelSend(cap(ct), func() { ct <- Time.Now().Add(time.Minute) })
 	rendered = string(stat.Render(true))
 	if rendered == "{}" {
 		t.Fatal("Expected non-empty latch with time=0: ", rendered)
 	}
-	if stat.Counter().Count() != 0 {
-		t.Fatal("Expected counter to be cleared after non-latch")
+}
+
+// Three sends are required to ensure the first is handled, not just goroutine-queued...
+// This function may seem hacky, but it's the simplest way to do ordered testing when we're
+// select'ing on two+ channels: one channel to trigger updates, another accepting
+// requests and immediately responding with a cached update.
+//
+// The Memory Model is light on details regarding select'ing from multiple channels,
+// but testing shows that the following sequence (or something similar) will happen
+// for unbuffered channels:
+// - first send is received/popped but doesn't enter the case statement. The channel is ready again.
+// - second send is is received and blocks further sends as the first send is still pending.
+// - third send blocks until the receive case statement for the first send is fully executed.
+//
+// Suggestions or further rationale welcomed.
+func ensureChannelSend(chanCapacity int, sendFn func()) {
+	for i := 0; i < chanCapacity+3; i++ {
+		sendFn()
 	}
 }
