@@ -3,6 +3,7 @@ package server_test
 import (
 	"fmt"
 	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/server"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestRunBadJobFails(t *testing.T) {
-	q, _ := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
 	defer q.Close()
 	handler := server.NewHandler(q)
 
@@ -49,7 +50,7 @@ func TestRunBadJobFails(t *testing.T) {
 }
 
 func TestRunSimpleJob(t *testing.T) {
-	q, _ := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
 	defer q.Close()
 	handler := server.NewHandler(q)
 
@@ -73,6 +74,8 @@ type errQueue struct{}
 func (q *errQueue) Enqueue(job sched.JobDefinition) (string, error) {
 	return "", fmt.Errorf("Not connected")
 }
+
+func (q *errQueue) Chan() chan queue.WorkItem { return nil }
 
 func (q *errQueue) Close() error {
 	return nil
@@ -100,7 +103,7 @@ func TestQueueError(t *testing.T) {
 }
 
 func TestQueueFillsAndEmpties(t *testing.T) {
-	q, itemCh := memory.NewSimpleQueue()
+	q := memory.NewSimpleQueue(1)
 	defer q.Close()
 	handler := server.NewHandler(q)
 
@@ -129,7 +132,7 @@ func TestQueueFillsAndEmpties(t *testing.T) {
 	}
 
 	// Empty queue
-	item := <-itemCh
+	item := <-q.Chan()
 	item.Dequeue()
 
 	_, err = handler.RunJob(jobDef)

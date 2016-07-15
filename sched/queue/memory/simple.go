@@ -11,7 +11,7 @@ import (
 
 func NewSimpleQueue(capacity int) queue.Queue {
 	q := &simpleQueue{}
-	q.inCh = make(chan queueReq)
+	q.inCh = make(chan enqueueReq)
 	q.outCh = make(chan queue.WorkItem)
 
 	st := &simpleQueueState{inCh: q.inCh, outCh: q.outCh, capacity: capacity}
@@ -21,13 +21,13 @@ func NewSimpleQueue(capacity int) queue.Queue {
 
 type simpleQueue struct {
 	// Immutable state, read by many goroutines
-	inCh  chan queueReq
+	inCh  chan enqueueReq
 	outCh chan queue.WorkItem
 }
 
 type simpleQueueState struct {
 	// Mutable state, only read/written by its goroutine
-	inCh      chan queueReq
+	inCh      chan enqueueReq
 	outCh     chan queue.WorkItem
 	dequeueCh chan struct{}
 	items     []*simpleWorkItem
@@ -37,8 +37,27 @@ type simpleQueueState struct {
 
 func (s *simpleQueueState) loop() {
 	for !s.done() {
-		s.iter()
-
+		var outCh chan queue.WorkItem
+		var item *simpleWorkItem
+		// only send if we aren't waiting for an ack and have something to send
+		if s.dequeueCh == nil && len(s.items) > 0 {
+			outCh = s.outCh
+			item = s.items[0]
+		}
+		select {
+		case outCh <- item:
+			s.dequeueCh = item.dequeueCh
+		case req, ok := <-s.inCh:
+			if !ok {
+				s.inCh = nil
+				return
+			}
+			req.resultCh <- s.enqueue(req.def)
+		case <-s.dequeueCh:
+			// Dequeue the last sent work item
+			s.items = s.items[1:]
+			s.dequeueCh = nil
+		}
 	}
 	close(s.outCh)
 }
@@ -49,30 +68,6 @@ func (s *simpleQueueState) done() bool {
 }
 
 func (s *simpleQueueState) iter() {
-	var outCh chan queue.WorkItem
-	var item *simpleWorkItem
-	// only send if we aren't waiting for an ack and have something to send
-	if s.dequeueCh == nil && len(s.items) > 0 {
-		outCh = s.outCh
-		item = s.items[0]
-	}
-	select {
-	case outCh <- item:
-		s.dequeueCh = item.dequeueCh
-	case req, ok := <-s.inCh:
-		if !ok {
-			s.inCh = nil
-			return
-		}
-		switch req := req.(type) {
-		case enqueueReq:
-			req.resultCh <- s.enqueue(req.def)
-		}
-	case <-s.dequeueCh:
-		// Dequeue the last sent work item
-		s.items = s.items[1:]
-		s.dequeueCh = nil
-	}
 }
 
 func (s *simpleQueueState) enqueue(def sched.JobDefinition) enqueueResult {
@@ -93,7 +88,7 @@ type simpleWorkItem struct {
 }
 
 func (i *simpleWorkItem) Job() sched.Job {
-	return sched.Job(i.job)
+	return i.job
 }
 
 func (i *simpleWorkItem) Dequeue() {
@@ -101,17 +96,10 @@ func (i *simpleWorkItem) Dequeue() {
 	close(i.dequeueCh)
 }
 
-// Requests to our queue
-type queueReq interface {
-	queueReq()
-}
-
 type enqueueReq struct {
 	def      sched.JobDefinition
 	resultCh chan enqueueResult
 }
-
-func (r enqueueReq) queueReq() {}
 
 type enqueueResult struct {
 	jobID string
