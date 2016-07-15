@@ -12,7 +12,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 
 	// TODO: upgrade to durable queue
-	queue, _ := memory.NewSimpleQueue()
+	queue := memory.NewSimpleQueue(1)
 	handler := server.NewHandler(queue)
 
 	// TODO: read from a config
