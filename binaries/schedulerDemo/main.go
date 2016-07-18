@@ -38,7 +38,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	workQueue, workCh := memory.NewSimpleQueue(1000)
+	workQueue := memory.NewSimpleQueue(1000)
 
 	go func() {
 		defer wg.Done()
@@ -48,7 +48,7 @@ func main() {
 	//This go routine will never exit will run forever
 	go func() {
 		defer wg.Done()
-		scheduler.GenerateWork(localSched, workCh)
+		scheduler.GenerateWork(localSched, workQueue.Chan())
 	}()
 
 	wg.Wait()

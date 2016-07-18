@@ -3,33 +3,97 @@ package memory
 // In-memory Scheduler Queue
 
 import (
-	"fmt"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
+	"strconv"
 	"time"
 )
 
-func NewSimpleQueue(capacity int) (queue.Queue, chan queue.WorkItem) {
+func NewSimpleQueue(capacity int) queue.Queue {
 	q := &simpleQueue{}
-	q.outCh = make(chan queue.WorkItem, capacity)
 	q.inCh = make(chan enqueueReq)
-	go q.loop()
-	return q, q.outCh
+	q.outCh = make(chan queue.WorkItem)
+
+	st := &simpleQueueState{inCh: q.inCh, outCh: q.outCh, capacity: capacity}
+	go st.loop()
+	return q
 }
 
 type simpleQueue struct {
-	nextID int
-	inCh   chan enqueueReq
-	outCh  chan queue.WorkItem
+	// Immutable state, read by many goroutines
+	inCh  chan enqueueReq
+	outCh chan queue.WorkItem
 }
 
-type simpleWorkItem sched.Job
-
-func (i simpleWorkItem) Job() sched.Job {
-	return sched.Job(i)
+type simpleQueueState struct {
+	// Mutable state, only read/written by its goroutine
+	inCh      chan enqueueReq
+	outCh     chan queue.WorkItem
+	dequeueCh chan struct{}
+	items     []*simpleWorkItem
+	nextID    int
+	capacity  int
 }
 
-func (i simpleWorkItem) Dequeue() {
+func (s *simpleQueueState) loop() {
+	for !s.done() {
+		var outCh chan queue.WorkItem
+		var item *simpleWorkItem
+		// only send if we aren't waiting for an ack and have something to send
+		if s.dequeueCh == nil && len(s.items) > 0 {
+			outCh = s.outCh
+			item = s.items[0]
+		}
+		select {
+		case outCh <- item:
+			s.dequeueCh = item.dequeueCh
+		case req, ok := <-s.inCh:
+			if !ok {
+				s.inCh = nil
+				return
+			}
+			req.resultCh <- s.enqueue(req.def)
+		case <-s.dequeueCh:
+			// Dequeue the last sent work item
+			s.items = s.items[1:]
+			s.dequeueCh = nil
+		}
+	}
+	close(s.outCh)
+}
+
+func (s *simpleQueueState) done() bool {
+	// We are done once our inputs are closed and we have no items left to send
+	return s.inCh == nil && len(s.items) == 0
+}
+
+func (s *simpleQueueState) iter() {
+}
+
+func (s *simpleQueueState) enqueue(def sched.JobDefinition) enqueueResult {
+	if len(s.items) >= s.capacity {
+		return enqueueResult{"", queue.NewCanNotScheduleNow(1*time.Second, "queue full")}
+	}
+	id := strconv.Itoa(s.nextID)
+	s.nextID++
+	job := sched.Job{Id: id, Def: def}
+	item := &simpleWorkItem{job, make(chan struct{})}
+	s.items = append(s.items, item)
+	return enqueueResult{id, nil}
+}
+
+type simpleWorkItem struct {
+	job       sched.Job
+	dequeueCh chan struct{}
+}
+
+func (i *simpleWorkItem) Job() sched.Job {
+	return i.job
+}
+
+func (i *simpleWorkItem) Dequeue() {
+	i.dequeueCh <- struct{}{}
+	close(i.dequeueCh)
 }
 
 type enqueueReq struct {
@@ -53,29 +117,11 @@ func (q *simpleQueue) Enqueue(job sched.JobDefinition) (string, error) {
 	return result.jobID, result.err
 }
 
-func (q *simpleQueue) Close() error {
-	close(q.inCh)
-	close(q.outCh)
-	return nil
+func (q *simpleQueue) Chan() chan queue.WorkItem {
+	return q.outCh
 }
 
-func (q *simpleQueue) loop() {
-	for {
-		req, ok := <-q.inCh
-		if !ok {
-			// Channel is cloed
-			return
-		}
-		def := req.def
-		id := fmt.Sprintf("%v", q.nextID)
-		q.nextID++
-
-		job := sched.Job{Id: id, Def: def}
-		select {
-		case q.outCh <- simpleWorkItem(job):
-			req.resultCh <- enqueueResult{id, nil}
-		default:
-			req.resultCh <- enqueueResult{"", queue.NewCanNotScheduleNow(1*time.Second, "queue full")}
-		}
-	}
+func (q *simpleQueue) Close() error {
+	close(q.inCh)
+	return nil
 }

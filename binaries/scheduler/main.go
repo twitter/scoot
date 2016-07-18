@@ -22,7 +22,7 @@ func main() {
 	scheduler := sched.NewScheduler(cluster, clusterState, sagaCoordinator)
 
 	// TODO: Replace with Durable WorkQueue, currently in Memory Only
-	_, workCh := memory.NewSimpleQueue(1000)
+	workQueue := memory.NewSimpleQueue(1000)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -30,7 +30,7 @@ func main() {
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
 		defer wg.Done()
-		sched.GenerateWork(scheduler, workCh)
+		sched.GenerateWork(scheduler, workQueue.Chan())
 	}()
 
 	wg.Wait()

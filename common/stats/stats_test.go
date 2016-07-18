@@ -3,8 +3,6 @@ package stats
 import (
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 func TestPrecisionChange(t *testing.T) {
@@ -60,7 +58,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	ct := make(chan time.Time, 2)
+	ct := make(chan time.Time)
 	Time = NewTestTime(time.Unix(0, 0), time.Nanosecond*5, ct)
 	defer close(ct)
 
@@ -109,52 +107,31 @@ func TestNonLatching(t *testing.T) {
 	}
 }
 
-//TODO: rewrite
 func TestLatching(t *testing.T) {
-	// Start new latch receiver but cancel its goroutine so we step manually below.
-	Time = DefaultTestTime()
-	statIface, cancelFn := NewLatchedStatsReceiver(time.Hour)
-	stat := statIface.(*defaultStatsReceiver)
-	captured := stat.capture()
-	cancelFn()
-
-	// Replace latchCh and construct channel to step through latch()
-	stat.latchCh = make(chan chan StatsRegistry)
-	ct := make(chan time.Time, 2)
-	respCh := make(chan bool)
+	ct := make(chan time.Time)
 	Time = NewTestTime(time.Unix(0, 0), 0, ct)
-	ctx, cancel := context.WithCancel(context.Background())
+	statIface, cancelFn := NewLatchedStatsReceiver(time.Second)
+	stat := statIface.(*defaultStatsReceiver)
+	defer cancelFn()
 
-	// Don't capture (ticker=0, firstSnapshotAt=1s)
-	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now().Add(time.Second), ctx, respCh)
-
-	// Registry should not be captured in latch() until we accrue measurements.
+	// Captured registry should initially be empty even though we added a counter.
 	stat.Counter("counter")
-	ct <- Time.Now()
-	<-respCh
 	rendered := string(stat.Render(true))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=0: ", rendered)
 	}
 
-	// Replace latchCh and construct channel to step through latch()
-	cancel()
-	stat.latchCh = make(chan chan StatsRegistry)
-	ct = make(chan time.Time, 2)
-	Time = NewTestTime(time.Unix(0, 0), 0, ct)
-	ctx, cancel = context.WithCancel(context.Background())
+	// Captured registry should still be empty.
+	ct <- Time.Now().Add(1)
+	rendered = string(stat.Render(true))
+	if rendered != "{}" {
+		t.Fatal("Expected empty latch with time=1: ", rendered)
+	}
 
-	// Captures immediately. (ticker=1m, firstSnapshotAt=0)
-	go latch(stat, captured, stat.latchCh, Time.NewTicker(0), Time.Now(), ctx, respCh)
-
-	// Captured registry should be updated here and render should pick that up.
+	// Should be captured after enough time has passed.
 	ct <- Time.Now().Add(time.Minute)
-	<-respCh
 	rendered = string(stat.Render(true))
 	if rendered == "{}" {
 		t.Fatal("Expected non-empty latch with time=0: ", rendered)
-	}
-	if stat.Counter().Count() != 0 {
-		t.Fatal("Expected counter to be cleared after non-latch")
 	}
 }
