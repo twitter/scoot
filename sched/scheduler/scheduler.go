@@ -1,5 +1,7 @@
 package scheduler
 
+//go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go
+
 import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
@@ -7,6 +9,10 @@ import (
 	dist "github.com/scootdev/scoot/sched/distributor"
 	"sync"
 )
+
+type Scheduler interface {
+	ScheduleJob(job sched.Job) error
+}
 
 type scheduler struct {
 	sc          saga.SagaCoordinator

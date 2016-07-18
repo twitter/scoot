@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/scootdev/scoot/saga"
 	ci "github.com/scootdev/scoot/sched/clusterimplementations"
+	"github.com/scootdev/scoot/sched/queue/memory"
 	sched "github.com/scootdev/scoot/sched/scheduler"
+	"sync"
 )
 
 func main() {
@@ -17,8 +19,19 @@ func main() {
 	// Create Saga Log
 	// TODO: Replace with Durable SagaLog, currently In Memory Only
 	sagaCoordinator := saga.MakeInMemorySagaCoordinator()
-	sched.NewScheduler(cluster, clusterState, sagaCoordinator)
+	scheduler := sched.NewScheduler(cluster, clusterState, sagaCoordinator)
 
-	// TODO: pull work off of WorkQueue and schedule
+	// TODO: Replace with Durable WorkQueue, currently in Memory Only
+	workQueue := memory.NewSimpleQueue(1000)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Go Routine which takes data from work queue and schedules it
+	go func() {
+		defer wg.Done()
+		sched.GenerateWork(scheduler, workQueue.Chan())
+	}()
+
+	wg.Wait()
 }

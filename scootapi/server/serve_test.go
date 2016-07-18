@@ -12,6 +12,7 @@ import (
 
 func TestRunBadJobFails(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
+
 	defer q.Close()
 	handler := server.NewHandler(q)
 
@@ -51,6 +52,7 @@ func TestRunBadJobFails(t *testing.T) {
 
 func TestRunSimpleJob(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
+
 	defer q.Close()
 	handler := server.NewHandler(q)
 
@@ -104,6 +106,7 @@ func TestQueueError(t *testing.T) {
 
 func TestQueueFillsAndEmpties(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
+
 	defer q.Close()
 	handler := server.NewHandler(q)
 
