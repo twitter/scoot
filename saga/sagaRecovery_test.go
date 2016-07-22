@@ -18,7 +18,7 @@ func TestRecoverState_GetMessagesReturnsError(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, errors.New("test error"))
 	sc := MakeSagaCoordinator(sagaLogMock)
 
-	state, err := recoverState(sagaId, sc, RollbackRecovery)
+	state, err := recoverState(sagaId, sc)
 
 	if err == nil {
 		t.Error("Expected GetMessages return error to cause recoverState to return an error")
@@ -39,7 +39,7 @@ func TestRecoverState_GetMessagesReturnsEmptyList(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, nil)
 	sc := MakeSagaCoordinator(sagaLogMock)
 
-	state, err := recoverState(sagaId, sc, RollbackRecovery)
+	state, err := recoverState(sagaId, sc)
 
 	if state != nil {
 		t.Error("Expected returned Saga to be nil when no messages in SagaLog")
@@ -65,7 +65,7 @@ func TestRecoverState_MissingStartMessage(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
 	sc := MakeSagaCoordinator(sagaLogMock)
 
-	state, err := recoverState(sagaId, sc, RollbackRecovery)
+	state, err := recoverState(sagaId, sc)
 
 	if err == nil {
 		t.Error("Expected error when StartSaga is not first message")
@@ -92,7 +92,7 @@ func TestRecoverState_UpdateSagaStateFails(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
 	sc := MakeSagaCoordinator(sagaLogMock)
 
-	state, err := recoverState(sagaId, sc, RollbackRecovery)
+	state, err := recoverState(sagaId, sc)
 
 	if err == nil {
 		t.Error("Expected error when StartSaga is not first message")

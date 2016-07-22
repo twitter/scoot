@@ -2,15 +2,51 @@ package scheduler
 
 import (
 	"fmt"
+	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
-	//"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"testing"
 )
 
-func Test_GetJobStatus(t *testing.T) {
+func Test_GetJobStatus_Error(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := s.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInternalLogError("test error"))
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+
+	status, err := GetJobStatus("job1", sagaCoord)
+	if err == nil {
+		t.Errorf("Expected error to be returned when SagaLog fails to retrieve messages")
+	}
+	if status.Id != "" || status.Status != sched.NotStarted {
+		t.Errorf("Expected Default JobStatus to be returned when error occurs")
+	}
+}
+
+func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := s.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, nil)
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+
+	status, err := GetJobStatus("job1", sagaCoord)
+	if err != nil {
+		t.Error("Unexpected error returned", err)
+	}
+
+	if status.Id != "job1" && status.Status != sched.InProgress {
+		t.Error("Unexpected JobStatus Returned")
+	}
+}
+
+func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 10000
@@ -19,7 +55,7 @@ func Test_GetJobStatus(t *testing.T) {
 	properties.Property("SagaState Converted To Job Status Correctly", prop.ForAll(
 		func(state *s.SagaState) bool {
 
-			jobStatus := GetJobStatus(state)
+			jobStatus := convertSagaStateToJobStatus(state)
 
 			// Verify JobId Set Correctly
 			if state.SagaId() != jobStatus.Id {

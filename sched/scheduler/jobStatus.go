@@ -11,15 +11,35 @@ type JobStatus struct {
 	TaskStatus map[string]sched.Status //map of taskId to status
 }
 
+//
+func GetJobStatus(jobId string, sc s.SagaCoordinator) (JobStatus, error) {
+	state, err := sc.GetSagaState(jobId)
+
+	if err != nil {
+		return JobStatus{}, err
+	}
+
+	// No Logged Saga Messages.  Job NotStarted yet
+	if state == nil {
+		js := JobStatus{
+			Id:     jobId,
+			Status: sched.NotStarted,
+		}
+		return js, nil
+	}
+
+	return convertSagaStateToJobStatus(state), nil
+}
+
 // Converts a SagaState to a corresponding JobStatus
-func GetJobStatus(sagaState *s.SagaState) JobStatus {
+func convertSagaStateToJobStatus(sagaState *s.SagaState) JobStatus {
 
 	jobStatus := JobStatus{
 		Id:         sagaState.SagaId(),
+		Status:     sched.NotStarted,
 		TaskStatus: make(map[string]sched.Status),
 	}
 
-	// TODO: GetTaskIds() should be replaced with taskIds from Job
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {
 
@@ -45,20 +65,17 @@ func GetJobStatus(sagaState *s.SagaState) JobStatus {
 	// Saga Completed Successfully
 	if sagaState.IsSagaCompleted() && !sagaState.IsSagaAborted() {
 		jobStatus.Status = sched.Completed
-	}
 
-	// Saga Completed Unsuccessfully was Aborted & Rolled Back
-	if sagaState.IsSagaCompleted() && sagaState.IsSagaAborted() {
+		// Saga Completed Unsuccessfully was Aborted & Rolled Back
+	} else if sagaState.IsSagaCompleted() && sagaState.IsSagaAborted() {
 		jobStatus.Status = sched.RolledBack
-	}
 
-	// Saga In Progress
-	if !sagaState.IsSagaCompleted() && !sagaState.IsSagaAborted() {
+		// Saga In Progress
+	} else if !sagaState.IsSagaCompleted() && !sagaState.IsSagaAborted() {
 		jobStatus.Status = sched.InProgress
-	}
 
-	// Saga in Progress - Aborted and Rolling Back
-	if !sagaState.IsSagaCompleted() && sagaState.IsSagaAborted() {
+		// Saga in Progress - Aborted and Rolling Back
+	} else if !sagaState.IsSagaCompleted() && sagaState.IsSagaAborted() {
 		jobStatus.Status = sched.RollingBack
 	}
 
