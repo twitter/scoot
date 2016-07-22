@@ -24,3 +24,14 @@ type Command struct {
 	// We may extend this with more configuration,
 	// E.g. environment variables
 }
+
+// Status for Job & Tasks
+type Status int
+
+const (
+	NotStarted Status = iota
+	InProgress
+	Completed
+	RollingBack
+	RolledBack
+)
