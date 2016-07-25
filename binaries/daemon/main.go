@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/scootdev/scoot/local/protocol"
-	"github.com/scootdev/scoot/local/server"
+	"github.com/scootdev/scoot/daemon/protocol"
+	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	"github.com/scootdev/scoot/runner/execer/os"

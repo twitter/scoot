@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/scootdev/scoot/local/protocol"
+	"github.com/scootdev/scoot/daemon/protocol"
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Create a protocol.LocalScootServer
-func NewServer(runner runner.Runner) (protocol.LocalScootServer, error) {
+// Create a protocol.ScootDaemonServer
+func NewServer(runner runner.Runner) (protocol.ScootDaemonServer, error) {
 	return &Server{runner}, nil
 }
 
@@ -21,7 +21,7 @@ type Server struct {
 // TODO(dbentley): how to cancel
 
 // Serve  serves the Scoot instance in scootdir with logic handler s.
-func Serve(s protocol.LocalScootServer, scootdir string) error {
+func Serve(s protocol.ScootDaemonServer, scootdir string) error {
 	socketPath := protocol.SocketForDir(scootdir)
 	l, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -29,7 +29,7 @@ func Serve(s protocol.LocalScootServer, scootdir string) error {
 	}
 	defer l.Close()
 	server := grpc.NewServer()
-	protocol.RegisterLocalScootServer(server, s)
+	protocol.RegisterScootDaemonServer(server, s)
 	server.Serve(l)
 	return nil
 }
