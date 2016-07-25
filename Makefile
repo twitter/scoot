@@ -24,6 +24,9 @@ dependencies:
 	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
 	go get github.com/golang/mock/mockgen
 
+	# Necessary to generate thrift files, in addition to manually installing thrift via homebrew
+	go get github.com/apache/thrift/lib/go/thrift
+
 check-dependencies:
 	# Run this whenever a dependency is added.
 	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.

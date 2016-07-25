@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -24,11 +25,15 @@ func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTrans
 }
 
 type Handler struct {
-	queue queue.Queue
+	queue     queue.Queue
+	sagaCoord saga.SagaCoordinator
 }
 
-func NewHandler(queue queue.Queue) scoot.CloudScoot {
-	return &Handler{queue}
+func NewHandler(queue queue.Queue, sc saga.SagaCoordinator) scoot.CloudScoot {
+	return &Handler{
+		queue:     queue,
+		sagaCoord: sc,
+	}
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
@@ -60,6 +65,10 @@ func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	r := scoot.NewJobId()
 	r.ID = id
 	return r, nil
+}
+
+func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
+	return GetJobStatus(jobId, h.sagaCoord)
 }
 
 // Translates thrift job definition message to scoot domain object

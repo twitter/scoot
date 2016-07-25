@@ -35,6 +35,7 @@ func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift
 	r.rootCmd = rootCmd
 
 	rootCmd.AddCommand(makeRunJobCmd(r))
+	rootCmd.AddCommand(makeGetStatusCmd(r))
 	return r, nil
 }
 

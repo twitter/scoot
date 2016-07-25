@@ -1,4 +1,4 @@
-package scheduler
+package server
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	s "github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"testing"
 )
 
-func Test_GetJobStatus_Error(t *testing.T) {
+func Test_GetJobStatus_InternalLogError(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -21,10 +21,42 @@ func Test_GetJobStatus_Error(t *testing.T) {
 
 	status, err := GetJobStatus("job1", sagaCoord)
 	if err == nil {
-		t.Errorf("Expected error to be returned when SagaLog fails to retrieve messages")
+		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
 	}
-	if status.Id != "" || status.Status != sched.NotStarted {
-		t.Errorf("Expected Default JobStatus to be returned when error occurs")
+
+	switch err.(type) {
+	case *scoot.ScootServerError:
+	default:
+		t.Error("Expected returned error to be ScootServerError", err)
+	}
+
+	if status.ID != "" || status.Status != scoot.Status_NOT_STARTED {
+		t.Error("Expected Default JobStatus to be returned when error occurs")
+	}
+}
+
+func Test_GetJobStatus_InvalidRequestError(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := s.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInvalidRequestError("test error"))
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+
+	status, err := GetJobStatus("job1", sagaCoord)
+	if err == nil {
+		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
+	}
+
+	switch err.(type) {
+	case *scoot.InvalidRequest:
+	default:
+		t.Error("Expected returned error to be ScootServerError", err)
+	}
+
+	if status.ID != "" || status.Status != scoot.Status_NOT_STARTED {
+		t.Error("Expected Default JobStatus to be returned when error occurs")
 	}
 }
 
@@ -41,7 +73,7 @@ func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
 		t.Error("Unexpected error returned", err)
 	}
 
-	if status.Id != "job1" && status.Status != sched.InProgress {
+	if status.ID != "job1" && status.Status != scoot.Status_IN_PROGRESS {
 		t.Error("Unexpected JobStatus Returned")
 	}
 }
@@ -49,7 +81,7 @@ func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 
 	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 10000
+	parameters.MinSuccessfulTests = 1000
 	properties := gopter.NewProperties(parameters)
 
 	properties.Property("SagaState Converted To Job Status Correctly", prop.ForAll(
@@ -58,13 +90,13 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 			jobStatus := convertSagaStateToJobStatus(state)
 
 			// Verify JobId Set Correctly
-			if state.SagaId() != jobStatus.Id {
+			if state.SagaId() != jobStatus.ID {
 				return false
 			}
 
 			// Verify JobStatus
 			switch jobStatus.Status {
-			case sched.Completed:
+			case scoot.Status_COMPLETED:
 				if !state.IsSagaCompleted() {
 					fmt.Println("Job Status is Completed when Saga is not")
 					return false
@@ -74,7 +106,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 					return false
 				}
 
-			case sched.InProgress:
+			case scoot.Status_IN_PROGRESS:
 				if state.IsSagaCompleted() {
 					fmt.Println("Job Status is InProgress when Saga is Completed")
 					return false
@@ -84,7 +116,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 					return false
 				}
 
-			case sched.RolledBack:
+			case scoot.Status_ROLLED_BACK:
 				if !state.IsSagaCompleted() {
 					fmt.Println("Job Status is RolledBack but Saga is not Completed")
 					return false
@@ -94,7 +126,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 					return false
 				}
 
-			case sched.RollingBack:
+			case scoot.Status_ROLLING_BACK:
 				if !state.IsSagaAborted() {
 					fmt.Println("Job Status is RollingBack but the Saga is not Aborted")
 					return false
@@ -104,7 +136,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 					return false
 				}
 
-			case sched.NotStarted:
+			case scoot.Status_NOT_STARTED:
 				fmt.Println("Unexepected Job State Not Started")
 				return false
 			}
@@ -113,7 +145,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 			for _, id := range state.GetTaskIds() {
 
 				switch jobStatus.TaskStatus[id] {
-				case sched.Completed:
+				case scoot.Status_COMPLETED:
 					if state.IsSagaAborted() {
 						fmt.Println("Task Status is Completed but Saga is Aborted, Expected RolledBack", id)
 						return false
@@ -124,7 +156,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 						return false
 					}
 
-				case sched.InProgress:
+				case scoot.Status_IN_PROGRESS:
 					if state.IsSagaAborted() {
 						fmt.Println("Task Status is InProgress but Saga is Aborted, Expected RollingBack", id)
 						return false
@@ -135,7 +167,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 						return false
 					}
 
-				case sched.RolledBack:
+				case scoot.Status_ROLLED_BACK:
 					if !state.IsSagaAborted() {
 						fmt.Println("Task Status is Rolled Back but Saga is Not Aborted, Expected Completed", id)
 						return false
@@ -146,7 +178,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 						return false
 					}
 
-				case sched.RollingBack:
+				case scoot.Status_ROLLING_BACK:
 					if !state.IsSagaAborted() {
 						fmt.Println("Task Status is RollingBack but Saga is Not Aborted, Expected In Progress", id)
 						return false
@@ -155,7 +187,7 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 					if state.IsCompTaskCompleted(id) {
 						fmt.Println("Task Status is RollingBack but Saga has completed CompTask, Expected RolledBack", id)
 					}
-				case sched.NotStarted:
+				case scoot.Status_NOT_STARTED:
 					fmt.Println("Unexepected Task State Not Started", id)
 					return false
 				}
