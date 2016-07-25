@@ -44,7 +44,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		ids := generateTasks(workQueue, 1000)
-		checkState(ids, sagaCoord)
+		waitUntilJobsCompleted(ids, sagaCoord)
 		fmt.Println("all tasks completed")
 	}()
 
@@ -59,7 +59,7 @@ func main() {
 
 // Checks the State of all Passed in jobs.  When they are all
 // completed returns
-func checkState(ids []string, sc s.SagaCoordinator) {
+func waitUntilJobsCompleted(ids []string, sc s.SagaCoordinator) {
 
 	completedJobs := 0
 

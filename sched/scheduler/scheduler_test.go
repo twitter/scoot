@@ -1,6 +1,6 @@
 package scheduler
 
-/*import (
+import (
 	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
@@ -103,4 +103,3 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 
 	properties.TestingRun(t)
 }
-*/
