@@ -24,6 +24,12 @@ func (s SagaCoordinator) MakeSaga(sagaId string, job []byte) (*Saga, error) {
 	return newSaga(sagaId, job, s.log)
 }
 
+// Read the Current SagaState from the Log, intended for status queries does not check for recovery.
+// RecoverSagaState should be used for recovering state in a failure scenario
+func (s SagaCoordinator) GetSagaState(sagaId string) (*SagaState, error) {
+	return recoverState(sagaId, s)
+}
+
 //
 // Should be called at Saga Creation time.
 // Returns a Slice of In Progress SagaIds
@@ -46,7 +52,7 @@ func (s SagaCoordinator) Startup() ([]string, error) {
 // Returns the current SagaState
 //
 func (sc SagaCoordinator) RecoverSagaState(sagaId string, recoveryType SagaRecoveryType) (*Saga, error) {
-	state, err := recoverState(sagaId, sc, recoveryType)
+	state, err := recoverState(sagaId, sc)
 
 	if err != nil {
 		return nil, err

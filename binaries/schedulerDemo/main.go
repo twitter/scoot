@@ -36,13 +36,16 @@ func main() {
 	//}()
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	workQueue := memory.NewSimpleQueue(1000)
 
+	// generates tasks, then checks if they are all done before returning
 	go func() {
 		defer wg.Done()
-		generateTasks(workQueue, 1000)
+		ids := generateTasks(workQueue, 1000)
+		waitUntilJobsCompleted(ids, sagaCoord)
+		fmt.Println("all tasks completed")
 	}()
 
 	//This go routine will never exit will run forever
@@ -52,6 +55,25 @@ func main() {
 	}()
 
 	wg.Wait()
+}
+
+// Checks the State of all Passed in jobs.  When they are all
+// completed returns
+func waitUntilJobsCompleted(ids []string, sc s.SagaCoordinator) {
+
+	completedJobs := 0
+
+	for completedJobs < len(ids) {
+		time.Sleep(100 * time.Millisecond)
+		completedJobs = 0
+		for _, id := range ids {
+
+			status, _ := scheduler.GetJobStatus(id, sc)
+			if status.Status == sched.Completed {
+				completedJobs++
+			}
+		}
+	}
 }
 
 /*
