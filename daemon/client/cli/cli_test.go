@@ -3,8 +3,8 @@ package cli_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/scootdev/scoot/local/client/cli"
-	"github.com/scootdev/scoot/local/client/conn"
+	"github.com/scootdev/scoot/daemon/client/cli"
+	"github.com/scootdev/scoot/daemon/client/conn"
 	"github.com/scootdev/scoot/runner"
 	fakerunner "github.com/scootdev/scoot/runner/fake"
 	"io"

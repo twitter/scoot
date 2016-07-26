@@ -1,7 +1,7 @@
 package conn
 
 import (
-	"github.com/scootdev/scoot/local/protocol"
+	"github.com/scootdev/scoot/daemon/protocol"
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -80,7 +80,7 @@ func (d *dialer) Dial() (Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := protocol.NewLocalScootClient(c)
+	client := protocol.NewScootDaemonClient(c)
 	return &conn{c, client}, nil
 }
 
@@ -90,7 +90,7 @@ func (d *dialer) Close() error {
 
 type conn struct {
 	conn   *grpc.ClientConn
-	client protocol.LocalScootClient
+	client protocol.ScootDaemonClient
 }
 
 func (c *conn) Echo(arg string) (string, error) {
