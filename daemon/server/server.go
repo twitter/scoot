@@ -5,7 +5,6 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"net"
 	"time"
 )
 
@@ -19,11 +18,10 @@ type Server struct {
 }
 
 // TODO(dbentley): how to cancel
-
 // Serve  serves the Scoot instance in scootdir with logic handler s.
 func Serve(s protocol.ScootDaemonServer, scootdir string) error {
 	socketPath := protocol.SocketForDir(scootdir)
-	l, err := net.Listen("unix", socketPath)
+	l, err := listen(socketPath)
 	if err != nil {
 		return err
 	}
