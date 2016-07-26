@@ -14,7 +14,7 @@ func (c *CliClient) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func (c *CliClient) Close(*cobra.Command, []string) error {
+func (c *CliClient) Close() error {
 	return c.comms.Close()
 }
 
@@ -25,7 +25,7 @@ func NewCliClient(dialer conn.Dialer) (*CliClient, error) {
 		Use:                "scootcl",
 		Short:              "Scootcl is a command-line client to Scoot Daemon",
 		Run:                func(*cobra.Command, []string) {},
-		PersistentPostRunE: r.Close,
+		PersistentPostRunE: func(*cobra.Command, []string) error { return r.Close() },
 	}
 
 	r.rootCmd = rootCmd

@@ -1,14 +1,19 @@
 package server
 
 import (
+	"github.com/scootdev/scoot/daemon/protocol"
 	"net"
 	"os"
 	"path"
 	"syscall"
 )
 
-func listen(socketPath string) (net.Listener, error) {
-	err := os.MkdirAll(path.Dir(socketPath), 0700)
+func Listen() (net.Listener, error) {
+	socketPath, err := protocol.LocateSocket()
+	if err != nil {
+		return nil, err
+	}
+	err = os.MkdirAll(path.Dir(socketPath), 0700)
 	if err != nil {
 		return nil, err
 	}
