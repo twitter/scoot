@@ -10,32 +10,41 @@ import (
 )
 
 // Create a protocol.ScootDaemonServer
-func NewServer(runner runner.Runner) (protocol.ScootDaemonServer, error) {
-	return &Server{runner}, nil
+func NewServer(runner runner.Runner) (*Server, error) {
+	s := &Server{
+		runner: runner,
+		server: grpc.NewServer(),
+	}
+	protocol.RegisterScootDaemonServer(s.server, s)
+	return s, nil
 }
 
 type Server struct {
 	runner runner.Runner
+
+	server *grpc.Server
 }
 
-// TODO(dbentley): how to cancel
-
-// Serve  serves the Scoot instance in scootdir with logic handler s.
-func Serve(s protocol.ScootDaemonServer, scootdir string) error {
-	socketPath := protocol.SocketForDir(scootdir)
-	l, err := net.Listen("unix", socketPath)
+func (s *Server) ListenAndServe() error {
+	l, err := Listen()
 	if err != nil {
 		return err
 	}
-	defer l.Close()
-	server := grpc.NewServer()
-	protocol.RegisterScootDaemonServer(server, s)
-	server.Serve(l)
-	return nil
+	return s.Serve(l)
+}
+
+// Serve serves Scoot Daemon at scootdir
+func (s *Server) Serve(l net.Listener) error {
+	return s.server.Serve(l)
+}
+
+// Stops the server, canceling all active RPCs
+func (s *Server) Stop() {
+	s.server.Stop()
 }
 
 func (s *Server) Echo(ctx context.Context, req *protocol.EchoRequest) (*protocol.EchoReply, error) {
-	return &protocol.EchoReply{Pong: "Pong: " + req.Ping}, nil
+	return &protocol.EchoReply{Pong: req.Ping}, nil
 }
 
 func (s *Server) Run(ctx context.Context, req *protocol.Command) (*protocol.ProcessStatus, error) {

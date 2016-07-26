@@ -7,12 +7,13 @@ import (
 )
 
 // Utilities to deal with Scoot instances.
-// TODOs:
-// read from $SCOOTDIR
-// create scootdir if it doesn't exist (w/correct permissions)
 
 // LocateScootDir locates a Scoot instance.
 func LocateScootDir() (string, error) {
+	scootdir := os.Getenv("SCOOTDIR")
+	if scootdir != "" {
+		return scootdir, nil
+	}
 	homedir := os.Getenv("HOME")
 	if homedir == "" {
 		return "", fmt.Errorf("Cannot find home directory; $HOME unset")
