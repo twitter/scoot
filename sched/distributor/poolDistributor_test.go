@@ -1,230 +1,127 @@
-package distributor
+package distributor_test
 
 import (
-	"github.com/golang/mock/gomock"
-	cm "github.com/scootdev/scoot/sched/clustermembership"
-	"strings"
+	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/cloud/cluster/memory"
+	"github.com/scootdev/scoot/sched/distributor"
 	"testing"
 )
 
-func TestPoolDistributor_NilCluster(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	clusterMock := cm.NewMockCluster(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nil)
-
-	dist := NewPoolDistributor(clusterMock)
-
-	if nil != dist {
-		t.Error("Expected dist to be nil when no members in Cluster")
-	}
-}
-
-func TestPoolDistributor_EmptyCluster(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	nodes := make([]cm.Node, 0)
-
-	clusterMock := cm.NewMockCluster(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nodes)
-
-	dist := NewPoolDistributor(clusterMock)
-
-	if nil != dist {
-		t.Error("Expected dist to be nil when no members in Cluster")
-	}
-}
-
 func TestPoolDistributor_OneNodeCluster(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	nodes := cm.GenerateTestNodes(1)
-	clusterMock := cm.NewMockCluster(mockCtrl)
-	clusterMock.EXPECT().Members().Return(nodes)
-
-	dist := NewPoolDistributor(clusterMock)
-
-	if nil == dist {
-		t.Error("Expected dist to not be nil when 1 or more nodes in Cluster")
-	}
-
-	node1 := dist.ReserveNode()
-
-	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
-	default:
-	}
-
-	dist.ReleaseNode(node1)
-	node2 := dist.ReserveNode()
-
-	if node1.Id() != node2.Id() {
-		t.Error("Expected nodes to be the same Id since there is only one in the cluster")
-	}
-
-	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
-	default:
-	}
+	h := makeHelper(t, "node1")
+	defer h.close()
+	h.reserve("node1")
+	h.empty()
+	h.release("node1")
+	h.reserve("node1")
+	h.empty()
 }
 
 func TestPoolDynamicDistributor_AddNodes(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	h := makeHelper(t, "node1")
+	defer h.close()
 
-	nodes := cm.GenerateTestNodes(1)
-	updateCh := make(chan cm.NodeUpdate)
-
-	clusterState := cm.DynamicClusterState{
-		InitialMembers: nodes,
-		Updates:        updateCh,
-	}
-
-	dist := NewDynamicPoolDistributor(clusterState)
-	node1 := dist.ReserveNode()
-
-	if strings.Compare(node1.Id(), nodes[0].Id()) != 0 {
-		t.Error("Unexpected Node Returned", node1.Id(), nodes[0].Id())
-	}
-
-	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
-	default:
-	}
-
-	addedNode := (cm.GenerateTestNodes(1))[0]
-
-	updateCh <- cm.NodeUpdate{
-		Node:       addedNode,
-		UpdateType: cm.NodeAdded,
-	}
-
-	node2 := dist.ReserveNode()
-
-	if strings.Compare(node2.Id(), addedNode.Id()) != 0 {
-		t.Error("Unexpected Node Returned", node2.Id(), addedNode)
-	}
-
-	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
-	default:
-	}
+	h.reserve("node1")
+	h.empty()
+	h.add("node2")
+	h.reserve("node2")
+	h.empty()
 }
 
 func TestDynamicDistributor_RemoveNodesUnReserved(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	h := makeHelper(t, "node1", "node2")
+	defer h.close()
 
-	nodes := cm.GenerateTestNodes(2)
-	updateCh := make(chan cm.NodeUpdate)
-
-	clusterState := cm.DynamicClusterState{
-		InitialMembers: nodes,
-		Updates:        updateCh,
-	}
-
-	dist := NewDynamicPoolDistributor(clusterState)
-
-	updateCh <- cm.NodeUpdate{
-		Node:       nodes[0],
-		UpdateType: cm.NodeRemoved,
-	}
-
-	node1 := dist.ReserveNode()
-
-	if strings.Compare(node1.Id(), nodes[0].Id()) == 0 {
-		t.Error("Removed Node Retured", nodes[0].Id())
-	}
-
-	if strings.Compare(node1.Id(), nodes[1].Id()) != 0 {
-		t.Error("Unexpected Node Returned", node1.Id(), nodes[1].Id())
-	}
-
-	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
-	default:
-	}
+	h.reserve("node1")
+	h.remove("node2")
+	h.empty()
 }
 
 func TestDynamicDistributor_RemoveNodesReserved(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+	h := makeHelper(t, "node1", "node2")
+	defer h.close()
 
-	nodes := cm.GenerateTestNodes(2)
-	updateCh := make(chan cm.NodeUpdate)
+	h.reserve("node1")
+	h.reserve("node2")
 
-	clusterState := cm.DynamicClusterState{
-		InitialMembers: nodes,
-		Updates:        updateCh,
+	h.remove("node1")
+	h.release("node1")
+	h.release("node2")
+	h.reserve("node2")
+	h.empty()
+
+}
+
+func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
+	h := makeHelper(t, "node1", "node2")
+	defer h.close()
+
+	h.reserve("node1")
+	h.reserve("node2")
+	h.empty()
+	h.remove("node1")
+	h.add("node1")
+
+	// TODO(dbentley): this behavior looks weird, because it
+	// means that two clients have node1 reserved at the same
+	// time...
+	h.reserve("node1")
+	h.empty()
+}
+
+type helper struct {
+	t        *testing.T
+	d        *distributor.PoolDistributor
+	ch       chan []cluster.NodeUpdate
+	reserved map[string]cluster.Node
+}
+
+func makeHelper(t *testing.T, node ...string) *helper {
+	r := &helper{
+		t:        t,
+		ch:       make(chan []cluster.NodeUpdate),
+		reserved: make(map[string]cluster.Node),
+	}
+	nodes := []cluster.Node{}
+	for _, n := range node {
+		nodes = append(nodes, memory.NewIdNode(n))
 	}
 
-	dist := NewDynamicPoolDistributor(clusterState)
+	r.d = distributor.NewPoolDistributor(nodes, r.ch)
+	return r
+}
 
-	// fully schedule the cluster
-	node1 := dist.ReserveNode()
-	node2 := dist.ReserveNode()
+func (h *helper) close() {
+	h.d.Close()
+}
 
-	// remove node0 from cluster
-	updateCh <- cm.NodeUpdate{
-		Node:       nodes[0],
-		UpdateType: cm.NodeRemoved,
+func (h *helper) reserve(expected string) {
+	actual := <-h.d.Reserve
+	if string(actual.Id()) != expected {
+		h.t.Fatalf("reserved wrong node %v; expected %v", actual, expected)
 	}
+	h.reserved[string(actual.Id())] = actual
+}
 
-	// return node1 & node2, node1 should get removed
-	dist.ReleaseNode(node1)
-	dist.ReleaseNode(node2)
-
-	node3 := dist.ReserveNode()
-
-	if strings.Compare(node3.Id(), nodes[1].Id()) != 0 {
-		t.Error("Unexpected Node Returned", node3.Id(), nodes[1].Id())
-	}
-
+func (h *helper) empty() {
 	select {
-	case <-dist.freeCh:
-		t.Error("Expected cluster to be full schedlued")
+	case n := <-h.d.Reserve:
+		h.t.Fatalf("not empty: %v", n)
 	default:
 	}
 }
 
-func TestDynamicDistributor_ReAddedRemovedNodeIsAvailable(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+func (h *helper) release(node string) {
+	n := h.reserved[node]
+	h.d.Release <- n
+}
 
-	nodes := cm.GenerateTestNodes(1)
-	updateCh := make(chan cm.NodeUpdate)
+func (h *helper) add(node string) {
+	update := cluster.NewAdd(memory.NewIdNode(node))
+	h.ch <- []cluster.NodeUpdate{update}
+}
 
-	clusterState := cm.DynamicClusterState{
-		InitialMembers: nodes,
-		Updates:        updateCh,
-	}
-
-	dist := NewDynamicPoolDistributor(clusterState)
-
-	// mimic flapping node remove and then add
-	updateCh <- cm.NodeUpdate{
-		Node:       nodes[0],
-		UpdateType: cm.NodeRemoved,
-	}
-
-	updateCh <- cm.NodeUpdate{
-		Node:       nodes[0],
-		UpdateType: cm.NodeAdded,
-	}
-
-	select {
-	case <-dist.freeCh:
-
-	default:
-		t.Error("Expected node to be available after remove then add")
-	}
-
+func (h *helper) remove(node string) {
+	update := cluster.NewRemove(cluster.NodeId(node))
+	h.ch <- []cluster.NodeUpdate{update}
 }

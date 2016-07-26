@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	clusterimpl "github.com/scootdev/scoot/cloud/cluster/memory"
 	"github.com/scootdev/scoot/saga"
-	ci "github.com/scootdev/scoot/sched/clusterimplementations"
-	"github.com/scootdev/scoot/sched/queue/memory"
-	sched "github.com/scootdev/scoot/sched/scheduler"
+	"github.com/scootdev/scoot/sched/distributor"
+	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
+	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/scootdev/scoot/sched/worker/fake"
+	"log"
 	"sync"
 )
 
@@ -14,15 +17,18 @@ func main() {
 
 	// Create Cluster
 	// TODO: replace with actual cluster implementation, currently dummy in memory cluster
-	cluster, clusterState := ci.DynamicLocalNodeClusterFactory(10)
+	cluster := clusterimpl.NewCluster(clusterimpl.NewIdNodes(10), nil)
+	dist, err := distributor.NewPoolDistributorFromCluster(cluster)
+	if err != nil {
+		log.Fatalf("Error subscribing to cluster: %v", err)
+	}
 
 	// Create Saga Log
 	// TODO: Replace with Durable SagaLog, currently In Memory Only
 	sagaCoordinator := saga.MakeInMemorySagaCoordinator()
-	scheduler := sched.NewScheduler(cluster, clusterState, sagaCoordinator)
-
+	sched := scheduler.NewScheduler(dist, sagaCoordinator, fake.MakeWaitingNoopWorker)
 	// TODO: Replace with Durable WorkQueue, currently in Memory Only
-	workQueue := memory.NewSimpleQueue(1000)
+	workQueue := queueimpl.NewSimpleQueue(1000)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -30,7 +36,7 @@ func main() {
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
 		defer wg.Done()
-		sched.GenerateWork(scheduler, workQueue.Chan())
+		scheduler.GenerateWork(sched, workQueue.Chan())
 	}()
 
 	wg.Wait()
