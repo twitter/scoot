@@ -32,17 +32,22 @@ func main() {
 
 	handler := server.NewHandler(workQueue, sagaCoordinator)
 
-	// Start API Server
-	err := server.Serve(handler, addr, transportFactory, protocolFactory)
-	if err != nil {
-		log.Fatal("Error serving Scoot API: ", err)
-	}
-
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(2)
+
+	// Start API Server
+	go func() {
+		log.Println("Starting API Server")
+		defer wg.Done()
+		err := server.Serve(handler, addr, transportFactory, protocolFactory)
+		if err != nil {
+			log.Fatal("Error serving Scoot API: ", err)
+		}
+	}()
 
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
+		log.Println("Starting Scheduler")
 		defer wg.Done()
 		sched.GenerateWork(scheduler, workQueue.Chan())
 	}()
