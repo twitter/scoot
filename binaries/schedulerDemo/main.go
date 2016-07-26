@@ -2,21 +2,23 @@ package main
 
 import (
 	"fmt"
-
-	s "github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	ci "github.com/scootdev/scoot/sched/clusterimplementations"
-	cm "github.com/scootdev/scoot/sched/clustermembership"
-	"github.com/scootdev/scoot/sched/queue"
-	"github.com/scootdev/scoot/sched/queue/memory"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	api "github.com/scootdev/scoot/scootapi/server"
-
+	"log"
 	"math/rand"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/scootdev/scoot/cloud/cluster"
+	ci "github.com/scootdev/scoot/cloud/cluster/memory"
+	s "github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/queue"
+	qi "github.com/scootdev/scoot/sched/queue/memory"
+	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/scootdev/scoot/sched/worker/fake"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	api "github.com/scootdev/scoot/scootapi/server"
 )
 
 /* demo code */
@@ -24,12 +26,19 @@ func main() {
 
 	runtime.GOMAXPROCS(2)
 
-	cluster, clusterState := ci.DynamicLocalNodeClusterFactory(10)
-	fmt.Println("clusterMembers:", cluster.Members())
+	updateCh := make(chan []cluster.NodeUpdate)
+	cluster := ci.NewCluster(ci.NewIdNodes(10), updateCh)
+	dist, err := distributor.NewPoolDistributorFromCluster(cluster)
+	if err != nil {
+		log.Fatalf("Could not create distributor: %v", err)
+	}
+
+	members := cluster.Members()
+	fmt.Println("clusterMembers:", members)
 	fmt.Println("")
 
 	sagaCoord := s.MakeInMemorySagaCoordinator()
-	localSched := scheduler.NewScheduler(cluster, clusterState, sagaCoord)
+	sched := scheduler.NewScheduler(dist, sagaCoord, fake.MakeWaitingNoopWorker)
 
 	// always results in a deadlock in a long running process.
 	// because we remove all nodes.  Commenting out for now
@@ -40,20 +49,19 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	workQueue := memory.NewSimpleQueue(1000)
+	workQueue := qi.NewSimpleQueue(1000)
 
 	// generates tasks, then checks if they are all done before returning
 	go func() {
 		defer wg.Done()
 		ids := generateTasks(workQueue, 1000)
 		waitUntilJobsCompleted(ids, sagaCoord)
-		fmt.Println("all tasks completed")
+		workQueue.Close()
 	}()
 
-	//This go routine will never exit will run forever
 	go func() {
 		defer wg.Done()
-		scheduler.GenerateWork(localSched, workQueue.Chan())
+		scheduler.GenerateWork(sched, workQueue.Chan())
 	}()
 
 	wg.Wait()
@@ -69,7 +77,6 @@ func waitUntilJobsCompleted(ids []string, sc s.SagaCoordinator) {
 		time.Sleep(100 * time.Millisecond)
 		completedJobs = 0
 		for _, id := range ids {
-
 			status, _ := api.GetJobStatus(id, sc)
 			if status.Status == scoot.Status_COMPLETED {
 				completedJobs++
@@ -89,7 +96,6 @@ func generateTasks(workQueue queue.Queue, numTasks int) []string {
 			JobType: "testTask",
 			Tasks: map[string]sched.TaskDefinition{
 				"Task_1": sched.TaskDefinition{
-
 					Command: sched.Command{
 						Argv: []string{"testcmd", "testcmd2"},
 					},
@@ -104,41 +110,39 @@ func generateTasks(workQueue queue.Queue, numTasks int) []string {
 	return ids
 }
 
-func generateClusterChurn(cluster cm.DynamicCluster, clusterState cm.DynamicClusterState) {
+func generateClusterChurn(cl cluster.Cluster, updateCh chan []cluster.NodeUpdate) {
 
 	//TODO: Make node removal more random, pick random index to remove instead
 	// of always removing from end
 
-	totalNodes := len(clusterState.InitialMembers)
-	addedNodes := clusterState.InitialMembers
-	removedNodes := make([]cm.Node, 0, len(addedNodes))
+	i := 0
+	removed := make([]cluster.NodeId, 0)
 
 	for {
-		// add a node
 		if rand.Intn(2) != 0 {
-			if len(removedNodes) > 0 {
-				var n cm.Node
-				n, removedNodes = removedNodes[len(removedNodes)-1], removedNodes[:len(removedNodes)-1]
-				addedNodes = append(addedNodes, n)
-				cluster.AddNode(n)
-				fmt.Println("ADDED NODE: ", n.Id())
+			// add a node
+			var id string
+
+			if len(removed) > 0 {
+				// Recycle
+				id = string(removed[0])
+				removed = removed[1:]
 			} else {
-				n := ci.LocalNode{
-					Name: fmt.Sprintf("dynamic_node_%d", totalNodes),
-				}
-				totalNodes++
-				addedNodes = append(addedNodes, n)
-				cluster.AddNode(n)
-				fmt.Println("ADDED NODE: ", n.Id())
+				id = fmt.Sprintf("new_node_%d", i)
+				i++
 			}
+			updateCh <- []cluster.NodeUpdate{cluster.NewAdd(ci.NewIdNode(id))}
+			fmt.Println("ADDED NODE: ", id)
 		} else {
-			if len(addedNodes) > 0 {
-				var n cm.Node
-				n, addedNodes = addedNodes[len(addedNodes)-1], addedNodes[:len(addedNodes)-1]
-				removedNodes = append(removedNodes, n)
-				cluster.RemoveNode(n.Id())
-				fmt.Println("REMOVED NODE: ", n.Id())
+			members := cl.Members()
+			if len(members) == 0 {
+				continue
 			}
+			which := rand.Intn(len(members))
+			id := members[which].Id()
+			removed = append(removed, id)
+			updateCh <- []cluster.NodeUpdate{cluster.NewRemove(id)}
+			fmt.Println("REMOVED NODE: ", id)
 		}
 
 		time.Sleep(10 * time.Millisecond)

@@ -12,9 +12,9 @@ func (e InvalidSagaStateError) Error() string {
 	return e.s
 }
 
-func NewInvalidSagaStateError(msg string) error {
+func NewInvalidSagaStateError(msg string, args ...interface{}) error {
 	return InvalidSagaStateError{
-		s: msg,
+		s: fmt.Sprintf(msg, args...),
 	}
 }
 
@@ -299,7 +299,7 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsSagaCompleted() {
-			return nil, NewInvalidSagaStateError("Cannot StartTask after Saga has been completed")
+			return nil, NewInvalidSagaStateError("Cannot StartTask after Saga has been completed: %s", msg.taskId)
 		}
 
 		if state.IsSagaAborted() {
@@ -307,7 +307,7 @@ func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
 		}
 
 		if state.IsTaskCompleted(msg.taskId) {
-			return nil, NewInvalidSagaStateError("Cannot StartTask after it has been completed")
+			return nil, NewInvalidSagaStateError("Cannot StartTask after it has been completed: %s", msg.taskId)
 		}
 
 		if msg.data != nil {

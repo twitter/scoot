@@ -4,7 +4,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	cm "github.com/scootdev/scoot/sched/clustermembership"
+	"github.com/scootdev/scoot/sched/worker/fake"
 	"testing"
 )
 
@@ -14,10 +14,6 @@ func Test_RunTask_SuccessfulExecution(t *testing.T) {
 
 	task := sched.GenTask()
 
-	// ensures node executes task
-	nodeMock := cm.NewMockNode(mockCtrl)
-	nodeMock.EXPECT().SendMessage(task)
-
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
@@ -25,7 +21,7 @@ func Test_RunTask_SuccessfulExecution(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	runTask(s, nodeMock, "task1", task)
+	runTask(s, fake.NewNoopWorker(), "task1", task)
 
 	if !s.GetState().IsTaskStarted("task1") {
 		t.Errorf("Expected task to be started")
@@ -40,8 +36,7 @@ func Test_RunTask_PanicWhenWritingStartTaskReturnsFatalError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	// ensures node does not execute task when a fatal error occurs logging starttask
-	nodeMock := cm.NewMockNode(mockCtrl)
+	worker := fake.NewPanicWorker()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil)).Return(saga.NewInvalidRequestError("test error"))
@@ -54,7 +49,7 @@ func Test_RunTask_PanicWhenWritingStartTaskReturnsFatalError(t *testing.T) {
 		}
 	}()
 
-	runTask(s, nodeMock, "task1", sched.GenTask())
+	runTask(s, worker, "task1", sched.GenTask())
 
 	t.Errorf("Expected A Fatal Log Returned by SagaLog to cause a Panic")
 }
@@ -65,9 +60,7 @@ func Test_RunTask_PanicWhenWritingEndTaskReturnsFatalError(t *testing.T) {
 
 	task := sched.GenTask()
 
-	// ensures node executes task
-	nodeMock := cm.NewMockNode(mockCtrl)
-	nodeMock.EXPECT().SendMessage(task)
+	worker := fake.NewNoopWorker()
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
@@ -82,7 +75,7 @@ func Test_RunTask_PanicWhenWritingEndTaskReturnsFatalError(t *testing.T) {
 		}
 	}()
 
-	runTask(s, nodeMock, "task1", task)
+	runTask(s, worker, "task1", task)
 
 	t.Errorf("Expected A Fatal Log Returned by SagaLog to cause a Panic")
 }
