@@ -6,6 +6,10 @@ import (
 	"log"
 )
 
+// Command line tool to talk to CloudScoot Server
+// Example Command:
+// 			Check Job Status: get_job_status "job1"
+
 // Binary to talk to Cloud Scoot API
 func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
