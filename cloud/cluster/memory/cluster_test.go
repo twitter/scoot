@@ -16,6 +16,8 @@ func TestMembers(t *testing.T) {
 	h.assertMembers()
 	h.add("node1", "node2")
 	h.assertMembers("node1", "node2")
+	h.add("node1")
+	h.assertMembers("node1", "node2")
 	h.remove("node1", "node2")
 	h.assertMembers()
 	// Try confusing it by removing a nonexisting node
