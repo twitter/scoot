@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/scootdev/scoot/local/client/cli"
-	"github.com/scootdev/scoot/local/client/conn"
+	"github.com/scootdev/scoot/daemon/client/cli"
+	"github.com/scootdev/scoot/daemon/client/conn"
 	"log"
 )
 
