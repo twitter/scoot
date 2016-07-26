@@ -31,6 +31,8 @@ func Listen() (net.Listener, error) {
 
 // replaceDeadServer handles the common case where a daemon has died but the socket file still exists.
 // If the address is already in use, that means the file exists but there may not be a live server attached to it.
+// (If we get an error other than in use, then we're not sure what's going on. Maybe it's a file instead of a socket?
+// Don't make the situation worse, just error out.)
 // To see if it's live, we try connecting to it. If we get connection refused, we infer the server is dead.
 // So we remove the socket file, and then try serving.
 // Returns a valid listener or nil.
