@@ -34,6 +34,7 @@ type output struct {
 	oldStderr *os.File
 }
 
+// Capture stdour and stdout into a *output.
 func captureOutput() *output {
 	oldStdout, oldStderr := os.Stdout, os.Stderr
 	stdout, stdoutCh := makeDiversion()
@@ -42,6 +43,7 @@ func captureOutput() *output {
 	return &output{stdout, stdoutCh, stderr, stderrCh, oldStdout, oldStderr}
 }
 
+// Creates a diversion: a file to write to, and a channel of string that will contain the contents written to it.
 func makeDiversion() (*os.File, chan string) {
 	reader, out, err := os.Pipe()
 	if err != nil {
@@ -58,12 +60,14 @@ func makeDiversion() (*os.File, chan string) {
 	return out, outCh
 }
 
+// Stop capturing output return the captured stdout and stderr
 func (o *output) WaitAndReset() (string, string) {
 	stdoutCh, stderrCh := o.stdoutCh, o.stderrCh
 	o.Reset()
 	return <-stdoutCh, <-stderrCh
 }
 
+// Stop capturing output.
 func (o *output) Reset() {
 	if o.stdout == nil {
 		return
@@ -71,6 +75,6 @@ func (o *output) Reset() {
 	o.stdout.Close()
 	o.stderr.Close()
 	os.Stdout, os.Stderr = o.oldStdout, o.oldStderr
-	// Zero
+	// Zero out fields
 	o.stdout, o.stderr, o.stdoutCh, o.stderrCh, o.oldStdout, o.oldStderr = nil, nil, nil, nil, nil, nil
 }

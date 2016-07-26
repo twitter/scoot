@@ -17,7 +17,7 @@ func TestIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not make temp directory", err)
 	}
-	// defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir)
 
 	scootDir := path.Join(tempDir, "scoot")
 	err = os.Setenv("SCOOTDIR", scootDir)
