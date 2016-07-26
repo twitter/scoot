@@ -1,6 +1,7 @@
-package server
+package server_test
 
 import (
+	"github.com/scootdev/scoot/daemon/server"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,16 +17,14 @@ func TestListen(t *testing.T) {
 
 	defer os.RemoveAll(tempDir)
 
-	scootDir := path.Join(tempDir, "scoot")
+	os.Setenv("SCOOTDIR", path.Join(tempDir, "scoot"))
 
-	socketPath := path.Join(scootDir, "socket")
-
-	l, err := listen(socketPath)
+	l, err := server.Listen()
 	if err != nil {
 		t.Fatalf("could not listen: %v", err)
 	}
 
-	_, err = listen(socketPath)
+	_, err = server.Listen()
 
 	if err == nil {
 		t.Fatalf("should not be able to listen again")
@@ -33,7 +32,7 @@ func TestListen(t *testing.T) {
 
 	l.Close()
 
-	l, err = listen(socketPath)
+	l, err = server.Listen()
 
 	if err != nil {
 		t.Fatalf("could not replace dead server")

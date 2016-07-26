@@ -7,7 +7,6 @@ import (
 	"github.com/scootdev/scoot/daemon/integration"
 	"github.com/scootdev/scoot/daemon/server"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"testing"
@@ -31,7 +30,7 @@ func TestIntegration(t *testing.T) {
 	l, err := server.Listen()
 
 	go func() {
-		err := s.Serve(l)
+		s.Serve(l)
 	}()
 
 	if err != nil {

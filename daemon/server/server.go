@@ -13,8 +13,8 @@ import (
 func NewServer(runner runner.Runner) (*Server, error) {
 	s := &Server{
 		runner: runner,
+		server: grpc.NewServer(),
 	}
-	s.server = grpc.NewServer()
 	protocol.RegisterScootDaemonServer(s.server, s)
 	return s, nil
 }
