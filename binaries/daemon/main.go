@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/scootdev/scoot/daemon/protocol"
 	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/fake"
@@ -13,13 +12,9 @@ import (
 
 var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
 
-// A Local Scoot server.
+// A Scoot Daemon server.
 func main() {
 	flag.Parse()
-	scootdir, err := protocol.LocateScootDir()
-	if err != nil {
-		log.Fatal("Error locating Scoot instance: ", err)
-	}
 	var ex execer.Execer
 	switch *execerType {
 	case "sim":
@@ -34,7 +29,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)
 	}
-	err = server.Serve(s, scootdir)
+	err = s.ListenAndServe()
 	if err != nil {
 		log.Fatal("Error serving Local Scoot: ", err)
 	}
