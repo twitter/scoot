@@ -37,10 +37,7 @@ func NewPoolDistributor(initial []cluster.Node, updateCh chan []cluster.NodeUpda
 }
 
 func NewPoolDistributorFromCluster(cluster cluster.Cluster) (*PoolDistributor, error) {
-	sub, err := cluster.Subscribe()
-	if err != nil {
-		return nil, err
-	}
+	sub := cluster.Subscribe()
 	return NewPoolDistributor(sub.InitialMembers, sub.Updates), nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 )
 
+// Create a WorkerController that talks to node
 type WorkerFactory func(node cluster.Node) WorkerController
 
 // WorkerController lets the Scheduler control a worker.

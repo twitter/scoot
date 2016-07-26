@@ -5,19 +5,6 @@ import (
 	"io"
 )
 
-type NodeId string
-
-type Node interface {
-	Id() NodeId
-}
-
-type NodeUpdateType int
-
-const (
-	NodeAdded NodeUpdateType = iota
-	NodeRemoved
-)
-
 // NodeUpdate represents a change to the cluster
 type NodeUpdate struct {
 	UpdateType NodeUpdateType
@@ -32,9 +19,9 @@ func (u *NodeUpdate) String() string {
 // Cluster represents a cluster of Nodes.
 type Cluster interface {
 	// Members returns the current members, or an error if they can't be determined.
-	Members() ([]Node, error)
+	Members() []Node
 	// Subscribe subscribes to changes to the cluster.
-	Subscribe() (Subscription, error)
+	Subscribe() Subscription
 	// Stop monitoring this cluster
 	Close() error
 }

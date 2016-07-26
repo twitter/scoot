@@ -73,11 +73,7 @@ func (h *helper) close() {
 }
 
 func (h *helper) assertMembers(node ...string) {
-	members, err := h.c.Members()
-	if err != nil {
-		h.t.Fatalf("error getting members: %v", err)
-	}
-	assertMembersEqual(makeNodes(node...), members, h.t)
+	assertMembersEqual(makeNodes(node...), h.c.Members(), h.t)
 }
 
 func (h *helper) add(node ...string) {
@@ -97,11 +93,7 @@ func (h *helper) remove(node ...string) {
 }
 
 func (h *helper) subscribe() cluster.Subscription {
-	s, err := h.c.Subscribe()
-	if err != nil {
-		h.t.Fatalf("error subscribing: %v", err)
-	}
-	return s
+	return h.c.Subscribe()
 }
 
 func (h *helper) assertInitialMembers(s cluster.Subscription, node ...string) {

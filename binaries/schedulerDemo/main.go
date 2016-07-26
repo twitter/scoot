@@ -16,15 +16,9 @@ import (
 	"github.com/scootdev/scoot/sched/queue"
 	qi "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/scootdev/scoot/sched/worker/fake"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	api "github.com/scootdev/scoot/scootapi/server"
-
-	"github.com/scootdev/scoot/sched/worker"
-	"github.com/scootdev/scoot/sched/worker/fake"
-	"math/rand"
-	"runtime"
-	"sync"
-	"time"
 )
 
 /* demo code */
@@ -39,8 +33,8 @@ func main() {
 		log.Fatalf("Could not create distributor: %v", err)
 	}
 
-	members, err := cluster.Members()
-	fmt.Println("clusterMembers:", members, err)
+	members := cluster.Members()
+	fmt.Println("clusterMembers:", members)
 	fmt.Println("")
 
 	sagaCoord := s.MakeInMemorySagaCoordinator()
@@ -140,10 +134,7 @@ func generateClusterChurn(cl cluster.Cluster, updateCh chan []cluster.NodeUpdate
 			updateCh <- []cluster.NodeUpdate{cluster.NewAdd(ci.NewIdNode(id))}
 			fmt.Println("ADDED NODE: ", id)
 		} else {
-			members, err := cl.Members()
-			if err != nil {
-				panic(err)
-			}
+			members := cl.Members()
 			if len(members) == 0 {
 				continue
 			}

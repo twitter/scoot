@@ -2,13 +2,18 @@ package memory
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
+	"sort"
 )
 
 func NewCluster(initial []cluster.Node, updateCh chan []cluster.NodeUpdate) cluster.Cluster {
+	members := make(map[cluster.NodeId]cluster.Node)
+	for _, n := range initial {
+		members[n.Id()] = n
+	}
 	c := &simpleCluster{
 		inCh:    updateCh,
 		reqCh:   make(chan interface{}),
-		members: State{members: initial},
+		members: members,
 		subs:    nil,
 	}
 	go c.loop()
@@ -19,20 +24,20 @@ type simpleCluster struct {
 	inCh  chan []cluster.NodeUpdate
 	reqCh chan interface{}
 
-	members State
+	members map[cluster.NodeId]cluster.Node
 	subs    []chan []cluster.NodeUpdate
 }
 
-func (c *simpleCluster) Members() ([]cluster.Node, error) {
+func (c *simpleCluster) Members() []cluster.Node {
 	ch := make(chan []cluster.Node)
 	c.reqCh <- ch
-	return <-ch, nil
+	return <-ch
 }
 
-func (c *simpleCluster) Subscribe() (cluster.Subscription, error) {
+func (c *simpleCluster) Subscribe() cluster.Subscription {
 	ch := make(chan cluster.Subscription)
 	c.reqCh <- ch
-	return <-ch, nil
+	return <-ch
 }
 
 func (c *simpleCluster) Close() error {
@@ -52,7 +57,7 @@ func (c *simpleCluster) loop() {
 				c.inCh = nil
 				continue
 			}
-			c.members.Apply(updates)
+			c.apply(updates)
 			for _, sub := range c.subs {
 				sub <- updates
 			}
@@ -73,15 +78,15 @@ func (c *simpleCluster) handleReq(req interface{}) {
 	switch req := req.(type) {
 	case chan []cluster.Node:
 		// Members()
-		req <- c.members.Current()
+		req <- c.current()
 	case chan cluster.Subscription:
 		// Subscribe()
 		ch := make(chan []cluster.NodeUpdate)
-		s := makeSubscription(c.members.Current(), c, ch)
+		s := makeSubscription(c.current(), c, ch)
 		c.subs = append(c.subs, ch)
 		req <- s
 	case chan []cluster.NodeUpdate:
-		// subscription.Close()
+		// close of a subscription
 		for i, sub := range c.subs {
 			if sub == req {
 				c.subs = append(
@@ -98,28 +103,28 @@ func (c *simpleCluster) closeSubscription(s *subscriber) {
 	c.reqCh <- s.inCh
 }
 
-// State holds the state of a Cluster (which is just its members)
-type State struct {
-	members []cluster.Node
-}
-
-func (s *State) Apply(updates []cluster.NodeUpdate) {
-	// TODO(dbentley): this could be slow if there are lots of updates
+func (c *simpleCluster) apply(updates []cluster.NodeUpdate) {
 	for _, update := range updates {
 		switch update.UpdateType {
 		case cluster.NodeAdded:
-			s.members = append(s.members, update.Node)
+			c.members[update.Id] = update.Node
 		case cluster.NodeRemoved:
-			for i, n := range s.members {
-				if n.Id() == update.Id {
-					s.members = append(s.members[0:i], s.members[i+1:]...)
-				}
-			}
+			delete(c.members, update.Id)
 		}
 	}
 }
 
-func (s *State) Current() []cluster.Node {
-	// Defensive copy
-	return append([]cluster.Node{}, s.members...)
+func (c *simpleCluster) current() []cluster.Node {
+	var r []cluster.Node
+	for _, v := range c.members {
+		r = append(r, v)
+	}
+	sort.Sort(nodeSorter(r))
+	return r
 }
+
+type nodeSorter []cluster.Node
+
+func (n nodeSorter) Len() int           { return len(n) }
+func (n nodeSorter) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n nodeSorter) Less(i, j int) bool { return n[i].Id() < n[j].Id() }
