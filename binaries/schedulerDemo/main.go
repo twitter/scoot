@@ -10,6 +10,8 @@ import (
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	api "github.com/scootdev/scoot/scootapi/server"
 
 	"math/rand"
 	"runtime"
@@ -68,8 +70,8 @@ func waitUntilJobsCompleted(ids []string, sc s.SagaCoordinator) {
 		completedJobs = 0
 		for _, id := range ids {
 
-			status, _ := scheduler.GetJobStatus(id, sc)
-			if status.Status == sched.Completed {
+			status, _ := api.GetJobStatus(id, sc)
+			if status.Status == scoot.Status_COMPLETED {
 				completedJobs++
 			}
 		}

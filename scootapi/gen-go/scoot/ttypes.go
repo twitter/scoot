@@ -58,6 +58,63 @@ func (p *JobType) UnmarshalText(text []byte) error {
 	return nil
 }
 
+type Status int64
+
+const (
+	Status_NOT_STARTED  Status = 1
+	Status_IN_PROGRESS  Status = 2
+	Status_COMPLETED    Status = 3
+	Status_ROLLING_BACK Status = 4
+	Status_ROLLED_BACK  Status = 5
+)
+
+func (p Status) String() string {
+	switch p {
+	case Status_NOT_STARTED:
+		return "NOT_STARTED"
+	case Status_IN_PROGRESS:
+		return "IN_PROGRESS"
+	case Status_COMPLETED:
+		return "COMPLETED"
+	case Status_ROLLING_BACK:
+		return "ROLLING_BACK"
+	case Status_ROLLED_BACK:
+		return "ROLLED_BACK"
+	}
+	return "<UNSET>"
+}
+
+func StatusFromString(s string) (Status, error) {
+	switch s {
+	case "NOT_STARTED":
+		return Status_NOT_STARTED, nil
+	case "IN_PROGRESS":
+		return Status_IN_PROGRESS, nil
+	case "COMPLETED":
+		return Status_COMPLETED, nil
+	case "ROLLING_BACK":
+		return Status_ROLLING_BACK, nil
+	case "ROLLED_BACK":
+		return Status_ROLLED_BACK, nil
+	}
+	return Status(0), fmt.Errorf("not a valid Status string")
+}
+
+func StatusPtr(v Status) *Status { return &v }
+
+func (p Status) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *Status) UnmarshalText(text []byte) error {
+	q, err := StatusFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*p = q
+	return nil
+}
+
 // Attributes:
 //  - Message
 type InvalidRequest struct {
@@ -267,6 +324,112 @@ func (p *CanNotScheduleNow) String() string {
 }
 
 func (p *CanNotScheduleNow) Error() string {
+	return p.String()
+}
+
+// Attributes:
+//  - RetryAfterMs
+type ScootServerError struct {
+	RetryAfterMs *int64 `thrift:"retryAfterMs,1" json:"retryAfterMs,omitempty"`
+}
+
+func NewScootServerError() *ScootServerError {
+	return &ScootServerError{}
+}
+
+var ScootServerError_RetryAfterMs_DEFAULT int64
+
+func (p *ScootServerError) GetRetryAfterMs() int64 {
+	if !p.IsSetRetryAfterMs() {
+		return ScootServerError_RetryAfterMs_DEFAULT
+	}
+	return *p.RetryAfterMs
+}
+func (p *ScootServerError) IsSetRetryAfterMs() bool {
+	return p.RetryAfterMs != nil
+}
+
+func (p *ScootServerError) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ScootServerError) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.RetryAfterMs = &v
+	}
+	return nil
+}
+
+func (p *ScootServerError) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ScootServerError"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ScootServerError) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRetryAfterMs() {
+		if err := oprot.WriteFieldBegin("retryAfterMs", thrift.I64, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:retryAfterMs: ", p), err)
+		}
+		if err := oprot.WriteI64(int64(*p.RetryAfterMs)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.retryAfterMs (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:retryAfterMs: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ScootServerError) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ScootServerError(%+v)", *p)
+}
+
+func (p *ScootServerError) Error() string {
 	return p.String()
 }
 
@@ -800,4 +963,216 @@ func (p *JobId) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("JobId(%+v)", *p)
+}
+
+// Attributes:
+//  - ID
+//  - Status
+//  - TaskStatus
+type JobStatus struct {
+	ID         string            `thrift:"id,1,required" json:"id"`
+	Status     Status            `thrift:"status,2,required" json:"status"`
+	TaskStatus map[string]Status `thrift:"taskStatus,3" json:"taskStatus,omitempty"`
+}
+
+func NewJobStatus() *JobStatus {
+	return &JobStatus{}
+}
+
+func (p *JobStatus) GetID() string {
+	return p.ID
+}
+
+func (p *JobStatus) GetStatus() Status {
+	return p.Status
+}
+
+var JobStatus_TaskStatus_DEFAULT map[string]Status
+
+func (p *JobStatus) GetTaskStatus() map[string]Status {
+	return p.TaskStatus
+}
+func (p *JobStatus) IsSetTaskStatus() bool {
+	return p.TaskStatus != nil
+}
+
+func (p *JobStatus) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	var issetID bool = false
+	var issetStatus bool = false
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+			issetID = true
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+			issetStatus = true
+		case 3:
+			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	if !issetID {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field ID is not set"))
+	}
+	if !issetStatus {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Status is not set"))
+	}
+	return nil
+}
+
+func (p *JobStatus) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.ID = v
+	}
+	return nil
+}
+
+func (p *JobStatus) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		temp := Status(v)
+		p.Status = temp
+	}
+	return nil
+}
+
+func (p *JobStatus) readField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]Status, size)
+	p.TaskStatus = tMap
+	for i := 0; i < size; i++ {
+		var _key3 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key3 = v
+		}
+		var _val4 Status
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			temp := Status(v)
+			_val4 = temp
+		}
+		p.TaskStatus[_key3] = _val4
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *JobStatus) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("JobStatus"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *JobStatus) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:id: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.ID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:id: ", p), err)
+	}
+	return err
+}
+
+func (p *JobStatus) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("status", thrift.I32, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:status: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Status)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.status (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:status: ", p), err)
+	}
+	return err
+}
+
+func (p *JobStatus) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskStatus() {
+		if err := oprot.WriteFieldBegin("taskStatus", thrift.MAP, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:taskStatus: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.TaskStatus)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.TaskStatus {
+			if err := oprot.WriteString(string(k)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+			if err := oprot.WriteI32(int32(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:taskStatus: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *JobStatus) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("JobStatus(%+v)", *p)
 }

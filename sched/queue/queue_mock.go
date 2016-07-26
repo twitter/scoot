@@ -40,6 +40,16 @@ func (_mr *_MockQueueRecorder) Enqueue(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Enqueue", arg0)
 }
 
+func (_m *MockQueue) Chan() chan WorkItem {
+	ret := _m.ctrl.Call(_m, "Chan")
+	ret0, _ := ret[0].(chan WorkItem)
+	return ret0
+}
+
+func (_mr *_MockQueueRecorder) Chan() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Chan")
+}
+
 func (_m *MockQueue) Close() error {
 	ret := _m.ctrl.Call(_m, "Close")
 	ret0, _ := ret[0].(error)
