@@ -30,12 +30,12 @@ func Listen() (net.Listener, error) {
 }
 
 // replaceDeadServer handles the common case where a daemon has died but the socket file still exists.
-// If the address is already in use, we try connecting to it.
-// If we get connection refused, we infer the server is dead and
-// remove the socket file, and then try serving.
+// If the address is already in use, that means the file exists but there may not be a live server attached to it.
+// To see if it's live, we try connecting to it. If we get connection refused, we infer the server is dead.
+// So we remove the socket file, and then try serving.
 // Returns a valid listener or nil.
 func replaceDeadServer(socketPath string, err error) net.Listener {
-	if !isAddrAlreadyInUse(err) {
+	if !isErrno(err, syscall.EADDRINUSE) {
 		return nil
 	}
 
@@ -45,7 +45,7 @@ func replaceDeadServer(socketPath string, err error) net.Listener {
 		conn.Close()
 		return nil
 	}
-	if !isConnectionRefused(connErr) {
+	if !isErrno(connErr, syscall.ECONNREFUSED) {
 		return nil
 	}
 	pathErr := os.Remove(socketPath)
@@ -59,27 +59,14 @@ func replaceDeadServer(socketPath string, err error) net.Listener {
 	return l
 }
 
-func isAddrAlreadyInUse(err error) bool {
+// Checks if an err is an errno that came from a call to a net function.
+// This involves unwrapping the errors as we expect to receive them from the net package.
+func isErrno(err error, expected syscall.Errno) bool {
 	opErr, ok := err.(*net.OpError)
 	if !ok {
 		return false
 	}
-	sysErr, ok := opErr.Err.(*os.SyscallError)
-	if !ok {
-		return false
-	}
-	errno, ok := sysErr.Err.(syscall.Errno)
-	if !ok {
-		return false
-	}
-	return errno == syscall.EADDRINUSE
-}
 
-func isConnectionRefused(err error) bool {
-	opErr, ok := err.(*net.OpError)
-	if !ok {
-		return false
-	}
 	sysErr, ok := opErr.Err.(*os.SyscallError)
 	if !ok {
 		return false
@@ -88,5 +75,5 @@ func isConnectionRefused(err error) bool {
 	if !ok {
 		return false
 	}
-	return errno == syscall.ECONNREFUSED
+	return errno == expected
 }
