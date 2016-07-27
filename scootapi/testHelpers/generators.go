@@ -1,6 +1,7 @@
-package testHelpers
+package testhelpers
 
 import (
+	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"math/rand"
 )
@@ -16,7 +17,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 
 	numTasks := rng.Intn(100) + 1
 	for i := 0; i < numTasks; i++ {
-		taskId := GenTaskId(rng)
+		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
 		taskDef := GenTask(rng)
 
 		def.Tasks[taskId] = taskDef

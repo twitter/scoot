@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/scootapi/testHelpers"
+	"github.com/scootdev/scoot/scootapi/testhelpers"
 	"github.com/spf13/cobra"
 	"math/rand"
 	"sync"
@@ -52,7 +52,7 @@ func (c *Client) generateAndRunJob() error {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// We just want the JobDefinition here Id doesn't matter
-	job := testHelpers.GenJobDefinition(rng)
+	job := testhelpers.GenJobDefinition(rng)
 	jobId, err := client.RunJob(job)
 
 	fmt.Println("Successfully Scheduled Job", jobId.ID)
