@@ -3,7 +3,6 @@ package sched
 import (
 	"fmt"
 	"github.com/leanovate/gopter"
-	//"github.com/leanovate/gopter/gen"
 )
 
 func GenJob(id string, numTasks int) Job {
