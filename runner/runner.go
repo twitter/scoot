@@ -89,4 +89,7 @@ type Runner interface {
 
 	// Status checks the status of run.
 	Status(run RunId) (ProcessStatus, error)
+
+	// Stop the given run.
+	Abort(run RunId) (ProcessStatus, error)
 }

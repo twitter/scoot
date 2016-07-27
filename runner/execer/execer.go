@@ -30,8 +30,7 @@ type Execer interface {
 type Process interface {
 	// TODO(dbentley): perhaps have a poll method?
 	Wait() ProcessStatus
-	// TODO(dbentley): we want the ability to abort at some point
-	// Abort() (ProcessStatus, error)
+	Abort() ProcessStatus
 }
 
 type ProcessStatus struct {

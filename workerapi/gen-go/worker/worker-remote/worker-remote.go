@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/scootdev/scoot/scootapi/gen-go/worker"
 	"math"
 	"net"
 	"net/url"
@@ -24,6 +24,7 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "  RunStatus Run(RunCommand cmd)")
 	fmt.Fprintln(os.Stderr, "  RunStatus Query(string runId)")
 	fmt.Fprintln(os.Stderr, "  RunStatus Abort(string runId)")
+	fmt.Fprintln(os.Stderr, "  void Clear(string runId)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -131,19 +132,19 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Run requires 1 args")
 			flag.Usage()
 		}
-		arg12 := flag.Arg(1)
-		mbTrans13 := thrift.NewTMemoryBufferLen(len(arg12))
-		defer mbTrans13.Close()
-		_, err14 := mbTrans13.WriteString(arg12)
-		if err14 != nil {
+		arg15 := flag.Arg(1)
+		mbTrans16 := thrift.NewTMemoryBufferLen(len(arg15))
+		defer mbTrans16.Close()
+		_, err17 := mbTrans16.WriteString(arg15)
+		if err17 != nil {
 			Usage()
 			return
 		}
-		factory15 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt16 := factory15.GetProtocol(mbTrans13)
+		factory18 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt19 := factory18.GetProtocol(mbTrans16)
 		argvalue0 := worker.NewRunCommand()
-		err17 := argvalue0.Read(jsProt16)
-		if err17 != nil {
+		err20 := argvalue0.Read(jsProt19)
+		if err20 != nil {
 			Usage()
 			return
 		}
@@ -169,6 +170,16 @@ func main() {
 		argvalue0 := flag.Arg(1)
 		value0 := argvalue0
 		fmt.Print(client.Abort(value0))
+		fmt.Print("\n")
+		break
+	case "Clear":
+		if flag.NArg()-1 != 1 {
+			fmt.Fprintln(os.Stderr, "Clear requires 1 args")
+			flag.Usage()
+		}
+		argvalue0 := flag.Arg(1)
+		value0 := argvalue0
+		fmt.Print(client.Clear(value0))
 		fmt.Print("\n")
 		break
 	case "":

@@ -2,9 +2,10 @@ package local
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
-	"sync"
 )
 
 func NewSimpleRunner(exec execer.Execer) runner.Runner {
@@ -61,9 +62,19 @@ func (r *simpleRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	return result, nil
 }
 
-func (r *simpleRunner) markFinished(p execer.Process, runId runner.RunId, status execer.ProcessStatus) {
+func (r *simpleRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	result, ok := r.runs[run]
+	if !ok {
+		return result, fmt.Errorf("unknown runId")
+	}
+	status := r.running.Abort()
+	r.markFinished(r.running, run, status)
+	return r.runs[run], nil
+}
+
+func (r *simpleRunner) markFinished(p execer.Process, runId runner.RunId, status execer.ProcessStatus) {
 	r.running = nil
 
 	switch status.State {
@@ -79,5 +90,7 @@ func (r *simpleRunner) markFinished(p execer.Process, runId runner.RunId, status
 func babysit(p execer.Process, runId runner.RunId, r *simpleRunner) {
 	// TODO(dbentley): here is where we enforce timeout (calling p.Abort() if we go too long)
 	status := p.Wait()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.markFinished(p, runId, status)
 }

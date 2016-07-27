@@ -2,10 +2,11 @@ package fake
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/runner/execer"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/scootdev/scoot/runner/execer"
 )
 
 func NewSimExecer(wait *sync.WaitGroup) execer.Execer {
@@ -78,6 +79,13 @@ func (p *simProcess) Wait() execer.ProcessStatus {
 	for !p.status.State.IsDone() {
 		p.done.Wait()
 	}
+	return p.status
+}
+
+//Abort op not supported by sim. Returns current process status.
+func (p *simProcess) Abort() execer.ProcessStatus {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.status
 }
 

@@ -20,22 +20,18 @@ type Status int64
 
 const (
 	Status_UNKNOWN   Status = 0
-	Status_READY     Status = 1
-	Status_PENDING   Status = 2
-	Status_RUNNING   Status = 3
-	Status_COMPLETED Status = 4
-	Status_ABORTED   Status = 5
-	Status_TIMEOUT   Status = 6
+	Status_RUNNING   Status = 1
+	Status_COMPLETED Status = 2
+	Status_ABORTED   Status = 3
+	Status_TIMEOUT   Status = 4
+	Status_ORPHANED  Status = 5
+	Status_INVALID   Status = 6
 )
 
 func (p Status) String() string {
 	switch p {
 	case Status_UNKNOWN:
 		return "UNKNOWN"
-	case Status_READY:
-		return "READY"
-	case Status_PENDING:
-		return "PENDING"
 	case Status_RUNNING:
 		return "RUNNING"
 	case Status_COMPLETED:
@@ -44,6 +40,10 @@ func (p Status) String() string {
 		return "ABORTED"
 	case Status_TIMEOUT:
 		return "TIMEOUT"
+	case Status_ORPHANED:
+		return "ORPHANED"
+	case Status_INVALID:
+		return "INVALID"
 	}
 	return "<UNSET>"
 }
@@ -52,10 +52,6 @@ func StatusFromString(s string) (Status, error) {
 	switch s {
 	case "UNKNOWN":
 		return Status_UNKNOWN, nil
-	case "READY":
-		return Status_READY, nil
-	case "PENDING":
-		return Status_PENDING, nil
 	case "RUNNING":
 		return Status_RUNNING, nil
 	case "COMPLETED":
@@ -64,6 +60,10 @@ func StatusFromString(s string) (Status, error) {
 		return Status_ABORTED, nil
 	case "TIMEOUT":
 		return Status_TIMEOUT, nil
+	case "ORPHANED":
+		return Status_ORPHANED, nil
+	case "INVALID":
+		return Status_INVALID, nil
 	}
 	return Status(0), fmt.Errorf("not a valid Status string")
 }
@@ -85,8 +85,12 @@ func (p *Status) UnmarshalText(text []byte) error {
 
 // Attributes:
 //  - Running
+//  - Ended
+//  - VersionId
 type WorkerStatus struct {
-	Running []string `thrift:"running,1,required" json:"running"`
+	Running   []string `thrift:"running,1,required" json:"running"`
+	Ended     []string `thrift:"ended,2" json:"ended,omitempty"`
+	VersionId *string  `thrift:"versionId,3" json:"versionId,omitempty"`
 }
 
 func NewWorkerStatus() *WorkerStatus {
@@ -96,6 +100,29 @@ func NewWorkerStatus() *WorkerStatus {
 func (p *WorkerStatus) GetRunning() []string {
 	return p.Running
 }
+
+var WorkerStatus_Ended_DEFAULT []string
+
+func (p *WorkerStatus) GetEnded() []string {
+	return p.Ended
+}
+
+var WorkerStatus_VersionId_DEFAULT string
+
+func (p *WorkerStatus) GetVersionId() string {
+	if !p.IsSetVersionId() {
+		return WorkerStatus_VersionId_DEFAULT
+	}
+	return *p.VersionId
+}
+func (p *WorkerStatus) IsSetEnded() bool {
+	return p.Ended != nil
+}
+
+func (p *WorkerStatus) IsSetVersionId() bool {
+	return p.VersionId != nil
+}
+
 func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -117,6 +144,14 @@ func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 				return err
 			}
 			issetRunning = true
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		case 3:
+			if err := p.readField3(iprot); err != nil {
+				return err
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -157,11 +192,48 @@ func (p *WorkerStatus) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *WorkerStatus) readField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]string, 0, size)
+	p.Ended = tSlice
+	for i := 0; i < size; i++ {
+		var _elem1 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_elem1 = v
+		}
+		p.Ended = append(p.Ended, _elem1)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *WorkerStatus) readField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.VersionId = &v
+	}
+	return nil
+}
+
 func (p *WorkerStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("WorkerStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -190,6 +262,44 @@ func (p *WorkerStatus) writeField1(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:running: ", p), err)
+	}
+	return err
+}
+
+func (p *WorkerStatus) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnded() {
+		if err := oprot.WriteFieldBegin("ended", thrift.LIST, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:ended: ", p), err)
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.Ended)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.Ended {
+			if err := oprot.WriteString(string(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:ended: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *WorkerStatus) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersionId() {
+		if err := oprot.WriteFieldBegin("versionId", thrift.STRING, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:versionId: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.VersionId)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.versionId (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:versionId: ", p), err)
+		}
 	}
 	return err
 }
@@ -533,10 +643,12 @@ func (p *RunStatus) String() string {
 //  - Argv
 //  - SnapshotId
 //  - TimeoutMs
+//  - LeaseMs
 type RunCommand struct {
 	Argv       []string `thrift:"argv,1,required" json:"argv"`
 	SnapshotId *string  `thrift:"snapshotId,2" json:"snapshotId,omitempty"`
 	TimeoutMs  *int32   `thrift:"timeoutMs,3" json:"timeoutMs,omitempty"`
+	LeaseMs    *int32   `thrift:"leaseMs,4" json:"leaseMs,omitempty"`
 }
 
 func NewRunCommand() *RunCommand {
@@ -564,12 +676,25 @@ func (p *RunCommand) GetTimeoutMs() int32 {
 	}
 	return *p.TimeoutMs
 }
+
+var RunCommand_LeaseMs_DEFAULT int32
+
+func (p *RunCommand) GetLeaseMs() int32 {
+	if !p.IsSetLeaseMs() {
+		return RunCommand_LeaseMs_DEFAULT
+	}
+	return *p.LeaseMs
+}
 func (p *RunCommand) IsSetSnapshotId() bool {
 	return p.SnapshotId != nil
 }
 
 func (p *RunCommand) IsSetTimeoutMs() bool {
 	return p.TimeoutMs != nil
+}
+
+func (p *RunCommand) IsSetLeaseMs() bool {
+	return p.LeaseMs != nil
 }
 
 func (p *RunCommand) Read(iprot thrift.TProtocol) error {
@@ -601,6 +726,10 @@ func (p *RunCommand) Read(iprot thrift.TProtocol) error {
 			if err := p.readField3(iprot); err != nil {
 				return err
 			}
+		case 4:
+			if err := p.readField4(iprot); err != nil {
+				return err
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -627,13 +756,13 @@ func (p *RunCommand) readField1(iprot thrift.TProtocol) error {
 	tSlice := make([]string, 0, size)
 	p.Argv = tSlice
 	for i := 0; i < size; i++ {
-		var _elem1 string
+		var _elem2 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_elem1 = v
+			_elem2 = v
 		}
-		p.Argv = append(p.Argv, _elem1)
+		p.Argv = append(p.Argv, _elem2)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -659,6 +788,15 @@ func (p *RunCommand) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *RunCommand) readField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.LeaseMs = &v
+	}
+	return nil
+}
+
 func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunCommand"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -670,6 +808,9 @@ func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField4(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -727,6 +868,21 @@ func (p *RunCommand) writeField3(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:timeoutMs: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunCommand) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLeaseMs() {
+		if err := oprot.WriteFieldBegin("leaseMs", thrift.I32, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:leaseMs: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.LeaseMs)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.leaseMs (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:leaseMs: ", p), err)
 		}
 	}
 	return err

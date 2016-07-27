@@ -19,6 +19,10 @@ func (r *fakeRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	return success(run), nil
 }
 
+func (r *fakeRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
+	return runner.ProcessStatus{}, nil
+}
+
 func success(runId runner.RunId) runner.ProcessStatus {
 	return runner.ProcessStatus{
 		RunId:     runId,

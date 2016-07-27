@@ -113,3 +113,5 @@ func (c *Client) queryworker(cmd *cobra.Command, args []string) error {
 	log.Println(render.Render(status))
 	return err
 }
+
+//TODO: implement clear()
