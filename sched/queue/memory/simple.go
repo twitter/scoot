@@ -50,7 +50,7 @@ func (s *simpleQueueState) loop() {
 		case req, ok := <-s.inCh:
 			if !ok {
 				s.inCh = nil
-				return
+				continue
 			}
 			req.resultCh <- s.enqueue(req.def)
 		case <-s.dequeueCh:

@@ -24,3 +24,26 @@ type Command struct {
 	// We may extend this with more configuration,
 	// E.g. environment variables
 }
+
+// Status for Job & Tasks
+type Status int
+
+const (
+	// NotRunning, waiting to be scheduled
+	NotStarted Status = iota
+
+	// Currently Scheduled and In Progress Job/Task
+	InProgress
+
+	// Successfully Completed Job/Task
+	Completed
+
+	// Job was Aborted, Compensating Tasks are being Applied.
+	// A RollingBack task has not finished its compensating
+	// tasks yet.
+	RollingBack
+
+	// Job/Task finished unsuccessfully all compensating actions
+	// have been applied.
+	RolledBack
+)

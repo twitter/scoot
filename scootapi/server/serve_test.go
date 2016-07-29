@@ -2,6 +2,8 @@ package server_test
 
 import (
 	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
@@ -10,11 +12,22 @@ import (
 	"testing"
 )
 
+func CreateSagaCoordMock(t *testing.T) (saga.SagaCoordinator, *saga.MockSagaLog) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+
+	return sagaCoord, sagaLogMock
+}
+
 func TestRunBadJobFails(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
-
 	defer q.Close()
-	handler := server.NewHandler(q)
+	sc, _ := CreateSagaCoordMock(t)
+
+	handler := server.NewHandler(q, sc)
 
 	jobDef := scoot.NewJobDefinition()
 
@@ -52,9 +65,10 @@ func TestRunBadJobFails(t *testing.T) {
 
 func TestRunSimpleJob(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
-
 	defer q.Close()
-	handler := server.NewHandler(q)
+	sc, _ := CreateSagaCoordMock(t)
+
+	handler := server.NewHandler(q, sc)
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
@@ -86,7 +100,9 @@ func (q *errQueue) Close() error {
 func TestQueueError(t *testing.T) {
 	q := &errQueue{}
 	defer q.Close()
-	handler := server.NewHandler(q)
+	sc, _ := CreateSagaCoordMock(t)
+
+	handler := server.NewHandler(q, sc)
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
@@ -106,9 +122,10 @@ func TestQueueError(t *testing.T) {
 
 func TestQueueFillsAndEmpties(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
-
 	defer q.Close()
-	handler := server.NewHandler(q)
+	sc, _ := CreateSagaCoordMock(t)
+
+	handler := server.NewHandler(q, sc)
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()

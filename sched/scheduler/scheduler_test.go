@@ -6,10 +6,11 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+	"github.com/scootdev/scoot/cloud/cluster/memory"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	ci "github.com/scootdev/scoot/sched/clusterimplementations"
-	cm "github.com/scootdev/scoot/sched/clustermembership"
+	"github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/worker/fake"
 	"testing"
 )
 
@@ -17,20 +18,19 @@ func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	//nodeMock used to ensure no tasks are executed if StartSaga Fails
-	nodeMock := cm.NewMockNode(mockCtrl)
-	nodeMock.EXPECT().Id().Return("node1")
-	cluster, clusterState := cm.DynamicClusterFactory([]cm.Node{nodeMock})
+	nodes := memory.NewIdNodes(1)
+
+	dist := distributor.NewPoolDistributor(nodes, nil)
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil).Return(saga.NewInternalLogError("test error"))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
-	scheduler := NewScheduler(cluster, clusterState, sagaCoord)
+	scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker)
 
 	job := sched.GenJob("job1", 5)
 	err := scheduler.ScheduleJob(job)
-	scheduler.BlockUnitlAllJobsCompleted()
+	scheduler.BlockUntilAllJobsCompleted()
 
 	if err == nil {
 		t.Error("Exepected Error to be Returned")
@@ -45,10 +45,10 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 
 	properties.Property("Scheduled Jobs should Update Saga Log Correctly", prop.ForAll(
 		func(jobId string, numTasks int16, numNodes int16) bool {
-
-			cluster, clusterState := ci.DynamicLocalNodeClusterFactory(int(numNodes))
+			nodes := memory.NewIdNodes(int(numNodes))
+			dist := distributor.NewPoolDistributor(nodes, nil)
 			sagaCoord := saga.MakeInMemorySagaCoordinator()
-			scheduler := NewScheduler(cluster, clusterState, sagaCoord)
+			scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker)
 
 			job := sched.GenJob(jobId, int(numTasks))
 			err := scheduler.ScheduleJob(job)
@@ -58,7 +58,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 				return false
 			}
 
-			scheduler.BlockUnitlAllJobsCompleted()
+			scheduler.BlockUntilAllJobsCompleted()
 
 			saga, _ := sagaCoord.RecoverSagaState(job.Id, saga.ForwardRecovery)
 			sagaState := saga.GetState()

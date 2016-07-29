@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/scootdev/scoot/local/client/cli"
-	"github.com/scootdev/scoot/local/client/conn"
+	"github.com/scootdev/scoot/daemon/client/cli"
+	"github.com/scootdev/scoot/daemon/client/conn"
 	"log"
 )
 
@@ -10,11 +10,11 @@ import (
 func main() {
 	dialer, err := conn.UnixDialer()
 	if err != nil {
-		log.Fatal("Cannot determine Local Scoot address", err)
+		log.Fatal("Cannot find Scoot Daemon address", err)
 	}
 	cli, err := cli.NewCliClient(conn.NewCachingDialer(dialer))
 	if err != nil {
-		log.Fatal("Cannot initalize Local Scoot CLI: ", err)
+		log.Fatal("Cannot initalize Scoot CLI: ", err)
 	}
 	err = cli.Exec()
 	if err != nil {
