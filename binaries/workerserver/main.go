@@ -26,7 +26,7 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
-	handler := server.NewHandler(stat.Scope("workerserver"), nil, nil)
+	handler := server.DefaultHandler(stat.Scope("workerserver"))
 	err := server.Serve(handler, fmt.Sprintf(":%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)

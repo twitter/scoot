@@ -2,6 +2,7 @@ package os
 
 import (
 	"bytes"
+	"errors"
 	"os/exec"
 	"syscall"
 
@@ -15,6 +16,9 @@ func NewExecer() execer.Execer {
 type osExecer struct{}
 
 func (e *osExecer) Exec(command execer.Command) (result execer.Process, err error) {
+	if len(command.Argv) <= 0 {
+		return nil, errors.New("No command specified.")
+	}
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdoutBuf, &stderrBuf

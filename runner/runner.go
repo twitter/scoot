@@ -19,14 +19,18 @@ const (
 	// States below are end states
 	// a Process in an end state will not change its state
 
-	// Ran to completion
+	// Run completed, possibly with nonzero exit code.
 	COMPLETE
-	// Could not run to completion
+	// Could not complete, bad request or golang runtime err.
 	FAILED
+	// User requested that the run be killed.
+	ABORTED
+	// Operation timed out and was killed.
+	TIMEDOUT
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
 func (p ProcessState) String() string {
@@ -41,6 +45,10 @@ func (p ProcessState) String() string {
 		return "COMPLETE"
 	case FAILED:
 		return "FAILED"
+	case ABORTED:
+		return "ABORTED"
+	case TIMEDOUT:
+		return "TIMEDOUT"
 	default:
 		panic(fmt.Sprintf("Unexpected ProcessState %v", int(p)))
 	}
@@ -85,11 +93,17 @@ type Runner interface {
 	// check if cmd is well-formed, and reject it if not (leading to state FAILED)
 	// wait a very short period of time for cmd to finish
 	// Run may not wait indefinitely for cmd to finish. This is an async API.
-	Run(cmd *Command) (ProcessStatus, error)
+	Run(cmd *Command) ProcessStatus
 
 	// Status checks the status of run.
-	Status(run RunId) (ProcessStatus, error)
+	Status(run RunId) ProcessStatus
 
-	// Stop the given run.
-	Abort(run RunId) (ProcessStatus, error)
+	// Current status of all runs, running and finished.
+	StatusAll() []ProcessStatus
+
+	// Kill the given run.
+	Abort(run RunId) ProcessStatus
+
+	// Prunes the run history so StatusAll() can return a reasonable number of runs.
+	Erase(run RunId)
 }

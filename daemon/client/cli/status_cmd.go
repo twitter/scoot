@@ -2,9 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/scootdev/scoot/runner"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 func makeStatusCmd(c *CliClient) *cobra.Command {
@@ -23,10 +24,7 @@ func (c *CliClient) status(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	process, err := conn.Status(runner.RunId(args[0]))
-	if err != nil {
-		return err
-	}
+	process := conn.Status(runner.RunId(args[0]))
 	log.Printf("Status of %v is %v", process.RunId, process.State)
 	return nil
 }
