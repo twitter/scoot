@@ -15,11 +15,19 @@ import (
 //
 
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
-	var timeout time.Duration
+	argv := make([]string, 0)
+	env := make(map[string]string)
+	timeout := time.Duration(0)
+	if thrift.Argv != nil {
+		argv = thrift.Argv
+	}
+	if thrift.Env != nil {
+		env = thrift.Env
+	}
 	if thrift.TimeoutMs != nil {
 		timeout = time.Millisecond * time.Duration(*thrift.TimeoutMs)
 	}
-	return runner.NewCommand(thrift.Argv, thrift.Env, timeout)
+	return runner.NewCommand(argv, env, timeout)
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
@@ -28,6 +36,7 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TimeoutMs = &timeoutMs
 	thrift.Env = domain.EnvVars
 	thrift.Argv = domain.Argv
+	thrift.SnapshotId = nil
 	return thrift
 }
 
@@ -47,6 +56,8 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
 		domain.State = runner.ABORTED
 	case worker.Status_TIMEDOUT:
 		domain.State = runner.TIMEDOUT
+	case worker.Status_BADREQUEST:
+		domain.State = runner.BADREQUEST
 	}
 	if thrift.OutUri != nil {
 		domain.StdoutRef = *thrift.OutUri
@@ -79,6 +90,8 @@ func DomainRunStatusToThrift(domain *runner.ProcessStatus) *worker.RunStatus {
 		thrift.Status = worker.Status_ABORTED
 	case runner.TIMEDOUT:
 		thrift.Status = worker.Status_TIMEDOUT
+	case runner.BADREQUEST:
+		thrift.Status = worker.Status_BADREQUEST
 	}
 	thrift.OutUri = &domain.StdoutRef
 	thrift.ErrUri = &domain.StderrRef

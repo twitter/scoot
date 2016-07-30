@@ -19,14 +19,16 @@ const (
 	// States below are end states
 	// a Process in an end state will not change its state
 
-	// Run completed, possibly with nonzero exit code.
+	// Succeeded or failed yielding an exit code. Only state with an exit code.
 	COMPLETE
-	// Could not complete, bad request or golang runtime err.
+	// Run mechanism failed and run is no longer active. Retry may or may not work.
 	FAILED
 	// User requested that the run be killed.
 	ABORTED
 	// Operation timed out and was killed.
 	TIMEDOUT
+	// Invalid request. Original runner state not affected. Retry may work after mutation.
+	BADREQUEST
 )
 
 func (p ProcessState) IsDone() bool {
@@ -49,6 +51,8 @@ func (p ProcessState) String() string {
 		return "ABORTED"
 	case TIMEDOUT:
 		return "TIMEDOUT"
+	case BADREQUEST:
+		return "BADREQUEST"
 	default:
 		panic(fmt.Sprintf("Unexpected ProcessState %v", int(p)))
 	}
@@ -81,7 +85,7 @@ type ProcessStatus struct {
 	// Only valid if State == COMPLETE
 	ExitCode int
 
-	// Only valid if State == FAILED
+	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
 }
 
@@ -98,7 +102,7 @@ type Runner interface {
 	// Status checks the status of run.
 	Status(run RunId) ProcessStatus
 
-	// Current status of all runs, running and finished.
+	// Current status of all runs, running and finished, excepting any Erase()'s runs.
 	StatusAll() []ProcessStatus
 
 	// Kill the given run.

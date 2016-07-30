@@ -84,9 +84,7 @@ func (p *simProcess) Wait() execer.ProcessStatus {
 
 //Abort op not supported by sim. Returns current process status.
 func (p *simProcess) Abort() execer.ProcessStatus {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.status
+	panic("Abort not implemented in sim code.")
 }
 
 func (p *simProcess) setStatus(status execer.ProcessStatus) {

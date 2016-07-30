@@ -21,7 +21,7 @@ func TestRun(t *testing.T) {
 	assertWait(t, r, firstId, complete(0), "complete 0")
 }
 
-func XTestSimul(t *testing.T) {
+func TestSimul(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ex := fake.NewSimExecer(&wg)
@@ -29,9 +29,6 @@ func XTestSimul(t *testing.T) {
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	st := r.Status(firstRun)
-	if st.State == runner.FAILED {
-		t.Fatalf("can't get status for %v: %v", firstArgs, st.Error)
-	}
 	assertStatus(t, st, running(), firstArgs...)
 
 	// Now that one is running, try running a second
@@ -39,7 +36,7 @@ func XTestSimul(t *testing.T) {
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
 	st = r.Run(cmd)
-	assertStatus(t, st, failed("Runner is busy"), secondArgs...)
+	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
@@ -55,6 +52,10 @@ func running() runner.ProcessStatus {
 
 func failed(errorText string) runner.ProcessStatus {
 	return runner.ErrorStatus(runner.RunId(""), fmt.Errorf(errorText))
+}
+
+func badreq(errorText string) runner.ProcessStatus {
+	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
@@ -78,13 +79,16 @@ func assertStatus(t *testing.T, actual runner.ProcessStatus, expected runner.Pro
 	if expected.State == runner.FAILED && expected.Error != actual.Error {
 		t.Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
 	}
+	if expected.State == runner.BADREQUEST && expected.Error != actual.Error {
+		t.Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
+	}
 }
 
 func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	cmd := &runner.Command{}
 	cmd.Argv = args
 	status := r.Run(cmd)
-	if status.State == runner.FAILED {
+	if status.State == runner.BADREQUEST {
 		t.Fatal("Couldn't run: ", args, status.Error)
 	}
 	return status.RunId

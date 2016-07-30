@@ -19,13 +19,14 @@ var GoUnusedProtection__ int
 type Status int64
 
 const (
-	Status_UNKNOWN  Status = 0
-	Status_PENDING  Status = 1
-	Status_RUNNING  Status = 2
-	Status_COMPLETE Status = 3
-	Status_FAILED   Status = 4
-	Status_ABORTED  Status = 5
-	Status_TIMEDOUT Status = 6
+	Status_UNKNOWN    Status = 0
+	Status_PENDING    Status = 1
+	Status_RUNNING    Status = 2
+	Status_COMPLETE   Status = 3
+	Status_FAILED     Status = 4
+	Status_ABORTED    Status = 5
+	Status_TIMEDOUT   Status = 6
+	Status_BADREQUEST Status = 7
 )
 
 func (p Status) String() string {
@@ -44,6 +45,8 @@ func (p Status) String() string {
 		return "ABORTED"
 	case Status_TIMEDOUT:
 		return "TIMEDOUT"
+	case Status_BADREQUEST:
+		return "BADREQUEST"
 	}
 	return "<UNSET>"
 }
@@ -64,6 +67,8 @@ func StatusFromString(s string) (Status, error) {
 		return Status_ABORTED, nil
 	case "TIMEDOUT":
 		return Status_TIMEDOUT, nil
+	case "BADREQUEST":
+		return Status_BADREQUEST, nil
 	}
 	return Status(0), fmt.Errorf("not a valid Status string")
 }

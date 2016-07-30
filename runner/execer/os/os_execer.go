@@ -16,7 +16,7 @@ func NewExecer() execer.Execer {
 type osExecer struct{}
 
 func (e *osExecer) Exec(command execer.Command) (result execer.Process, err error) {
-	if len(command.Argv) <= 0 {
+	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
 	}
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
@@ -75,7 +75,7 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		result.Error = "Aborted. Couldn't kill pgid or parent."
 	}
 
-	err = p.cmd.Wait()
+	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
 			result.ExitCode = status.ExitStatus()

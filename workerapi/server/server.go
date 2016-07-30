@@ -9,8 +9,6 @@ import (
 	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
-	execer "github.com/scootdev/scoot/runner/execer/os"
-	localrunner "github.com/scootdev/scoot/runner/local"
 	domain "github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -30,21 +28,10 @@ func Serve(handler worker.Worker, addr string, transportFactory thrift.TTranspor
 }
 
 type handler struct {
-	stat            stats.StatsReceiver
-	run             runner.Runner
-	getVersion      func() string
-	timeLastContact time.Time
-}
-
-func DefaultHandler(stat stats.StatsReceiver) worker.Worker {
-	if stat == nil {
-		stat = stats.NilStatsReceiver()
-	}
-	return NewHandler(
-		stat,
-		localrunner.NewSimpleRunner(execer.NewExecer()),
-		func() string { return "" },
-	)
+	stat        stats.StatsReceiver
+	run         runner.Runner
+	getVersion  func() string
+	timeLastRpc time.Time
 }
 
 func NewHandler(stat stats.StatsReceiver, run runner.Runner, getVersion func() string) worker.Worker {
@@ -55,6 +42,7 @@ func NewHandler(stat stats.StatsReceiver, run runner.Runner, getVersion func() s
 }
 
 // Periodically output stats
+//TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 func (h *handler) stats() {
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
@@ -78,7 +66,7 @@ func (h *handler) stats() {
 			}
 			h.stat.Gauge("numActiveRuns").Update(numActive)
 			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastContact)))
+			h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
 		}
 	}
 }
@@ -87,7 +75,7 @@ func (h *handler) stats() {
 //
 func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
-	h.timeLastContact = time.Now()
+	h.timeLastRpc = time.Now()
 	ws := worker.NewWorkerStatus()
 	version := h.getVersion()
 	ws.VersionId = &version
@@ -102,21 +90,22 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	h.stat.Counter("runs").Inc(1)
 	log.Println("Running", render.Render(cmd))
 
-	h.timeLastContact = time.Now()
+	h.timeLastRpc = time.Now()
+	h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
 	process := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
 	return domain.DomainRunStatusToThrift(&process), nil
 }
 
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
-	h.timeLastContact = time.Now()
+	h.timeLastRpc = time.Now()
 	process := h.run.Abort(runner.RunId(runId))
 	return domain.DomainRunStatusToThrift(&process), nil
 }
 
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
-	h.timeLastContact = time.Now()
+	h.timeLastRpc = time.Now()
 	h.run.Erase(runner.RunId(runId))
 	return nil
 }

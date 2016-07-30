@@ -21,6 +21,13 @@ func ErrorStatus(runId RunId, err error) (r ProcessStatus) {
 	return r
 }
 
+func BadRequestStatus(runId RunId, err error) (r ProcessStatus) {
+	r.RunId = runId
+	r.State = BADREQUEST
+	r.Error = err.Error()
+	return r
+}
+
 func RunningStatus(runId RunId) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = RUNNING
