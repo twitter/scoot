@@ -1,14 +1,15 @@
 package conn
 
 import (
-	"github.com/scootdev/scoot/daemon/protocol"
-	"github.com/scootdev/scoot/runner"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"io"
 	"log"
 	"net"
 	"time"
+
+	"github.com/scootdev/scoot/daemon/protocol"
+	"github.com/scootdev/scoot/runner"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 // A Dialer can dial a connection to the Scoot server.
@@ -101,7 +102,7 @@ func (c *conn) Echo(arg string) (string, error) {
 	return r.Pong, nil
 }
 
-func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (c *conn) Run(cmd *runner.Command) runner.ProcessStatus {
 	req := &protocol.Command{}
 	req.Argv = cmd.Argv
 	req.Env = cmd.EnvVars
@@ -109,17 +110,29 @@ func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 
 	r, err := c.client.Run(context.Background(), req)
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.ProcessStatus{State: runner.FAILED, Error: err.Error()}
 	}
-	return protocol.ToRunnerStatus(r), nil
+	return protocol.ToRunnerStatus(r)
 }
 
-func (c *conn) Status(run runner.RunId) (runner.ProcessStatus, error) {
+func (c *conn) Status(run runner.RunId) runner.ProcessStatus {
 	r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.ProcessStatus{State: runner.FAILED, Error: err.Error()}
 	}
-	return protocol.ToRunnerStatus(r), nil
+	return protocol.ToRunnerStatus(r)
+}
+
+func (c *conn) StatusAll() []runner.ProcessStatus {
+	panic("StatusAll not implemented in daemon code.")
+}
+
+func (c *conn) Abort(run runner.RunId) runner.ProcessStatus {
+	panic("Abort not implemented in daemon code.")
+}
+
+func (c *conn) Erase(run runner.RunId) {
+	panic("Erase not implemented in daemon code.")
 }
 
 func (c *conn) Close() error {

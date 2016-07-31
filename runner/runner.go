@@ -19,14 +19,20 @@ const (
 	// States below are end states
 	// a Process in an end state will not change its state
 
-	// Ran to completion
+	// Succeeded or failed yielding an exit code. Only state with an exit code.
 	COMPLETE
-	// Could not run to completion
+	// Run mechanism failed and run is no longer active. Retry may or may not work.
 	FAILED
+	// User requested that the run be killed.
+	ABORTED
+	// Operation timed out and was killed.
+	TIMEDOUT
+	// Invalid request. Original runner state not affected. Retry may work after mutation.
+	BADREQUEST
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
 func (p ProcessState) String() string {
@@ -41,6 +47,12 @@ func (p ProcessState) String() string {
 		return "COMPLETE"
 	case FAILED:
 		return "FAILED"
+	case ABORTED:
+		return "ABORTED"
+	case TIMEDOUT:
+		return "TIMEDOUT"
+	case BADREQUEST:
+		return "BADREQUEST"
 	default:
 		panic(fmt.Sprintf("Unexpected ProcessState %v", int(p)))
 	}
@@ -73,7 +85,7 @@ type ProcessStatus struct {
 	// Only valid if State == COMPLETE
 	ExitCode int
 
-	// Only valid if State == FAILED
+	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
 }
 
@@ -85,8 +97,17 @@ type Runner interface {
 	// check if cmd is well-formed, and reject it if not (leading to state FAILED)
 	// wait a very short period of time for cmd to finish
 	// Run may not wait indefinitely for cmd to finish. This is an async API.
-	Run(cmd *Command) (ProcessStatus, error)
+	Run(cmd *Command) ProcessStatus
 
 	// Status checks the status of run.
-	Status(run RunId) (ProcessStatus, error)
+	Status(run RunId) ProcessStatus
+
+	// Current status of all runs, running and finished, excepting any Erase()'s runs.
+	StatusAll() []ProcessStatus
+
+	// Kill the given run.
+	Abort(run RunId) ProcessStatus
+
+	// Prunes the run history so StatusAll() can return a reasonable number of runs.
+	Erase(run RunId)
 }

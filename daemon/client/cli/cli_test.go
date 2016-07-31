@@ -2,13 +2,14 @@ package cli_test
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/scootdev/scoot/daemon/client/cli"
 	"github.com/scootdev/scoot/daemon/client/conn"
 	"github.com/scootdev/scoot/daemon/integration"
 	"github.com/scootdev/scoot/runner"
 	fakerunner "github.com/scootdev/scoot/runner/fake"
-	"strings"
-	"testing"
 )
 
 type errorDialer struct{}
@@ -66,18 +67,36 @@ func (c *fakeConn) Echo(arg string) (string, error) {
 	return arg, nil
 }
 
-func (c *fakeConn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (c *fakeConn) Run(cmd *runner.Command) runner.ProcessStatus {
 	if c.err != nil {
-		return runner.ProcessStatus{}, c.err
+		return runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
 	}
 	return c.runner.Run(cmd)
 }
 
-func (c *fakeConn) Status(run runner.RunId) (runner.ProcessStatus, error) {
+func (c *fakeConn) Status(run runner.RunId) runner.ProcessStatus {
 	if c.err != nil {
-		return runner.ProcessStatus{}, c.err
+		return runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
 	}
 	return c.runner.Status(run)
+}
+
+func (c *fakeConn) StatusAll() []runner.ProcessStatus {
+	if c.err != nil {
+		process := runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
+		return []runner.ProcessStatus{process}
+	}
+	return c.runner.StatusAll()
+}
+
+func (c *fakeConn) Abort(run runner.RunId) runner.ProcessStatus {
+	if c.err != nil {
+		return runner.ProcessStatus{State: runner.FAILED, Error: "Can't abort ended run."}
+	}
+	return c.runner.Abort(run)
+}
+
+func (c *fakeConn) Erase(run runner.RunId) {
 }
 
 func (c *fakeConn) Close() error {

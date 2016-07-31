@@ -3,16 +3,17 @@ package server
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/runner"
+	domain "github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
+// Called by a main binary. Blocks until the connection is terminated.
 func Serve(handler worker.Worker, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
 	transport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
@@ -21,99 +22,90 @@ func Serve(handler worker.Worker, addr string, transportFactory thrift.TTranspor
 	processor := worker.NewWorkerProcessor(handler)
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
 
-	fmt.Println("About to serve")
+	fmt.Println("Serving thrift: ", addr)
 
 	return server.Serve()
 }
 
-type Handler struct {
-	runs map[string]*worker.RunStatus
-	stat stats.StatsReceiver
+type handler struct {
+	stat        stats.StatsReceiver
+	run         runner.Runner
+	getVersion  func() string
+	timeLastRpc time.Time
 }
 
-func NewHandler(stat stats.StatsReceiver) worker.Worker {
-	if stat == nil {
-		stat = stats.NilStatsReceiver()
-	}
+func NewHandler(stat stats.StatsReceiver, run runner.Runner, getVersion func() string) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	return &Handler{make(map[string]*worker.RunStatus), scopedStat}
+	h := &handler{stat: scopedStat, run: run, getVersion: getVersion}
+	go h.stats()
+	return h
 }
 
-func (h *Handler) QueryWorker() (*worker.WorkerStatus, error) {
-	wstatus := worker.NewWorkerStatus()
-	wstatus.Running = []string{}
-	for runId, status := range h.runs {
-		if status.Status == worker.Status_RUNNING {
-			wstatus.Running = append(wstatus.Running, runId)
+// Periodically output stats
+//TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
+func (h *handler) stats() {
+	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
+	for {
+		select {
+		case <-ticker.C:
+			var numFailed int64
+			var numActive int64
+			processes := h.run.StatusAll()
+			for _, process := range processes {
+				if process.State == runner.FAILED {
+					numFailed++
+				}
+				if !process.State.IsDone() {
+					numActive++
+				}
+			}
+			failed := h.stat.Counter("numFailed")
+			prevNumFailed := failed.Count()
+			if numFailed > prevNumFailed {
+				failed.Inc(numFailed - prevNumFailed)
+			}
+			h.stat.Gauge("numActiveRuns").Update(numActive)
+			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
+			h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
 		}
 	}
-	return wstatus, nil
 }
 
-func makeStatus(status worker.Status, exitCode int32, info string) *worker.RunStatus {
-	rs := worker.NewRunStatus()
-	rs.Status = status
-	rs.Info = &info
-	rs.ExitCode = &exitCode
-	return rs
+// Implement thrift worker.Worker interface.
+//
+func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
+	h.stat.Counter("workerQueries").Inc(1)
+	h.timeLastRpc = time.Now()
+	ws := worker.NewWorkerStatus()
+	version := h.getVersion()
+	ws.VersionId = &version
+	for _, process := range h.run.StatusAll() {
+		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(&process))
+	}
+	return ws, nil
 }
 
-//TODO: integrate runner lib and remove all this temp test code.
-var dummyGaugeVal int64 = 0
-
-func (h *Handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
+func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
-	dummyGaugeVal++
-	h.stat.Gauge("run%3").Update(dummyGaugeVal % 3)
-	h.stat.Counter("run#").Inc(1)
-	time.Sleep(time.Millisecond * time.Duration(100+(rand.Int()%50)))
+	h.stat.Counter("runs").Inc(1)
+	log.Println("Running", render.Render(cmd))
 
-	numRuns := len(h.runs)
-	runId := strconv.Itoa(numRuns)
-	prevRunId := strconv.Itoa(numRuns - 1)
-
-	log.Println("Running", render.Render(cmd), runId)
-	if numRuns > 0 && h.runs[prevRunId].Status == worker.Status_RUNNING {
-		h.stat.Counter("alreadyRunning").Inc(1)
-		return makeStatus(worker.Status_UNKNOWN, -1, "A cmd is already running"), nil
-	}
-
-	devNull := "/dev/null"
-	status := makeStatus(worker.Status_COMPLETED, -1, "Worker is working by saying it won't work")
-	status.OutUri = &devNull
-	status.ErrUri = &devNull
-	status.RunId = &runId
-	if len(cmd.Argv) == 1 && cmd.Argv[0] == "sleep" {
-		exitCode := int32(0)
-		status.Status = worker.Status_RUNNING
-		status.ExitCode = &exitCode
-	}
-
-	h.runs[runId] = status
-	return status, nil
+	h.timeLastRpc = time.Now()
+	h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
+	process := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
+	return domain.DomainRunStatusToThrift(&process), nil
 }
 
-func (h *Handler) Query(runId string) (*worker.RunStatus, error) {
-	if status, ok := h.runs[runId]; ok {
-		return status, nil
-	}
-	info := "RunId not found"
-	status := worker.NewRunStatus()
-	status.Status = worker.Status_UNKNOWN
-	status.Info = &info
-	return status, nil
+func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
+	h.stat.Counter("aborts").Inc(1)
+	h.timeLastRpc = time.Now()
+	process := h.run.Abort(runner.RunId(runId))
+	return domain.DomainRunStatusToThrift(&process), nil
 }
 
-func (h *Handler) Abort(runId string) (*worker.RunStatus, error) {
-	if status, ok := h.runs[runId]; ok && status.Status != worker.Status_COMPLETED && status.Status != worker.Status_ABORTED {
-		info := "Aborted"
-		status.Status = worker.Status_ABORTED
-		status.Info = &info
-		return status, nil
-	}
-	info := "RunId not found or not abortable"
-	status := worker.NewRunStatus()
-	status.Status = worker.Status_UNKNOWN
-	status.Info = &info
-	return status, nil
+func (h *handler) Erase(runId string) error {
+	h.stat.Counter("clears").Inc(1)
+	h.timeLastRpc = time.Now()
+	h.run.Erase(runner.RunId(runId))
+	return nil
 }

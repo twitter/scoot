@@ -39,32 +39,6 @@ func (c *Client) run(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-// Query
-var queryRunId *string
-
-func makeQueryCmd(c *Client) *cobra.Command {
-	r := &cobra.Command{
-		Use:   "query",
-		Short: "queries a runId",
-		RunE:  c.query,
-	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
-	queryRunId = r.Flags().String("id", "", "status of a run.")
-	return r
-}
-func (c *Client) query(cmd *cobra.Command, args []string) error {
-	log.Println("Calling query rpc to cloud worker", args)
-
-	client, err := c.Dial()
-	if err != nil {
-		return err
-	}
-
-	status, err := client.Query(*queryRunId)
-	log.Println(render.Render(status))
-	return err
-}
-
 // Abort
 var abortRunId *string
 
@@ -113,3 +87,5 @@ func (c *Client) queryworker(cmd *cobra.Command, args []string) error {
 	log.Println(render.Render(status))
 	return err
 }
+
+//TODO: implement Erase()

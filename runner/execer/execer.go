@@ -24,14 +24,18 @@ func (s ProcessState) IsDone() bool {
 }
 
 type Execer interface {
+	// Starts process to exec command in a new goroutine.
 	Exec(command Command) (Process, error)
 }
 
 type Process interface {
 	// TODO(dbentley): perhaps have a poll method?
+
+	// Blocks until the process terminates.
 	Wait() ProcessStatus
-	// TODO(dbentley): we want the ability to abort at some point
-	// Abort() (ProcessStatus, error)
+
+	// Terminates process and does best effort to get ExitCode.
+	Abort() ProcessStatus
 }
 
 type ProcessStatus struct {

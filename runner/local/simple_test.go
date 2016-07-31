@@ -2,10 +2,12 @@ package local_test
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	"github.com/scootdev/scoot/runner/local"
-	// "log"
+
 	"sync"
 	"testing"
 )
@@ -26,21 +28,15 @@ func TestSimul(t *testing.T) {
 	r := local.NewSimpleRunner(ex)
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
-	st, err := r.Status(firstRun)
-	if err != nil {
-		t.Fatalf("can't get status for %v: %v", firstArgs, err)
-	}
+	st := r.Status(firstRun)
 	assertStatus(t, st, running(), firstArgs...)
 
 	// Now that one is running, try running a second
 	secondArgs := []string{"complete 3"}
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
-	st, err = r.Run(cmd)
-	if err != nil {
-		t.Fatalf("Couldn't run %v: %v", secondArgs, err)
-	}
-	assertStatus(t, st, failed("Runner is busy"), secondArgs...)
+	st = r.Run(cmd)
+	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
@@ -58,6 +54,10 @@ func failed(errorText string) runner.ProcessStatus {
 	return runner.ErrorStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
+func badreq(errorText string) runner.ProcessStatus {
+	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
+}
+
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, expected, args...)
@@ -65,10 +65,7 @@ func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, arg
 }
 
 func assertWait(t *testing.T, r runner.Runner, runId runner.RunId, expected runner.ProcessStatus, args ...string) {
-	actual, err := wait(r, runId)
-	if err != nil {
-		t.Fatalf("error waiting (cmd:%v)", args)
-	}
+	actual := wait(r, runId)
 	assertStatus(t, actual, expected, args...)
 }
 
@@ -82,23 +79,27 @@ func assertStatus(t *testing.T, actual runner.ProcessStatus, expected runner.Pro
 	if expected.State == runner.FAILED && expected.Error != actual.Error {
 		t.Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
 	}
+	if expected.State == runner.BADREQUEST && expected.Error != actual.Error {
+		t.Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
+	}
 }
 
 func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	cmd := &runner.Command{}
 	cmd.Argv = args
-	status, err := r.Run(cmd)
-	if err != nil {
-		t.Fatal("Couldn't run: ", args, err)
+	status := r.Run(cmd)
+	if status.State == runner.BADREQUEST {
+		t.Fatal("Couldn't run: ", args, status.Error)
 	}
 	return status.RunId
 }
 
-func wait(r runner.Runner, run runner.RunId) (runner.ProcessStatus, error) {
+func wait(r runner.Runner, run runner.RunId) runner.ProcessStatus {
 	for {
-		status, err := r.Status(run)
-		if err != nil || status.State.IsDone() {
-			return status, err
+		time.Sleep(time.Second * 2)
+		status := r.Status(run)
+		if status.State.IsDone() {
+			return status
 		}
 	}
 }

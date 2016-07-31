@@ -1,9 +1,10 @@
 package cli
 
 import (
+	"log"
+
 	"github.com/scootdev/scoot/runner"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 func makeRunCmd(c *CliClient) *cobra.Command {
@@ -21,10 +22,7 @@ func (c *CliClient) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	command := runner.NewCommand(args, map[string]string{}, 0)
-	process, err := conn.Run(command)
-	if err != nil {
-		return err
-	}
-	log.Println("Running as : ", process.RunId)
+	process := conn.Run(command)
+	log.Printf("Running as %v, status %v", process.RunId, process.State)
 	return nil
 }

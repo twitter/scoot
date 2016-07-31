@@ -11,12 +11,23 @@ func NewRunner() runner.Runner {
 type fakeRunner struct {
 }
 
-func (r *fakeRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	return success(runner.RunId("1")), nil
+func (r *fakeRunner) Run(cmd *runner.Command) runner.ProcessStatus {
+	return success(runner.RunId("1"))
 }
 
-func (r *fakeRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
-	return success(run), nil
+func (r *fakeRunner) Status(run runner.RunId) runner.ProcessStatus {
+	return success(run)
+}
+
+func (r *fakeRunner) StatusAll() []runner.ProcessStatus {
+	return []runner.ProcessStatus{success(runner.RunId("1"))}
+}
+
+func (r *fakeRunner) Abort(run runner.RunId) runner.ProcessStatus {
+	return runner.ProcessStatus{State: runner.ABORTED}
+}
+
+func (r *fakeRunner) Erase(run runner.RunId) {
 }
 
 func success(runId runner.RunId) runner.ProcessStatus {

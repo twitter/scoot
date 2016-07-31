@@ -2,9 +2,28 @@ package runner
 
 // Helper functions to create ProcessStatus
 
+func AbortStatus(runId RunId) (r ProcessStatus) {
+	r.RunId = runId
+	r.State = ABORTED
+	return r
+}
+
+func TimeoutStatus(runId RunId) (r ProcessStatus) {
+	r.RunId = runId
+	r.State = TIMEDOUT
+	return r
+}
+
 func ErrorStatus(runId RunId, err error) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = FAILED
+	r.Error = err.Error()
+	return r
+}
+
+func BadRequestStatus(runId RunId, err error) (r ProcessStatus) {
+	r.RunId = runId
+	r.State = BADREQUEST
 	r.Error = err.Error()
 	return r
 }

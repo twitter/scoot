@@ -35,10 +35,10 @@ func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift
 
 	r.rootCmd = rootCmd
 
-	rootCmd.AddCommand(makeRunCmd(r))
-	rootCmd.AddCommand(makeQueryCmd(r))
-	rootCmd.AddCommand(makeAbortCmd(r))
 	rootCmd.AddCommand(makeQueryworkerCmd(r))
+	rootCmd.AddCommand(makeRunCmd(r))
+	rootCmd.AddCommand(makeAbortCmd(r))
+
 	return r, nil
 }
 

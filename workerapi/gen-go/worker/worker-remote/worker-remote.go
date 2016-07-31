@@ -22,8 +22,8 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
 	fmt.Fprintln(os.Stderr, "  WorkerStatus QueryWorker()")
 	fmt.Fprintln(os.Stderr, "  RunStatus Run(RunCommand cmd)")
-	fmt.Fprintln(os.Stderr, "  RunStatus Query(string runId)")
 	fmt.Fprintln(os.Stderr, "  RunStatus Abort(string runId)")
+	fmt.Fprintln(os.Stderr, "  void Erase(string runId)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -131,34 +131,24 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Run requires 1 args")
 			flag.Usage()
 		}
-		arg12 := flag.Arg(1)
-		mbTrans13 := thrift.NewTMemoryBufferLen(len(arg12))
-		defer mbTrans13.Close()
-		_, err14 := mbTrans13.WriteString(arg12)
-		if err14 != nil {
+		arg14 := flag.Arg(1)
+		mbTrans15 := thrift.NewTMemoryBufferLen(len(arg14))
+		defer mbTrans15.Close()
+		_, err16 := mbTrans15.WriteString(arg14)
+		if err16 != nil {
 			Usage()
 			return
 		}
-		factory15 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt16 := factory15.GetProtocol(mbTrans13)
+		factory17 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt18 := factory17.GetProtocol(mbTrans15)
 		argvalue0 := worker.NewRunCommand()
-		err17 := argvalue0.Read(jsProt16)
-		if err17 != nil {
+		err19 := argvalue0.Read(jsProt18)
+		if err19 != nil {
 			Usage()
 			return
 		}
 		value0 := argvalue0
 		fmt.Print(client.Run(value0))
-		fmt.Print("\n")
-		break
-	case "Query":
-		if flag.NArg()-1 != 1 {
-			fmt.Fprintln(os.Stderr, "Query requires 1 args")
-			flag.Usage()
-		}
-		argvalue0 := flag.Arg(1)
-		value0 := argvalue0
-		fmt.Print(client.Query(value0))
 		fmt.Print("\n")
 		break
 	case "Abort":
@@ -169,6 +159,16 @@ func main() {
 		argvalue0 := flag.Arg(1)
 		value0 := argvalue0
 		fmt.Print(client.Abort(value0))
+		fmt.Print("\n")
+		break
+	case "Erase":
+		if flag.NArg()-1 != 1 {
+			fmt.Fprintln(os.Stderr, "Erase requires 1 args")
+			flag.Usage()
+		}
+		argvalue0 := flag.Arg(1)
+		value0 := argvalue0
+		fmt.Print(client.Erase(value0))
 		fmt.Print("\n")
 		break
 	case "":
