@@ -1,38 +1,39 @@
 package fake
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
-	"math/rand"
-	"time"
 )
 
-type noopWorkerController struct{}
+type noopWorker struct{}
 
-func NewNoopWorker() worker.WorkerController {
-	return &noopWorkerController{}
+func NewNoopWorker() worker.Worker {
+	return &noopWorker{}
 }
 
-func (c *noopWorkerController) RunAndWait(task sched.TaskDefinition) error {
+func (c *noopWorker) RunAndWait(task sched.TaskDefinition) error {
 	return nil
 }
 
-func MakeNoopWorker(node cluster.Node) worker.WorkerController {
-	return &noopWorkerController{}
+func MakeNoopWorker(node cluster.Node) worker.Worker {
+	return &noopWorker{}
 }
 
-type waitingWorkerController struct {
-	delegate worker.WorkerController
+type waitingWorker struct {
+	delegate worker.Worker
 }
 
-func MakeWaitingNoopWorker(node cluster.Node) worker.WorkerController {
-	return &waitingWorkerController{
-		&noopWorkerController{},
+func MakeWaitingNoopWorker(node cluster.Node) worker.Worker {
+	return &waitingWorker{
+		&noopWorker{},
 	}
 }
 
-func (c *waitingWorkerController) RunAndWait(task sched.TaskDefinition) error {
+func (c *waitingWorker) RunAndWait(task sched.TaskDefinition) error {
 	result := c.delegate.RunAndWait(task)
 
 	//delay message to mimic network call
@@ -41,12 +42,12 @@ func (c *waitingWorkerController) RunAndWait(task sched.TaskDefinition) error {
 	return result
 }
 
-type panicWorkerController struct{}
+type panicWorker struct{}
 
-func NewPanicWorker() worker.WorkerController {
-	return &panicWorkerController{}
+func NewPanicWorker() worker.Worker {
+	return &panicWorker{}
 }
 
-func (c *panicWorkerController) RunAndWait(task sched.TaskDefinition) error {
-	panic("panicWorkerController panics")
+func (c *panicWorker) RunAndWait(task sched.TaskDefinition) error {
+	panic("panicWorker panics")
 }

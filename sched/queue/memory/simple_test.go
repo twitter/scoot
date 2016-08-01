@@ -1,10 +1,11 @@
 package memory_test
 
 import (
+	"testing"
+
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
-	"testing"
 )
 
 func TestBadDef(t *testing.T) {
@@ -29,7 +30,7 @@ func TestEnqueue(t *testing.T) {
 
 	job := sched.JobDefinition{}
 	task := sched.TaskDefinition{}
-	task.Command = sched.Command{Argv: []string{"echo", "foo"}}
+	task.Argv = []string{"echo", "foo"}
 	task.SnapshotId = "snapshot-id"
 	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	id, err := q.Enqueue(job)
@@ -61,7 +62,7 @@ func TestBackpressure(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
 	job := sched.JobDefinition{}
 	task := sched.TaskDefinition{}
-	task.Command = sched.Command{Argv: []string{"echo", "foo"}}
+	task.Argv = []string{"echo", "foo"}
 	task.SnapshotId = "snapshot-id"
 	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	_, err := q.Enqueue(job)

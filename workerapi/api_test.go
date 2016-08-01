@@ -36,13 +36,14 @@ var tests = []struct {
 	},
 	{
 		1, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: nil, TimeoutMs: &zero},
+		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero},
 		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero)},
 	},
 	{
 		2, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: nil, TimeoutMs: &nonzero},
-		&runner.Command{Argv: someCmd, EnvVars: someEnv, Timeout: time.Duration(nonzero) * time.Millisecond},
+		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero},
+		&runner.Command{Argv: someCmd, EnvVars: someEnv,
+			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotId: nonemptystr},
 	},
 
 	//Status

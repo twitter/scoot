@@ -2,7 +2,9 @@ package sched
 
 import (
 	"fmt"
+
 	"github.com/leanovate/gopter"
+	"github.com/scootdev/scoot/runner"
 )
 
 func GenJob(id string, numTasks int) Job {
@@ -28,7 +30,7 @@ func GenJob(id string, numTasks int) Job {
 
 func GenTask() TaskDefinition {
 	return TaskDefinition{
-		Command: Command{
+		Command: runner.Command{
 			Argv: []string{"cmd1", "arg1", "arg2"},
 		},
 	}

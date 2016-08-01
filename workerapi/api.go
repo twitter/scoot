@@ -14,10 +14,40 @@ import (
 // Translation between local domain objects and thrift objects:
 //
 
+//TODO: test workerStatus.
+type WorkerStatus struct {
+	Runs      []*runner.ProcessStatus
+	VersionId string
+	Error     error
+}
+
+func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) *WorkerStatus {
+	runs := make([]*runner.ProcessStatus, 0)
+	versionId := ""
+	for _, r := range thrift.Runs {
+		runs = append(runs, ThriftRunStatusToDomain(r))
+	}
+	if thrift.VersionId != nil {
+		versionId = *thrift.VersionId
+	}
+	return &WorkerStatus{runs, versionId, nil}
+}
+
+func DomainWorkerStatusToThrift(domain *WorkerStatus) *worker.WorkerStatus {
+	thrift := worker.NewWorkerStatus()
+	thrift.Runs = make([]*worker.RunStatus, 0)
+	for _, r := range domain.Runs {
+		thrift.Runs = append(thrift.Runs, DomainRunStatusToThrift(r))
+	}
+	thrift.VersionId = &domain.VersionId
+	return thrift
+}
+
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
+	snapshotId := ""
 	if thrift.Argv != nil {
 		argv = thrift.Argv
 	}
@@ -27,7 +57,10 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.TimeoutMs != nil {
 		timeout = time.Millisecond * time.Duration(*thrift.TimeoutMs)
 	}
-	return runner.NewCommand(argv, env, timeout)
+	if thrift.SnapshotId != nil {
+		snapshotId = *thrift.SnapshotId
+	}
+	return runner.NewCommand(argv, env, timeout, snapshotId)
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
@@ -36,7 +69,7 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TimeoutMs = &timeoutMs
 	thrift.Env = domain.EnvVars
 	thrift.Argv = domain.Argv
-	thrift.SnapshotId = nil
+	thrift.SnapshotId = &domain.SnapshotId
 	return thrift
 }
 

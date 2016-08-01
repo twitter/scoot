@@ -6,7 +6,7 @@ enum Status {
   FAILED = 4       # Run mechanism failed and run is no longer active. Retry may or may not work.
   ABORTED = 5      # User requested that the run be killed.
   TIMEDOUT = 6     # Run timed out and was killed.
-  BADREQUEST = 7   # Invalid request. Original worker state not affected. Retry may work after mutation.
+  BADREQUEST = 7   # Invalid or error'd request. Original worker state not affected. Retry may work after mutation.
 }
 
 // Note, each worker has its own runId space which is unrelated to any external ids.

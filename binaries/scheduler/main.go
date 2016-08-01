@@ -1,16 +1,21 @@
 package main
 
 import (
+	"log"
+	"sync"
+
 	"github.com/apache/thrift/lib/go/thrift"
+	//clusterdef "github.com/scootdev/scoot/cloud/cluster"
 	clusterimpl "github.com/scootdev/scoot/cloud/cluster/memory"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/distributor"
 	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
+	//"github.com/scootdev/scoot/sched/worker"
+
 	"github.com/scootdev/scoot/sched/worker/fake"
+	// "github.com/scootdev/scoot/sched/worker/rpc"
 	"github.com/scootdev/scoot/scootapi/server"
-	"log"
-	"sync"
 )
 
 func main() {
@@ -32,6 +37,11 @@ func main() {
 	// TODO: Replace with Durable SagaLog, currently In Memory Only
 	sagaCoordinator := saga.MakeInMemorySagaCoordinator()
 	sched := scheduler.NewScheduler(dist, sagaCoordinator, fake.MakeWaitingNoopWorker)
+	//TODO: real workers.
+	// workerFactory := func(node clusterdef.Node) worker.Worker {
+	// 	return rpc.NewThriftWorker(transportFactory, protocolFactory, string(node.Id()))
+	// }
+	// sched := scheduler.NewScheduler(dist, sagaCoordinator, workerFactory)
 	// TODO: Replace with Durable WorkQueue, currently in Memory Only
 	workQueue := queueimpl.NewSimpleQueue(1000)
 

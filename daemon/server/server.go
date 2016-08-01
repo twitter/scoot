@@ -49,7 +49,7 @@ func (s *Server) Echo(ctx context.Context, req *protocol.EchoRequest) (*protocol
 }
 
 func (s *Server) Run(ctx context.Context, req *protocol.Command) (*protocol.ProcessStatus, error) {
-	cmd := runner.NewCommand(req.Argv, req.Env, time.Duration(req.Timeout))
+	cmd := runner.NewCommand(req.Argv, req.Env, time.Duration(req.Timeout), "")
 	status := s.runner.Run(cmd)
 	return protocol.FromRunnerStatus(status), nil
 }

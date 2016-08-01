@@ -27,7 +27,7 @@ const (
 	ABORTED
 	// Operation timed out and was killed.
 	TIMEDOUT
-	// Invalid request. Original runner state not affected. Retry may work after mutation.
+	// Invalid or error'd request. Original runner state not affected. Retry may work after mutation.
 	BADREQUEST
 )
 
@@ -66,12 +66,16 @@ type Command struct {
 	// Key-value pairs for environment variables
 	EnvVars map[string]string
 
-	// Timeout
+	// Kill command after timeout. Zero value is ignored.
 	Timeout time.Duration
+
+	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.
+	//TODO: plumb this through.
+	SnapshotId string
 }
 
-func NewCommand(argv []string, env map[string]string, timeout time.Duration) *Command {
-	return &Command{Argv: argv, EnvVars: env, Timeout: timeout}
+func NewCommand(argv []string, env map[string]string, timeout time.Duration, snapshotId string) *Command {
+	return &Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotId: snapshotId}
 }
 
 // Returned by the coordinator when a run request is made.
