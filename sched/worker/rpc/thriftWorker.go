@@ -29,10 +29,10 @@ func (c *thriftWorker) RunAndWait(task sched.TaskDefinition) error {
 	if err != nil {
 		return err
 	}
-Loop:
 	for !status.State.IsDone() {
 		time.Sleep(250 * time.Millisecond) //TODO: make configurable
 		workerStatus, err := c.client.QueryWorker()
+		updated := false
 		if err != nil {
 			return err
 		}
@@ -42,10 +42,13 @@ Loop:
 		for _, s := range workerStatus.Runs {
 			if s.RunId == status.RunId {
 				status = s
-				goto Loop
+				updated = true
+				break
 			}
 		}
-		return errors.New("RunId disappeared!")
+		if !updated {
+			return errors.New("RunId disappeared!")
+		}
 	}
 	if status.State != runner.COMPLETE || status.ExitCode != 0 {
 		return errors.New(render.Render(status))

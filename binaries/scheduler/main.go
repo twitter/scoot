@@ -24,6 +24,11 @@ import (
 	"github.com/scootdev/scoot/scootapi/server"
 )
 
+//TODO: we'll want more flexibility with startup configuration, maybe something like:
+//  {"cluster": {"type": "static"},
+//   "initial_nodes": ["localhost:2345", "localhost:2346"],
+//   "workerFactory": "thrift"}
+//
 var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
 var workers = flag.String("workers", "", "Comma separated list of workers (host:port,...)|NUM:mem.")
 
