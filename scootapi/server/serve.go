@@ -2,13 +2,14 @@ package server
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"log"
-	"time"
 )
 
 func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {

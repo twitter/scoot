@@ -3,12 +3,13 @@ package scheduler
 //go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go
 
 import (
+	"sync"
+
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	dist "github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/worker"
-	"sync"
 )
 
 type Scheduler interface {
@@ -67,7 +68,15 @@ func (s *scheduler) ScheduleJob(job sched.Job) error {
 		numNodes := getNumNodes(job)
 		nodes := make([]cluster.Node, numNodes)
 		for i := 0; i < numNodes; i++ {
-			nodes[i] = <-s.nodes.Reserve
+			select {
+			case nodes[i] = <-s.nodes.Reserve:
+				continue
+				// default:
+				// 	//FIXME: better logic for handling case where total # of nodes is < numNodes.
+				//  //       this code causes scheduler_test.go to block indefinitely...
+				// 	numNodes = i
+				// 	nodes = nodes[:i]
+			}
 		}
 		jobNodes := dist.NewPoolDistributor(nodes, nil)
 

@@ -20,7 +20,7 @@ func makeRunCmd(c *cliClient) *cobra.Command {
 		Short: "runs a command",
 		RunE:  c.run,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	runArgv = r.Flags().String("argv", "", "comma separated list of binary and args")
 	runcmd.SnapshotId = *r.Flags().String("snapshotid", "", "snapshot/patch id.")
 	runcmd.Timeout = time.Duration(*r.Flags().Int32("timeout_ms", 0, "timeout to abort cmd")) * time.Millisecond
@@ -30,8 +30,8 @@ func (c *cliClient) run(cmd *cobra.Command, args []string) error {
 	runcmd.Argv = strings.Split(*runArgv, ",")
 	log.Println("Calling run rpc to cloud worker", args, render.Render(runcmd))
 
-	status := c.Run(runcmd)
-	log.Println(render.Render(status))
+	status, err := c.client.Run(runcmd)
+	log.Println(render.Render(status), err)
 	return nil
 }
 
@@ -44,15 +44,15 @@ func makeAbortCmd(c *cliClient) *cobra.Command {
 		Short: "aborts a runId",
 		RunE:  c.abort,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	abortRunId = r.Flags().String("id", "", "status of a run.")
 	return r
 }
 func (c *cliClient) abort(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	status := c.Abort(*abortRunId)
-	log.Println(render.Render(status))
+	status, err := c.client.Abort(*abortRunId)
+	log.Println(render.Render(status), err)
 	return nil
 }
 
@@ -63,14 +63,14 @@ func makeQueryworkerCmd(c *cliClient) *cobra.Command {
 		Short: "queries worker status",
 		RunE:  c.queryworker,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	return r
 }
 func (c *cliClient) queryworker(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
-	status := c.QueryWorker()
-	log.Println(render.Render(status))
+	status, err := c.client.QueryWorker()
+	log.Println(render.Render(status), err)
 	return nil
 }
 

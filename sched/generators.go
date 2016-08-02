@@ -31,7 +31,7 @@ func GenJob(id string, numTasks int) Job {
 func GenTask() TaskDefinition {
 	return TaskDefinition{
 		Command: runner.Command{
-			Argv: []string{"cmd1", "arg1", "arg2"},
+			Argv: []string{"sleep", "1"},
 		},
 	}
 }

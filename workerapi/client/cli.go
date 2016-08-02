@@ -5,8 +5,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type CliClient interface {
+	Cli() error
+}
+
 type cliClient struct {
-	client
+	client  client
 	rootCmd *cobra.Command
 }
 
@@ -14,17 +18,17 @@ func (c *cliClient) Cli() error {
 	return c.rootCmd.Execute()
 }
 
-func NewCliClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) Client {
+func NewCliClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) CliClient {
 	r := &cliClient{}
-	r.transportFactory = transportFactory
-	r.protocolFactory = protocolFactory
-	// r.addr is provided as a cmdline flag.
+	r.client.transportFactory = transportFactory
+	r.client.protocolFactory = protocolFactory
+	// r.client.addr is provided as a cmdline flag.
 
 	rootCmd := &cobra.Command{
 		Use:                "workercl",
 		Short:              "workercl is a command-line client to Cloud Worker",
 		Run:                func(*cobra.Command, []string) {},
-		PersistentPostRunE: func(*cobra.Command, []string) error { return r.Close() },
+		PersistentPostRunE: func(*cobra.Command, []string) error { return r.client.Close() },
 	}
 
 	r.rootCmd = rootCmd

@@ -13,11 +13,3 @@ type Worker interface {
 	// TODO(dbentley): include more info on positive results
 	RunAndWait(task sched.TaskDefinition) error
 }
-
-type workerNode struct {
-	worker Worker
-	node   cluster.Node
-}
-
-func (n *workerNode) Worker() Worker     { return n.worker }
-func (n *workerNode) Id() cluster.NodeId { return n.node.Id() }

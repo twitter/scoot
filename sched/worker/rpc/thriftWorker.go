@@ -25,17 +25,24 @@ func NewThriftWorker(
 }
 
 func (c *thriftWorker) RunAndWait(task sched.TaskDefinition) error {
-	status := c.client.Run(&task.Command)
+	status, err := c.client.Run(&task.Command)
+	if err != nil {
+		return err
+	}
+Loop:
 	for !status.State.IsDone() {
 		time.Sleep(250 * time.Millisecond) //TODO: make configurable
-		workerStatus := c.client.QueryWorker()
+		workerStatus, err := c.client.QueryWorker()
+		if err != nil {
+			return err
+		}
 		if workerStatus.Error != nil {
 			return workerStatus.Error
 		}
 		for _, s := range workerStatus.Runs {
 			if s.RunId == status.RunId {
 				status = s
-				continue
+				goto Loop
 			}
 		}
 		return errors.New("RunId disappeared!")

@@ -83,6 +83,8 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
 		domain.State = runner.PENDING
 	case worker.Status_RUNNING:
 		domain.State = runner.RUNNING
+	case worker.Status_COMPLETE:
+		domain.State = runner.COMPLETE
 	case worker.Status_FAILED:
 		domain.State = runner.FAILED
 	case worker.Status_ABORTED:
@@ -117,6 +119,8 @@ func DomainRunStatusToThrift(domain *runner.ProcessStatus) *worker.RunStatus {
 		thrift.Status = worker.Status_PENDING
 	case runner.RUNNING:
 		thrift.Status = worker.Status_RUNNING
+	case runner.COMPLETE:
+		thrift.Status = worker.Status_COMPLETE
 	case runner.FAILED:
 		thrift.Status = worker.Status_FAILED
 	case runner.ABORTED:

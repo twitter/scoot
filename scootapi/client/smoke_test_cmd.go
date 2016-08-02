@@ -2,12 +2,13 @@ package client
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/scootapi/testhelpers"
-	"github.com/spf13/cobra"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/scootapi/testhelpers"
+	"github.com/spf13/cobra"
 )
 
 func makeSmokeTestCmd(c *Client) *cobra.Command {

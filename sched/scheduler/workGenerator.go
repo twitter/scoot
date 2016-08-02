@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/queue"
 )
@@ -9,9 +10,7 @@ import (
 // Retrievews work from the work queue and sends it to the scheduler
 // To be scheduled and completed.
 func GenerateWork(scheduler Scheduler, workCh chan queue.WorkItem) {
-
 	for workItem := range workCh {
-
 		job := workItem.Job()
 		err := scheduler.ScheduleJob(job)
 

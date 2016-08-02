@@ -11,12 +11,11 @@ import (
 )
 
 type Client interface {
-	Cli() error
 	Dial() error
 	Close() error
-	Run(*runner.Command) *runner.ProcessStatus
-	Abort(runId string) *runner.ProcessStatus
-	QueryWorker() *workerapi.WorkerStatus
+	Run(*runner.Command) (*runner.ProcessStatus, error)
+	Abort(runId string) (*runner.ProcessStatus, error)
+	QueryWorker() (*workerapi.WorkerStatus, error)
 }
 
 type client struct {
@@ -34,10 +33,6 @@ func NewClient(
 	r.protocolFactory = protocolFactory
 	r.addr = addr
 	return r
-}
-
-func (c *client) Cli() error {
-	panic("Cli not implemented in bare client. Use cliClient instead.")
 }
 
 func (c *client) Dial() error {
@@ -73,43 +68,43 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) Run(cmd *runner.Command) *runner.ProcessStatus {
+func (c *client) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
 	client, err := c.dial()
 	if err != nil {
-		return &runner.ProcessStatus{State: runner.BADREQUEST, Error: err.Error()}
+		return &runner.ProcessStatus{}, err
 	}
 
 	status, err := client.Run(workerapi.DomainRunCommandToThrift(cmd))
 	if err != nil {
-		return &runner.ProcessStatus{State: runner.BADREQUEST, Error: err.Error()}
+		return &runner.ProcessStatus{}, err
 	}
-	return workerapi.ThriftRunStatusToDomain(status)
+	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
-func (c *client) Abort(runId string) *runner.ProcessStatus {
+func (c *client) Abort(runId string) (*runner.ProcessStatus, error) {
 	client, err := c.dial()
 	if err != nil {
-		return &runner.ProcessStatus{State: runner.BADREQUEST, Error: err.Error()}
+		return &runner.ProcessStatus{}, err
 	}
 
 	status, err := client.Abort(*abortRunId)
 	if err != nil {
-		return &runner.ProcessStatus{State: runner.BADREQUEST, Error: err.Error()}
+		return &runner.ProcessStatus{}, err
 	}
-	return workerapi.ThriftRunStatusToDomain(status)
+	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
-func (c *client) QueryWorker() *workerapi.WorkerStatus {
+func (c *client) QueryWorker() (*workerapi.WorkerStatus, error) {
 	client, err := c.dial()
 	if err != nil {
-		return &workerapi.WorkerStatus{Error: err}
+		return &workerapi.WorkerStatus{}, err
 	}
 
 	status, err := client.QueryWorker()
 	if err != nil {
-		return &workerapi.WorkerStatus{Error: err}
+		return &workerapi.WorkerStatus{}, err
 	}
-	return workerapi.ThriftWorkerStatusToDomain(status)
+	return workerapi.ThriftWorkerStatusToDomain(status), nil
 }
 
 //TODO: implement erase

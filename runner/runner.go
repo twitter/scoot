@@ -32,7 +32,7 @@ const (
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
+	return p == UNKNOWN || p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
 func (p ProcessState) String() string {
