@@ -26,7 +26,7 @@ type WorkItem interface {
 
 	// Dequeue dequeues the work item from the queue. Callers should only call this
 	// once the Job has been persisted to the next storage system.
-	Dequeue()
+	Dequeue() error
 }
 
 func NewInvalidJobRequest(errMsg string) error {
