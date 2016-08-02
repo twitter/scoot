@@ -1,5 +1,9 @@
 package sched
 
+import (
+	"github.com/scootdev/scoot/runner"
+)
+
 // Job is the job Scoot can schedule
 type Job struct {
 	Id  string
@@ -14,36 +18,29 @@ type JobDefinition struct {
 
 // Task is one task to run
 type TaskDefinition struct {
-	Command    Command
-	SnapshotId string
+	runner.Command
 }
 
-// Command is the argv to run
-type Command struct {
-	Argv []string
-	// We may extend this with more configuration,
-	// E.g. environment variables
-}
+//TODO: determine when/if this will be needed.
+// // Status for Job & Tasks
+// type Status int
 
-// Status for Job & Tasks
-type Status int
+// const (
+// 	// NotRunning, waiting to be scheduled
+// 	NotStarted Status = iota
 
-const (
-	// NotRunning, waiting to be scheduled
-	NotStarted Status = iota
+// 	// Currently Scheduled and In Progress Job/Task
+// 	InProgress
 
-	// Currently Scheduled and In Progress Job/Task
-	InProgress
+// 	// Successfully Completed Job/Task
+// 	Completed
 
-	// Successfully Completed Job/Task
-	Completed
+// 	// Job was Aborted, Compensating Tasks are being Applied.
+// 	// A RollingBack task has not finished its compensating
+// 	// tasks yet.
+// 	RollingBack
 
-	// Job was Aborted, Compensating Tasks are being Applied.
-	// A RollingBack task has not finished its compensating
-	// tasks yet.
-	RollingBack
-
-	// Job/Task finished unsuccessfully all compensating actions
-	// have been applied.
-	RolledBack
-)
+// 	// Job/Task finished unsuccessfully all compensating actions
+// 	// have been applied.
+// 	RolledBack
+// )

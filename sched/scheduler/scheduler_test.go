@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
@@ -11,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/worker/fake"
-	"testing"
 )
 
 func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {

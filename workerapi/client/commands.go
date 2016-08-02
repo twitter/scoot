@@ -3,89 +3,75 @@ package client
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/luci/go-render/render"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/scootdev/scoot/runner"
 	"github.com/spf13/cobra"
 )
 
 // Run
 var runArgv *string
-var runcmd *worker.RunCommand = worker.NewRunCommand()
+var runcmd *runner.Command = &runner.Command{}
 
-func makeRunCmd(c *Client) *cobra.Command {
+func makeRunCmd(c *cliClient) *cobra.Command {
 	r := &cobra.Command{
 		Use:   "run",
 		Short: "runs a command",
 		RunE:  c.run,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	runArgv = r.Flags().String("argv", "", "comma separated list of binary and args")
-	runcmd.SnapshotId = r.Flags().String("snapshotid", "", "snapshot/patch id.")
-	runcmd.TimeoutMs = r.Flags().Int32("timeout_ms", 0, "timeout before aborting cmd")
+	runcmd.SnapshotId = *r.Flags().String("snapshotid", "", "snapshot/patch id.")
+	runcmd.Timeout = time.Duration(*r.Flags().Int32("timeout_ms", 0, "timeout to abort cmd")) * time.Millisecond
 	return r
 }
-func (c *Client) run(cmd *cobra.Command, args []string) error {
+func (c *cliClient) run(cmd *cobra.Command, args []string) error {
 	runcmd.Argv = strings.Split(*runArgv, ",")
 	log.Println("Calling run rpc to cloud worker", args, render.Render(runcmd))
 
-	client, err := c.Dial()
-	if err != nil {
-		return err
-	}
-
-	status, err := client.Run(runcmd)
-	log.Println(render.Render(status))
-	return err
+	status, err := c.client.Run(runcmd)
+	log.Println(render.Render(status), err)
+	return nil
 }
 
 // Abort
 var abortRunId *string
 
-func makeAbortCmd(c *Client) *cobra.Command {
+func makeAbortCmd(c *cliClient) *cobra.Command {
 	r := &cobra.Command{
 		Use:   "abort",
 		Short: "aborts a runId",
 		RunE:  c.abort,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	abortRunId = r.Flags().String("id", "", "status of a run.")
 	return r
 }
-func (c *Client) abort(cmd *cobra.Command, args []string) error {
+func (c *cliClient) abort(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	client, err := c.Dial()
-	if err != nil {
-		return err
-	}
-
-	status, err := client.Abort(*abortRunId)
-	log.Println(render.Render(status))
-	return err
+	status, err := c.client.Abort(*abortRunId)
+	log.Println(render.Render(status), err)
+	return nil
 }
 
 // QueryWorker
-func makeQueryworkerCmd(c *Client) *cobra.Command {
+func makeQueryworkerCmd(c *cliClient) *cobra.Command {
 	r := &cobra.Command{
 		Use:   "queryworker",
 		Short: "queries worker status",
 		RunE:  c.queryworker,
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
 	return r
 }
-func (c *Client) queryworker(cmd *cobra.Command, args []string) error {
+func (c *cliClient) queryworker(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
-	client, err := c.Dial()
-	if err != nil {
-		return err
-	}
-
-	status, err := client.QueryWorker()
-	log.Println(render.Render(status))
-	return err
+	status, err := c.client.QueryWorker()
+	log.Println(render.Render(status), err)
+	return nil
 }
 
 //TODO: implement Erase()

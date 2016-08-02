@@ -12,11 +12,8 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
-	client, err := client.NewClient(transportFactory, protocolFactory)
-	if err != nil {
-		log.Fatal("Cannot initialize Worker CL: ", err)
-	}
-	err = client.Exec()
+	client := client.NewCliClient(transportFactory, protocolFactory)
+	err := client.Cli()
 	if err != nil {
 		log.Fatal("error running workercl ", err)
 	}

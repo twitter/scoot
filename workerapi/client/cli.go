@@ -1,36 +1,34 @@
 package client
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 	"github.com/spf13/cobra"
 )
 
-type Client struct {
-	rootCmd          *cobra.Command
-	addr             string // modified by flag parsing
-	transportFactory thrift.TTransportFactory
-	protocolFactory  thrift.TProtocolFactory
-	client           *worker.WorkerClient
+type CliClient interface {
+	Cli() error
 }
 
-func (c *Client) Exec() error {
+type cliClient struct {
+	client  client
+	rootCmd *cobra.Command
+}
+
+func (c *cliClient) Cli() error {
 	return c.rootCmd.Execute()
 }
 
-func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) (*Client, error) {
-	r := &Client{}
-	r.transportFactory = transportFactory
-	r.protocolFactory = protocolFactory
+func NewCliClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) CliClient {
+	r := &cliClient{}
+	r.client.transportFactory = transportFactory
+	r.client.protocolFactory = protocolFactory
+	// r.client.addr is provided as a cmdline flag.
 
 	rootCmd := &cobra.Command{
 		Use:                "workercl",
 		Short:              "workercl is a command-line client to Cloud Worker",
 		Run:                func(*cobra.Command, []string) {},
-		PersistentPostRunE: r.Close,
+		PersistentPostRunE: func(*cobra.Command, []string) error { return r.client.Close() },
 	}
 
 	r.rootCmd = rootCmd
@@ -39,33 +37,5 @@ func NewClient(transportFactory thrift.TTransportFactory, protocolFactory thrift
 	rootCmd.AddCommand(makeRunCmd(r))
 	rootCmd.AddCommand(makeAbortCmd(r))
 
-	return r, nil
-}
-
-func (c *Client) Dial() (*worker.WorkerClient, error) {
-	if c.client == nil {
-		if c.addr == "" {
-			return nil, fmt.Errorf("Cannot dial: no address")
-		}
-		log.Println("Dialing", c.addr)
-		var transport thrift.TTransport
-		transport, err := thrift.NewTSocket(c.addr)
-		if err != nil {
-			return nil, fmt.Errorf("Error opening socket: %v", err)
-		}
-		transport = c.transportFactory.GetTransport(transport)
-		err = transport.Open()
-		if err != nil {
-			return nil, fmt.Errorf("Error opening transport: %v", err)
-		}
-		c.client = worker.NewWorkerClientFactory(transport, c.protocolFactory)
-	}
-	return c.client, nil
-}
-
-func (c *Client) Close(cmd *cobra.Command, args []string) error {
-	if c.client != nil {
-		return c.client.Transport.Close()
-	}
-	return nil
+	return r
 }

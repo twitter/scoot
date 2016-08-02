@@ -2,17 +2,18 @@ package scheduler
 
 import (
 	"fmt"
+	"sync"
+
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/worker"
-	"sync"
 )
 
 // Run the Job associated with this Saga to completion.  If its a brand new job
 // all tasks will be ran.  If its an in-progress Saga, only uncompleted tasks
 // will be executed
-func runJob(job sched.Job, saga *s.Saga, workers *distributor.PoolDistributor, workerFactory worker.WorkerFactory) {
+func runJob(job sched.Job, saga *s.Saga, jobNodes *distributor.PoolDistributor, workerFactory worker.WorkerFactory) {
 
 	var wg sync.WaitGroup
 
@@ -29,12 +30,12 @@ func runJob(job sched.Job, saga *s.Saga, workers *distributor.PoolDistributor, w
 		for id, task := range job.Def.Tasks {
 			if !initialSagaState.IsTaskCompleted(id) {
 				wg.Add(1)
-				node := <-workers.Reserve
+				node := <-jobNodes.Reserve
 				worker := workerFactory(node)
 
 				go func(id string, task sched.TaskDefinition) {
 					runTask(saga, worker, id, task)
-					workers.Release <- node
+					jobNodes.Release <- node
 					wg.Done()
 				}(id, task)
 			}
@@ -60,7 +61,7 @@ func runJob(job sched.Job, saga *s.Saga, workers *distributor.PoolDistributor, w
 
 // Logic to execute a single task in a Job.  Ensures Messages are logged to SagaLog
 // Logs StartTask, executes Tasks, Logs EndTask
-func runTask(saga *s.Saga, worker worker.WorkerController, taskId string, task sched.TaskDefinition) {
+func runTask(saga *s.Saga, worker worker.Worker, taskId string, task sched.TaskDefinition) {
 	// Put StartTask Message on SagaLog
 	stErr := saga.StartTask(taskId, nil)
 	if stErr != nil {

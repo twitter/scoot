@@ -2,8 +2,9 @@ package testhelpers
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"math/rand"
+
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
 // Test Helpers that are useful for Generating random Scoot Api Structs
@@ -31,7 +32,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{"cmd1", "arg1", "arg2"}
+	cmd.Argv = []string{"sleep", "1"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd

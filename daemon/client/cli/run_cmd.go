@@ -21,7 +21,7 @@ func (c *CliClient) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	command := runner.NewCommand(args, map[string]string{}, 0)
+	command := runner.NewCommand(args, map[string]string{}, 0, "")
 	process := conn.Run(command)
 	log.Printf("Running as %v, status %v", process.RunId, process.State)
 	return nil
