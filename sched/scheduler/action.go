@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 // An action represents work to do. This involves three steps:
@@ -34,18 +34,24 @@ type dequeueWorkItem struct {
 
 type workerRpc struct {
 	workerId string
-	call     func(w worker.Worker) workerReply
+	call     func(w workerapi.Worker) workerReply
 }
 
 func (r logSagaMsg) rpc()      {}
 func (r dequeueWorkItem) rpc() {}
 func (r workerRpc) rpc()       {}
 
-type errorReply struct {
+type sagaLogReply struct {
+	id  string
+	err error
+}
+
+type queueReply struct {
 	err error
 }
 
 type workerReply func(*schedulerState)
 
-func (r errorReply) reply()  {}
-func (r workerReply) reply() {}
+func (r sagaLogReply) reply() {}
+func (r queueReply) reply()   {}
+func (r workerReply) reply()  {}

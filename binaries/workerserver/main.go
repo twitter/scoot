@@ -11,6 +11,7 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	execer "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
+	runnerworker "github.com/scootdev/scoot/workerapi/runner"
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -29,9 +30,10 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 
 	stats := stat.Scope("workerserver")
-	run := localrunner.NewSimpleRunner(execer.NewExecer())
+	r := localrunner.NewSimpleRunner(execer.NewExecer())
 	version := func() string { return "" }
-	handler := server.NewHandler(stats, run, version)
+	w := runnerworker.MakeWorker(r)
+	handler := server.NewHandler(stats, w, version)
 	err := server.Serve(handler, fmt.Sprintf(":%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)

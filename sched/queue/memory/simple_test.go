@@ -3,6 +3,7 @@ package memory_test
 import (
 	"testing"
 
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
@@ -30,8 +31,10 @@ func TestEnqueue(t *testing.T) {
 
 	job := sched.JobDefinition{}
 	task := sched.TaskDefinition{}
-	task.Argv = []string{"echo", "foo"}
-	task.SnapshotId = "snapshot-id"
+	task.Command = runner.Command{
+		Argv:       []string{"echo", "foo"},
+		SnapshotId: "snapshot-id",
+	}
 	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	id, err := q.Enqueue(job)
 	if err != nil {
@@ -52,8 +55,8 @@ func TestEnqueue(t *testing.T) {
 	if len(outTask.Command.Argv) != 2 || outTask.Command.Argv[0] != "echo" || outTask.Command.Argv[1] != "foo" {
 		t.Fatalf("Unequal task.Command %v %v", outTask.Command.Argv, task.Command.Argv)
 	}
-	if outTask.SnapshotId != task.SnapshotId {
-		t.Fatalf("Unequal task.SnapshotId %v %v", outTask.SnapshotId, task.SnapshotId)
+	if outTask.Command.SnapshotId != task.Command.SnapshotId {
+		t.Fatalf("Unequal task.SnapshotId %v %v", outTask.Command.SnapshotId, task.Command.SnapshotId)
 	}
 	out.Dequeue()
 }
@@ -62,8 +65,10 @@ func TestBackpressure(t *testing.T) {
 	q := memory.NewSimpleQueue(1)
 	job := sched.JobDefinition{}
 	task := sched.TaskDefinition{}
-	task.Argv = []string{"echo", "foo"}
-	task.SnapshotId = "snapshot-id"
+	task.Command = runner.Command{
+		Argv:       []string{"echo", "foo"},
+		SnapshotId: "snapshot-id",
+	}
 	job.Tasks = map[string]sched.TaskDefinition{"task": task}
 	_, err := q.Enqueue(job)
 	if err != nil {

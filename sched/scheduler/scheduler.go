@@ -5,16 +5,20 @@ import (
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 type Scheduler interface {
-	Sagas() saga.SagaCoordinator
+	Run(def sched.JobDefinition) (string, error)
+	GetState(jobId string) (*saga.SagaState, error)
+	GetStatus(jobId string) (JobStatus, error)
 	Wait() error
 }
 
-func NewSchedulerFromCluster(cl cluster.Cluster, q chan queue.WorkItem, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
+func NewSchedulerFromCluster(cl cluster.Cluster, q queue.Queue, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
 	sub := cl.Subscribe()
 
 	s := NewScheduler(sub.Updates, q, sagaLog, workerFactory).(*coordinator)
@@ -28,18 +32,19 @@ func NewSchedulerFromCluster(cl cluster.Cluster, q chan queue.WorkItem, sagaLog 
 	return s
 }
 
-func NewScheduler(cl chan []cluster.NodeUpdate, q chan queue.WorkItem, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
+func NewScheduler(cl chan []cluster.NodeUpdate, q queue.Queue, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
 	sc := saga.MakeSagaCoordinator(sagaLog)
 
 	s := &coordinator{
-		cluster: cl,
-		queue:   q,
-		replyCh: make(chan reply),
-
+		queue:         q,
 		sc:            sc,
 		workerFactory: workerFactory,
 
-		workers:    make(map[cluster.NodeId]worker.Worker),
+		cluster: cl,
+		queueCh: q.Chan(),
+		replyCh: make(chan reply),
+
+		workers:    make(map[cluster.NodeId]workerapi.Worker),
 		queueItems: make(map[string]queue.WorkItem),
 		sagas:      make(map[string]chan saga.Message),
 
@@ -48,6 +53,10 @@ func NewScheduler(cl chan []cluster.NodeUpdate, q chan queue.WorkItem, sagaLog s
 		writers: &sync.WaitGroup{},
 
 		errCh: make(chan error),
+
+		actives: &jobStates{
+			actives: make(map[string]*saga.SagaState),
+		},
 	}
 	s.writers.Add(2) // cluster and queue
 
@@ -57,4 +66,8 @@ func NewScheduler(cl chan []cluster.NodeUpdate, q chan queue.WorkItem, sagaLog s
 	// TODO(dbentley): recover in-process jobs from saga log
 
 	return s
+}
+
+func (s *coordinator) Run(def sched.JobDefinition) (string, error) {
+	return s.queue.Enqueue(def)
 }

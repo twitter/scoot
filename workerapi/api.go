@@ -10,19 +10,29 @@ import (
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
+// TODO(dbentley): argh, Worker is so close to Runner but just a little different...
+// Should we maybe just add RunnerStatus to the Runner interface?
+type Worker interface {
+	Run(cmd *runner.Command) (runner.ProcessStatus, error)
+	Status() (*WorkerStatus, error)
+	Close() error
+	Abort(run runner.RunId) (runner.ProcessStatus, error)
+	Erase(run runner.RunId) error
+}
+
 //
 // Translation between local domain objects and thrift objects:
 //
 
 //TODO: test workerStatus.
 type WorkerStatus struct {
-	Runs      []*runner.ProcessStatus
+	Runs      []runner.ProcessStatus
 	VersionId string
 	Error     error
 }
 
 func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) *WorkerStatus {
-	runs := make([]*runner.ProcessStatus, 0)
+	runs := make([]runner.ProcessStatus, 0)
 	versionId := ""
 	for _, r := range thrift.Runs {
 		runs = append(runs, ThriftRunStatusToDomain(r))
@@ -73,8 +83,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	return thrift
 }
 
-func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
-	domain := &runner.ProcessStatus{}
+func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.ProcessStatus {
+	domain := runner.ProcessStatus{}
 	domain.RunId = runner.RunId(thrift.RunId)
 	switch thrift.Status {
 	case worker.Status_UNKNOWN:
@@ -109,7 +119,7 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
 	return domain
 }
 
-func DomainRunStatusToThrift(domain *runner.ProcessStatus) *worker.RunStatus {
+func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 	thrift := worker.NewRunStatus()
 	thrift.RunId = string(domain.RunId)
 	switch domain.State {

@@ -10,14 +10,6 @@ import (
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
-type Client interface {
-	Dial() error
-	Close() error
-	Run(*runner.Command) (*runner.ProcessStatus, error)
-	Abort(runId string) (*runner.ProcessStatus, error)
-	QueryWorker() (*workerapi.WorkerStatus, error)
-}
-
 type client struct {
 	addr             string
 	transportFactory thrift.TTransportFactory
@@ -27,7 +19,7 @@ type client struct {
 
 func NewClient(
 	transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory, addr string,
-) Client {
+) workerapi.Worker {
 	r := &client{}
 	r.transportFactory = transportFactory
 	r.protocolFactory = protocolFactory
@@ -68,33 +60,33 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) Run(cmd *runner.Command) (*runner.ProcessStatus, error) {
+func (c *client) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	client, err := c.dial()
 	if err != nil {
-		return &runner.ProcessStatus{}, err
+		return runner.ProcessStatus{}, err
 	}
 
 	status, err := client.Run(workerapi.DomainRunCommandToThrift(cmd))
 	if err != nil {
-		return &runner.ProcessStatus{}, err
+		return runner.ProcessStatus{}, err
 	}
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
-func (c *client) Abort(runId string) (*runner.ProcessStatus, error) {
+func (c *client) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	client, err := c.dial()
 	if err != nil {
-		return &runner.ProcessStatus{}, err
+		return runner.ProcessStatus{}, err
 	}
 
-	status, err := client.Abort(*abortRunId)
+	status, err := client.Abort(string(runId))
 	if err != nil {
-		return &runner.ProcessStatus{}, err
+		return runner.ProcessStatus{}, err
 	}
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
-func (c *client) QueryWorker() (*workerapi.WorkerStatus, error) {
+func (c *client) Status() (*workerapi.WorkerStatus, error) {
 	client, err := c.dial()
 	if err != nil {
 		return &workerapi.WorkerStatus{}, err
@@ -107,4 +99,7 @@ func (c *client) QueryWorker() (*workerapi.WorkerStatus, error) {
 	return workerapi.ThriftWorkerStatusToDomain(status), nil
 }
 
-//TODO: implement erase
+func (c *client) Erase(run runner.RunId) error {
+	//TODO: implement erase
+	return nil
+}

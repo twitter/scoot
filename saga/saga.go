@@ -220,7 +220,11 @@ func logMessage(state *SagaState, msg Message, log SagaLog) (*SagaState, error) 
 	}
 
 	//try durably storing the message
-	err = log.LogMessage(msg)
+	if msg.msgType == StartSaga {
+		err = log.StartSaga(msg.sagaId, msg.data)
+	} else {
+		err = log.LogMessage(msg)
+	}
 	if err != nil {
 		return nil, err
 	}

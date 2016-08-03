@@ -3,6 +3,7 @@ package scheduler
 type planner struct {
 	st      *schedulerState
 	actions []action
+	rpcs    []rpc
 }
 
 func makePlanner(st *schedulerState) *planner {
@@ -17,11 +18,7 @@ func (p *planner) plan() {
 	p.pingNewWorkers()
 	p.finishTasks()
 	p.assignWorkers()
-	p.endJobs()
-}
-
-func (p *planner) rpcs() []rpc {
-	return nil
+	p.updateJobsStatus()
 }
 
 func (p *planner) pingNewWorkers() {
@@ -88,27 +85,30 @@ func (p *planner) offerWorkerToJob(w *workerState, j *jobState) bool {
 	return false
 }
 
-func (p *planner) endJobs() {
+func (p *planner) updateJobsStatus() {
 	for _, j := range p.st.jobs {
-		if j.status == jobDone {
-			continue
-		}
-		done := true
+		p.updateJobStatus(j)
+	}
+}
+
+func (p *planner) updateJobStatus(j *jobState) {
+	switch j.status {
+	case jobPersisted:
+		p.dequeue(j.id)
+	case jobRunning:
 		for _, t := range j.tasks {
 			if t.status != taskDone {
-				done = false
-				break
+				return
 			}
 		}
-		if done {
-			p.endJob(j.id)
-		}
+		p.endJob(j.id)
 	}
 }
 
 func (p *planner) act(a action) {
 	p.actions = append(p.actions, a)
-	a.apply(p.st)
+	rpcs := a.apply(p.st)
+	p.rpcs = append(p.rpcs, rpcs...)
 }
 
 // Utility Functions to make planner code easy to write
@@ -130,4 +130,8 @@ func (p *planner) endTask(jobId string, taskId string) {
 
 func (p *planner) endJob(jobId string) {
 	p.act(&endJobAction{jobId: jobId})
+}
+
+func (p *planner) dequeue(jobId string) {
+	p.act(&dequeueAction{jobId: jobId})
 }

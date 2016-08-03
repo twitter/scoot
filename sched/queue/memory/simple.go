@@ -3,10 +3,11 @@ package memory
 // In-memory Scheduler Queue
 
 import (
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/queue"
 	"strconv"
 	"time"
+
+	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/sched/queue"
 )
 
 func NewSimpleQueue(capacity int) queue.Queue {

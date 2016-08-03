@@ -2,81 +2,12 @@ package server
 
 import (
 	"fmt"
-	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"testing"
 )
-
-func Test_GetJobStatus_InternalLogError(t *testing.T) {
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	sagaLogMock := s.NewMockSagaLog(mockCtrl)
-	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInternalLogError("test error"))
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
-
-	status, err := GetJobStatus("job1", sagaCoord)
-	if err == nil {
-		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
-	}
-
-	switch err.(type) {
-	case *scoot.ScootServerError:
-	default:
-		t.Error("Expected returned error to be ScootServerError", err)
-	}
-
-	if status.ID != "" || status.Status != scoot.Status_NOT_STARTED {
-		t.Error("Expected Default JobStatus to be returned when error occurs")
-	}
-}
-
-func Test_GetJobStatus_InvalidRequestError(t *testing.T) {
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	sagaLogMock := s.NewMockSagaLog(mockCtrl)
-	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInvalidRequestError("test error"))
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
-
-	status, err := GetJobStatus("job1", sagaCoord)
-	if err == nil {
-		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
-	}
-
-	switch err.(type) {
-	case *scoot.InvalidRequest:
-	default:
-		t.Error("Expected returned error to be ScootServerError", err)
-	}
-
-	if status.ID != "" || status.Status != scoot.Status_NOT_STARTED {
-		t.Error("Expected Default JobStatus to be returned when error occurs")
-	}
-}
-
-func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	sagaLogMock := s.NewMockSagaLog(mockCtrl)
-	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, nil)
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
-
-	status, err := GetJobStatus("job1", sagaCoord)
-	if err != nil {
-		t.Error("Unexpected error returned", err)
-	}
-
-	if status.ID != "job1" && status.Status != scoot.Status_IN_PROGRESS {
-		t.Error("Unexpected JobStatus Returned")
-	}
-}
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 

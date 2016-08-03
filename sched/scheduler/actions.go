@@ -6,6 +6,7 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 type pingWorkerAction struct {
@@ -17,8 +18,8 @@ func (a *pingWorkerAction) apply(st *schedulerState) []rpc {
 	return []rpc{workerRpc{a.id, a.queryWorker}}
 }
 
-func (a *pingWorkerAction) queryWorker(w worker.Worker) workerReply {
-	status, err := w.Query()
+func (a *pingWorkerAction) queryWorker(w workerapi.Worker) workerReply {
+	status, err := w.Status()
 
 	return func(st *schedulerState) {
 		st.updateWorker(a, status, err)
@@ -34,7 +35,7 @@ func (a *startJobAction) apply(st *schedulerState) []rpc {
 	for i, j := range st.incoming {
 		if j.Id == a.id {
 			job = j
-			st.incoming = append(st.incoming[0:i], st.incoming[i:]...)
+			st.incoming = append(st.incoming[0:i], st.incoming[i+1:]...)
 		}
 		break
 	}
@@ -63,7 +64,7 @@ func (a *startRunAction) apply(st *schedulerState) []rpc {
 	w.status = workerBusy
 	return []rpc{
 		logSagaMsg{a.jobId, saga.MakeStartTaskMessage(a.jobId, a.taskId, []byte(a.workerId)), false},
-		workerRpc{a.workerId, func(w worker.Worker) workerReply {
+		workerRpc{a.workerId, func(w workerapi.Worker) workerReply {
 			err := worker.RunAndWait(cmd, w)
 			return func(st *schedulerState) {
 				st.markRunComplete(a, err)
@@ -92,6 +93,16 @@ func (a *endJobAction) apply(st *schedulerState) []rpc {
 	t := st.getJob(a.jobId)
 	t.status = jobDone
 	return []rpc{logSagaMsg{a.jobId, saga.MakeEndSagaMessage(a.jobId), true}}
+}
+
+type dequeueAction struct {
+	jobId string
+}
+
+func (a *dequeueAction) apply(st *schedulerState) []rpc {
+	t := st.getJob(a.jobId)
+	t.status = jobRunning
+	return []rpc{dequeueWorkItem{a.jobId}}
 }
 
 func p(s string, args ...interface{}) {

@@ -1,23 +1,26 @@
 package scheduler
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 type coordinator struct {
-	cluster chan []cluster.NodeUpdate
-	queue   chan queue.WorkItem
-	replyCh chan reply
-
+	queue         queue.Queue
 	sc            saga.SagaCoordinator
 	workerFactory worker.WorkerFactory
 
-	workers    map[cluster.NodeId]worker.Worker
+	cluster chan []cluster.NodeUpdate
+	queueCh chan queue.WorkItem
+	replyCh chan reply
+
+	workers    map[cluster.NodeId]workerapi.Worker
 	queueItems map[string]queue.WorkItem
 	sagas      map[string]chan saga.Message
 
@@ -28,6 +31,8 @@ type coordinator struct {
 	writers *sync.WaitGroup
 
 	errCh chan error
+
+	actives *jobStates
 }
 
 func (c *coordinator) Sagas() saga.SagaCoordinator {
@@ -43,8 +48,12 @@ func (c *coordinator) closeWhenDone() {
 	close(c.replyCh)
 }
 
+func (c *coordinator) done() bool {
+	return c.cluster == nil && c.queueCh == nil && c.replyCh == nil
+}
+
 func (c *coordinator) loop() {
-	for {
+	for !c.done() {
 		select {
 		case updates, ok := <-c.cluster:
 			if !ok {
@@ -52,31 +61,32 @@ func (c *coordinator) loop() {
 				c.writers.Done()
 				continue
 			}
+			// log.Println("Cluster Updates")
 			for _, update := range updates {
 				c.handleNodeUpdate(update)
 			}
-		case item, ok := <-c.queue:
+		case item, ok := <-c.queueCh:
 			if !ok {
-				c.queue = nil
+				c.queueCh = nil
 				c.writers.Done()
 				continue
 			}
 			c.handleWorkItem(item)
 		case reply, ok := <-c.replyCh:
 			if !ok {
-				break
+				c.replyCh = nil
+				continue
 			}
 			c.writers.Done()
 			switch reply := reply.(type) {
-			case *errorReply:
-				if reply.err == nil {
-					// We don't need to schedule if we didn't change anything
-					continue
+			case queueReply:
+				if reply.err != nil && c.st.err != nil {
+					c.st.err = nil
 				}
-				if c.st.err == nil {
-					c.st.err = reply.err
-				}
+			case sagaLogReply:
+				c.handleSagaLogReply(reply)
 			case workerReply:
+				// log.Println("Worker Reply")
 				reply(c.st)
 			default:
 				p("Unexpected reply type: %v %T", reply, reply)
@@ -94,21 +104,37 @@ func (c *coordinator) loop() {
 	c.errCh <- c.st.err
 }
 
+func (c *coordinator) handleSagaLogReply(r sagaLogReply) {
+	// log.Println("Saga Reply")
+	if r.err != nil && c.st.err == nil {
+		c.st.err = r.err
+	}
+	if r.err == nil {
+		j := c.st.getJob(r.id)
+		if j != nil && j.status == jobNew {
+			j.status = jobPersisted
+		}
+	}
+}
+
 func (c *coordinator) tick() {
-	if c.cluster == nil && c.queue == nil {
+	if c.cluster == nil && c.queueCh == nil {
 		// Our inputs are closed; we don't want to plan anything more,
 		// just let our in-flight rpcs drain
 		return
 	}
+	// log.Println("State Before", render.Render(c.st))
 	p := makePlanner(c.st)
 	p.plan()
-	rpcs := p.rpcs()
-	for _, rpc := range rpcs {
+	// log.Println("State After", render.Render(c.st))
+	// log.Println("Actions", render.Render(p.actions))
+	for _, rpc := range p.rpcs {
 		c.dispatchRpc(rpc)
 	}
 }
 
 func (c *coordinator) dispatchRpc(rpc rpc) {
+	// log.Println("Dispatching RPC:", render.Render(rpc))
 	c.writers.Add(1)
 	switch rpc := rpc.(type) {
 	case logSagaMsg:
@@ -122,11 +148,13 @@ func (c *coordinator) dispatchRpc(rpc rpc) {
 		item := c.queueItems[rpc.jobId]
 		delete(c.queueItems, rpc.jobId)
 		go func() {
-			c.replyCh <- &errorReply{item.Dequeue()}
+			// log.Println("Replying dequeue", item, c.replyCh)
+			c.replyCh <- queueReply{item.Dequeue()}
 		}()
 	case workerRpc:
 		worker := c.workers[cluster.NodeId(rpc.workerId)]
 		go func() {
+			// log.Println("Replying Worker RPC")
 			c.replyCh <- rpc.call(worker)
 		}()
 	default:
@@ -135,6 +163,7 @@ func (c *coordinator) dispatchRpc(rpc rpc) {
 }
 
 func (c *coordinator) handleNodeUpdate(update cluster.NodeUpdate) {
+	// log.Println("Handling Node Update", update, update.UpdateType == cluster.NodeAdded)
 	switch update.UpdateType {
 	case cluster.NodeAdded:
 		_, ok := c.workers[update.Id]
@@ -147,12 +176,12 @@ func (c *coordinator) handleNodeUpdate(update cluster.NodeUpdate) {
 				// We already have this worker
 				return
 			}
-			c.st.workers = append(c.st.workers,
-				&workerState{
-					id:     string(update.Id),
-					status: workerAdded,
-				})
 		}
+		c.st.workers = append(c.st.workers,
+			&workerState{
+				id:     string(update.Id),
+				status: workerAdded,
+			})
 	case cluster.NodeRemoved:
 		worker, ok := c.workers[update.Id]
 		if ok {
@@ -174,19 +203,20 @@ func (c *coordinator) handleNodeUpdate(update cluster.NodeUpdate) {
 func (c *coordinator) handleWorkItem(item queue.WorkItem) {
 	jobId := item.Job().Id
 	c.queueItems[jobId] = item
+	// log.Println("Work Item", jobId, item, c.queueItems)
 
 	c.st.incoming = append(c.st.incoming, item.Job())
 
 	// This job isn't yet started, so don't write anything, but begin listening for saga writes for this job.
 	s := c.sc.MakeEmptySaga(jobId)
 	bufCh := make(chan saga.Message)
-	go sagaBufferLoop(s, bufCh, c.replyCh)
+	go sagaBufferLoop(jobId, c.actives, s, bufCh, c.replyCh)
 	c.sagas[jobId] = bufCh
 }
 
-func sagaBufferLoop(s *saga.Saga, bufCh chan saga.Message, replyCh chan reply) {
+func sagaBufferLoop(sagaId string, actives *jobStates, s *saga.Saga, bufCh chan saga.Message, replyCh chan reply) {
 	var pending []saga.Message
-	var inflight chan struct{}
+	var inflight chan error
 	for bufCh != nil || len(pending) > 0 {
 		select {
 		case msg, ok := <-bufCh:
@@ -195,17 +225,33 @@ func sagaBufferLoop(s *saga.Saga, bufCh chan saga.Message, replyCh chan reply) {
 				continue
 			}
 			pending = append(pending, msg)
-		case <-inflight:
+		case err := <-inflight:
 			pending = pending[1:]
 			inflight = nil
+			if err != nil {
+				// We have hit an error. Stop trying to write
+				// (it might make the situation worse)
+				// Just exhaust the buffer so the coordinator doesn't get stuck
+				go exhaustBufferLoop(sagaId, bufCh, replyCh)
+				return
+			}
 		}
 		if inflight == nil && len(pending) > 0 {
-			inflight = make(chan struct{})
+			inflight = make(chan error)
 			msg := pending[0]
 			go func() {
-				defer close(inflight)
-				replyCh <- &errorReply{s.LogMessage(msg)}
+				err := s.LogMessage(msg)
+				actives.setState(sagaId, s.GetState())
+				inflight <- err
+				replyCh <- sagaLogReply{sagaId, err}
+
 			}()
 		}
+	}
+}
+
+func exhaustBufferLoop(sagaId string, bufCh chan saga.Message, replyCh chan reply) {
+	for _ = range bufCh {
+		replyCh <- sagaLogReply{sagaId, fmt.Errorf("Stopped Logging")}
 	}
 }

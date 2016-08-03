@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
+	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
-func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
+func Serve(s scheduler.Scheduler, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
 	transport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
 		return err
 	}
-	processor := scoot.NewCloudScootProcessor(handler)
+	processor := scoot.NewCloudScootProcessor(&Handler{s})
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
 
 	fmt.Println("About to serve")
@@ -26,15 +26,7 @@ func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTrans
 }
 
 type Handler struct {
-	queue     queue.Queue
-	sagaCoord saga.SagaCoordinator
-}
-
-func NewHandler(queue queue.Queue, sc saga.SagaCoordinator) scoot.CloudScoot {
-	return &Handler{
-		queue:     queue,
-		sagaCoord: sc,
-	}
+	s scheduler.Scheduler
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
@@ -45,7 +37,7 @@ func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 		return nil, err
 	}
 
-	id, err := h.queue.Enqueue(job)
+	id, err := h.s.Run(job)
 
 	if err != nil {
 		switch err := err.(type) {
@@ -68,10 +60,6 @@ func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	return r, nil
 }
 
-func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
-	return GetJobStatus(jobId, h.sagaCoord)
-}
-
 // Translates thrift job definition message to scoot domain object
 func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err error) {
 	if def == nil {
@@ -90,7 +78,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		}
 		task.Command.Argv = t.Command.Argv
 		if t.SnapshotId != nil {
-			task.SnapshotId = *t.SnapshotId
+			task.Command.SnapshotId = *t.SnapshotId
 		}
 		result.Tasks[taskId] = task
 	}

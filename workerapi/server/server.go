@@ -5,22 +5,22 @@ import (
 	"log"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	thriftlib "github.com/apache/thrift/lib/go/thrift"
 	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	domain "github.com/scootdev/scoot/workerapi"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	thrift "github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
 // Called by a main binary. Blocks until the connection is terminated.
-func Serve(handler worker.Worker, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
-	transport, err := thrift.NewTServerSocket(addr)
+func Serve(handler thrift.Worker, addr string, transportFactory thriftlib.TTransportFactory, protocolFactory thriftlib.TProtocolFactory) error {
+	transport, err := thriftlib.NewTServerSocket(addr)
 	if err != nil {
 		return err
 	}
-	processor := worker.NewWorkerProcessor(handler)
-	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
+	processor := thrift.NewWorkerProcessor(handler)
+	server := thriftlib.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
 
 	fmt.Println("Serving thrift: ", addr)
 
@@ -29,14 +29,17 @@ func Serve(handler worker.Worker, addr string, transportFactory thrift.TTranspor
 
 type handler struct {
 	stat        stats.StatsReceiver
-	run         runner.Runner
+	worker      domain.Worker
 	getVersion  func() string
 	timeLastRpc time.Time
 }
 
-func NewHandler(stat stats.StatsReceiver, run runner.Runner, getVersion func() string) worker.Worker {
-	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, getVersion: getVersion}
+func NewHandler(stat stats.StatsReceiver, worker domain.Worker, getVersion func() string) thrift.Worker {
+	h := &handler{
+		stat:       stat.Scope("handler"),
+		worker:     worker,
+		getVersion: getVersion,
+	}
 	go h.stats()
 	return h
 }
@@ -50,8 +53,11 @@ func (h *handler) stats() {
 		case <-ticker.C:
 			var numFailed int64
 			var numActive int64
-			processes := h.run.StatusAll()
-			for _, process := range processes {
+			ws, err := h.worker.Status()
+			if err != nil {
+				return
+			}
+			for _, process := range ws.Runs {
 				if process.State == runner.FAILED {
 					numFailed++
 				}
@@ -65,7 +71,7 @@ func (h *handler) stats() {
 				failed.Inc(numFailed - prevNumFailed)
 			}
 			h.stat.Gauge("numActiveRuns").Update(numActive)
-			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
+			h.stat.Gauge("numEndedRuns").Update(int64(len(ws.Runs)) - numActive)
 			h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
 		}
 	}
@@ -73,39 +79,34 @@ func (h *handler) stats() {
 
 // Implement thrift worker.Worker interface.
 //
-func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
+func (h *handler) QueryWorker() (*thrift.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.timeLastRpc = time.Now()
-	ws := worker.NewWorkerStatus()
-	version := h.getVersion()
-	ws.VersionId = &version
-	for _, process := range h.run.StatusAll() {
-		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(&process))
-	}
-	return ws, nil
+	status, err := h.worker.Status()
+	return domain.DomainWorkerStatusToThrift(status), err
 }
 
-func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
+func (h *handler) Run(cmd *thrift.RunCommand) (*thrift.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
 	log.Println("Running", render.Render(cmd))
 
 	h.timeLastRpc = time.Now()
 	h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
-	process := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
-	return domain.DomainRunStatusToThrift(&process), nil
+	process, err := h.worker.Run(domain.ThriftRunCommandToDomain(cmd))
+	return domain.DomainRunStatusToThrift(process), err
 }
 
-func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
+func (h *handler) Abort(runId string) (*thrift.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.timeLastRpc = time.Now()
-	process := h.run.Abort(runner.RunId(runId))
-	return domain.DomainRunStatusToThrift(&process), nil
+	process, err := h.worker.Abort(runner.RunId(runId))
+	return domain.DomainRunStatusToThrift(process), err
 }
 
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.timeLastRpc = time.Now()
-	h.run.Erase(runner.RunId(runId))
+	h.worker.Erase(runner.RunId(runId))
 	return nil
 }

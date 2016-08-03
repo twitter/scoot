@@ -1,162 +1,151 @@
 package server_test
 
-import (
-	"fmt"
-	"github.com/golang/mock/gomock"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/queue"
-	"github.com/scootdev/scoot/sched/queue/memory"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/scootapi/server"
-	"testing"
-)
+// import (
+// 	"fmt"
+// 	"github.com/scootdev/scoot/saga"
+// 	"github.com/scootdev/scoot/sched"
+// 	"github.com/scootdev/scoot/sched/queue"
+// 	"github.com/scootdev/scoot/sched/queue/memory"
+// 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+// 	"github.com/scootdev/scoot/scootapi/server"
+// 	"testing"
+// )
 
-func CreateSagaCoordMock(t *testing.T) (saga.SagaCoordinator, *saga.MockSagaLog) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+// func TestRunBadJobFails(t *testing.T) {
+// 	q := memory.NewSimpleQueue(1)
+// 	defer q.Close()
+// 	sc, _ := CreateSagaCoordMock(t)
 
-	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+// 	handler := server.NewHandler(q, sc)
 
-	return sagaCoord, sagaLogMock
-}
+// 	jobDef := scoot.NewJobDefinition()
 
-func TestRunBadJobFails(t *testing.T) {
-	q := memory.NewSimpleQueue(1)
-	defer q.Close()
-	sc, _ := CreateSagaCoordMock(t)
+// 	_, err := handler.RunJob(jobDef)
+// 	if err == nil {
+// 		t.Fatalf("Expected err enqueueing empty job")
+// 	}
+// 	if err != nil {
+// 		_, ok := err.(*scoot.InvalidRequest)
+// 		if !ok {
+// 			t.Fatalf("Didn't get InvalidRequest %v", err)
+// 		}
+// 	}
 
-	handler := server.NewHandler(q, sc)
+// 	task := scoot.NewTaskDefinition()
+// 	task.Command = scoot.NewCommand()
+// 	task.Command.Argv = []string{}
+// 	task.SnapshotId = new(string)
+// 	jobDef = scoot.NewJobDefinition()
+// 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+// 		"task1": task,
+// 	}
 
-	jobDef := scoot.NewJobDefinition()
+// 	_, err = handler.RunJob(jobDef)
+// 	if err == nil {
+// 		t.Fatalf("Expected err enqueing job with no command")
+// 	}
+// 	if err != nil {
+// 		_, ok := err.(*scoot.InvalidRequest)
+// 		if !ok {
+// 			t.Fatalf("Didn't get InvalidRequest %v", err)
+// 		}
+// 	}
+// }
 
-	_, err := handler.RunJob(jobDef)
-	if err == nil {
-		t.Fatalf("Expected err enqueueing empty job")
-	}
-	if err != nil {
-		_, ok := err.(*scoot.InvalidRequest)
-		if !ok {
-			t.Fatalf("Didn't get InvalidRequest %v", err)
-		}
-	}
+// func TestRunSimpleJob(t *testing.T) {
+// 	q := memory.NewSimpleQueue(1)
+// 	defer q.Close()
+// 	sc, _ := CreateSagaCoordMock(t)
 
-	task := scoot.NewTaskDefinition()
-	task.Command = scoot.NewCommand()
-	task.Command.Argv = []string{}
-	task.SnapshotId = new(string)
-	jobDef = scoot.NewJobDefinition()
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"task1": task,
-	}
+// 	handler := server.NewHandler(q, sc)
 
-	_, err = handler.RunJob(jobDef)
-	if err == nil {
-		t.Fatalf("Expected err enqueing job with no command")
-	}
-	if err != nil {
-		_, ok := err.(*scoot.InvalidRequest)
-		if !ok {
-			t.Fatalf("Didn't get InvalidRequest %v", err)
-		}
-	}
-}
+// 	task := scoot.NewTaskDefinition()
+// 	task.Command = scoot.NewCommand()
+// 	task.Command.Argv = []string{"true"}
+// 	task.SnapshotId = new(string)
+// 	jobDef := scoot.NewJobDefinition()
+// 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+// 		"task1": task,
+// 	}
 
-func TestRunSimpleJob(t *testing.T) {
-	q := memory.NewSimpleQueue(1)
-	defer q.Close()
-	sc, _ := CreateSagaCoordMock(t)
+// 	_, err := handler.RunJob(jobDef)
+// 	if err != nil {
+// 		t.Fatalf("Can't enqueue job: %v", err)
+// 	}
+// }
 
-	handler := server.NewHandler(q, sc)
+// type errQueue struct{}
 
-	task := scoot.NewTaskDefinition()
-	task.Command = scoot.NewCommand()
-	task.Command.Argv = []string{"true"}
-	task.SnapshotId = new(string)
-	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"task1": task,
-	}
+// func (q *errQueue) Enqueue(job sched.JobDefinition) (string, error) {
+// 	return "", fmt.Errorf("Not connected")
+// }
 
-	_, err := handler.RunJob(jobDef)
-	if err != nil {
-		t.Fatalf("Can't enqueue job: %v", err)
-	}
-}
+// func (q *errQueue) Chan() chan queue.WorkItem { return nil }
 
-type errQueue struct{}
+// func (q *errQueue) Close() error {
+// 	return nil
+// }
 
-func (q *errQueue) Enqueue(job sched.JobDefinition) (string, error) {
-	return "", fmt.Errorf("Not connected")
-}
+// func TestQueueError(t *testing.T) {
+// 	q := &errQueue{}
+// 	defer q.Close()
+// 	sc, _ := CreateSagaCoordMock(t)
 
-func (q *errQueue) Chan() chan queue.WorkItem { return nil }
+// 	handler := server.NewHandler(q, sc)
 
-func (q *errQueue) Close() error {
-	return nil
-}
+// 	task := scoot.NewTaskDefinition()
+// 	task.Command = scoot.NewCommand()
+// 	task.Command.Argv = []string{"true"}
+// 	task.SnapshotId = new(string)
+// 	jobDef := scoot.NewJobDefinition()
+// 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+// 		"task1": task,
+// 	}
 
-func TestQueueError(t *testing.T) {
-	q := &errQueue{}
-	defer q.Close()
-	sc, _ := CreateSagaCoordMock(t)
+// 	_, err := handler.RunJob(jobDef)
+// 	if err == nil {
+// 		t.Fatalf("expected enqueue to fail")
+// 	}
 
-	handler := server.NewHandler(q, sc)
+// }
 
-	task := scoot.NewTaskDefinition()
-	task.Command = scoot.NewCommand()
-	task.Command.Argv = []string{"true"}
-	task.SnapshotId = new(string)
-	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"task1": task,
-	}
+// func TestQueueFillsAndEmpties(t *testing.T) {
+// 	q := memory.NewSimpleQueue(1)
+// 	defer q.Close()
+// 	sc, _ := CreateSagaCoordMock(t)
 
-	_, err := handler.RunJob(jobDef)
-	if err == nil {
-		t.Fatalf("expected enqueue to fail")
-	}
+// 	handler := server.NewHandler(q, sc)
 
-}
+// 	task := scoot.NewTaskDefinition()
+// 	task.Command = scoot.NewCommand()
+// 	task.Command.Argv = []string{"true"}
+// 	task.SnapshotId = new(string)
+// 	jobDef := scoot.NewJobDefinition()
+// 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
+// 		"task1": task,
+// 	}
 
-func TestQueueFillsAndEmpties(t *testing.T) {
-	q := memory.NewSimpleQueue(1)
-	defer q.Close()
-	sc, _ := CreateSagaCoordMock(t)
+// 	_, err := handler.RunJob(jobDef)
+// 	if err != nil {
+// 		t.Fatalf("can't enqueue job: %v", err)
+// 	}
 
-	handler := server.NewHandler(q, sc)
+// 	// Now retry, and queue should be full
+// 	_, err = handler.RunJob(jobDef)
+// 	if err == nil {
+// 		t.Fatalf("expected queue to be full")
+// 	}
+// 	_, ok := err.(*scoot.CanNotScheduleNow)
+// 	if !ok {
+// 		t.Fatalf("expected queue to be full %v", err)
+// 	}
 
-	task := scoot.NewTaskDefinition()
-	task.Command = scoot.NewCommand()
-	task.Command.Argv = []string{"true"}
-	task.SnapshotId = new(string)
-	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"task1": task,
-	}
+// 	// Empty queue
+// 	item := <-q.Chan()
+// 	item.Dequeue()
 
-	_, err := handler.RunJob(jobDef)
-	if err != nil {
-		t.Fatalf("can't enqueue job: %v", err)
-	}
-
-	// Now retry, and queue should be full
-	_, err = handler.RunJob(jobDef)
-	if err == nil {
-		t.Fatalf("expected queue to be full")
-	}
-	_, ok := err.(*scoot.CanNotScheduleNow)
-	if !ok {
-		t.Fatalf("expected queue to be full %v", err)
-	}
-
-	// Empty queue
-	item := <-q.Chan()
-	item.Dequeue()
-
-	_, err = handler.RunJob(jobDef)
-	if err != nil {
-		t.Fatalf("can't enqueue after emptying: %v", err)
-	}
-}
+// 	_, err = handler.RunJob(jobDef)
+// 	if err != nil {
+// 		t.Fatalf("can't enqueue after emptying: %v", err)
+// 	}
+// }

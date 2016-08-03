@@ -35,6 +35,12 @@ func TestPlanner(t *testing.T) {
 		jobs(j("job1", task("task1", "wait")))),
 		startRun("job1", "task1", "node1"))
 
+	assertPlan(t, state(jobs(j("job1", jobNew))))
+	assertPlan(t, state(jobs(j("job1", jobPersisted))),
+		dequeue("job1"))
+	assertPlan(t, state(jobs(j("job1", jobRunning))),
+		endJob("job1"))
+
 	assertPlan(t, state(
 		workers(w("node1", "busy"),
 			w("node2", "avail")),
@@ -49,7 +55,7 @@ func TestPlanner(t *testing.T) {
 
 	assertPlan(t, state(
 		workers(w("node1", "avail")),
-		jobs(j("job1", taskRun("task1", "node1")))),
+		jobs(j("job1", jobRunning, taskRun("task1", "node1")))),
 		endTask("job1", "task1"),
 		endJob("job1"))
 	assertPlan(t, state(
@@ -248,4 +254,8 @@ func endTask(jobId string, taskId string) *endTaskAction {
 
 func endJob(jobId string) *endJobAction {
 	return &endJobAction{jobId: jobId}
+}
+
+func dequeue(jobId string) *dequeueAction {
+	return &dequeueAction{jobId: jobId}
 }

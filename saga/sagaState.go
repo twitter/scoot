@@ -255,7 +255,7 @@ func updateSagaState(s *SagaState, msg Message) (*SagaState, error) {
 
 	if s == nil {
 		if msg.msgType != StartSaga {
-			return nil, NewInvalidSagaStateError("Can only apply a StartSaga Message to an empty Saga")
+			return nil, NewInvalidSagaStateError("Can only apply a StartSaga Message to an empty Saga but got %v", msg.msgType)
 		}
 		return makeSagaState(msg.sagaId, msg.data)
 	}

@@ -51,7 +51,7 @@ func makeAbortCmd(c *cliClient) *cobra.Command {
 func (c *cliClient) abort(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	status, err := c.client.Abort(*abortRunId)
+	status, err := c.client.Abort(runner.RunId(*abortRunId))
 	log.Println(render.Render(status), err)
 	return nil
 }
@@ -69,7 +69,7 @@ func makeQueryworkerCmd(c *cliClient) *cobra.Command {
 func (c *cliClient) queryworker(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
-	status, err := c.client.QueryWorker()
+	status, err := c.client.Status()
 	log.Println(render.Render(status), err)
 	return nil
 }

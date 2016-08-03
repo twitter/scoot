@@ -5,8 +5,8 @@ import (
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
-func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {
-	state, err := sc.GetSagaState(jobId)
+func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
+	state, err := h.s.GetState(jobId)
 
 	if err != nil {
 		js := scoot.NewJobStatus()

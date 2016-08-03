@@ -43,7 +43,9 @@ type taskState struct {
 type jobStatus int
 
 const (
-	jobRunning jobStatus = iota
+	jobNew jobStatus = iota
+	jobPersisted
+	jobRunning
 	jobDone
 )
 

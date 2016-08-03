@@ -10,25 +10,19 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
-type Worker interface {
-	Run(cmd *runner.Command) (*runner.ProcessStatus, error)
-	Query() (*workerapi.WorkerStatus, error)
-	Close() error
-}
-
 // Create a Worker Client that talks to node
-type WorkerFactory func(node cluster.Node) Worker
+type WorkerFactory func(node cluster.Node) workerapi.Worker
 
 // TODO(dbentley): delete this function
 // Instead, the scheduler should just use Worker above
-func RunAndWait(cmd *runner.Command, w Worker) error {
+func RunAndWait(cmd *runner.Command, w workerapi.Worker) error {
 	status, err := w.Run(cmd)
 	if err != nil {
 		return err
 	}
 	for !status.State.IsDone() {
 		time.Sleep(250 * time.Millisecond) //TODO: make configurable
-		workerStatus, err := w.Query()
+		workerStatus, err := w.Status()
 		updated := false
 		if err != nil {
 			return err
