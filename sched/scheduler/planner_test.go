@@ -8,6 +8,7 @@ import (
 
 	"github.com/luci/go-render/render"
 
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched"
 )
 
@@ -138,10 +139,10 @@ func simpleJob(id string) sched.Job {
 	tasks := make(map[string]sched.TaskDefinition)
 	for i := 0; i < 10; i++ {
 		tasks[fmt.Sprintf("task1")] = sched.TaskDefinition{
-			Command: sched.Command{
-				Argv: []string{"echo", "hello world"},
+			Command: runner.Command{
+				Argv:       []string{"echo", "hello world"},
+				SnapshotId: "",
 			},
-			SnapshotId: "",
 		}
 	}
 	return sched.Job{
@@ -227,4 +228,24 @@ func assertPlan(t *testing.T, st *schedulerState, expected ...action) {
 	}
 
 	// TODO(dbentley): now apply, then plan again, and make sure the plan is empty
+}
+
+func pingWorker(id string) *pingWorkerAction {
+	return &pingWorkerAction{id: id}
+}
+
+func startJob(id string) *startJobAction {
+	return &startJobAction{id: id}
+}
+
+func startRun(jobId string, taskId string, workerId string) *startRunAction {
+	return &startRunAction{jobId: jobId, taskId: taskId, workerId: workerId}
+}
+
+func endTask(jobId string, taskId string) *endTaskAction {
+	return &endTaskAction{jobId: jobId, taskId: taskId}
+}
+
+func endJob(jobId string) *endJobAction {
+	return &endJobAction{jobId: jobId}
 }

@@ -15,6 +15,19 @@ type Saga struct {
 	mutex    sync.RWMutex
 }
 
+func newEmptySaga(sagaId string, log SagaLog) *Saga {
+	updateCh := make(chan sagaUpdate, 0)
+	s := &Saga{
+		id:       sagaId,
+		log:      log,
+		state:    nil,
+		updateCh: updateCh,
+		mutex:    sync.RWMutex{},
+	}
+	go s.updateSagaStateLoop()
+	return s
+}
+
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
 // returns a Saga, or an error if one occurs
 func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
@@ -77,7 +90,7 @@ func (s *Saga) GetState() *SagaState {
 // Once EndSaga is succesfully called, trying to log additional
 // messages will result in a panic.
 func (s *Saga) EndSaga() error {
-	return s.updateSagaState(MakeEndSagaMessage(s.id))
+	return s.LogMessage(MakeEndSagaMessage(s.id))
 }
 
 //
@@ -88,7 +101,7 @@ func (s *Saga) EndSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) AbortSaga() error {
-	return s.updateSagaState(MakeAbortSagaMessage(s.id))
+	return s.LogMessage(MakeAbortSagaMessage(s.id))
 }
 
 //
@@ -101,7 +114,7 @@ func (s *Saga) AbortSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) StartTask(taskId string, data []byte) error {
-	return s.updateSagaState(MakeStartTaskMessage(s.id, taskId, data))
+	return s.LogMessage(MakeStartTaskMessage(s.id, taskId, data))
 }
 
 //
@@ -114,7 +127,7 @@ func (s *Saga) StartTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndTask(taskId string, results []byte) error {
-	return s.updateSagaState(MakeEndTaskMessage(s.id, taskId, results))
+	return s.LogMessage(MakeEndTaskMessage(s.id, taskId, results))
 }
 
 //
@@ -128,7 +141,7 @@ func (s *Saga) EndTask(taskId string, results []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
-	return s.updateSagaState(MakeStartCompTaskMessage(s.id, taskId, data))
+	return s.LogMessage(MakeStartCompTaskMessage(s.id, taskId, data))
 }
 
 //
@@ -141,12 +154,12 @@ func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndCompensatingTask(taskId string, results []byte) error {
-	return s.updateSagaState(MakeEndCompTaskMessage(s.id, taskId, results))
+	return s.LogMessage(MakeEndCompTaskMessage(s.id, taskId, results))
 }
 
 // adds a message for updateSagaStateLoop to execute to the channel for the
 // specified saga.  blocks until the message has been applied
-func (s *Saga) updateSagaState(msg sagaMessage) error {
+func (s *Saga) LogMessage(msg Message) error {
 	resultCh := make(chan error, 0)
 	s.updateCh <- sagaUpdate{
 		msg:      msg,
@@ -191,14 +204,14 @@ func (s *Saga) itr(update sagaUpdate) {
 }
 
 type sagaUpdate struct {
-	msg      sagaMessage
+	msg      Message
 	resultCh chan error
 }
 
 //
 // logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
 //
-func logMessage(state *SagaState, msg sagaMessage, log SagaLog) (*SagaState, error) {
+func logMessage(state *SagaState, msg Message, log SagaLog) (*SagaState, error) {
 
 	//verify that the applied message results in a valid state
 	newState, err := updateSagaState(state, msg)

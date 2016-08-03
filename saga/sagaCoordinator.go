@@ -18,6 +18,10 @@ func MakeSagaCoordinator(log SagaLog) SagaCoordinator {
 	}
 }
 
+func (s SagaCoordinator) MakeEmptySaga(sagaId string) *Saga {
+	return newEmptySaga(sagaId, s.log)
+}
+
 // Make a Saga add it to the SagaCoordinator, if a Saga Already exists
 // with the same id, it will overwrite the already existing one.
 func (s SagaCoordinator) MakeSaga(sagaId string, job []byte) (*Saga, error) {

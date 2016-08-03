@@ -2,30 +2,34 @@ package scheduler
 
 import (
 	"fmt"
+
+	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
+	"github.com/scootdev/scoot/sched/worker"
 )
 
 type pingWorkerAction struct {
 	id string
 }
 
-func pingWorker(id string) *pingWorkerAction {
-	return &pingWorkerAction{id: id}
+func (a *pingWorkerAction) apply(st *schedulerState) []rpc {
+	st.getWorker(a.id).status = workerPinged
+	return []rpc{workerRpc{a.id, a.queryWorker}}
 }
 
-func (a *pingWorkerAction) apply(st *schedulerState) {
-	st.getWorker(a.id).status = workerPinged
+func (a *pingWorkerAction) queryWorker(w worker.Worker) workerReply {
+	status, err := w.Query()
+
+	return func(st *schedulerState) {
+		st.updateWorker(a, status, err)
+	}
 }
 
 type startJobAction struct {
 	id string
 }
 
-func startJob(id string) *startJobAction {
-	return &startJobAction{id: id}
-}
-
-func (a *startJobAction) apply(st *schedulerState) {
+func (a *startJobAction) apply(st *schedulerState) []rpc {
 	var job sched.Job
 	for i, j := range st.incoming {
 		if j.Id == a.id {
@@ -39,6 +43,9 @@ func (a *startJobAction) apply(st *schedulerState) {
 	}
 
 	st.jobs = append(st.jobs, initialJobState(job))
+	// TODO: need to serialize job into binary and pass in here
+	// so we can recover the job in case of failure
+	return []rpc{logSagaMsg{a.id, saga.MakeStartSagaMessage(a.id, []byte{}), false}}
 }
 
 type startRunAction struct {
@@ -47,16 +54,22 @@ type startRunAction struct {
 	workerId string
 }
 
-func startRun(jobId string, taskId string, workerId string) *startRunAction {
-	return &startRunAction{jobId: jobId, taskId: taskId, workerId: workerId}
-}
-
-func (a *startRunAction) apply(st *schedulerState) {
+func (a *startRunAction) apply(st *schedulerState) []rpc {
 	t := st.getTask(a.jobId, a.taskId)
+	cmd := &t.def.Command
 	t.status = taskRunning
 	t.runningOn = a.workerId
 	w := st.getWorker(a.workerId)
 	w.status = workerBusy
+	return []rpc{
+		logSagaMsg{a.jobId, saga.MakeStartTaskMessage(a.jobId, a.taskId, []byte(a.workerId)), false},
+		workerRpc{a.workerId, func(w worker.Worker) workerReply {
+			err := worker.RunAndWait(cmd, w)
+			return func(st *schedulerState) {
+				st.markRunComplete(a, err)
+			}
+		}},
+	}
 }
 
 type endTaskAction struct {
@@ -64,27 +77,21 @@ type endTaskAction struct {
 	taskId string
 }
 
-func endTask(jobId string, taskId string) *endTaskAction {
-	return &endTaskAction{jobId: jobId, taskId: taskId}
-}
-
-func (a *endTaskAction) apply(st *schedulerState) {
+func (a *endTaskAction) apply(st *schedulerState) []rpc {
 	t := st.getTask(a.jobId, a.taskId)
 	t.status = taskDone
 	t.runningOn = ""
+	return []rpc{logSagaMsg{a.jobId, saga.MakeEndTaskMessage(a.jobId, a.taskId, []byte{}), false}}
 }
 
 type endJobAction struct {
 	jobId string
 }
 
-func endJob(jobId string) *endJobAction {
-	return &endJobAction{jobId: jobId}
-}
-
-func (a *endJobAction) apply(st *schedulerState) {
+func (a *endJobAction) apply(st *schedulerState) []rpc {
 	t := st.getJob(a.jobId)
 	t.status = jobDone
+	return []rpc{logSagaMsg{a.jobId, saga.MakeEndSagaMessage(a.jobId), true}}
 }
 
 func p(s string, args ...interface{}) {

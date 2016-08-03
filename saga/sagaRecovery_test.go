@@ -56,7 +56,7 @@ func TestRecoverState_MissingStartMessage(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	msgs := []sagaMessage{
+	msgs := []Message{
 		MakeEndSagaMessage(sagaId),
 		MakeStartSagaMessage(sagaId, nil),
 	}
@@ -82,7 +82,7 @@ func TestRecoverState_UpdateSagaStateFails(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	msgs := []sagaMessage{
+	msgs := []Message{
 		MakeStartSagaMessage(sagaId, nil),
 		MakeEndTaskMessage(sagaId, "task1", nil),
 		MakeEndSagaMessage(sagaId),
@@ -110,7 +110,7 @@ func TestRecoverState_SuccessfulForwardRecovery(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	msgs := []sagaMessage{
+	msgs := []Message{
 		MakeStartSagaMessage(sagaId, []byte{4, 5, 6}),
 		MakeStartTaskMessage(sagaId, taskId, []byte{1, 2, 3}),
 	}
@@ -185,7 +185,7 @@ func TestRecoverState_SuccessfulRollbackRecovery(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	msgs := []sagaMessage{
+	msgs := []Message{
 		MakeStartSagaMessage(sagaId, []byte{4, 5, 6}),
 		MakeStartTaskMessage(sagaId, taskId, []byte{1, 2, 3}),
 	}

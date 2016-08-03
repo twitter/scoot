@@ -105,7 +105,7 @@ func TestRecoverSagaState(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	msgs := []sagaMessage{
+	msgs := []Message{
 		MakeStartSagaMessage(sagaId, nil),
 		MakeStartTaskMessage(sagaId, taskId, nil),
 		MakeEndTaskMessage(sagaId, taskId, nil),

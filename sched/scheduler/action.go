@@ -1,37 +1,51 @@
 package scheduler
 
 import (
-	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/queue"
+	"github.com/scootdev/scoot/sched/worker"
 )
-
-// An update to our Scheduler's view of the world
-type update interface {
-	apply(s *schedulerState)
-}
 
 // An action represents work to do. This involves three steps:
 // First, update our state to signal that the work has started.
 // Second, fire off rpcs to talk to other systems.
 // Third, each RPC returns an update when it's done.
 type action interface {
-	update
-	// rpcs() []rpc
+	apply(s *schedulerState) []rpc
 }
 
-type rpc interface{}
+type rpc interface {
+	rpc()
+}
 
-type sagaRpc struct {
+// A reply from an RPC
+type reply interface {
+	reply()
+}
+
+type logSagaMsg struct {
 	sagaId string
-	msg    saga.SagaMsg
+	msg    saga.Message
+	final  bool
 }
 
-type queueRpc struct {
+type dequeueWorkItem struct {
 	jobId string
-	// No func because the only thing we can do is dequeue it
 }
 
 type workerRpc struct {
 	workerId string
+	call     func(w worker.Worker) workerReply
 }
+
+func (r logSagaMsg) rpc()      {}
+func (r dequeueWorkItem) rpc() {}
+func (r workerRpc) rpc()       {}
+
+type errorReply struct {
+	err error
+}
+
+type workerReply func(*schedulerState)
+
+func (r errorReply) reply()  {}
+func (r workerReply) reply() {}

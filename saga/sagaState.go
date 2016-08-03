@@ -251,7 +251,14 @@ func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data
  *
  * Returns an Error if applying the message would result in an invalid Saga State
  */
-func updateSagaState(s *SagaState, msg sagaMessage) (*SagaState, error) {
+func updateSagaState(s *SagaState, msg Message) (*SagaState, error) {
+
+	if s == nil {
+		if msg.msgType != StartSaga {
+			return nil, NewInvalidSagaStateError("Can only apply a StartSaga Message to an empty Saga")
+		}
+		return makeSagaState(msg.sagaId, msg.data)
+	}
 
 	//first copy current state, and then apply update so we don't mutate the passed in SagaState
 	state := copySagaState(s)

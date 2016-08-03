@@ -20,10 +20,14 @@ func (p *planner) plan() {
 	p.endJobs()
 }
 
+func (p *planner) rpcs() []rpc {
+	return nil
+}
+
 func (p *planner) pingNewWorkers() {
 	for _, w := range p.st.workers {
 		if w.status == workerAdded {
-			p.action(pingWorker(w.id))
+			p.pingWorker(w.id)
 		}
 	}
 }
@@ -34,7 +38,7 @@ func (p *planner) finishTasks() {
 			if t.status == taskRunning {
 				w := p.st.getWorker(t.runningOn)
 				if w.status == workerAvailable {
-					p.action(endTask(j.id, t.id))
+					p.endTask(j.id, t.id)
 				}
 			}
 		}
@@ -51,7 +55,7 @@ func (p *planner) assignWorkers() {
 		}
 		for _, _ = range p.st.incoming {
 			// Start the incoming job
-			p.action(startJob(p.st.incoming[0].Id))
+			p.startJob(p.st.incoming[0].Id)
 			j := p.st.jobs[len(p.st.jobs)-1]
 			if p.offerWorkerToJob(w, j) {
 				continue
@@ -77,7 +81,7 @@ func (p *planner) offerWorkerToJob(w *workerState, j *jobState) bool {
 	}
 	for _, t := range j.tasks {
 		if t.status == taskWaiting {
-			p.action(startRun(j.id, t.id, w.id))
+			p.startRun(j.id, t.id, w.id)
 			return true
 		}
 	}
@@ -97,12 +101,33 @@ func (p *planner) endJobs() {
 			}
 		}
 		if done {
-			p.action(endJob(j.id))
+			p.endJob(j.id)
 		}
 	}
 }
 
-func (p *planner) action(a action) {
+func (p *planner) act(a action) {
 	p.actions = append(p.actions, a)
 	a.apply(p.st)
+}
+
+// Utility Functions to make planner code easy to write
+func (p *planner) pingWorker(id string) {
+	p.act(&pingWorkerAction{id: id})
+}
+
+func (p *planner) startJob(id string) {
+	p.act(&startJobAction{id: id})
+}
+
+func (p *planner) startRun(jobId string, taskId string, workerId string) {
+	p.act(&startRunAction{jobId: jobId, taskId: taskId, workerId: workerId})
+}
+
+func (p *planner) endTask(jobId string, taskId string) {
+	p.act(&endTaskAction{jobId: jobId, taskId: taskId})
+}
+
+func (p *planner) endJob(jobId string) {
+	p.act(&endJobAction{jobId: jobId})
 }

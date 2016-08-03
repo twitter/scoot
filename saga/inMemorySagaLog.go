@@ -11,22 +11,25 @@ import (
  * This is for local testing purposes.
  */
 type inMemorySagaLog struct {
-	sagas map[string][]sagaMessage
+	sagas map[string][]Message
 	mutex sync.RWMutex
 }
 
 /*
  * Returns an Instance of a Saga based on an InMemorySagaLog
  */
-func MakeInMemorySagaCoordinator() SagaCoordinator {
-	inMemLog := &inMemorySagaLog{
-		sagas: make(map[string][]sagaMessage),
-		mutex: sync.RWMutex{},
-	}
-	return MakeSagaCoordinator(inMemLog)
+func MakeInMemorySagaCoordinator(log SagaLog) SagaCoordinator {
+	return MakeSagaCoordinator(MakeInMemorySagaLog())
 }
 
-func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
+func MakeInMemorySagaLog() SagaLog {
+	return &inMemorySagaLog{
+		sagas: make(map[string][]Message),
+		mutex: sync.RWMutex{},
+	}
+}
+
+func (log *inMemorySagaLog) LogMessage(msg Message) error {
 
 	log.mutex.Lock()
 	defer log.mutex.Unlock()
@@ -51,12 +54,12 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 	fmt.Println(fmt.Sprintf("Start Saga %s", sagaId))
 
 	startMsg := MakeStartSagaMessage(sagaId, job)
-	log.sagas[sagaId] = []sagaMessage{startMsg}
+	log.sagas[sagaId] = []Message{startMsg}
 
 	return nil
 }
 
-func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
+func (log *inMemorySagaLog) GetMessages(sagaId string) ([]Message, error) {
 
 	log.mutex.RLock()
 	defer log.mutex.RUnlock()

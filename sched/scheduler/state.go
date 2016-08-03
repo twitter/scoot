@@ -2,9 +2,10 @@ package scheduler
 
 import (
 	"log"
+	"sort"
 
 	"github.com/scootdev/scoot/sched"
-	"sort"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 type workerStatus int
@@ -56,6 +57,7 @@ type schedulerState struct {
 	workers  []*workerState
 	jobs     []*jobState
 	incoming []sched.Job
+	err      error
 }
 
 func (s *schedulerState) getJob(jobId string) *jobState {
@@ -122,5 +124,29 @@ func initialJobState(job sched.Job) *jobState {
 	return &jobState{
 		id:    job.Id,
 		tasks: tasks,
+	}
+}
+
+func (s *schedulerState) updateWorker(a *pingWorkerAction, status *workerapi.WorkerStatus, err error) {
+	ws := s.getWorker(a.id)
+	if ws == nil {
+		return
+	}
+	if err != nil {
+		ws.status = workerDown
+		return
+	}
+	for _, rs := range status.Runs {
+		if rs.State.IsBusy() {
+			ws.status = workerBusy
+		}
+	}
+	ws.status = workerAvailable
+}
+
+func (s *schedulerState) markRunComplete(a *startRunAction, err error) {
+	w := s.getWorker(a.workerId)
+	if w != nil {
+		w.status = workerAvailable
 	}
 }

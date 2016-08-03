@@ -91,9 +91,10 @@ func (i *simpleWorkItem) Job() sched.Job {
 	return i.job
 }
 
-func (i *simpleWorkItem) Dequeue() {
+func (i *simpleWorkItem) Dequeue() error {
 	i.dequeueCh <- struct{}{}
 	close(i.dequeueCh)
+	return nil
 }
 
 type enqueueReq struct {

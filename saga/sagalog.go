@@ -17,13 +17,13 @@ type SagaLog interface {
 	 * Update the State of the Saga by Logging a message.
 	 * Returns an error if it fails.
 	 */
-	LogMessage(message sagaMessage) error
+	LogMessage(message Message) error
 
 	/*
 	 * Returns all of the messages logged so far for the
 	 * specified saga.
 	 */
-	GetMessages(sagaId string) ([]sagaMessage, error)
+	GetMessages(sagaId string) ([]Message, error)
 
 	/*
 	 * Returns a list of all in progress sagaIds.

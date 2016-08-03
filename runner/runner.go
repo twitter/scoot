@@ -35,6 +35,10 @@ func (p ProcessState) IsDone() bool {
 	return p == UNKNOWN || p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
+func (p ProcessState) IsBusy() bool {
+	return p == PENDING || p == RUNNING
+}
+
 func (p ProcessState) String() string {
 	switch p {
 	case UNKNOWN:

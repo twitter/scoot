@@ -1,110 +1,60 @@
 package scheduler
 
-//go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go
-
 import (
 	"sync"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	dist "github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/worker"
 )
 
 type Scheduler interface {
-	ScheduleJob(job sched.Job) error
+	Sagas() saga.SagaCoordinator
+	Wait() error
 }
 
-type scheduler struct {
-	sc            saga.SagaCoordinator
-	nodes         *dist.PoolDistributor
-	wg            sync.WaitGroup // used to track jobs in progress
-	workerFactory worker.WorkerFactory
-}
+func NewSchedulerFromCluster(cl cluster.Cluster, q chan queue.WorkItem, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
+	sub := cl.Subscribe()
 
-func NewScheduler(nodes *dist.PoolDistributor, sc saga.SagaCoordinator, workerFactory worker.WorkerFactory) *scheduler {
-	s := &scheduler{
-		nodes:         nodes,
-		sc:            sc,
-		workerFactory: workerFactory,
+	s := NewScheduler(sub.Updates, q, sagaLog, workerFactory).(*coordinator)
+
+	// Populate initial nodes
+	updates := []cluster.NodeUpdate{}
+	for _, n := range sub.InitialMembers {
+		updates = append(updates, cluster.NewAdd(n))
 	}
-
-	s.startUp()
+	s.cluster <- updates
 	return s
 }
 
-// Starts the scheduler, must be called before any other
-// methods on the scheduler can be called
-func (s *scheduler) startUp() {
+func NewScheduler(cl chan []cluster.NodeUpdate, q chan queue.WorkItem, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
+	sc := saga.MakeSagaCoordinator(sagaLog)
 
-	// TODO: Recover form SagaLog Any In Process Tasks
-	// Return only once all those have been scheduled
+	s := &coordinator{
+		cluster: cl,
+		queue:   q,
+		replyCh: make(chan reply),
 
-}
+		sc:            sc,
+		workerFactory: workerFactory,
 
-// Blocks until all scheduled jobs are compeleted
-// Should be used only for testing to verify expected
-// tasks have been completed
-func (s *scheduler) BlockUntilAllJobsCompleted() {
-	s.wg.Wait()
-}
+		workers:    make(map[cluster.NodeId]worker.Worker),
+		queueItems: make(map[string]queue.WorkItem),
+		sagas:      make(map[string]chan saga.Message),
 
-// Schedule a job, returns once the job has been successfully
-// scheduled, nodes reserved & durably started Saga,
-// Returns an error if scheduling was unsuccessful
-func (s *scheduler) ScheduleJob(job sched.Job) error {
+		st: &schedulerState{},
 
-	// Log StartSaga Message
-	// TODO: need to serialize job into binary and pass in here
-	// so we can recover the job in case of failure
-	sagaObj, err := s.sc.MakeSaga(job.Id, nil)
+		writers: &sync.WaitGroup{},
 
-	// If we succssfully started the Saga, ProcssJob
-	if err == nil {
-		// Reserve Nodes to Schedule Job On
-		// By reserving nodes per Job before returnig
-		// we get BackPressure & DataLocality within the job.
-		numNodes := getNumNodes(job)
-		nodes := make([]cluster.Node, numNodes)
-		for i := 0; i < numNodes; i++ {
-			select {
-			case nodes[i] = <-s.nodes.Reserve:
-				continue
-				// default:
-				// 	//FIXME: better logic for handling case where total # of nodes is < numNodes.
-				//  //       this code causes scheduler_test.go to block indefinitely...
-				// 	numNodes = i
-				// 	nodes = nodes[:i]
-			}
-		}
-		jobNodes := dist.NewPoolDistributor(nodes, nil)
-
-		// Start Running Job
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			runJob(job, sagaObj, jobNodes, s.workerFactory)
-			jobNodes.Close()
-
-			// Release all nodes used for this job
-			for _, node := range nodes {
-				s.nodes.Release <- node
-			}
-		}()
+		errCh: make(chan error),
 	}
+	s.writers.Add(2) // cluster and queue
 
-	return err
-}
+	go s.closeWhenDone()
+	go s.loop()
 
-// Get the Number of Nodes needed to run this job.  Right now this is
-// dumb, and just returns min(len(Tasks), 5)
-// TODO: Make this smarter
-func getNumNodes(job sched.Job) int {
-	numTasks := len(job.Def.Tasks)
-	if numTasks > 5 {
-		return 5
-	} else {
-		return numTasks
-	}
+	// TODO(dbentley): recover in-process jobs from saga log
+
+	return s
 }
