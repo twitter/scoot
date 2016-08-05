@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"testing"
+	"time"
 
 	"github.com/luci/go-render/render"
 
@@ -14,14 +15,17 @@ import (
 
 func TestPlanner(t *testing.T) {
 	assertPlan(t, state())
+
 	assertPlan(t,
-		state(workers(w("node1", "added"))),
+		state(workers(w("node1", "added", unix(0)))),
 		pingWorker("node1"))
+	assertPlan(t,
+		state(workers(w("node1", "added"))))
 	assertPlan(t, state(workers(w("node1", "avail"))))
 
 	assertPlan(t, state(incoming(i("job1"))))
 	assertPlan(t, state(
-		workers(w("node1", "added"), w("node2", "pinged"), w("node3", "busy"), w("node4", "down")),
+		workers(w("node1", "added", unix(0)), w("node2", "added"), w("node3", "busy"), w("node4", "down")),
 		incoming(simpleJob(("job1")))),
 		pingWorker("node1"))
 	assertPlan(t, state(
@@ -38,32 +42,62 @@ func TestPlanner(t *testing.T) {
 	assertPlan(t, state(jobs(j("job1", jobNew))))
 	assertPlan(t, state(jobs(j("job1", jobPersisted))),
 		dequeue("job1"))
+	assertPlan(t, state(jobs(j("job1", jobCannotPersist))),
+		dequeue("job1", false))
 	assertPlan(t, state(jobs(j("job1", jobRunning))),
 		endJob("job1"))
 
-	assertPlan(t, state(
-		workers(w("node1", "busy"),
-			w("node2", "avail")),
-		jobs(j("job1", taskRun("task1", "node1")))))
+	// Don't run task1 if we're already running
 	assertPlan(t, state(
 		workers(w("node1", "busy"),
 			w("node2", "avail")),
 		jobs(j("job1",
-			taskRun("task1", "node1"),
-			taskRun("task2", "node2")))),
+			taskRun("task1", "node1", "r1")))))
+
+	// Ping the worker if it's been too long
+	assertPlan(t, state(
+		workers(w("node1", "busy", unix(7)),
+			w("node2", "avail")),
+		jobs(j("job1",
+			taskRun("task1", "node1", "r1")))),
+		pingWorker("node1"))
+
+	// Finish when our run is complete
+	assertPlan(t, state(
+		workers(w("node1", "avail", complete("r1"))),
+		jobs(j("job1",
+			taskRun("task1", "node1", "r1")))),
+		endTask("job1", "task1"))
+
+	// Don't finish just because the worker is available
+	assertPlan(t, state(
+		workers(w("node1", "avail")),
+		jobs(j("job1", taskRun("task1", "node1", "r1")))))
+
+	// Make sure we finish the right task
+	assertPlan(t, state(
+		workers(
+			w("node1", "avail"),
+			w("node2", "avail", complete("r1"))),
+		jobs(j("job1",
+			taskRun("task1", "node1", "r1"),
+			taskRun("task2", "node2", "r1")))),
 		endTask("job1", "task2"))
 
 	assertPlan(t, state(
-		workers(w("node1", "avail")),
-		jobs(j("job1", jobRunning, taskRun("task1", "node1")))),
+		workers(w("node1", "avail", complete("r1"))),
+		jobs(j("job1", jobRunning, taskRun("task1", "node1", "r1")))),
 		endTask("job1", "task1"),
 		endJob("job1"))
+
+	// Nothing to do if we're done
 	assertPlan(t, state(
 		jobs(j("job1", jobDone, task("task1", "done")))))
 }
 
 func state(data ...interface{}) *schedulerState {
 	st := &schedulerState{}
+	st.now = now
 	for _, d := range data {
 		switch d := d.(type) {
 		case []*workerState:
@@ -92,11 +126,51 @@ func workers(workers ...*workerState) []*workerState {
 	return workers
 }
 
-func w(id string, status string) *workerState {
-	return &workerState{
+func w(id string, status string, data ...interface{}) *workerState {
+	r := &workerState{
 		id:     id,
 		status: workerStatusFromName(status),
+		// By default, make these up-to-date
+		lastSend: now,
+		lastRecv: now,
 	}
+
+	setLastSend := false
+
+	for _, d := range data {
+		switch d := d.(type) {
+		case time.Time:
+			if setLastSend {
+				r.lastRecv = d
+			} else {
+				r.lastSend = d
+				setLastSend = true
+			}
+		case runner.ProcessStatus:
+			r.runs = append(r.runs, d)
+		default:
+			panic(fmt.Errorf("bad type for arg to func w %T %v", d, d))
+		}
+
+	}
+
+	if r.lastRecv.After(r.lastSend) {
+		r.lastRecv = r.lastSend
+	}
+
+	return r
+}
+
+func unix(secs int64) time.Time {
+	return time.Unix(secs, 0)
+}
+
+var now = unix(10000)
+
+func complete(runId string) (r runner.ProcessStatus) {
+	r.RunId = runner.RunId(runId)
+	r.State = runner.COMPLETE
+	return r
 }
 
 func jobs(jobs ...*jobState) []*jobState {
@@ -129,11 +203,12 @@ func task(id string, status string) *taskState {
 	}
 }
 
-func taskRun(id string, workerId string) *taskState {
+func taskRun(id string, workerId string, runId string) *taskState {
 	return &taskState{
 		id:        id,
 		status:    taskRunning,
 		runningOn: workerId,
+		runningAs: runner.RunId(runId),
 	}
 }
 
@@ -175,8 +250,6 @@ func workerStatusFromName(name string) workerStatus {
 	switch name {
 	case "added":
 		return workerAdded
-	case "pinged":
-		return workerPinged
 	case "avail":
 		return workerAvailable
 	case "busy":
@@ -256,6 +329,10 @@ func endJob(jobId string) *endJobAction {
 	return &endJobAction{jobId: jobId}
 }
 
-func dequeue(jobId string) *dequeueAction {
-	return &dequeueAction{jobId: jobId}
+func dequeue(jobId string, cs ...bool) *dequeueAction {
+	claimed := true
+	if len(cs) > 0 {
+		claimed = cs[0]
+	}
+	return &dequeueAction{jobId: jobId, claimed: claimed}
 }

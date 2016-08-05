@@ -30,7 +30,7 @@ type simpleQueueState struct {
 	// Mutable state, only read/written by its goroutine
 	inCh      chan enqueueReq
 	outCh     chan queue.WorkItem
-	dequeueCh chan struct{}
+	respondCh chan bool
 	items     []*simpleWorkItem
 	nextID    int
 	capacity  int
@@ -41,31 +41,37 @@ func (s *simpleQueueState) loop() {
 		var outCh chan queue.WorkItem
 		var item *simpleWorkItem
 		// only send if we aren't waiting for an ack and have something to send
-		if s.dequeueCh == nil && len(s.items) > 0 {
+		if s.outCh != nil && s.respondCh == nil && len(s.items) > 0 {
 			outCh = s.outCh
 			item = s.items[0]
 		}
 		select {
 		case outCh <- item:
-			s.dequeueCh = item.dequeueCh
+			s.respondCh = item.respondCh
 		case req, ok := <-s.inCh:
 			if !ok {
 				s.inCh = nil
+				close(s.outCh)
+				s.outCh = nil
 				continue
 			}
 			req.resultCh <- s.enqueue(req.def)
-		case <-s.dequeueCh:
-			// Dequeue the last sent work item
-			s.items = s.items[1:]
-			s.dequeueCh = nil
+		case claimed := <-s.respondCh:
+			if claimed {
+				// Dequeue the last sent work item
+				s.items = s.items[1:]
+			}
+			s.respondCh = nil
 		}
 	}
-	close(s.outCh)
+	if s.respondCh != nil {
+		<-s.respondCh
+	}
 }
 
 func (s *simpleQueueState) done() bool {
 	// We are done once our inputs are closed and we have no items left to send
-	return s.inCh == nil && len(s.items) == 0
+	return s.inCh == nil
 }
 
 func (s *simpleQueueState) iter() {
@@ -78,23 +84,23 @@ func (s *simpleQueueState) enqueue(def sched.JobDefinition) enqueueResult {
 	id := strconv.Itoa(s.nextID)
 	s.nextID++
 	job := sched.Job{Id: id, Def: def}
-	item := &simpleWorkItem{job, make(chan struct{})}
+	item := &simpleWorkItem{job, make(chan bool)}
 	s.items = append(s.items, item)
 	return enqueueResult{id, nil}
 }
 
 type simpleWorkItem struct {
 	job       sched.Job
-	dequeueCh chan struct{}
+	respondCh chan bool
 }
 
 func (i *simpleWorkItem) Job() sched.Job {
 	return i.job
 }
 
-func (i *simpleWorkItem) Dequeue() error {
-	i.dequeueCh <- struct{}{}
-	close(i.dequeueCh)
+func (i *simpleWorkItem) Respond(claimed bool) error {
+	i.respondCh <- claimed
+	close(i.respondCh)
 	return nil
 }
 

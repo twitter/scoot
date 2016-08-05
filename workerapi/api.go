@@ -20,16 +20,16 @@ type Worker interface {
 	Erase(run runner.RunId) error
 }
 
-//
-// Translation between local domain objects and thrift objects:
-//
-
 //TODO: test workerStatus.
 type WorkerStatus struct {
 	Runs      []runner.ProcessStatus
 	VersionId string
 	Error     error
 }
+
+//
+// Translation between local domain objects and thrift objects:
+//
 
 func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) *WorkerStatus {
 	runs := make([]runner.ProcessStatus, 0)

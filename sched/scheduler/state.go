@@ -3,24 +3,27 @@ package scheduler
 import (
 	"log"
 	"sort"
+	"time"
 
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/workerapi"
 )
 
 type workerStatus int
 
 const (
 	workerAdded workerStatus = iota
-	workerPinged
 	workerAvailable
 	workerBusy
 	workerDown
 )
 
 type workerState struct {
-	id     string
-	status workerStatus
+	id       string
+	status   workerStatus
+	runs     []runner.ProcessStatus
+	lastSend time.Time
+	lastRecv time.Time
 }
 
 type taskStatus int
@@ -38,6 +41,7 @@ type taskState struct {
 	// The ID for the worker this task is currently running on
 	// Only valid for taskRunning
 	runningOn string
+	runningAs runner.RunId
 }
 
 type jobStatus int
@@ -45,8 +49,10 @@ type jobStatus int
 const (
 	jobNew jobStatus = iota
 	jobPersisted
+	jobCannotPersist
 	jobRunning
 	jobDone
+	jobFailed
 )
 
 type jobState struct {
@@ -59,7 +65,7 @@ type schedulerState struct {
 	workers  []*workerState
 	jobs     []*jobState
 	incoming []sched.Job
-	err      error
+	now      time.Time
 }
 
 func (s *schedulerState) getJob(jobId string) *jobState {
@@ -129,26 +135,19 @@ func initialJobState(job sched.Job) *jobState {
 	}
 }
 
-func (s *schedulerState) updateWorker(a *pingWorkerAction, status *workerapi.WorkerStatus, err error) {
-	ws := s.getWorker(a.id)
-	if ws == nil {
-		return
-	}
-	if err != nil {
-		ws.status = workerDown
-		return
-	}
-	for _, rs := range status.Runs {
-		if rs.State.IsBusy() {
-			ws.status = workerBusy
-		}
-	}
-	ws.status = workerAvailable
+const pingTimeout = time.Duration(100 * time.Millisecond)
+
+func (w *workerState) nextPing() time.Time {
+	return w.lastSend.Add(pingTimeout)
 }
 
-func (s *schedulerState) markRunComplete(a *startRunAction, err error) {
-	w := s.getWorker(a.workerId)
-	if w != nil {
-		w.status = workerAvailable
+func (s *schedulerState) nextTimeout() time.Time {
+	// very far in the future
+	r := time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC)
+	for _, w := range s.workers {
+		if t := w.nextPing(); r.After(t) {
+			r = t
+		}
 	}
+	return r
 }

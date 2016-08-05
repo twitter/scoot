@@ -2,10 +2,11 @@ package scheduler
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/workerapi"
 )
 
@@ -14,16 +15,49 @@ type pingWorkerAction struct {
 }
 
 func (a *pingWorkerAction) apply(st *schedulerState) []rpc {
-	st.getWorker(a.id).status = workerPinged
-	return []rpc{workerRpc{a.id, a.queryWorker}}
+	st.getWorker(a.id).lastSend = st.now
+	return []rpc{&pingRpc{a: a, sent: st.now}}
 }
 
-func (a *pingWorkerAction) queryWorker(w workerapi.Worker) workerReply {
-	status, err := w.Status()
+type pingRpc struct {
+	a      *pingWorkerAction
+	sent   time.Time
+	status *workerapi.WorkerStatus
+	err    error
+}
 
-	return func(st *schedulerState) {
-		st.updateWorker(a, status, err)
+func (r *pingRpc) workerId() string { return r.a.id }
+func (r *pingRpc) rpc()             {}
+func (r *pingRpc) reply()           {}
+
+func (r *pingRpc) call(w workerapi.Worker) workerReply {
+	r.status, r.err = w.Status()
+	return r
+}
+
+func (r *pingRpc) apply(st *schedulerState) {
+	ws := st.getWorker(r.a.id)
+	if ws == nil {
+		return
 	}
+	if r.err != nil {
+		ws.status = workerDown
+		return
+	}
+	if ws.lastRecv.After(r.sent) {
+		// Our ping is stale; don't update
+		return
+	}
+	ws.runs = r.status.Runs
+	ws.status = workerAvailable
+	for _, rs := range ws.runs {
+		if rs.State.IsBusy() {
+			// HMM(dbentley):
+			// if ws.status is just a function of ws.runs, maybe just have it be a method...
+			ws.status = workerBusy
+		}
+	}
+	ws.lastRecv = r.sent
 }
 
 type startJobAction struct {
@@ -55,6 +89,33 @@ type startRunAction struct {
 	workerId string
 }
 
+type runRpc struct {
+	a     *startRunAction
+	cmd   *runner.Command
+	runId runner.RunId
+	err   error
+}
+
+func (r *runRpc) call(w workerapi.Worker) workerReply {
+	status, err := w.Run(r.cmd)
+	r.err = err
+	r.runId = status.RunId
+	return r
+}
+
+func (r *runRpc) workerId() string { return r.a.workerId }
+func (r *runRpc) rpc()             {}
+func (r *runRpc) reply()           {}
+
+func (r *runRpc) apply(st *schedulerState) {
+	t := st.getTask(r.a.jobId, r.a.taskId)
+	if t == nil || t.runningOn != r.a.workerId || t.runningAs != runner.RunId("") {
+		// The task doesn't need us anymore
+		return
+	}
+	t.runningAs = r.runId
+}
+
 func (a *startRunAction) apply(st *schedulerState) []rpc {
 	t := st.getTask(a.jobId, a.taskId)
 	cmd := &t.def.Command
@@ -64,12 +125,7 @@ func (a *startRunAction) apply(st *schedulerState) []rpc {
 	w.status = workerBusy
 	return []rpc{
 		logSagaMsg{a.jobId, saga.MakeStartTaskMessage(a.jobId, a.taskId, []byte(a.workerId)), false},
-		workerRpc{a.workerId, func(w workerapi.Worker) workerReply {
-			err := worker.RunAndWait(cmd, w)
-			return func(st *schedulerState) {
-				st.markRunComplete(a, err)
-			}
-		}},
+		&runRpc{a: a, cmd: cmd},
 	}
 }
 
@@ -82,6 +138,8 @@ func (a *endTaskAction) apply(st *schedulerState) []rpc {
 	t := st.getTask(a.jobId, a.taskId)
 	t.status = taskDone
 	t.runningOn = ""
+	t.runningAs = runner.RunId("")
+	// TODO(dbentley): also send a clear message for this runId
 	return []rpc{logSagaMsg{a.jobId, saga.MakeEndTaskMessage(a.jobId, a.taskId, []byte{}), false}}
 }
 
@@ -96,13 +154,18 @@ func (a *endJobAction) apply(st *schedulerState) []rpc {
 }
 
 type dequeueAction struct {
-	jobId string
+	jobId   string
+	claimed bool
 }
 
 func (a *dequeueAction) apply(st *schedulerState) []rpc {
 	t := st.getJob(a.jobId)
-	t.status = jobRunning
-	return []rpc{dequeueWorkItem{a.jobId}}
+	if a.claimed {
+		t.status = jobRunning
+	} else {
+		t.status = jobFailed
+	}
+	return []rpc{respondWorkItem{a.jobId, a.claimed}}
 }
 
 func p(s string, args ...interface{}) {

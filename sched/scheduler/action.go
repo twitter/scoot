@@ -28,18 +28,19 @@ type logSagaMsg struct {
 	final  bool
 }
 
-type dequeueWorkItem struct {
-	jobId string
+type respondWorkItem struct {
+	jobId   string
+	claimed bool
 }
 
-type workerRpc struct {
-	workerId string
-	call     func(w workerapi.Worker) workerReply
+type workerRpc interface {
+	rpc
+	workerId() string
+	call(w workerapi.Worker) workerReply
 }
 
 func (r logSagaMsg) rpc()      {}
-func (r dequeueWorkItem) rpc() {}
-func (r workerRpc) rpc()       {}
+func (r respondWorkItem) rpc() {}
 
 type sagaLogReply struct {
 	id  string
@@ -50,8 +51,10 @@ type queueReply struct {
 	err error
 }
 
-type workerReply func(*schedulerState)
+type workerReply interface {
+	reply
+	apply(st *schedulerState)
+}
 
 func (r sagaLogReply) reply() {}
 func (r queueReply) reply()   {}
-func (r workerReply) reply()  {}

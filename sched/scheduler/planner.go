@@ -14,16 +14,15 @@ func makePlanner(st *schedulerState) *planner {
 }
 
 func (p *planner) plan() {
-	// TODO(dbentley): log c.current
-	p.pingNewWorkers()
+	p.pingWorkers()
 	p.finishTasks()
 	p.assignWorkers()
 	p.updateJobsStatus()
 }
 
-func (p *planner) pingNewWorkers() {
+func (p *planner) pingWorkers() {
 	for _, w := range p.st.workers {
-		if w.status == workerAdded {
+		if p.st.now.After(w.nextPing()) {
 			p.pingWorker(w.id)
 		}
 	}
@@ -33,11 +32,22 @@ func (p *planner) finishTasks() {
 	for _, j := range p.st.jobs {
 		for _, t := range j.tasks {
 			if t.status == taskRunning {
-				w := p.st.getWorker(t.runningOn)
-				if w.status == workerAvailable {
-					p.endTask(j.id, t.id)
-				}
+				p.finishTaskIfDone(t, j)
 			}
+		}
+	}
+}
+
+func (p *planner) finishTaskIfDone(t *taskState, j *jobState) {
+	w := p.st.getWorker(t.runningOn)
+	if w == nil {
+		// TODO: handle worker death
+		return
+	}
+	for _, r := range w.runs {
+		if t.runningAs == r.RunId && r.State.IsDone() {
+			// TODO: handle unsuccessful runs and exit codes
+			p.endTask(j.id, t.id)
 		}
 	}
 }
@@ -94,7 +104,9 @@ func (p *planner) updateJobsStatus() {
 func (p *planner) updateJobStatus(j *jobState) {
 	switch j.status {
 	case jobPersisted:
-		p.dequeue(j.id)
+		p.dequeue(j.id, true)
+	case jobCannotPersist:
+		p.dequeue(j.id, false)
 	case jobRunning:
 		for _, t := range j.tasks {
 			if t.status != taskDone {
@@ -132,6 +144,6 @@ func (p *planner) endJob(jobId string) {
 	p.act(&endJobAction{jobId: jobId})
 }
 
-func (p *planner) dequeue(jobId string) {
-	p.act(&dequeueAction{jobId: jobId})
+func (p *planner) dequeue(jobId string, claimed bool) {
+	p.act(&dequeueAction{jobId: jobId, claimed: claimed})
 }

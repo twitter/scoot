@@ -15,7 +15,8 @@ type Scheduler interface {
 	Run(def sched.JobDefinition) (string, error)
 	GetState(jobId string) (*saga.SagaState, error)
 	GetStatus(jobId string) (JobStatus, error)
-	Wait() error
+	WaitForError() error
+	WaitForShutdown()
 }
 
 func NewSchedulerFromCluster(cl cluster.Cluster, q queue.Queue, sagaLog saga.SagaLog, workerFactory worker.WorkerFactory) Scheduler {
@@ -44,23 +45,27 @@ func NewScheduler(cl chan []cluster.NodeUpdate, q queue.Queue, sagaLog saga.Saga
 		queueCh: q.Chan(),
 		replyCh: make(chan reply),
 
-		workers:    make(map[cluster.NodeId]workerapi.Worker),
-		queueItems: make(map[string]queue.WorkItem),
-		sagas:      make(map[string]chan saga.Message),
+		workers:      make(map[cluster.NodeId]workerapi.Worker),
+		queueItems:   make(map[string]queue.WorkItem),
+		sagas:        make(map[string]chan saga.Message),
+		inflightRpcs: 0,
 
 		st: &schedulerState{},
 
-		writers: &sync.WaitGroup{},
-
-		errCh: make(chan error),
+		err:    nil,
+		errWg:  &sync.WaitGroup{},
+		loopWg: &sync.WaitGroup{},
 
 		actives: &jobStates{
 			actives: make(map[string]*saga.SagaState),
 		},
-	}
-	s.writers.Add(2) // cluster and queue
 
-	go s.closeWhenDone()
+		l: &loggingListener{},
+	}
+
+	s.errWg.Add(1)
+	s.loopWg.Add(1)
+
 	go s.loop()
 
 	// TODO(dbentley): recover in-process jobs from saga log
