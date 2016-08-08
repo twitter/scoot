@@ -26,9 +26,7 @@ func Serve(addr string) {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Handling!", r.URL.Path)
-	// TODO(dbentley): implement the actual health-checking protocol.
-	fmt.Fprintf(w, "OK (health check in golang for %v )", r.URL.Path)
+	fmt.Fprintf(w, "ok")
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
