@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"log"
-	"sync"
 
-	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/sched/config"
 	"github.com/scootdev/scoot/scootapi/server"
+	"golang.org/x/net/context"
 )
 
 var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
@@ -16,29 +17,26 @@ func main() {
 	log.Println("Starting Cloud Scoot API Server & Scheduler")
 	flag.Parse()
 
-	cfg, _ := NewSchedConfig(*cfgFile)
-	sched, _ := cfg.ToScheduler()
-	handler, _ := cfg.ToServerHandler()
+	plugins := config.Plugins{}
+	ctx := context.Background()
+	transportFactory := thrift.NewTTransportFactory()
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	// Construct scootapi server handler based on config.
+	cfg, err := config.DefaultConfig(*cfgFile, plugins)
+	if err != nil {
+		log.Fatal("Error configuring Scoot API: ", err)
+	}
+
+	handler, err := config.ConfigureCloudScoot(cfg, ctx, transportFactory, protocolFactory)
+	if err != nil {
+		log.Fatal("Error configuring Scoot API: ", err)
+	}
 
 	// Start API Server
-	go func() {
-		log.Println("Starting API Server")
-		defer wg.Done()
-		err := server.Serve(handler, *addr, cfg.TransportFactory, cfg.ProtocolFactory)
-		if err != nil {
-			log.Fatal("Error serving Scoot API: ", err)
-		}
-	}()
-
-	// Go Routine which takes data from work queue and schedules it
-	go func() {
-		log.Println("Starting Scheduler")
-		defer wg.Done()
-		scheduler.GenerateWork(sched, cfg.QueueImpl.Chan())
-	}()
-
-	wg.Wait()
+	log.Println("Starting API Server")
+	err = server.Serve(handler, *addr, transportFactory, protocolFactory)
+	if err != nil {
+		log.Fatal("Error serving Scoot API: ", err)
+	}
 }
