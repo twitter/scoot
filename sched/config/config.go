@@ -15,11 +15,9 @@ import (
 	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
-	//"github.com/scootdev/scoot/sched/worker"
 
 	"github.com/scootdev/scoot/sched/worker/fake"
 	"github.com/scootdev/scoot/sched/worker/rpc"
-	// "github.com/scootdev/scoot/sched/worker/rpc"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/server"
 
