@@ -3,445 +3,201 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 
-	"github.com/apache/thrift/lib/go/thrift"
-	clusterdef "github.com/scootdev/scoot/cloud/cluster"
-	clusterimpl "github.com/scootdev/scoot/cloud/cluster/memory"
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/queue"
-	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
-
-	"github.com/scootdev/scoot/sched/worker/fake"
-	"github.com/scootdev/scoot/sched/worker/rpc"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/server"
-
-	"golang.org/x/net/context"
 )
 
-//
-//TODO: handle and propagate all config values. handle errors. decide extensibility story.
-//
-
-// Return a Config where each field is initialized only if there is no plugin for it.
-func DefaultConfig(cfgFile string, plugins Plugins) (*Config, error) {
-	rawCfg, _ := defaultConfig(cfgFile)
-	realizedCfg := Config{raw: rawCfg, plugins: plugins}
-
-	//TODO: catch errors unmarshaling.
-	if _, ok := plugins[ClusterTypeId]; !ok {
-		var cfg ClusterConfig
-		realizedCfg.Cluster = &cfg
-		json.Unmarshal(rawCfg.Cluster, realizedCfg.Cluster)
-	}
-	if _, ok := plugins[QueueTypeId]; !ok {
-		var cfg QueueConfig
-		realizedCfg.Queue = &cfg
-		json.Unmarshal(rawCfg.Queue, &realizedCfg.Queue)
-	}
-	if _, ok := plugins[SagaCoordTypeId]; !ok {
-		var cfg SagaCoordConfig
-		realizedCfg.SagaCoord = &cfg
-		json.Unmarshal(rawCfg.SagaCoord, &realizedCfg.SagaCoord)
-	}
-	if _, ok := plugins[WorkerTypeId]; !ok {
-		var cfg WorkerConfig
-		realizedCfg.Worker = &cfg
-		json.Unmarshal(rawCfg.Worker, &realizedCfg.Worker)
-	}
-	if _, ok := plugins[PlannerTypeId]; !ok {
-		var cfg PlannerConfig
-		realizedCfg.Planner = &cfg
-		json.Unmarshal(rawCfg.Planner, &realizedCfg.Planner)
-	}
-	if _, ok := plugins[StatsTypeId]; !ok {
-		var cfg StatsConfig
-		realizedCfg.Stats = &cfg
-		json.Unmarshal(rawCfg.Stats, &realizedCfg.Stats)
-	}
-	if _, ok := plugins[HealthTypeId]; !ok {
-		var cfg HealthConfig
-		realizedCfg.Health = &cfg
-		json.Unmarshal(rawCfg.Health, &realizedCfg.Health)
-	}
-
-	return &realizedCfg, nil
+// Config is the top-level configuration for the Scheduler. It defines how to create
+// each of our (configurable) dependencies and then creates the top-level handler.
+type Config struct {
+	Queue   QueueConfig
+	Cluster ClusterConfig
+	SagaLog SagaLogConfig
+	Workers WorkersConfig
 }
 
-// Main entry point, gets everything ready for 'main' to serve.
-//TODO: check errors, add planner type, do health and stats.
-func ConfigureCloudScoot(
-	cfg *Config, ctx context.Context,
-	transportFactory thrift.TTransportFactory,
-	protocolFactory *thrift.TBinaryProtocolFactory,
-) (scoot.CloudScoot, error) {
-	var clusterImpl clusterdef.Cluster
-	var sagaCoordImpl *saga.SagaCoordinator
-	var workerFactory worker.WorkerFactory
-	var queueImpl queue.Queue
-
-	// Construct types from plugin if specified, else construct using Config.
-	if plugin, ok := cfg.plugins[ClusterTypeId]; ok {
-		impl, _ := plugin(cfg.raw.Cluster)
-		clusterImpl = impl.(clusterdef.Cluster)
-	} else {
-		clusterImpl, _ = CreateCluster(cfg.Cluster)
+// Create creates the thrift handler (or returns an error describing why it couldn't)
+func (c *Config) Create() (scoot.CloudScoot, error) {
+	q, err := c.Queue.Create()
+	if err != nil {
+		return nil, err
 	}
 
-	if plugin, ok := cfg.plugins[SagaCoordTypeId]; ok {
-		impl, _ := plugin(cfg.raw.SagaCoord)
-		sagaCoordImpl = impl.(*saga.SagaCoordinator)
-	} else {
-		sagaCoordImpl, _ = CreateSagaCoord(cfg.SagaCoord)
+	cl, err := c.Cluster.Create()
+	if err != nil || cl == nil {
+		return nil, err
 	}
 
-	if plugin, ok := cfg.plugins[WorkerTypeId]; ok {
-		factory, _ := plugin(cfg.raw.Worker)
-		workerFactory = factory.(worker.WorkerFactory)
-	} else {
-		workerFactory, _ = CreateWorkerFactory(cfg.Worker, transportFactory, protocolFactory)
+	return nil, nil
+
+	sl, err := c.SagaLog.Create()
+	if err != nil {
+		return nil, err
 	}
 
-	if plugin, ok := cfg.plugins[QueueTypeId]; ok {
-		impl, _ := plugin(cfg.raw.Queue)
-		queueImpl = impl.(queue.Queue)
-	} else {
-		queueImpl, _ = CreateQueue(cfg.Queue)
+	wf, err := c.Workers.Create()
+	if err != nil {
+		return nil, err
 	}
 
+	sc := saga.MakeSagaCoordinator(sl)
 	// Make the scheduler and handler
-	distImpl, _ := CreateDistributor(clusterImpl)
-	schedImpl := scheduler.NewScheduler(distImpl, *sagaCoordImpl, workerFactory)
-	handler := server.NewHandler(queueImpl, *sagaCoordImpl)
+	dist, err := distributor.NewPoolDistributorFromCluster(cl)
+	if err != nil {
+		return nil, err
+	}
+	schedImpl := scheduler.NewScheduler(dist, sc, wf)
+	handler := server.NewHandler(q, sc)
 
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
-		log.Println("Starting Scheduler")
-		scheduler.GenerateWork(schedImpl, queueImpl.Chan())
+		scheduler.GenerateWork(schedImpl, q.Chan())
 	}()
 
 	return handler, nil
 }
 
-//
-func CreateCluster(cfg *ClusterConfig) (clusterdef.Cluster, error) {
-	// TODO: replace with actual cluster implementation, currently dummy in memory cluster
-	// Create the cluster nodes.
-	workerNodes := []clusterdef.Node{}
-	switch cfg.Type {
-	case ClusterMemory:
-		for idx := 0; idx < *cfg.Count; idx++ {
-			workerNodes = append(workerNodes, clusterimpl.NewIdNode(fmt.Sprintf("inmemory%d", idx)))
-		}
-	case ClusterStatic:
-		for idx := 0; idx < len(cfg.Hosts); idx++ {
-			workerNodes = append(workerNodes, clusterimpl.NewIdNode(cfg.Hosts[idx]))
-		}
-	case ClusterDynamic:
-		//TODO
+type QueueConfig interface {
+	Create() (queue.Queue, error)
+}
+
+type ClusterConfig interface {
+	Create() (cluster.Cluster, error)
+}
+
+type SagaLogConfig interface {
+	Create() (saga.SagaLog, error)
+}
+
+type WorkersConfig interface {
+	Create() (worker.WorkerFactory, error)
+}
+
+// Scheduler config parsed from JSON. Each should parse into an empty string or a JSON object that has a "type" field which we will use to pick which kind of config to parse it ias.
+type topLevelConfig struct {
+	Cluster json.RawMessage
+	Queue   json.RawMessage
+	SagaLog json.RawMessage
+	Workers json.RawMessage
+}
+
+type typeConfig struct {
+	Type string
+}
+
+var emptyJson = []byte("{}")
+
+func parseType(data json.RawMessage) (string, []byte) {
+	if len(data) == 0 {
+		return "", emptyJson
 	}
-	cluster := clusterimpl.NewCluster(workerNodes, nil)
-	return cluster, nil
-}
 
-//
-func CreateSagaCoord(cfg *SagaCoordConfig) (*saga.SagaCoordinator, error) {
-	// TODO: Replace with Durable SagaLog, currently In Memory Only
-	sagaCoord := saga.MakeInMemorySagaCoordinator()
-	return &sagaCoord, nil
-}
-
-//
-func CreateWorkerFactory(
-	cfg *WorkerConfig,
-	transportFactory thrift.TTransportFactory,
-	protocolFactory *thrift.TBinaryProtocolFactory,
-) (worker.WorkerFactory, error) {
-	workerFactory := fake.MakeWaitingNoopWorker
-	if cfg.Type != WorkerMemory {
-		workerFactory = func(node clusterdef.Node) worker.Worker {
-			return rpc.NewThriftWorker(transportFactory, protocolFactory, string(node.Id()))
-		}
-	}
-	return workerFactory, nil
-}
-
-//
-func CreateQueue(cfg *QueueConfig) (queue.Queue, error) {
-	// TODO: Replace with Durable WorkQueue, currently in Memory Only
-	workQueue := queueimpl.NewSimpleQueue(*cfg.Capacity)
-	return workQueue, nil
-}
-
-//
-func CreateDistributor(cluster clusterdef.Cluster) (*distributor.PoolDistributor, error) {
-	dist, err := distributor.NewPoolDistributorFromCluster(cluster)
+	var t typeConfig
+	err := json.Unmarshal(data, &t)
 	if err != nil {
-		log.Fatalf("Error subscribing to cluster: %v", err)
+		return "", emptyJson
 	}
-	return dist, nil
+	return t.Type, data
 }
 
-//
-//TODO: expect fully specified JSON cfg and skip this back and forth marshaling nonsense.
-func defaultConfig(cfgFile string) (*rawConfig, error) {
-	realizedCfg := &Config{
-		Cluster: &ClusterConfig{
-			Type:    ClusterMemory,
-			Initial: 5,
-			Count:   IntToPtr(10),
-		},
-		Queue: &QueueConfig{
-			Type:     QueueMemory,
-			Capacity: IntToPtr(1000),
-		},
-		SagaCoord: &SagaCoordConfig{
-			Type: SagaCoordMemory,
-		},
-		Worker: &WorkerConfig{
-			Type: WorkerMemory,
-			Runner: RunnerConfig{
-				Type: RunnerSimple,
-				Exec: ExecConfig{
-					Type: ExecOs,
-				},
-			},
-		},
-		Planner: &PlannerConfig{
-			Type: PlannerSimple,
-		},
-		Stats: &StatsConfig{
-			Path:    "/admin/metrics.json",
-			Enabled: true,
-		},
-		Health: &HealthConfig{
-			Path:    "/",
-			Ok:      "OK",
-			Enabled: true,
-		},
+// Parser holds how to parse our configs. For each configurable dependency, it holds
+// options for how to parse it. It will look at the "type" field in the config and
+// look that up in the map. (If the object is not present in the JSON, it will lookup
+// the empty string. If you want to set a default, set Parser.Foo[""] = &FooBarConfig{Type: "bar", Setting: Value})
+type Parser struct {
+	Queue   map[string]QueueConfig
+	Cluster map[string]ClusterConfig
+	SagaLog map[string]SagaLogConfig
+	Workers map[string]WorkersConfig
+}
+
+// Create parses and creates in one step.
+func (p *Parser) Create(configText []byte) (scoot.CloudScoot, error) {
+	c, err := p.Parse(configText)
+	if err != nil {
+		return nil, err
+	}
+	return c.Create()
+}
+
+// Generates the JSON config that results from the empty string; useful for showing a complete configuration.
+func (p *Parser) DefaultJSON() ([]byte, error) {
+	i, err := p.Parse(nil)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(i)
+}
+
+func (p *Parser) Parse(configText []byte) (*Config, error) {
+	// TODO(dbentley): allow this to refer to a file instead of being a giant string
+	if len(configText) == 0 {
+		configText = emptyJson
+	}
+	var cfg topLevelConfig
+	err := json.Unmarshal(configText, &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't Parse top-level config: %v", err)
 	}
 
-	var bytes []byte
-	var err error
-	if len(cfgFile) == 0 {
-		bytes, err = json.Marshal(&realizedCfg)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		bytes, err = ioutil.ReadFile(cfgFile)
-		if err != nil {
-			return nil, err
-		}
+	r := &Config{}
+
+	// Now we parse each config. To do this, we:
+	// 1) Parse its type
+	// 2) Find the FooConfig for this type
+	// 3) Unmarshal into the FooConfig
+	// 4) Set this config in the result
+
+	queueType, queueData := parseType(cfg.Queue)
+	queueConfig, ok := p.Queue[queueType]
+	if !ok {
+		return nil, fmt.Errorf("No parser for queue type %s", queueType)
 	}
-	var rawCfg rawConfig
-	err = json.Unmarshal(bytes, &rawCfg)
+	err = json.Unmarshal(queueData, &queueConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Queue: %v (config: %s; type: %s)", err, queueData, queueType)
+	}
+	r.Queue = queueConfig
 
-	return &rawCfg, err
+	clusterType, clusterData := parseType(cfg.Cluster)
+	clusterConfig, ok := p.Cluster[clusterType]
+	if !ok {
+		return nil, fmt.Errorf("No parser for cluster type %s", clusterType)
+	}
+	err = json.Unmarshal(clusterData, &clusterConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Cluster: %v (config: %s; type: %s)", err, clusterData, clusterType)
+	}
+	r.Cluster = clusterConfig
 
+	logType, logData := parseType(cfg.SagaLog)
+	logConfig, ok := p.SagaLog[logType]
+	if !ok {
+		return nil, fmt.Errorf("No parser for log type %s", logType)
+	}
+	err = json.Unmarshal(logData, &logConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Log: %v (config: %s; type: %s)", err, logData, logType)
+	}
+	r.SagaLog = logConfig
+
+	workersType, workersData := parseType(cfg.Workers)
+	workersConfig, ok := p.Workers[workersType]
+	if !ok {
+		return nil, fmt.Errorf("No parser for workers type %s", workersType)
+	}
+	err = json.Unmarshal(workersData, &workersConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Workers: %v (config: %s; type: %s)", err, workersData, workersType)
+	}
+	r.Workers = workersConfig
+
+	return r, nil
 }
-
-// Scheduler config, represented by json on disk.
-//
-type rawConfig struct {
-	Cluster   json.RawMessage `json:","`
-	Queue     json.RawMessage `json:","`
-	SagaCoord json.RawMessage `json:","`
-	Worker    json.RawMessage `json:","`
-	Planner   json.RawMessage `json:","`
-	Stats     json.RawMessage `json:","`
-	Health    json.RawMessage `json:","`
-}
-
-// Public config that allows one-off changes after parsing the config file.
-type Config struct {
-	raw     *rawConfig
-	plugins Plugins
-
-	Cluster   *ClusterConfig
-	Queue     *QueueConfig
-	SagaCoord *SagaCoordConfig
-	Worker    *WorkerConfig
-	Planner   *PlannerConfig
-	Stats     *StatsConfig
-	Health    *HealthConfig
-}
-
-// Configs for each type we want to construct.
-//
-type ClusterConfig struct {
-	Type    ClusterType `json:","`
-	Initial int         `json:","`
-	Count   *int        `json:",omitempty"` //memory
-	Hosts   []string    `json:",omitempty"` //static
-	Max     *int        `json:",omitempty"` //dynamic
-}
-type QueueConfig struct {
-	Type     QueueType `json:","`
-	Count    *int      `json:",omitempty"` //fake
-	Capacity *int      `json:",omitempty"` //memory
-}
-type SagaCoordConfig struct {
-	Type SagaCoordType `json:","`
-}
-type ExecConfig struct {
-	Type ExecType `json:","`
-}
-type RunnerConfig struct {
-	Type RunnerType `json:","`
-	Exec ExecConfig `json:","`
-}
-type WorkerConfig struct {
-	Type           WorkerType   `json:","`
-	Runner         RunnerConfig `json:","`
-	PingIntervalMs int          `json:","`
-	TimeoutMs      int          `json:","`
-}
-type PlannerConfig struct {
-	Type PlannerType `json:","`
-}
-type StatsConfig struct {
-	Path    string `json:","`
-	Enabled bool   `json:","`
-}
-type HealthConfig struct {
-	Path    string `json:","`
-	Ok      string `json:","`
-	Enabled bool   `json:","`
-}
-
-// Takes a subsection of the config file and constructs the appropriate type.
-type Plugins map[TypeId]PluginFn
-type PluginFn func(json.RawMessage) (interface{}, error)
-type PluginType string
-
-// All the types we construct based on the config.
-type TypeId string
-type ClusterType PluginType
-type SagaCoordType PluginType
-type WorkerType PluginType
-type QueueType PluginType
-type PlannerType PluginType
-type RunnerType string //PluginType
-type ExecType string   //PluginType
-
-const (
-	//
-	ClusterTypeId   TypeId = "cluster"
-	SagaCoordTypeId TypeId = "sagaCoord"
-	WorkerTypeId    TypeId = "worker"
-	QueueTypeId     TypeId = "queue"
-	PlannerTypeId   TypeId = "planner"
-	RunnerTypeId    TypeId = "runner"
-	ExecTypeId      TypeId = "exec"
-	StatsTypeId     TypeId = "stats"
-	HealthTypeId    TypeId = "health"
-
-	//
-	ClusterMemory  ClusterType = "memory"
-	ClusterStatic  ClusterType = "static"
-	ClusterDynamic ClusterType = "dynamic"
-
-	//
-	QueueFake    QueueType = "fake"
-	QueueMemory  QueueType = "memory"
-	QueueDurable QueueType = "durable"
-
-	//
-	SagaCoordMemory  SagaCoordType = "memory"
-	SagaCoordDurable SagaCoordType = "durable"
-
-	//
-	WorkerMemory WorkerType = "memory"
-	WorkerThrift WorkerType = "thrift"
-
-	//
-	PlannerChaos  PlannerType = "chaos"
-	PlannerSimple PlannerType = "simple"
-	PlannerSmart  PlannerType = "smart"
-
-	//
-	RunnerSimple RunnerType = "simple"
-
-	//
-	ExecOs  ExecType = "os"
-	ExecSim ExecType = "sim"
-)
-
-func IntToPtr(i int) *int { return &i }
-
-/*
-
-
-## Example json. Any subset can be specified to override specific defaults.
-##
-
-
-{
-    "Cluster": {
-        "Type": "memory",
-        "Initial": 5,
-        "Count": 10
-    },
-    "Queue": {
-        "Type": "memory",
-        "Capacity": 1000
-    },
-    "SagaCoord": {
-        "Type": "memory"
-    },
-    "Worker": {
-        "Type": "memory",
-        "Runner": {
-            "Type": "simple",
-            "Exec": {
-                "Type": "os"
-            }
-        },
-        "PingIntervalMs": 0,
-        "TimeoutMs": 0
-    },
-    "Planner": {
-        "Type": "simple"
-    },
-    "Stats": {
-        "Path": "/admin/metrics.json",
-        "Enabled": true
-    },
-    "Health": {
-        "Path": "/",
-        "Ok": "OK",
-        "Enabled": true
-    }
-}
-
-## For posterity, original pseudo json.
-##
-{
- "cluster": {"type": "memory",  "initial": 5, "count": 10} ||
-            {"type": "static",  "initial": 5, "hosts": [":2345", ":2346"]} ||
-            {"type": "dynamic", "initial": 5, "max": 6},
-
- "queue": {"type": "fake", "count": 1000} ||
-          {"type": "memory", "capacity": 1000} ||
-          {"type": "durable"}
-
- "sagalog": {"type": "memory"} ||
-            {"type": "durable"}
-
- "worker": {"type": "memory", "runner": {"type": "simple", "exec": {"type": "os" } || {"type": "sim"}}} ||
-           {"type": "thrift", "pingIntervalMs": "1000", "timeoutMs": 5000}
-
- "planner": {"type": "chaos"} ||
-            {"type": "simple"} ||
-            {"type": "smart"}
-
- "stats": {"path": "/admin/metrics.json", "enabled": true}
- "health": {"path": "/", "ok": "OK", "enabled": true}
-}
-*/
