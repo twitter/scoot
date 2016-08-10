@@ -92,35 +92,17 @@ type typeConfig struct {
 
 var emptyJson = []byte("{}")
 
-func parseType(data json.RawMessage) string {
+func parseType(data json.RawMessage) (string, []byte) {
 	if len(data) == 0 {
-		return ""
+		return "", emptyJson
 	}
 
 	var t typeConfig
 	err := json.Unmarshal(data, &t)
 	if err != nil {
-		return ""
+		return "", emptyJson
 	}
-	return t.Type
-}
-
-// We'd like to take the data, the domain, and a map[string]interface{}
-// But Parse struct doesn't have a map[string]interface{}, it has a map[string]FooConfig (for different values of Foo)
-// So have the caller call parseType, then look it up in the map, and pass it to us.
-func parseDomain(data json.RawMessage, domain string, config interface{}) (interface{}, error) {
-	t := parseType(data)
-	if config == nil {
-		return nil, fmt.Errorf("No parser for type %s in domain %s", t, domain)
-	}
-	if len(data) == 0 {
-		data = emptyJson
-	}
-	err := json.Unmarshal(data, config)
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse %s: %v (config: %s; type: %s)", domain, err, data, t)
-	}
-	return config, nil
+	return t.Type, data
 }
 
 // Parser holds how to parse our configs. For each configurable dependency, it holds
@@ -165,43 +147,53 @@ func (p *Parser) Parse(configText []byte) (*Config, error) {
 
 	r := &Config{}
 
-	parsed, err := parseDomain(cfg.Queue, "Queue", p.Queue[parseType(cfg.Queue)])
-	if err != nil {
-		return nil, err
-	}
-	queueConfig, ok := parsed.(QueueConfig)
+	// Now we parse each config. To do this, we:
+	// 1) Parse its type
+	// 2) Find the FooConfig for this type
+	// 3) Unmarshal into the FooConfig
+	// 4) Set this config in the result
+
+	queueType, queueData := parseType(cfg.Queue)
+	queueConfig, ok := p.Queue[queueType]
 	if !ok {
-		return nil, fmt.Errorf("Didn't get a QueueConfig: %v %T", parsed, parsed)
+		return nil, fmt.Errorf("No parser for queue type %s", queueType)
+	}
+	err = json.Unmarshal(queueData, &queueConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Queue: %v (config: %s; type: %s)", err, queueData, queueType)
 	}
 	r.Queue = queueConfig
 
-	parsed, err = parseDomain(cfg.Cluster, "Cluster", p.Cluster[parseType(cfg.Cluster)])
-	if err != nil {
-		return nil, err
-	}
-	clusterConfig, ok := parsed.(ClusterConfig)
+	clusterType, clusterData := parseType(cfg.Cluster)
+	clusterConfig, ok := p.Cluster[clusterType]
 	if !ok {
-		return nil, fmt.Errorf("Didn't get a ClusterConfig: %v %T", parsed, parsed)
+		return nil, fmt.Errorf("No parser for cluster type %s", clusterType)
+	}
+	err = json.Unmarshal(clusterData, &clusterConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Cluster: %v (config: %s; type: %s)", err, clusterData, clusterType)
 	}
 	r.Cluster = clusterConfig
 
-	parsed, err = parseDomain(cfg.SagaLog, "SagaLog", p.SagaLog[parseType(cfg.SagaLog)])
-	if err != nil {
-		return nil, err
-	}
-	sagalogConfig, ok := parsed.(SagaLogConfig)
+	logType, logData := parseType(cfg.SagaLog)
+	logConfig, ok := p.SagaLog[logType]
 	if !ok {
-		return nil, fmt.Errorf("Didn't get a SagaLogConfig: %v %T", parsed, parsed)
+		return nil, fmt.Errorf("No parser for log type %s", logType)
 	}
-	r.SagaLog = sagalogConfig
+	err = json.Unmarshal(logData, &logConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Log: %v (config: %s; type: %s)", err, logData, logType)
+	}
+	r.SagaLog = logConfig
 
-	parsed, err = parseDomain(cfg.Workers, "Workers", p.Workers[parseType(cfg.Workers)])
-	if err != nil {
-		return nil, err
-	}
-	workersConfig, ok := parsed.(WorkersConfig)
+	workersType, workersData := parseType(cfg.Workers)
+	workersConfig, ok := p.Workers[workersType]
 	if !ok {
-		return nil, fmt.Errorf("Didn't get a WorkersConfig: %v %T", parsed, parsed)
+		return nil, fmt.Errorf("No parser for workers type %s", workersType)
+	}
+	err = json.Unmarshal(workersData, &workersConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Workers: %v (config: %s; type: %s)", err, workersData, workersType)
 	}
 	r.Workers = workersConfig
 
