@@ -16,11 +16,11 @@ func main() {
 	log.Println("Starting Cloud Scoot API Server & Scheduler")
 	flag.Parse()
 
-	cfg := config.Default()
+	parser := config.DefaultParser()
 
 	// Construct scootapi server handler based on config.
 
-	handler, err := cfg.Create([]byte(*cfgText))
+	handler, err := parser.Create([]byte(*cfgText))
 	if err != nil {
 		log.Fatal("Error configuring Scoot API: ", err)
 	}

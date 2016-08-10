@@ -14,7 +14,7 @@ import (
 	"github.com/scootdev/scoot/sched/worker/rpc"
 )
 
-func Default() *Parser {
+func DefaultParser() *Parser {
 	r := &Parser{
 		Cluster: map[string]ClusterConfig{
 			"memory": &ClusterMemoryConfig{},
