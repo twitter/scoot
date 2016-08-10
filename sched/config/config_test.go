@@ -25,7 +25,7 @@ func TestConfigRoundtrip(t *testing.T) {
  }
 }`
 
-	p := config.Default()
+	p := config.DefaultParser()
 	cfg, err := p.Parse([]byte(before))
 	if err != nil {
 		t.Fatalf("Error parsing before: %v", err)

@@ -83,6 +83,7 @@ func (c *SagaLogMemoryConfig) Create() (saga.SagaLog, error) {
 
 type LocalWorkersConfig struct {
 	Type string
+	// TODO(dbentley): allow specifying what the runner/execer underneath this local worker is like
 }
 
 func (c *LocalWorkersConfig) Create() (worker.WorkerFactory, error) {
