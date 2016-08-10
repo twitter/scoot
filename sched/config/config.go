@@ -35,8 +35,6 @@ func (c *Config) Create() (scoot.CloudScoot, error) {
 		return nil, err
 	}
 
-	return nil, nil
-
 	sl, err := c.SagaLog.Create()
 	if err != nil {
 		return nil, err
