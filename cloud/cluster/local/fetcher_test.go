@@ -21,7 +21,7 @@ func TestFetcher(t *testing.T) {
 		memory.NewIdNode("localhost:9877"),
 	}
 
-	f := &localFetcher{regexCapturePort: "workerserver.*thrift_port(?: *|=)(\\d*)"}
+	f := &localFetcher{}
 	nodes, err := f.parseData([]byte(psOutput))
 	if err != nil {
 		t.Fatalf("error parsing: %v", err)
