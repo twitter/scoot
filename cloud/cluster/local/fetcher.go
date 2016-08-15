@@ -12,13 +12,11 @@ import (
 
 // Poor man's dynamic localhost cluster nodes.
 // Note: lsof is slow to return on osx so we just use 'ps' and regex match the port.
-func MakeFetcher(regexCapturePort string) cluster.Fetcher {
-	return &localFetcher{regexCapturePort: regexCapturePort}
+func MakeFetcher() cluster.Fetcher {
+	return &localFetcher{}
 }
 
-type localFetcher struct {
-	regexCapturePort string
-}
+type localFetcher struct{}
 
 func (f *localFetcher) Fetch() (nodes []cluster.Node, err error) {
 	var data []byte
@@ -40,7 +38,8 @@ func (f *localFetcher) fetchData() ([]byte, error) {
 func (f *localFetcher) parseData(data []byte) ([]cluster.Node, error) {
 	nodes := []cluster.Node{}
 	lines := string(data)
-	re := regexp.MustCompile(f.regexCapturePort)
+	// This is ugly but it works for now.
+	re := regexp.MustCompile("workerserver.*thrift_port(?: *|=)(\\d*)")
 	for _, line := range strings.Split(lines, "\n") {
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 2 {

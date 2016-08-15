@@ -6,10 +6,10 @@ import (
 )
 
 type ClusterLocalConfig struct {
-	RegexCapturePort string
+	Type string
 }
 
 func (c *ClusterLocalConfig) Create() (cluster.Cluster, error) {
-	sub := Subscribe(c.RegexCapturePort)
+	sub := Subscribe()
 	return memory.NewCluster(sub.InitialMembers, sub.Updates), nil
 }

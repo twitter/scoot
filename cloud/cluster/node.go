@@ -5,9 +5,6 @@ type NodeId string
 type Node interface {
 	// A unique node identifier, like 'host:port'
 	Id() NodeId
-
-	// Comparator for sorting.
-	Less(Node) bool
 }
 
 type Nodes []Node
@@ -24,7 +21,7 @@ func (n Nodes) Swap(i, j int) {
 
 // Less is part of sort.Interface.
 func (n Nodes) Less(i, j int) bool {
-	return n[i].Less(n[j])
+	return n[i].Id() < n[j].Id()
 }
 
 type NodeUpdateType int

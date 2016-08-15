@@ -8,8 +8,6 @@ PROJECT_URL := "https://github.com/scootdev/scoot"
 GO15VENDOREXPERIMENT := 1
 export GO15VENDOREXPERIMENT
 
-MAINS=$(dir $(wildcard binaries/*/main.go))
-
 default:
 	go build $$(go list ./... | grep -v /vendor/)
 
@@ -54,8 +52,3 @@ clean: clean-mockgen
 	go clean ./...
 
 fullbuild: dependencies generate test
-
-install:
-	@for main in $(MAINS); do \
-		(echo $$main && cd $$main && go install); \
-	done

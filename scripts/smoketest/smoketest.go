@@ -73,7 +73,7 @@ func main() {
 		fatalf("Could not create log dir: %v", *logDir)
 	}
 
-	cmd := exec.Command("make", "install")
+	cmd := exec.Command("go", "install", "./binaries/...")
 	cmd.Dir = os.ExpandEnv(*repoDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -101,7 +101,7 @@ func main() {
 		os.Exit(1)
 	}()
 
-	for idx := 0; idx < *numWorkers; idx++ {
+	for i := 0; i < *numWorkers; i++ {
 		port := strconv.Itoa(getPort())
 		run(true, "workerserver", "-thrift_port", port)
 		fmt.Println("Started worker on port: ", port)

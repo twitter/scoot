@@ -18,10 +18,8 @@ func main() {
 	flag.Parse()
 
 	parser := config.DefaultParser()
-	parser.Workers[""] = &config.RPCWorkersConfig{}
-	parser.Cluster[""] = &local.ClusterLocalConfig{
-		RegexCapturePort: "workerserver.*thrift_port(?: *|=)(\\d*)",
-	}
+	parser.Workers[""] = &config.RPCWorkersConfig{Type: "rpc"}
+	parser.Cluster[""] = &local.ClusterLocalConfig{Type: "local"}
 	parser.Cluster["local"] = &local.ClusterLocalConfig{}
 
 	// Construct scootapi server handler based on config.

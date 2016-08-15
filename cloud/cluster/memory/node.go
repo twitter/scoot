@@ -14,14 +14,6 @@ func (n *idNode) Id() cluster.NodeId {
 	return n.id
 }
 
-func (n *idNode) Less(otherNode cluster.Node) bool {
-	other, ok := otherNode.(*idNode)
-	if !ok {
-		panic("Comparing incompatible node types.")
-	}
-	return n.id < other.id
-}
-
 func (n *idNode) String() string {
 	return string(n.id)
 }
