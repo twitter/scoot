@@ -9,7 +9,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
-	execer "github.com/scootdev/scoot/runner/execer/os"
+	"github.com/scootdev/scoot/runner/execer/fake"
 	localrunner "github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/workerapi/server"
 )
@@ -29,7 +29,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 
 	stats := stat.Scope("workerserver")
-	run := localrunner.NewSimpleRunner(execer.NewExecer())
+	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil))
 	version := func() string { return "" }
 	handler := server.NewHandler(stats, run, version)
 	err := server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
