@@ -56,8 +56,6 @@ func (c *Client) generateAndRunJob() error {
 	job := testhelpers.GenJobDefinition(rng)
 	jobId, err := client.RunJob(job)
 
-	fmt.Println("Successfully Scheduled Job", jobId.ID)
-
 	// Error Enqueuing Job
 	if err != nil {
 		switch err := err.(type) {
@@ -67,6 +65,7 @@ func (c *Client) generateAndRunJob() error {
 			return fmt.Errorf("Error running job: %v %T", err, err)
 		}
 	}
+	fmt.Println("Successfully Scheduled Job", jobId.ID)
 
 	// Check Job Status
 	jobInProgress := true

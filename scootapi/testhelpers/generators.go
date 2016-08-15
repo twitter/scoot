@@ -16,7 +16,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 	def := scoot.NewJobDefinition()
 	def.Tasks = make(map[string]*scoot.TaskDefinition)
 
-	numTasks := rng.Intn(100) + 1
+	numTasks := rng.Intn(10) + 1
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
 		taskDef := GenTask(rng)

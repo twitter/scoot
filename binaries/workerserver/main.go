@@ -23,7 +23,7 @@ func main() {
 	stat = stat.Precision(time.Millisecond)
 	endpoints.RegisterStats("/admin/metrics.json", stat)
 	endpoints.RegisterHealthCheck("/")
-	go endpoints.Serve(fmt.Sprintf(":%d", *httpPort))
+	go endpoints.Serve(fmt.Sprintf("localhost:%d", *httpPort))
 
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
@@ -32,7 +32,7 @@ func main() {
 	run := localrunner.NewSimpleRunner(execer.NewExecer())
 	version := func() string { return "" }
 	handler := server.NewHandler(stats, run, version)
-	err := server.Serve(handler, fmt.Sprintf(":%d", *thriftPort), transportFactory, protocolFactory)
+	err := server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)
 	}

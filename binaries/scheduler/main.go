@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/sched/config"
 	"github.com/scootdev/scoot/scootapi/server"
 )
@@ -17,6 +18,9 @@ func main() {
 	flag.Parse()
 
 	parser := config.DefaultParser()
+	parser.Workers[""] = &config.RPCWorkersConfig{Type: "rpc"}
+	parser.Cluster[""] = &local.ClusterLocalConfig{Type: "local"}
+	parser.Cluster["local"] = &local.ClusterLocalConfig{}
 
 	// Construct scootapi server handler based on config.
 

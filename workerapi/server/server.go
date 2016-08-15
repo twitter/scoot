@@ -88,7 +88,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Println("Running", render.Render(cmd))
+	log.Println("WorkerRunning", render.Render(cmd))
 
 	h.timeLastRpc = time.Now()
 	h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))

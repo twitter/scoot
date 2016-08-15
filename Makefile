@@ -30,7 +30,7 @@ check-dependencies:
 	./deps.sh
 	go get github.com/golang/mock/mockgen
 
-generate: 
+generate:
 	go generate $$(go list ./... | grep -v /vendor/)
 
 format:
