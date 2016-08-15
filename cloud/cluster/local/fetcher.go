@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/memory"
@@ -50,15 +51,20 @@ func (f *localFetcher) parseData(data []byte) ([]cluster.Node, error) {
 }
 
 type fakeFetcher struct {
+	mutex sync.Mutex
 	nodes []cluster.Node
 	err   error
 }
 
 func (f *fakeFetcher) Fetch() ([]cluster.Node, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
 	return f.nodes, f.err
 }
 
 func (f *fakeFetcher) setResult(nodes []cluster.Node, err error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
 	f.nodes = nodes
 	f.err = err
 }
