@@ -1,8 +1,9 @@
 package memory
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
 	"sort"
+
+	"github.com/scootdev/scoot/cloud/cluster"
 )
 
 func NewCluster(initial []cluster.Node, updateCh chan []cluster.NodeUpdate) cluster.Cluster {

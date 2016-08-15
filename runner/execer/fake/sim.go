@@ -82,7 +82,7 @@ func (p *simProcess) Wait() execer.ProcessStatus {
 	return p.status
 }
 
-//Abort op not supported by sim. Returns current process status.
+//Abort op not supported by sim.
 func (p *simProcess) Abort() execer.ProcessStatus {
 	panic("Abort not implemented in sim code.")
 }
