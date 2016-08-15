@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/scootdev/scoot/runner/execer"
 )
@@ -24,6 +25,8 @@ type simExecer struct {
 //   complete with exitcode
 // pause
 //   pause until the simExecer's WaitGroup is Done
+// sleep <millis int>
+//   sleep for millis milliseconds
 func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 	steps, err := e.parse(command.Argv)
 	if err != nil {
@@ -63,6 +66,12 @@ func (e *simExecer) parseArg(arg string) (simStep, error) {
 		return &completeStep{i}, nil
 	case "pause":
 		return &pauseStep{e.wait}, nil
+	case "sleep":
+		i, err := strconv.Atoi(rest)
+		if err != nil {
+			return nil, err
+		}
+		return &sleepStep{time.Duration(i) * time.Millisecond}, nil
 	}
 	return nil, fmt.Errorf("can't simulate arg: %v", arg)
 }
@@ -135,5 +144,14 @@ type pauseStep struct {
 
 func (s *pauseStep) run(status execer.ProcessStatus) execer.ProcessStatus {
 	s.wait.Wait()
+	return status
+}
+
+type sleepStep struct {
+	duration time.Duration
+}
+
+func (s *sleepStep) run(status execer.ProcessStatus) execer.ProcessStatus {
+	time.Sleep(s.duration)
 	return status
 }

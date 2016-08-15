@@ -13,6 +13,7 @@ func TestSimExec(t *testing.T) {
 	ex := fake.NewSimExecer(&wg)
 	assertRun(ex, t, complete(0), "complete 0")
 	assertRun(ex, t, complete(1), "complete 1")
+	assertRun(ex, t, complete(0), "sleep 1", "complete 0")
 	argv := []string{"pause", "complete 0"}
 	p := assertStart(ex, t, argv...)
 	wg.Done()
