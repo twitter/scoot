@@ -32,7 +32,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{"sleep", "1"}
+	cmd.Argv = []string{"sleep 500", "complete 0}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd
