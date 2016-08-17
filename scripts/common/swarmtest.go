@@ -14,9 +14,9 @@ import (
 	"syscall"
 )
 
-type SmokeTest []*exec.Cmd
+type SwarmTest []*exec.Cmd
 
-type SmokeTestOpts struct {
+type SwarmTestOpts struct {
 	LogDir     string
 	RepoDir    string
 	NumWorkers int
@@ -24,8 +24,8 @@ type SmokeTestOpts struct {
 	Run        func() error
 }
 
-func (s *SmokeTest) InitOptions() (*SmokeTestOpts, error) {
-	logDir := flag.String("logdir", "/tmp/scoot-smoketest", "If empty, write to stdout, else to log file")
+func (s *SwarmTest) InitOptions() (*SwarmTestOpts, error) {
+	logDir := flag.String("logdir", "/tmp/scoot-swarmtest", "If empty, write to stdout, else to log file")
 	repoDir := flag.String("repo", "$GOPATH/src/github.com/scootdev/scoot", "Path to scoot repo")
 	numWorkers := flag.Int("num_workers", 5, "Number of workerserver instances to spin up.")
 
@@ -35,16 +35,16 @@ func (s *SmokeTest) InitOptions() (*SmokeTestOpts, error) {
 	}
 	compile := func() error { return s.compile(*repoDir) }
 	run := func() error { return s.run(*numWorkers) }
-	opts := &SmokeTestOpts{*logDir, *repoDir, *numWorkers, compile, run}
+	opts := &SwarmTestOpts{*logDir, *repoDir, *numWorkers, compile, run}
 	return opts, nil
 }
 
-func (s *SmokeTest) Fatalf(format string, v ...interface{}) {
+func (s *SwarmTest) Fatalf(format string, v ...interface{}) {
 	fmt.Printf(format+"\n", v...)
 	s.Kill()
 }
 
-func (s *SmokeTest) Kill() {
+func (s *SwarmTest) Kill() {
 	for _, cmd := range *s {
 		if cmd.ProcessState == nil && cmd.Process != nil {
 			fmt.Printf("Killing: %v\n", cmd.Path)
@@ -54,13 +54,13 @@ func (s *SmokeTest) Kill() {
 	}
 }
 
-func (s *SmokeTest) GetPort() int {
+func (s *SwarmTest) GetPort() int {
 	l, _ := net.Listen("tcp", "localhost:0")
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port
 }
 
-func (s *SmokeTest) RunCmd(blocking bool, name string, args ...string) error {
+func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
 	bin := filepath.Join(os.Getenv("GOPATH"), "bin", name)
 	cmd := exec.Command(bin, args...)
 	cmd.Stdout = os.Stdout
@@ -74,7 +74,7 @@ func (s *SmokeTest) RunCmd(blocking bool, name string, args ...string) error {
 	if !blocking {
 		go func() {
 			if err := cmd.Wait(); err != nil {
-				s.Fatalf("Exiting %v,%v: %v", bin, args, err)
+				s.Fatalf("Exiting because cmd ended early %v,%v: %v", bin, args, err)
 			}
 		}()
 		return nil
@@ -83,12 +83,12 @@ func (s *SmokeTest) RunCmd(blocking bool, name string, args ...string) error {
 	}
 }
 
-func (s *SmokeTest) SetupLog(logDir string) error {
+func (s *SwarmTest) SetupLog(logDir string) error {
 	if logDir != "" {
 		if err := os.MkdirAll(logDir, 0777); err != nil {
 			return fmt.Errorf("Could not create log dir: %v", logDir)
 		}
-		logpath := path.Join(logDir, "smoketest"+strconv.Itoa(os.Getpid()))
+		logpath := path.Join(logDir, "swarmtest"+strconv.Itoa(os.Getpid()))
 		out, err := os.Create(logpath)
 		if err != nil {
 			return fmt.Errorf("Could not init logfile: %v", logpath)
@@ -100,19 +100,19 @@ func (s *SmokeTest) SetupLog(logDir string) error {
 	return nil
 }
 
-func (s *SmokeTest) StartSignalHandler() {
+func (s *SwarmTest) StartSignalHandler() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		var sig os.Signal
 		sig = <-sigchan
-		fmt.Printf("signal %s received, shutting down", sig)
+		fmt.Printf("signal %s received, shutting down\n", sig)
 		s.Kill()
 		os.Exit(1)
 	}()
 }
 
-func (s *SmokeTest) compile(repoDir string) error {
+func (s *SwarmTest) compile(repoDir string) error {
 	cmd := exec.Command("go", "install", "./binaries/...")
 	cmd.Dir = os.ExpandEnv(repoDir)
 	out, err := cmd.CombinedOutput()
@@ -123,21 +123,20 @@ func (s *SmokeTest) compile(repoDir string) error {
 	return nil
 }
 
-func (s *SmokeTest) run(numWorkers int) error {
+func (s *SwarmTest) run(numWorkers int) error {
 	for i := 0; i < numWorkers; i++ {
 		port := strconv.Itoa(s.GetPort())
 		if err := s.RunCmd(false, "workerserver", "-thrift_port", port); err != nil {
 			return err
 		}
 	}
-	//Note: assumes ClusterLocalConfig is the default for scheduler.
-	if err := s.RunCmd(false, "scheduler"); err != nil {
+	if err := s.RunCmd(false, "scheduler", "-sched_config", `{"Cluster": {"Type": "local"}}`); err != nil {
 		return err
 	}
 	return s.RunCmd(true, "scootapi", "run_smoke_test")
 }
 
-func (s *SmokeTest) Main(opts *SmokeTestOpts) {
+func (s *SwarmTest) Main(opts *SwarmTestOpts) {
 	var err error
 	s.StartSignalHandler()
 	if err = s.SetupLog(opts.LogDir); err == nil {

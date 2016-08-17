@@ -1,11 +1,11 @@
 package main
 
 import (
-	smoketest "github.com/scootdev/scoot/scripts/common"
+	swarmtest "github.com/scootdev/scoot/scripts/common"
 )
 
 func main() {
-	s := smoketest.SmokeTest{}
+	s := swarmtest.SwarmTest{}
 	opts, err := s.InitOptions()
 	if err != nil {
 		panic(err)
