@@ -49,3 +49,20 @@ func NewRemove(id NodeId) NodeUpdate {
 		Id:         id,
 	}
 }
+
+type NodeUpdates []NodeUpdate
+
+// Len is part of sort.Interface.
+func (n NodeUpdates) Len() int {
+	return len(n)
+}
+
+// Less is part of sort.Interface.
+func (n NodeUpdates) Less(i, j int) bool {
+	return n[i].Id < n[j].Id
+}
+
+// Swap is part of sort.Interface.
+func (n NodeUpdates) Swap(i, j int) {
+	n[i], n[j] = n[j], n[i]
+}
