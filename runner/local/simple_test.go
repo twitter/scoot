@@ -29,18 +29,34 @@ func TestSimul(t *testing.T) {
 	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
-	st := r.Status(firstRun)
 	assertWait(t, r, firstRun, running(), firstArgs...)
 
 	// Now that one is running, try running a second
 	secondArgs := []string{"complete 3"}
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
-	st = r.Run(cmd)
+	st := r.Run(cmd)
 	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
+}
+
+func TestAbort(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ex := fake.NewSimExecer(&wg)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
+	args := []string{"pause", "complete 0"}
+	runId := run(t, r, args)
+	assertWait(t, r, runId, running(), args...)
+	r.Abort(runId)
+	// use r.Status isntead of assertWait so that we make sure it's aborted immediately, not eventually
+	st := r.Status(runId)
+	assertStatus(t, st, aborted(), args...)
+
+	st = r.Abort(runner.RunId("not-a-run-id"))
+	assertStatus(t, st, badreq("cannot find run not-a-run-id"))
 }
 
 func complete(exitCode int) runner.ProcessStatus {
@@ -57,6 +73,10 @@ func failed(errorText string) runner.ProcessStatus {
 
 func badreq(errorText string) runner.ProcessStatus {
 	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
+}
+
+func aborted() runner.ProcessStatus {
+	return runner.AbortStatus(runner.RunId(""))
 }
 
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {

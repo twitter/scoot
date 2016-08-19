@@ -49,11 +49,3 @@ func PreparingStatus(runId RunId) (r ProcessStatus) {
 		State: PREPARING,
 	}
 }
-
-func FailedStatus(runId RunId, err error) (r ProcessStatus) {
-	return ProcessStatus{
-		RunId: runId,
-		State: FAILED,
-		Error: err.Error(),
-	}
-}

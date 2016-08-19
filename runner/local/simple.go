@@ -132,7 +132,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, cancelCh cha
 	case <-checkoutDone:
 	}
 	if err != nil {
-		r.updateStatus(runner.FailedStatus(runId, fmt.Errorf("could not checkout: %v", err)))
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)))
 		return
 	}
 	defer checkout.Release()
@@ -142,7 +142,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, cancelCh cha
 		Dir:  checkout.Path(),
 	})
 	if err != nil {
-		r.updateStatus(runner.FailedStatus(runId, fmt.Errorf("could not exec: %v", err)))
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err)))
 		return
 	}
 
