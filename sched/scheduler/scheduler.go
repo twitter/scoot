@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	dist "github.com/scootdev/scoot/sched/distributor"
@@ -21,13 +22,20 @@ type scheduler struct {
 	nodes         *dist.PoolDistributor
 	wg            sync.WaitGroup // used to track jobs in progress
 	workerFactory worker.WorkerFactory
+	stat          stats.StatsReceiver
 }
 
-func NewScheduler(nodes *dist.PoolDistributor, sc saga.SagaCoordinator, workerFactory worker.WorkerFactory) *scheduler {
+func NewScheduler(
+	nodes *dist.PoolDistributor,
+	sc saga.SagaCoordinator,
+	workerFactory worker.WorkerFactory,
+	stat stats.StatsReceiver,
+) *scheduler {
 	s := &scheduler{
 		nodes:         nodes,
 		sc:            sc,
 		workerFactory: workerFactory,
+		stat:          stat,
 	}
 
 	s.startUp()
@@ -54,6 +62,8 @@ func (s *scheduler) BlockUntilAllJobsCompleted() {
 // scheduled, nodes reserved & durably started Saga,
 // Returns an error if scheduling was unsuccessful
 func (s *scheduler) ScheduleJob(job sched.Job) error {
+	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
+	s.stat.Counter("schedJobRequests").Inc(1)
 
 	// Log StartSaga Message
 	// TODO: need to serialize job into binary and pass in here

@@ -125,8 +125,9 @@ func (s *SwarmTest) compile(repoDir string) error {
 
 func (s *SwarmTest) run(numWorkers int) error {
 	for i := 0; i < numWorkers; i++ {
-		port := strconv.Itoa(s.GetPort())
-		if err := s.RunCmd(false, "workerserver", "-thrift_port", port); err != nil {
+		thriftPort := strconv.Itoa(s.GetPort())
+		httpPort := strconv.Itoa(s.GetPort())
+		if err := s.RunCmd(false, "workerserver", "-thrift_port", thriftPort, "-http_port", httpPort); err != nil {
 			return err
 		}
 	}

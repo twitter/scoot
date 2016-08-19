@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/queue"
@@ -24,7 +25,7 @@ type Config struct {
 }
 
 // Create creates the thrift handler (or returns an error describing why it couldn't)
-func (c *Config) Create() (scoot.CloudScoot, error) {
+func (c *Config) Create(stat stats.StatsReceiver) (scoot.CloudScoot, error) {
 	q, err := c.Queue.Create()
 	if err != nil {
 		return nil, err
@@ -51,12 +52,12 @@ func (c *Config) Create() (scoot.CloudScoot, error) {
 	if err != nil {
 		return nil, err
 	}
-	schedImpl := scheduler.NewScheduler(dist, sc, wf)
-	handler := server.NewHandler(q, sc)
+	schedImpl := scheduler.NewScheduler(dist, sc, wf, stat.Scope("scheduler"))
+	handler := server.NewHandler(q, sc, stat.Scope("handler"))
 
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
-		scheduler.GenerateWork(schedImpl, q.Chan())
+		scheduler.GenerateWork(schedImpl, q.Chan(), stat.Scope("generator"))
 	}()
 
 	return handler, nil
@@ -117,12 +118,12 @@ type Parser struct {
 }
 
 // Create parses and creates in one step.
-func (p *Parser) Create(configText []byte) (scoot.CloudScoot, error) {
+func (p *Parser) Create(configText []byte, stat stats.StatsReceiver) (scoot.CloudScoot, error) {
 	c, err := p.Parse(configText)
 	if err != nil {
 		return nil, err
 	}
-	return c.Create()
+	return c.Create(stat)
 }
 
 // Generates the JSON config that results from the empty string; useful for showing a complete configuration.

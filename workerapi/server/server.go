@@ -59,6 +59,7 @@ func (h *handler) stats() {
 					numActive++
 				}
 			}
+			lastContact := int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			failed := h.stat.Counter("numFailed")
 			prevNumFailed := failed.Count()
 			if numFailed > prevNumFailed {
@@ -66,7 +67,7 @@ func (h *handler) stats() {
 			}
 			h.stat.Gauge("numActiveRuns").Update(numActive)
 			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
+			h.stat.Gauge("timeSinceLastContact_ms").Update(lastContact)
 		}
 	}
 }
@@ -91,7 +92,6 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	log.Println("WorkerRunning", render.Render(cmd))
 
 	h.timeLastRpc = time.Now()
-	h.stat.Gauge("timeSinceLastContact").Update(int64(time.Now().Sub(h.timeLastRpc)))
 	process := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
 	return domain.DomainRunStatusToThrift(&process), nil
 }
