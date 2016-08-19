@@ -7,6 +7,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	"github.com/scootdev/scoot/runner/local"
+	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 
 	"sync"
 	"testing"
@@ -14,7 +15,7 @@ import (
 
 func TestRun(t *testing.T) {
 	exec := fake.NewSimExecer(nil)
-	r := local.NewSimpleRunner(exec)
+	r := local.NewSimpleRunner(exec, fakesnaps.MakeInvalidCheckouter())
 	firstId := assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
 	// Now make sure that the first results are still available
@@ -25,11 +26,11 @@ func TestSimul(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	st := r.Status(firstRun)
-	assertStatus(t, st, running(), firstArgs...)
+	assertWait(t, r, firstRun, running(), firstArgs...)
 
 	// Now that one is running, try running a second
 	secondArgs := []string{"complete 3"}
@@ -65,7 +66,7 @@ func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, arg
 }
 
 func assertWait(t *testing.T, r runner.Runner, runId runner.RunId, expected runner.ProcessStatus, args ...string) {
-	actual := wait(r, runId)
+	actual := wait(r, runId, expected)
 	assertStatus(t, actual, expected, args...)
 }
 
@@ -94,11 +95,11 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	return status.RunId
 }
 
-func wait(r runner.Runner, run runner.RunId) runner.ProcessStatus {
+func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(100 * time.Microsecond)
 		status := r.Status(run)
-		if status.State.IsDone() {
+		if status.State.IsDone() || status.State == expected.State {
 			return status
 		}
 	}

@@ -42,3 +42,18 @@ func CompleteStatus(runId RunId, stdoutRef string, stderrRef string, exitCode in
 	r.ExitCode = exitCode
 	return r
 }
+
+func PreparingStatus(runId RunId) (r ProcessStatus) {
+	return ProcessStatus{
+		RunId: runId,
+		State: PREPARING,
+	}
+}
+
+func FailedStatus(runId RunId, err error) (r ProcessStatus) {
+	return ProcessStatus{
+		RunId: runId,
+		State: FAILED,
+		Error: err.Error(),
+	}
+}

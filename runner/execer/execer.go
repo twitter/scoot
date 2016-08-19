@@ -6,7 +6,7 @@ package execer
 
 type Command struct {
 	Argv []string
-	// TODO(dbentley): accept dir
+	Dir  string
 	// TODO(dbentley): environment variables?
 }
 
