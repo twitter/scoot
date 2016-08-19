@@ -9,6 +9,7 @@ import (
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/cloud/cluster/memory"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/distributor"
@@ -27,7 +28,7 @@ func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("job1", nil).Return(saga.NewInternalLogError("test error"))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
-	scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker)
+	scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver())
 
 	job := sched.GenJob("job1", 5)
 	err := scheduler.ScheduleJob(job)
@@ -49,7 +50,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 			nodes := memory.NewIdNodes(int(numNodes))
 			dist := distributor.NewPoolDistributor(nodes, nil)
 			sagaCoord := saga.MakeInMemorySagaCoordinator()
-			scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker)
+			scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver())
 
 			job := sched.GenJob(jobId, int(numTasks))
 			err := scheduler.ScheduleJob(job)

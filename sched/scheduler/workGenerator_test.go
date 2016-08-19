@@ -1,11 +1,13 @@
 package scheduler
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
-	"testing"
 )
 
 func TestGenerateWork_ReadsAllItemsFromChannel(t *testing.T) {
@@ -25,7 +27,7 @@ func TestGenerateWork_ReadsAllItemsFromChannel(t *testing.T) {
 	schedulerMock := NewMockScheduler(mockCtrl)
 	schedulerMock.EXPECT().ScheduleJob(job).Return(nil)
 
-	GenerateWork(schedulerMock, workCh)
+	GenerateWork(schedulerMock, workCh, stats.NilStatsReceiver())
 }
 
 func TestGenerateWork_PanicsFatalError(t *testing.T) {
@@ -49,6 +51,6 @@ func TestGenerateWork_PanicsFatalError(t *testing.T) {
 		}
 	}()
 
-	GenerateWork(schedulerMock, workCh)
+	GenerateWork(schedulerMock, workCh, stats.NilStatsReceiver())
 	t.Errorf("Expected Schedule Job returning a Fatal Error to cause a panic")
 }
