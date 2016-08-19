@@ -3,13 +3,14 @@ package scheduler
 import (
 	"fmt"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/queue"
 )
 
 // Retrievews work from the work queue and sends it to the scheduler
 // To be scheduled and completed.
-func GenerateWork(scheduler Scheduler, workCh chan queue.WorkItem) {
+func GenerateWork(scheduler Scheduler, workCh chan queue.WorkItem, stat stats.StatsReceiver) {
 	for workItem := range workCh {
 		job := workItem.Job()
 		err := scheduler.ScheduleJob(job)
@@ -27,6 +28,7 @@ func GenerateWork(scheduler Scheduler, workCh chan queue.WorkItem) {
 			}
 		}
 
+		stat.Counter("scheduledJobs").Inc(1)
 		workItem.Dequeue()
 	}
 }

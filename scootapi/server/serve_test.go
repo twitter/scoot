@@ -2,14 +2,16 @@ package server_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/server"
-	"testing"
 )
 
 func CreateSagaCoordMock(t *testing.T) (saga.SagaCoordinator, *saga.MockSagaLog) {
@@ -27,7 +29,7 @@ func TestRunBadJobFails(t *testing.T) {
 	defer q.Close()
 	sc, _ := CreateSagaCoordMock(t)
 
-	handler := server.NewHandler(q, sc)
+	handler := server.NewHandler(q, sc, stats.NilStatsReceiver())
 
 	jobDef := scoot.NewJobDefinition()
 
@@ -68,7 +70,7 @@ func TestRunSimpleJob(t *testing.T) {
 	defer q.Close()
 	sc, _ := CreateSagaCoordMock(t)
 
-	handler := server.NewHandler(q, sc)
+	handler := server.NewHandler(q, sc, stats.NilStatsReceiver())
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
@@ -102,7 +104,7 @@ func TestQueueError(t *testing.T) {
 	defer q.Close()
 	sc, _ := CreateSagaCoordMock(t)
 
-	handler := server.NewHandler(q, sc)
+	handler := server.NewHandler(q, sc, stats.NilStatsReceiver())
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
@@ -125,7 +127,7 @@ func TestQueueFillsAndEmpties(t *testing.T) {
 	defer q.Close()
 	sc, _ := CreateSagaCoordMock(t)
 
-	handler := server.NewHandler(q, sc)
+	handler := server.NewHandler(q, sc, stats.NilStatsReceiver())
 
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()

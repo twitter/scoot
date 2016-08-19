@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/queue"
@@ -21,6 +22,7 @@ type Config struct {
 	Cluster ClusterConfig
 	SagaLog SagaLogConfig
 	Workers WorkersConfig
+	Report  ReportConfig
 }
 
 // Create creates the thrift handler (or returns an error describing why it couldn't)
@@ -45,18 +47,23 @@ func (c *Config) Create() (scoot.CloudScoot, error) {
 		return nil, err
 	}
 
+	stat, err := c.Report.Create()
+	if err != nil {
+		return nil, err
+	}
+
 	sc := saga.MakeSagaCoordinator(sl)
 	// Make the scheduler and handler
 	dist, err := distributor.NewPoolDistributorFromCluster(cl)
 	if err != nil {
 		return nil, err
 	}
-	schedImpl := scheduler.NewScheduler(dist, sc, wf)
-	handler := server.NewHandler(q, sc)
+	schedImpl := scheduler.NewScheduler(dist, sc, wf, stat.Scope("scheduler"))
+	handler := server.NewHandler(q, sc, stat.Scope("handler"))
 
 	// Go Routine which takes data from work queue and schedules it
 	go func() {
-		scheduler.GenerateWork(schedImpl, q.Chan())
+		scheduler.GenerateWork(schedImpl, q.Chan(), stat.Scope("generator"))
 	}()
 
 	return handler, nil
@@ -78,12 +85,17 @@ type WorkersConfig interface {
 	Create() (worker.WorkerFactory, error)
 }
 
+type ReportConfig interface {
+	Create() (stats.StatsReceiver, error)
+}
+
 // Scheduler config parsed from JSON. Each should parse into an empty string or a JSON object that has a "type" field which we will use to pick which kind of config to parse it ias.
 type topLevelConfig struct {
 	Cluster json.RawMessage
 	Queue   json.RawMessage
 	SagaLog json.RawMessage
 	Workers json.RawMessage
+	Report  json.RawMessage
 }
 
 type typeConfig struct {
@@ -114,6 +126,7 @@ type Parser struct {
 	Cluster map[string]ClusterConfig
 	SagaLog map[string]SagaLogConfig
 	Workers map[string]WorkersConfig
+	Report  map[string]ReportConfig
 }
 
 // Create parses and creates in one step.
@@ -196,6 +209,17 @@ func (p *Parser) Parse(configText []byte) (*Config, error) {
 		return nil, fmt.Errorf("Couldn't parse Workers: %v (config: %s; type: %s)", err, workersData, workersType)
 	}
 	r.Workers = workersConfig
+
+	reportType, reportData := parseType(cfg.Report)
+	reportConfig, ok := p.Report[reportType]
+	if !ok {
+		return nil, fmt.Errorf("No parser for report type %s", reportType)
+	}
+	err = json.Unmarshal(reportData, &reportConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse Report: %v (config: %s; type: %s)", err, reportData, reportType)
+	}
+	r.Report = reportConfig
 
 	return r, nil
 }

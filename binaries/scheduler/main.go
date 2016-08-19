@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -11,6 +12,7 @@ import (
 )
 
 var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
+var httpPort = flag.Int("http_port", 9091, "port to serve http on")
 var cfgText = flag.String("sched_config", "", "Scheduler Configuration.")
 
 func main() {
@@ -21,9 +23,9 @@ func main() {
 	parser.Workers[""] = &config.RPCWorkersConfig{Type: "rpc"}
 	parser.Cluster[""] = &local.ClusterLocalConfig{Type: "local"}
 	parser.Cluster["local"] = &local.ClusterLocalConfig{}
+	parser.Report[""].(*config.DefaultReportConfig).HttpAddr = fmt.Sprintf("localhost:%d", *httpPort)
 
 	// Construct scootapi server handler based on config.
-
 	handler, err := parser.Create([]byte(*cfgText))
 	if err != nil {
 		log.Fatal("Error configuring Scoot API: ", err)
