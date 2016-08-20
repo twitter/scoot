@@ -29,8 +29,8 @@ type simpleRunner struct {
 }
 
 type inflight struct {
-	runId    runner.RunId
-	cancelCh chan struct{}
+	runId  runner.RunId
+	doneCh chan struct{}
 }
 
 func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
@@ -44,11 +44,11 @@ func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
 		return r.runs[runId]
 	}
 
-	r.running = &inflight{runId: runId, cancelCh: make(chan struct{})}
+	r.running = &inflight{runId: runId, doneCh: make(chan struct{})}
 	r.runs[runId] = runner.PreparingStatus(runId)
 
 	// Run in a new goroutine
-	go r.run(cmd, runId, r.running.cancelCh)
+	go r.run(cmd, runId, r.running.doneCh)
 	if cmd.Timeout > 0 { // Timeout if applicable
 		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId)) })
 	}
@@ -114,14 +114,14 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStat
 		// We are ending the running task.
 		// depend on the invariant that there is at most 1 run with !state.IsDone(),
 		// so if we're changing a Process from not Done to Done it must be running
-		close(r.running.cancelCh)
+		close(r.running.doneCh)
 		r.running = nil
 	}
 	return new
 }
 
-// run cmd in the background, writing results to r as id, unless cancelCh is closed
-func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, cancelCh chan struct{}) {
+// run cmd in the background, writing results to r as id, unless doneCh is closed
+func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
 	checkout, err, checkoutDone := (snapshots.Checkout)(nil), (error)(nil), make(chan struct{}, 1)
 	go func() {
 		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
@@ -130,7 +130,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, cancelCh cha
 
 	// Wait for checkout or cancel
 	select {
-	case <-cancelCh:
+	case <-doneCh:
 		return
 	case <-checkoutDone:
 	}
@@ -156,7 +156,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, cancelCh cha
 
 	// Wait for process complete or cancel
 	select {
-	case <-cancelCh:
+	case <-doneCh:
 		p.Abort()
 		return
 	case st := <-processCh:
