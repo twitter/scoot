@@ -51,7 +51,7 @@ func TestAbort(t *testing.T) {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, running(), args...)
 	r.Abort(runId)
-	// use r.Status isntead of assertWait so that we make sure it's aborted immediately, not eventually
+	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
 	st := r.Status(runId)
 	assertStatus(t, st, aborted(), args...)
 

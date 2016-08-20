@@ -110,7 +110,10 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStat
 		return old
 	}
 	r.runs[new.RunId] = new
-	if new.State.IsDone() && r.running.runId == new.RunId {
+	if new.State.IsDone() {
+		// We are ending the running task.
+		// depend on the invariant that there is at most 1 run with !state.IsDone(),
+		// so if we're changing a Process from not Done to Done it must be running
 		close(r.running.cancelCh)
 		r.running = nil
 	}
