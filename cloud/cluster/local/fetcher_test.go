@@ -3,7 +3,7 @@ package local
 import (
 	"reflect"
 	"testing"
-
+	"github.com/scootdev/scoot/cloud/cluster_test"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/memory"
 )

@@ -10,6 +10,7 @@ type ClusterLocalConfig struct {
 }
 
 func (c *ClusterLocalConfig) Create() (cluster.Cluster, error) {
-	sub := Subscribe()
-	return memory.NewCluster(sub.InitialMembers, sub.Updates), nil
+	sub := cluster.Subscribe(MakeFetcher())
+	stateCh := make(chan []cluster.Node)
+	return memory.NewCluster(sub.InitialMembers, sub.Updates, stateCh), nil
 }
