@@ -6,9 +6,9 @@ import (
 
 func main() {
 	s := swarmtest.SwarmTest{}
-	opts, err := s.InitOptions()
+	err := s.InitOptions(nil)
 	if err != nil {
 		panic(err)
 	}
-	s.Main(opts)
+	s.Main()
 }
