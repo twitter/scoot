@@ -1,13 +1,13 @@
 package cluster
 
 type Subscriber struct {
-	inCh  	chan []NodeUpdateb
+	inCh  	chan []NodeUpdate
 	OutCh 	chan []NodeUpdate
-	cl    	*simpleCluster
+	cl    	*Cluster
 	queue 	[]NodeUpdate
 }
 
-func newSubscriber(initial []Node, cl *simpleCluster, inCh chan []NodeUpdate) Subscriber {
+func newSubscriber(initial []Node, cl *Cluster, inCh chan []NodeUpdate) Subscriber {
 	s := Subscriber{
 		inCh:  	inCh,
 		OutCh: 	make(chan []NodeUpdate),

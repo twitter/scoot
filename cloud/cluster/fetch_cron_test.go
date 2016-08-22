@@ -6,31 +6,45 @@ import (
 	"time"
 	"reflect"
 	"sync"
+	"sort"
+	// "fmt"
 )
 
 func TestFetchCron(t *testing.T) {
-	c, exp := setUpTest(time.Second, "host1:1234")
-	assertEqual(t, exp, c.Cl.Current())
-	c, exp = setUpTest(time.Second, "host1:1234", "host2:8888")
-	assertEqual(t, exp, c.Cl.Current())
-	c, exp = setUpTest(time.Second, "host1:1234", "host1:1234")
-	assertEqual(t, exp, c.Cl.Current())
-	c, exp = setUpTest(time.Second, "")
-	assertEqual(t, exp, c.Cl.Current())
+	h := makeCronHelper(t)
+	h.assertFetch(t, h.setupTest("host1:1234"))
+	h.assertFetch(t, h.setupTest("host1:1234", "host2:8888"))
+	h.assertFetch(t, h.setupTest("host1:1234", "host1:1234"))
+	h.assertFetch(t, h.setupTest(""))
 }
 
-func setUpTest(t time.Duration, nodeNames ...string) (*cluster.FetchCron, []cluster.Node) {
-	f := fakeFetcher{}
-	f.setResult(nodes(nodeNames), nil)
-	c := cluster.NewFetchCron(f, t)
-	expected := nodes(nodeNames)
-	// give fetcher time to fetch and pass nodes to cluster
-	time.Sleep(t * 3)
-	c.Ticker.Stop()
-	return c, expected
+func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
+	nodes := nodes(nodeNames)
+	h.f.setResult(nodes)
+	time.Sleep(h.time * 2)
+	sort.Sort(cluster.NodeSorter(nodes))
+	return nodes
 }
 
-func assertEqual(t *testing.T, expected, actual []cluster.Node) {
+type cronHelper struct {
+	t     *testing.T
+	c     *cluster.FetchCron
+	cl 	  *cluster.Cluster
+	f  	  *fakeFetcher
+	time  time.Duration
+}
+
+func makeCronHelper(t *testing.T) *cronHelper {
+	h := &cronHelper{t: t}
+	h.cl = cluster.NewCluster([]cluster.Node{}, make(chan []cluster.NodeUpdate), make(chan []cluster.Node))
+	h.time = time.Second
+	h.f = &fakeFetcher{}
+	h.c = cluster.NewFetchCron(h.f, h.time, h.cl)
+	return h
+}
+
+func (h *cronHelper) assertFetch(t *testing.T, expected []cluster.Node) {
+	actual := h.cl.Current()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("Unequal, expected %v, received %v", expected, actual)
 	}
@@ -52,18 +66,16 @@ func nodes(ids []string) []cluster.Node {
 type fakeFetcher struct {
 	mutex	sync.Mutex
 	nodes	[]cluster.Node
-	err		error
 }
 
-func (f fakeFetcher) Fetch() ([]cluster.Node, error) {
+func (f *fakeFetcher) Fetch() ([]cluster.Node, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
-	return f.nodes, f.err
+	return f.nodes, nil
 }
 
-func (f *fakeFetcher) setResult(nodes []cluster.Node, err error) {
+func (f *fakeFetcher) setResult(nodes []cluster.Node) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 	f.nodes = nodes
-	f.err = err
 }

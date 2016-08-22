@@ -9,10 +9,11 @@ type State struct {
 	Nodes 	map[NodeId]Node
 }
 
-func MakeState() *State {
+func MakeState(nodes []Node) *State {
 	s := &State{
 		Nodes: make(map[NodeId]Node),
 	}
+	s.SetAndDiff(nodes)
 	return s
 }
 

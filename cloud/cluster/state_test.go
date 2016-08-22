@@ -6,7 +6,7 @@ import (
 )
 
 func TestState(t *testing.T) {
-	s := cluster.MakeState()
+	s := cluster.MakeState([]cluster.Node{})
 	// no nodes removed or added
 	assertUpdates(t, s, []string{}, []cluster.NodeUpdate{})
 	// 1 node added
@@ -25,7 +25,7 @@ func TestState(t *testing.T) {
 }
 
 func TestUpdateState(t *testing.T) {
-	s := cluster.MakeState()
+	s := cluster.MakeState([]cluster.Node{})
 	// empty cluster
 	assertMembers(t, s, []cluster.NodeUpdate{}, []cluster.Node{})
 	// add one node

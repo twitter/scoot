@@ -69,7 +69,7 @@ func TestSubscribe(t *testing.T) {
 
 type helper struct {
 	t   *testing.T
-	c   cluster.Cluster
+	c   *cluster.Cluster
 	ch  chan []cluster.NodeUpdate
 	sc  chan []cluster.Node
 }

@@ -5,16 +5,16 @@ import (
 )
 
 // Cluster represents a cluster of Nodes.
-type Cluster interface {
-	// Members returns the current members, or an error if they can't be determined.
-	Members() []Node
-	// Subscribe subscribes to changes to the cluster.
-	Subscribe() Subscriber
-	// Stop monitoring this cluster
-	Close() error
-}
+// type Cluster interface {
+// 	// Members returns the current members, or an error if they can't be determined.
+// 	Members() []Node
+// 	// Subscribe subscribes to changes to the cluster.
+// 	Subscribe() Subscriber
+// 	// Stop monitoring this cluster
+// 	Close() error
+// }
 
-type simpleCluster struct {
+type Cluster struct {
 	State  		*State
 	reqCh   	chan interface{}
 	updateCh 	chan []NodeUpdate
@@ -22,10 +22,10 @@ type simpleCluster struct {
 	subs    	[]chan []NodeUpdate
 }
 
-func NewCluster(state []Node, updateCh chan []NodeUpdate, stateCh chan []Node) *simpleCluster {
-	s := MakeState()
-	s.SetAndDiff(state)
-	c := &simpleCluster{
+func NewCluster(state []Node, updateCh chan []NodeUpdate, stateCh chan []Node) *Cluster {
+	s := MakeState(state)
+	// s.SetAndDiff(state)
+	c := &Cluster{
 		State:  	s,
 		reqCh:   	make(chan interface{}),
 		updateCh:	updateCh,
@@ -36,28 +36,28 @@ func NewCluster(state []Node, updateCh chan []NodeUpdate, stateCh chan []Node) *
 	return c
 }
 
-func (c *simpleCluster) Members() []Node {
+func (c *Cluster) Members() []Node {
 	ch := make(chan []Node)
 	c.reqCh <- ch
 	return <-ch
 }
 
-func (c *simpleCluster) Subscribe() Subscriber {
+func (c *Cluster) Subscribe() Subscriber {
 	ch := make(chan Subscriber)
 	c.reqCh <- ch
 	return <-ch
 }
 
-func (c *simpleCluster) Close() error {
+func (c *Cluster) Close() error {
 	close(c.reqCh)
 	return nil
 }
 
-func (c *simpleCluster) done() bool {
+func (c *Cluster) done() bool {
 	return c.updateCh == nil && c.stateCh == nil && c.reqCh == nil
 }
 
-func (c *simpleCluster) loop() {
+func (c *Cluster) loop() {
 	for !c.done() {
 		select {
 		case updates, ok := <-c.updateCh:
@@ -91,7 +91,7 @@ func (c *simpleCluster) loop() {
 	}
 }
 
-func (c *simpleCluster) handleReq(req interface{}) {
+func (c *Cluster) handleReq(req interface{}) {
 	switch req := req.(type) {
 	case chan []Node:
 		// Members()
@@ -116,15 +116,15 @@ func (c *simpleCluster) handleReq(req interface{}) {
 	}
 }
 
-func (c *simpleCluster) closeSubscription(s *Subscriber) {
+func (c *Cluster) closeSubscription(s *Subscriber) {
 	c.reqCh <- s.inCh
 }
 
-func (c *simpleCluster) Current() []Node {
+func (c *Cluster) Current() []Node {
 	var r []Node
 	for _, v := range c.State.Nodes {
 		r = append(r, v)
 	}
-	sort.Sort(nodeSorter(r))
+	sort.Sort(NodeSorter(r))
 	return r
 }

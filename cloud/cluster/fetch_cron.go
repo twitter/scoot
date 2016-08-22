@@ -8,8 +8,7 @@ import (
 type FetchCron struct {
 	Ticker  *time.Ticker
 	f 	    Fetcher
-	Cl 		*simpleCluster
-	// Nodes   []Node	
+	Cl 		*Cluster
 }
 
 // Returns a full list of visible nodes.
@@ -17,12 +16,11 @@ type Fetcher interface {
 	Fetch() ([]Node, error)
 }
 
-func NewFetchCron(f Fetcher, t time.Duration) *FetchCron {
+func NewFetchCron(f Fetcher, t time.Duration, cl *Cluster) *FetchCron {
 	c := &FetchCron{
 		Ticker: time.NewTicker(t),
 		f: 		f,
-		Cl: 	NewCluster([]Node{}, make(chan []NodeUpdate), make(chan []Node)),
-		// Nodes: []Node{},
+		Cl: 	cl,
 	}
 	go c.loop()
 	return c
@@ -36,6 +34,5 @@ func (c *FetchCron) loop() {
 			fmt.Println("Received error: %v", err)
 		}
 		c.Cl.stateCh <- nodes
-		// c.Nodes = nodes
 	}
 }

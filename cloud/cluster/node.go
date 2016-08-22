@@ -35,11 +35,11 @@ func (n *idNode) Id() NodeId {
 	return n.id
 }
 
-type nodeSorter []Node
+type NodeSorter []Node
 
-func (n nodeSorter) Len() int           { return len(n) }
-func (n nodeSorter) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n nodeSorter) Less(i, j int) bool { return n[i].Id() < n[j].Id() }
+func (n NodeSorter) Len() int           { return len(n) }
+func (n NodeSorter) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n NodeSorter) Less(i, j int) bool { return n[i].Id() < n[j].Id() }
 
 type NodeUpdateType int
 
