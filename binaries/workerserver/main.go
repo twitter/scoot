@@ -11,6 +11,7 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	localrunner "github.com/scootdev/scoot/runner/local"
+	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -29,7 +30,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 
 	stats := stat.Scope("workerserver")
-	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil))
+	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil), fakesnaps.MakeInvalidCheckouter())
 	version := func() string { return "" }
 	handler := server.NewHandler(stats, run, version)
 	err := server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)

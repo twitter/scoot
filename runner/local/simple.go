@@ -7,23 +7,30 @@ import (
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/snapshots"
 )
 
-func NewSimpleRunner(exec execer.Execer) runner.Runner {
-	r := &simpleRunner{}
-	r.exec = exec
-	r.runs = make(map[runner.RunId]runner.ProcessStatus)
-	r.running = make(map[runner.RunId]execer.Process)
-	return r
+func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter) runner.Runner {
+	return &simpleRunner{
+		exec:       exec,
+		checkouter: checkouter,
+		runs:       make(map[runner.RunId]runner.ProcessStatus),
+	}
 }
 
-// simpleRunner runs N=maxRunning processes at a time and stores results.
+// simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
-	exec      execer.Execer
-	runs      map[runner.RunId]runner.ProcessStatus
-	running   map[runner.RunId]execer.Process
-	nextRunId int64
-	mu        sync.Mutex
+	exec       execer.Execer
+	checkouter snapshots.Checkouter
+	runs       map[runner.RunId]runner.ProcessStatus
+	running    *inflight
+	nextRunId  int64
+	mu         sync.Mutex
+}
+
+type inflight struct {
+	runId  runner.RunId
+	doneCh chan struct{}
 }
 
 func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
@@ -32,24 +39,31 @@ func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
 	runId := runner.RunId(fmt.Sprintf("%d", r.nextRunId))
 	r.nextRunId++
 
-	if len(r.running) == 1 {
+	if r.running != nil {
 		r.runs[runId] = runner.BadRequestStatus(runId, fmt.Errorf("Runner is busy"))
 		return r.runs[runId]
 	}
 
-	var c execer.Command
-	c.Argv = cmd.Argv
-	p, err := r.exec.Exec(c)
-	if err != nil {
-		r.runs[runId] = runner.BadRequestStatus(runId, fmt.Errorf("could not exec: %v", err))
-		return r.runs[runId]
+	r.running = &inflight{runId: runId, doneCh: make(chan struct{})}
+	r.runs[runId] = runner.PreparingStatus(runId)
+
+	// Run in a new goroutine
+	go r.run(cmd, runId, r.running.doneCh)
+	if cmd.Timeout > 0 { // Timeout if applicable
+		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId)) })
 	}
-	r.runs[runId] = runner.RunningStatus(runId)
-	r.running[runId] = p
-
-	go babysit(p, runId, r, cmd.Timeout)
-
+	// TODO(dbentley): we return PREPARING now to defend against long-checkout
+	// But we could sleep short (50ms?), query status, and return that to capture the common, fast case
 	return r.runs[runId]
+}
+
+func makeRunnerStatus(st execer.ProcessStatus, runId runner.RunId) runner.ProcessStatus {
+	if st.State == execer.COMPLETE {
+		return runner.CompleteStatus(runId, st.StdoutURI, st.StderrURI, st.ExitCode)
+	} else if st.State == execer.FAILED {
+		return runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error))
+	}
+	return runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State))
 }
 
 func (r *simpleRunner) Status(run runner.RunId) runner.ProcessStatus {
@@ -73,7 +87,7 @@ func (r *simpleRunner) StatusAll() []runner.ProcessStatus {
 }
 
 func (r *simpleRunner) Abort(run runner.RunId) runner.ProcessStatus {
-	return r.abortImpl(run, runner.ABORTED)
+	return r.updateStatus(runner.AbortStatus(run))
 }
 
 func (r *simpleRunner) Erase(run runner.RunId) {
@@ -85,52 +99,67 @@ func (r *simpleRunner) Erase(run runner.RunId) {
 	}
 }
 
-func (r *simpleRunner) abortImpl(run runner.RunId, state runner.ProcessState) runner.ProcessStatus {
+func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStatus {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	result, ok := r.running[run]
+	old, ok := r.runs[new.RunId]
 	if !ok {
-		return runner.BadRequestStatus(run, fmt.Errorf("could not find abortable run: %v", run))
+		return runner.BadRequestStatus(new.RunId, fmt.Errorf("cannot find run %v", new.RunId))
 	}
-	result.Abort()
-	delete(r.running, run)
-	r.runs[run] = runner.AbortStatus(run)
-	return r.runs[run]
+	if old.State.IsDone() {
+		return old
+	}
+	r.runs[new.RunId] = new
+	if new.State.IsDone() {
+		// We are ending the running task.
+		// depend on the invariant that there is at most 1 run with !state.IsDone(),
+		// so if we're changing a Process from not Done to Done it must be running
+		close(r.running.doneCh)
+		r.running = nil
+	}
+	return new
 }
 
-func babysit(p execer.Process, run runner.RunId, r *simpleRunner, timeout time.Duration) {
-	done := make(chan interface{})
-	if timeout > 0 {
-		go func() {
-			select {
-			case <-time.NewTimer(timeout).C:
-				r.abortImpl(run, runner.TIMEDOUT)
-			case <-done:
-				return
-			}
-		}()
+// run cmd in the background, writing results to r as id, unless doneCh is closed
+func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
+	checkout, err, checkoutDone := (snapshots.Checkout)(nil), (error)(nil), make(chan struct{}, 1)
+	go func() {
+		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
+		close(checkoutDone)
+	}()
+
+	// Wait for checkout or cancel
+	select {
+	case <-doneCh:
+		return
+	case <-checkoutDone:
 	}
-
-	status := p.Wait()
-	if timeout > 0 {
-		done <- nil
+	if err != nil {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)))
+		return
 	}
+	defer checkout.Release()
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.running, run)
-
-	// Check if we already marked this run as done (i.e. in Abort())
-	if r.runs[run].State.IsDone() {
+	p, err := r.exec.Exec(execer.Command{
+		Argv: cmd.Argv,
+		Dir:  checkout.Path(),
+	})
+	if err != nil {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err)))
 		return
 	}
 
-	switch status.State {
-	case execer.COMPLETE:
-		r.runs[run] = runner.CompleteStatus(run, status.StdoutURI, status.StderrURI, status.ExitCode)
-	case execer.FAILED:
-		r.runs[run] = runner.ErrorStatus(run, fmt.Errorf("error execing: %v", status.Error))
-	default:
-		r.runs[run] = runner.ErrorStatus(run, fmt.Errorf("unexpected exec state: %v", status.State))
+	r.updateStatus(runner.RunningStatus(runId))
+
+	processCh := make(chan execer.ProcessStatus, 1)
+	go func() { processCh <- p.Wait() }()
+
+	// Wait for process complete or cancel
+	select {
+	case <-doneCh:
+		p.Abort()
+		return
+	case st := <-processCh:
+		r.updateStatus(makeRunnerStatus(st, runId))
 	}
 }
