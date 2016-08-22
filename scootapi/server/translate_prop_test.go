@@ -24,7 +24,7 @@ func TestTranslateJob(t *testing.T) {
 	properties.TestingRun(t)
 }
 
-const MAX_TASKS = 1000
+const MAX_TASKS = 10
 const MAX_ARGS = 10
 
 func genTask() gopter.Gen {
