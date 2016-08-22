@@ -2,12 +2,14 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	"github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/local"
-	"log"
+	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 )
 
 var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
@@ -24,7 +26,7 @@ func main() {
 	default:
 		log.Fatalf("Unknown execer type %v", *execerType)
 	}
-	r := local.NewSimpleRunner(ex)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	s, err := server.NewServer(r)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

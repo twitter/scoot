@@ -7,6 +7,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/fake"
 	"github.com/scootdev/scoot/runner/local"
+	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 
 	"sync"
 	"testing"
@@ -14,7 +15,7 @@ import (
 
 func TestRun(t *testing.T) {
 	exec := fake.NewSimExecer(nil)
-	r := local.NewSimpleRunner(exec)
+	r := local.NewSimpleRunner(exec, fakesnaps.MakeInvalidCheckouter())
 	firstId := assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
 	// Now make sure that the first results are still available
@@ -25,21 +26,37 @@ func TestSimul(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
-	st := r.Status(firstRun)
-	assertStatus(t, st, running(), firstArgs...)
+	assertWait(t, r, firstRun, running(), firstArgs...)
 
 	// Now that one is running, try running a second
 	secondArgs := []string{"complete 3"}
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
-	st = r.Run(cmd)
+	st := r.Run(cmd)
 	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
+}
+
+func TestAbort(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ex := fake.NewSimExecer(&wg)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
+	args := []string{"pause", "complete 0"}
+	runId := run(t, r, args)
+	assertWait(t, r, runId, running(), args...)
+	r.Abort(runId)
+	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
+	st := r.Status(runId)
+	assertStatus(t, st, aborted(), args...)
+
+	st = r.Abort(runner.RunId("not-a-run-id"))
+	assertStatus(t, st, badreq("cannot find run not-a-run-id"))
 }
 
 func complete(exitCode int) runner.ProcessStatus {
@@ -58,6 +75,10 @@ func badreq(errorText string) runner.ProcessStatus {
 	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
+func aborted() runner.ProcessStatus {
+	return runner.AbortStatus(runner.RunId(""))
+}
+
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, expected, args...)
@@ -65,7 +86,7 @@ func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, arg
 }
 
 func assertWait(t *testing.T, r runner.Runner, runId runner.RunId, expected runner.ProcessStatus, args ...string) {
-	actual := wait(r, runId)
+	actual := wait(r, runId, expected)
 	assertStatus(t, actual, expected, args...)
 }
 
@@ -94,11 +115,11 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	return status.RunId
 }
 
-func wait(r runner.Runner, run runner.RunId) runner.ProcessStatus {
+func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(100 * time.Microsecond)
 		status := r.Status(run)
-		if status.State.IsDone() {
+		if status.State.IsDone() || status.State == expected.State {
 			return status
 		}
 	}

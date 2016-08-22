@@ -34,7 +34,6 @@ func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
 	log.mutex.Lock()
 	defer log.mutex.Unlock()
 
-	fmt.Println(fmt.Sprintf("Saga %s: %s %s", msg.sagaId, msg.msgType.String(), msg.taskId))
 	sagaId := msg.sagaId
 
 	msgs, ok := log.sagas[sagaId]
@@ -50,8 +49,6 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 	log.mutex.Lock()
 	defer log.mutex.Unlock()
-
-	fmt.Println(fmt.Sprintf("Start Saga %s", sagaId))
 
 	startMsg := MakeStartSagaMessage(sagaId, job)
 	log.sagas[sagaId] = []sagaMessage{startMsg}
