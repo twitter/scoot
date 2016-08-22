@@ -9,14 +9,12 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
-	"path/filepath"
 	"strconv"
 	"syscall"
 )
 
-type SwarmTest []*exec.Cmd
-
-type SwarmTestOpts struct {
+type SwarmTest struct {
+	Running    []*exec.Cmd
 	LogDir     string
 	RepoDir    string
 	NumWorkers int
@@ -24,19 +22,30 @@ type SwarmTestOpts struct {
 	Run        func() error
 }
 
-func (s *SwarmTest) InitOptions() (*SwarmTestOpts, error) {
-	logDir := flag.String("logdir", "/tmp/scoot-swarmtest", "If empty, write to stdout, else to log file")
-	repoDir := flag.String("repo", "$GOPATH/src/github.com/scootdev/scoot", "Path to scoot repo")
-	numWorkers := flag.Int("num_workers", 5, "Number of workerserver instances to spin up.")
+func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
+	d := map[string]interface{}{
+		"logdir":      "/tmp/scoot-swarmtest",
+		"repo":        "$GOPATH/src/github.com/scootdev/scoot",
+		"num_workers": 5,
+	}
+	for key, val := range defaults {
+		d[key] = val
+	}
+	logDir := flag.String("logdir", d["logdir"].(string), "If empty, write to stdout, else to log file")
+	repoDir := flag.String("repo", d["repo"].(string), "Path to scoot repo")
+	numWorkers := flag.Int("num_workers", d["num_workers"].(int), "Number of workerserver instances to spin up.")
 
 	flag.Parse()
 	if *numWorkers < 5 {
-		return nil, errors.New("Need >5 workers (see scheduler.go:getNumNodes)")
+		return errors.New("Need >5 workers (see scheduler.go:getNumNodes)")
 	}
-	compile := func() error { return s.compile(*repoDir) }
-	run := func() error { return s.run(*numWorkers) }
-	opts := &SwarmTestOpts{*logDir, *repoDir, *numWorkers, compile, run}
-	return opts, nil
+
+	s.LogDir = *logDir
+	s.RepoDir = *repoDir
+	s.NumWorkers = *numWorkers
+	s.Compile = func() error { return s.compile() }
+	s.Run = func() error { return s.run() }
+	return nil
 }
 
 func (s *SwarmTest) Fatalf(format string, v ...interface{}) {
@@ -45,7 +54,7 @@ func (s *SwarmTest) Fatalf(format string, v ...interface{}) {
 }
 
 func (s *SwarmTest) Kill() {
-	for _, cmd := range *s {
+	for _, cmd := range s.Running {
 		if cmd.ProcessState == nil && cmd.Process != nil {
 			fmt.Printf("Killing: %v\n", cmd.Path)
 			p, _ := os.FindProcess(cmd.Process.Pid)
@@ -61,20 +70,23 @@ func (s *SwarmTest) GetPort() int {
 }
 
 func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
-	bin := filepath.Join(os.Getenv("GOPATH"), "bin", name)
-	cmd := exec.Command(bin, args...)
+	for i, _ := range args {
+		args[i] = os.ExpandEnv(args[i])
+	}
+	cmd := exec.Command(os.ExpandEnv(name), args...)
+	cmd.Dir = os.ExpandEnv(s.RepoDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	*s = append(*s, cmd)
+	s.Running = append(s.Running, cmd)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("Error starting %v,%v: %v", bin, args, err)
+		return fmt.Errorf("Error starting %v,%v: %v", name, args, err)
 	}
 	fmt.Println("Started: ", name, args)
 
 	if !blocking {
 		go func() {
 			if err := cmd.Wait(); err != nil {
-				s.Fatalf("Exiting because cmd ended early %v,%v: %v", bin, args, err)
+				s.Fatalf("Exiting because cmd ended early %v,%v: %v", name, args, err)
 			}
 		}()
 		return nil
@@ -112,42 +124,40 @@ func (s *SwarmTest) StartSignalHandler() {
 	}()
 }
 
-func (s *SwarmTest) compile(repoDir string) error {
-	cmd := exec.Command("go", "install", "./binaries/...")
-	cmd.Dir = os.ExpandEnv(repoDir)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println(string(out))
-		return err
-	}
-	return nil
+func (s *SwarmTest) compile() error {
+	return s.RunCmd(true, "go", "install", "./binaries/...")
 }
 
-func (s *SwarmTest) run(numWorkers int) error {
-	for i := 0; i < numWorkers; i++ {
+func (s *SwarmTest) run() error {
+	for i := 0; i < s.NumWorkers; i++ {
 		thriftPort := strconv.Itoa(s.GetPort())
 		httpPort := strconv.Itoa(s.GetPort())
-		if err := s.RunCmd(false, "workerserver", "-thrift_port", thriftPort, "-http_port", httpPort); err != nil {
+		args := []string{"-thrift_port", thriftPort, "-http_port", httpPort}
+		if err := s.RunCmd(false, "$GOPATH/bin/workerserver", args...); err != nil {
 			return err
 		}
 	}
-	if err := s.RunCmd(false, "scheduler", "-sched_config", `{"Cluster": {"Type": "local"}}`); err != nil {
+	args := []string{"-sched_config", `{"Cluster": {"Type": "local"}}`}
+	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
 		return err
 	}
-	return s.RunCmd(true, "scootapi", "run_smoke_test")
+	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test")
 }
 
-func (s *SwarmTest) Main(opts *SwarmTestOpts) {
+func (s *SwarmTest) Main() {
 	var err error
 	s.StartSignalHandler()
-	if err = s.SetupLog(opts.LogDir); err == nil {
-		if err = opts.Compile(); err == nil {
-			err = opts.Run()
+	if err = s.SetupLog(s.LogDir); err == nil {
+		fmt.Println("Compiling...")
+		if err = s.Compile(); err == nil {
+			fmt.Println("Running...")
+			err = s.Run()
 			s.Kill()
 		}
 	}
 	fmt.Println("Done")
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	} else {
 		os.Exit(0)
