@@ -1,18 +1,21 @@
 package cluster
 
+// Subscriber receives node updates from its cluster and maintains a queue
+// so that the sender doesn't have to worry about send blocking
+
 type Subscriber struct {
-	inCh  	chan []NodeUpdate
-	OutCh 	chan []NodeUpdate
-	cl    	*Cluster
-	queue 	[]NodeUpdate
+	inCh  chan []NodeUpdate
+	OutCh chan []NodeUpdate
+	cl    *Cluster
+	queue []NodeUpdate
 }
 
 func newSubscriber(initial []Node, cl *Cluster, inCh chan []NodeUpdate) Subscriber {
 	s := Subscriber{
-		inCh:  	inCh,
-		OutCh: 	make(chan []NodeUpdate),
-		cl:    	cl,
-		queue: 	nil,
+		inCh:  inCh,
+		OutCh: make(chan []NodeUpdate),
+		cl:    cl,
+		queue: nil,
 	}
 	go s.loop()
 	return s

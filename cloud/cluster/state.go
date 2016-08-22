@@ -6,7 +6,7 @@ import (
 
 type State struct {
 	// current view of our nodes
-	Nodes 	map[NodeId]Node
+	Nodes map[NodeId]Node
 }
 
 func MakeState(nodes []Node) *State {
@@ -36,14 +36,14 @@ func (s *State) SetAndDiff(newState []Node) []NodeUpdate {
 	for _, n := range added {
 		outgoing = append(outgoing, NodeUpdate{
 			UpdateType: NodeAdded,
-			Id: 		n.Id(),
-			Node: 		n,
+			Id:         n.Id(),
+			Node:       n,
 		})
 	}
 	for _, n := range removed {
 		outgoing = append(outgoing, NodeUpdate{
 			UpdateType: NodeRemoved,
-			Id: 		n.Id(),
+			Id:         n.Id(),
 		})
 	}
 	// reset nodes map, assign to new state
@@ -56,13 +56,30 @@ func (s *State) SetAndDiff(newState []Node) []NodeUpdate {
 	return outgoing
 }
 
-func (s *State) Update(newUpdates []NodeUpdate) {
+func (s *State) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
+	filtered := []NodeUpdate{}
 	for _, update := range newUpdates {
+		_, ok := s.Nodes[update.Id]
 		switch {
-			case update.UpdateType == NodeAdded:
+		case update.UpdateType == NodeAdded:
+			if ok {
+				// node is already included in state
+				continue
+			} else {
+				// add node to state
 				s.Nodes[update.Id] = update.Node
-			case update.UpdateType == NodeRemoved:
+				filtered = append(filtered, update)
+			}
+		case update.UpdateType == NodeRemoved:
+			if ok {
+				// remove node from state
 				delete(s.Nodes, update.Id)
+				filtered = append(filtered, update)
+			} else {
+				// node wasn't previously in state
+				continue
+			}
 		}
 	}
+	return filtered
 }

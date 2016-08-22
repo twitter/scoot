@@ -1,8 +1,8 @@
 package cluster_test
 
 import (
-	"testing"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"testing"
 )
 
 func TestState(t *testing.T) {
@@ -46,7 +46,7 @@ func assertUpdates(t *testing.T, s *cluster.State, nodeNames []string, expected 
 		nodes = append(nodes, node)
 	}
 	actual := s.SetAndDiff(nodes)
-	
+
 	if len(actual) != len(expected) {
 		t.Fatalf("Unequal updates %v %v", actual, expected)
 	}
@@ -59,7 +59,7 @@ func assertUpdates(t *testing.T, s *cluster.State, nodeNames []string, expected 
 }
 
 func assertMembers(t *testing.T, s *cluster.State, updates []cluster.NodeUpdate, expected []cluster.Node) {
-	s.Update(updates)
+	s.FilterAndUpdate(updates)
 	actual := s.Nodes
 
 	if len(actual) != len(expected) {

@@ -48,6 +48,4 @@ const (
 	NodeRemoved
 )
 
-
 var _ Node = (*idNode)(nil)
-

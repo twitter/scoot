@@ -1,13 +1,12 @@
 package cluster_test
 
 import (
-	"testing"
 	"github.com/scootdev/scoot/cloud/cluster"
-	"time"
 	"reflect"
-	"sync"
 	"sort"
-	// "fmt"
+	"sync"
+	"testing"
+	"time"
 )
 
 func TestFetchCron(t *testing.T) {
@@ -21,30 +20,29 @@ func TestFetchCron(t *testing.T) {
 func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
 	nodes := nodes(nodeNames)
 	h.f.setResult(nodes)
-	time.Sleep(h.time * 2)
 	sort.Sort(cluster.NodeSorter(nodes))
 	return nodes
 }
 
 type cronHelper struct {
-	t     *testing.T
-	c     *cluster.FetchCron
-	cl 	  *cluster.Cluster
-	f  	  *fakeFetcher
-	time  time.Duration
+	t    *testing.T
+	c    *cluster.FetchCron
+	cl   *cluster.Cluster
+	f    *fakeFetcher
+	time time.Duration
 }
 
 func makeCronHelper(t *testing.T) *cronHelper {
 	h := &cronHelper{t: t}
 	h.cl = cluster.NewCluster([]cluster.Node{}, make(chan []cluster.NodeUpdate), make(chan []cluster.Node))
-	h.time = time.Second
+	h.time = time.Nanosecond
 	h.f = &fakeFetcher{}
-	h.c = cluster.NewFetchCron(h.f, h.time, h.cl)
+	h.c = cluster.NewFetchCron(h.f, h.time, h.cl.StateCh)
 	return h
 }
 
 func (h *cronHelper) assertFetch(t *testing.T, expected []cluster.Node) {
-	actual := h.cl.Current()
+	actual := <-h.c.Ch
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("Unequal, expected %v, received %v", expected, actual)
 	}
@@ -64,8 +62,8 @@ func nodes(ids []string) []cluster.Node {
 
 // fakeFetcher for testing fetch cron
 type fakeFetcher struct {
-	mutex	sync.Mutex
-	nodes	[]cluster.Node
+	mutex sync.Mutex
+	nodes []cluster.Node
 }
 
 func (f *fakeFetcher) Fetch() ([]cluster.Node, error) {

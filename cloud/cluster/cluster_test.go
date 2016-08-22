@@ -68,10 +68,10 @@ func TestSubscribe(t *testing.T) {
 // Below here are helpers that make it easy to write more fluent tests.
 
 type helper struct {
-	t   *testing.T
-	c   *cluster.Cluster
-	ch  chan []cluster.NodeUpdate
-	sc  chan []cluster.Node
+	t  *testing.T
+	c  *cluster.Cluster
+	ch chan []cluster.NodeUpdate
+	sc chan []cluster.Node
 }
 
 func makeHelper(t *testing.T) *helper {

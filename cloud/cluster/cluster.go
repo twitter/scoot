@@ -15,22 +15,21 @@ import (
 // }
 
 type Cluster struct {
-	State  		*State
-	reqCh   	chan interface{}
-	updateCh 	chan []NodeUpdate
-	stateCh 	chan []Node
-	subs    	[]chan []NodeUpdate
+	State    *State
+	reqCh    chan interface{}
+	updateCh chan []NodeUpdate
+	StateCh  chan []Node
+	subs     []chan []NodeUpdate
 }
 
 func NewCluster(state []Node, updateCh chan []NodeUpdate, stateCh chan []Node) *Cluster {
 	s := MakeState(state)
-	// s.SetAndDiff(state)
 	c := &Cluster{
-		State:  	s,
-		reqCh:   	make(chan interface{}),
-		updateCh:	updateCh,
-		stateCh: 	stateCh,
-		subs:    	nil,
+		State:    s,
+		reqCh:    make(chan interface{}),
+		updateCh: updateCh,
+		StateCh:  stateCh,
+		subs:     nil,
 	}
 	go c.loop()
 	return c
@@ -54,7 +53,7 @@ func (c *Cluster) Close() error {
 }
 
 func (c *Cluster) done() bool {
-	return c.updateCh == nil && c.stateCh == nil && c.reqCh == nil
+	return c.updateCh == nil && c.StateCh == nil && c.reqCh == nil
 }
 
 func (c *Cluster) loop() {
@@ -65,13 +64,13 @@ func (c *Cluster) loop() {
 				c.updateCh = nil
 				continue
 			}
-			c.State.Update(updates)
+			filtered := c.State.FilterAndUpdate(updates)
 			for _, sub := range c.subs {
-				sub <- updates
+				sub <- filtered
 			}
-		case nodes, ok := <-c.stateCh:
+		case nodes, ok := <-c.StateCh:
 			if !ok {
-				c.stateCh = nil
+				c.StateCh = nil
 				continue
 			}
 			outgoing := c.State.SetAndDiff(nodes)
