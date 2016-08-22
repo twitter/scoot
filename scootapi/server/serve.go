@@ -42,7 +42,6 @@ func NewHandler(queue queue.Queue, sc saga.SagaCoordinator, stat stats.StatsRece
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
-	log.Println("Running job", def)
 
 	job, err := thriftJobToScoot(def)
 	if err != nil {
