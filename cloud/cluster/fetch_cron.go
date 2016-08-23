@@ -36,3 +36,7 @@ func (c *FetchCron) loop() {
 		c.Ch <- nodes
 	}
 }
+
+func (c *FetchCron) Close() {
+	c.Ticker.Stop()
+}

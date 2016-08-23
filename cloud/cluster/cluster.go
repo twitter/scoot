@@ -38,10 +38,6 @@ func (c *Cluster) Subscribe() Subscriber {
 }
 
 func (c *Cluster) Close() error {
-	for _, s := range c.subs {
-		c.handleReq(s)
-	}
-	c.subs = nil
 	close(c.reqCh)
 	return nil
 }
@@ -76,8 +72,10 @@ func (c *Cluster) loop() {
 		}
 	}
 	for _, sub := range c.subs {
+		c.handleReq(sub)
 		close(sub)
 	}
+	c.subs = nil
 }
 
 func (c *Cluster) handleReq(req interface{}) {

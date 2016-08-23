@@ -2,7 +2,6 @@ package distributor_test
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/memory"
 	"github.com/scootdev/scoot/sched/distributor"
 	"testing"
 )
@@ -84,7 +83,7 @@ func makeHelper(t *testing.T, node ...string) *helper {
 	}
 	nodes := []cluster.Node{}
 	for _, n := range node {
-		nodes = append(nodes, memory.NewIdNode(n))
+		nodes = append(nodes, cluster.NewIdNode(n))
 	}
 
 	r.d = distributor.NewPoolDistributor(nodes, r.ch)
@@ -117,7 +116,7 @@ func (h *helper) release(node string) {
 }
 
 func (h *helper) add(node string) {
-	update := cluster.NewAdd(memory.NewIdNode(node))
+	update := cluster.NewAdd(cluster.NewIdNode(node))
 	h.ch <- []cluster.NodeUpdate{update}
 }
 

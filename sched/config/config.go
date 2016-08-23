@@ -67,7 +67,7 @@ type QueueConfig interface {
 }
 
 type ClusterConfig interface {
-	Create() (cluster.Cluster, error)
+	Create() (*cluster.Cluster, error)
 }
 
 type SagaLogConfig interface {
