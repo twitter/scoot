@@ -70,15 +70,15 @@ func TestSubscribe(t *testing.T) {
 type helper struct {
 	t  *testing.T
 	c  *cluster.Cluster
-	ch chan []cluster.NodeUpdate
-	sc chan []cluster.Node
+	ch chan interface{}
+	// sc chan []cluster.Node
 }
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
-	h.ch = make(chan []cluster.NodeUpdate)
-	h.sc = make(chan []cluster.Node)
-	h.c = cluster.NewCluster(nil, h.ch, h.sc)
+	h.ch = make(chan interface{})
+	// h.sc = make(chan []cluster.Node)
+	h.c = cluster.NewCluster(nil, h.ch)
 	return h
 }
 
@@ -108,7 +108,7 @@ func (h *helper) remove(node ...string) {
 
 func (h *helper) changeStateTo(node ...string) {
 	nodes := makeNodes(node...)
-	h.sc <- nodes
+	h.ch <- nodes
 }
 
 func (h *helper) subscribe() cluster.Subscriber {

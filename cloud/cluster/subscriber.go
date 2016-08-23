@@ -29,10 +29,8 @@ func (s *Subscriber) Close() error {
 func (s *Subscriber) loop() {
 	for s.inCh != nil || len(s.queue) > 0 {
 		var outCh chan []NodeUpdate
-		var outgoing []NodeUpdate
 		if len(s.queue) > 0 {
 			outCh = s.OutCh
-			outgoing = s.queue
 		}
 		select {
 		case updates, ok := <-s.inCh:
@@ -41,7 +39,7 @@ func (s *Subscriber) loop() {
 				continue
 			}
 			s.queue = append(s.queue, updates...)
-		case outCh <- outgoing:
+		case outCh <- s.queue:
 			s.queue = nil
 		}
 	}

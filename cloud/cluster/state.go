@@ -1,9 +1,5 @@
 package cluster
 
-import (
-	"sort"
-)
-
 type State struct {
 	// current view of our nodes
 	Nodes map[NodeId]Node
@@ -17,6 +13,8 @@ func MakeState(nodes []Node) *State {
 	return s
 }
 
+// SetAndDiff takes the new state as an argument and creates
+// node updates based on the diff
 func (s *State) SetAndDiff(newState []Node) []NodeUpdate {
 	added := []Node{}
 	for _, n := range newState {
@@ -52,11 +50,16 @@ func (s *State) SetAndDiff(newState []Node) []NodeUpdate {
 		s.Nodes[n.Id()] = n
 	}
 	// present updates in predictable order
-	sort.Sort(NodeUpdateSorter(outgoing))
+	// sort.Sort(NodeUpdateSorter(outgoing))
 	return outgoing
 }
 
+// FilterAndUpdate takes node updates as an argument and applies them
+// to the state to create a new state. It also filters out updates that
+// are not applicable, i.e. adding a node that is already in the state
+// or removing one that isn't present.
 func (s *State) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
+	unused := []NodeUpdate{}
 	filtered := []NodeUpdate{}
 	for _, update := range newUpdates {
 		_, ok := s.Nodes[update.Id]
@@ -64,6 +67,7 @@ func (s *State) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
 		case update.UpdateType == NodeAdded:
 			if ok {
 				// node is already included in state
+				unused = append(unused, update)
 				continue
 			} else {
 				// add node to state
@@ -77,9 +81,22 @@ func (s *State) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
 				filtered = append(filtered, update)
 			} else {
 				// node wasn't previously in state
+				unused = append(unused, update)
 				continue
 			}
 		}
 	}
-	return filtered
+	if len(unused) == 0 || len(unused) == len(newUpdates) {
+		// if all updates were applied or if none were applied
+		// return the filtered updates
+		return filtered
+	} else {
+		// recurse through until either all unused updates are applied
+		// or none are
+		next := s.FilterAndUpdate(unused)
+		for _, nextUpdate := range next {
+			filtered = append(filtered, nextUpdate)
+		}
+		return filtered
+	}
 }
