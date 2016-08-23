@@ -71,13 +71,11 @@ type helper struct {
 	t  *testing.T
 	c  *cluster.Cluster
 	ch chan interface{}
-	// sc chan []cluster.Node
 }
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
 	h.ch = make(chan interface{})
-	// h.sc = make(chan []cluster.Node)
 	h.c = cluster.NewCluster(nil, h.ch)
 	return h
 }
