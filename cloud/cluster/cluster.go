@@ -10,7 +10,7 @@ type Cluster struct {
 	State *State
 	reqCh chan interface{}
 	ch    chan interface{}
-	subs []chan []NodeUpdate
+	subs  []chan []NodeUpdate
 }
 
 func NewCluster(state []Node, ch chan interface{}) *Cluster {
@@ -19,7 +19,7 @@ func NewCluster(state []Node, ch chan interface{}) *Cluster {
 		State: s,
 		reqCh: make(chan interface{}),
 		ch:    ch,
-		subs: nil,
+		subs:  nil,
 	}
 	go c.loop()
 	return c

@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"fmt"
+	"log"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func (c *FetchCron) loop() {
 		nodes, err := c.f.Fetch()
 		if err != nil {
 			// Log? Return?
-			fmt.Println("Received error: %v", err)
+			log.Printf("Received error: %v", err)
 		}
 		c.Ch <- nodes
 	}
