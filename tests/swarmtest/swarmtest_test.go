@@ -1,4 +1,3 @@
-// +build !unit
 // +build integration
 
 package swarmtest
