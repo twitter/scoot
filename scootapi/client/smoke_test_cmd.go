@@ -63,7 +63,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 
 	wg.Wait()
 
-	// if any errors were looged return an error
+	// if any errors were logged return an error
 	select {
 	case err := <-errCh:
 		return err
