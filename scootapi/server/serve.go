@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/queue"
@@ -28,17 +28,19 @@ func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTrans
 type Handler struct {
 	queue     queue.Queue
 	sagaCoord saga.SagaCoordinator
+	stat      stats.StatsReceiver
 }
 
-func NewHandler(queue queue.Queue, sc saga.SagaCoordinator) scoot.CloudScoot {
+func NewHandler(queue queue.Queue, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	return &Handler{
 		queue:     queue,
 		sagaCoord: sc,
+		stat:      stat,
 	}
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
-	log.Println("Running job", def)
+	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
 
 	job, err := thriftJobToScoot(def)
 	if err != nil {

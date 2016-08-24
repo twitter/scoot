@@ -13,6 +13,8 @@ const (
 	UNKNOWN ProcessState = iota
 	// Waiting to run.
 	PENDING
+	// Preparing to run (e.g., checking out the Snapshot)
+	PREPARING
 	// Running
 	RUNNING
 
@@ -32,7 +34,7 @@ const (
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == UNKNOWN || p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
 func (p ProcessState) String() string {
@@ -41,6 +43,8 @@ func (p ProcessState) String() string {
 		return "UNKNOWN"
 	case PENDING:
 		return "PENDING"
+	case PREPARING:
+		return "PREPARING"
 	case RUNNING:
 		return "RUNNING"
 	case COMPLETE:

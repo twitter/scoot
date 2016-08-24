@@ -2,9 +2,11 @@ package config
 
 import (
 	"fmt"
-
+	"time"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/queue"
 	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
@@ -32,6 +34,15 @@ func DefaultParser() *Parser {
 			"local": &LocalWorkersConfig{},
 			"rpc":   &RPCWorkersConfig{},
 			"":      &LocalWorkersConfig{Type: "local"},
+		},
+		Report: map[string]ReportConfig{
+			"default": &DefaultReportConfig{},
+			"": &DefaultReportConfig{
+				Type:       "default",
+				StatsPath:  "/admin/metrics.json",
+				HealthPath: "/",
+				HttpAddr:   "localhost:9091",
+			},
 		},
 	}
 	return r
@@ -100,4 +111,30 @@ func (c *RPCWorkersConfig) Create() (worker.WorkerFactory, error) {
 	return func(node cluster.Node) worker.Worker {
 		return rpc.NewThriftWorker(transportFactory, protocolFactory, string(node.Id()))
 	}, nil
+}
+
+type DefaultReportConfig struct {
+	Type       string
+	StatsPath  string
+	HealthPath string
+	QuitPath   string
+	AbortPath  string
+	HttpAddr   string
+}
+
+func (c *DefaultReportConfig) Create() (stat stats.StatsReceiver, err error) {
+	stat = stats.NilStatsReceiver()
+	if c.StatsPath != "" {
+		stat, _ = stats.NewCustomStatsReceiver(stats.NewFinagleStatsRegistry, 15*time.Second)
+		stat = stat.Precision(time.Millisecond)
+		endpoints.RegisterStats("/admin/metrics.json", stat)
+	}
+	if c.HealthPath != "" {
+		endpoints.RegisterHealthCheck("/")
+	}
+
+	//TODO(jschiller): quit and abort endpoints.
+
+	go endpoints.Serve(c.HttpAddr)
+	return
 }

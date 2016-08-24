@@ -22,6 +22,14 @@ func TestConfigRoundtrip(t *testing.T) {
  },
  "Workers": {
   "Type": "local"
+ },
+ "Report": {
+  "Type": "default",
+  "StatsPath": "/admin/metrics.json",
+  "HealthPath": "/",
+  "QuitPath": "",
+  "AbortPath": "",
+  "HttpAddr": "localhost:9091"
  }
 }`
 
