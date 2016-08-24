@@ -31,9 +31,3 @@ func NewRemove(id NodeId) NodeUpdate {
 		Id:         id,
 	}
 }
-
-type NodeUpdateSorter []NodeUpdate
-
-func (n NodeUpdateSorter) Len() int           { return len(n) }
-func (n NodeUpdateSorter) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n NodeUpdateSorter) Less(i, j int) bool { return n[i].Id < n[j].Id }

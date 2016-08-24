@@ -20,7 +20,7 @@ func TestState(t *testing.T) {
 	// TODO: (rcouto) Differ should know when a node is removed and then re-added in between diffs
 	assertUpdates(t, s, []string{"host1:1234", "host1:4321"}, []cluster.NodeUpdate{})
 	// 1 node added, different node removed
-	assertUpdates(t, s, []string{"host1:1234", "host1:6789"}, []cluster.NodeUpdate{cluster.NewRemove(cluster.NodeId("host1:4321")), cluster.NewAdd(cluster.NewIdNode("host1:6789"))})
+	assertUpdates(t, s, []string{"host1:1234", "host1:6789"}, []cluster.NodeUpdate{cluster.NewAdd(cluster.NewIdNode("host1:6789")), cluster.NewRemove(cluster.NodeId("host1:4321"))})
 	// 2 nodes removed
 	assertUpdates(t, s, []string{}, []cluster.NodeUpdate{cluster.NewRemove(cluster.NodeId("host1:1234")), cluster.NewRemove(cluster.NodeId("host1:6789"))})
 }
@@ -62,8 +62,8 @@ func assertUpdates(t *testing.T, s *cluster.State, nodeNames []string, expected 
 		node := cluster.NewIdNode(n)
 		nodes = append(nodes, node)
 	}
+	sort.Sort(cluster.NodeSorter(nodes))
 	actual := s.SetAndDiff(nodes)
-	sort.Sort(cluster.NodeUpdateSorter(actual))
 	if len(actual) != len(expected) {
 		t.Fatalf("Unequal updates %v %v", actual, expected)
 	}

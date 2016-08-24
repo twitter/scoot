@@ -61,6 +61,7 @@ func (c *Cluster) loop() {
 			if updates, ok := nodesOrUpdates.([]NodeUpdate); ok {
 				outgoing = c.State.FilterAndUpdate(updates)
 			} else if nodes, ok := nodesOrUpdates.([]Node); ok {
+				sort.Sort(NodeSorter(nodes))
 				outgoing = c.State.SetAndDiff(nodes)
 			}
 			for _, sub := range c.subs {
