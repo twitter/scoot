@@ -6,38 +6,103 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/cloud/cluster/local"
-	"github.com/scootdev/scoot/sched/config"
+	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/ice"
+
+	// For putting into ice.MagicBag
+	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/server"
+
+	// For putting into jsonconfig.Options
+	"github.com/scootdev/scoot/config/scootconfig"
 )
 
 var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
 var httpPort = flag.Int("http_port", 9091, "port to serve http on")
 var cfgText = flag.String("sched_config", "", "Scheduler Configuration.")
 
+type servers struct {
+	thrift thrift.TServer
+	http   *endpoints.TwitterServer
+}
+
+func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
+	return servers{thrift, http}
+}
+
 func main() {
 	log.Println("Starting Cloud Scoot API Server & Scheduler")
 	flag.Parse()
 
-	parser := config.DefaultParser()
-	parser.Workers[""] = &config.RPCWorkersConfig{Type: "rpc"}
-	parser.Cluster[""] = &local.ClusterLocalConfig{Type: "local"}
-	parser.Cluster["local"] = &local.ClusterLocalConfig{}
-	parser.Report[""].(*config.DefaultReportConfig).HttpAddr = fmt.Sprintf("localhost:%d", *httpPort)
+	bag := ice.NewMagicBag()
+	bag.PutMany(
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*addr) },
+		endpoints.MakeStatsReceiver,
+		server.MakeServer,
+		server.NewHandler,
+		func(s stats.StatsReceiver) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer(fmt.Sprintf(":%d", *httpPort), s)
+		},
+		makeServers,
+		saga.MakeSagaCoordinator,
+		saga.MakeInMemorySagaLog,
+		distributor.NewPoolDistributorFromCluster,
+		scheduler.MakeAndStartScheduler,
+		thrift.NewTTransportFactory,
+		func() thrift.TProtocolFactory {
+			return thrift.NewTBinaryProtocolFactoryDefault()
+		},
+	)
 
-	// Construct scootapi server handler based on config.
-	handler, err := parser.Create([]byte(*cfgText))
+	schema := jsonconfig.Schema(map[string]jsonconfig.Implementations{
+		"Cluster": {
+			"memory": &scootconfig.ClusterMemoryConfig{},
+			"local":  &scootconfig.ClusterLocalConfig{},
+			"": &scootconfig.ClusterMemoryConfig{
+				Type:  "memory",
+				Count: 10,
+			},
+		},
+		"Queue": {
+			"memory": &scootconfig.QueueMemoryConfig{},
+			"": &scootconfig.QueueMemoryConfig{
+				Type:     "memory",
+				Capacity: 1000,
+			},
+		},
+		"Workers": {
+			"local": &scootconfig.WorkersLocalConfig{},
+			"rpc":   &scootconfig.WorkersThriftConfig{},
+			"":      &scootconfig.WorkersLocalConfig{Type: "local"},
+		},
+	})
+
+	mod, err := schema.Parse([]byte(*cfgText))
 	if err != nil {
 		log.Fatal("Error configuring Scoot API: ", err)
 	}
+	bag.InstallModule(mod)
 
-	// Start API Server
-	log.Println("Starting API Server")
-
-	err = server.Serve(handler, *addr,
-		thrift.NewTTransportFactory(),
-		thrift.NewTBinaryProtocolFactoryDefault())
+	var servers servers
+	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error serving Scoot API: ", err)
+		log.Fatal("Error injecting servers", err)
 	}
+
+	// TODO(dbentley): if one fails and the other doesn't, we should do
+	// something smarter...
+
+	errCh := make(chan error)
+	go func() {
+		errCh <- servers.http.Serve()
+	}()
+	go func() {
+		errCh <- servers.thrift.Serve()
+
+	}()
+	log.Fatal("Error serving: ", <-errCh)
 }

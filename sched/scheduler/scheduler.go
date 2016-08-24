@@ -29,8 +29,7 @@ func NewScheduler(
 	nodes *dist.PoolDistributor,
 	sc saga.SagaCoordinator,
 	workerFactory worker.WorkerFactory,
-	stat stats.StatsReceiver,
-) *scheduler {
+	stat stats.StatsReceiver) Scheduler {
 	s := &scheduler{
 		nodes:         nodes,
 		sc:            sc,
@@ -45,7 +44,6 @@ func NewScheduler(
 // Starts the scheduler, must be called before any other
 // methods on the scheduler can be called
 func (s *scheduler) startUp() {
-
 	// TODO: Recover form SagaLog Any In Process Tasks
 	// Return only once all those have been scheduled
 

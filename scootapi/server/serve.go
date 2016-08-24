@@ -12,31 +12,21 @@ import (
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
-func Serve(handler scoot.CloudScoot, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
-	transport, err := thrift.NewTServerSocket(addr)
-	if err != nil {
-		return err
-	}
-	processor := scoot.NewCloudScootProcessor(handler)
-	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
+func NewHandler(q queue.Queue, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
+	return &Handler{queue: q, sagaCoord: sc, stat: stat}
+}
 
-	fmt.Println("About to serve")
-
-	return server.Serve()
+func MakeServer(handler scoot.CloudScoot,
+	transport thrift.TServerTransport, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) thrift.TServer {
+	return thrift.NewTSimpleServer4(
+		scoot.NewCloudScootProcessor(handler),
+		transport, transportFactory, protocolFactory)
 }
 
 type Handler struct {
 	queue     queue.Queue
 	sagaCoord saga.SagaCoordinator
 	stat      stats.StatsReceiver
-}
-
-func NewHandler(queue queue.Queue, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
-	return &Handler{
-		queue:     queue,
-		sagaCoord: sc,
-		stat:      stat,
-	}
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
