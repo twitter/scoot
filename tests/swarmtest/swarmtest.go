@@ -31,8 +31,8 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	d := map[string]interface{}{
 		"logdir":      "",
 		"repo":        "$GOPATH/src/github.com/scootdev/scoot",
-		"num_workers": 10,
-		"num_jobs":    10,
+		"num_workers": 5,
+		"num_jobs":    1,
 		"timeout":     10 * time.Second,
 	}
 	for key, val := range defaults {
