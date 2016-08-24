@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/scootapi/testhelpers"
+	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 func makeSmokeTestCmd(c *Client) *cobra.Command {
@@ -25,13 +26,35 @@ func makeSmokeTestCmd(c *Client) *cobra.Command {
 func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
 
+	numTasks := 100
+
+	if (len(args)) > 0 {
+		var err error
+		numTasks, err = strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+	}
+
+	timeout := 10 * time.Second
+	if (len(args)) > 1 {
+		var err error
+		timeout, err = time.ParseDuration(args[1])
+		if err != nil {
+			return err
+		}
+	}
+
 	// run a bunch of concurrent jobs
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+
+	errCh := make(chan error, numTasks)
+	for i := 0; i < numTasks; i++ {
 		wg.Add(1)
 		go func() {
-			err := c.generateAndRunJob()
+			err := c.generateAndRunJob(timeout)
 			if err != nil {
+				errCh <- err
 				fmt.Println(err)
 			}
 			wg.Done()
@@ -40,10 +63,16 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 
 	wg.Wait()
 
-	return nil
+	// if any errors were logged return an error
+	select {
+	case err := <-errCh:
+		return err
+	default:
+		return nil
+	}
 }
 
-func (c *Client) generateAndRunJob() error {
+func (c *Client) generateAndRunJob(timeout time.Duration) error {
 	client, err := c.Dial()
 
 	if err != nil {
@@ -69,7 +98,8 @@ func (c *Client) generateAndRunJob() error {
 
 	// Check Job Status
 	jobInProgress := true
-	for jobInProgress {
+	timeSpent := 0 * time.Second
+	for jobInProgress && timeSpent < timeout {
 		status, err := client.GetStatus(jobId.ID)
 		if status.Status == scoot.Status_COMPLETED || status.Status == scoot.Status_ROLLED_BACK {
 			jobInProgress = false
@@ -86,7 +116,12 @@ func (c *Client) generateAndRunJob() error {
 
 		fmt.Println("Status Update Job", jobId.ID, status.Status)
 		time.Sleep(50 * time.Millisecond)
+		timeSpent += 50 * time.Millisecond
 	}
 
-	return nil
+	if jobInProgress {
+		return fmt.Errorf("Could Not Complete Jobs in Alloted Time %v", timeout)
+	} else {
+		return nil
+	}
 }
