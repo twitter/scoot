@@ -1,15 +1,21 @@
+// +build !unit
+// +build integration
+
 package swarmtest
 
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
-// This test will trigger the race condition because we wait on processes
-// and then kill them in different go routines.  This is ok though!
 func Test_RunSwarmTest(t *testing.T) {
 	s := SwarmTest{}
-	err := s.InitOptions(nil)
+	err := s.InitOptions(map[string]interface{}{
+		"num_workers": 10,
+		"num_jobs":    10,
+		"timeout":     10 * time.Second,
+	})
 	if err != nil {
 		t.Error("Error Initializing Swarm Test")
 	}
