@@ -7,7 +7,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	// "fmt"
 )
 
 func TestFetchCron(t *testing.T) {
@@ -17,7 +16,6 @@ func TestFetchCron(t *testing.T) {
 	h.assertFetch(t, h.setupTest("host1:1234", "host2:8888"))
 	h.assertFetch(t, h.setupTest("host1:1234"))
 	h.assertFetch(t, h.setupTest())
-	h.c.Close()
 }
 
 func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
