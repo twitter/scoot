@@ -72,10 +72,8 @@ func (c *Cluster) loop() {
 		}
 	}
 	for _, sub := range c.subs {
-		c.handleReq(sub)
 		close(sub)
 	}
-	c.subs = nil
 }
 
 func (c *Cluster) handleReq(req interface{}) {

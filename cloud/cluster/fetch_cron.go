@@ -29,6 +29,7 @@ func NewFetchCron(f Fetcher, t time.Duration, ch chan []Node) *FetchCron {
 }
 
 func (c *FetchCron) loop() {
+	defer close(c.closer)
 	for {
 		select {
 		case <-c.ticker.C:
