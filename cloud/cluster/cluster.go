@@ -13,6 +13,9 @@ type Cluster struct {
 	subs  []chan []NodeUpdate
 }
 
+// Cluster's ch channel accepts []Node and []NodeUpdate types, which then
+// get passed to its state to either SetAndDiff or UpdateAndFilter
+
 func NewCluster(state []Node, ch chan interface{}) *Cluster {
 	s := MakeState(state)
 	c := &Cluster{

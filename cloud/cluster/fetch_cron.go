@@ -35,7 +35,7 @@ func (c *FetchCron) loop() {
 		case <-c.ticker.C:
 			nodes, err := c.f.Fetch()
 			if err != nil {
-				// Log? Return?
+				// TODO(rcouto): Correctly handle as many errors as possible
 				log.Printf("Received error: %v", err)
 			}
 			c.Ch <- nodes
