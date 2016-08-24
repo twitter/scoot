@@ -1,4 +1,4 @@
-package common
+package swarmtest
 
 import (
 	"errors"
@@ -10,7 +10,9 @@ import (
 	"os/signal"
 	"path"
 	"strconv"
+	"sync"
 	"syscall"
+	"time"
 )
 
 type SwarmTest struct {
@@ -20,13 +22,18 @@ type SwarmTest struct {
 	NumWorkers int
 	Compile    func() error
 	Run        func() error
+	NumJobs    int
+	Timeout    time.Duration
+	mutex      *sync.Mutex
 }
 
 func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	d := map[string]interface{}{
-		"logdir":      "/tmp/scoot-swarmtest",
+		"logdir":      "",
 		"repo":        "$GOPATH/src/github.com/scootdev/scoot",
-		"num_workers": 5,
+		"num_workers": 10,
+		"num_jobs":    10,
+		"timeout":     10 * time.Second,
 	}
 	for key, val := range defaults {
 		d[key] = val
@@ -34,6 +41,8 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	logDir := flag.String("logdir", d["logdir"].(string), "If empty, write to stdout, else to log file")
 	repoDir := flag.String("repo", d["repo"].(string), "Path to scoot repo")
 	numWorkers := flag.Int("num_workers", d["num_workers"].(int), "Number of workerserver instances to spin up.")
+	numJobs := flag.Int("num_jobs", d["num_jobs"].(int), "Number of Jobs to run")
+	timeout := flag.Duration("timeout", d["timeout"].(time.Duration), "Time to wait for jobs to complete")
 
 	flag.Parse()
 	if *numWorkers < 5 {
@@ -45,6 +54,9 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.NumWorkers = *numWorkers
 	s.Compile = func() error { return s.compile() }
 	s.Run = func() error { return s.run() }
+	s.NumJobs = *numJobs
+	s.Timeout = *timeout
+	s.mutex = &sync.Mutex{}
 	return nil
 }
 
@@ -54,6 +66,9 @@ func (s *SwarmTest) Fatalf(format string, v ...interface{}) {
 }
 
 func (s *SwarmTest) Kill() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	for _, cmd := range s.Running {
 		if cmd.ProcessState == nil && cmd.Process != nil {
 			fmt.Printf("Killing: %v\n", cmd.Path)
@@ -70,6 +85,9 @@ func (s *SwarmTest) GetPort() int {
 }
 
 func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	for i, _ := range args {
 		args[i] = os.ExpandEnv(args[i])
 	}
@@ -84,11 +102,6 @@ func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
 	fmt.Println("Started: ", name, args)
 
 	if !blocking {
-		go func() {
-			if err := cmd.Wait(); err != nil {
-				s.Fatalf("Exiting because cmd ended early %v,%v: %v", name, args, err)
-			}
-		}()
 		return nil
 	} else {
 		return cmd.Wait()
@@ -141,10 +154,11 @@ func (s *SwarmTest) run() error {
 	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
 		return err
 	}
-	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test")
+
+	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test", strconv.Itoa(s.NumJobs), s.Timeout.String())
 }
 
-func (s *SwarmTest) Main() {
+func (s *SwarmTest) RunSwarmTest() error {
 	var err error
 	s.StartSignalHandler()
 	if err = s.SetupLog(s.LogDir); err == nil {
@@ -156,6 +170,11 @@ func (s *SwarmTest) Main() {
 		}
 	}
 	fmt.Println("Done")
+	return err
+}
+
+func (s *SwarmTest) Main() {
+	err := s.RunSwarmTest()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
