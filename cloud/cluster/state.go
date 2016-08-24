@@ -49,8 +49,6 @@ func (s *State) SetAndDiff(newState []Node) []NodeUpdate {
 	for _, n := range newState {
 		s.Nodes[n.Id()] = n
 	}
-	// present updates in predictable order
-	// sort.Sort(NodeUpdateSorter(outgoing))
 	return outgoing
 }
 
