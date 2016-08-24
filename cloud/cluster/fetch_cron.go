@@ -6,9 +6,10 @@ import (
 )
 
 type FetchCron struct {
-	Ticker *time.Ticker
+	ticker *time.Ticker
 	f      Fetcher
 	Ch     chan []Node
+	closer chan struct{}
 }
 
 // Returns a full list of visible nodes.
@@ -18,25 +19,32 @@ type Fetcher interface {
 
 func NewFetchCron(f Fetcher, t time.Duration, ch chan []Node) *FetchCron {
 	c := &FetchCron{
-		Ticker: time.NewTicker(t),
+		ticker: time.NewTicker(t),
 		f:      f,
 		Ch:     ch,
+		closer: make(chan struct{}),
 	}
 	go c.loop()
 	return c
 }
 
 func (c *FetchCron) loop() {
-	for _ = range c.Ticker.C {
-		nodes, err := c.f.Fetch()
-		if err != nil {
-			// Log? Return?
-			log.Printf("Received error: %v", err)
+	for {
+		select {
+		case <-c.ticker.C:
+			nodes, err := c.f.Fetch()
+			if err != nil {
+				// Log? Return?
+				log.Printf("Received error: %v", err)
+			}
+			c.Ch <- nodes
+		case <-c.closer:
+			c.ticker.Stop()
+			return
 		}
-		c.Ch <- nodes
 	}
 }
 
 func (c *FetchCron) Close() {
-	c.Ticker.Stop()
+	c.closer <- struct{}{}
 }

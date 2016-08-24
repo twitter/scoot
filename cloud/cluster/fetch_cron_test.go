@@ -7,15 +7,17 @@ import (
 	"sync"
 	"testing"
 	"time"
+	// "fmt"
 )
 
 func TestFetchCron(t *testing.T) {
 	h := makeCronHelper(t)
 	h.assertFetch(t, h.setupTest())
-	// h.assertFetch(t, h.setupTest("host1:1234"))
-	// h.assertFetch(t, h.setupTest("host1:1234", "host2:8888"))
-	// h.assertFetch(t, h.setupTest("host1:1234"))
-	// h.assertFetch(t, h.setupTest())
+	h.assertFetch(t, h.setupTest("host1:1234"))
+	h.assertFetch(t, h.setupTest("host1:1234", "host2:8888"))
+	h.assertFetch(t, h.setupTest("host1:1234"))
+	h.assertFetch(t, h.setupTest())
+	h.c.Close()
 }
 
 func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
@@ -42,9 +44,21 @@ func makeCronHelper(t *testing.T) *cronHelper {
 }
 
 func (h *cronHelper) assertFetch(t *testing.T, expected []cluster.Node) {
-	actual := <-h.ch
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("Unequal, expected %v, received %v", expected, actual)
+	var actual []cluster.Node
+	timeout := time.After(time.Millisecond)
+	for {
+		select {
+		case actual = <-h.ch:
+			if reflect.DeepEqual(expected, actual) {
+				return
+			}
+		case <-timeout:
+			if !reflect.DeepEqual(expected, actual) {
+				t.Fatalf("Unequal, expected %v, received %v", expected, actual)
+			} else {
+				return
+			}
+		}
 	}
 }
 
