@@ -2,6 +2,7 @@ package cluster_test
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"testing"
 )
 
@@ -31,7 +32,7 @@ func TestSubscribe(t *testing.T) {
 	defer h.close()
 	h.assertMembers()
 	s := h.subscribe()
-	defer s.Close()
+	defer s.Closer.Close()
 	h.assertInitialMembers(s)
 	h.add("node1")
 	h.assertUpdates(s, add("node1"))
@@ -42,7 +43,7 @@ func TestSubscribe(t *testing.T) {
 
 	// Add a second subscription
 	s2 := h.subscribe()
-	defer s2.Close()
+	defer s2.Closer.Close()
 	h.assertInitialMembers(s2, "node2", "node3")
 
 	// Now test that a subscriber that's not pulling doesn't block others
@@ -68,15 +69,19 @@ func TestSubscribe(t *testing.T) {
 // Below here are helpers that make it easy to write more fluent tests.
 
 type helper struct {
-	t  *testing.T
-	c  *cluster.Cluster
-	ch chan interface{}
+	t        *testing.T
+	c        *cluster.Cluster
+	updateCh chan []cluster.NodeUpdate
+	f  		 cluster.Fetcher
+	ch       chan interface{}
 }
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
+	h.updateCh = make(chan []cluster.NodeUpdate)
 	h.ch = make(chan interface{})
-	h.c = cluster.NewCluster(nil, h.ch)
+	h.f = local.MakeFetcher()
+	h.c = cluster.NewCluster(nil, h.updateCh, h.ch, h.f)
 	return h
 }
 
@@ -109,18 +114,18 @@ func (h *helper) changeStateTo(node ...string) {
 	h.ch <- nodes
 }
 
-func (h *helper) subscribe() cluster.Subscriber {
+func (h *helper) subscribe() cluster.Subscription {
 	return h.c.Subscribe()
 }
 
-func (h *helper) assertInitialMembers(s cluster.Subscriber, node ...string) {
-	assertMembersEqual(h.c.Members(), makeNodes(node...), h.t)
+func (h *helper) assertInitialMembers(s cluster.Subscription, node ...string) {
+	assertMembersEqual(s.InitialMembers, makeNodes(node...), h.t)
 }
 
-func (h *helper) assertUpdates(s cluster.Subscriber, expected ...cluster.NodeUpdate) {
+func (h *helper) assertUpdates(s cluster.Subscription, expected ...cluster.NodeUpdate) {
 	// Calling Members makes sure that any updates sent have propagated from the cluster to the subscription
 	h.c.Members()
-	actual := <-s.OutCh
+	actual := <-s.Updates
 	h.assertUpdatesEqual(expected, actual)
 }
 
