@@ -77,4 +77,3 @@ func NewRemove(id NodeId) NodeUpdate {
 		Id:         id,
 	}
 }
-

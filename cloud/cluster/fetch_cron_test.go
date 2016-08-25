@@ -32,7 +32,7 @@ type cronHelper struct {
 	ch       chan interface{}
 	updateCh chan []cluster.NodeUpdate
 	// c        *cluster.FetchCron
-	cl       *cluster.Cluster
+	cl *cluster.Cluster
 }
 
 func makeCronHelper(t *testing.T) *cronHelper {

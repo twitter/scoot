@@ -5,10 +5,10 @@ import (
 )
 
 type fetchCron struct {
-	tickCh   <-chan time.Time
-	f        Fetcher
-	outCh    chan interface{}
-	closer   chan struct{}
+	tickCh <-chan time.Time
+	f      Fetcher
+	outCh  chan interface{}
+	closer chan struct{}
 }
 
 // Returns a full list of visible nodes.
@@ -18,10 +18,10 @@ type Fetcher interface {
 
 func makeFetchCron(f Fetcher, t time.Duration, ch chan interface{}) *fetchCron {
 	c := &fetchCron{
-		tickCh:   time.NewTicker(t).C,
-		f:        f,
-		outCh:    ch,
-		closer:   make(chan struct{}),
+		tickCh: time.NewTicker(t).C,
+		f:      f,
+		outCh:  ch,
+		closer: make(chan struct{}),
 	}
 	go c.loop()
 	return c

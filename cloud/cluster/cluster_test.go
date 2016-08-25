@@ -72,7 +72,7 @@ type helper struct {
 	t        *testing.T
 	c        *cluster.Cluster
 	updateCh chan []cluster.NodeUpdate
-	f  		 cluster.Fetcher
+	f        cluster.Fetcher
 	ch       chan interface{}
 }
 
