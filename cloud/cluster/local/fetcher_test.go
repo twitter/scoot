@@ -1,11 +1,9 @@
 package local
 
 import (
+	"github.com/scootdev/scoot/cloud/cluster"
 	"reflect"
 	"testing"
-
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/memory"
 )
 
 func TestFetcher(t *testing.T) {
@@ -17,8 +15,8 @@ func TestFetcher(t *testing.T) {
  8440 s005  Ss     0:01.58 /bin/bash
 `
 	expected := []cluster.Node{
-		memory.NewIdNode("localhost:9876"),
-		memory.NewIdNode("localhost:9877"),
+		cluster.NewIdNode("localhost:9876"),
+		cluster.NewIdNode("localhost:9877"),
 	}
 
 	f := &localFetcher{}

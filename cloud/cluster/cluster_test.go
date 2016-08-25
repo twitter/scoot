@@ -1,8 +1,8 @@
-package memory_test
+package cluster_test
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/memory"
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"testing"
 )
 
@@ -53,20 +53,35 @@ func TestSubscribe(t *testing.T) {
 	h.assertUpdates(s, remove("node2"))
 	h.assertMembers("node3", "node4")
 	h.assertUpdates(s2, add("node4"), remove("node2"))
+
+	// Test a subscription gets updates when state is changed directly
+	h.changeStateTo("node3")
+	h.assertMembers("node3")
+	h.assertUpdates(s, remove("node4"))
+	h.assertUpdates(s2, remove("node4"))
+
+	h.changeStateTo("node1", "node2")
+	h.assertMembers("node1", "node2")
+	h.assertUpdates(s, add("node1"), add("node2"), remove("node3"))
+	h.assertUpdates(s2, add("node1"), add("node2"), remove("node3"))
 }
 
 // Below here are helpers that make it easy to write more fluent tests.
 
 type helper struct {
-	t  *testing.T
-	c  cluster.Cluster
-	ch chan []cluster.NodeUpdate
+	t        *testing.T
+	c        *cluster.Cluster
+	updateCh chan []cluster.NodeUpdate
+	f        cluster.Fetcher
+	ch       chan interface{}
 }
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
-	h.ch = make(chan []cluster.NodeUpdate)
-	h.c = memory.NewCluster(nil, h.ch)
+	h.updateCh = make(chan []cluster.NodeUpdate)
+	h.ch = make(chan interface{})
+	h.f = local.MakeFetcher()
+	h.c = cluster.NewCluster(nil, h.updateCh, h.ch, h.f)
 	return h
 }
 
@@ -92,6 +107,11 @@ func (h *helper) remove(node ...string) {
 		updates = append(updates, remove(n))
 	}
 	h.ch <- updates
+}
+
+func (h *helper) changeStateTo(node ...string) {
+	nodes := makeNodes(node...)
+	h.ch <- nodes
 }
 
 func (h *helper) subscribe() cluster.Subscription {
@@ -124,13 +144,13 @@ func (h *helper) assertUpdatesEqual(expected []cluster.NodeUpdate, actual []clus
 func makeNodes(node ...string) []cluster.Node {
 	r := []cluster.Node{}
 	for _, n := range node {
-		r = append(r, memory.NewIdNode(n))
+		r = append(r, cluster.NewIdNode(n))
 	}
 	return r
 }
 
 func add(node string) cluster.NodeUpdate {
-	return cluster.NewAdd(memory.NewIdNode(node))
+	return cluster.NewAdd(cluster.NewIdNode(node))
 }
 
 func remove(node string) cluster.NodeUpdate {

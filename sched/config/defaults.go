@@ -3,10 +3,9 @@ package config
 import (
 	"fmt"
 	"time"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
-	clusterimpl "github.com/scootdev/scoot/cloud/cluster/memory"
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
@@ -55,12 +54,12 @@ type ClusterMemoryConfig struct {
 	Count int
 }
 
-func (c *ClusterMemoryConfig) Create() (cluster.Cluster, error) {
+func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
 	workerNodes := []cluster.Node{}
 	for i := 0; i < c.Count; i++ {
-		workerNodes = append(workerNodes, clusterimpl.NewIdNode(fmt.Sprintf("inmemory%d", i)))
+		workerNodes = append(workerNodes, cluster.NewIdNode(fmt.Sprintf("inmemory%d", i)))
 	}
-	return clusterimpl.NewCluster(workerNodes, nil), nil
+	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
 }
 
 type ClusterStaticConfig struct {
@@ -68,12 +67,12 @@ type ClusterStaticConfig struct {
 	Hosts []string
 }
 
-func (c *ClusterStaticConfig) Create() (cluster.Cluster, error) {
+func (c *ClusterStaticConfig) Create() (*cluster.Cluster, error) {
 	workerNodes := []cluster.Node{}
 	for _, h := range c.Hosts {
-		workerNodes = append(workerNodes, clusterimpl.NewIdNode(h))
+		workerNodes = append(workerNodes, cluster.NewIdNode(h))
 	}
-	return clusterimpl.NewCluster(workerNodes, nil), nil
+	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
 }
 
 type QueueMemoryConfig struct {
