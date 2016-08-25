@@ -5,9 +5,6 @@ import (
 	"time"
 )
 
-// Subscriber receives node updates from its cluster and maintains a queue
-// so that the sender doesn't have to worry about send blocking
-
 // Subscription is a subscription to cluster changes.
 type Subscription struct {
 	InitialMembers []Node            // The members at the time the subscription started
@@ -15,6 +12,8 @@ type Subscription struct {
 	Closer         io.Closer         // How to stop subscribing
 }
 
+// Subscriber receives node updates from its cluster and maintains a queue
+// so that the sender doesn't have to worry about send blocking
 type subscriber struct {
 	inCh  chan []NodeUpdate
 	outCh chan []NodeUpdate
