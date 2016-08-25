@@ -2,28 +2,32 @@ package cluster
 
 import (
 	"sort"
+	"time"
 )
 
 // Cluster represents a cluster of Nodes.
 
 type Cluster struct {
-	State *State
-	reqCh chan interface{}
-	ch    chan interface{}
-	subs  []chan []NodeUpdate
+	state    *state
+	reqCh    chan interface{}
+	ch       chan interface{}
+	updateCh chan []NodeUpdate
+	subs     []chan []NodeUpdate
 }
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
 
-func NewCluster(state []Node, ch chan interface{}) *Cluster {
+func NewCluster(state []Node, updateCh chan []NodeUpdate, ch chan interface{}, fetcher Fetcher) *Cluster {
 	s := MakeState(state)
 	c := &Cluster{
-		State: s,
-		reqCh: make(chan interface{}),
-		ch:    ch,
-		subs:  nil,
+		state:    s,
+		reqCh:    make(chan interface{}),
+		ch:       ch,
+		updateCh: updateCh,
+		subs:     nil,
 	}
+	NewFetchCron(fetcher, time.Millisecond, c)
 	go c.loop()
 	return c
 }
@@ -34,8 +38,8 @@ func (c *Cluster) Members() []Node {
 	return <-ch
 }
 
-func (c *Cluster) Subscribe() Subscriber {
-	ch := make(chan Subscriber)
+func (c *Cluster) Subscribe() Subscription {
+	ch := make(chan Subscription)
 	c.reqCh <- ch
 	return <-ch
 }
@@ -46,12 +50,19 @@ func (c *Cluster) Close() error {
 }
 
 func (c *Cluster) done() bool {
-	return c.ch == nil && c.reqCh == nil
+	return c.ch == nil && c.reqCh == nil && c.updateCh == nil
 }
 
 func (c *Cluster) loop() {
 	for !c.done() {
 		select {
+		case updates, ok := <-c.updateCh:
+			if !ok {
+				c.updateCh = nil
+				continue
+			}
+			c.ch <- updates
+			continue
 		case nodesOrUpdates, ok := <-c.ch:
 			if !ok {
 				c.ch = nil
@@ -59,10 +70,10 @@ func (c *Cluster) loop() {
 			}
 			outgoing := []NodeUpdate{}
 			if updates, ok := nodesOrUpdates.([]NodeUpdate); ok {
-				outgoing = c.State.FilterAndUpdate(updates)
+				outgoing = c.state.FilterAndUpdate(updates)
 			} else if nodes, ok := nodesOrUpdates.([]Node); ok {
 				sort.Sort(NodeSorter(nodes))
-				outgoing = c.State.SetAndDiff(nodes)
+				outgoing = c.state.SetAndDiff(nodes)
 			}
 			for _, sub := range c.subs {
 				sub <- outgoing
@@ -85,10 +96,10 @@ func (c *Cluster) handleReq(req interface{}) {
 	case chan []Node:
 		// Members()
 		req <- c.current()
-	case chan Subscriber:
+	case chan Subscription:
 		// Subscribe()
 		ch := make(chan []NodeUpdate)
-		s := newSubscriber(c.current(), c, ch)
+		s := makeSubscription(c.current(), c, ch)
 		c.subs = append(c.subs, ch)
 		req <- s
 	case chan []NodeUpdate:
@@ -105,13 +116,13 @@ func (c *Cluster) handleReq(req interface{}) {
 	}
 }
 
-func (c *Cluster) closeSubscription(s *Subscriber) {
+func (c *Cluster) closeSubscription(s *subscriber) {
 	c.reqCh <- s.inCh
 }
 
 func (c *Cluster) current() []Node {
 	var r []Node
-	for _, v := range c.State.Nodes {
+	for _, v := range c.state.nodes {
 		r = append(r, v)
 	}
 	sort.Sort(NodeSorter(r))
