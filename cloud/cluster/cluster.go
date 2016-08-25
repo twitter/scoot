@@ -6,7 +6,6 @@ import (
 )
 
 // Cluster represents a cluster of Nodes.
-
 type Cluster struct {
 	state    *state
 	reqCh    chan interface{}
@@ -17,7 +16,6 @@ type Cluster struct {
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-
 func NewCluster(state []Node, updateCh chan []NodeUpdate, ch chan interface{}, fetcher Fetcher) *Cluster {
 	s := makeState(state)
 	c := &Cluster{
