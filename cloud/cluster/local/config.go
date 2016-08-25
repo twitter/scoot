@@ -9,5 +9,6 @@ type ClusterLocalConfig struct {
 }
 
 func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
-	return cluster.NewCluster([]cluster.Node{}, make(chan interface{})), nil
+	sub, fetcher := Subscribe()
+	return cluster.NewCluster(sub.InitialMembers, sub.Updates, make(chan interface{}), fetcher), nil
 }

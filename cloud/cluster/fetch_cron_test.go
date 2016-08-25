@@ -26,36 +26,36 @@ func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
 }
 
 type cronHelper struct {
-	t    *testing.T
-	time time.Duration
-	f    *fakeFetcher
-	ch   chan []cluster.Node
-	c    *cluster.FetchCron
+	t        *testing.T
+	time     time.Duration
+	f        *fakeFetcher
+	ch       chan interface{}
+	updateCh chan []cluster.NodeUpdate
+	c        *cluster.FetchCron
+	cl       *cluster.Cluster
 }
 
 func makeCronHelper(t *testing.T) *cronHelper {
 	h := &cronHelper{t: t, time: time.Nanosecond}
 	h.f = &fakeFetcher{}
-	h.ch = make(chan []cluster.Node)
-	h.c = cluster.NewFetchCron(h.f, h.time, h.ch)
+	h.ch = make(chan interface{})
+	h.cl = cluster.NewCluster([]cluster.Node{}, h.updateCh, h.ch, h.f)
+	h.c = cluster.NewFetchCron(h.f, h.time, h.cl)
 	return h
 }
 
 func (h *cronHelper) assertFetch(t *testing.T, expected []cluster.Node) {
-	var actual []cluster.Node
-	timeout := time.After(time.Millisecond)
+	timeout := time.After(time.Millisecond * 100)
 	for {
 		select {
-		case actual = <-h.ch:
-			if reflect.DeepEqual(expected, actual) {
-				return
+		case actual := <-h.ch:
+			if _, ok := actual.([]cluster.Node); ok {
+				if reflect.DeepEqual(expected, actual) {
+					return
+				}
 			}
 		case <-timeout:
-			if !reflect.DeepEqual(expected, actual) {
-				t.Fatalf("Unequal, expected %v, received %v", expected, actual)
-			} else {
-				return
-			}
+			t.Fatalf("Unequal, expected %v", expected)
 		}
 	}
 }

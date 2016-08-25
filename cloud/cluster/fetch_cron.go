@@ -1,15 +1,17 @@
 package cluster
 
 import (
-	"log"
 	"time"
 )
 
 type FetchCron struct {
-	ticker *time.Ticker
-	f      Fetcher
-	Ch     chan []Node
-	closer chan struct{}
+	tickCh   <-chan time.Time
+	f        Fetcher
+	inCh     chan nodesAndError
+	outCh    chan []NodeUpdate
+	outgoing []NodeUpdate
+	closer   chan struct{}
+	cl       *Cluster
 }
 
 // Returns a full list of visible nodes.
@@ -17,35 +19,69 @@ type Fetcher interface {
 	Fetch() ([]Node, error)
 }
 
-func NewFetchCron(f Fetcher, t time.Duration, ch chan []Node) *FetchCron {
+func NewFetchCron(f Fetcher, t time.Duration, cl *Cluster) *FetchCron {
 	c := &FetchCron{
-		ticker: time.NewTicker(t),
-		f:      f,
-		Ch:     ch,
-		closer: make(chan struct{}),
+		tickCh:   time.NewTicker(t).C,
+		f:        f,
+		inCh:     nil,
+		outCh:    make(chan []NodeUpdate),
+		outgoing: nil,
+		closer:   make(chan struct{}),
+		cl:       cl,
 	}
 	go c.loop()
 	return c
 }
 
 func (c *FetchCron) loop() {
-	defer close(c.closer)
-	for {
+	c.inCh = make(chan nodesAndError)
+	go func() {
+		nodes, err := c.f.Fetch()
+		c.inCh <- nodesAndError{nodes, err}
+	}()
+	for c.tickCh != nil || c.inCh != nil || len(c.outgoing) > 0 {
+		var outCh chan []NodeUpdate
+		if len(c.outgoing) > 0 {
+			outCh = c.outCh
+		}
 		select {
-		case <-c.ticker.C:
-			nodes, err := c.f.Fetch()
-			if err != nil {
-				// TODO(rcouto): Correctly handle as many errors as possible
-				log.Printf("Received error: %v", err)
+		case _, ok := <-c.tickCh:
+			if !ok {
+				// tickCh is closed means we should stop
+				c.tickCh = nil
 			}
-			c.Ch <- nodes
-		case <-c.closer:
-			c.ticker.Stop()
-			return
+			if c.inCh != nil {
+				// We're already waiting for a fetch, ignore this tick
+				continue
+			}
+			c.inCh = make(chan nodesAndError)
+			go func() {
+				nodes, err := c.f.Fetch()
+				c.inCh <- nodesAndError{nodes, err}
+			}()
+		case r := <-c.inCh:
+			c.inCh = nil
+			c.handleFetch(r.nodes, r.err)
+		case outCh <- c.outgoing:
+			c.outgoing = nil
 		}
 	}
+	close(c.outCh)
+}
+
+func (c *FetchCron) handleFetch(nodes []Node, err error) {
+	if err != nil {
+		// TODO(rcouto): Correctly handle as many errors as possible
+		return
+	}
+	c.cl.ch <- nodes
 }
 
 func (c *FetchCron) Close() {
 	c.closer <- struct{}{}
+}
+
+type nodesAndError struct {
+	nodes []Node
+	err   error
 }
