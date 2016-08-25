@@ -4,14 +4,11 @@ import (
 	"time"
 )
 
-type FetchCron struct {
+type fetchCron struct {
 	tickCh   <-chan time.Time
 	f        Fetcher
-	inCh     chan nodesAndError
-	outCh    chan []NodeUpdate
-	outgoing []NodeUpdate
+	outCh    chan interface{}
 	closer   chan struct{}
-	cl       *Cluster
 }
 
 // Returns a full list of visible nodes.
@@ -19,65 +16,47 @@ type Fetcher interface {
 	Fetch() ([]Node, error)
 }
 
-func NewFetchCron(f Fetcher, t time.Duration, cl *Cluster) *FetchCron {
-	c := &FetchCron{
+func makeFetchCron(f Fetcher, t time.Duration, ch chan interface{}) *fetchCron {
+	c := &fetchCron{
 		tickCh:   time.NewTicker(t).C,
 		f:        f,
-		inCh:     nil,
-		outCh:    make(chan []NodeUpdate),
-		outgoing: nil,
+		outCh:    ch,
 		closer:   make(chan struct{}),
-		cl:       cl,
 	}
 	go c.loop()
 	return c
 }
 
-func (c *FetchCron) loop() {
-	c.inCh = make(chan nodesAndError)
-	go func() {
-		nodes, err := c.f.Fetch()
-		c.inCh <- nodesAndError{nodes, err}
-	}()
-	for c.tickCh != nil || c.inCh != nil || len(c.outgoing) > 0 {
-		var outCh chan []NodeUpdate
-		if len(c.outgoing) > 0 {
-			outCh = c.outCh
-		}
+func (c *fetchCron) loop() {
+	for c.tickCh != nil {
 		select {
 		case _, ok := <-c.tickCh:
 			if !ok {
 				// tickCh is closed means we should stop
 				c.tickCh = nil
 			}
-			if c.inCh != nil {
-				// We're already waiting for a fetch, ignore this tick
+			nodes, err := c.f.Fetch()
+			c.handleFetch(nodes, err)
+		case _, ok := <-c.closer:
+			if !ok {
 				continue
+			} else {
+				return
 			}
-			c.inCh = make(chan nodesAndError)
-			go func() {
-				nodes, err := c.f.Fetch()
-				c.inCh <- nodesAndError{nodes, err}
-			}()
-		case r := <-c.inCh:
-			c.inCh = nil
-			c.handleFetch(r.nodes, r.err)
-		case outCh <- c.outgoing:
-			c.outgoing = nil
 		}
 	}
 	close(c.outCh)
 }
 
-func (c *FetchCron) handleFetch(nodes []Node, err error) {
+func (c *fetchCron) handleFetch(nodes []Node, err error) {
 	if err != nil {
 		// TODO(rcouto): Correctly handle as many errors as possible
 		return
 	}
-	c.cl.ch <- nodes
+	c.outCh <- nodes
 }
 
-func (c *FetchCron) Close() {
+func (c *fetchCron) close() {
 	c.closer <- struct{}{}
 }
 

@@ -19,7 +19,7 @@ type Cluster struct {
 // get passed to its state to either SetAndDiff or UpdateAndFilter
 
 func NewCluster(state []Node, updateCh chan []NodeUpdate, ch chan interface{}, fetcher Fetcher) *Cluster {
-	s := MakeState(state)
+	s := makeState(state)
 	c := &Cluster{
 		state:    s,
 		reqCh:    make(chan interface{}),
@@ -27,7 +27,7 @@ func NewCluster(state []Node, updateCh chan []NodeUpdate, ch chan interface{}, f
 		updateCh: updateCh,
 		subs:     nil,
 	}
-	NewFetchCron(fetcher, time.Millisecond, c)
+	makeFetchCron(fetcher, time.Millisecond, ch)
 	go c.loop()
 	return c
 }
@@ -70,10 +70,10 @@ func (c *Cluster) loop() {
 			}
 			outgoing := []NodeUpdate{}
 			if updates, ok := nodesOrUpdates.([]NodeUpdate); ok {
-				outgoing = c.state.FilterAndUpdate(updates)
+				outgoing = c.state.filterAndUpdate(updates)
 			} else if nodes, ok := nodesOrUpdates.([]Node); ok {
 				sort.Sort(NodeSorter(nodes))
-				outgoing = c.state.SetAndDiff(nodes)
+				outgoing = c.state.setAndDiff(nodes)
 			}
 			for _, sub := range c.subs {
 				sub <- outgoing

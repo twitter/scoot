@@ -18,8 +18,7 @@ func MakeFetcher() cluster.Fetcher {
 type localFetcher struct{}
 
 func Subscribe() (cluster.Subscription, cluster.Fetcher) {
-	fetcher := MakeFetcher()
-	return cluster.Subscribe(fetcher), fetcher
+	return cluster.Subscribe(), MakeFetcher()
 }
 
 func (f *localFetcher) Fetch() (nodes []cluster.Node, err error) {

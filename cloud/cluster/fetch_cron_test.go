@@ -31,7 +31,7 @@ type cronHelper struct {
 	f        *fakeFetcher
 	ch       chan interface{}
 	updateCh chan []cluster.NodeUpdate
-	c        *cluster.FetchCron
+	// c        *cluster.FetchCron
 	cl       *cluster.Cluster
 }
 
@@ -40,7 +40,7 @@ func makeCronHelper(t *testing.T) *cronHelper {
 	h.f = &fakeFetcher{}
 	h.ch = make(chan interface{})
 	h.cl = cluster.NewCluster([]cluster.Node{}, h.updateCh, h.ch, h.f)
-	h.c = cluster.NewFetchCron(h.f, h.time, h.cl)
+	// h.c = cluster.NewFetchCron(h.f, h.time, h.ch)
 	return h
 }
 

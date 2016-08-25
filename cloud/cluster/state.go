@@ -9,17 +9,17 @@ type state struct {
 	nodes map[NodeId]Node
 }
 
-func MakeState(nodes []Node) *state {
+func makeState(nodes []Node) *state {
 	s := &state{
 		nodes: make(map[NodeId]Node),
 	}
-	s.SetAndDiff(nodes)
+	s.setAndDiff(nodes)
 	return s
 }
 
 // SetAndDiff takes the new state as an argument and creates
 // node updates based on the diff
-func (s *state) SetAndDiff(newState []Node) []NodeUpdate {
+func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 	added := []Node{}
 	for _, n := range newState {
 		if _, exists := s.nodes[n.Id()]; exists {
@@ -61,7 +61,7 @@ func (s *state) SetAndDiff(newState []Node) []NodeUpdate {
 // to the state to create a new state. It also filters out updates that
 // are not applicable, i.e. adding a node that is already in the state
 // or removing one that isn't present.
-func (s *state) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
+func (s *state) filterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
 	unused := []NodeUpdate{}
 	filtered := []NodeUpdate{}
 	for _, update := range newUpdates {
@@ -96,7 +96,7 @@ func (s *state) FilterAndUpdate(newUpdates []NodeUpdate) []NodeUpdate {
 	} else {
 		// recurse through until either all unused updates are applied
 		// or none are
-		next := s.FilterAndUpdate(unused)
+		next := s.filterAndUpdate(unused)
 		for _, nextUpdate := range next {
 			filtered = append(filtered, nextUpdate)
 		}
