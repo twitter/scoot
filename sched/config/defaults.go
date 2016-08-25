@@ -5,6 +5,7 @@ import (
 	"time"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
@@ -58,7 +59,7 @@ func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
 	for i := 0; i < c.Count; i++ {
 		workerNodes = append(workerNodes, cluster.NewIdNode(fmt.Sprintf("inmemory%d", i)))
 	}
-	return cluster.NewCluster(workerNodes, nil), nil
+	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
 }
 
 type ClusterStaticConfig struct {
@@ -71,7 +72,7 @@ func (c *ClusterStaticConfig) Create() (*cluster.Cluster, error) {
 	for _, h := range c.Hosts {
 		workerNodes = append(workerNodes, cluster.NewIdNode(h))
 	}
-	return cluster.NewCluster(workerNodes, nil), nil
+	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
 }
 
 type QueueMemoryConfig struct {
