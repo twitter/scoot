@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+// SwarmTest expects a handful of config options and InitOptions() sets the defaults.
+// Also maintains a list of Running cmds in order to kill everything on exit.
 type SwarmTest struct {
 	Running    []*exec.Cmd
 	LogDir     string
@@ -27,6 +29,7 @@ type SwarmTest struct {
 	mutex      *sync.Mutex
 }
 
+// Initializes SwarmTest with defaults or cli flags if provided.
 func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	d := map[string]interface{}{
 		"logdir":      "",
@@ -60,11 +63,14 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	return nil
 }
 
+// Log a message then kill all running commands.
 func (s *SwarmTest) Fatalf(format string, v ...interface{}) {
 	fmt.Printf(format+"\n", v...)
 	s.Kill()
 }
 
+// Kill each running command by sending an interrupt signal.
+// This assumes that we run well behaved commands and don't need to use pgid or force kill.
 func (s *SwarmTest) Kill() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -78,12 +84,15 @@ func (s *SwarmTest) Kill() {
 	}
 }
 
+// Get any free port.
 func (s *SwarmTest) GetPort() int {
 	l, _ := net.Listen("tcp", "localhost:0")
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port
 }
 
+// Run the given command by first evaluating any env vars and redirecting output to global stdout/stderr.
+// If blocking, waits for the command to finish and returns any err, otherwise returns nil.
 func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -108,6 +117,8 @@ func (s *SwarmTest) RunCmd(blocking bool, name string, args ...string) error {
 	}
 }
 
+// If logDir is specified, creates logDir and then redirects global output to a new file in that dir.
+// Note: currently names the log 'scoot-{PID}' which may repeat over the course of many swarmtests.
 func (s *SwarmTest) SetupLog(logDir string) error {
 	if logDir != "" {
 		if err := os.MkdirAll(logDir, 0777); err != nil {
@@ -125,6 +136,7 @@ func (s *SwarmTest) SetupLog(logDir string) error {
 	return nil
 }
 
+// Kill all running commands before exiting.
 func (s *SwarmTest) StartSignalHandler() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -137,10 +149,13 @@ func (s *SwarmTest) StartSignalHandler() {
 	}()
 }
 
+// Default. Does a golang install to $GOPATH/bin
 func (s *SwarmTest) compile() error {
 	return s.RunCmd(true, "go", "install", "./binaries/...")
 }
 
+// Default. Runs a locally distributed end-to-end test.
+// Creates multiple workers, a scheduler, and the scootapi smoketest to drive job requests.
 func (s *SwarmTest) run() error {
 	for i := 0; i < s.NumWorkers; i++ {
 		thriftPort := strconv.Itoa(s.GetPort())
@@ -158,6 +173,7 @@ func (s *SwarmTest) run() error {
 	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test", strconv.Itoa(s.NumJobs), s.Timeout.String())
 }
 
+// Sets up env and runs the binaries necessary to complete a local smoketest.
 func (s *SwarmTest) RunSwarmTest() error {
 	var err error
 	s.StartSignalHandler()
@@ -173,6 +189,7 @@ func (s *SwarmTest) RunSwarmTest() error {
 	return err
 }
 
+// Run the swarmtest and print err, if any, before exiting with a success/fail exit code.
 func (s *SwarmTest) Main() {
 	err := s.RunSwarmTest()
 	if err != nil {
