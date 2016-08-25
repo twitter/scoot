@@ -18,7 +18,7 @@ type Fetcher interface {
 
 func makeFetchCron(f Fetcher, t time.Duration, ch chan interface{}) *fetchCron {
 	c := &fetchCron{
-		tickCh: time.NewTicker(t).C,
+		tickCh: time.NewTicker(t),
 		f:      f,
 		outCh:  ch,
 		closer: make(chan struct{}),
@@ -28,39 +28,15 @@ func makeFetchCron(f Fetcher, t time.Duration, ch chan interface{}) *fetchCron {
 }
 
 func (c *fetchCron) loop() {
-	for c.tickCh != nil {
-		select {
-		case _, ok := <-c.tickCh:
-			if !ok {
-				// tickCh is closed means we should stop
-				c.tickCh = nil
-			}
-			nodes, err := c.f.Fetch()
-			c.handleFetch(nodes, err)
-		case _, ok := <-c.closer:
-			if !ok {
-				continue
-			} else {
-				return
-			}
+	for range c.tickCh.C {
+		nodes, err := c.f.Fetch()
+		if err != nil {
+			// TODO(rcouto): Correctly handle as many errors as possible
+			return
 		}
+		c.outCh <- nodes
 	}
 	close(c.outCh)
 }
 
-func (c *fetchCron) handleFetch(nodes []Node, err error) {
-	if err != nil {
-		// TODO(rcouto): Correctly handle as many errors as possible
-		return
-	}
-	c.outCh <- nodes
-}
-
-func (c *fetchCron) close() {
-	c.closer <- struct{}{}
-}
-
-type nodesAndError struct {
-	nodes []Node
-	err   error
-}
+// TODO(rcouto): add close and shutdown
