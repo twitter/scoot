@@ -5,7 +5,7 @@ import (
 )
 
 type fetchCron struct {
-	tickCh <-chan time.Time
+	tickCh *time.Ticker
 	f      Fetcher
 	outCh  chan interface{}
 	closer chan struct{}
