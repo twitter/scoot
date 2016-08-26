@@ -42,7 +42,7 @@ func Test_AsyncMailbox(t *testing.T) {
 // test to verify that example code for mailbox.go docs works!
 func Test_AsyncMailboxExample(t *testing.T) {
 	err := storeValue(5)
-	if err != nil {
+	if err == nil {
 		t.Error("expected to storeValue to complete successfully")
 	}
 }
@@ -73,7 +73,7 @@ func storeValue(num int) error {
 
 	// Send to Replica Three
 	go func(rsp *AsyncError) {
-		rsp.SetValue(write(num, "replicaTwo"))
+		rsp.SetValue(write(num, "replicaThree"))
 	}(mailbox.NewAsyncError(writeCallback))
 
 	// Value is Considered Durably Stored if at least two write calls succeeded
