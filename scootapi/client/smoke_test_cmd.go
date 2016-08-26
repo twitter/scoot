@@ -47,12 +47,23 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 
 	// run a bunch of concurrent jobs
 	var wg sync.WaitGroup
-
+	ch := make(chan map[string]scoot.Status, 1)
+	jobStatusMap := make(map[string]scoot.Status)
+	ch <- jobStatusMap
+	go func() {
+		for range time.NewTicker(time.Second).C {
+			jobStatusMap = <-ch
+			for job, status := range jobStatusMap {
+				fmt.Println(job, "		", status)
+			}
+			ch <- jobStatusMap
+		}
+	}()
 	errCh := make(chan error, numTasks)
 	for i := 0; i < numTasks; i++ {
 		wg.Add(1)
 		go func() {
-			err := c.generateAndRunJob(timeout)
+			err := c.generateAndRunJob(timeout, ch)
 			if err != nil {
 				errCh <- err
 				fmt.Println(err)
@@ -67,12 +78,17 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 	select {
 	case err := <-errCh:
 		return err
+	case jobStatusMap := <-ch:
+		for job, status := range jobStatusMap {
+			fmt.Println(job, "		", status)
+		}
+		return nil
 	default:
 		return nil
 	}
 }
 
-func (c *Client) generateAndRunJob(timeout time.Duration) error {
+func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]scoot.Status) error {
 	client, err := c.Dial()
 
 	if err != nil {
@@ -113,10 +129,11 @@ func (c *Client) generateAndRunJob(timeout time.Duration) error {
 				return fmt.Errorf("Error getting status: %v", err.Error())
 			}
 		}
-
-		fmt.Println("Status Update Job", jobId.ID, status.Status)
-		time.Sleep(50 * time.Millisecond)
-		timeSpent += 50 * time.Millisecond
+		jobStatusMap := <-ch
+		jobStatusMap[jobId.ID] = status.Status
+		ch <- jobStatusMap
+		time.Sleep(100 * time.Millisecond)
+		timeSpent += 100 * time.Millisecond
 	}
 
 	if jobInProgress {
