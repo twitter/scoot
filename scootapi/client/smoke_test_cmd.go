@@ -66,9 +66,10 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 	// jobs grouped together by status
 	statusJobMap := make(map[scoot.Status][]string)
 	ch <- jobStatusMap
+	ticker := time.NewTicker(time.Millisecond * 500)
 	// print current status of all jobs
 	go func() {
-		for range time.NewTicker(time.Millisecond * 500).C {
+		for range ticker.C {
 			jobStatusMap = <-ch
 			for job, status := range jobStatusMap {
 				// populate statusJobMap
@@ -85,7 +86,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 	}()
 
 	wg.Wait()
-
+	ticker.Stop()
 	// if any errors were logged return an error
 	select {
 	case err := <-errCh:
