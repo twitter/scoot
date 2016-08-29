@@ -76,7 +76,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			}
 			for status, jobs := range statusJobMap {
 				sort.Sort(sort.StringSlice(jobs))
-				fmt.Println(status, ":", jobs, "\n")
+				fmt.Println(status, ":", jobs)
 				// clear statusJobMap so it can be repopulated with updates
 				delete(statusJobMap, status)
 			}
