@@ -46,7 +46,8 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		}
 	}
 	// run a bunch of concurrent jobs and track their status
-	ch := make(chan map[string]scoot.Status)
+	ch := make(chan JobAndStatus)
+	timedOutJobs := make(chan error)
 	var wg sync.WaitGroup
 	errCh := make(chan error, numTasks)
 	for i := 0; i < numTasks; i++ {
@@ -54,6 +55,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		go func() {
 			err := c.generateAndRunJob(timeout, ch)
 			if err != nil {
+				timedOutJobs <- err
 				errCh <- err
 				fmt.Println(err)
 			}
@@ -61,39 +63,34 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
-	// current status of every job
 	jobStatusMap := make(map[string]scoot.Status)
-	// get updated statuses as they're sent
-	go func() {
-		for {
-			jobAndStatus := <-ch
-			for job, status := range jobAndStatus {
-				jobStatusMap[job] = status
-			}
-		}
-	}()
-
-	ticker := time.NewTicker(time.Millisecond * 250)
-	// job id's grouped by status
-	statusJobMap := make(map[scoot.Status][]string)
+	ticker := time.NewTicker(time.Millisecond)
+	timeouts := 0
 Loop:
-	for range ticker.C {
-		for job, status := range jobStatusMap {
-			// populate statusJobMap
-			statusJobMap[status] = append(statusJobMap[status], job)
-		}
-		for status, jobs := range statusJobMap {
-			sort.Sort(sort.StringSlice(jobs))
-			fmt.Println(status, ":", jobs)
-			// if all jobs are completed, break loop
-			if len(statusJobMap[scoot.Status_COMPLETED]) == numTasks {
-				ticker.Stop()
-				break Loop
+	for {
+		select {
+		case <-timedOutJobs:
+			timeouts++
+		case <-ticker.C:
+			// job id's grouped by status
+			statusJobMap := make(map[scoot.Status][]string)
+			jobAndStatus := <-ch
+			jobStatusMap[jobAndStatus.job] = jobAndStatus.status
+			for job, status := range jobStatusMap {
+				// populate statusJobMap
+				statusJobMap[status] = append(statusJobMap[status], job)
 			}
-			// clear statusJobMap so it can be repopulated with updates
-			delete(statusJobMap, status)
+			fmt.Println(timeouts, "jobs have timed out")
+			for status, jobs := range statusJobMap {
+				sort.Sort(sort.StringSlice(jobs))
+				fmt.Println(status, ":", jobs)
+				// if all jobs are completed, break loop
+				if len(statusJobMap[scoot.Status_COMPLETED])+timeouts == numTasks {
+					ticker.Stop()
+					break Loop
+				}
+			}
 		}
-		ch <- jobStatusMap
 	}
 
 	wg.Wait()
@@ -107,7 +104,7 @@ Loop:
 	}
 }
 
-func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]scoot.Status) error {
+func (c *Client) generateAndRunJob(timeout time.Duration, ch chan JobAndStatus) error {
 	client, err := c.Dial()
 
 	if err != nil {
@@ -148,10 +145,8 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]sco
 				return fmt.Errorf("Error getting status: %v", err.Error())
 			}
 		}
-		jobAndStatus := make(map[string]scoot.Status)
-		jobAndStatus[jobId.ID] = status.Status
 		// send it back with updated status
-		ch <- jobAndStatus
+		ch <- JobAndStatus{job: jobId.ID, status: status.Status}
 		time.Sleep(50 * time.Millisecond)
 		timeSpent += 50 * time.Millisecond
 	}
@@ -161,4 +156,9 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]sco
 	} else {
 		return nil
 	}
+}
+
+type JobAndStatus struct {
+	job    string
+	status scoot.Status
 }
