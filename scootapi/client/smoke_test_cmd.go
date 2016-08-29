@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -44,21 +45,9 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-
-	// run a bunch of concurrent jobs
+	// run a bunch of concurrent jobs and track their status
+	ch := make(chan map[string]scoot.Status)
 	var wg sync.WaitGroup
-	ch := make(chan map[string]scoot.Status, 1)
-	jobStatusMap := make(map[string]scoot.Status)
-	ch <- jobStatusMap
-	go func() {
-		for range time.NewTicker(time.Second).C {
-			jobStatusMap = <-ch
-			for job, status := range jobStatusMap {
-				fmt.Println(job, "		", status)
-			}
-			ch <- jobStatusMap
-		}
-	}()
 	errCh := make(chan error, numTasks)
 	for i := 0; i < numTasks; i++ {
 		wg.Add(1)
@@ -72,17 +61,35 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
+	// current status of every job
+	jobStatusMap := make(map[string]scoot.Status)
+	// jobs grouped together by status
+	statusJobMap := make(map[scoot.Status][]string)
+	ch <- jobStatusMap
+	// print current status of all jobs
+	go func() {
+		for range time.NewTicker(time.Millisecond * 500).C {
+			jobStatusMap = <-ch
+			for job, status := range jobStatusMap {
+				// populate statusJobMap
+				statusJobMap[status] = append(statusJobMap[status], job)
+			}
+			for status, jobs := range statusJobMap {
+				sort.Sort(sort.StringSlice(jobs))
+				fmt.Println(status, ":", jobs, "\n")
+				// clear statusJobMap so it can be repopulated with updates
+				delete(statusJobMap, status)
+			}
+			ch <- jobStatusMap
+		}
+	}()
+
 	wg.Wait()
 
 	// if any errors were logged return an error
 	select {
 	case err := <-errCh:
 		return err
-	case jobStatusMap := <-ch:
-		for job, status := range jobStatusMap {
-			fmt.Println(job, "		", status)
-		}
-		return nil
 	default:
 		return nil
 	}
@@ -129,11 +136,13 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]sco
 				return fmt.Errorf("Error getting status: %v", err.Error())
 			}
 		}
+		// get current version of jobStatusMap
 		jobStatusMap := <-ch
 		jobStatusMap[jobId.ID] = status.Status
+		// send it back with updated status
 		ch <- jobStatusMap
-		time.Sleep(100 * time.Millisecond)
-		timeSpent += 100 * time.Millisecond
+		time.Sleep(50 * time.Millisecond)
+		timeSpent += 50 * time.Millisecond
 	}
 
 	if jobInProgress {
