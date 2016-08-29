@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_AsyncRunner(t *testing.T) {
+func Test_Runner(t *testing.T) {
 	err := storeValue_withRunner(5)
 	if err == nil {
 		t.Error("expected to storeValue to complete successfully")
@@ -16,7 +16,7 @@ func storeValue_withRunner(num int) error {
 	successfulWrites := 0
 	returnedWrites := 0
 
-	runner := NewAsyncRunner()
+	runner := NewRunner()
 
 	writeCb := func(err error) {
 		if err != nil {

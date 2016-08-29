@@ -40,22 +40,19 @@ package async
 //  // which is accessed via the network
 //  func write (num int, address string) error { ... }
 //
-type AsyncRunner struct {
-	bx *AsyncMailbox
+type Runner struct {
+	bx *Mailbox
 }
 
-func NewAsyncRunner() AsyncRunner {
-	return AsyncRunner{
-		bx: NewAsyncMailbox(),
+func NewRunner() Runner {
+	return Runner{
+		bx: NewMailbox(),
 	}
 }
 
-// Function that takes no parameters and returns an error
-type AsyncFunction func() error
-
 // RunAsync creates a go routine to run the specified function f.
 // The callback, cb, is invoked once f is completed by calling ProcessMessages.
-func (r *AsyncRunner) RunAsync(f AsyncFunction, cb AsyncErrorResponseHandler) {
+func (r *Runner) RunAsync(f func() error, cb AsyncErrorResponseHandler) {
 	asyncErr := r.bx.NewAsyncError(cb)
 	go func(rsp *AsyncError) {
 		err := f()
@@ -65,6 +62,6 @@ func (r *AsyncRunner) RunAsync(f AsyncFunction, cb AsyncErrorResponseHandler) {
 
 // Invokes all callbacks of completed asyncfunctions.
 // Callbacks are ran synchronously and by the calling go routine
-func (r *AsyncRunner) ProcessMessages() {
+func (r *Runner) ProcessMessages() {
 	r.bx.ProcessMessages()
 }

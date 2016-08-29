@@ -6,7 +6,9 @@ package async
 // Once the value is supplied AsyncError is considered completed
 // The value can be retrieved once AsyncError is completed via TryGetValue
 type AsyncError struct {
-	errCh chan error
+	errCh     chan error
+	val       error
+	completed bool
 }
 
 func newAsyncError() *AsyncError {
@@ -17,25 +19,30 @@ func newAsyncError() *AsyncError {
 
 // Sets the value for the AsyncError.  Marks AsyncError as Completed or Fulfilled.
 // This method should only ever be called once per AsyncError instance.
-// Calling it more than once it will block indefinitely
-func (p *AsyncError) SetValue(err error) {
-	p.errCh <- err
+// Calling this method more than once will panic
+func (e *AsyncError) SetValue(err error) {
+	e.errCh <- err
+	close(e.errCh)
 }
 
-// Returns the Status of this AsyncError, Completed or Pending
+// Returns the Status of this AsyncError:
+// Completed(true) or Pending(false)
 // and the value of the AsyncError if it is Completed.
 //
 // The returned bool is true if Completed, false if Pending
 // If Completed the returned error is the Value of this AsyncError
 // If AsyncError is not completed the returned error is nil.
-//
-// Calling this method after true has been returned will panic
-func (p *AsyncError) TryGetValue() (bool, error) {
-	select {
-	case err := <-p.errCh:
-		close(p.errCh)
-		return true, err
-	default:
-		return false, nil
+func (e *AsyncError) TryGetValue() (bool, error) {
+	if e.completed {
+		return true, e.val
+	} else {
+		select {
+		case err := <-e.errCh:
+			e.val = err
+			e.completed = true
+			return true, err
+		default:
+			return false, nil
+		}
 	}
 }

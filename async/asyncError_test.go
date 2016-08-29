@@ -38,6 +38,16 @@ func TestAsyncError_Completed(t *testing.T) {
 		t.Errorf("Expected returned error {%v} to be the same as SetValue error {%v}",
 			retErr.Error(), testErr.Error())
 	}
+
+	// verify it can be called multiple times, and returns the result
+	ok, retErr = err.TryGetValue()
+	if !ok {
+		t.Error("Expected calling TryGetValue to return true")
+	}
+
+	if retErr == nil {
+		t.Error("Expected TryGetValue to return an error for completed AsyncError")
+	}
 }
 
 func TestAsyncError_CompletedNilError(t *testing.T) {
@@ -52,4 +62,16 @@ func TestAsyncError_CompletedNilError(t *testing.T) {
 	if retErr != nil {
 		t.Error("Expected TryGetValue to return an error of nil completed AsyncError")
 	}
+}
+
+func TestAsyncError_CallingSetValueMoreThanOncePanics(t *testing.T) {
+	err := newAsyncError()
+	err.SetValue(nil)
+
+	defer func() {
+		if r := recover(); r != nil {
+		}
+	}()
+	err.SetValue(nil)
+	t.Errorf("Expected calling SetValue twice to cause a panic")
 }

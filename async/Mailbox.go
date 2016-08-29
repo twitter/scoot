@@ -61,8 +61,8 @@ package async
 // are always executed within the same context and only one at at ime.
 // A Mailbox for keeping track of in progress AsyncMessages.
 // This structure is not thread-safe.
-type AsyncMailbox struct {
-	msgs []asyncMessage
+type Mailbox struct {
+	msgs []message
 }
 
 // The function type of the callback invoked when an AsyncError is Completed
@@ -70,38 +70,38 @@ type AsyncErrorResponseHandler func(error)
 
 // async message is a struct composed of an AsyncError
 // and its associated callback
-type asyncMessage struct {
+type message struct {
 	Err      *AsyncError
 	callback AsyncErrorResponseHandler
 }
 
-func newAsyncMessage(cb AsyncErrorResponseHandler) asyncMessage {
-	return asyncMessage{
+func newMessage(cb AsyncErrorResponseHandler) message {
+	return message{
 		Err:      newAsyncError(),
 		callback: cb,
 	}
 }
 
-func NewAsyncMailbox() *AsyncMailbox {
-	return &AsyncMailbox{
-		msgs: make([]asyncMessage, 0),
+func NewMailbox() *Mailbox {
+	return &Mailbox{
+		msgs: make([]message, 0),
 	}
 }
 
 // Creates a NewAsyncError and assocaites the supplied callback with it.
 // Once the AsyncError has been completed, SetValue called, the callback
 // will be invoked on the next execution of ProcessMessages
-func (bx *AsyncMailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
-	msg := newAsyncMessage(cb)
+func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
+	msg := newMessage(cb)
 	bx.msgs = append(bx.msgs, msg)
 	return msg.Err
 }
 
 // Processes the mailbox.  For all messages with completed AsyncErrors
 // the callback function and removes the message from the mailbox
-func (bx *AsyncMailbox) ProcessMessages() {
+func (bx *Mailbox) ProcessMessages() {
 
-	var unCompletedMsgs []asyncMessage
+	var unCompletedMsgs []message
 	for _, msg := range bx.msgs {
 
 		ok, err := msg.Err.TryGetValue()

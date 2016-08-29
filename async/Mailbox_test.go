@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func Test_AsyncMailbox(t *testing.T) {
-	mailbox := NewAsyncMailbox()
+func Test_Mailbox(t *testing.T) {
+	mailbox := NewMailbox()
 
 	cbInvoked := false
 	var retErr error
@@ -40,7 +40,7 @@ func Test_AsyncMailbox(t *testing.T) {
 }
 
 // test to verify that example code for mailbox.go docs works!
-func Test_AsyncMailboxExample(t *testing.T) {
+func Test_MailboxExample(t *testing.T) {
 	err := storeValue_withMailbox(5)
 	if err == nil {
 		t.Error("expected to storeValue to complete successfully")
@@ -51,7 +51,7 @@ func Test_AsyncMailboxExample(t *testing.T) {
 func storeValue_withMailbox(num int) error {
 	successfulWrites := 0
 	returnedWrites := 0
-	mailbox := NewAsyncMailbox()
+	mailbox := NewMailbox()
 
 	writeCallback := func(err error) {
 		if err != nil {
