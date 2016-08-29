@@ -63,30 +63,41 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 
 	// current status of every job
 	jobStatusMap := make(map[string]scoot.Status)
-	// jobs grouped together by status
-	statusJobMap := make(map[scoot.Status][]string)
-	ch <- jobStatusMap
-	ticker := time.NewTicker(time.Millisecond * 500)
-	// print current status of all jobs
+	// get updated statuses as they're sent
 	go func() {
-		for range ticker.C {
-			jobStatusMap = <-ch
-			for job, status := range jobStatusMap {
-				// populate statusJobMap
-				statusJobMap[status] = append(statusJobMap[status], job)
+		for {
+			jobAndStatus := <-ch
+			for job, status := range jobAndStatus {
+				jobStatusMap[job] = status
 			}
-			for status, jobs := range statusJobMap {
-				sort.Sort(sort.StringSlice(jobs))
-				fmt.Println(status, ":", jobs)
-				// clear statusJobMap so it can be repopulated with updates
-				delete(statusJobMap, status)
-			}
-			ch <- jobStatusMap
 		}
 	}()
 
+	ticker := time.NewTicker(time.Millisecond * 250)
+	// job id's grouped by status
+	statusJobMap := make(map[scoot.Status][]string)
+Loop:
+	for range ticker.C {
+		for job, status := range jobStatusMap {
+			// populate statusJobMap
+			statusJobMap[status] = append(statusJobMap[status], job)
+		}
+		for status, jobs := range statusJobMap {
+			sort.Sort(sort.StringSlice(jobs))
+			fmt.Println(status, ":", jobs)
+			// if all jobs are completed, break loop
+			if len(statusJobMap[scoot.Status_COMPLETED]) == numTasks {
+				ticker.Stop()
+				break Loop
+			}
+			// clear statusJobMap so it can be repopulated with updates
+			delete(statusJobMap, status)
+		}
+		ch <- jobStatusMap
+	}
+
 	wg.Wait()
-	ticker.Stop()
+
 	// if any errors were logged return an error
 	select {
 	case err := <-errCh:
@@ -137,11 +148,10 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan map[string]sco
 				return fmt.Errorf("Error getting status: %v", err.Error())
 			}
 		}
-		// get current version of jobStatusMap
-		jobStatusMap := <-ch
-		jobStatusMap[jobId.ID] = status.Status
+		jobAndStatus := make(map[string]scoot.Status)
+		jobAndStatus[jobId.ID] = status.Status
 		// send it back with updated status
-		ch <- jobStatusMap
+		ch <- jobAndStatus
 		time.Sleep(50 * time.Millisecond)
 		timeSpent += 50 * time.Millisecond
 	}
