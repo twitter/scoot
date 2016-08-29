@@ -85,7 +85,7 @@ Loop:
 				sort.Sort(sort.StringSlice(jobs))
 				fmt.Println(status, ":", jobs)
 				// if all jobs are completed, break loop
-				if len(statusJobMap[scoot.Status_COMPLETED])+timeouts == numTasks {
+				if len(statusJobMap[scoot.Status_COMPLETED])+len(statusJobMap[scoot.Status_ROLLED_BACK])+timeouts == numTasks {
 					ticker.Stop()
 					break Loop
 				}
