@@ -1,6 +1,6 @@
 package async
 
-// An AsyncMailbox stores AsyncErrors and their assocaited callbacks
+// An AsyncMailbox stores AsyncErrors and their associated callbacks
 // and invokes them once the AsyncError is completed
 //
 // Often times we may spawn go routines in an event loop to do some concurrent work,

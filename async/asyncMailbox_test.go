@@ -41,14 +41,14 @@ func Test_AsyncMailbox(t *testing.T) {
 
 // test to verify that example code for mailbox.go docs works!
 func Test_AsyncMailboxExample(t *testing.T) {
-	err := storeValue(5)
+	err := storeValue_withMailbox(5)
 	if err == nil {
 		t.Error("expected to storeValue to complete successfully")
 	}
 }
 
 // example code for mailbox.go
-func storeValue(num int) error {
+func storeValue_withMailbox(num int) error {
 	successfulWrites := 0
 	returnedWrites := 0
 	mailbox := NewAsyncMailbox()
