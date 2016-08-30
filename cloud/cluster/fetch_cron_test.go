@@ -11,50 +11,40 @@ import (
 
 func TestFetchCron(t *testing.T) {
 	h := makeCronHelper(t)
-	h.assertFetch(t, h.setupTest())
-	h.assertFetch(t, h.setupTest("host1:1234"))
-	h.assertFetch(t, h.setupTest("host1:1234", "host2:8888"))
-	h.assertFetch(t, h.setupTest("host1:1234"))
-	h.assertFetch(t, h.setupTest())
-}
-
-func (h *cronHelper) setupTest(nodeNames ...string) []cluster.Node {
-	nodes := nodes(nodeNames)
-	sort.Sort(cluster.NodeSorter(nodes))
-	h.f.setResult(nodes)
-	return nodes
+	h.assertFetch(t)
+	h.assertFetch(t, "host1:1234")
+	h.assertFetch(t, "host1:1234", "host2:8888")
+	h.assertFetch(t)
+	h.assertFetch(t, "host1:1234")
+	h.assertFetch(t)
 }
 
 type cronHelper struct {
-	t        *testing.T
-	time     time.Duration
-	f        *fakeFetcher
-	ch       chan interface{}
-	updateCh chan []cluster.NodeUpdate
-	cl       *cluster.Cluster
+	t      *testing.T
+	tickCh chan time.Time
+	f      *fakeFetcher
+	ch     chan cluster.ClusterUpdate
 }
 
 func makeCronHelper(t *testing.T) *cronHelper {
-	h := &cronHelper{t: t, time: time.Nanosecond}
-	h.f = &fakeFetcher{}
-	h.ch = make(chan interface{})
-	h.cl = cluster.NewCluster([]cluster.Node{}, h.updateCh, h.ch, h.f)
+	h := &cronHelper{
+		t:      t,
+		tickCh: make(chan time.Time),
+		f:      &fakeFetcher{},
+	}
+	h.ch = cluster.MakeFetchCron(h.f, h.tickCh)
 	return h
 }
 
-func (h *cronHelper) assertFetch(t *testing.T, expected []cluster.Node) {
-	timeout := time.After(time.Millisecond * 100)
-	for {
-		select {
-		case actual := <-h.ch:
-			if _, ok := actual.([]cluster.Node); ok {
-				if reflect.DeepEqual(expected, actual) {
-					return
-				}
-			}
-		case <-timeout:
-			t.Fatalf("Unequal, expected %v", expected)
-		}
+func (h *cronHelper) assertFetch(t *testing.T, expectedNames ...string) {
+	nodes := nodes(expectedNames)
+	sort.Sort(cluster.NodeSorter(nodes))
+	h.f.setResult(nodes)
+	expected := nodes
+	h.tickCh <- time.Now()
+	actual := <-h.ch
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("got %v, expected %v", actual, expected)
 	}
 }
 

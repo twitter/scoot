@@ -2,10 +2,8 @@ package config
 
 import (
 	"fmt"
-	"time"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
@@ -14,6 +12,7 @@ import (
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/fake"
 	"github.com/scootdev/scoot/sched/worker/rpc"
+	"time"
 )
 
 func DefaultParser() *Parser {
@@ -59,7 +58,7 @@ func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
 	for i := 0; i < c.Count; i++ {
 		workerNodes = append(workerNodes, cluster.NewIdNode(fmt.Sprintf("inmemory%d", i)))
 	}
-	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
+	return cluster.NewCluster(workerNodes, nil), nil
 }
 
 type ClusterStaticConfig struct {
@@ -72,7 +71,7 @@ func (c *ClusterStaticConfig) Create() (*cluster.Cluster, error) {
 	for _, h := range c.Hosts {
 		workerNodes = append(workerNodes, cluster.NewIdNode(h))
 	}
-	return cluster.NewCluster(workerNodes, nil, nil, local.MakeFetcher()), nil
+	return cluster.NewCluster(workerNodes, nil), nil
 }
 
 type QueueMemoryConfig struct {
