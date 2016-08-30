@@ -2,14 +2,15 @@ package local
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/memory"
+	"time"
 )
 
 type ClusterLocalConfig struct {
 	Type string
 }
 
-func (c *ClusterLocalConfig) Create() (cluster.Cluster, error) {
-	sub := Subscribe()
-	return memory.NewCluster(sub.InitialMembers, sub.Updates), nil
+func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
+	f := MakeFetcher()
+	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Second).C)
+	return cluster.NewCluster(nil, updates), nil
 }
