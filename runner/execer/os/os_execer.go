@@ -1,8 +1,8 @@
 package os
 
 import (
-	"bytes"
 	"errors"
+	"io"
 	"os/exec"
 	"syscall"
 
@@ -15,13 +15,23 @@ func NewExecer() execer.Execer {
 
 type osExecer struct{}
 
+type WriterDelegater interface {
+	WriterDelegate() io.Writer
+}
+
 func (e *osExecer) Exec(command execer.Command) (result execer.Process, err error) {
 	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
 	}
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdoutBuf, &stderrBuf
+	cmd.Stdout, cmd.Stderr = command.Stdout, command.Stderr
+	// Make sure to get the best possible Writer, so that
+	if stdoutW, ok := cmd.Stdout.(WriterDelegater); ok {
+		cmd.Stdout = stdoutW.WriterDelegate()
+	}
+	if stderrW, ok := cmd.Stderr.(WriterDelegater); ok {
+		cmd.Stderr = stderrW.WriterDelegate()
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	err = cmd.Start()
 	if err != nil {

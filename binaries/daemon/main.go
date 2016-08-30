@@ -26,7 +26,11 @@ func main() {
 	default:
 		log.Fatalf("Unknown execer type %v", *execerType)
 	}
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
+	saver, err := local.NewSaver()
+	if err != nil {
+		log.Fatal("Cannot create Saver: ", err)
+	}
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), saver)
 	s, err := server.NewServer(r)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

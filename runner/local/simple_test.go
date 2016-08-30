@@ -2,6 +2,9 @@ package local_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/scootdev/scoot/runner"
@@ -14,19 +17,46 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	exec := fake.NewSimExecer(nil)
-	r := local.NewSimpleRunner(exec, fakesnaps.MakeInvalidCheckouter())
+	r, _ := newRunner()
 	firstId := assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
 	// Now make sure that the first results are still available
 	assertWait(t, r, firstId, complete(0), "complete 0")
 }
 
+func TestOutput(t *testing.T) {
+	r, _ := newRunner()
+	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
+	id := assertRun(t, r, complete(0),
+		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
+	st := r.Status(id)
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
+	uriPrefix := "file://" + hostname
+	stdoutFilename := strings.TrimPrefix(st.StdoutRef, uriPrefix)
+	stdoutActual, err := ioutil.ReadFile(stdoutFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdoutExpected != string(stdoutActual) {
+		t.Fatalf("stdout was %q; expected %q", stdoutActual, stdoutExpected)
+	}
+
+	stderrFilename := strings.TrimPrefix(st.StderrRef, uriPrefix)
+	stderrActual, err := ioutil.ReadFile(stderrFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stderrExpected != string(stderrActual) {
+		t.Fatalf("stderr was %q; expected %q", stderrActual, stderrExpected)
+	}
+}
+
 func TestSimul(t *testing.T) {
-	var wg sync.WaitGroup
+	r, wg := newRunner()
 	wg.Add(1)
-	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	assertWait(t, r, firstRun, running(), firstArgs...)
@@ -43,10 +73,8 @@ func TestSimul(t *testing.T) {
 }
 
 func TestAbort(t *testing.T) {
-	var wg sync.WaitGroup
+	r, wg := newRunner()
 	wg.Add(1)
-	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	args := []string{"pause", "complete 0"}
 	runId := run(t, r, args)
 	assertWait(t, r, runId, running(), args...)
@@ -123,4 +151,15 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 			return status
 		}
 	}
+}
+
+func newRunner() (runner.Runner, *sync.WaitGroup) {
+	wg := &sync.WaitGroup{}
+	ex := fake.NewSimExecer(wg)
+	saver, err := local.NewSaver()
+	if err != nil {
+		panic(err)
+	}
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), saver)
+	return r, wg
 }
