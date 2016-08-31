@@ -158,7 +158,6 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan jobAndStatus) 
 	}
 }
 
-// struct to pass status back to UI
 type jobAndStatus struct {
 	job    string
 	status scoot.Status
