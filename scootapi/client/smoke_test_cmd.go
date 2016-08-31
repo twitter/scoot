@@ -46,7 +46,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		}
 	}
 	// run a bunch of concurrent jobs and track their status
-	ch := make(chan JobAndStatus)
+	ch := make(chan jobAndStatus)
 	timedOutJobs := make(chan error)
 	var wg sync.WaitGroup
 	errCh := make(chan error, numTasks)
@@ -104,7 +104,7 @@ Loop:
 	}
 }
 
-func (c *Client) generateAndRunJob(timeout time.Duration, ch chan JobAndStatus) error {
+func (c *Client) generateAndRunJob(timeout time.Duration, ch chan jobAndStatus) error {
 	client, err := c.Dial()
 
 	if err != nil {
@@ -146,7 +146,7 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan JobAndStatus) 
 			}
 		}
 		// send it back with updated status
-		ch <- JobAndStatus{job: jobId.ID, status: status.Status}
+		ch <- jobAndStatus{job: jobId.ID, status: status.Status}
 		time.Sleep(50 * time.Millisecond)
 		timeSpent += 50 * time.Millisecond
 	}
@@ -158,7 +158,7 @@ func (c *Client) generateAndRunJob(timeout time.Duration, ch chan JobAndStatus) 
 	}
 }
 
-type JobAndStatus struct {
+type jobAndStatus struct {
 	job    string
 	status scoot.Status
 }
