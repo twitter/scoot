@@ -2,6 +2,7 @@ package local
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
+	"time"
 )
 
 type ClusterLocalConfig struct {
@@ -9,6 +10,7 @@ type ClusterLocalConfig struct {
 }
 
 func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
-	sub, fetcher := Subscribe()
-	return cluster.NewCluster(sub.InitialMembers, sub.Updates, make(chan interface{}), fetcher), nil
+	f := MakeFetcher()
+	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Second).C)
+	return cluster.NewCluster(nil, updates), nil
 }

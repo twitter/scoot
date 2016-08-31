@@ -25,11 +25,6 @@ type closer struct {
 	ticker *time.Ticker
 }
 
-func Subscribe() Subscription {
-	ticker := time.NewTicker(time.Duration(15 * time.Second))
-	return Subscription{nil, nil, &closer{ticker}}
-}
-
 func makeSubscription(initial []Node, cl *Cluster, inCh chan []NodeUpdate) Subscription {
 	s := &subscriber{
 		inCh:  inCh,

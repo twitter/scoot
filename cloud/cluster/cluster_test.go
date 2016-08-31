@@ -2,7 +2,6 @@ package cluster_test
 
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/local"
 	"testing"
 )
 
@@ -73,15 +72,13 @@ type helper struct {
 	c        *cluster.Cluster
 	updateCh chan []cluster.NodeUpdate
 	f        cluster.Fetcher
-	ch       chan interface{}
+	ch       chan cluster.ClusterUpdate
 }
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
-	h.updateCh = make(chan []cluster.NodeUpdate)
-	h.ch = make(chan interface{})
-	h.f = local.MakeFetcher()
-	h.c = cluster.NewCluster(nil, h.updateCh, h.ch, h.f)
+	h.ch = make(chan cluster.ClusterUpdate)
+	h.c = cluster.NewCluster(nil, h.ch)
 	return h
 }
 
