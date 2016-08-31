@@ -2,30 +2,31 @@ package cluster
 
 import (
 	"sort"
-	"time"
 )
 
 // Cluster represents a cluster of Nodes.
 type Cluster struct {
 	state    *state
 	reqCh    chan interface{}
-	ch       chan interface{}
-	updateCh chan []NodeUpdate
+	updateCh chan ClusterUpdate
 	subs     []chan []NodeUpdate
 }
 
+// Clusters can be updated in two ways:
+// *) a new state of the Cluster, which is a []Node
+// *) updates to specific Nodes, which is a []NodeUpdate
+type ClusterUpdate interface{}
+
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-func NewCluster(state []Node, updateCh chan []NodeUpdate, ch chan interface{}, fetcher Fetcher) *Cluster {
+func NewCluster(state []Node, updateCh chan ClusterUpdate) *Cluster {
 	s := makeState(state)
 	c := &Cluster{
 		state:    s,
 		reqCh:    make(chan interface{}),
-		ch:       ch,
 		updateCh: updateCh,
 		subs:     nil,
 	}
-	makeFetchCron(fetcher, time.Millisecond, ch)
 	go c.loop()
 	return c
 }
@@ -48,22 +49,15 @@ func (c *Cluster) Close() error {
 }
 
 func (c *Cluster) done() bool {
-	return c.ch == nil && c.reqCh == nil && c.updateCh == nil
+	return c.reqCh == nil && c.updateCh == nil
 }
 
 func (c *Cluster) loop() {
 	for !c.done() {
 		select {
-		case updates, ok := <-c.updateCh:
+		case nodesOrUpdates, ok := <-c.updateCh:
 			if !ok {
 				c.updateCh = nil
-				continue
-			}
-			c.ch <- updates
-			continue
-		case nodesOrUpdates, ok := <-c.ch:
-			if !ok {
-				c.ch = nil
 				continue
 			}
 			outgoing := []NodeUpdate{}
