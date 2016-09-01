@@ -6,38 +6,55 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/scootdev/scoot/common/stats"
 )
 
-func RegisterHealthCheck(path string) {
-	http.HandleFunc(path, healthHandler)
+func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
+	return &TwitterServer{
+		Addr:  addr,
+		Stats: stats,
+	}
 }
 
-func RegisterStats(path string, statsRecvr stats.StatsReceiver) {
-	stats.CurrentStatsReceiver = statsRecvr
-	http.HandleFunc(path, statsHandler)
+type TwitterServer struct {
+	Addr  string
+	Stats stats.StatsReceiver
 }
 
-func Serve(addr string) {
-	log.Println("Serving http & stats on", addr)
-	err := http.ListenAndServe(addr, nil)
-	log.Println("Done serving http", err)
+func (s *TwitterServer) Serve() error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", healthHandler)
+	mux.HandleFunc("/admin/metrics.json", s.statsHandler)
+	server := &http.Server{
+		Addr:    s.Addr,
+		Handler: mux,
+	}
+	log.Println("Serving http & stats on", s.Addr)
+	return server.ListenAndServe()
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
 
-func statsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 	const contentTypeHdr = "Content-Type"
 	const contentTypeVal = "application/json; charset=utf-8"
 	w.Header().Set(contentTypeHdr, contentTypeVal)
 
 	pretty := r.URL.Query().Get("pretty") == "true"
-	str := stats.CurrentStatsReceiver.Render(pretty)
+	str := s.Stats.Render(pretty)
 	if _, err := io.Copy(w, bytes.NewBuffer(str)); err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+}
+
+func MakeStatsReceiver() stats.StatsReceiver {
+	s, _ := stats.NewCustomStatsReceiver(
+		stats.NewFinagleStatsRegistry,
+		15*time.Second)
+	return s
 }
