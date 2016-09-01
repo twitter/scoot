@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -44,21 +45,52 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-
-	// run a bunch of concurrent jobs
+	// run a bunch of concurrent jobs and track their status
+	ch := make(chan jobAndStatus)
+	timedOutJobs := make(chan error)
 	var wg sync.WaitGroup
-
 	errCh := make(chan error, numTasks)
 	for i := 0; i < numTasks; i++ {
 		wg.Add(1)
 		go func() {
-			err := c.generateAndRunJob(timeout)
+			err := c.generateAndRunJob(timeout, ch)
 			if err != nil {
+				timedOutJobs <- err
 				errCh <- err
 				fmt.Println(err)
 			}
 			wg.Done()
 		}()
+	}
+
+	jobStatusMap := make(map[string]scoot.Status)
+	ticker := time.NewTicker(time.Millisecond)
+	timeouts := 0
+Loop:
+	for {
+		select {
+		case <-timedOutJobs:
+			timeouts++
+		case <-ticker.C:
+			// job id's grouped by status
+			statusJobMap := make(map[scoot.Status][]string)
+			jobAndStatus := <-ch
+			jobStatusMap[jobAndStatus.job] = jobAndStatus.status
+			for job, status := range jobStatusMap {
+				// populate statusJobMap
+				statusJobMap[status] = append(statusJobMap[status], job)
+			}
+			fmt.Println(timeouts, "jobs have timed out")
+			for status, jobs := range statusJobMap {
+				sort.Sort(sort.StringSlice(jobs))
+				fmt.Println(status, ":", jobs)
+				// if all jobs are completed, break loop
+				if len(statusJobMap[scoot.Status_COMPLETED])+len(statusJobMap[scoot.Status_ROLLED_BACK])+timeouts == numTasks {
+					ticker.Stop()
+					break Loop
+				}
+			}
+		}
 	}
 
 	wg.Wait()
@@ -72,7 +104,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 	}
 }
 
-func (c *Client) generateAndRunJob(timeout time.Duration) error {
+func (c *Client) generateAndRunJob(timeout time.Duration, ch chan jobAndStatus) error {
 	client, err := c.Dial()
 
 	if err != nil {
@@ -113,8 +145,8 @@ func (c *Client) generateAndRunJob(timeout time.Duration) error {
 				return fmt.Errorf("Error getting status: %v", err.Error())
 			}
 		}
-
-		fmt.Println("Status Update Job", jobId.ID, status.Status)
+		// send it back with updated status
+		ch <- jobAndStatus{job: jobId.ID, status: status.Status}
 		time.Sleep(50 * time.Millisecond)
 		timeSpent += 50 * time.Millisecond
 	}
@@ -124,4 +156,10 @@ func (c *Client) generateAndRunJob(timeout time.Duration) error {
 	} else {
 		return nil
 	}
+}
+
+// struct for passing status to UI
+type jobAndStatus struct {
+	job    string
+	status scoot.Status
 }
