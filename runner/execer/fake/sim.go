@@ -2,6 +2,7 @@ package fake
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,10 +33,10 @@ func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &simProcess{}
+	r := &simProcess{stdout: command.Stdout, stderr: command.Stderr}
 	r.done = sync.NewCond(&r.mu)
 	r.status.State = execer.RUNNING
-	go run(steps, r)
+	go r.run(steps)
 	return r, nil
 }
 
@@ -72,6 +73,10 @@ func (e *simExecer) parseArg(arg string) (simStep, error) {
 			return nil, err
 		}
 		return &sleepStep{time.Duration(i) * time.Millisecond}, nil
+	case "stdout":
+		return &stdoutStep{rest}, nil
+	case "stderr":
+		return &stderrStep{rest}, nil
 	}
 	return nil, fmt.Errorf("can't simulate arg: %v", arg)
 }
@@ -80,6 +85,9 @@ type simProcess struct {
 	status execer.ProcessStatus
 	done   *sync.Cond
 	mu     sync.Mutex
+
+	stdout io.Writer
+	stderr io.Writer
 }
 
 func (p *simProcess) Wait() execer.ProcessStatus {
@@ -115,25 +123,25 @@ func (p *simProcess) getStatus() execer.ProcessStatus {
 	return p.status
 }
 
-func run(steps []simStep, p *simProcess) {
+func (p *simProcess) run(steps []simStep) {
 	for _, step := range steps {
 		status := p.getStatus()
 		if status.State.IsDone() {
 			break
 		}
-		p.setStatus(step.run(status))
+		p.setStatus(step.run(status, p))
 	}
 }
 
 type simStep interface {
-	run(status execer.ProcessStatus) execer.ProcessStatus
+	run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus
 }
 
 type completeStep struct {
 	exitCode int
 }
 
-func (s *completeStep) run(status execer.ProcessStatus) execer.ProcessStatus {
+func (s *completeStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	status.ExitCode = s.exitCode
 	status.State = execer.COMPLETE
 	return status
@@ -143,7 +151,7 @@ type pauseStep struct {
 	wait *sync.WaitGroup
 }
 
-func (s *pauseStep) run(status execer.ProcessStatus) execer.ProcessStatus {
+func (s *pauseStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	s.wait.Wait()
 	return status
 }
@@ -152,7 +160,25 @@ type sleepStep struct {
 	duration time.Duration
 }
 
-func (s *sleepStep) run(status execer.ProcessStatus) execer.ProcessStatus {
+func (s *sleepStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	time.Sleep(s.duration)
+	return status
+}
+
+type stdoutStep struct {
+	output string
+}
+
+func (s *stdoutStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
+	p.stdout.Write([]byte(s.output))
+	return status
+}
+
+type stderrStep struct {
+	output string
+}
+
+func (s *stderrStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
+	p.stderr.Write([]byte(s.output))
 	return status
 }

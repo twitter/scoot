@@ -28,7 +28,7 @@ func Test_ScheduleJob_WritingStartSagaFails(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("job1", nil).Return(saga.NewInternalLogError("test error"))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
-	scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver())
+	scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver()).(*scheduler)
 
 	job := sched.GenJob("job1", 5)
 	err := scheduler.ScheduleJob(job)
@@ -50,7 +50,7 @@ func Test_ScheduleJob_JobsExecuteSuccessfully(t *testing.T) {
 			nodes := cluster.NewIdNodes(int(numNodes))
 			dist := distributor.NewPoolDistributor(nodes, nil)
 			sagaCoord := saga.MakeInMemorySagaCoordinator()
-			scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver())
+			scheduler := NewScheduler(dist, sagaCoord, fake.MakeNoopWorker, stats.NilStatsReceiver()).(*scheduler)
 
 			job := sched.GenJob(jobId, int(numTasks))
 			err := scheduler.ScheduleJob(job)
