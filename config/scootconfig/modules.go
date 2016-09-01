@@ -2,11 +2,11 @@ package scootconfig
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
-	clusterimpl "github.com/scootdev/scoot/cloud/cluster/memory"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/sched/queue"
 	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
@@ -35,12 +35,12 @@ func (c *ClusterMemoryConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
-func (c *ClusterMemoryConfig) Create() (cluster.Cluster, error) {
+func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
 	workerNodes := make([]cluster.Node, c.Count)
 	for i := 0; i < c.Count; i++ {
-		workerNodes[i] = clusterimpl.NewIdNode(fmt.Sprintf("inmemory%d", i))
+		workerNodes[i] = cluster.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	return clusterimpl.NewCluster(workerNodes, nil), nil
+	return cluster.NewCluster(workerNodes, nil), nil
 }
 
 type ClusterLocalConfig struct {
@@ -51,9 +51,10 @@ func (c *ClusterLocalConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
-func (c *ClusterLocalConfig) Create() (cluster.Cluster, error) {
-	sub := local.Subscribe()
-	return clusterimpl.NewCluster(sub.InitialMembers, sub.Updates), nil
+func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
+	f := local.MakeFetcher()
+	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Second).C)
+	return cluster.NewCluster(nil, updates), nil
 }
 
 type WorkersThriftConfig struct {
