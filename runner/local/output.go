@@ -11,19 +11,20 @@ import (
 	osexecer "github.com/scootdev/scoot/runner/execer/os"
 )
 
-type localSaver struct {
+type localOutputCreator struct {
 	hostname string
 }
 
-func NewSaver() (runner.Saver, error) {
+// Create a new OutputCreator
+func NewOutputCreator() (runner.OutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
-	return &localSaver{hostname: hostname}, nil
+	return &localOutputCreator{hostname: hostname}, nil
 }
 
-func (s *localSaver) Create(id string) (runner.Output, error) {
+func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 	f, err := ioutil.TempFile("", id)
 	if err != nil {
 		return nil, err

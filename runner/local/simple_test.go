@@ -156,10 +156,10 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 func newRunner() (runner.Runner, *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
 	ex := fake.NewSimExecer(wg)
-	saver, err := local.NewSaver()
+	outputCreator, err := local.NewOutputCreator()
 	if err != nil {
 		panic(err)
 	}
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), saver)
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
 	return r, wg
 }

@@ -4,10 +4,11 @@ import (
 	"io"
 )
 
-// Saver lets clients create new Outputs so they can save data.
+// OutputCreator lets clients create new Outputs so they can save data.
 // This is how Runner can save stdout and stderr.
+// OutputCreator is the filesystem that creates many Outputs; Output is one file in that.
 // (NB: Saver is temporary until we save output into a new Snapshot)
-type Saver interface {
+type OutputCreator interface {
 	// Create an output for the given ID
 	Create(id string) (Output, error)
 }

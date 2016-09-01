@@ -10,24 +10,24 @@ import (
 	"github.com/scootdev/scoot/snapshots"
 )
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter, saver runner.Saver) runner.Runner {
+func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
-		exec:       exec,
-		checkouter: checkouter,
-		saver:      saver,
-		runs:       make(map[runner.RunId]runner.ProcessStatus),
+		exec:          exec,
+		checkouter:    checkouter,
+		outputCreator: outputCreator,
+		runs:          make(map[runner.RunId]runner.ProcessStatus),
 	}
 }
 
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
-	exec       execer.Execer
-	checkouter snapshots.Checkouter
-	saver      runner.Saver
-	runs       map[runner.RunId]runner.ProcessStatus
-	running    *run
-	nextRunId  int64
-	mu         sync.Mutex
+	exec          execer.Execer
+	checkouter    snapshots.Checkouter
+	outputCreator runner.OutputCreator
+	runs          map[runner.RunId]runner.ProcessStatus
+	running       *run
+	nextRunId     int64
+	mu            sync.Mutex
 }
 
 type run struct {
@@ -143,13 +143,13 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	}
 	defer checkout.Release()
 
-	stdout, err := r.saver.Create(fmt.Sprintf("%s-stdout", runId))
+	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
 	if err != nil {
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)))
 		return
 	}
 	defer stdout.Close()
-	stderr, err := r.saver.Create(fmt.Sprintf("%s-stderr", runId))
+	stderr, err := r.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
 	if err != nil {
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)))
 		return
