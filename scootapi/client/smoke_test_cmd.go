@@ -2,15 +2,15 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"sort"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 func makeSmokeTestCmd(c *Client) *cobra.Command {
@@ -45,18 +45,16 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	jobs := make(map[string]scoot.Status)
-	// run a bunch of concurrent jobs and track their status
-	jobIdsCh := make(chan string)
+	jobs := make(map[string]*scoot.JobStatus)
 	for i := 0; i < numTasks; i++ {
 		id, err := c.generateAndStartJob()
 		if err != nil {
-			log.Fatal("Error starting job", err)
+			return err
 		}
-		jobs[id] = scoot.Status{}
+		jobs[id] = nil
 	}
 
-	c.waitForJobs(jobs, timeout)
+	return c.waitForJobs(jobs, timeout)
 }
 
 func (c *Client) generateAndStartJob() (string, error) {
@@ -72,12 +70,62 @@ func (c *Client) generateAndStartJob() (string, error) {
 	return jobId.ID, err
 }
 
-func (c *Client) updateJobStatus(jobId string, jobs map[string]scoot.Status) (done, error) {
+func (c *Client) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
+	end := time.Now().Add(timeout)
+	for {
+		printJobs(jobs)
+		if time.Now().After(end) {
+			return fmt.Errorf("Took longer than %v", timeout)
+		}
+		done := true
+		for k, _ := range jobs {
+			d, err := c.updateJobStatus(k, jobs)
+			if err != nil {
+				return err
+			}
+			done = done && d
+		}
+		if done {
+			log.Println("Done")
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+}
+
+func printJobs(jobs map[string]*scoot.JobStatus) {
+	byStatus := make(map[scoot.Status][]string)
+	for k, v := range jobs {
+		st := scoot.Status_NOT_STARTED
+		if v != nil {
+			st = v.Status
+		}
+		byStatus[st] = append(byStatus[st], k)
+	}
+
+	for _, v := range byStatus {
+		sort.Sort(sort.StringSlice(v))
+	}
+
+	log.Println()
+	log.Println("Job Status")
+
+	log.Println("Waiting", byStatus[scoot.Status_NOT_STARTED])
+	log.Println("Running", byStatus[scoot.Status_IN_PROGRESS])
+	log.Println("Done", byStatus[scoot.Status_COMPLETED])
+}
+
+func (c *Client) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
+	client, err := c.Dial()
+	if err != nil {
+		return true, err
+	}
+
 	status := jobs[jobId]
 	if done(status) {
 		return true, nil
 	}
-	status, err := s.client.GetStatus(jobId)
+	status, err = client.GetStatus(jobId)
 	if err != nil {
 		return true, err
 	}
@@ -85,6 +133,6 @@ func (c *Client) updateJobStatus(jobId string, jobs map[string]scoot.Status) (do
 	return done(status), nil
 }
 
-func done(s scoot.Status) bool {
-	return s.Status == scoot.Status_COMPLETED || s.Status == scoot.Status_ROLLED_BACK
+func done(s *scoot.JobStatus) bool {
+	return s != nil && (s.Status == scoot.Status_COMPLETED || s.Status == scoot.Status_ROLLED_BACK)
 }
