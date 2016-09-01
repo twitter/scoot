@@ -10,26 +10,28 @@ import (
 	"github.com/scootdev/scoot/snapshots"
 )
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter) runner.Runner {
+func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
-		exec:       exec,
-		checkouter: checkouter,
-		runs:       make(map[runner.RunId]runner.ProcessStatus),
+		exec:          exec,
+		checkouter:    checkouter,
+		outputCreator: outputCreator,
+		runs:          make(map[runner.RunId]runner.ProcessStatus),
 	}
 }
 
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
-	exec       execer.Execer
-	checkouter snapshots.Checkouter
-	runs       map[runner.RunId]runner.ProcessStatus
-	running    *inflight
-	nextRunId  int64
-	mu         sync.Mutex
+	exec          execer.Execer
+	checkouter    snapshots.Checkouter
+	outputCreator runner.OutputCreator
+	runs          map[runner.RunId]runner.ProcessStatus
+	running       *run
+	nextRunId     int64
+	mu            sync.Mutex
 }
 
-type inflight struct {
-	runId  runner.RunId
+type run struct {
+	id     runner.RunId
 	doneCh chan struct{}
 }
 
@@ -44,7 +46,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
 		return r.runs[runId]
 	}
 
-	r.running = &inflight{runId: runId, doneCh: make(chan struct{})}
+	r.running = &run{id: runId, doneCh: make(chan struct{})}
 	r.runs[runId] = runner.PreparingStatus(runId)
 
 	// Run in a new goroutine
@@ -59,7 +61,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
 
 func makeRunnerStatus(st execer.ProcessStatus, runId runner.RunId) runner.ProcessStatus {
 	if st.State == execer.COMPLETE {
-		return runner.CompleteStatus(runId, st.StdoutURI, st.StderrURI, st.ExitCode)
+		return runner.CompleteStatus(runId, "", "", st.ExitCode)
 	} else if st.State == execer.FAILED {
 		return runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error))
 	}
@@ -99,6 +101,7 @@ func (r *simpleRunner) Erase(run runner.RunId) {
 	}
 }
 
+// TODO(dbentley): when we timeout or abort, we should include the previous stdout/stderr URIs
 func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStatus {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -140,9 +143,24 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	}
 	defer checkout.Release()
 
+	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
+	if err != nil {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)))
+		return
+	}
+	defer stdout.Close()
+	stderr, err := r.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
+	if err != nil {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)))
+		return
+	}
+	defer stderr.Close()
+
 	p, err := r.exec.Exec(execer.Command{
-		Argv: cmd.Argv,
-		Dir:  checkout.Path(),
+		Argv:   cmd.Argv,
+		Dir:    checkout.Path(),
+		Stdout: stdout,
+		Stderr: stderr,
 	})
 	if err != nil {
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err)))
@@ -153,13 +171,19 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
+	var st execer.ProcessStatus
 
 	// Wait for process complete or cancel
 	select {
 	case <-doneCh:
 		p.Abort()
 		return
-	case st := <-processCh:
-		r.updateStatus(makeRunnerStatus(st, runId))
+	case st = <-processCh:
 	}
+	if st.State == execer.COMPLETE {
+		r.updateStatus(runner.CompleteStatus(runId, stdout.URI(), stderr.URI(), st.ExitCode))
+	} else if st.State == execer.FAILED {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)))
+	}
+	r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State)))
 }

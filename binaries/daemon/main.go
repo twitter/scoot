@@ -26,7 +26,11 @@ func main() {
 	default:
 		log.Fatalf("Unknown execer type %v", *execerType)
 	}
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
+	outputCreator, err := local.NewOutputCreator()
+	if err != nil {
+		log.Fatal("Cannot create OutputCreator: ", err)
+	}
+	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
 	s, err := server.NewServer(r)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

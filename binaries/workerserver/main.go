@@ -27,10 +27,14 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 
 	stats := stat.Scope("workerserver")
-	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil), fakesnaps.MakeInvalidCheckouter())
+	outputCreator, err := localrunner.NewOutputCreator()
+	if err != nil {
+		log.Fatal("Error creating OutputCreatorr: ", err)
+	}
+	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil), fakesnaps.MakeInvalidCheckouter(), outputCreator)
 	version := func() string { return "" }
 	handler := server.NewHandler(stats, run, version)
-	err := server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
+	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)
 	}
