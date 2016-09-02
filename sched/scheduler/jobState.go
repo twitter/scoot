@@ -22,7 +22,7 @@ type taskState struct {
 	NumTimesTried int
 }
 
-func NewJobState(job sched.Job, saga *saga.Saga) *jobState {
+func newJobState(job sched.Job, saga *saga.Saga) *jobState {
 	j := &jobState{
 		Job:        job,
 		Saga:       saga,
@@ -44,7 +44,7 @@ func NewJobState(job sched.Job, saga *saga.Saga) *jobState {
 }
 
 // Returns a list of taskIds that can be scheduled currently.
-func (j *jobState) GetUnScheduledTasks() []*taskState {
+func (j *jobState) getUnScheduledTasks() []*taskState {
 
 	var tasksToRun []*taskState
 
@@ -58,20 +58,20 @@ func (j *jobState) GetUnScheduledTasks() []*taskState {
 }
 
 // Update JobState to reflect that a Task has been started
-func (j *jobState) TaskStarted(taskId string) {
+func (j *jobState) taskStarted(taskId string) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.InProgress
 	taskState.NumTimesTried++
 }
 
 // Update JobState to reflect that a Task has been completed
-func (j *jobState) TaskCompleted(taskId string) {
+func (j *jobState) taskCompleted(taskId string) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.Completed
 }
 
 // Update JobState to reflect that an error has occurred running this Task
-func (j *jobState) ErrorRunningTask(taskId string, err error) {
+func (j *jobState) errorRunningTask(taskId string, err error) {
 	taskState := j.Tasks[taskId]
 
 	//TODO: Check error to see if its retryable.  If a task has
@@ -82,7 +82,7 @@ func (j *jobState) ErrorRunningTask(taskId string, err error) {
 }
 
 // Returns the Current Job Status
-func (j *jobState) GetJobStatus() sched.Status {
+func (j *jobState) getJobStatus() sched.Status {
 	for _, tState := range j.Tasks {
 		if tState.Status != sched.Completed {
 			return sched.InProgress

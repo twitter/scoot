@@ -17,19 +17,19 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 
 	// test add node
 	cl.add("node1")
-	cs.UpdateCluster()
+	cs.updateCluster()
 	if len(cs.nodes) != 1 {
 		t.Errorf("expected cluster size to be 1")
 	}
 
-	ns, _ := cs.GetNodeState(cluster.NodeId("node1"))
+	ns, _ := cs.getNodeState(cluster.NodeId("node1"))
 	if ns.runningTask != noTask {
 		t.Errorf("expected newly added node to have no tasks")
 	}
 
 	// test remove existing node
 	cl.remove("node1")
-	cs.UpdateCluster()
+	cs.updateCluster()
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
 	}
@@ -42,7 +42,7 @@ func Test_ClusterState_RemoveNotTrackedNode(t *testing.T) {
 	cs := newClusterState(cl.nodes, cl.ch)
 
 	cl.remove("node1")
-	cs.UpdateCluster()
+	cs.updateCluster()
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
 	}
@@ -53,18 +53,18 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.TaskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1")
 
 	// readd node to cluster
 	cl.add("node1")
-	cs.UpdateCluster()
+	cs.updateCluster()
 
 	// verify cluster is still size1
 	if len(cs.nodes) != 1 {
 		t.Errorf("Expected cluster size to be 1")
 	}
 
-	ns, _ := cs.GetNodeState("node1")
+	ns, _ := cs.getNodeState("node1")
 	// verify that the state wasn't modified
 	if ns.runningTask != "task1" {
 		t.Errorf("Expected adding an already tracked node to not modify state %v", cs.nodes[cluster.NodeId("node1")].runningTask)
@@ -75,8 +75,8 @@ func Test_TaskStarted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.TaskScheduled("node1", "task1")
-	ns, _ := cs.GetNodeState("node1")
+	cs.taskScheduled("node1", "task1")
+	ns, _ := cs.getNodeState("node1")
 
 	if ns.runningTask != "task1" {
 		t.Errorf("Expected Node1 to be running task1")
@@ -87,10 +87,10 @@ func Test_TaskCompleted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.TaskScheduled("node1", "task1")
-	ns, _ := cs.GetNodeState("node1")
+	cs.taskScheduled("node1", "task1")
+	ns, _ := cs.getNodeState("node1")
 
-	cs.TaskCompleted("node1", "task1")
+	cs.taskCompleted("node1", "task1")
 	if ns.runningTask != noTask {
 		t.Errorf("Expected Node1 to be running task1")
 	}

@@ -21,7 +21,6 @@ type TaskDefinition struct {
 	runner.Command
 }
 
-//TODO: determine when/if this will be needed.
 // Status for Job & Tasks
 type Status int
 

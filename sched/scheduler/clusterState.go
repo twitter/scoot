@@ -46,14 +46,14 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 
 // Update ClusterState to reflect that a task has been scheduled on a
 // particular node
-func (c *clusterState) TaskScheduled(nodeId cluster.NodeId, taskId string) {
+func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string) {
 	ns := c.nodes[nodeId]
 	ns.runningTask = taskId
 }
 
 // Update ClusterState to reflect that a task has finished running on
 // a particular node, whether successfully or unsuccessfully
-func (c *clusterState) TaskCompleted(nodeId cluster.NodeId, taskId string) {
+func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string) {
 	// this node may have been removed from the cluster in the last update
 	ns, ok := c.nodes[nodeId]
 	if ok {
@@ -61,13 +61,13 @@ func (c *clusterState) TaskCompleted(nodeId cluster.NodeId, taskId string) {
 	}
 }
 
-func (c *clusterState) GetNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
+func (c *clusterState) getNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
 	ns, ok := c.nodes[nodeId]
 	return ns, ok
 }
 
 // upate cluster state to reflect added and removed nodes
-func (c *clusterState) UpdateCluster() {
+func (c *clusterState) updateCluster() {
 	select {
 	case updates, ok := <-c.updateCh:
 		if !ok {

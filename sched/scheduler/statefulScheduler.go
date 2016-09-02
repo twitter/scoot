@@ -134,7 +134,7 @@ func (s *statefulScheduler) step() {
 	// nodes added or removed to cluster, new jobs scheduled,
 	// async functions completed & invoke callbacks
 	s.addJobs()
-	s.clusterState.UpdateCluster()
+	s.clusterState.updateCluster()
 	s.asyncRunner.ProcessMessages()
 
 	// TODO: make processUpdates on scheduler state wait until an update
@@ -152,7 +152,7 @@ func (s *statefulScheduler) addJobs() {
 	// Add New Jobs to State
 	select {
 	case newJobMsg := <-s.addJobCh:
-		s.inProgressJobs[newJobMsg.job.Id] = NewJobState(newJobMsg.job, newJobMsg.saga)
+		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)
 	default:
 	}
 }
@@ -163,28 +163,28 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 	// Check For Completed Jobs & Log EndSaga Message
 	for _, jobState := range s.inProgressJobs {
-		if jobState.GetJobStatus() == sched.Completed && !jobState.EndingSaga {
+		if jobState.getJobStatus() == sched.Completed && !jobState.EndingSaga {
 
 			// mark job as being completed
 			jobState.EndingSaga = true
 
 			// set up variables for async functions for async function & callbacks
-			ji := jobState
+			j := jobState
 
 			s.asyncRunner.RunAsync(
 				func() error {
-					return ji.Saga.EndSaga()
+					return j.Saga.EndSaga()
 				},
 				func(err error) {
 					if err == nil {
-						fmt.Printf("Job %v Completed \n", ji.Job.Id)
+						fmt.Printf("Job %v Completed \n", j.Job.Id)
 						// This job is fully processed remove from
 						// InProgressJobs
-						delete(s.inProgressJobs, ji.Job.Id)
+						delete(s.inProgressJobs, j.Job.Id)
 					} else {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
-						ji.EndingSaga = false
+						j.EndingSaga = false
 					}
 				})
 		}
@@ -196,11 +196,11 @@ func (s *statefulScheduler) scheduleTasks() {
 	// Get a list of all available tasks to be ran
 	var unscheduledTasks []*taskState
 	for _, jobState := range s.inProgressJobs {
-		unscheduledTasks = append(unscheduledTasks, jobState.GetUnScheduledTasks()...)
+		unscheduledTasks = append(unscheduledTasks, jobState.getUnScheduledTasks()...)
 	}
 
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments := GetTasksAssignments(s.clusterState, unscheduledTasks)
+	taskAssignments := getTasksAssignments(s.clusterState, unscheduledTasks)
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
@@ -212,8 +212,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.inProgressJobs[jobId]
 
 		// Mark Task as Started
-		s.clusterState.TaskScheduled(ta.node.Id(), taskId)
-		jobState.TaskStarted(taskId)
+		s.clusterState.taskScheduled(ta.node.Id(), taskId)
+		jobState.taskStarted(taskId)
 
 		s.asyncRunner.RunAsync(
 			func() error {
@@ -228,13 +228,13 @@ func (s *statefulScheduler) scheduleTasks() {
 				fmt.Println("Ending task", taskId)
 				// update the jobState
 				if err == nil {
-					jobState.TaskCompleted(taskId)
+					jobState.taskCompleted(taskId)
 				} else {
-					jobState.ErrorRunningTask(taskId, err)
+					jobState.errorRunningTask(taskId, err)
 				}
 
 				// update cluster state that this node is now free
-				s.clusterState.TaskCompleted(ta.node.Id(), taskId)
+				s.clusterState.taskCompleted(ta.node.Id(), taskId)
 			})
 	}
 }

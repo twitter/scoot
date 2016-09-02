@@ -132,7 +132,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.inProgressJobs[job.Id].GetJobStatus() != sched.Completed {
+	for s.inProgressJobs[job.Id].getJobStatus() != sched.Completed {
 		s.step()
 	}
 
