@@ -8,7 +8,7 @@ import (
 
 func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
-	jobState := NewJobState(job, nil)
+	jobState := newJobState(job, nil)
 
 	tasks := jobState.getUnScheduledTasks()
 
