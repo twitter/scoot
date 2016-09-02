@@ -11,7 +11,7 @@ type taskAssignments struct {
 
 // Returns a list of taskAssigments of task to available node.  Not all
 // tasks are guaranteed to be scheduled.  Does best effort scheduling
-func getTasksAssignments(cs *clusterState, tasks []*taskState) []taskAssignments {
+func getTaskAssignments(cs *clusterState, tasks []*taskState) []taskAssignments {
 
 	// for now just assign any task to any available node
 	var tas []taskAssignments
