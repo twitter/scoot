@@ -2,9 +2,9 @@ package sched
 
 import (
 	"fmt"
-
 	"github.com/leanovate/gopter"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
 func GenJob(id string, numTasks int) Job {
@@ -40,13 +40,7 @@ func GenTask() TaskDefinition {
 // use as a sagaId or taskId
 func GenJobId() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-		length := (genParams.Rng.Intn(20) + 1)
-		result := make([]byte, length)
-		for i := 0; i < length; i++ {
-			result[i] = chars[genParams.Rng.Intn(len(chars))]
-		}
-
+		result := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
 		return gopter.NewGenResult(string(result), gopter.NoShrinker)
 	}
 }

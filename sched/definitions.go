@@ -21,26 +21,25 @@ type TaskDefinition struct {
 	runner.Command
 }
 
-//TODO: determine when/if this will be needed.
-// // Status for Job & Tasks
-// type Status int
+// Status for Job & Tasks
+type Status int
 
-// const (
-// 	// NotRunning, waiting to be scheduled
-// 	NotStarted Status = iota
+const (
+	// NotRunning, waiting to be scheduled
+	NotStarted Status = iota
 
-// 	// Currently Scheduled and In Progress Job/Task
-// 	InProgress
+	// Currently Scheduled and In Progress Job/Task
+	InProgress
 
-// 	// Successfully Completed Job/Task
-// 	Completed
+	// Successfully Completed Job/Task
+	Completed
 
-// 	// Job was Aborted, Compensating Tasks are being Applied.
-// 	// A RollingBack task has not finished its compensating
-// 	// tasks yet.
-// 	RollingBack
+	// Job was Aborted, Compensating Tasks are being Applied.
+	// A RollingBack task has not finished its compensating
+	// tasks yet.
+	RollingBack
 
-// 	// Job/Task finished unsuccessfully all compensating actions
-// 	// have been applied.
-// 	RolledBack
-// )
+	// Job/Task finished unsuccessfully all compensating actions
+	// have been applied.
+	RolledBack
+)
