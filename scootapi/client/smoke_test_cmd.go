@@ -2,15 +2,15 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"sort"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 func makeSmokeTestCmd(c *Client) *cobra.Command {
@@ -45,121 +45,94 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	// run a bunch of concurrent jobs and track their status
-	ch := make(chan jobAndStatus)
-	timedOutJobs := make(chan error)
-	var wg sync.WaitGroup
-	errCh := make(chan error, numTasks)
+	jobs := make(map[string]*scoot.JobStatus)
 	for i := 0; i < numTasks; i++ {
-		wg.Add(1)
-		go func() {
-			err := c.generateAndRunJob(timeout, ch)
-			if err != nil {
-				timedOutJobs <- err
-				errCh <- err
-				fmt.Println(err)
-			}
-			wg.Done()
-		}()
-	}
-
-	jobStatusMap := make(map[string]scoot.Status)
-	ticker := time.NewTicker(time.Millisecond)
-	timeouts := 0
-Loop:
-	for {
-		select {
-		case <-timedOutJobs:
-			timeouts++
-		case <-ticker.C:
-			// job id's grouped by status
-			statusJobMap := make(map[scoot.Status][]string)
-			jobAndStatus := <-ch
-			jobStatusMap[jobAndStatus.job] = jobAndStatus.status
-			for job, status := range jobStatusMap {
-				// populate statusJobMap
-				statusJobMap[status] = append(statusJobMap[status], job)
-			}
-			fmt.Println(timeouts, "jobs have timed out")
-			for status, jobs := range statusJobMap {
-				sort.Sort(sort.StringSlice(jobs))
-				fmt.Println(status, ":", jobs)
-				// if all jobs are completed, break loop
-				if len(statusJobMap[scoot.Status_COMPLETED])+len(statusJobMap[scoot.Status_ROLLED_BACK])+timeouts == numTasks {
-					ticker.Stop()
-					break Loop
-				}
-			}
+		id, err := c.generateAndStartJob()
+		if err != nil {
+			return err
 		}
+		jobs[id] = nil
 	}
 
-	wg.Wait()
-
-	// if any errors were logged return an error
-	select {
-	case err := <-errCh:
-		return err
-	default:
-		return nil
-	}
+	return c.waitForJobs(jobs, timeout)
 }
 
-func (c *Client) generateAndRunJob(timeout time.Duration, ch chan jobAndStatus) error {
+func (c *Client) generateAndStartJob() (string, error) {
 	client, err := c.Dial()
-
 	if err != nil {
-		return err
+		return "", err
 	}
-
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// We just want the JobDefinition here Id doesn't matter
 	job := testhelpers.GenJobDefinition(rng)
 	jobId, err := client.RunJob(job)
+	return jobId.ID, err
+}
 
-	// Error Enqueuing Job
-	if err != nil {
-		switch err := err.(type) {
-		case *scoot.InvalidRequest:
-			return fmt.Errorf("Invalid Request: %v", err.GetMessage())
-		default:
-			return fmt.Errorf("Error running job: %v %T", err, err)
+func (c *Client) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
+	end := time.Now().Add(timeout)
+	for {
+		printJobs(jobs)
+		if time.Now().After(end) {
+			return fmt.Errorf("Took longer than %v", timeout)
 		}
-	}
-	fmt.Println("Successfully Scheduled Job", jobId.ID)
-
-	// Check Job Status
-	jobInProgress := true
-	timeSpent := 0 * time.Second
-	for jobInProgress && timeSpent < timeout {
-		status, err := client.GetStatus(jobId.ID)
-		if status.Status == scoot.Status_COMPLETED || status.Status == scoot.Status_ROLLED_BACK {
-			jobInProgress = false
-		}
-
-		if err != nil {
-			switch err := err.(type) {
-			case *scoot.InvalidRequest:
-				return fmt.Errorf("Invalid Request: %v", err.GetMessage())
-			case *scoot.ScootServerError:
-				return fmt.Errorf("Error getting status: %v", err.Error())
+		done := true
+		for k, _ := range jobs {
+			d, err := c.updateJobStatus(k, jobs)
+			if err != nil {
+				return err
 			}
+			done = done && d
 		}
-		// send it back with updated status
-		ch <- jobAndStatus{job: jobId.ID, status: status.Status}
-		time.Sleep(50 * time.Millisecond)
-		timeSpent += 50 * time.Millisecond
-	}
-
-	if jobInProgress {
-		return fmt.Errorf("Could Not Complete Jobs in Alloted Time %v", timeout)
-	} else {
-		return nil
+		if done {
+			log.Println("Done")
+			return nil
+		}
+		time.Sleep(time.Second)
 	}
 }
 
-// struct for passing status to UI
-type jobAndStatus struct {
-	job    string
-	status scoot.Status
+func printJobs(jobs map[string]*scoot.JobStatus) {
+	byStatus := make(map[scoot.Status][]string)
+	for k, v := range jobs {
+		st := scoot.Status_NOT_STARTED
+		if v != nil {
+			st = v.Status
+		}
+		byStatus[st] = append(byStatus[st], k)
+	}
+
+	for _, v := range byStatus {
+		sort.Sort(sort.StringSlice(v))
+	}
+
+	log.Println()
+	log.Println("Job Status")
+
+	log.Println("Waiting", byStatus[scoot.Status_NOT_STARTED])
+	log.Println("Running", byStatus[scoot.Status_IN_PROGRESS])
+	log.Println("Done", byStatus[scoot.Status_COMPLETED])
+}
+
+func (c *Client) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
+	client, err := c.Dial()
+	if err != nil {
+		return true, err
+	}
+
+	status := jobs[jobId]
+	if done(status) {
+		return true, nil
+	}
+	status, err = client.GetStatus(jobId)
+	if err != nil {
+		return true, err
+	}
+	jobs[jobId] = status
+	return done(status), nil
+}
+
+func done(s *scoot.JobStatus) bool {
+	return s != nil && (s.Status == scoot.Status_COMPLETED || s.Status == scoot.Status_ROLLED_BACK)
 }
