@@ -14,7 +14,7 @@ func makeRunJobCmd(c *Client) *cobra.Command {
 		Short: "run a job",
 	}
 	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
-	r.Flags().StringVar(&snapshotId, "sid", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
+	r.Flags().StringVar(&snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
 	r.RunE = func(cmd *cobra.Command, args []string) error {
 		return c.runJob(cmd, args, snapshotId)
 	}
