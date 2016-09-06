@@ -46,6 +46,9 @@ func Deserialize(serializedVal []byte, serializeType string) (*JobDefinition, er
 
 func Serialize(jobDef *JobDefinition, serializeType string) ([]byte, error) {
 
+	if (jobDef == nil) {
+		return nil, fmt.Errorf("Cannot serialize a nil object")
+	}
 	serializer, err := getSerializer(serializeType)
 	if (err != nil) {
 		return nil, err
