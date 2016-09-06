@@ -13,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/distributor"
 	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/server"
@@ -54,8 +53,7 @@ func main() {
 		makeServers,
 		saga.MakeSagaCoordinator,
 		saga.MakeInMemorySagaLog,
-		distributor.NewPoolDistributorFromCluster,
-		scheduler.NewScheduler,
+		scheduler.NewStatefulSchedulerFromCluster,
 		thrift.NewTTransportFactory,
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
