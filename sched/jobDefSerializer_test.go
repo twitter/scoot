@@ -10,7 +10,7 @@ import (
 	"github.com/leanovate/gopter/prop"
 )
 
-const serializeType = JsonSerialize
+const serializeType = BinarySerialize
 
 
 func Test_JobDefCompare(t *testing.T) {
@@ -73,7 +73,7 @@ func makeSampleJobDefintion() JobDefinition {
 	args := []string{"arg1", "arg2"}
 	taskDefinition.Argv = args
 	jobDef.Tasks["task0"] = taskDefinition
-	//Print(jobDef)
+	//Print(jobDef)  -I enable this for debugging
 
 	return jobDef
 }
@@ -218,7 +218,7 @@ func genJobDefFromParams(genParams *gopter.GenParameters) JobDefinition {
 		taskDef.Argv = args
 
 		envVarsMap :=  make(map[string]string)
-		numEnvVars := int(genParams.NextUint64() % 5.0)
+		numEnvVars := int(genParams.NextUint64() % 5)
 		for j = 0 ; j < numEnvVars; j++ {
 			envVarsMap[fmt.Sprintf("env%d",j)] = genString(genParams)
 		}
