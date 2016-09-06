@@ -13,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/distributor"
+	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/server"
 
@@ -28,10 +28,13 @@ var cfgText = flag.String("sched_config", "", "Scheduler Configuration.")
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
+	sched  scheduler.Scheduler
+	queue  queue.Queue
+	stat   stats.StatsReceiver
 }
 
-func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
-	return servers{thrift, http}
+func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer, sched scheduler.Scheduler, queue queue.Queue, stat stats.StatsReceiver) servers {
+	return servers{thrift, http, sched, queue, stat}
 }
 
 func main() {
@@ -50,8 +53,7 @@ func main() {
 		makeServers,
 		saga.MakeSagaCoordinator,
 		saga.MakeInMemorySagaLog,
-		distributor.NewPoolDistributorFromCluster,
-		scheduler.MakeAndStartScheduler,
+		scheduler.NewStatefulSchedulerFromCluster,
 		thrift.NewTTransportFactory,
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
@@ -87,11 +89,17 @@ func main() {
 	}
 	bag.InstallModule(mod)
 
+	// TODO(dbentley): we may want to refactor all of the code below here to be
+	// logic in a library instead of copied into each main, but for now be explicit.
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
 		log.Fatal("Error injecting servers", err)
 	}
+
+	go func() {
+		scheduler.GenerateWork(servers.sched, servers.queue.Chan(), servers.stat)
+	}()
 
 	// TODO(dbentley): if one fails and the other doesn't, we should do
 	// something smarter...

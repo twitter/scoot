@@ -1,10 +1,12 @@
 package fake_test
 
 import (
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/fake"
+	"bytes"
 	"sync"
 	"testing"
+
+	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/runner/execer/fake"
 )
 
 func TestSimExec(t *testing.T) {
@@ -18,6 +20,32 @@ func TestSimExec(t *testing.T) {
 	p := assertStart(ex, t, argv...)
 	wg.Done()
 	assertStatus(t, complete(0), p, argv...)
+}
+
+func TestOutput(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	expectedStdout, expectedStderr := "foo\n", "bar\n"
+	cmd := execer.Command{
+		Argv:   []string{"stdout " + expectedStdout, "stderr " + expectedStderr, "complete 0"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+
+	ex := fake.NewSimExecer(nil)
+	p, err := ex.Exec(cmd)
+	if err != nil {
+		t.Fatal("Error running cmd", err)
+	}
+	st := p.Wait()
+	if st != complete(0) {
+		t.Fatalf("got status %v; expected %v", st, complete(0))
+	}
+	if stdout.String() != expectedStdout {
+		t.Fatalf("got stdout %v; expected %v", stdout.String(), expectedStdout)
+	}
+	if stderr.String() != expectedStderr {
+		t.Fatalf("got stderr %v; expected %v", stderr.String(), expectedStderr)
+	}
 }
 
 func assertRun(ex execer.Execer, t *testing.T, expected execer.ProcessStatus, argv ...string) {

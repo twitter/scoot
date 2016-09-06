@@ -1,5 +1,7 @@
 package worker
 
+//go:generate mockgen -source=worker.go -package=worker -destination=worker_mock.go
+
 import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/sched"
