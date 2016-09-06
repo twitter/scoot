@@ -6,6 +6,8 @@ import (
 	//"github.com/leanovate/gopter/prop"
 	"fmt"
 	"time"
+	"github.com/leanovate/gopter"
+	"github.com/leanovate/gopter/prop"
 )
 
 const serializeType = JsonSerialize
@@ -15,10 +17,11 @@ func Test_JobDefCompare(t *testing.T) {
 	origJobDef := makeSampleJobDefintion()
 
 	// validate comparison logic
-	if ok, msg := taskDefMapEqual(origJobDef.Tasks, origJobDef.Tasks); !ok {
+	if ok, msg := origJobDef.Equal(origJobDef); !ok {
 		panic(fmt.Sprintf("error: comparison logic doesn't work comparing an object against itself %s\n", msg))
 	}
-	if ok, msg := taskDefMapEqual(origJobDef.Tasks, nil); ok {
+	var actualJobDef JobDefinition
+	if ok, msg := origJobDef.Equal(actualJobDef); ok {
 		panic(fmt.Sprintf("error: comparison logic doesn't work comparing an object against nil %s\n", msg))
 	}
 
@@ -47,7 +50,7 @@ func Test_FixedJobDefinition(t *testing.T) {
 		} else if (origJobDef.JobType != newJobDef.JobType) {
 			panic(fmt.Sprintf("fail: deserialized job def type doesn't equal original job def, expected %s, got %s\n", origJobDef.JobType, newJobDef.JobType))
 			// compare the orig and generated task definitions
-		} else if ok, msg := taskDefMapEqual(origJobDef.Tasks, newJobDef.Tasks); !ok {
+		} else if ok, msg := origJobDef.Equal(*newJobDef); !ok {
 			panic(fmt.Sprintf("fail: task definitions are not equal: %s\n", msg))
 		} else {
 			fmt.Printf(fmt.Sprintf("ok=%t\n", ok))
@@ -75,7 +78,13 @@ func makeSampleJobDefintion() JobDefinition {
 	return jobDef
 }
 
-func taskDefMapEqual(expectedMap, actualMap map[string]TaskDefinition) (bool, string) {
+
+func (this *JobDefinition) Equal(actualJobDef JobDefinition) (bool, string) {
+
+	expectedMap := (*this).Tasks
+	actualMap := actualJobDef.Tasks
+
+
 	if len(expectedMap) != len(actualMap) {
 		return false, fmt.Sprintf("task Definitions maps two different lengths: expected %d, got %d", len(expectedMap), len(actualMap))
 	}
@@ -146,81 +155,95 @@ func Print(jobDef JobDefinition) {
 	fmt.Printf("\n")
 }
 
-//func Test_RandomSerializerDeserializer(t *testing.T) {
-//	parameters := gopter.DefaultTestParameters()
-//	parameters.MinSuccessfulTests = 1000
-//	properties := gopter.NewProperties(parameters)
-//
-//	properties.Property("Serialize xxx", prop.ForAll(
-//		func(jobDef JobDefinition) bool {
-//			//serialize then deserialized -  should get equal objects
-//			if defAsByte, err := Serialize(jobDef); err != nil {
-//				return false
-//			} else {
-//				deserializedJobDef := Deserialize(defAsByte)
-//				if jobDef != deserializedJobDef {
-//					return false
-//				}
-//				return true
-//			}
-//
-//		},
-//
-//		genJobDef(),
-//	))
-//
-//	properties.TestingRun(t)
-//
-//}
-//
-//func genJobDef() gopter.Gen {
-//	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-//		jobDef := genJobDefFromParams(genParams)
-//		genResult := gopter.NewGenResult(jobDef, gopter.NoShrinker)
-//		return genResult
-//	}
-//}
-//
-//func genJobDefFromParams(genParams *gopter.GenParameters) JobDefinition {
-//	jobDef := JobDefinition{}
-//	jobDef.JobType = genString(genParams)
-//
-//	//number of tasks to run in this saga
-//	numTasks := int(genParams.NextUint64() % 100)
-//	jobDef.Tasks = make(map[string]TaskDefinition)
-//
-//	for i := 0; i < numTasks; i++ {
-//		taskDef := TaskDefinition{}
-//		taskName := genString(genParams)
-//		jobDef.Tasks[taskName] = taskDef
-//		numArgs := int(genParams.NextInt64()) % 10
-//		var j int8
-//		for j = 0 ; j < numArgs; j++ {
-//			taskDef.Argv[j] = genString(genParams)
-//		}
-//
-//		numEnvVars := int(genParams.NextInt64()) %20
-//		for j = 0 ; j < numEnvVars; j++ {
-//			taskDef.EnvVars[j] = genString(genParams)
-//		}
-//
-//		taskDef.Timeout = genParams.NextUint64()
-//
-//		taskDef.SnapshotId = genString(genParams)
-//
-//	}
-//
-//	return jobDef
-//}
-//
-//// generate a random string for the type
-//func genString(genParams *gopter.GenParameters) string {
-//	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-//	length := int(genParams.NextUint64()%20) + 1
-//	result := make([]byte, length)
-//	for i := 0; i < length; i++ {
-//		result[i] = chars[genParams.Rng.Intn(len(chars))]
-//	}
-//
-//	return string(result)
-//}
+func Test_RandomSerializerDeserializer(t *testing.T) {
+	parameters := gopter.DefaultTestParameters()
+	parameters.MinSuccessfulTests = 1000
+	properties := gopter.NewProperties(parameters)
+
+	properties.Property("Serialize JobDef", prop.ForAll(
+		func(jobDef JobDefinition) bool {
+			//serialize then deserialized -  should get equal objects
+			if defAsByte, err := Serialize(&jobDef, serializeType); err != nil {
+				return false
+			} else {
+				deserializedJobDef, err := Deserialize(defAsByte, serializeType)
+				if err != nil {
+					return false
+				}
+				if ok, err1 := jobDef.Equal(*deserializedJobDef); !ok {
+					fmt.Printf(err1)
+					return false
+				}
+				//fmt.Printf(fmt.Sprintf("Job Def:%s\n",string(defAsByte)))
+				return true;
+			}
+
+		},
+
+		genJobDef(),
+	))
+
+	properties.TestingRun(t)
+
+}
+
+func genJobDef() gopter.Gen {
+	return func(genParams *gopter.GenParameters) *gopter.GenResult {
+		jobDef := genJobDefFromParams(genParams)
+		//Print(jobDef)
+		genResult := gopter.NewGenResult(jobDef, gopter.NoShrinker)
+		return genResult
+	}
+}
+
+func genJobDefFromParams(genParams *gopter.GenParameters) JobDefinition {
+	jobDef := JobDefinition{}
+	jobDef.JobType = fmt.Sprintf("jobType:%s",genString(genParams))
+
+	//number of tasks to run in this saga
+	numTasks := int(genParams.NextUint64() % 10)
+	var taskDefMap = make(map[string]TaskDefinition)
+
+	for i := 0; i < numTasks; i++ {
+		taskDef := TaskDefinition{}
+		taskName := fmt.Sprintf("taskName:%s", genString(genParams))
+		numArgs := int(genParams.NextUint64() % 5)
+
+		var j int
+		var args []string
+		for j = 0 ; j < numArgs; j++ {
+			args = append(args, fmt.Sprintf("arg%d:%s", j, genString(genParams)))
+			//taskDef.Argv = append(taskDef.Argv, fmt.Sprintf("arg%d:%s", j, genString(genParams)))
+		}
+		taskDef.Argv = args
+
+		envVarsMap :=  make(map[string]string)
+		numEnvVars := int(genParams.NextUint64() % 5.0)
+		for j = 0 ; j < numEnvVars; j++ {
+			envVarsMap[fmt.Sprintf("env%d",j)] = genString(genParams)
+		}
+		taskDef.EnvVars = envVarsMap
+
+		timeout, _ := time.ParseDuration(fmt.Sprintf("+%ds",genParams.NextUint64()))
+		taskDef.Timeout = timeout
+
+		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s",genString(genParams))
+		taskDefMap[taskName] = taskDef
+
+	}
+	jobDef.Tasks = taskDefMap
+
+	return jobDef
+}
+
+// generate a random string for the type
+func genString(genParams *gopter.GenParameters) string {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	length := int(genParams.NextUint64()%20) + 1
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		result[i] = chars[genParams.Rng.Intn(len(chars))]
+	}
+
+	return string(result)
+}
