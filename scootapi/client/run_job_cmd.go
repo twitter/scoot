@@ -8,16 +8,20 @@ import (
 )
 
 func makeRunJobCmd(c *Client) *cobra.Command {
+	var snapshotId string
 	r := &cobra.Command{
 		Use:   "run_job",
 		Short: "run a job",
-		RunE:  c.runJob,
 	}
 	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
+	r.RunE = func(cmd *cobra.Command, args []string) error {
+		return c.runJob(cmd, args, snapshotId)
+	}
 	return r
 }
 
-func (c *Client) runJob(cmd *cobra.Command, args []string) error {
+func (c *Client) runJob(cmd *cobra.Command, args []string, snapshotId string) error {
 	log.Println("Running on scoot", args)
 
 	client, err := c.Dial()
@@ -27,6 +31,7 @@ func (c *Client) runJob(cmd *cobra.Command, args []string) error {
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
+	task.SnapshotId = &snapshotId
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
 		"task1": task,
