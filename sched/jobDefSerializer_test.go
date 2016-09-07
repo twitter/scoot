@@ -1,64 +1,61 @@
 package sched
 
 import (
-	"testing"
-	//"github.com/leanovate/gopter"
-	//"github.com/leanovate/gopter/prop"
 	"fmt"
-	"time"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
+	"github.com/scootdev/scoot/tests/testhelpers"
+	"testing"
+	"time"
+	"reflect"
 )
 
-const serializeType = BinarySerialize
+const serializeType = JsonSerialize
 
-
-func Test_JobDefCompare(t *testing.T) {
-	origJobDef := makeSampleJobDefintion()
+func Test_JobCompare(t *testing.T) {
+	origJob := makeSampleJob()
 
 	// validate comparison logic
-	if ok, msg := origJobDef.Equal(origJobDef); !ok {
-		panic(fmt.Sprintf("error: comparison logic doesn't work comparing an object against itself %s\n", msg))
+	if ok, msg := origJob.Equal(origJob); !ok {
+		t.Errorf("error: comparison logic doesn't work comparing an object against itself. %s\n", msg)
 	}
-	var actualJobDef JobDefinition
-	if ok, msg := origJobDef.Equal(actualJobDef); ok {
-		panic(fmt.Sprintf("error: comparison logic doesn't work comparing an object against nil %s\n", msg))
+	var actualJob Job
+	if ok, msg := origJob.Equal(actualJob); ok {
+		t.Errorf("error: comparison logic doesn't work comparing an object against nil. %s\n", msg)
 	}
 
 }
 
-func Test_NilJobDefinition(t *testing.T) {
+func Test_NilJob(t *testing.T) {
 	if ok, err := Serialize(nil, serializeType); err == nil {
-		panic("error: should have gotten an error from serializing a nil object\n")
-		fmt.Printf(string(ok))
+		t.Errorf("error: did not get an error from serializing a nil object, instead got %s\n", ok)
 	}
 }
 
-func Test_FixedJobDefinition(t *testing.T) {
+func Test_FixedJob(t *testing.T) {
 	// use this test to test a specific jobDefinition struct
-	origJobDef := makeSampleJobDefintion()
-
+	origJob := makeSampleJob()
 
 	// serialize the object to a byte array
-	if asByteArray, err := Serialize(&origJobDef, serializeType); err != nil {
-		panic(fmt.Sprintf("error: couldn't serialize the fixed job def. %s\n", err.Error()))
+	if asByteArray, err := Serialize(&origJob, serializeType); err != nil {
+		t.Errorf("error: couldn't serialize the fixed job def. %s\n", err.Error())
+
 	} else {
 		// deserialize the byte array
-		if newJobDef, err := Deserialize(asByteArray, serializeType); err != nil {
-			panic(fmt.Sprintf("error: deserializing the byte Array: %s\n", string(asByteArray)) + err.Error())
-			// compare the orig and generated job types
-		} else if (origJobDef.JobType != newJobDef.JobType) {
-			panic(fmt.Sprintf("fail: deserialized job def type doesn't equal original job def, expected %s, got %s\n", origJobDef.JobType, newJobDef.JobType))
+		if newJob, err := Deserialize(asByteArray, serializeType); err != nil {
+			t.Errorf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
+
 			// compare the orig and generated task definitions
-		} else if ok, msg := origJobDef.Equal(*newJobDef); !ok {
-			panic(fmt.Sprintf("fail: task definitions are not equal: %s\n", msg))
-		} else {
-			fmt.Printf(fmt.Sprintf("ok=%t\n", ok))
+		} else if ok, msg := origJob.Equal(*newJob); !ok {
+			t.Errorf("fail: task definitions are not equal: %s\n", msg)
+
 		}
 	}
 }
 
-func makeSampleJobDefintion() JobDefinition {
+func makeSampleJob() Job {
+	job := Job{}
+	job.Id = "jobID"
 	jobDef := JobDefinition{}
 	jobDef.Tasks = make(map[string]TaskDefinition)
 	jobDef.JobType = "jobTypeVal"
@@ -74,39 +71,38 @@ func makeSampleJobDefintion() JobDefinition {
 	taskDefinition.Argv = args
 	jobDef.Tasks["task0"] = taskDefinition
 	//Print(jobDef)  -I enable this for debugging
+	job.Def = jobDef
 
-	return jobDef
+	return job
 }
 
+// could not use reflect.DeepCopy(obj1, obj2) - it returns a false negative when the
+// envVars or args in a task are empty
+func (this *Job) Equal(thatJobDef Job) (bool, string) {
 
-func (this *JobDefinition) Equal(actualJobDef JobDefinition) (bool, string) {
+	if (*this).Id != thatJobDef.Id {
+		return false, fmt.Sprintf("job Ids differ: expected %s, got %s\n", this.Id, thatJobDef.Id)
+	}
 
-	expectedMap := (*this).Tasks
-	actualMap := actualJobDef.Tasks
 
+	if (*this).Def.JobType != thatJobDef.Def.JobType {
+		return false, fmt.Sprintf("job Types differ: expected %s, got %s\n", this.Def.JobType, thatJobDef.Def.JobType)
+	}
 
+	expectedMap := (*this).Def.Tasks
+	actualMap := thatJobDef.Def.Tasks
 	if len(expectedMap) != len(actualMap) {
 		return false, fmt.Sprintf("task Definitions maps two different lengths: expected %d, got %d", len(expectedMap), len(actualMap))
 	}
 
 	for taskName, _ := range expectedMap {
-		def1Task, _ := expectedMap[taskName]
-		def2Task, foundTask := actualMap[taskName];
+		thisTask, _ := expectedMap[taskName]
+		thatTask, foundTask := actualMap[taskName]
 		if !foundTask {
 			return false, "actual taskDef doesn't contain the expected entry for key:" + taskName
 		}
-		if argvOk, msg := stringSliceCompare(def1Task.Argv, def2Task.Argv); !argvOk {
-			return false, "Argv entries are different:" + msg
-		}
-		if envOk, msg := stringMapEqual(def1Task.EnvVars, def2Task.EnvVars); !envOk {
-			return false, "EnvVars entries are different:" + msg
-		}
-		if def1Task.Timeout.String() != def2Task.Timeout.String() {
-			fmt.Printf(fmt.Sprintf("expected timeout: %s, actual timeout: %s", def1Task.Timeout.String(), def2Task.Timeout.String()))
-			return false, fmt.Sprintf("Timeout values differ, expected %s, got %s", def1Task.Timeout.String(), def2Task.Timeout.String())
-		}
-		if def1Task.SnapshotId != def2Task.SnapshotId {
-			return false, fmt.Sprintf("Snapshot ids differ, expected %s, got %s", def1Task.SnapshotId, def2Task.SnapshotId)
+		if ok, msg := thisTask.Equal(thatTask); !ok {
+			return false, msg
 		}
 	}
 
@@ -118,10 +114,26 @@ func stringMapEqual(expectedMap, actualMap map[string]string) (bool, string) {
 		return false, fmt.Sprintf("The 2 maps are different lengths: expected %d, got %d", len(expectedMap), len(actualMap))
 	}
 
-	for taskName, entry1 := range expectedMap {
-		if entry2, ok := actualMap[taskName]; !ok || entry1 != entry2 {
-			return false, fmt.Sprintf("The map entries (expected %s, got %s) for %s have different values.", expectedMap[taskName], actualMap[taskName], taskName)
-		}
+	if ok := reflect.DeepEqual(expectedMap, actualMap); !ok {
+		return ok, "the maps are not equal"
+	}
+
+	return true, ""
+}
+
+func (thisTask *TaskDefinition) Equal(thatTask TaskDefinition) (bool, string) {
+	if argvOk, msg := stringSliceCompare(thisTask.Argv, thatTask.Argv); !argvOk {
+		return false, "Argv entries are different:" + msg
+	}
+	if envOk, msg := stringMapEqual(thisTask.EnvVars, thatTask.EnvVars); !envOk {
+		return false, "EnvVars entries are different:" + msg
+	}
+	if thisTask.Timeout.String() != thatTask.Timeout.String() {
+		fmt.Printf(fmt.Sprintf("expected timeout: %s, actual timeout: %s", thisTask.Timeout.String(), thatTask.Timeout.String()))
+		return false, fmt.Sprintf("Timeout values differ, expected %s, got %s", thisTask.Timeout.String(), thatTask.Timeout.String())
+	}
+	if thisTask.SnapshotId != thatTask.SnapshotId {
+		return false, fmt.Sprintf("Snapshot ids differ, expected %s, got %s", thisTask.SnapshotId, thatTask.SnapshotId)
 	}
 
 	return true, ""
@@ -132,16 +144,27 @@ func stringSliceCompare(expectedSlice, actualSlice []string) (bool, string) {
 		return false, fmt.Sprintf("The 2 slices (expected %s, got %s) are different lengths: expected %d, got %d", expectedSlice, actualSlice, len(expectedSlice), len(actualSlice))
 	}
 
-	for j, val1 := range expectedSlice {
-		if actualSlice[j] != val1 {
-			return false, fmt.Sprintf("Slice entries differ at index %d: expected %s, got %s", j, expectedSlice[j], actualSlice[j])
-		}
+	// DeepCopy does not work with nil slices
+	if expectedSlice == nil && actualSlice == nil {
+		return true, ""
 	}
+
+	// DeepCopy does not work with slices of 0 length
+	if len(expectedSlice) == 0 && len(actualSlice) == 0 {
+		return true, ""
+	}
+
+	if ok := reflect.DeepEqual(expectedSlice, actualSlice); !ok {
+		return ok, "the slices are not equal"
+	}
+
 	return true, ""
 }
 
-func Print(jobDef JobDefinition) {
-	for taskName, taskDef := range jobDef.Tasks {
+func Print(job Job) {
+	fmt.Printf(fmt.Sprintf("job id:%s\n",job.Id))
+	fmt.Printf(fmt.Sprintf("job type:%s\n", job.Def.JobType))
+	for taskName, taskDef := range job.Def.Tasks {
 		fmt.Printf(fmt.Sprintf("taskName: %s\n", taskName))
 		fmt.Printf(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
 		fmt.Printf(fmt.Sprintf("\tsnapshotId: %s\n", taskDef.SnapshotId))
@@ -161,44 +184,55 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	properties := gopter.NewProperties(parameters)
 
 	properties.Property("Serialize JobDef", prop.ForAll(
-		func(jobDef JobDefinition) bool {
+		func(job Job) bool {
 			//serialize then deserialized -  should get equal objects
-			if defAsByte, err := Serialize(&jobDef, serializeType); err != nil {
+			if defAsByte, err := Serialize(&job, serializeType); err != nil {
 				return false
 			} else {
-				deserializedJobDef, err := Deserialize(defAsByte, serializeType)
+				deserializedJob, err := Deserialize(defAsByte, serializeType)
 				if err != nil {
+					fmt.Printf("serialize/deserialize test couldn't deserialize object:\n")
+					Print(job)
+					fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(defAsByte)))
 					return false
 				}
-				if ok, err1 := jobDef.Equal(*deserializedJobDef); !ok {
-					fmt.Printf(err1)
+				if ok, msg := job.Equal(*deserializedJob); !ok {
+					fmt.Printf("serialize/deserialize test didn't return equivalent value: %s\n", msg)
+					fmt.Printf("original jobDef:\n")
+					Print(job)
+					fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(defAsByte)))
+					fmt.Printf("deserialized to:\n")
+					Print(*deserializedJob)
 					return false
 				}
-				//fmt.Printf(fmt.Sprintf("Job Def:%s\n",string(defAsByte)))
-				return true;
+				return true
 			}
 
 		},
 
-		genJobDef(),
+		genJob(),
 	))
 
 	properties.TestingRun(t)
 
 }
 
-func genJobDef() gopter.Gen {
+func genJob() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		jobDef := genJobDefFromParams(genParams)
+		jobDef := genJobFromParams(genParams)
 		//Print(jobDef)
 		genResult := gopter.NewGenResult(jobDef, gopter.NoShrinker)
 		return genResult
 	}
 }
 
-func genJobDefFromParams(genParams *gopter.GenParameters) JobDefinition {
+func genJobFromParams(genParams *gopter.GenParameters) Job {
+
+	job := Job{}
+	job.Id = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
+
 	jobDef := JobDefinition{}
-	jobDef.JobType = fmt.Sprintf("jobType:%s",genString(genParams))
+	jobDef.JobType = fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 
 	//number of tasks to run in this saga
 	numTasks := int(genParams.NextUint64() % 10)
@@ -206,44 +240,33 @@ func genJobDefFromParams(genParams *gopter.GenParameters) JobDefinition {
 
 	for i := 0; i < numTasks; i++ {
 		taskDef := TaskDefinition{}
-		taskName := fmt.Sprintf("taskName:%s", genString(genParams))
+		taskName := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 		numArgs := int(genParams.NextUint64() % 5)
 
 		var j int
 		var args []string
-		for j = 0 ; j < numArgs; j++ {
-			args = append(args, fmt.Sprintf("arg%d:%s", j, genString(genParams)))
-			//taskDef.Argv = append(taskDef.Argv, fmt.Sprintf("arg%d:%s", j, genString(genParams)))
+		for j = 0; j < numArgs; j++ {
+			args = append(args, fmt.Sprintf("arg%d:%s", j, testhelpers.GenRandomAlphaNumericString(genParams.Rng)))
 		}
 		taskDef.Argv = args
 
-		envVarsMap :=  make(map[string]string)
+		envVarsMap := make(map[string]string)
 		numEnvVars := int(genParams.NextUint64() % 5)
-		for j = 0 ; j < numEnvVars; j++ {
-			envVarsMap[fmt.Sprintf("env%d",j)] = genString(genParams)
+		for j = 0; j < numEnvVars; j++ {
+			envVarsMap[fmt.Sprintf("env%d", j)] = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
 		}
 		taskDef.EnvVars = envVarsMap
 
-		timeout, _ := time.ParseDuration(fmt.Sprintf("+%ds",genParams.NextUint64()))
+		timeoutVal := genParams.NextUint64() % 10000
+		timeout, _ := time.ParseDuration(fmt.Sprintf("+%ds", timeoutVal))
 		taskDef.Timeout = timeout
 
-		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s",genString(genParams))
+		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 		taskDefMap[taskName] = taskDef
 
 	}
 	jobDef.Tasks = taskDefMap
+	job.Def = jobDef
 
-	return jobDef
-}
-
-// generate a random string for the type
-func genString(genParams *gopter.GenParameters) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	length := int(genParams.NextUint64()%20) + 1
-	result := make([]byte, length)
-	for i := 0; i < length; i++ {
-		result[i] = chars[genParams.Rng.Intn(len(chars))]
-	}
-
-	return string(result)
+	return job
 }
