@@ -67,7 +67,6 @@ func makeSampleJob() Job {
 	return job
 }
 
-
 func Print(job Job) {
 	fmt.Printf(fmt.Sprintf("job id:%s\n", job.Id))
 	fmt.Printf(fmt.Sprintf("job type:%s\n", job.Def.JobType))
@@ -123,7 +122,6 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	properties.TestingRun(t)
 
 }
-
 
 func GopterGenJob() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {

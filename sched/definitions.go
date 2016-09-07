@@ -1,8 +1,8 @@
 package sched
 
 import (
-	"github.com/scootdev/scoot/runner"
 	"fmt"
+	"github.com/scootdev/scoot/runner"
 	"reflect"
 )
 
@@ -45,7 +45,6 @@ const (
 	// have been applied.
 	RolledBack
 )
-
 
 // could not use reflect.DeepCopy(obj1, obj2) - it returns a false negative when the
 // envVars or args in a task are empty
@@ -130,4 +129,3 @@ func stringSliceEqual(expectedSlice, actualSlice []string) (bool, string) {
 
 	return true, ""
 }
-
