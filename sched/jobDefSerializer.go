@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/sched/gen-go/sagalog"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"time"
 )
-
 
 type JobSerializer struct {
 	writer thrift.TSerializer
@@ -18,32 +17,30 @@ type JobSerializer struct {
 var JsonSerializer JobSerializer = getJsonSerializer()
 var BinarySerializer JobSerializer = getBinarySerializer()
 
-
-func Deserialize(serializedVal []byte, deserializer JobSerializer) (*Job, error) {
+func DeserializeJobDef(serializedVal []byte, deserializer JobSerializer) (*Job, error) {
 
 	// create the thrift jobDef struct for the saga log
-	sagaLogJob := sagalog.NewJob()
+	internalJobDef := schedthrift.NewJob()
 
-	//NOTE: if we don't close, the next call to Deserialize will deserialize the prior []byte input
-	deserializer.reader.Transport.Close()
+	//NOTE:  must flush here otherwise the deserialization will deserialize the []byte input from the prior call
+	deserializer.reader.Transport.Flush()
 
 	// parse the byte string into the thrift jobDef struct
-	if err := deserializer.reader.Read(sagaLogJob, serializedVal); err != nil {
+	if err := deserializer.reader.Read(internalJobDef, serializedVal); err != nil {
 		return nil, err
 	}
 
 	// make a sched JobDefintion from the thrift JobDefinition for the saga log
-	schedJob := makeSchedJob(*sagaLogJob)
+	schedJob := makeSchedJob(*internalJobDef)
 
 	return &schedJob, nil
 }
 
-// note: tried to declare this as a method on sagalog.JobDefintion - couldn't get the syntax right
-func makeSchedJob(sagaLogJob sagalog.Job) Job {
+func makeSchedJob(internalJobDef schedthrift.Job) Job {
 
 	var schedJob = Job{}
-	schedJob.Id = sagaLogJob.ID
-	sagaLogJobDef := sagaLogJob.JobDefinition
+	schedJob.Id = internalJobDef.ID
+	sagaLogJobDef := internalJobDef.JobDefinition
 
 	var schedJobDef = JobDefinition{}
 	schedJobDef.JobType = sagaLogJobDef.JobType
@@ -60,35 +57,32 @@ func makeSchedJob(sagaLogJob sagalog.Job) Job {
 	return schedJob
 }
 
-func Serialize(job *Job, serializer JobSerializer) ([]byte, error) {
-
-	if job == nil {
-		return nil, fmt.Errorf("Cannot serialize a nil object")
-	}
+// NOTE: leaving this method in this file so it lives close to the Deserializer
+func (job *Job) SerializeJobDef(serializer JobSerializer) ([]byte, error) {
 
 	// allocate a thrift Job for saga log
-	sagalogJob := sagalog.NewJob()
+	internalJob := schedthrift.NewJob()
 
 	// copy the sched JobDefinition properties to the thrift jobDefinition structure
-	(*sagalogJob).ID = (*job).Id
+	(*internalJob).ID = (*job).Id
 
-	sagalogJobDefinition := sagalog.NewJobDefinition()
+	internalJobDef := schedthrift.NewJobDefinition()
 
 	jobDef := (*job).Def
-	sagalogJobDefinition.JobType = jobDef.JobType
-	sagalogJobDefinition.Tasks = make(map[string]*sagalog.TaskDefinition)
+	internalJobDef.JobType = jobDef.JobType
+	internalJobDef.Tasks = make(map[string]*schedthrift.TaskDefinition)
 	for taskName, taskDef := range jobDef.Tasks {
-		sagaTaskDef := sagalog.NewTaskDefinition()
-		(*sagaTaskDef).Command = sagalog.NewCommand()
-		(*(*sagaTaskDef).Command).Argv = taskDef.Argv
-		(*(*sagaTaskDef).Command).EnvVars = taskDef.EnvVars
-		(*(*sagaTaskDef).Command).SnapshotId = taskDef.SnapshotId
-		(*(*sagaTaskDef).Command).Timeout = taskDef.Timeout.Nanoseconds()
-		sagalogJobDefinition.Tasks[taskName] = sagaTaskDef
+		internalTaskDef := schedthrift.NewTaskDefinition()
+		(*internalTaskDef).Command = schedthrift.NewCommand()
+		(*(*internalTaskDef).Command).Argv = taskDef.Argv
+		(*(*internalTaskDef).Command).EnvVars = taskDef.EnvVars
+		(*(*internalTaskDef).Command).SnapshotId = taskDef.SnapshotId
+		(*(*internalTaskDef).Command).Timeout = taskDef.Timeout.Nanoseconds()
+		internalJobDef.Tasks[taskName] = internalTaskDef
 	}
-	(*sagalogJob).JobDefinition = sagalogJobDefinition
+	(*internalJob).JobDefinition = internalJobDef
 
-	if serializedVal, err := serializer.writer.Write(sagalogJob); err != nil {
+	if serializedVal, err := serializer.writer.Write(internalJob); err != nil {
 		return nil, err
 	} else {
 		return serializedVal, nil
@@ -100,9 +94,9 @@ func getJsonSerializer() JobSerializer {
 
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
-	writer := thrift.TSerializer{Transport:transport, Protocol:protocol}
+	writer := thrift.TSerializer{Transport: transport, Protocol: protocol}
 
-	reader := thrift.TDeserializer{Transport:transport, Protocol:protocol}
+	reader := thrift.TDeserializer{Transport: transport, Protocol: protocol}
 	jobSerializer := JobSerializer{writer, reader}
 
 	return jobSerializer

@@ -9,7 +9,7 @@
 #
 
 # To Generate files run from this (github.com/scootdev/scoot/sched) directory
-#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift sagaLog.thrift
+#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift JobDef.thrift
 
 
 struct Command {
