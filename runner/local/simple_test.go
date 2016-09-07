@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer/fake"
+	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/local"
 	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 
@@ -155,7 +155,7 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 
 func newRunner() (runner.Runner, *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
-	ex := fake.NewSimExecer(wg)
+	ex := execers.NewSimExecer(wg)
 	outputCreator, err := local.NewOutputCreator()
 	if err != nil {
 		panic(err)

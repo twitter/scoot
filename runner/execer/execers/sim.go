@@ -1,4 +1,4 @@
-package fake
+package execers
 
 import (
 	"fmt"
@@ -53,6 +53,9 @@ func (e *simExecer) parse(argv []string) (steps []simStep, err error) {
 }
 
 func (e *simExecer) parseArg(arg string) (simStep, error) {
+	if strings.HasPrefix(arg, "#") {
+		return &noopStep{}, nil
+	}
 	splits := strings.SplitN(arg, " ", 2)
 	opcode, rest := splits[0], ""
 	if len(splits) == 2 {
@@ -180,5 +183,11 @@ type stderrStep struct {
 
 func (s *stderrStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	p.stderr.Write([]byte(s.output))
+	return status
+}
+
+type noopStep struct{}
+
+func (s *noopStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	return status
 }

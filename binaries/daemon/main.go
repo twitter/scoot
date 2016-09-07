@@ -6,7 +6,7 @@ import (
 
 	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/fake"
+	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/local"
 	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
@@ -20,7 +20,7 @@ func main() {
 	var ex execer.Execer
 	switch *execerType {
 	case "sim":
-		ex = fake.NewSimExecer(nil)
+		ex = execers.NewSimExecer(nil)
 	case "os":
 		ex = os.NewExecer()
 	default:
