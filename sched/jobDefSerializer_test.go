@@ -10,7 +10,7 @@ import (
 	"reflect"
 )
 
-const serializeType = JsonSerialize
+var serializer = BinarySerializer // options are: JsonSerializer or BinarySerializer
 
 func Test_JobCompare(t *testing.T) {
 	origJob := makeSampleJob()
@@ -27,7 +27,7 @@ func Test_JobCompare(t *testing.T) {
 }
 
 func Test_NilJob(t *testing.T) {
-	if ok, err := Serialize(nil, serializeType); err == nil {
+	if ok, err := Serialize(nil, serializer); err == nil {
 		t.Errorf("error: did not get an error from serializing a nil object, instead got %s\n", ok)
 	}
 }
@@ -37,12 +37,12 @@ func Test_FixedJob(t *testing.T) {
 	origJob := makeSampleJob()
 
 	// serialize the object to a byte array
-	if asByteArray, err := Serialize(&origJob, serializeType); err != nil {
+	if asByteArray, err := Serialize(&origJob, serializer); err != nil {
 		t.Errorf("error: couldn't serialize the fixed job def. %s\n", err.Error())
 
 	} else {
 		// deserialize the byte array
-		if newJob, err := Deserialize(asByteArray, serializeType); err != nil {
+		if newJob, err := Deserialize(asByteArray, serializer); err != nil {
 			t.Errorf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 
 			// compare the orig and generated task definitions
@@ -186,10 +186,10 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	properties.Property("Serialize JobDef", prop.ForAll(
 		func(job Job) bool {
 			//serialize then deserialized -  should get equal objects
-			if defAsByte, err := Serialize(&job, serializeType); err != nil {
+			if defAsByte, err := Serialize(&job, serializer); err != nil {
 				return false
 			} else {
-				deserializedJob, err := Deserialize(defAsByte, serializeType)
+				deserializedJob, err := Deserialize(defAsByte, serializer)
 				if err != nil {
 					fmt.Printf("serialize/deserialize test couldn't deserialize object:\n")
 					Print(job)

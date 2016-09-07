@@ -8,24 +8,27 @@ import (
 	"time"
 )
 
-const (
-	JsonSerialize   string = "json"
-	BinarySerialize string = "binary"
-)
 
-func Deserialize(serializedVal []byte, serializeType string) (*Job, error) {
+type JobSerializer struct {
+	writer thrift.TSerializer
+	reader thrift.TDeserializer
+}
 
-	// create the thrift deserializer
-	deserializer, err := getDeserializer(serializeType)
-	if err != nil {
-		return nil, err
-	}
+// if add new XXX serialization formats add XXXSerializer here and add getXXXSerializer() func below
+var JsonSerializer JobSerializer = getJsonSerializer()
+var BinarySerializer JobSerializer = getBinarySerializer()
+
+
+func Deserialize(serializedVal []byte, deserializer JobSerializer) (*Job, error) {
 
 	// create the thrift jobDef struct for the saga log
 	sagaLogJob := sagalog.NewJob()
 
+	//NOTE: if we don't close, the next call to Deserialize will deserialize the prior []byte input
+	deserializer.reader.Transport.Close()
+
 	// parse the byte string into the thrift jobDef struct
-	if err := deserializer.Read(sagaLogJob, serializedVal); err != nil {
+	if err := deserializer.reader.Read(sagaLogJob, serializedVal); err != nil {
 		return nil, err
 	}
 
@@ -57,15 +60,10 @@ func makeSchedJob(sagaLogJob sagalog.Job) Job {
 	return schedJob
 }
 
-func Serialize(job *Job, serializeType string) ([]byte, error) {
+func Serialize(job *Job, serializer JobSerializer) ([]byte, error) {
 
 	if job == nil {
 		return nil, fmt.Errorf("Cannot serialize a nil object")
-	}
-
-	serializer, err := getSerializer(serializeType)
-	if err != nil {
-		return nil, err
 	}
 
 	// allocate a thrift Job for saga log
@@ -90,7 +88,7 @@ func Serialize(job *Job, serializeType string) ([]byte, error) {
 	}
 	(*sagalogJob).JobDefinition = sagalogJobDefinition
 
-	if serializedVal, err := serializer.Write(sagalogJob); err != nil {
+	if serializedVal, err := serializer.writer.Write(sagalogJob); err != nil {
 		return nil, err
 	} else {
 		return serializedVal, nil
@@ -98,35 +96,24 @@ func Serialize(job *Job, serializeType string) ([]byte, error) {
 
 }
 
-func getSerializer(serializeType string) (*thrift.TSerializer, error) {
+func getJsonSerializer() JobSerializer {
 
-	switch serializeType {
-	case JsonSerialize:
-		transport := thrift.NewTMemoryBufferLen(1024)
-		protocol := thrift.NewTJSONProtocol(transport)
-		serializer := thrift.TSerializer{Transport:transport, Protocol:protocol}
-		return &serializer, nil
-	case BinarySerialize:
-		serializer := thrift.NewTSerializer()
-		return serializer, nil
-	default:
-		return nil, fmt.Errorf("Invalid serializer type: %s\n", serializeType)
-	}
+	transport := thrift.NewTMemoryBufferLen(1024)
+	protocol := thrift.NewTJSONProtocol(transport)
+	writer := thrift.TSerializer{Transport:transport, Protocol:protocol}
 
+	reader := thrift.TDeserializer{Transport:transport, Protocol:protocol}
+	jobSerializer := JobSerializer{writer, reader}
+
+	return jobSerializer
 }
 
-func getDeserializer(serializeType string) (*thrift.TDeserializer, error) {
+func getBinarySerializer() JobSerializer {
 
-	switch serializeType {
-	case JsonSerialize:
-		transport := thrift.NewTMemoryBufferLen(1024)
-		protocol := thrift.NewTJSONProtocol(transport)
-		deserializer := thrift.TDeserializer{Transport:transport, Protocol:protocol}
-		return &deserializer, nil
-	case BinarySerialize:
-		deserializer := thrift.NewTDeserializer()
-		return deserializer, nil
-	default:
-		return nil, fmt.Errorf("Invalid deserializer type: %s\n", serializeType)
-	}
+	writer := thrift.NewTSerializer()
+	reader := thrift.NewTDeserializer()
+	jobSerializer := JobSerializer{*writer, *reader}
+
+	return jobSerializer
+
 }
