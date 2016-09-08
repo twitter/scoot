@@ -46,31 +46,39 @@ const (
 	RolledBack
 )
 
-// could not use reflect.DeepCopy(obj1, obj2) - it returns a false negative when the
-// envVars or args in a task are empty
-func (this *Job) Equal(thatJobDef Job) (bool, string) {
+// could not use reflect.DeepEqual(obj1, obj2) - it returns a false negative when the
+// args in a task are empty
+func JobEqual(job1, job2 *Job) (bool, string) {
 
-	if (*this).Id != thatJobDef.Id {
-		return false, fmt.Sprintf("job Ids differ: expected %s, got %s\n", this.Id, thatJobDef.Id)
+	if job1 == job2 {
+		return true, ""
 	}
 
-	if (*this).Def.JobType != thatJobDef.Def.JobType {
-		return false, fmt.Sprintf("job Types differ: expected %s, got %s\n", this.Def.JobType, thatJobDef.Def.JobType)
+	if job1 == nil || job2 == nil {
+		return false, fmt.Sprintf("job equals failed, one but not both jobs are nil")
 	}
 
-	expectedMap := (*this).Def.Tasks
-	actualMap := thatJobDef.Def.Tasks
-	if len(expectedMap) != len(actualMap) {
-		return false, fmt.Sprintf("task Definitions maps two different lengths: expected %d, got %d", len(expectedMap), len(actualMap))
+	if job1.Id != job2.Id {
+		return false, fmt.Sprintf("job Ids differ: job1 id '%s', job2 id '%s'\n", job1.Id, job2.Id)
 	}
 
-	for taskName, _ := range expectedMap {
-		thisTask, _ := expectedMap[taskName]
-		thatTask, foundTask := actualMap[taskName]
+	if job1.Def.JobType != job2.Def.JobType {
+		return false, fmt.Sprintf("job Types differ: job1 type '%s', job2 type '%s'\n", job1.Def.JobType, job2.Def.JobType)
+	}
+
+	map1 := job1.Def.Tasks
+	map2 := job2.Def.Tasks
+	if len(map1) != len(map2) {
+		return false, fmt.Sprintf("task Definitions maps  are different lengths: job1 task map len: %d, job2 task map len: %d\n", len(map1), len(map2))
+	}
+
+	for taskName, _ := range map1 {
+		task1, _ := map1[taskName]
+		task2, foundTask := map2[taskName]
 		if !foundTask {
-			return false, "actual taskDef doesn't contain the expected entry for key:" + taskName
+			return false, fmt.Sprintf("job1 taskDef doesn't contain an entry for task : %s from job2\n",taskName)
 		}
-		if ok, msg := thisTask.Equal(thatTask); !ok {
+		if ok, msg := TaskDefinitionEqual(&task1, &task2); !ok {
 			return false, msg
 		}
 	}
@@ -78,54 +86,42 @@ func (this *Job) Equal(thatJobDef Job) (bool, string) {
 	return true, ""
 }
 
-func stringMapEqual(expectedMap, actualMap map[string]string) (bool, string) {
-	if len(expectedMap) != len(actualMap) {
-		return false, fmt.Sprintf("The 2 maps are different lengths: expected %d, got %d", len(expectedMap), len(actualMap))
-	}
+func StringMapEqual(map1, map2 map[string]string) (bool, string) {
 
-	if ok := reflect.DeepEqual(expectedMap, actualMap); !ok {
-		return ok, "the maps are not equal"
+	if ok := reflect.DeepEqual(map1, map2); !ok {
+		return ok, "the maps are not equal\n"
 	}
 
 	return true, ""
 }
 
-func (thisTask *TaskDefinition) Equal(thatTask TaskDefinition) (bool, string) {
-	if argvOk, msg := stringSliceEqual(thisTask.Argv, thatTask.Argv); !argvOk {
+func TaskDefinitionEqual(task1, task2 *TaskDefinition) (bool, string) {
+	if argvOk, msg := StringSliceEqual(task1.Argv, task2.Argv); !argvOk {
 		return false, "Argv entries are different:" + msg
 	}
-	if envOk, msg := stringMapEqual(thisTask.EnvVars, thatTask.EnvVars); !envOk {
+	if envOk, msg := StringMapEqual(task1.EnvVars, task2.EnvVars); !envOk {
 		return false, "EnvVars entries are different:" + msg
 	}
-	if thisTask.Timeout.String() != thatTask.Timeout.String() {
-		fmt.Printf(fmt.Sprintf("expected timeout: %s, actual timeout: %s", thisTask.Timeout.String(), thatTask.Timeout.String()))
-		return false, fmt.Sprintf("Timeout values differ, expected %s, got %s", thisTask.Timeout.String(), thatTask.Timeout.String())
+	if task1.Timeout.String() != task2.Timeout.String() {
+		return false, fmt.Sprintf("Timeout values differ, task1 timeout '%s', task2 timeout '%s'\n", task1.Timeout.String(), task2.Timeout.String())
 	}
-	if thisTask.SnapshotId != thatTask.SnapshotId {
-		return false, fmt.Sprintf("Snapshot ids differ, expected %s, got %s", thisTask.SnapshotId, thatTask.SnapshotId)
+	if task1.SnapshotId != task2.SnapshotId {
+		return false, fmt.Sprintf("Snapshot ids differ, task1 id '%s', task2 timeout '%s'\n", task1.SnapshotId, task2.SnapshotId)
 	}
 
 	return true, ""
 }
 
-func stringSliceEqual(expectedSlice, actualSlice []string) (bool, string) {
-	if len(expectedSlice) != len(actualSlice) {
-		return false, fmt.Sprintf("The 2 slices (expected %s, got %s) are different lengths: expected %d, got %d", expectedSlice, actualSlice, len(expectedSlice), len(actualSlice))
-	}
-
-	// DeepCopy does not work with nil slices
-	if expectedSlice == nil && actualSlice == nil {
+func StringSliceEqual(slice1, slice2 []string) (bool, string) {
+	// DeepEqual does not work with nil/empty slices
+	if len(slice1) == 0 && len(slice2) == 0 {
 		return true, ""
 	}
 
-	// DeepCopy does not work with slices of 0 length
-	if len(expectedSlice) == 0 && len(actualSlice) == 0 {
-		return true, ""
-	}
-
-	if ok := reflect.DeepEqual(expectedSlice, actualSlice); !ok {
-		return ok, "the slices are not equal"
+	if ok := reflect.DeepEqual(slice1, slice2); !ok {
+		return ok, "the slices are not equal\n"
 	}
 
 	return true, ""
+
 }
