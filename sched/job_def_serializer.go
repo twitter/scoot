@@ -57,10 +57,9 @@ func makeSchedJob(internalJobDef *schedthrift.Job) *Job {
 	return &schedJob
 }
 
-// NOTE: leaving this method in this file so it lives close to the Deserializer
 func SerializeJobDef(job *Job, serializer JobSerializer) ([]byte, error) {
 
-	if (job == nil) {
+	if job == nil {
 		return nil, nil
 	}
 

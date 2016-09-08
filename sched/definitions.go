@@ -48,7 +48,15 @@ const (
 
 // could not use reflect.DeepEqual(obj1, obj2) - it returns a false negative when the
 // args in a task are empty
-func JobEqual(job1, job2 *Job) (bool, string) {
+func (job1 *Job) Equal(job2 *Job) (bool, string) {
+
+	if job1 == nil {
+		if job2 == nil {
+			return true, ""
+		} else {
+			return false, "caller was nil, but other job was not"
+		}
+	}
 
 	if job1 == job2 {
 		return true, ""
@@ -76,9 +84,9 @@ func JobEqual(job1, job2 *Job) (bool, string) {
 		task1, _ := map1[taskName]
 		task2, foundTask := map2[taskName]
 		if !foundTask {
-			return false, fmt.Sprintf("job1 taskDef doesn't contain an entry for task : %s from job2\n",taskName)
+			return false, fmt.Sprintf("job1 taskDef doesn't contain an entry for task : %s from job2\n", taskName)
 		}
-		if ok, msg := TaskDefinitionEqual(&task1, &task2); !ok {
+		if ok, msg := task1.Equal(&task2); !ok {
 			return false, msg
 		}
 	}
@@ -95,7 +103,15 @@ func StringMapEqual(map1, map2 map[string]string) (bool, string) {
 	return true, ""
 }
 
-func TaskDefinitionEqual(task1, task2 *TaskDefinition) (bool, string) {
+func (task1 *TaskDefinition) Equal(task2 *TaskDefinition) (bool, string) {
+	if task1 == nil {
+		if task2 == nil {
+			return true, ""
+		} else {
+			return false, "caller was nil, but other task was not"
+		}
+	}
+
 	if argvOk, msg := StringSliceEqual(task1.Argv, task2.Argv); !argvOk {
 		return false, "Argv entries are different:" + msg
 	}

@@ -20,13 +20,13 @@ func Test_JobCompare(t *testing.T) {
 	origJob := makeFixedSampleJob()
 
 	// compare object to itself
-	if ok, msg := JobEqual(origJob, origJob); !ok {
+	if ok, msg := origJob.Equal(origJob); !ok {
 		t.Errorf("error: comparison logic doesn't work comparing an object with itself. %s\n", msg)
 	}
 
 	// compare object to nil
 	var actualJob *Job
-	if ok, msg := JobEqual(origJob, actualJob); ok {
+	if ok, msg := origJob.Equal(actualJob); ok {
 		t.Errorf("error: comparison logic doesn't work comparing an object vs nil. %s\n", msg)
 	}
 
@@ -35,20 +35,20 @@ func Test_JobCompare(t *testing.T) {
 	// compare nil to object
 	var saveOrigJob *Job = origJob
 	origJob = nil
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "one but not both jobs are nil") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "caller was nil, but other job was not") {
 		t.Errorf("error: comparison logic doesn't work comparing an nil vs object. %s\n", msg)
 	}
 	origJob = saveOrigJob
 
 	//  compare object to equivalent object
-	if ok, msg := JobEqual(origJob, actualJob); !ok {
+	if ok, msg := origJob.Equal(actualJob); !ok {
 		t.Errorf("error: comparison logic doesn't work comparing an object against equivalent. %s\n", msg)
 	}
 
 	var savedStringVal string
 	// compare when job Ids don't match
 	actualJob.Id, savedStringVal = "ids not equal", actualJob.Id
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "job Ids differ") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "job Ids differ") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different job Ids. %s\n", msg)
 	}
 	actualJob.Id = savedStringVal
@@ -56,7 +56,7 @@ func Test_JobCompare(t *testing.T) {
 	// compare when job Tasks don't match
 	// job types differ
 	actualJob.Def.JobType, savedStringVal = "job type not equal", actualJob.Def.JobType
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "job Types differ") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "job Types differ") {
 		t.Errorf("error: comparison logic doesn't work comparing object with different job types. %s\n", msg)
 	}
 	actualJob.Def.JobType = savedStringVal
@@ -66,7 +66,7 @@ func Test_JobCompare(t *testing.T) {
 	var modifiedTaskDef TaskDefinition = actualJob.Def.Tasks[testTaskName]
 	modifiedTaskDef.SnapshotId = "snapshot id not equal"
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "Snapshot ids differ") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "Snapshot ids differ") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition snapshot ids: message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -75,7 +75,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedTaskDef = actualJob.Def.Tasks[testTaskName]
 	modifiedTaskDef.Timeout, _ = time.ParseDuration("+9s")
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "Timeout values differ") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "Timeout values differ") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition timeout values: message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -84,7 +84,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedTaskDef = actualJob.Def.Tasks[testTaskName]
 	modifiedTaskDef.Argv = []string{"args don't match"}
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition args: message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -93,7 +93,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedTaskDef = actualJob.Def.Tasks[testTaskName]
 	modifiedTaskDef.Argv = []string{}
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition args (not empty vs empty): message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -102,7 +102,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedTaskDef = actualJob.Def.Tasks[testTaskName]
 	modifiedTaskDef.Argv = nil
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "Argv entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition args (not empty vs nil): message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -113,7 +113,7 @@ func Test_JobCompare(t *testing.T) {
 	var modifiedEnvVars map[string]string
 	modifiedTaskDef.EnvVars = modifiedEnvVars
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition envVars (not empty vs nil): message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -123,7 +123,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedEnvVars[envVar1Name] = "different lengths"
 	modifiedTaskDef.EnvVars = modifiedEnvVars
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition envVars (different lengths): message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -133,7 +133,7 @@ func Test_JobCompare(t *testing.T) {
 	modifiedEnvVars[envVar2Name] = actualJob.Def.Tasks[testTaskName].EnvVars[envVar2Name]
 	modifiedTaskDef.EnvVars = modifiedEnvVars
 	actualJob.Def.Tasks[testTaskName] = modifiedTaskDef
-	if ok, msg := JobEqual(origJob, actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
+	if ok, msg := origJob.Equal(actualJob); ok || !strings.Contains(msg, "EnvVars entries are different") {
 		t.Errorf("error: comparison logic doesn't work comparing an objects with different task definition envVars (different values): message: %s\n", msg)
 	}
 	actualJob.Def.Tasks[testTaskName] = savedTaskDef
@@ -165,8 +165,7 @@ func makeFixedSampleJob() *Job {
 	jobDef.JobType = "jobTypeVal"
 	taskDefinition := TaskDefinition{}
 	taskDefinition.SnapshotId = "snapshotIdVal"
-	tx, _ := time.ParseDuration("+3s")
-	taskDefinition.Timeout = tx
+	taskDefinition.Timeout = 3
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
 	envVars[envVar1Name] = "var2Value"
@@ -230,7 +229,7 @@ func ValidateSerialization(origJob *Job, serializer JobSerializer, t *testing.T)
 			t.Errorf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 
 			// compare the orig and generated task definitions
-		} else if ok, msg := JobEqual(origJob, newJob); !ok {
+		} else if ok, msg := origJob.Equal(newJob); !ok {
 			fmt.Printf("serialize/deserialize test didn't return equivalent value: %s\n", msg)
 			fmt.Printf("original jobDef:\n")
 			Print(origJob)
