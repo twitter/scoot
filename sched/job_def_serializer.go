@@ -1,7 +1,7 @@
+
 package sched
 
 import (
-	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
@@ -9,46 +9,27 @@ import (
 )
 
 type Serializer interface {
- 	Read(msg thrift.TStruct, b []byte) (err error)
-	Write(obj thrift.TStruct) (b []byte, err error)
-	DeserializerClose()
+	Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error)
+	Serialize(sourceStruct thrift.TStruct) (b []byte, err error)
 }
 
-type JobSerializer struct {
-	*thrift.TSerializer
-	*thrift.TDeserializer
-}
+type jsonSerializer struct {}
+type binarySerializer struct {}
 
-func (t JobSerializer) Read(msg thrift.TStruct, b []byte) (err error) {
-	return t.TDeserializer.Read(msg, b)
-}
-func (t JobSerializer) Write(obj thrift.TStruct) (b []byte, err error) {
-	return t.TSerializer.Write(obj)
-}
 
-func (t JobSerializer) DeserializerClose() {
-	t.TDeserializer.Transport.Close()
-}
+// clients will provide either the json or binary serializer to the SerializeJob/DeserializeJob operations
+var JsonSerializer Serializer = jsonSerializer{}
+var BinarySerializer Serializer = binarySerializer{}
 
-// if add new XXX serialization formats add XXXSerializer here and add getXXXSerializer() func below
-var JsonSerializer JobSerializer
-var BinarySerializer JobSerializer
 
-func init() {
-	JsonSerializer = getJsonSerializer()
-	BinarySerializer = getBinarySerializer()
-}
-
-func DeserializeJobDef(serializedVal []byte, deserializer Serializer) (*Job, error) {
+// Deserialize a byte slice into a Job object.
+func DeserializeJob(serializedVal []byte, deserializer Serializer) (*Job, error) {
 
 	// create the thrift jobDef struct for the saga log
 	thriftJob := schedthrift.NewJob()
 
-	//NOTE:  must close here otherwise the deserialization will deserialize the []byte input from the prior call
-	deserializer.DeserializerClose()
-
 	// parse the byte string into the thrift jobDef struct
-	if err := deserializer.Read(thriftJob, serializedVal); err != nil {
+	if err := deserializer.Deserialize(thriftJob, serializedVal); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +53,7 @@ func makeSchedJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 		argvs = sagaLogTaskDefTask.Command.Argv
 		var envVars map[string]string
 		envVars = sagaLogTaskDefTask.Command.EnvVars
-		timeout, _ := time.ParseDuration(fmt.Sprintf("%dns", sagaLogTaskDefTask.Command.Timeout))
+		timeout := time.Duration(sagaLogTaskDefTask.Command.Timeout)
 		snapshotId := sagaLogTaskDefTask.Command.SnapshotId
 		command := runner.NewCommand(argvs, envVars, timeout, snapshotId)
 		schedJobDef.Tasks[taskName] = TaskDefinition{*command}
@@ -81,7 +62,9 @@ func makeSchedJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	return &schedJob
 }
 
-func SerializeJobDef(job *Job, serializer Serializer) ([]byte, error) {
+// Serialize a Job object to bytes.  Note: nil taks definition maps, envVar maps or
+// args slices will serialize to an empty map/slice.
+func SerializeJob(job *Job, serializer Serializer) ([]byte, error) {
 
 	if job == nil {
 		return nil, nil
@@ -109,7 +92,7 @@ func SerializeJobDef(job *Job, serializer Serializer) ([]byte, error) {
 	}
 	internalJob.JobDefinition = internalJobDef
 
-	if serializedVal, err := serializer.Write(internalJob); err != nil {
+	if serializedVal, err := serializer.Serialize(internalJob); err != nil {
 		return nil, err
 	} else {
 		return serializedVal, nil
@@ -117,24 +100,37 @@ func SerializeJobDef(job *Job, serializer Serializer) ([]byte, error) {
 
 }
 
-func getJsonSerializer() JobSerializer {
-
+// Json behavior
+func (s jsonSerializer) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
-	writer := &thrift.TSerializer{Transport: transport, Protocol: protocol}
 
-	reader := &thrift.TDeserializer{Transport: transport, Protocol: protocol}
-	jobSerializer := JobSerializer{writer, reader}
-
-	return jobSerializer
+	d := &thrift.TDeserializer{Transport: transport, Protocol: protocol}
+	err = d.Read(targetStruct, sourceBytes)
+	return err
 }
 
-func getBinarySerializer() JobSerializer {
+func (s jsonSerializer) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
+	transport := thrift.NewTMemoryBufferLen(1024)
+	protocol := thrift.NewTJSONProtocol(transport)
 
-	writer := thrift.NewTSerializer()
-	reader := thrift.NewTDeserializer()
-	jobSerializer := JobSerializer{writer, reader}
-
-	return jobSerializer
-
+	d := &thrift.TSerializer{Transport: transport, Protocol: protocol}
+	serializedValue, err := d.Write(sourceStruct)
+	return serializedValue, err
 }
+
+
+// Binary behavior
+func (s binarySerializer) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	d := thrift.NewTDeserializer()
+	err = d.Read(targetStruct, sourceBytes)
+	return err
+}
+
+func (s binarySerializer) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
+	d := thrift.NewTSerializer()
+	serializedValue, err := d.Write(sourceStruct)
+	return serializedValue, err
+}
+
+

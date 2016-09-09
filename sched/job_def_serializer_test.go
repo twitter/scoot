@@ -152,10 +152,10 @@ func Test_FixedJob(t *testing.T) {
 }
 
 func Test_SerializeNilJob(t *testing.T) {
-	if asByteArray, err := SerializeJobDef(nil, JsonSerializer); err != nil || asByteArray != nil {
+	if asByteArray, err := SerializeJob(nil, JsonSerializer); err != nil || asByteArray != nil {
 		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
-	if asByteArray, err := SerializeJobDef(nil, BinarySerializer); err != nil || asByteArray != nil {
+	if asByteArray, err := SerializeJob(nil, BinarySerializer); err != nil || asByteArray != nil {
 		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
 }
@@ -199,6 +199,24 @@ func Print(job *Job) {
 	fmt.Printf("\n")
 }
 
+func Test_SerializationErrors(t *testing.T) {
+
+	if _, err := SerializeJob(&Job{}, FakeSerializer); err == nil || !strings.Contains(err.Error(), "error writing\n" ) {
+		t.Errorf("error: didn't get error serializing")
+	}
+
+	var bytes = []byte("unparsable byte string")
+	var err error
+	if _, err = DeserializeJob(bytes, JsonSerializer); err == nil {
+		t.Errorf("error: didn't get error from json deserializing");
+	}
+
+	if _, err = DeserializeJob(bytes, BinarySerializer); err == nil {
+		t.Errorf("error: didn't get error from binary deserializing");
+	}
+}
+
+
 func Test_RandomSerializerDeserializer(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 1000
@@ -218,32 +236,15 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 
 }
 
-func Test_SerializationErrors(t *testing.T) {
-	var erroringSerilizer Serializer = FakeSerializer{JsonSerializer}
 
-	if _, err := SerializeJobDef(&Job{}, erroringSerilizer); err == nil || !strings.Contains(err.Error(), "error writing\n" ) {
-		t.Errorf("error: didn't get error serializing")
-	}
+func ValidateSerialization(origJob *Job, serializer Serializer, t *testing.T) {
 
-	var bytes = []byte("unparsable byte string")
-	var err error
-	if _, err = DeserializeJobDef(bytes, JsonSerializer); err == nil {
-		t.Errorf("error: didn't get error from json deserializing");
-	}
-
-	if _, err = DeserializeJobDef(bytes, BinarySerializer); err == nil {
-		t.Errorf("error: didn't get error from binary deserializing");
-	}
-}
-
-func ValidateSerialization(origJob *Job, serializer JobSerializer, t *testing.T) {
-
-	if asByteArray, err := SerializeJobDef(origJob, serializer); err != nil {
+	if asByteArray, err := SerializeJob(origJob, serializer); err != nil {
 		t.Errorf("error: couldn't serialize the fixed job def. %s\n", err.Error())
 
 	} else {
 		// deserialize the byte array
-		if newJob, err := DeserializeJobDef(asByteArray, serializer); err != nil {
+		if newJob, err := DeserializeJob(asByteArray, serializer); err != nil {
 			fmt.Printf("serialize/deserialize test couldn't deserialize object:\n")
 			Print(origJob)
 			fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
@@ -318,14 +319,18 @@ func genJobFromParams(genParams *gopter.GenParameters) *Job {
 	return &job
 }
 
-type FakeSerializer struct {
-	JobSerializer
-}
 
-func (t FakeSerializer) Write(msg thrift.TStruct) (b []byte, err error) {
+
+type fakeSerializerForErrors struct {}
+
+
+func (s fakeSerializerForErrors) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	return nil, errors.New("error writing\n")
 }
 
-func getFakeJsonSerializer() Serializer {
-	return FakeSerializer{JsonSerializer}
+func (s fakeSerializerForErrors) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	return errors.New("this method should not be used\n")
 }
+
+
+var FakeSerializer Serializer = fakeSerializerForErrors{}
