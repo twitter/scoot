@@ -1,9 +1,7 @@
 package sched
 
 import (
-	"fmt"
 	"github.com/scootdev/scoot/runner"
-	"reflect"
 )
 
 // Job is the job Scoot can schedule
@@ -46,98 +44,3 @@ const (
 	RolledBack
 )
 
-// could not use reflect.DeepEqual(obj1, obj2) - it returns a false negative when the
-// args in a task are empty
-func (job1 *Job) Equal(job2 *Job) (bool, string) {
-
-	if job1 == nil {
-		if job2 == nil {
-			return true, ""
-		} else {
-			return false, "caller was nil, but other job was not"
-		}
-	}
-
-	if job1 == job2 {
-		return true, ""
-	}
-
-	if job1 == nil || job2 == nil {
-		return false, fmt.Sprintf("job equals failed, one but not both jobs are nil")
-	}
-
-	if job1.Id != job2.Id {
-		return false, fmt.Sprintf("job Ids differ: job1 id '%s', job2 id '%s'\n", job1.Id, job2.Id)
-	}
-
-	if job1.Def.JobType != job2.Def.JobType {
-		return false, fmt.Sprintf("job Types differ: job1 type '%s', job2 type '%s'\n", job1.Def.JobType, job2.Def.JobType)
-	}
-
-	map1 := job1.Def.Tasks
-	map2 := job2.Def.Tasks
-	if len(map1) != len(map2) {
-		return false, fmt.Sprintf("task Definitions maps  are different lengths: job1 task map len: %d, job2 task map len: %d\n", len(map1), len(map2))
-	}
-
-	for taskName, _ := range map1 {
-		task1, _ := map1[taskName]
-		task2, foundTask := map2[taskName]
-		if !foundTask {
-			return false, fmt.Sprintf("job1 taskDef doesn't contain an entry for task : %s from job2\n", taskName)
-		}
-		if ok, msg := task1.Equal(&task2); !ok {
-			return false, msg
-		}
-	}
-
-	return true, ""
-}
-
-func StringMapEqual(map1, map2 map[string]string) (bool, string) {
-
-	if ok := reflect.DeepEqual(map1, map2); !ok {
-		return ok, "the maps are not equal\n"
-	}
-
-	return true, ""
-}
-
-func (task1 *TaskDefinition) Equal(task2 *TaskDefinition) (bool, string) {
-	if task1 == nil {
-		if task2 == nil {
-			return true, ""
-		} else {
-			return false, "caller was nil, but other task was not"
-		}
-	}
-
-	if argvOk, msg := StringSliceEqual(task1.Argv, task2.Argv); !argvOk {
-		return false, "Argv entries are different:" + msg
-	}
-	if envOk, msg := StringMapEqual(task1.EnvVars, task2.EnvVars); !envOk {
-		return false, "EnvVars entries are different:" + msg
-	}
-	if task1.Timeout.String() != task2.Timeout.String() {
-		return false, fmt.Sprintf("Timeout values differ, task1 timeout '%s', task2 timeout '%s'\n", task1.Timeout.String(), task2.Timeout.String())
-	}
-	if task1.SnapshotId != task2.SnapshotId {
-		return false, fmt.Sprintf("Snapshot ids differ, task1 id '%s', task2 timeout '%s'\n", task1.SnapshotId, task2.SnapshotId)
-	}
-
-	return true, ""
-}
-
-func StringSliceEqual(slice1, slice2 []string) (bool, string) {
-	// DeepEqual does not work with nil/empty slices
-	if len(slice1) == 0 && len(slice2) == 0 {
-		return true, ""
-	}
-
-	if ok := reflect.DeepEqual(slice1, slice2); !ok {
-		return ok, "the slices are not equal\n"
-	}
-
-	return true, ""
-
-}
