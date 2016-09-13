@@ -139,3 +139,35 @@
 	path = vendor/github.com/stathat/go
 	url = https://github.com/stathat/go
 	branch = c828dca0ee6eadc566bfcbcc00e4a992f12821a3
+[submodule "vendor/cloud.google.com/go"]
+	path = vendor/cloud.google.com/go
+	url = https://code.googlesource.com/gocloud
+	branch = 3b1ae45394a234c385be014e9a488f2bb6eef821
+[submodule "vendor/github.com/kr/fs"]
+	path = vendor/github.com/kr/fs
+	url = https://github.com/kr/fs
+	branch = 2788f0dbd16903de03cb8186e5c7d97b69ad387b
+[submodule "vendor/github.com/pelletier/go-buffruneio"]
+	path = vendor/github.com/pelletier/go-buffruneio
+	url = https://github.com/pelletier/go-buffruneio
+	branch = df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
+[submodule "vendor/github.com/pelletier/go-toml"]
+	path = vendor/github.com/pelletier/go-toml
+	url = https://github.com/pelletier/go-toml
+	branch = 31055c2ff0bb0c7f9095aec0d220aed21108121e
+[submodule "vendor/github.com/pkg/errors"]
+	path = vendor/github.com/pkg/errors
+	url = https://github.com/pkg/errors
+	branch = 17b591df37844cde689f4d5813e5cea0927d8dd2
+[submodule "vendor/github.com/pkg/sftp"]
+	path = vendor/github.com/pkg/sftp
+	url = https://github.com/pkg/sftp
+	branch = 8197a2e580736b78d704be0fc47b2324c0591a32
+[submodule "vendor/github.com/spf13/afero"]
+	path = vendor/github.com/spf13/afero
+	url = https://github.com/spf13/afero
+	branch = 20500e2abd0d1f4564a499e83d11d6c73cd58c27
+[submodule "vendor/golang.org/x/text"]
+	path = vendor/golang.org/x/text
+	url = https://go.googlesource.com/text
+	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316

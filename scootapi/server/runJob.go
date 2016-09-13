@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -21,9 +22,8 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition) (*scoot.Job
 		return nil, err
 	}
 
-	// TODO: Calculate unique job ids
 	job := sched.Job{
-		Id:  "1",
+		Id:  generateJobId(),
 		Def: jobDef,
 	}
 
@@ -34,6 +34,15 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition) (*scoot.Job
 	}
 
 	return &scoot.JobId{ID: job.Id}, nil
+}
+
+func generateJobId() string {
+	id, err := uuid.NewV4()
+	for err != nil {
+		id, err = uuid.NewV4()
+	}
+
+	return id.String()
 }
 
 // Translates thrift job definition message to scoot domain object
