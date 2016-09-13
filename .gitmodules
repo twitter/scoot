@@ -142,7 +142,7 @@
 [submodule "vendor/cloud.google.com/go"]
 	path = vendor/cloud.google.com/go
 	url = https://code.googlesource.com/gocloud
-	branch = 3b1ae45394a234c385be014e9a488f2bb6eef821
+	branch = 8e3c0b22f89d3d365c5e678011ca2268d8b36c63
 [submodule "vendor/github.com/kr/fs"]
 	path = vendor/github.com/kr/fs
 	url = https://github.com/kr/fs
@@ -171,3 +171,7 @@
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
 	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
+[submodule "vendor/github.com/nu7hatch/gouuid"]
+	path = vendor/github.com/nu7hatch/gouuid
+	url = https://github.com/nu7hatch/gouuid
+	branch = 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
