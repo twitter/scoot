@@ -92,18 +92,12 @@ func main() {
 		log.Fatal("Error injecting servers", err)
 	}
 
-	// TODO: Start server
-	// go func() {
-	//	scheduler.GenerateWork(servers.sched, servers.queue.Chan(), servers.stat)
-	//}()
-
 	errCh := make(chan error)
 	go func() {
 		errCh <- servers.http.Serve()
 	}()
 	go func() {
 		errCh <- servers.thrift.Serve()
-
 	}()
 	log.Fatal("Error serving: ", <-errCh)
 }
