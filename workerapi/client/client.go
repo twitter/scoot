@@ -87,7 +87,7 @@ func (c *client) Abort(runId string) (*runner.ProcessStatus, error) {
 		return &runner.ProcessStatus{}, err
 	}
 
-	status, err := client.Abort(*abortRunId)
+	status, err := client.Abort(runId)
 	if err != nil {
 		return &runner.ProcessStatus{}, err
 	}
