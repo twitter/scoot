@@ -42,6 +42,10 @@
 	path = vendor/github.com/rcrowley/go-metrics
 	url = https://github.com/rcrowley/go-metrics
 	branch = cfa5a85e9f0abbdf1701b59082c36fc7bff10759
+[submodule "vendor/github.com/nu7hatch/gouuid"]
+	path = vendor/github.com/nu7hatch/gouuid
+	url = https://github.com/nu7hatch/gouuid
+	branch = 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
 # Note: this division should be curated whenever the dependencies change.
@@ -171,7 +175,3 @@
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
 	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
-[submodule "vendor/github.com/nu7hatch/gouuid"]
-	path = vendor/github.com/nu7hatch/gouuid
-	url = https://github.com/nu7hatch/gouuid
-	branch = 179d4d0c4d8d407a32af483c2354df1d2c91e6c3

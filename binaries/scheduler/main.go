@@ -27,16 +27,12 @@ var cfgText = flag.String("sched_config", "", "Scheduler Configuration.")
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
-	sched  scheduler.Scheduler
-	stat   stats.StatsReceiver
 }
 
 func makeServers(
 	thrift thrift.TServer,
-	http *endpoints.TwitterServer,
-	sched scheduler.Scheduler,
-	stat stats.StatsReceiver) servers {
-	return servers{thrift, http, sched, stat}
+	http *endpoints.TwitterServer) servers {
+	return servers{thrift, http}
 }
 
 func main() {
