@@ -123,7 +123,7 @@ var tests = []struct {
 	//WorkerStatus
 	{
 		13, wsFromThrift, nil,
-		&worker.WorkerStatus{Runs: nil, VersionId: nil},
+		&worker.WorkerStatus{Runs: nil},
 		WorkerStatus{Runs: []runner.ProcessStatus{}},
 	},
 	{
