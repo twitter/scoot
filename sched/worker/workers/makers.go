@@ -19,6 +19,7 @@ func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	return NewPollingWorker(r, time.Duration(250)*time.Millisecond)
 }
 
+// Makes a worker that uses a SimExecer. This is suitable for testing.
 func MakeSimWorker() worker.Worker {
 	ex := execers.NewSimExecer(nil)
 	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())

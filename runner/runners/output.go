@@ -4,11 +4,12 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
-type nullOutputCreator struct{}
-
+// Creates a new OutputCreator that will not save anything
 func NewNullOutputCreator() runner.OutputCreator {
 	return &nullOutputCreator{}
 }
+
+type nullOutputCreator struct{}
 
 func (c *nullOutputCreator) Create(id string) (runner.Output, error) {
 	return &nullOutput{}, nil

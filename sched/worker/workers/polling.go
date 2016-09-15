@@ -8,10 +8,12 @@ import (
 	"github.com/scootdev/scoot/sched/worker"
 )
 
+// NewPollingWorker creates a PollingWorker
 func NewPollingWorker(runner runner.Runner, period time.Duration) worker.Worker {
 	return &PollingWorker{runner, period}
 }
 
+// PollingWorker acts as a Worker by polling the underlying runner every period
 type PollingWorker struct {
 	runner runner.Runner
 	period time.Duration

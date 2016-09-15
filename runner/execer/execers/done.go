@@ -4,10 +4,12 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 )
 
+// Creates a new doneExecer.
 func NewDoneExecer() execer.Execer {
 	return &doneExecer{}
 }
 
+// doneExecer finishes something as soon as its run
 type doneExecer struct{}
 
 func (e *doneExecer) Exec(command execer.Command) (execer.Process, error) {
