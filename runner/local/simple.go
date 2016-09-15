@@ -35,15 +35,14 @@ type run struct {
 	doneCh chan struct{}
 }
 
-func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
+func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	runId := runner.RunId(fmt.Sprintf("%d", r.nextRunId))
 	r.nextRunId++
 
 	if r.running != nil {
-		r.runs[runId] = runner.BadRequestStatus(runId, fmt.Errorf("Runner is busy"))
-		return r.runs[runId]
+		return runner.ProcessStatus{}, fmt.Errorf("Runner is busy")
 	}
 
 	r.running = &run{id: runId, doneCh: make(chan struct{})}
@@ -56,7 +55,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) runner.ProcessStatus {
 	}
 	// TODO(dbentley): we return PREPARING now to defend against long-checkout
 	// But we could sleep short (50ms?), query status, and return that to capture the common, fast case
-	return r.runs[runId]
+	return r.runs[runId], nil
 }
 
 func makeRunnerStatus(st execer.ProcessStatus, runId runner.RunId) runner.ProcessStatus {
@@ -68,49 +67,50 @@ func makeRunnerStatus(st execer.ProcessStatus, runId runner.RunId) runner.Proces
 	return runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State))
 }
 
-func (r *simpleRunner) Status(run runner.RunId) runner.ProcessStatus {
+func (r *simpleRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	result, ok := r.runs[run]
 	if !ok {
-		return runner.BadRequestStatus(run, fmt.Errorf("could not find: %v", run))
+		return runner.ProcessStatus{}, fmt.Errorf("could not find: %v", run)
 	}
-	return result
+	return result, nil
 }
 
-func (r *simpleRunner) StatusAll() []runner.ProcessStatus {
+func (r *simpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	statuses := []runner.ProcessStatus{}
 	for _, status := range r.runs {
 		statuses = append(statuses, status)
 	}
-	return statuses
+	return statuses, nil
 }
 
-func (r *simpleRunner) Abort(run runner.RunId) runner.ProcessStatus {
+func (r *simpleRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	return r.updateStatus(runner.AbortStatus(run))
 }
 
-func (r *simpleRunner) Erase(run runner.RunId) {
+func (r *simpleRunner) Erase(run runner.RunId) error {
 	// Best effort is fine here.
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if result, ok := r.runs[run]; ok && result.State.IsDone() {
 		delete(r.runs, run)
 	}
+	return nil
 }
 
 // TODO(dbentley): when we timeout or abort, we should include the previous stdout/stderr URIs
-func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStatus {
+func (r *simpleRunner) updateStatus(new runner.ProcessStatus) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	old, ok := r.runs[new.RunId]
 	if !ok {
-		return runner.BadRequestStatus(new.RunId, fmt.Errorf("cannot find run %v", new.RunId))
+		return runner.ProcessStatus{}, fmt.Errorf("cannot find run %v", new.RunId)
 	}
 	if old.State.IsDone() {
-		return old
+		return old, nil
 	}
 	r.runs[new.RunId] = new
 	if new.State.IsDone() {
@@ -120,7 +120,7 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) runner.ProcessStat
 		close(r.running.doneCh)
 		r.running = nil
 	}
-	return new
+	return new, nil
 }
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed

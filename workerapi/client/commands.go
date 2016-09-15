@@ -50,7 +50,7 @@ func (c *abortCmd) registerFlags(cmd *cobra.Command) {
 func (c *abortCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	status, err := c.client.Abort(c.runId)
+	status, err := c.client.Abort(runner.RunId(c.runId))
 	log.Println(render.Render(status), err)
 	return nil
 }

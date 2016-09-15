@@ -29,7 +29,10 @@ func TestOutput(t *testing.T) {
 	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
 	id := assertRun(t, r, complete(0),
 		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
-	st := r.Status(id)
+	st, err := r.Status(id)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hostname, err := os.Hostname()
 	if err != nil {
 		t.Fatal(err)
@@ -65,8 +68,10 @@ func TestSimul(t *testing.T) {
 	secondArgs := []string{"complete 3"}
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
-	st := r.Run(cmd)
-	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
+	_, err := r.Run(cmd)
+	if err == nil {
+		t.Fatal(err)
+	}
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
@@ -80,11 +85,16 @@ func TestAbort(t *testing.T) {
 	assertWait(t, r, runId, running(), args...)
 	r.Abort(runId)
 	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
-	st := r.Status(runId)
+	st, err := r.Status(runId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertStatus(t, st, aborted(), args...)
 
-	st = r.Abort(runner.RunId("not-a-run-id"))
-	assertStatus(t, st, badreq("cannot find run not-a-run-id"))
+	st, err = r.Abort(runner.RunId("not-a-run-id"))
+	if err == nil {
+		t.Fatal(err)
+	}
 }
 
 func complete(exitCode int) runner.ProcessStatus {
@@ -97,10 +107,6 @@ func running() runner.ProcessStatus {
 
 func failed(errorText string) runner.ProcessStatus {
 	return runner.ErrorStatus(runner.RunId(""), fmt.Errorf(errorText))
-}
-
-func badreq(errorText string) runner.ProcessStatus {
-	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
 func aborted() runner.ProcessStatus {
@@ -136,9 +142,9 @@ func assertStatus(t *testing.T, actual runner.ProcessStatus, expected runner.Pro
 func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	cmd := &runner.Command{}
 	cmd.Argv = args
-	status := r.Run(cmd)
-	if status.State == runner.BADREQUEST {
-		t.Fatal("Couldn't run: ", args, status.Error)
+	status, err := r.Run(cmd)
+	if err != nil {
+		t.Fatal("Couldn't run: ", args, err)
 	}
 	return status.RunId
 }
@@ -146,7 +152,10 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
 	for {
 		time.Sleep(100 * time.Microsecond)
-		status := r.Status(run)
+		status, err := r.Status(run)
+		if err != nil {
+			panic(err)
+		}
 		if status.State.IsDone() || status.State == expected.State {
 			return status
 		}

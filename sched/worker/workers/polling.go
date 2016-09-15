@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/scootdev/scoot/runner"
@@ -19,17 +18,16 @@ type PollingWorker struct {
 }
 
 func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
-	status := r.runner.Run(&task.Command)
-	if status.State == runner.BADREQUEST {
-		return runner.ProcessStatus{}, fmt.Errorf("error running task %v: %v", task, status.Error)
+	status, err := r.runner.Run(&task.Command)
+	if err != nil {
+		return status, err
 	}
 	id := status.RunId
-	for !status.State.IsDone() {
-		status = r.runner.Status(id)
-		if status.State == runner.BADREQUEST {
-			return runner.ProcessStatus{}, fmt.Errorf("error querying run %v: %v", id, status.Error)
+	for {
+		status, err = r.runner.Status(id)
+		if err != nil || status.State.IsDone() {
+			return status, err
 		}
 		time.Sleep(r.period)
 	}
-	return status, nil
 }

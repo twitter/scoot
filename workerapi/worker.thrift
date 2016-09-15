@@ -19,13 +19,9 @@ struct RunStatus {
   6: optional i32 exitCode
 }
 
-// VersionId will be empty by default. To change this, pass a getVersion() func to server.Handler.
-// - Semantics are up to the implementer, this needn't be a library version, it could be a gitSha, etc.
-//
 // TODO: add useful load information when it comes time to have multiple runs.
 struct WorkerStatus {
   1: required list<RunStatus> runs  # All runs excepting what's been Erase()'d
-  2: optional string versionId      # Version associated with this worker.
 }
 
 struct RunCommand {

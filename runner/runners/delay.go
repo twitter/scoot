@@ -8,13 +8,13 @@ import (
 )
 
 func NewChaosRunner(delegate runner.Runner, delay time.Duration) *ChaosRunner {
-	return &ChaosRunner{delegate, delay, runner.ProcessStatus{}}
+	return &ChaosRunner{delegate, delay, nil}
 }
 
 type ChaosRunner struct {
-	del         runner.Runner
-	MaxDelay    time.Duration
-	ErrorStatus runner.ProcessStatus
+	del      runner.Runner
+	MaxDelay time.Duration
+	Err      error
 }
 
 func (r *ChaosRunner) delay() {
@@ -24,36 +24,42 @@ func (r *ChaosRunner) delay() {
 	time.Sleep(time.Duration(rand.Int63n(int64(r.MaxDelay))))
 }
 
-func (r *ChaosRunner) Run(cmd *runner.Command) runner.ProcessStatus {
+func (r *ChaosRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.delay()
-	if r.ErrorStatus.State != runner.UNKNOWN {
-		return r.ErrorStatus
+	if r.Err != nil {
+		return runner.ProcessStatus{}, r.Err
 	}
 	return r.del.Run(cmd)
 }
 
-func (r *ChaosRunner) Status(run runner.RunId) runner.ProcessStatus {
+func (r *ChaosRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	r.delay()
-	if r.ErrorStatus.State != runner.UNKNOWN {
-		return r.ErrorStatus
+	if r.Err != nil {
+		return runner.ProcessStatus{}, r.Err
 	}
 	return r.del.Status(run)
 }
 
-func (r *ChaosRunner) StatusAll() []runner.ProcessStatus {
+func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	r.delay()
+	if r.Err != nil {
+		return nil, r.Err
+	}
 	return r.del.StatusAll()
 }
 
-func (r *ChaosRunner) Abort(run runner.RunId) runner.ProcessStatus {
+func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	r.delay()
-	if r.ErrorStatus.State != runner.UNKNOWN {
-		return r.ErrorStatus
+	if r.Err != nil {
+		return runner.ProcessStatus{}, r.Err
 	}
 	return r.Abort(run)
 }
 
-func (r *ChaosRunner) Erase(run runner.RunId) {
+func (r *ChaosRunner) Erase(run runner.RunId) error {
 	r.delay()
-	r.Erase(run)
+	if r.Err != nil {
+		return r.Err
+	}
+	return r.Erase(run)
 }

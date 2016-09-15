@@ -50,11 +50,17 @@ func (s *Server) Echo(ctx context.Context, req *protocol.EchoRequest) (*protocol
 
 func (s *Server) Run(ctx context.Context, req *protocol.Command) (*protocol.ProcessStatus, error) {
 	cmd := runner.NewCommand(req.Argv, req.Env, time.Duration(req.Timeout), "")
-	status := s.runner.Run(cmd)
+	status, err := s.runner.Run(cmd)
+	if err != nil {
+		return nil, err
+	}
 	return protocol.FromRunnerStatus(status), nil
 }
 
 func (s *Server) Status(ctx context.Context, req *protocol.StatusQuery) (*protocol.ProcessStatus, error) {
-	status := s.runner.Status(runner.RunId(req.RunId))
+	status, err := s.runner.Status(runner.RunId(req.RunId))
+	if err != nil {
+		return nil, err
+	}
 	return protocol.FromRunnerStatus(status), nil
 }
