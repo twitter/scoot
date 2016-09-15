@@ -35,8 +35,7 @@ func main() {
 
 	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
 	run := localrunner.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
-	version := func() string { return "" }
-	handler := server.NewHandler(stats, run, version)
+	handler := server.NewHandler(stats, run)
 	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)

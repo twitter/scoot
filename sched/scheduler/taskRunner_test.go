@@ -2,11 +2,15 @@ package scheduler
 
 import (
 	"errors"
+	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/worker"
-	"testing"
+	"github.com/scootdev/scoot/sched/worker/workers"
 )
 
 func Test_runTaskAndLog_Successful(t *testing.T) {
@@ -21,11 +25,8 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", nil))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
-	worker := worker.NewMockWorker(mockCtrl)
-	worker.EXPECT().RunAndWait(task)
-
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := runTaskAndLog(s, worker, "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
@@ -43,7 +44,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, worker.NewMockWorker(mockCtrl), "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -62,10 +63,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	worker := worker.NewMockWorker(mockCtrl)
-	worker.EXPECT().RunAndWait(task)
-
-	err := runTaskAndLog(s, worker, "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
@@ -83,9 +81,10 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	worker := worker.NewMockWorker(mockCtrl)
-	worker.EXPECT().RunAndWait(task).Return(errors.New("test error"))
+	chaos := runners.NewChaosRunner(nil, time.Duration(0))
+	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
+	chaos.Err = fmt.Errorf("starting error")
 	err := runTaskAndLog(s, worker, "task1", task)
 
 	if err == nil {
