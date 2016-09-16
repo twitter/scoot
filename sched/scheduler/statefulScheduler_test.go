@@ -6,6 +6,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
@@ -28,7 +29,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 	return &schedulerDeps{
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
-		sc:        saga.MakeInMemorySagaCoordinator(),
+		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		wf: func(cluster.Node) worker.Worker {
 			return workers.MakeSimWorker()
 		},
