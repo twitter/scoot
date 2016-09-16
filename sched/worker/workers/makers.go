@@ -15,8 +15,9 @@ import (
 func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	ex := execers.NewDoneExecer()
 	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
-	r = runners.NewChaosRunner(r, time.Duration(500)*time.Millisecond)
-	return NewPollingWorker(r, time.Duration(250)*time.Millisecond)
+	chaos := runners.NewChaosRunner(r)
+	chaos.SetDelay(time.Duration(500) * time.Millisecond)
+	return NewPollingWorker(chaos, time.Duration(250)*time.Millisecond)
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
