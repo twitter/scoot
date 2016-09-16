@@ -22,6 +22,7 @@ func makeTestTargetsCmd(c *Client) *cobra.Command {
 }
 
 func (c *Client) testTargets(cmd *cobra.Command, args []string, snapshotID string) error {
+
 	client, err := c.Dial()
 	if err != nil {
 		return err
@@ -29,8 +30,9 @@ func (c *Client) testTargets(cmd *cobra.Command, args []string, snapshotID strin
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
-	for _, t := range getTargets() {
+	for i, t := range getTargets() {
 		task.Command.Argv = append(task.Command.Argv, "./pants test "+t+":")
+		log.Println(i)
 	}
 	log.Println("Testing targets", task.Command.Argv)
 	task.SnapshotId = &snapshotID
