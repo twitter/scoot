@@ -16,7 +16,7 @@ func runTaskAndLog(saga *saga.Saga, worker worker.Worker, taskId string, task sc
 		return err
 	}
 	// runtask on worker
-	err = worker.RunAndWait(task)
+	_, err = worker.RunAndWait(task)
 	if err != nil {
 		return err
 	}

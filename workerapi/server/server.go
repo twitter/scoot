@@ -30,13 +30,12 @@ func Serve(handler worker.Worker, addr string, transportFactory thrift.TTranspor
 type handler struct {
 	stat        stats.StatsReceiver
 	run         runner.Runner
-	getVersion  func() string
 	timeLastRpc time.Time
 }
 
-func NewHandler(stat stats.StatsReceiver, run runner.Runner, getVersion func() string) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, getVersion: getVersion}
+	h := &handler{stat: scopedStat, run: run}
 	go h.stats()
 	return h
 }
@@ -50,7 +49,10 @@ func (h *handler) stats() {
 		case <-ticker.C:
 			var numFailed int64
 			var numActive int64
-			processes := h.run.StatusAll()
+			processes, err := h.run.StatusAll()
+			if err != nil {
+				continue
+			}
 			for _, process := range processes {
 				if process.State == runner.FAILED {
 					numFailed++
@@ -78,10 +80,12 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.timeLastRpc = time.Now()
 	ws := worker.NewWorkerStatus()
-	version := h.getVersion()
-	ws.VersionId = &version
-	for _, process := range h.run.StatusAll() {
-		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(&process))
+	st, err := h.run.StatusAll()
+	if err != nil {
+		return nil, err
+	}
+	for _, process := range st {
+		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(process))
 	}
 	return ws, nil
 }
@@ -92,15 +96,21 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	log.Println("WorkerRunning", render.Render(cmd))
 
 	h.timeLastRpc = time.Now()
-	process := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
-	return domain.DomainRunStatusToThrift(&process), nil
+	process, err := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
+	if err != nil {
+		return nil, err
+	}
+	return domain.DomainRunStatusToThrift(process), nil
 }
 
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.timeLastRpc = time.Now()
-	process := h.run.Abort(runner.RunId(runId))
-	return domain.DomainRunStatusToThrift(&process), nil
+	process, err := h.run.Abort(runner.RunId(runId))
+	if err != nil {
+		return nil, err
+	}
+	return domain.DomainRunStatusToThrift(process), nil
 }
 
 func (h *handler) Erase(runId string) error {

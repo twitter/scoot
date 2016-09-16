@@ -8,23 +8,10 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/sched/queue"
-	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/worker"
-	"github.com/scootdev/scoot/sched/worker/fake"
-	"github.com/scootdev/scoot/sched/worker/rpc"
+	"github.com/scootdev/scoot/sched/worker/workers"
+	"github.com/scootdev/scoot/workerapi/client"
 )
-
-type QueueMemoryConfig struct {
-	Type     string
-	Capacity int
-}
-
-func (c *QueueMemoryConfig) Install(e *ice.MagicBag) {
-	e.Put(func() queue.Queue {
-		return queueimpl.NewSimpleQueue(c.Capacity)
-	})
-}
 
 type ClusterMemoryConfig struct {
 	Type  string
@@ -61,9 +48,12 @@ type WorkersThriftConfig struct {
 	Type string
 }
 
+const pollingPeriod = time.Duration(250) * time.Millisecond
+
 func MakeRpcWorkerFactory(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) worker.WorkerFactory {
 	return func(node cluster.Node) worker.Worker {
-		return rpc.NewThriftWorker(tf, pf, string(node.Id()))
+		c := client.NewClient(tf, pf, string(node.Id()))
+		return workers.NewPollingWorker(c, pollingPeriod)
 	}
 }
 
@@ -78,6 +68,6 @@ type WorkersLocalConfig struct {
 
 func (c *WorkersLocalConfig) Install(bag *ice.MagicBag) {
 	bag.Put(func() worker.WorkerFactory {
-		return fake.MakeWaitingNoopWorker
+		return workers.MakeInmemoryWorker
 	})
 }

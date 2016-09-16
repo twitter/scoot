@@ -37,7 +37,7 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	timeout := 10 * time.Second
+	timeout := 180 * time.Second
 	if (len(args)) > 1 {
 		var err error
 		timeout, err = time.ParseDuration(args[1])
