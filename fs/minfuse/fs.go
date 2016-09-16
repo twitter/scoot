@@ -10,19 +10,19 @@ import (
 	fs "github.com/scootdev/scoot/fs/min/interface"
 	"github.com/scootdev/scoot/fs/perf"
 	"github.com/scootdev/scoot/fuse"
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 const blockSize uint32 = 4096
 
 var Trace bool = false
 
-func NewSlimMinFs(snap snapshots.Snapshot) fs.FS {
+func NewSlimMinFs(snap snapshot.Snapshot) fs.FS {
 	return &slimMinFS{snap, os.Getuid(), os.Getgid(), blockSize}
 }
 
 type slimMinFS struct {
-	snap      snapshots.Snapshot
+	snap      snapshot.Snapshot
 	ownerUID  int
 	ownerGID  int
 	blockSize uint32
@@ -63,7 +63,7 @@ func (n *minNode) Lookup(name string) (fs.Node, error) {
 	p := perf.UnsafePathJoin(false, n.p, name)
 	fi, err := n.fs.snap.Lstat(p)
 	if err != nil {
-		if _, ok := err.(snapshots.PathError); ok {
+		if _, ok := err.(snapshot.PathError); ok {
 			return nil, fuse.ENOENT
 		}
 		return nil, wrapError(err)
@@ -124,7 +124,7 @@ func (h *minHandle) ReadDirAll() ([]fuse.Dirent, error) {
 	return r, nil
 }
 
-func makeAttr(fi snapshots.FileInfo, ownerUID int, ownerGID int, blockSize uint32) fuse.Attr {
+func makeAttr(fi snapshot.FileInfo, ownerUID int, ownerGID int, blockSize uint32) fuse.Attr {
 	var attr fuse.Attr
 	attr.Uid = uint32(ownerUID)
 	attr.Gid = uint32(ownerGID)
@@ -140,13 +140,13 @@ func makeAttr(fi snapshots.FileInfo, ownerUID int, ownerGID int, blockSize uint3
 
 	switch fi.Type() {
 	// No FT_File because that's 0.
-	case snapshots.FT_Directory:
+	case snapshot.FT_Directory:
 		attr.Mode |= os.ModeDir
-	case snapshots.FT_Symlink:
+	case snapshot.FT_Symlink:
 		attr.Mode |= os.ModeSymlink
 	}
 	// TODO(dbentley): we could set links accurately by
-	// extending snapshots.FileInfo to include NLink
+	// extending snapshot.FileInfo to include NLink
 	attr.Nlink = 1
 	return attr
 }

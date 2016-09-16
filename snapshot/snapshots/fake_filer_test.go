@@ -1,10 +1,10 @@
-package fake
+package snapshots
 
 import (
 	"sync"
 	"testing"
 
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type wgIniter struct {
@@ -21,7 +21,7 @@ func TestIniting(t *testing.T) {
 	i.wg.Add(1)
 
 	c := MakeInitingCheckouter("/fake/path", i)
-	resultCh := make(chan snapshots.Checkout)
+	resultCh := make(chan snapshot.Checkout)
 	go func() {
 		result, _ := c.Checkout("foo")
 		resultCh <- result
