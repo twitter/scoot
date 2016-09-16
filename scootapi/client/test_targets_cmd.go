@@ -5,7 +5,6 @@ import (
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"log"
-	"strconv"
 )
 
 func makeTestTargetsCmd(c *Client) *cobra.Command {
@@ -28,15 +27,15 @@ func (c *Client) testTargets(cmd *cobra.Command, args []string) error {
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
 	// create a task for each target to test
-	for i, t := range getTargets() {
+	for _, t := range getTargets() {
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = []string{"./pants", "test", t}
 		jobDef.Tasks["task-"+t] = task
 	}
-	log.Println("jobDef:" jobDef)
-	id, err = client.RunJob(jobDef)
-	log.Println("JobID:", id)	
+	log.Println("jobDef:", jobDef)
+	id, err := client.RunJob(jobDef)
+	log.Println("JobID:", id)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
