@@ -35,7 +35,7 @@ func (c *Client) testTargets(cmd *cobra.Command, snapshotID string) error {
 	for i, t := range getTargets() {
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
-		task.Command.Argv = []string{"./pants", "test ", t + ":"}
+		task.Command.Argv = []string{"./pants", "test", t + ":"}
 		task.SnapshotId = &snapshotID
 		jobDef.Tasks["task"+strconv.Itoa(i)] = task
 	}
