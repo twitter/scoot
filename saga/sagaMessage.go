@@ -39,11 +39,11 @@ func (s SagaMessageType) String() string {
  * Factory Methods are supplied for creation of Saga Messages
  * and should be used instead of directly creatinga  sagaMessage struct
  */
-type sagaMessage struct {
-	sagaId  string
-	msgType SagaMessageType
-	data    []byte
-	taskId  string
+type SagaMessage struct {
+	SagaId  string
+	MsgType SagaMessageType
+	Data    []byte
+	TaskId  string
 }
 
 /*
@@ -51,11 +51,11 @@ type sagaMessage struct {
  *  - sagaId - id of the Saga
  *  - data - data needed to execute the saga
  */
-func MakeStartSagaMessage(sagaId string, job []byte) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: StartSaga,
-		data:    job,
+func MakeStartSagaMessage(sagaId string, job []byte) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: StartSaga,
+		Data:    job,
 	}
 }
 
@@ -63,10 +63,10 @@ func MakeStartSagaMessage(sagaId string, job []byte) sagaMessage {
  * EndSaga SagaMessageType
  *  - sagaId - id of the Saga
  */
-func MakeEndSagaMessage(sagaId string) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: EndSaga,
+func MakeEndSagaMessage(sagaId string) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: EndSaga,
 	}
 }
 
@@ -74,10 +74,10 @@ func MakeEndSagaMessage(sagaId string) sagaMessage {
  * AbortSaga SagaMessageType
  *  - sagaId - id of the Saga
  */
-func MakeAbortSagaMessage(sagaId string) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: AbortSaga,
+func MakeAbortSagaMessage(sagaId string) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: AbortSaga,
 	}
 }
 
@@ -88,12 +88,12 @@ func MakeAbortSagaMessage(sagaId string) sagaMessage {
  *  - data   - data that is persisted to the log, useful for
  *             diagnostic information
  */
-func MakeStartTaskMessage(sagaId string, taskId string, data []byte) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: StartTask,
-		taskId:  taskId,
-		data:    data,
+func MakeStartTaskMessage(sagaId string, taskId string, data []byte) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: StartTask,
+		TaskId:  taskId,
+		Data:    data,
 	}
 }
 
@@ -103,12 +103,12 @@ func MakeStartTaskMessage(sagaId string, taskId string, data []byte) sagaMessage
  *  - taskId - id of the completed Task
  *  - data - any results from task completion
  */
-func MakeEndTaskMessage(sagaId string, taskId string, results []byte) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: EndTask,
-		taskId:  taskId,
-		data:    results,
+func MakeEndTaskMessage(sagaId string, taskId string, results []byte) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: EndTask,
+		TaskId:  taskId,
+		Data:    results,
 	}
 }
 
@@ -120,12 +120,12 @@ func MakeEndTaskMessage(sagaId string, taskId string, results []byte) sagaMessag
  *  - data   - data that is persisted to the log, useful for
  *             diagnostic information
  */
-func MakeStartCompTaskMessage(sagaId string, taskId string, data []byte) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: StartCompTask,
-		taskId:  taskId,
-		data:    data,
+func MakeStartCompTaskMessage(sagaId string, taskId string, data []byte) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: StartCompTask,
+		TaskId:  taskId,
+		Data:    data,
 	}
 }
 
@@ -136,11 +136,11 @@ func MakeStartCompTaskMessage(sagaId string, taskId string, data []byte) sagaMes
  *             be the same as the original taskId
  *  - data - any results from compensating task completion
  */
-func MakeEndCompTaskMessage(sagaId string, taskId string, results []byte) sagaMessage {
-	return sagaMessage{
-		sagaId:  sagaId,
-		msgType: EndCompTask,
-		taskId:  taskId,
-		data:    results,
+func MakeEndCompTaskMessage(sagaId string, taskId string, results []byte) SagaMessage {
+	return SagaMessage{
+		SagaId:  sagaId,
+		MsgType: EndCompTask,
+		TaskId:  taskId,
+		Data:    results,
 	}
 }

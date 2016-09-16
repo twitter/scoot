@@ -1,32 +1,32 @@
-package fake_test
+package snapshots_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/scootdev/scoot/snapshots"
-	"github.com/scootdev/scoot/snapshots/fake"
+	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 const (
-	dir  = snapshots.FT_Directory
-	file = snapshots.FT_File
+	dir  = snapshot.FT_Directory
+	file = snapshot.FT_File
 )
 
 func TestFakes(t *testing.T) {
-	snap := fake.NewSnapshot(
-		fake.NewDir(
-			map[string]fake.FakeFile{
-				"foo.txt": fake.NewContents("foo text", false),
-				"foo.py":  fake.NewContents("foo code", true),
+	snap := snapshots.NewSnapshot(
+		snapshots.NewDir(
+			map[string]snapshots.FakeFile{
+				"foo.txt": snapshots.NewContents("foo text", false),
+				"foo.py":  snapshots.NewContents("foo code", true),
 			},
 		),
 		"")
 
 	assertDirents(
-		[]snapshots.Dirent{
-			{"foo.py", snapshots.FT_File},
-			{"foo.txt", snapshots.FT_File},
+		[]snapshot.Dirent{
+			{"foo.py", snapshot.FT_File},
+			{"foo.txt", snapshot.FT_File},
 		},
 		nil, snap, "", t)
 	assertStat(nil, dir, true, -1, snap, "", t)
@@ -38,7 +38,7 @@ func TestFakes(t *testing.T) {
 	assertReadAt([]byte("oo cod"), nil, f, 1, 6, t)
 }
 
-func assertOpen(expectedErr error, snap snapshots.Snapshot, path string, t *testing.T) snapshots.File {
+func assertOpen(expectedErr error, snap snapshot.Snapshot, path string, t *testing.T) snapshot.File {
 	f, err := snap.Open(path)
 	if err != expectedErr {
 		t.Fatalf("Unexpected err opening %v: %v (expected %v)", path, err, expectedErr)
@@ -46,7 +46,7 @@ func assertOpen(expectedErr error, snap snapshots.Snapshot, path string, t *test
 	return f
 }
 
-func assertReadAll(expected []byte, expectedErr error, f snapshots.File, t *testing.T) {
+func assertReadAll(expected []byte, expectedErr error, f snapshot.File, t *testing.T) {
 	data, err := f.ReadAll()
 	if err != expectedErr {
 		t.Fatalf("Unexpected err reading all: %v (expected %v)", err, expectedErr)
@@ -59,7 +59,7 @@ func assertReadAll(expected []byte, expectedErr error, f snapshots.File, t *test
 	}
 }
 
-func assertReadAt(expected []byte, expectedErr error, f snapshots.File, offset int64, l int, t *testing.T) {
+func assertReadAt(expected []byte, expectedErr error, f snapshot.File, offset int64, l int, t *testing.T) {
 	bs := make([]byte, l)
 	n, err := f.ReadAt(bs, offset)
 	if err != expectedErr {
@@ -73,7 +73,7 @@ func assertReadAt(expected []byte, expectedErr error, f snapshots.File, offset i
 		t.Fatalf("Unexpected data: %v (expected %v)", bs, expected)
 	}
 }
-func assertStat(expectedErr error, expectedType snapshots.FileType, exec bool, size int64, snap snapshots.Snapshot, path string, t *testing.T) {
+func assertStat(expectedErr error, expectedType snapshot.FileType, exec bool, size int64, snap snapshot.Snapshot, path string, t *testing.T) {
 	fi, err := snap.Stat(path)
 	if err != expectedErr {
 		t.Fatalf("Unexpected error stat'ing %v: %v (expected %v)", path, err, expectedErr)
@@ -97,7 +97,7 @@ func assertStat(expectedErr error, expectedType snapshots.FileType, exec bool, s
 	}
 }
 
-func assertDirents(expected []snapshots.Dirent, expectedErr error, snap snapshots.Snapshot, path string, t *testing.T) {
+func assertDirents(expected []snapshot.Dirent, expectedErr error, snap snapshot.Snapshot, path string, t *testing.T) {
 	actual, err := snap.Readdirents(path)
 	if err != expectedErr {
 		t.Fatalf("Unexpected error reading dirents for %v: %v (expected %v)", path, err, expectedErr)

@@ -18,6 +18,7 @@ import (
 
 	// For putting into jsonconfig.Options
 	"github.com/scootdev/scoot/config/scootconfig"
+	"github.com/scootdev/scoot/saga/sagalogs"
 )
 
 var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
@@ -50,7 +51,7 @@ func main() {
 		},
 		makeServers,
 		saga.MakeSagaCoordinator,
-		saga.MakeInMemorySagaLog,
+		sagalogs.MakeInMemorySagaLog,
 		scheduler.NewStatefulSchedulerFromCluster,
 		thrift.NewTTransportFactory,
 		func() thrift.TProtocolFactory {

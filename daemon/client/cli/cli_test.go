@@ -12,7 +12,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshots/fake"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 type errorDialer struct{}
@@ -56,7 +56,7 @@ func (d *connDialer) Close() error {
 
 func newFakeConn() conn.Conn {
 	ex := execers.NewSimExecer(nil)
-	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	return &fakeConn{r, nil}
 }
 

@@ -1,17 +1,17 @@
-package fake
+package snapshots
 
 import (
 	"path/filepath"
 	"sort"
 
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type FakeFile interface {
 	IsExec() bool
 	Size() int64
 
-	Type() snapshots.FileType
+	Type() snapshot.FileType
 	IsDir() bool
 }
 
@@ -32,8 +32,8 @@ func (f *FakeDir) Size() int64 {
 	return int64(len(f.Children))
 }
 
-func (f *FakeDir) Type() snapshots.FileType {
-	return snapshots.FT_Directory
+func (f *FakeDir) Type() snapshot.FileType {
+	return snapshot.FT_Directory
 }
 
 func (f *FakeDir) IsDir() bool {
@@ -57,8 +57,8 @@ func (f *FakeContents) Size() int64 {
 	return int64(len(f.Contents))
 }
 
-func (f *FakeContents) Type() snapshots.FileType {
-	return snapshots.FT_File
+func (f *FakeContents) Type() snapshot.FileType {
+	return snapshot.FT_File
 }
 
 func (f *FakeContents) IsDir() bool {
@@ -150,15 +150,15 @@ func (e *pathError) Error() string {
 	return ""
 }
 
-func (s *FakeSnapshot) Lstat(name string) (snapshots.FileInfo, error) {
+func (s *FakeSnapshot) Lstat(name string) (snapshot.FileInfo, error) {
 	return findFile(s.Root, name)
 }
 
-func (s *FakeSnapshot) Stat(name string) (snapshots.FileInfo, error) {
+func (s *FakeSnapshot) Stat(name string) (snapshot.FileInfo, error) {
 	return findFile(s.Root, name)
 }
 
-func (s *FakeSnapshot) Readdirents(name string) ([]snapshots.Dirent, error) {
+func (s *FakeSnapshot) Readdirents(name string) ([]snapshot.Dirent, error) {
 	f, err := s.findFile(name)
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func (s *FakeSnapshot) Readdirents(name string) ([]snapshots.Dirent, error) {
 	case *FakeContents:
 		return nil, &pathError{}
 	case *FakeDir:
-		r := make([]snapshots.Dirent, len(f.Children))
+		r := make([]snapshot.Dirent, len(f.Children))
 		keys := make([]string, len(f.Children))
 		i := 0
 		for k, _ := range f.Children {
@@ -185,14 +185,14 @@ func (s *FakeSnapshot) Readdirents(name string) ([]snapshots.Dirent, error) {
 
 }
 
-func toDirent(f FakeFile, name string) snapshots.Dirent {
-	result := snapshots.Dirent{}
+func toDirent(f FakeFile, name string) snapshot.Dirent {
+	result := snapshot.Dirent{}
 	result.Name = name
 	switch f.(type) {
 	case *FakeContents:
-		result.Type = snapshots.FT_File
+		result.Type = snapshot.FT_File
 	case *FakeDir:
-		result.Type = snapshots.FT_Directory
+		result.Type = snapshot.FT_Directory
 	}
 	return result
 }
@@ -202,7 +202,7 @@ func (s *FakeSnapshot) Readlink(name string) (string, error) {
 	return "", &pathError{}
 }
 
-func (s *FakeSnapshot) Open(path string) (snapshots.File, error) {
+func (s *FakeSnapshot) Open(path string) (snapshot.File, error) {
 	f, err := s.findFile(path)
 	if err != nil {
 		return nil, err
