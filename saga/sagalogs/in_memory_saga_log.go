@@ -1,8 +1,9 @@
-package saga
+package sagalogs
 
 import (
 	"errors"
 	"fmt"
+	"github.com/scootdev/scoot/saga"
 	"sync"
 )
 
@@ -11,34 +12,34 @@ import (
  * This is for local testing purposes.
  */
 type inMemorySagaLog struct {
-	sagas map[string][]sagaMessage
+	sagas map[string][]saga.SagaMessage
 	mutex sync.RWMutex
 }
 
 /*
  * Returns an Instance of a Saga based on an InMemorySagaLog
  */
-func MakeInMemorySagaCoordinator() SagaCoordinator {
-	return MakeSagaCoordinator(MakeInMemorySagaLog())
+func MakeInMemorySagaCoordinator() saga.SagaCoordinator {
+	return saga.MakeSagaCoordinator(MakeInMemorySagaLog())
 }
 
-func MakeInMemorySagaLog() SagaLog {
+func MakeInMemorySagaLog() saga.SagaLog {
 	return &inMemorySagaLog{
-		sagas: make(map[string][]sagaMessage),
+		sagas: make(map[string][]saga.SagaMessage),
 		mutex: sync.RWMutex{},
 	}
 }
 
-func (log *inMemorySagaLog) LogMessage(msg sagaMessage) error {
+func (log *inMemorySagaLog) LogMessage(msg saga.SagaMessage) error {
 
 	log.mutex.Lock()
 	defer log.mutex.Unlock()
 
-	sagaId := msg.sagaId
+	sagaId := msg.SagaId
 
 	msgs, ok := log.sagas[sagaId]
 	if !ok {
-		return errors.New(fmt.Sprintf("Saga: %s is not Started yet.", msg.sagaId))
+		return errors.New(fmt.Sprintf("Saga: %s is not Started yet.", msg.SagaId))
 	}
 
 	log.sagas[sagaId] = append(msgs, msg)
@@ -50,13 +51,13 @@ func (log *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 	log.mutex.Lock()
 	defer log.mutex.Unlock()
 
-	startMsg := MakeStartSagaMessage(sagaId, job)
-	log.sagas[sagaId] = []sagaMessage{startMsg}
+	startMsg := saga.MakeStartSagaMessage(sagaId, job)
+	log.sagas[sagaId] = []saga.SagaMessage{startMsg}
 
 	return nil
 }
 
-func (log *inMemorySagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
+func (log *inMemorySagaLog) GetMessages(sagaId string) ([]saga.SagaMessage, error) {
 
 	log.mutex.RLock()
 	defer log.mutex.RUnlock()
