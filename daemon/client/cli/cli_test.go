@@ -9,7 +9,10 @@ import (
 	"github.com/scootdev/scoot/daemon/client/conn"
 	"github.com/scootdev/scoot/daemon/integration"
 	"github.com/scootdev/scoot/runner"
-	fakerunner "github.com/scootdev/scoot/runner/fake"
+	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
+	"github.com/scootdev/scoot/snapshots/fake"
 )
 
 type errorDialer struct{}
@@ -52,7 +55,9 @@ func (d *connDialer) Close() error {
 }
 
 func newFakeConn() conn.Conn {
-	return &fakeConn{fakerunner.NewRunner(), nil}
+	ex := execers.NewSimExecer(nil)
+	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	return &fakeConn{r, nil}
 }
 
 type fakeConn struct {
@@ -67,36 +72,36 @@ func (c *fakeConn) Echo(arg string) (string, error) {
 	return arg, nil
 }
 
-func (c *fakeConn) Run(cmd *runner.Command) runner.ProcessStatus {
+func (c *fakeConn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	if c.err != nil {
-		return runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
+		return runner.ProcessStatus{}, c.err
 	}
 	return c.runner.Run(cmd)
 }
 
-func (c *fakeConn) Status(run runner.RunId) runner.ProcessStatus {
+func (c *fakeConn) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	if c.err != nil {
-		return runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
+		return runner.ProcessStatus{}, c.err
 	}
 	return c.runner.Status(run)
 }
 
-func (c *fakeConn) StatusAll() []runner.ProcessStatus {
+func (c *fakeConn) StatusAll() ([]runner.ProcessStatus, error) {
 	if c.err != nil {
-		process := runner.ProcessStatus{State: runner.FAILED, Error: c.err.Error()}
-		return []runner.ProcessStatus{process}
+		return nil, c.err
 	}
 	return c.runner.StatusAll()
 }
 
-func (c *fakeConn) Abort(run runner.RunId) runner.ProcessStatus {
+func (c *fakeConn) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	if c.err != nil {
-		return runner.ProcessStatus{State: runner.FAILED, Error: "Can't abort ended run."}
+		return runner.ProcessStatus{}, c.err
 	}
 	return c.runner.Abort(run)
 }
 
-func (c *fakeConn) Erase(run runner.RunId) {
+func (c *fakeConn) Erase(run runner.RunId) error {
+	return nil
 }
 
 func (c *fakeConn) Close() error {

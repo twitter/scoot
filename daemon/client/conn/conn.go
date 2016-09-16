@@ -102,7 +102,7 @@ func (c *conn) Echo(arg string) (string, error) {
 	return r.Pong, nil
 }
 
-func (c *conn) Run(cmd *runner.Command) runner.ProcessStatus {
+func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	req := &protocol.Command{}
 	req.Argv = cmd.Argv
 	req.Env = cmd.EnvVars
@@ -110,28 +110,28 @@ func (c *conn) Run(cmd *runner.Command) runner.ProcessStatus {
 
 	r, err := c.client.Run(context.Background(), req)
 	if err != nil {
-		return runner.ProcessStatus{State: runner.FAILED, Error: err.Error()}
+		return runner.ProcessStatus{}, err
 	}
-	return protocol.ToRunnerStatus(r)
+	return protocol.ToRunnerStatus(r), nil
 }
 
-func (c *conn) Status(run runner.RunId) runner.ProcessStatus {
+func (c *conn) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
 	if err != nil {
-		return runner.ProcessStatus{State: runner.FAILED, Error: err.Error()}
+		return runner.ProcessStatus{}, err
 	}
-	return protocol.ToRunnerStatus(r)
+	return protocol.ToRunnerStatus(r), nil
 }
 
-func (c *conn) StatusAll() []runner.ProcessStatus {
+func (c *conn) StatusAll() ([]runner.ProcessStatus, error) {
 	panic("StatusAll not implemented in daemon code.")
 }
 
-func (c *conn) Abort(run runner.RunId) runner.ProcessStatus {
+func (c *conn) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	panic("Abort not implemented in daemon code.")
 }
 
-func (c *conn) Erase(run runner.RunId) {
+func (c *conn) Erase(run runner.RunId) error {
 	panic("Erase not implemented in daemon code.")
 }
 

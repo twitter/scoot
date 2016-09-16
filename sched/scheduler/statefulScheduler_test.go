@@ -8,7 +8,7 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
-	"github.com/scootdev/scoot/sched/worker/fake"
+	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"testing"
 )
@@ -29,7 +29,9 @@ func getDefaultSchedDeps() *schedulerDeps {
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
 		sc:        saga.MakeInMemorySagaCoordinator(),
-		wf:        fake.MakeNoopWorker,
+		wf: func(cluster.Node) worker.Worker {
+			return workers.MakeSimWorker()
+		},
 	}
 }
 

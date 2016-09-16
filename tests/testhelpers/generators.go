@@ -2,9 +2,11 @@ package testhelpers
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"math/rand"
 	"time"
+
+	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
 // generates a new random number seeded with
@@ -37,7 +39,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{"sleep 500", "complete 0"}
+	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 500", "complete 0"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd

@@ -8,7 +8,8 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/runner/execer/fake"
+	"github.com/scootdev/scoot/runner/execer/execers"
+	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
 	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
 	"github.com/scootdev/scoot/workerapi/server"
@@ -31,9 +32,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Error creating OutputCreatorr: ", err)
 	}
-	run := localrunner.NewSimpleRunner(fake.NewSimExecer(nil), fakesnaps.MakeInvalidCheckouter(), outputCreator)
-	version := func() string { return "" }
-	handler := server.NewHandler(stats, run, version)
+
+	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
+	run := localrunner.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
+	handler := server.NewHandler(stats, run)
 	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)

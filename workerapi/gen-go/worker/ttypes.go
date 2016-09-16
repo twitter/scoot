@@ -412,10 +412,8 @@ func (p *RunStatus) String() string {
 
 // Attributes:
 //  - Runs
-//  - VersionId
 type WorkerStatus struct {
-	Runs      []*RunStatus `thrift:"runs,1,required" json:"runs"`
-	VersionId *string      `thrift:"versionId,2" json:"versionId,omitempty"`
+	Runs []*RunStatus `thrift:"runs,1,required" json:"runs"`
 }
 
 func NewWorkerStatus() *WorkerStatus {
@@ -425,19 +423,6 @@ func NewWorkerStatus() *WorkerStatus {
 func (p *WorkerStatus) GetRuns() []*RunStatus {
 	return p.Runs
 }
-
-var WorkerStatus_VersionId_DEFAULT string
-
-func (p *WorkerStatus) GetVersionId() string {
-	if !p.IsSetVersionId() {
-		return WorkerStatus_VersionId_DEFAULT
-	}
-	return *p.VersionId
-}
-func (p *WorkerStatus) IsSetVersionId() bool {
-	return p.VersionId != nil
-}
-
 func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -459,10 +444,6 @@ func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 				return err
 			}
 			issetRuns = true
-		case 2:
-			if err := p.readField2(iprot); err != nil {
-				return err
-			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -501,23 +482,11 @@ func (p *WorkerStatus) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *WorkerStatus) readField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
-	} else {
-		p.VersionId = &v
-	}
-	return nil
-}
-
 func (p *WorkerStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("WorkerStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -546,21 +515,6 @@ func (p *WorkerStatus) writeField1(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:runs: ", p), err)
-	}
-	return err
-}
-
-func (p *WorkerStatus) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetVersionId() {
-		if err := oprot.WriteFieldBegin("versionId", thrift.STRING, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:versionId: ", p), err)
-		}
-		if err := oprot.WriteString(string(*p.VersionId)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.versionId (2) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:versionId: ", p), err)
-		}
 	}
 	return err
 }

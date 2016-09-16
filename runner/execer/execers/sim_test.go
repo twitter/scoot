@@ -1,4 +1,4 @@
-package fake_test
+package execers
 
 import (
 	"bytes"
@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/fake"
 )
 
 func TestSimExec(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	ex := fake.NewSimExecer(&wg)
+	ex := NewSimExecer(&wg)
 	assertRun(ex, t, complete(0), "complete 0")
 	assertRun(ex, t, complete(1), "complete 1")
 	assertRun(ex, t, complete(0), "sleep 1", "complete 0")
+	assertRun(ex, t, complete(0), "#this is a comment", "complete 0")
 	argv := []string{"pause", "complete 0"}
 	p := assertStart(ex, t, argv...)
 	wg.Done()
@@ -31,7 +31,7 @@ func TestOutput(t *testing.T) {
 		Stderr: &stderr,
 	}
 
-	ex := fake.NewSimExecer(nil)
+	ex := NewSimExecer(nil)
 	p, err := ex.Exec(cmd)
 	if err != nil {
 		t.Fatal("Error running cmd", err)
