@@ -61,7 +61,7 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
-	chaos.Err = fmt.Errorf("could not run")
+	chaos.SetError(fmt.Errorf("could not run"))
 	// Now make the runner error
 	st, err := w.RunAndWait(task("complete 43"))
 
@@ -94,7 +94,7 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 	}
 
 	// Now make the runner error
-	chaos.Err = fmt.Errorf("connection error")
+	chaos.SetError(fmt.Errorf("connection error"))
 
 	st, err := <-stCh, <-errCh
 

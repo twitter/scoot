@@ -16,7 +16,7 @@ func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	ex := execers.NewDoneExecer()
 	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
-	chaos.MaxDelay = time.Duration(500) * time.Millisecond
+	chaos.SetDelay(time.Duration(500) * time.Millisecond)
 	return NewPollingWorker(chaos, time.Duration(250)*time.Millisecond)
 }
 
