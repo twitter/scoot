@@ -1,12 +1,12 @@
-package fake
+package snapshots
 
 import (
 	"sync"
 
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
-func MakeInvalidCheckouter() snapshots.Checkouter {
+func MakeInvalidCheckouter() snapshot.Checkouter {
 	return &noopCheckouter{path: "/path/is/invalid"}
 }
 
@@ -14,7 +14,7 @@ type noopCheckouter struct {
 	path string
 }
 
-func (c *noopCheckouter) Checkout(id string) (snapshots.Checkout, error) {
+func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	return &staticCheckout{
 		path: c.path,
 		id:   id,
@@ -43,7 +43,7 @@ type Initer interface {
 	Init() error
 }
 
-func MakeInitingCheckouter(path string, initer Initer) snapshots.Checkouter {
+func MakeInitingCheckouter(path string, initer Initer) snapshot.Checkouter {
 	r := &initingCheckouter{path: path}
 	// Start the Initer as soon as we know we'll need to
 	r.wg.Add(1)
@@ -60,7 +60,7 @@ type initingCheckouter struct {
 	path string
 }
 
-func (c *initingCheckouter) Checkout(id string) (snapshots.Checkout, error) {
+func (c *initingCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	c.wg.Wait()
 	return &staticCheckout{
 		path: c.path,

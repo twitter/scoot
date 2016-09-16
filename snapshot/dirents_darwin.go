@@ -1,9 +1,8 @@
-package snapshots
+package snapshot
 
 import (
-	"unsafe"
-
 	"golang.org/x/sys/unix"
+	"unsafe"
 )
 
 // Adapted from golang's syscall/syscall_darwin.go:ParseDirent to include more info
@@ -12,12 +11,16 @@ import (
 func parseDirent(buf []byte, dirents []Dirent) []Dirent {
 	for len(buf) > 0 {
 		dirent := (*unix.Dirent)(unsafe.Pointer(&buf[0]))
+		if dirent.Reclen == 0 {
+			buf = nil
+			break
+		}
 		buf = buf[dirent.Reclen:]
 		if dirent.Ino == 0 { // File absent in directory.
 			continue
 		}
 		bytes := (*[10000]byte)(unsafe.Pointer(&dirent.Name[0]))
-		var name = string(bytes[0:clen(bytes[:])])
+		var name = string(bytes[0:dirent.Namlen])
 		if name == "." || name == ".." { // Useless names
 			continue
 		}
@@ -36,13 +39,4 @@ func parseDirent(buf []byte, dirents []Dirent) []Dirent {
 		dirents = append(dirents, out)
 	}
 	return dirents
-}
-
-func clen(n []byte) int {
-	for i := 0; i < len(n); i++ {
-		if n[i] == 0 {
-			return i
-		}
-	}
-	return len(n)
 }
