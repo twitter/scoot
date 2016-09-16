@@ -13,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/queue"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/server"
 
@@ -29,13 +28,12 @@ var cfgText = flag.String("sched_config", "", "Scheduler Configuration.")
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
-	sched  scheduler.Scheduler
-	queue  queue.Queue
-	stat   stats.StatsReceiver
 }
 
-func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer, sched scheduler.Scheduler, queue queue.Queue, stat stats.StatsReceiver) servers {
-	return servers{thrift, http, sched, queue, stat}
+func makeServers(
+	thrift thrift.TServer,
+	http *endpoints.TwitterServer) servers {
+	return servers{thrift, http}
 }
 
 func main() {
@@ -70,13 +68,6 @@ func main() {
 				Count: 10,
 			},
 		},
-		"Queue": {
-			"memory": &scootconfig.QueueMemoryConfig{},
-			"": &scootconfig.QueueMemoryConfig{
-				Type:     "memory",
-				Capacity: 1000,
-			},
-		},
 		"Workers": {
 			"local": &scootconfig.WorkersLocalConfig{},
 			"rpc":   &scootconfig.WorkersThriftConfig{},
@@ -98,20 +89,12 @@ func main() {
 		log.Fatal("Error injecting servers", err)
 	}
 
-	go func() {
-		scheduler.GenerateWork(servers.sched, servers.queue.Chan(), servers.stat)
-	}()
-
-	// TODO(dbentley): if one fails and the other doesn't, we should do
-	// something smarter...
-
 	errCh := make(chan error)
 	go func() {
 		errCh <- servers.http.Serve()
 	}()
 	go func() {
 		errCh <- servers.thrift.Serve()
-
 	}()
 	log.Fatal("Error serving: ", <-errCh)
 }
