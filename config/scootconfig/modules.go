@@ -8,23 +8,10 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/sched/queue"
-	queueimpl "github.com/scootdev/scoot/sched/queue/memory"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
-
-type QueueMemoryConfig struct {
-	Type     string
-	Capacity int
-}
-
-func (c *QueueMemoryConfig) Install(e *ice.MagicBag) {
-	e.Put(func() queue.Queue {
-		return queueimpl.NewSimpleQueue(c.Capacity)
-	})
-}
 
 type ClusterMemoryConfig struct {
 	Type  string

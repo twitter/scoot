@@ -2,6 +2,9 @@
 # Add new direct and transitive dependencies as submodules.
 # Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'
 #
+echo "Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'"
+echo "DO NOT install dependencies with go get before running this script, this script  will fail to find dependencies previously addedd via go get"
+
 set -euo pipefail
 trap "exit" INT TERM
 trap 'rm -rf ${GOPATH}' EXIT
