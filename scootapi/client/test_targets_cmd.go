@@ -30,7 +30,6 @@ func (c *Client) testTargets(cmd *cobra.Command, snapshotID string) error {
 	}
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
-	// task.Command.Argv = []string{"./pants test util/util-function/src/main/java:"}
 	for _, t := range getTargets() {
 		task.Command.Argv = append(task.Command.Argv, "./pants test "+t+":")
 	}
