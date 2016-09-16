@@ -31,11 +31,12 @@ func (c *Client) testTargets(cmd *cobra.Command, args []string) error {
 	for i, t := range getTargets() {
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
-		task.Command.Argv = []string{"./pants", "test", t + ":"}
-		jobDef.Tasks["task"+strconv.Itoa(i)] = task
+		task.Command.Argv = []string{"./pants", "test", t}
+		jobDef.Tasks["task-"+t] = task
 	}
-	log.Println("Testing targets")
-	_, err = client.RunJob(jobDef)
+	log.Println("jobDef:" jobDef)
+	id, err = client.RunJob(jobDef)
+	log.Println("JobID:", id)	
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
