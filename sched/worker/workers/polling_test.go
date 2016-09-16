@@ -11,12 +11,12 @@ import (
 	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/snapshots/fake"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 func TestPollingWorker_Simple(t *testing.T) {
 	ex := execers.NewSimExecer(nil)
-	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 42 {
@@ -29,7 +29,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ex := execers.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
 	go func() {
@@ -57,7 +57,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	ex := execers.NewSimExecer(nil)
-	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
@@ -74,7 +74,7 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	ex := execers.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fake.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
