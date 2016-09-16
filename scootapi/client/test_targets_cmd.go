@@ -39,7 +39,7 @@ func (c *Client) testTargets(cmd *cobra.Command, snapshotID string) error {
 		task.SnapshotId = &snapshotID
 		jobDef.Tasks["task"+strconv.Itoa(i)] = task
 	}
-	log.Println("Testing targets", task.Command.Argv)
+	log.Println("Testing targets")
 	_, err = client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
