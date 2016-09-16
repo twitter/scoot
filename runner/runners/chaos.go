@@ -8,8 +8,8 @@ import (
 )
 
 // Creates a new Chaos Runner
-func NewChaosRunner(delegate runner.Runner, delay time.Duration) *ChaosRunner {
-	return &ChaosRunner{delegate, delay, nil}
+func NewChaosRunner(delegate runner.Runner) *ChaosRunner {
+	return &ChaosRunner{delegate, time.Duration(0), nil}
 }
 
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,
