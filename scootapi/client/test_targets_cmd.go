@@ -30,10 +30,10 @@ func (c *Client) testTargets(cmd *cobra.Command, args []string, snapshotID strin
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
-	for i, t := range getTargets() {
-		task.Command.Argv = append(task.Command.Argv, "./pants test "+t+":")
-		log.Println(i)
-	}
+	task.Command.Argv = append(task.Command.Argv, "./pants test "+getTargets()+":")
+	// for _, t := range getTargets() {
+	// 	task.Command.Argv = append(task.Command.Argv, "./pants test "+t+":")
+	// }
 	log.Println("Testing targets", task.Command.Argv)
 	task.SnapshotId = &snapshotID
 	jobDef := scoot.NewJobDefinition()
