@@ -16,22 +16,20 @@ func makeTestTargetsCmd(c *Client) *cobra.Command {
 	}
 	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
 	r.Flags().StringVar(&snapshotID, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
-	r.RunE = func(cmd *cobra.Command, args []string) error {
-		log.Println(args)
+	r.RunE = func(cmd *cobra.Command) error {
 		return c.testTargets(cmd, snapshotID)
 	}
 	return r
 }
 
 func (c *Client) testTargets(cmd *cobra.Command, snapshotID string) error {
-
 	client, err := c.Dial()
 	if err != nil {
 		return err
 	}
-
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
+	// create a task for each target to test
 	for i, t := range getTargets() {
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
