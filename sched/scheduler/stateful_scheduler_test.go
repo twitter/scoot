@@ -105,7 +105,6 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(job.Id, taskId, nil))
 	endMessageMatcher := TaskMessageMatcher{JobId: job.Id, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
-	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage(job.Id, taskId, nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(job.Id))
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 
