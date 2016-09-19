@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -22,27 +21,13 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition) (*scoot.Job
 		return nil, err
 	}
 
-	job := sched.Job{
-		Id:  generateJobId(),
-		Def: jobDef,
-	}
-
-	err = scheduler.ScheduleJob(job)
+	id, err := scheduler.ScheduleJob(jobDef)
 
 	if err != nil {
 		return nil, scoot.NewCanNotScheduleNow()
 	}
 
-	return &scoot.JobId{ID: job.Id}, nil
-}
-
-func generateJobId() string {
-	id, err := uuid.NewV4()
-	for err != nil {
-		id, err = uuid.NewV4()
-	}
-
-	return id.String()
+	return &scoot.JobId{ID: id}, nil
 }
 
 // Translates thrift job definition message to scoot domain object

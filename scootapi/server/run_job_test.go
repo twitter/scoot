@@ -42,7 +42,7 @@ func Test_RunJob_WithNoTasks(t *testing.T) {
 	}
 
 	if jobId != nil {
-		t.Errorf("expected jobId to be nil when error occurs")
+		t.Errorf("expected job Id to be nil when error occurs not %v", jobId)
 	}
 }
 
@@ -61,7 +61,7 @@ func Test_RunJob_InvalidTaskId(t *testing.T) {
 	}
 
 	if jobId != nil {
-		t.Errorf("expected jobId to be nil when error occurs")
+		t.Errorf("expected job Id to be nil when error occurs not %v", jobId)
 	}
 }
 
@@ -81,7 +81,7 @@ func Test_RunJob_NoCommand(t *testing.T) {
 	}
 
 	if jobId != nil {
-		t.Error("expected jobId to be nil when error occurs")
+		t.Errorf("expected job Id to be nil when error occurs not %v", jobId)
 	}
 }
 
@@ -89,12 +89,16 @@ func Test_RunJob_ValidJob(t *testing.T) {
 	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand())
 
 	scheduler := CreateSchedulerMock(t)
-	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return(nil)
+	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("testJobId", nil)
 
-	_, err := runJob(scheduler, jobDef)
+	jobId, err := runJob(scheduler, jobDef)
 
 	if err != nil {
 		t.Errorf("expected job to be successfully scheduled.  Instead error returned: %v", err)
+	}
+
+	if jobId.ID != "testJobId" {
+		t.Errorf("expected jobId to be testJobId not %v", jobId.ID)
 	}
 }
 
@@ -102,11 +106,15 @@ func Test_RunJob_SchedulerError(t *testing.T) {
 	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand())
 
 	scheduler := CreateSchedulerMock(t)
-	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return(errors.New("test error"))
+	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("", errors.New("test error"))
 
-	_, err := runJob(scheduler, jobDef)
+	jobId, err := runJob(scheduler, jobDef)
 
 	if err == nil {
 		t.Error("expected error when scheduler returns an error")
+	}
+
+	if jobId != nil {
+		t.Errorf("expected job Id to be nil when error occurs not %v", jobId)
 	}
 }
