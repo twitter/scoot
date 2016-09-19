@@ -127,12 +127,15 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 
 // generates a jobId using a random uuid
 func generateJobId() string {
-	id, err := uuid.NewV4()
-	for err != nil {
-		id, err = uuid.NewV4()
-	}
 
-	return id.String()
+	// uuid.NewV4() should never actually return an error the code uses
+	// rand.Read Api to generate the uuid, which according to golang docs
+	// "Read always returns ... a nil error" https://golang.org/pkg/math/rand/#Read
+	for {
+		if id, err := uuid.NewV4(); err == nil {
+			return id.String()
+		}
+	}
 }
 
 // run the scheduler loop indefinitely
