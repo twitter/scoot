@@ -132,7 +132,7 @@ func genTaskCompletedData(state *SagaState, taskId string, genParams *gopter.Gen
 		return err
 	}
 
-	state.AddTaskData(taskId, EndTask, messageAsBytes)
+	state.addTaskData(taskId, EndTask, messageAsBytes)
 
 	return nil
 }
