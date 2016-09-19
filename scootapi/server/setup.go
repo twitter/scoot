@@ -36,7 +36,7 @@ func makeServers(
 }
 
 // Creates an MagicBag and a JsconSchema for this server and returns them
-func SetupServer() (*ice.MagicBag, jsonconfig.Schema) {
+func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*addr) },

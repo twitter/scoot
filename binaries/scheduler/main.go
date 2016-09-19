@@ -11,6 +11,6 @@ func main() {
 			"Count": 10
 		}
 	}`
-	bag, schema := server.SetupServer()
+	bag, schema := server.Defaults()
 	server.RunServer(bag, schema, []byte(config))
 }
