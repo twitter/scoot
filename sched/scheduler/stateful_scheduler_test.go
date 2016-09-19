@@ -161,9 +161,6 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
-	//sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
-	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage(jobId, taskId, nil))
-	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
