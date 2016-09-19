@@ -5,6 +5,7 @@ package worker
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	runner "github.com/scootdev/scoot/runner"
 	sched "github.com/scootdev/scoot/sched"
 )
 
@@ -29,10 +30,11 @@ func (_m *MockWorker) EXPECT() *_MockWorkerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockWorker) RunAndWait(task sched.TaskDefinition) error {
+func (_m *MockWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
 	ret := _m.ctrl.Call(_m, "RunAndWait", task)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(runner.ProcessStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 func (_mr *_MockWorkerRecorder) RunAndWait(arg0 interface{}) *gomock.Call {

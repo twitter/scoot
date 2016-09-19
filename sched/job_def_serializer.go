@@ -1,4 +1,3 @@
-
 package sched
 
 import (
@@ -13,14 +12,12 @@ type Serializer interface {
 	Serialize(sourceStruct thrift.TStruct) (b []byte, err error)
 }
 
-type jsonSerializer struct {}
-type binarySerializer struct {}
-
+type jsonSerializer struct{}
+type binarySerializer struct{}
 
 // clients will provide either the json or binary serializer to the SerializeJob/DeserializeJob operations
 var JsonSerializer Serializer = jsonSerializer{}
 var BinarySerializer Serializer = binarySerializer{}
-
 
 // Deserialize a byte slice into a Job object.
 func DeserializeJob(serializedVal []byte, deserializer Serializer) (*Job, error) {
@@ -119,7 +116,6 @@ func (s jsonSerializer) Serialize(sourceStruct thrift.TStruct) (b []byte, err er
 	return serializedValue, err
 }
 
-
 // Binary behavior
 func (s binarySerializer) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	d := thrift.NewTDeserializer()
@@ -132,5 +128,3 @@ func (s binarySerializer) Serialize(sourceStruct thrift.TStruct) (b []byte, err 
 	serializedValue, err := d.Write(sourceStruct)
 	return serializedValue, err
 }
-
-

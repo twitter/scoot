@@ -148,6 +148,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
+
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -157,8 +158,12 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 
 	// add additional saga data
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage(jobId, taskId, nil))
+	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
+	//sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
+	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage(jobId, taskId, nil))
+	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
