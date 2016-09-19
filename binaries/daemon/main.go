@@ -9,7 +9,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/local"
-	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
 	s, err := server.NewServer(r)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

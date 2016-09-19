@@ -10,7 +10,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/local"
-	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 
 	"sync"
 	"testing"
@@ -169,6 +169,6 @@ func newRunner() (runner.Runner, *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter(), outputCreator)
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
 	return r, wg
 }

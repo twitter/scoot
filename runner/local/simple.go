@@ -7,10 +7,10 @@ import (
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
+func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
 		exec:          exec,
 		checkouter:    checkouter,
@@ -22,7 +22,7 @@ func NewSimpleRunner(exec execer.Execer, checkouter snapshots.Checkouter, output
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
 	exec          execer.Execer
-	checkouter    snapshots.Checkouter
+	checkouter    snapshot.Checkouter
 	outputCreator runner.OutputCreator
 	runs          map[runner.RunId]runner.ProcessStatus
 	running       *run
@@ -125,7 +125,7 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) (runner.ProcessSta
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed
 func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
-	checkout, err, checkoutDone := (snapshots.Checkout)(nil), (error)(nil), make(chan struct{}, 1)
+	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{}, 1)
 	go func() {
 		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
 		close(checkoutDone)

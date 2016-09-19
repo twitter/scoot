@@ -13,18 +13,18 @@ import (
 	"os"
 	"path"
 
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type checkoutContext struct {
 	srcRoot string
 	dstRoot string
-	snap    snapshots.Snapshot
+	snap    snapshot.Snapshot
 }
 
 func copyFiles(ctx *checkoutContext, relPath string) {
 	var isDir bool
-	if useSnapshots {
+	if useSnapshot {
 		fi, err := ctx.snap.Stat(relPath)
 		if err != nil {
 			log.Print("Couldn't Stat", err, relPath)
@@ -47,14 +47,14 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		var r io.Reader
 
 		// TODO(dbentley): copy contents
-		if useSnapshots {
+		if useSnapshot {
 			f, err := ctx.snap.Open(relPath)
 			if err != nil {
 				log.Print("Couldn't open", err, relPath)
 				return
 			}
 			defer f.Close()
-			r = snapshots.MakeCursor(f)
+			r = snapshot.MakeCursor(f)
 		} else {
 			f, err := os.Open(path.Join(ctx.srcRoot, relPath))
 			if err != nil {
@@ -76,7 +76,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	}
 	os.MkdirAll(dstPath, 0777)
 	var children []string
-	if useSnapshots {
+	if useSnapshot {
 		childDirents, err := ctx.snap.Readdirents(relPath)
 		if err != nil {
 			log.Print("Couldn't ReadDir", err, relPath)
@@ -106,12 +106,12 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 
 var srcRoot string
 var dstRoot string
-var useSnapshots bool
+var useSnapshot bool
 
 func init() {
 	flag.StringVar(&srcRoot, "src", "", "root of source directory")
 	flag.StringVar(&dstRoot, "dst", "", "root of destination directory")
-	flag.BoolVar(&useSnapshots, "use_snapshots", false, "whether to use snapshots interface")
+	flag.BoolVar(&useSnapshot, "use_snapshot", false, "whether to use snapshot interface")
 }
 
 func main() {
@@ -119,7 +119,7 @@ func main() {
 	if srcRoot == "" || dstRoot == "" {
 		log.Fatal("-src and -dst must both be set")
 	}
-	snaps := snapshots.NewFileBackedSnapshots(srcRoot)
+	snaps := snapshot.NewFileBackedSnapshots(srcRoot)
 	snap, err := snaps.Get("foo")
 	if err != nil {
 		log.Fatal("Invalid ID \"foo\":", err)

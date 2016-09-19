@@ -1,4 +1,4 @@
-package snapshots
+package snapshot
 
 type pathError struct {
 	underlying error

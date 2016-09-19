@@ -29,7 +29,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		return nil, errors.New("No command specified.")
 	}
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
-	cmd.Stdout, cmd.Stderr = command.Stdout, command.Stderr
+	cmd.Stdout, cmd.Stderr, cmd.Dir = command.Stdout, command.Stderr, command.Dir
 	// Make sure to get the best possible Writer, so if possible os/exec can connect
 	// the command's stdout/stderr directly to a file, instead of having to go through
 	// our delegation

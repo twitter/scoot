@@ -1,7 +1,7 @@
 package main
 
 // A simple utility to count files in a Snapshot.
-// It can use either Scoot Snapshots or Go's OS library as a backend.
+// It can use either Scoot Snapshot or Go's OS library as a backend.
 // This lets us make sure Scoot's overhead is comparable to raw OS access.
 
 import (
@@ -11,17 +11,17 @@ import (
 	"os"
 	"path"
 
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type countContext struct {
 	root string
-	snap snapshots.Snapshot
+	snap snapshot.Snapshot
 }
 
 func countFiles(ctx *countContext, count *int, relPath string) {
 	var isDir bool
-	if useSnapshots {
+	if useSnapshot {
 		fi, err := ctx.snap.Stat(relPath)
 		if err != nil {
 			log.Print("Couldn't Stat", err, relPath)
@@ -41,7 +41,7 @@ func countFiles(ctx *countContext, count *int, relPath string) {
 		return
 	}
 	var children []string
-	if useSnapshots {
+	if useSnapshot {
 		childDirents, err := ctx.snap.Readdirents(relPath)
 		if err != nil {
 			log.Print("Couldn't ReadDir", err, relPath)
@@ -70,11 +70,11 @@ func countFiles(ctx *countContext, count *int, relPath string) {
 }
 
 var root string
-var useSnapshots bool
+var useSnapshot bool
 
 func init() {
 	flag.StringVar(&root, "root", "", "root of filesystem to count")
-	flag.BoolVar(&useSnapshots, "use_snapshots", false, "whether to use snapshots interface")
+	flag.BoolVar(&useSnapshot, "use_snapshot", false, "whether to use snapshot interface")
 }
 
 func main() {
@@ -82,7 +82,7 @@ func main() {
 	if root == "" {
 		log.Fatal("-root not set")
 	}
-	snaps := snapshots.NewFileBackedSnapshots(root)
+	snaps := snapshot.NewFileBackedSnapshots(root)
 	snap, err := snaps.Get("foo")
 	if err != nil {
 		log.Fatal("Invalid ID \"foo\":", err)

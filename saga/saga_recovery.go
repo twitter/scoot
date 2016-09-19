@@ -38,11 +38,11 @@ func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
 
 	// Reconstruct Saga State from Logged Messages
 	startMsg := msgs[0]
-	if startMsg.msgType != StartSaga {
+	if startMsg.MsgType != StartSaga {
 		return nil, fmt.Errorf("InvalidMessages: first message must be StartSaga")
 	}
 
-	state, err := makeSagaState(sagaId, startMsg.data)
+	state, err := makeSagaState(sagaId, startMsg.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
 	for _, msg := range msgs {
 		// skip applying StartSaga message we already did this
 		// duplicate messages are just ignored since msgs are idempotent
-		if msg.msgType == StartSaga {
+		if msg.MsgType == StartSaga {
 			continue
 		}
 
