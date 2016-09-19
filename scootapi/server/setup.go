@@ -78,7 +78,7 @@ func SetupServer() (*ice.MagicBag, jsonconfig.Schema) {
 // Starts the Server based on the MagicBag and config schema provided
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
-	log.Println("Starting Cloud Scoot API Server & Scheduler")
+	log.Println("Starting Cloud Scoot API Server & Scheduler on", *addr)
 
 	// Parse Config
 	mod, err := schema.Parse(config)

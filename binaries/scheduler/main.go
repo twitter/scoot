@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/scootdev/scoot/scootapi/server"
 )
 
