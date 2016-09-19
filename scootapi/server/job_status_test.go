@@ -5,8 +5,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"strings"
 	"testing"
 )
 
@@ -156,6 +158,11 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 						return false
 					}
 
+					runResultAsBytes := state.GetEndTaskData(id)
+					if !validateRunResult(runResultAsBytes, id) {
+						return false
+					}
+
 				case scoot.Status_IN_PROGRESS:
 					if state.IsSagaAborted() {
 						fmt.Println("Task Status is InProgress but Saga is Aborted, Expected RollingBack", id)
@@ -200,4 +207,36 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 	))
 
 	properties.TestingRun(t)
+}
+
+func validateRunResult(resultsAsByte []byte, taskId string) bool {
+	runResults := scoot.RunStatus{}
+	thrifthelpers.JsonDeserialize(&runResults, resultsAsByte)
+
+	if runResults.RunId != taskId {
+		fmt.Printf(fmt.Sprintf("Run ids didn't match. got: %s,  expected: %s\n", taskId, runResults.RunId))
+		return false
+	}
+	if runResults.Status < scoot.RunStatusState_COMPLETE {
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid run status: %v\n", taskId, runResults.Status))
+		return false
+	}
+	if int(*runResults.ExitCode) != 0 && int(*runResults.ExitCode) != -1 {
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid exit code: %d\n", taskId, runResults.ExitCode))
+		return false
+	}
+	if !strings.Contains(*runResults.Error, "error ") {
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid error string: %s\n", taskId, runResults.Error))
+		return false
+	}
+	if !strings.Contains(*runResults.OutUri, "out URI ") {
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid out URI: %s\n", taskId, runResults.OutUri))
+		return false
+	}
+	if !strings.Contains(*runResults.ErrUri, "error URI ") {
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid err URI: %s\n", taskId, runResults.ErrUri))
+		return false
+	}
+
+	return true
 }

@@ -222,7 +222,7 @@ func (state *SagaState) IsSagaCompleted() bool {
  * This Data is stored in the SagaState and persisted to durable saga log, so it
  * can be recovered.  It is opaque to sagas but useful to persist for applications.
  */
-func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data []byte) {
+func (state *SagaState) AddTaskData(taskId string, msgType SagaMessageType, data []byte) {
 
 	tData, ok := state.taskData[taskId]
 	if !ok {
@@ -311,7 +311,7 @@ func updateSagaState(s *SagaState, msg SagaMessage) (*SagaState, error) {
 		}
 
 		if msg.Data != nil {
-			state.addTaskData(msg.TaskId, msg.MsgType, msg.Data)
+			state.AddTaskData(msg.TaskId, msg.MsgType, msg.Data)
 		}
 
 		state.taskState[msg.TaskId] = TaskStarted
@@ -338,7 +338,7 @@ func updateSagaState(s *SagaState, msg SagaMessage) (*SagaState, error) {
 		state.taskState[msg.TaskId] = state.taskState[msg.TaskId] | TaskCompleted
 
 		if msg.Data != nil {
-			state.addTaskData(msg.TaskId, msg.MsgType, msg.Data)
+			state.AddTaskData(msg.TaskId, msg.MsgType, msg.Data)
 		}
 
 	case StartCompTask:
@@ -368,7 +368,7 @@ func updateSagaState(s *SagaState, msg SagaMessage) (*SagaState, error) {
 		state.taskState[msg.TaskId] = state.taskState[msg.TaskId] | CompTaskStarted
 
 		if msg.Data != nil {
-			state.addTaskData(msg.TaskId, msg.MsgType, msg.Data)
+			state.AddTaskData(msg.TaskId, msg.MsgType, msg.Data)
 		}
 
 	case EndCompTask:
@@ -397,7 +397,7 @@ func updateSagaState(s *SagaState, msg SagaMessage) (*SagaState, error) {
 		}
 
 		if msg.Data != nil {
-			state.addTaskData(msg.TaskId, msg.MsgType, msg.Data)
+			state.AddTaskData(msg.TaskId, msg.MsgType, msg.Data)
 		}
 
 		state.taskState[msg.TaskId] = state.taskState[msg.TaskId] | CompTaskCompleted

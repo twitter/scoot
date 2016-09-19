@@ -1,8 +1,11 @@
 package server
 
 import (
+	"fmt"
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
 func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {
@@ -45,6 +48,7 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.ID = sagaState.SagaId()
 	js.Status = scoot.Status_NOT_STARTED
 	js.TaskStatus = make(map[string]scoot.Status)
+	js.TaskData = make(map[string]*scoot.RunStatus)
 
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {
@@ -60,6 +64,7 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 		} else {
 			if sagaState.IsTaskCompleted(id) {
 				taskStatus = scoot.Status_COMPLETED
+				setTaskData(js, id, sagaState.GetEndTaskData(id))
 			} else if sagaState.IsTaskStarted(id) {
 				taskStatus = scoot.Status_IN_PROGRESS
 			}
@@ -86,4 +91,25 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	}
 
 	return js
+}
+
+func setTaskData(js *scoot.JobStatus, id string, resultsFromSaga []byte) error {
+	workerRunStatus := worker.RunStatus{}
+	thrifthelpers.JsonDeserialize(&workerRunStatus, resultsFromSaga)
+
+	scootRunStatus := scoot.RunStatus{}
+	var err error
+	scootRunStatus.Status, err = scoot.RunStatusStateFromString(workerRunStatus.Status.String())
+	if err != nil {
+		return err
+	}
+
+	scootRunStatus.RunId = fmt.Sprintf("%s", workerRunStatus.RunId)
+	scootRunStatus.OutUri = workerRunStatus.OutUri
+	scootRunStatus.ErrUri = workerRunStatus.ErrUri
+	scootRunStatus.ExitCode = workerRunStatus.ExitCode
+	scootRunStatus.Error = workerRunStatus.Error
+
+	js.TaskData[id] = &scootRunStatus
+	return nil
 }
