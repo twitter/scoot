@@ -7,5 +7,5 @@ import (
 )
 
 type Scheduler interface {
-	ScheduleJob(job sched.Job) error
+	ScheduleJob(jobDef sched.JobDefinition) (string, error)
 }

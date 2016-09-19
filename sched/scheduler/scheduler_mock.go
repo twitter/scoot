@@ -29,10 +29,11 @@ func (_m *MockScheduler) EXPECT() *_MockSchedulerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockScheduler) ScheduleJob(job sched.Job) error {
-	ret := _m.ctrl.Call(_m, "ScheduleJob", job)
-	ret0, _ := ret[0].(error)
-	return ret0
+func (_m *MockScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
+	ret := _m.ctrl.Call(_m, "ScheduleJob", jobDef)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 func (_mr *_MockSchedulerRecorder) ScheduleJob(arg0 interface{}) *gomock.Call {

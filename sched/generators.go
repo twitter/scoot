@@ -10,6 +10,17 @@ import (
 )
 
 func GenJob(id string, numTasks int) Job {
+	jobDef := GenJobDef(numTasks)
+
+	job := Job{
+		Id:  id,
+		Def: jobDef,
+	}
+
+	return job
+}
+
+func GenJobDef(numTasks int) JobDefinition {
 	jobDef := JobDefinition{
 		JobType: "testJob",
 		Tasks:   make(map[string]TaskDefinition),
@@ -22,12 +33,7 @@ func GenJob(id string, numTasks int) Job {
 		jobDef.Tasks[taskId] = task
 	}
 
-	job := Job{
-		Id:  id,
-		Def: jobDef,
-	}
-
-	return job
+	return jobDef
 }
 
 func GenTask() TaskDefinition {
