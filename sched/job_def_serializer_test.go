@@ -7,10 +7,10 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/tests/testhelpers"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
-	"reflect"
 )
 
 func Test_FixedJob(t *testing.T) {
@@ -71,21 +71,20 @@ func Print(job *Job) {
 
 func Test_SerializationErrors(t *testing.T) {
 
-	if _, err := SerializeJob(&Job{}, FakeSerializer); err == nil || !strings.Contains(err.Error(), "error writing\n" ) {
+	if _, err := SerializeJob(&Job{}, FakeSerializer); err == nil || !strings.Contains(err.Error(), "error writing\n") {
 		t.Errorf("error: didn't get error serializing")
 	}
 
 	var bytes = []byte("unparsable byte string")
 	var err error
 	if _, err = DeserializeJob(bytes, JsonSerializer); err == nil {
-		t.Errorf("error: didn't get error from json deserializing");
+		t.Errorf("error: didn't get error from json deserializing")
 	}
 
 	if _, err = DeserializeJob(bytes, BinarySerializer); err == nil {
-		t.Errorf("error: didn't get error from binary deserializing");
+		t.Errorf("error: didn't get error from binary deserializing")
 	}
 }
-
 
 func Test_RandomSerializerDeserializer(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
@@ -105,7 +104,6 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	properties.TestingRun(t)
 
 }
-
 
 func ValidateSerialization(origJob *Job, serializer Serializer, t *testing.T) {
 
@@ -128,11 +126,10 @@ func ValidateSerialization(origJob *Job, serializer Serializer, t *testing.T) {
 			fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
 			fmt.Printf("deserialized to:\n")
 			Print(newJob)
-			t.Errorf("fail: task definitions are not equal:\n",)
+			t.Errorf("fail: task definitions are not equal:\n")
 		}
 	}
 }
-
 
 func GopterGenJob() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
@@ -189,10 +186,7 @@ func genJobFromParams(genParams *gopter.GenParameters) *Job {
 	return &job
 }
 
-
-
-type fakeSerializerForErrors struct {}
-
+type fakeSerializerForErrors struct{}
 
 func (s fakeSerializerForErrors) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	return nil, errors.New("error writing\n")
@@ -201,6 +195,5 @@ func (s fakeSerializerForErrors) Serialize(sourceStruct thrift.TStruct) (b []byt
 func (s fakeSerializerForErrors) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	return errors.New("this method should not be used\n")
 }
-
 
 var FakeSerializer Serializer = fakeSerializerForErrors{}
