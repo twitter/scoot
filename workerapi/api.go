@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -129,4 +130,18 @@ func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
 	return thrift
+}
+
+
+func SerializeProcessStatus(processStatus runner.ProcessStatus) ([]byte, error) {
+
+	runStatus := DomainRunStatusToThrift(processStatus)
+
+	asBytes, err := thrifthelpers.JsonSerialize(runStatus)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return asBytes, err
 }
