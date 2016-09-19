@@ -13,25 +13,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func makeSmokeTestCmd(c *Client) *cobra.Command {
+type smokeTestCmd struct{}
+
+func (c *smokeTestCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "run_smoke_test",
 		Short: "Smoke Test",
-		RunE:  c.runSmokeTest,
 	}
-
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
 	return r
 }
 
-func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
+func (c *smokeTestCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
 
-	numTasks := 100
+	numJobs := 100
 
 	if (len(args)) > 0 {
 		var err error
-		numTasks, err = strconv.Atoi(args[0])
+		numJobs, err = strconv.Atoi(args[0])
 		if err != nil {
 			return err
 		}
@@ -45,20 +44,30 @@ func (c *Client) runSmokeTest(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+	runner := &smokeTestRunner{cl: cl}
+	return runner.run(numJobs, timeout)
+}
+
+type smokeTestRunner struct {
+	cl *Client
+}
+
+func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 	jobs := make(map[string]*scoot.JobStatus)
-	for i := 0; i < numTasks; i++ {
-		id, err := c.generateAndStartJob()
+
+	for i := 0; i < numJobs; i++ {
+		id, err := r.generateAndStartJob()
 		if err != nil {
 			return err
 		}
 		jobs[id] = nil
 	}
 
-	return c.waitForJobs(jobs, timeout)
+	return r.waitForJobs(jobs, timeout)
 }
 
-func (c *Client) generateAndStartJob() (string, error) {
-	client, err := c.Dial()
+func (r *smokeTestRunner) generateAndStartJob() (string, error) {
+	client, err := r.cl.Dial()
 	if err != nil {
 		return "", err
 	}
@@ -70,7 +79,7 @@ func (c *Client) generateAndStartJob() (string, error) {
 	return jobId.ID, err
 }
 
-func (c *Client) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
+func (r *smokeTestRunner) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
 	end := time.Now().Add(timeout)
 	for {
 		printJobs(jobs)
@@ -79,7 +88,7 @@ func (c *Client) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Dura
 		}
 		done := true
 		for k, _ := range jobs {
-			d, err := c.updateJobStatus(k, jobs)
+			d, err := r.updateJobStatus(k, jobs)
 			if err != nil {
 				return err
 			}
@@ -115,8 +124,8 @@ func printJobs(jobs map[string]*scoot.JobStatus) {
 	log.Println("Done", byStatus[scoot.Status_COMPLETED])
 }
 
-func (c *Client) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
-	client, err := c.Dial()
+func (r *smokeTestRunner) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
+	client, err := r.cl.Dial()
 	if err != nil {
 		return true, err
 	}
