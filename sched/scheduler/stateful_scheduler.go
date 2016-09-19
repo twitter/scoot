@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
@@ -99,17 +100,21 @@ type jobAddedMsg struct {
 	saga *saga.Saga
 }
 
-func (s *statefulScheduler) ScheduleJob(job sched.Job) error {
-
+func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
 	defer s.stats.Latency("schedJobLatency_ms").Time().Stop()
 	s.stats.Counter("schedJobRequests").Inc(1)
+
+	job := sched.Job{
+		Id:  generateJobId(),
+		Def: jobDef,
+	}
 
 	// Log StartSaga Message
 	// TODO: need to serialize job into binary and pass in here
 	// so we can recover the job in case of failure
 	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	s.addJobCh <- jobAddedMsg{
@@ -117,7 +122,20 @@ func (s *statefulScheduler) ScheduleJob(job sched.Job) error {
 		saga: sagaObj,
 	}
 
-	return nil
+	return job.Id, nil
+}
+
+// generates a jobId using a random uuid
+func generateJobId() string {
+
+	// uuid.NewV4() should never actually return an error the code uses
+	// rand.Read Api to generate the uuid, which according to golang docs
+	// "Read always returns ... a nil error" https://golang.org/pkg/math/rand/#Read
+	for {
+		if id, err := uuid.NewV4(); err == nil {
+			return id.String()
+		}
+	}
 }
 
 // run the scheduler loop indefinitely
