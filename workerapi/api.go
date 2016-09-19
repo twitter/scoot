@@ -6,8 +6,8 @@ package workerapi
 import (
 	"time"
 
-	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -131,7 +131,6 @@ func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 	thrift.ExitCode = &exitCode
 	return thrift
 }
-
 
 func SerializeProcessStatus(processStatus runner.ProcessStatus) ([]byte, error) {
 

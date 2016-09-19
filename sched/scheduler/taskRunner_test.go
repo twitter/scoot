@@ -13,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/sched/worker/workers"
 )
 
-
 func Test_runTaskAndLog_Successful(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -23,7 +22,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-	endMessageMatcher := taskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", nil))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
@@ -62,7 +61,10 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", nil)).Return(errors.New("test error"))
+	//sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", nil)).Return(errors.New("test error"))
+	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(endMessageMatcher).Return(errors.New("test error"))
+
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
@@ -95,15 +97,13 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	}
 }
 
-
-
-type taskMessageMatcher struct {
+type TaskMessageMatcher struct {
 	JobId  string
 	TaskId string
 	Data   gomock.Matcher
 }
 
-func (c taskMessageMatcher) Matches(x interface{}) bool {
+func (c TaskMessageMatcher) Matches(x interface{}) bool {
 	fmt.Printf("******* in end message matcher\n")
 	sagaMessage, ok := x.(saga.SagaMessage)
 
@@ -122,14 +122,13 @@ func (c taskMessageMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	//if !c.Data.Matches(sagaMessage.Data) {
-	//	fmt.Printf("****** not any match\n")
-	//	return false
-	//}
+	if !c.Data.Matches(sagaMessage.Data) {
+		fmt.Printf("****** not any match\n")
+		return false
+	}
 
 	return true
 }
-func (c taskMessageMatcher) String() string {
+func (c TaskMessageMatcher) String() string {
 	return "matches to SagaMessage SagaId, TaskId and Data"
 }
-

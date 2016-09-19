@@ -5,7 +5,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/workerapi"
-	"fmt"
 )
 
 // Run the task on the specified worker, and update the SagaLog appropriately.  Returns an error if one
@@ -27,8 +26,6 @@ func runTaskAndLog(saga *saga.Saga, worker worker.Worker, taskId string, task sc
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf(fmt.Sprintf("%s\n",statusAsBytes))
 
 	// Log EndTask Message to SagaLog
 	return saga.EndTask(taskId, statusAsBytes)

@@ -43,4 +43,3 @@ const (
 	// have been applied.
 	RolledBack
 )
-

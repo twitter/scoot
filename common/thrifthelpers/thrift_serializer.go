@@ -2,13 +2,10 @@ package thrifthelpers
 
 import "github.com/apache/thrift/lib/go/thrift"
 
-
 type Serializer interface {
 	Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error)
 	Serialize(sourceStruct thrift.TStruct) (b []byte, err error)
 }
-
-
 
 // Json behavior
 func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
@@ -29,7 +26,6 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	return serializedValue, err
 }
 
-
 // Binary behavior
 func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	d := thrift.NewTDeserializer()
@@ -42,5 +38,3 @@ func BinarySerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	serializedValue, err := d.Write(sourceStruct)
 	return serializedValue, err
 }
-
-
