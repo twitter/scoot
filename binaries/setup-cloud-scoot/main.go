@@ -5,9 +5,7 @@ import (
 	"time"
 )
 
-// Runs an end to end integration test with work being scheduled
-// via the ScootApi placed on the WorkQueue, Dequeued by the Scheduler
-// and ran on local instances of Workers.
+// Sets up a local swarm, then waits.
 func main() {
 	s := swarmtest.SwarmTest{}
 
@@ -19,5 +17,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	s.Run = swarmtest.WaitDontRun
 	s.Main()
 }
