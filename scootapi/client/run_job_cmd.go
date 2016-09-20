@@ -7,31 +7,30 @@ import (
 	"log"
 )
 
-func makeRunJobCmd(c *Client) *cobra.Command {
-	var snapshotId string
+type runJobCmd struct {
+	snapshotId string
+}
+
+func (c *runJobCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "run_job",
 		Short: "run a job",
 	}
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
-	r.Flags().StringVar(&snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
-	r.RunE = func(cmd *cobra.Command, args []string) error {
-		return c.runJob(cmd, args, snapshotId)
-	}
+	r.Flags().StringVar(&c.snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
 	return r
 }
 
-func (c *Client) runJob(cmd *cobra.Command, args []string, snapshotId string) error {
+func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
-	client, err := c.Dial()
+	client, err := cl.Dial()
 	if err != nil {
 		return err
 	}
 	task := scoot.NewTaskDefinition()
 	task.Command = scoot.NewCommand()
 	task.Command.Argv = args
-	task.SnapshotId = &snapshotId
+	task.SnapshotId = &c.snapshotId
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
 		"task1": task,
