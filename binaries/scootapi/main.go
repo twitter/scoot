@@ -14,10 +14,8 @@ import (
 
 // Binary to talk to Cloud Scoot API
 func main() {
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	transportFactory := thrift.NewTTransportFactory()
-
-	client, err := client.NewClient(transportFactory, protocolFactory)
+	dialer := client.NewDialer(thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
+	client, err := client.NewClient(dialer)
 	if err != nil {
 		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)
 	}
