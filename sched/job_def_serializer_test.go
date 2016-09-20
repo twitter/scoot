@@ -1,12 +1,11 @@
 package sched
 
 import (
-	"errors"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"reflect"
@@ -28,6 +27,16 @@ func Test_SerializeNilJob(t *testing.T) {
 	}
 	if asByteArray, err := thrifthelpers.BinarySerialize(nil); err != nil || asByteArray != nil {
 		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+	}
+
+	job := schedthrift.Job{}
+	var emptyBytes []byte
+	if err := thrifthelpers.BinaryDeserialize(&job, emptyBytes); err != nil {
+		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+	}
+
+	if err := thrifthelpers.JsonDeserialize(&job, emptyBytes); err != nil {
+		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
 	}
 }
 
@@ -144,21 +153,13 @@ func GopterGenJob() gopter.Gen {
 
 func genJobFromParams(genParams *gopter.GenParameters) *Job {
 
-	job := Job{}
-	job.Id = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-
-	jobDef := JobDefinition{}
-	jobDef.JobType = fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-
-	//number of tasks to run in this saga
+	//number of tasks to have in this saga
 	numTasks := int(genParams.NextUint64() % 10)
 	var taskDefMap = make(map[string]TaskDefinition)
 
 	for i := 0; i < numTasks; i++ {
-		taskDef := TaskDefinition{}
-		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
+		snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 		taskName := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 
 		numArgs := int(genParams.NextUint64() % 5)
 		var j int
@@ -166,36 +167,24 @@ func genJobFromParams(genParams *gopter.GenParameters) *Job {
 		for j = 0; j < numArgs; j++ {
 			args = append(args, fmt.Sprintf("arg%d:%s", j, testhelpers.GenRandomAlphaNumericString(genParams.Rng)))
 		}
-		taskDef.Argv = args
 
 		var envVarsMap map[string]string = make(map[string]string)
 		numEnvVars := int(genParams.NextUint64() % 5)
 		for j = 0; j < numEnvVars; j++ {
 			envVarsMap[fmt.Sprintf("env%d", j)] = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
 		}
-		taskDef.EnvVars = envVarsMap
 
-		timeoutVal := genParams.NextUint64() % 10000
-		timeout, _ := time.ParseDuration(fmt.Sprintf("+%ds", timeoutVal))
-		taskDef.Timeout = timeout
+		timeout := time.Duration(genParams.NextInt64() % 1000)
 
+		cmd := runner.Command{SnapshotId: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
+		taskDef := TaskDefinition{cmd}
 		taskDefMap[taskName] = taskDef
 
 	}
-	jobDef.Tasks = taskDefMap
-	job.Def = jobDef
+	jobType := fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
+	jobDef := JobDefinition{JobType: jobType, Tasks: taskDefMap}
+
+	job := Job{Id: testhelpers.GenRandomAlphaNumericString(genParams.Rng), Def: jobDef}
 
 	return &job
 }
-
-type fakeSerializerForErrors struct{}
-
-func (s fakeSerializerForErrors) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
-	return nil, errors.New("error writing\n")
-}
-
-func (s fakeSerializerForErrors) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
-	return errors.New("this method should not be used\n")
-}
-
-//var FakeSerializer Serializer = fakeSerializerForErrors{}

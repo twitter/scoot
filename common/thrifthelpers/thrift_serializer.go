@@ -4,6 +4,10 @@ import "github.com/apache/thrift/lib/go/thrift"
 
 // Json behavior
 func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	if len(sourceBytes) == 0 {
+		return nil
+	}
+
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
 
@@ -17,6 +21,7 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	if sourceStruct == nil {
 		return nil, nil
 	}
+
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
 
@@ -27,6 +32,9 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 
 // Binary behavior
 func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	if len(sourceBytes) == 0 {
+		return nil
+	}
 	d := thrift.NewTDeserializer()
 	err = d.Read(targetStruct, sourceBytes)
 	return err

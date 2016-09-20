@@ -55,25 +55,22 @@ func GenJobId() gopter.Gen {
 
 func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 
-	var domainJob = Job{}
-	domainJob.Id = thriftJob.ID
-	sagaLogJobDef := thriftJob.JobDefinition
-
-	var schedJobDef = JobDefinition{}
-	schedJobDef.JobType = sagaLogJobDef.JobType
-	schedJobDef.Tasks = make(map[string]TaskDefinition)
-	for taskName, sagaLogTaskDefTask := range sagaLogJobDef.Tasks {
-		var argvs []string
-		argvs = sagaLogTaskDefTask.Command.Argv
-		var envVars map[string]string
-		envVars = sagaLogTaskDefTask.Command.EnvVars
-		timeout := time.Duration(sagaLogTaskDefTask.Command.Timeout)
-		snapshotId := sagaLogTaskDefTask.Command.SnapshotId
-		command := runner.NewCommand(argvs, envVars, timeout, snapshotId)
-		schedJobDef.Tasks[taskName] = TaskDefinition{*command}
+	if thriftJob == nil {
+		return nil
 	}
-	domainJob.Def = schedJobDef
-	return &domainJob
+
+	thriftJobDef := thriftJob.JobDefinition
+
+	domainTasks := make(map[string]TaskDefinition)
+	for taskName, task := range thriftJobDef.Tasks {
+		cmd := task.Command
+		command := runner.NewCommand(cmd.Argv, cmd.EnvVars, time.Duration(cmd.Timeout), cmd.SnapshotId)
+		domainTasks[taskName] = TaskDefinition{*command}
+	}
+
+	domainJobDef := JobDefinition{JobType: thriftJobDef.JobType, Tasks: domainTasks}
+
+	return &Job{Id: thriftJob.ID, Def: domainJobDef}
 }
 
 func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
@@ -81,28 +78,15 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 		return nil, nil
 	}
 
-	// allocate a thrift Job for saga log
-	thriftJob := schedthrift.NewJob()
-
-	// copy the sched JobDefinition properties to the thrift jobDefinition structure
-	(*thriftJob).ID = (*domainJob).Id
-
-	internalJobDef := schedthrift.NewJobDefinition()
-
-	jobDef := domainJob.Def
-	internalJobDef.JobType = jobDef.JobType
-	internalJobDef.Tasks = make(map[string]*schedthrift.TaskDefinition)
-	for taskName, taskDef := range jobDef.Tasks {
-		internalTaskDef := schedthrift.NewTaskDefinition()
-		internalTaskDef.Command = schedthrift.NewCommand()
-		internalTaskDef.Command.Argv = taskDef.Argv
-		internalTaskDef.Command.EnvVars = taskDef.EnvVars
-		internalTaskDef.Command.SnapshotId = taskDef.SnapshotId
-		internalTaskDef.Command.Timeout = taskDef.Timeout.Nanoseconds()
-		internalJobDef.Tasks[taskName] = internalTaskDef
+	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
+	for taskName, domainTask := range domainJob.Def.Tasks {
+		cmd := schedthrift.Command{Argv: domainTask.Argv, EnvVars: domainTask.EnvVars, Timeout: int64(domainTask.Timeout), SnapshotId: domainTask.SnapshotId}
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
+		thriftTasks[taskName] = &thriftTask
 	}
-	thriftJob.JobDefinition = internalJobDef
+	thriftJobDefinition := schedthrift.JobDefinition{JobType: (*domainJob).Def.JobType, Tasks: thriftTasks}
+	thriftJob := schedthrift.Job{ID: domainJob.Id, JobDefinition: &thriftJobDefinition}
 
-	return thriftJob, nil
+	return &thriftJob, nil
 
 }

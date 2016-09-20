@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -64,7 +63,9 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 		} else {
 			if sagaState.IsTaskCompleted(id) {
 				taskStatus = scoot.Status_COMPLETED
-				setTaskData(js, id, sagaState.GetEndTaskData(id))
+				if thriftJobStatus, err := workerRunStatusToScootRunStatus(sagaState.GetEndTaskData(id)); err != nil {
+					js.TaskData[id] = thriftJobStatus
+				}
 			} else if sagaState.IsTaskStarted(id) {
 				taskStatus = scoot.Status_IN_PROGRESS
 			}
@@ -93,23 +94,23 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	return js
 }
 
-func setTaskData(js *scoot.JobStatus, id string, resultsFromSaga []byte) error {
+// this is a thrift to thrift structure translation.  We are doing this because we get invalid
+// import statements in the generated code when we use thrift import statements (this issue is supposed
+// to be fixed in thrift 10.0
+func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, error) {
+	if resultsFromSaga == nil {
+		return nil, nil
+	}
+
 	workerRunStatus := worker.RunStatus{}
 	thrifthelpers.JsonDeserialize(&workerRunStatus, resultsFromSaga)
 
-	scootRunStatus := scoot.RunStatus{}
-	var err error
-	scootRunStatus.Status, err = scoot.RunStatusStateFromString(workerRunStatus.Status.String())
+	status, err := scoot.RunStatusStateFromString(workerRunStatus.Status.String())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	scootRunStatus.RunId = fmt.Sprintf("%s", workerRunStatus.RunId)
-	scootRunStatus.OutUri = workerRunStatus.OutUri
-	scootRunStatus.ErrUri = workerRunStatus.ErrUri
-	scootRunStatus.ExitCode = workerRunStatus.ExitCode
-	scootRunStatus.Error = workerRunStatus.Error
+	scootRunStatus := scoot.RunStatus{RunId: workerRunStatus.RunId, Status: status, OutUri: workerRunStatus.OutUri, ErrUri: workerRunStatus.ErrUri, ExitCode: workerRunStatus.ExitCode, Error: workerRunStatus.Error}
 
-	js.TaskData[id] = &scootRunStatus
-	return nil
+	return &scootRunStatus, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 	"strings"
 	"testing"
 )
@@ -78,6 +79,76 @@ func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
 	if status.ID != "job1" && status.Status != scoot.Status_IN_PROGRESS {
 		t.Error("Unexpected JobStatus Returned")
 	}
+}
+
+func Test_RunStatusThriftConversion(t *testing.T) {
+	// test with non-empty structure
+	var outURI = "outURI"
+	var errURI = "errURI"
+	var errorMsg = "error"
+	var exitCode = int32(23)
+	var workerRunStatus = &worker.RunStatus{Status: worker.Status_ABORTED, RunId: "runId", OutUri: &outURI, ErrUri: &errURI, Error: &errorMsg, ExitCode: &exitCode}
+	var asBytes, _ = thrifthelpers.JsonSerialize(workerRunStatus)
+
+	var scootRunStatus *scoot.RunStatus
+	var err error
+	if scootRunStatus, err = workerRunStatusToScootRunStatus(asBytes); err != nil {
+		t.Errorf("converting non-nil filled worker.RunStatus to scoot.RunStatus returned an error:%s\n", err.Error())
+	} else if runStatusEqual(scootRunStatus, workerRunStatus) {
+		t.Errorf("converting non-nil filled worker.RunStatus to scoot.RunStatus did not match, expected %v go %v\n", workerRunStatus, scootRunStatus)
+	}
+
+	// test with empty structure
+	workerRunStatus = &worker.RunStatus{}
+	asBytes, _ = thrifthelpers.JsonSerialize(workerRunStatus)
+
+	if scootRunStatus, err = workerRunStatusToScootRunStatus(asBytes); err != nil {
+		t.Errorf("converting nil filled serialized worker.RunStatus to scoot.RunStatus returned an error:%s\n", err.Error())
+	} else if runStatusEqual(scootRunStatus, workerRunStatus) {
+		t.Errorf("converting nil filled worker.RunStatus to scoot.RunStatus did not match, expected %v go %v\n", workerRunStatus, scootRunStatus)
+	}
+
+	// test with nil structure
+	asBytes, _ = thrifthelpers.JsonSerialize(nil)
+
+	if scootRunStatus, err = workerRunStatusToScootRunStatus(asBytes); err != nil {
+		t.Errorf("converting nil filled serialized worker.RunStatus to scoot.RunStatus returned an error:%s\n", err.Error())
+	} else if scootRunStatus != nil {
+		t.Errorf("converting nil worker.RunStatus to scoot.RunStatus did not match, expected nil go %v\n", scootRunStatus)
+	}
+
+}
+
+func runStatusEqual(scootRunStatus *scoot.RunStatus, workerRunStatus *worker.RunStatus) bool {
+	return scootRunStatus.RunId != workerRunStatus.RunId ||
+		!strPtrCompare(scootRunStatus.Error, workerRunStatus.Error) ||
+		!strPtrCompare(scootRunStatus.ErrUri, workerRunStatus.ErrUri) ||
+		!int32PtrCompare(scootRunStatus.ExitCode, workerRunStatus.ExitCode) ||
+		!strPtrCompare(scootRunStatus.OutUri, workerRunStatus.OutUri) ||
+		scootRunStatus.Status.String() != workerRunStatus.Status.String()
+}
+
+// TODO should this be in a utility somewhere (does one already exist)?
+func strPtrCompare(s1 *string, s2 *string) bool {
+
+	if s1 == nil && s2 == nil {
+		return true
+	}
+	if s1 == nil || s2 == nil {
+		return false
+	}
+	return strings.Compare(*s1, *s2) == 0
+}
+
+// TODO should this be in a utility somewhere (does one already exist)?
+func int32PtrCompare(i1 *int32, i2 *int32) bool {
+	if i1 == nil && i2 == nil {
+		return true
+	}
+	if i1 == nil || i2 == nil {
+		return false
+	}
+	return *i1 == *i2
 }
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {
