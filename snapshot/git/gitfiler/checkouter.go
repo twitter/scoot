@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
-	"github.com/scootdev/scoot/snapshots"
 )
 
 // Utilities for Reference Repositories.
@@ -43,7 +43,7 @@ func NewRefRepoCloningCheckouter(getter RefRepoGetter, tmp *temp.TempDir) *RefRe
 
 // Checkout checks out id (a raw git sha) into a Checkout.
 // It does this by making a new clone (via reference) and checking out id.
-func (c *RefRepoCloningCheckouter) Checkout(id string) (snapshots.Checkout, error) {
+func (c *RefRepoCloningCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.repo == nil {
