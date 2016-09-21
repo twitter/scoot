@@ -29,7 +29,7 @@ func (r *Repository) Run(args ...string) (string, error) {
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
 	if err != nil {
-		log.Println("repo.Repository.Run error:", err.(*exec.ExitError).Stderr)
+		log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
 	}
 	return string(data), err
 }
