@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestsagaStateFactory(t *testing.T) {
+func TestSagaStateFactory(t *testing.T) {
 
 	sagaId := "testSaga"
 	job := []byte{0, 1, 2, 3, 4, 5}

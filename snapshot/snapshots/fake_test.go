@@ -25,8 +25,8 @@ func TestFakes(t *testing.T) {
 
 	assertDirents(
 		[]snapshot.Dirent{
-			{"foo.py", snapshot.FT_File},
-			{"foo.txt", snapshot.FT_File},
+			{Name: "foo.py", Type: snapshot.FT_File},
+			{Name: "foo.txt", Type: snapshot.FT_File},
 		},
 		nil, snap, "", t)
 	assertStat(nil, dir, true, -1, snap, "", t)
