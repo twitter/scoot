@@ -1,32 +1,42 @@
 package sched
 
 import (
-	"errors"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
 
 func Test_FixedJob(t *testing.T) {
 	// use this test to test a specific jobDefinition struct
-	origJob := makeFixedSampleJob()
+	schedJob := makeFixedSampleJob()
 
-	ValidateSerialization(origJob, BinarySerializer, t)
-	ValidateSerialization(origJob, JsonSerializer, t)
+	ValidateSerialization(schedJob, false, t)
+	ValidateSerialization(schedJob, true, t)
 }
 
 func Test_SerializeNilJob(t *testing.T) {
-	if asByteArray, err := SerializeJob(nil, JsonSerializer); err != nil || asByteArray != nil {
+	if asByteArray, err := thrifthelpers.JsonSerialize(nil); err != nil || asByteArray != nil {
 		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
-	if asByteArray, err := SerializeJob(nil, BinarySerializer); err != nil || asByteArray != nil {
+	if asByteArray, err := thrifthelpers.BinarySerialize(nil); err != nil || asByteArray != nil {
 		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+	}
+
+	job := schedthrift.Job{}
+	var emptyBytes []byte
+	if err := thrifthelpers.BinaryDeserialize(&job, emptyBytes); err != nil {
+		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+	}
+
+	if err := thrifthelpers.JsonDeserialize(&job, emptyBytes); err != nil {
+		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
 	}
 }
 
@@ -69,23 +79,6 @@ func Print(job *Job) {
 	fmt.Printf("\n")
 }
 
-func Test_SerializationErrors(t *testing.T) {
-
-	if _, err := SerializeJob(&Job{}, FakeSerializer); err == nil || !strings.Contains(err.Error(), "error writing\n") {
-		t.Errorf("error: didn't get error serializing")
-	}
-
-	var bytes = []byte("unparsable byte string")
-	var err error
-	if _, err = DeserializeJob(bytes, JsonSerializer); err == nil {
-		t.Errorf("error: didn't get error from json deserializing")
-	}
-
-	if _, err = DeserializeJob(bytes, BinarySerializer); err == nil {
-		t.Errorf("error: didn't get error from binary deserializing")
-	}
-}
-
 func Test_RandomSerializerDeserializer(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 1000
@@ -93,8 +86,8 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 
 	properties.Property("Serialize JobDef", prop.ForAll(
 		func(job *Job) bool {
-			ValidateSerialization(job, BinarySerializer, t)
-			ValidateSerialization(job, JsonSerializer, t)
+			ValidateSerialization(job, false, t)
+			ValidateSerialization(job, true, t)
 			return true
 		},
 
@@ -105,28 +98,46 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 
 }
 
-func ValidateSerialization(origJob *Job, serializer Serializer, t *testing.T) {
+func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
 
-	if asByteArray, err := SerializeJob(origJob, serializer); err != nil {
+	var asByteArray []byte
+	var err error
+	thriftJob, _ := makeThriftJobFromDomainJob(domainJob)
+	if useJson {
+		asByteArray, err = thrifthelpers.JsonSerialize(thriftJob)
+	} else {
+		asByteArray, err = thrifthelpers.BinarySerialize(thriftJob)
+	}
+	if err != nil {
 		t.Errorf("error: couldn't serialize the fixed job def. %s\n", err.Error())
 
 	} else {
 		// deserialize the byte array
-		if newJob, err := DeserializeJob(asByteArray, serializer); err != nil {
+		var newThriftJob = schedthrift.NewJob()
+		var newDomainJob *Job
+		if useJson {
+			err = thrifthelpers.JsonDeserialize(newThriftJob, asByteArray)
+		} else {
+			err = thrifthelpers.BinaryDeserialize(newThriftJob, asByteArray)
+		}
+		if err != nil {
 			fmt.Printf("serialize/deserialize test couldn't deserialize object:\n")
-			Print(origJob)
+			Print(domainJob)
 			fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
 			t.Errorf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 
 			// compare the orig and generated task definitions
-		} else if !reflect.DeepEqual(origJob, newJob) {
-			fmt.Printf("serialize/deserialize test didn't return equivalent value:\n")
-			fmt.Printf("original jobDef:\n")
-			Print(origJob)
-			fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-			fmt.Printf("deserialized to:\n")
-			Print(newJob)
-			t.Errorf("fail: task definitions are not equal:\n")
+		} else {
+			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
+			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
+				fmt.Printf("serialize/deserialize test didn't return equivalent value:\n")
+				fmt.Printf("original jobDef:\n")
+				Print(domainJob)
+				fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
+				fmt.Printf("deserialized to:\n")
+				Print(newDomainJob)
+				t.Errorf("fail: task definitions are not equal:\n")
+			}
 		}
 	}
 }
@@ -142,21 +153,13 @@ func GopterGenJob() gopter.Gen {
 
 func genJobFromParams(genParams *gopter.GenParameters) *Job {
 
-	job := Job{}
-	job.Id = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-
-	jobDef := JobDefinition{}
-	jobDef.JobType = fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-
-	//number of tasks to run in this saga
+	//number of tasks to have in this saga
 	numTasks := int(genParams.NextUint64() % 10)
 	var taskDefMap = make(map[string]TaskDefinition)
 
 	for i := 0; i < numTasks; i++ {
-		taskDef := TaskDefinition{}
-		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
+		snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 		taskName := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-		taskDef.SnapshotId = fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
 
 		numArgs := int(genParams.NextUint64() % 5)
 		var j int
@@ -164,36 +167,24 @@ func genJobFromParams(genParams *gopter.GenParameters) *Job {
 		for j = 0; j < numArgs; j++ {
 			args = append(args, fmt.Sprintf("arg%d:%s", j, testhelpers.GenRandomAlphaNumericString(genParams.Rng)))
 		}
-		taskDef.Argv = args
 
 		var envVarsMap map[string]string = make(map[string]string)
 		numEnvVars := int(genParams.NextUint64() % 5)
 		for j = 0; j < numEnvVars; j++ {
 			envVarsMap[fmt.Sprintf("env%d", j)] = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
 		}
-		taskDef.EnvVars = envVarsMap
 
-		timeoutVal := genParams.NextUint64() % 10000
-		timeout, _ := time.ParseDuration(fmt.Sprintf("+%ds", timeoutVal))
-		taskDef.Timeout = timeout
+		timeout := time.Duration(genParams.NextInt64() % 1000)
 
+		cmd := runner.Command{SnapshotId: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
+		taskDef := TaskDefinition{cmd}
 		taskDefMap[taskName] = taskDef
 
 	}
-	jobDef.Tasks = taskDefMap
-	job.Def = jobDef
+	jobType := fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
+	jobDef := JobDefinition{JobType: jobType, Tasks: taskDefMap}
+
+	job := Job{Id: testhelpers.GenRandomAlphaNumericString(genParams.Rng), Def: jobDef}
 
 	return &job
 }
-
-type fakeSerializerForErrors struct{}
-
-func (s fakeSerializerForErrors) Serialize(sourceStruct thrift.TStruct) (b []byte, err error) {
-	return nil, errors.New("error writing\n")
-}
-
-func (s fakeSerializerForErrors) Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
-	return errors.New("this method should not be used\n")
-}
-
-var FakeSerializer Serializer = fakeSerializerForErrors{}

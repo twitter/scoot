@@ -16,6 +16,28 @@ enum JobType {
   IRON_TESTS=2,
 }
 
+enum RunStatusState {
+  UNKNOWN = 0      # Reserved.
+  PENDING = 1      # Run scheduled but not yet started.
+  RUNNING = 2      # Run is happening.
+  COMPLETE = 3     # Succeeded or failed yielding an exit code. Only state with an exit code.
+  FAILED = 4       # Run mechanism failed and run is no longer active. Retry may or may not work.
+  ABORTED = 5      # User requested that the run be killed.
+  TIMEDOUT = 6     # Run timed out and was killed.
+  BADREQUEST = 7   # Invalid or error'd request. Original worker state not affected. Retry may work after mutation.
+}
+
+// Note, each worker has its own runId space which is unrelated to any external ids.
+struct RunStatus {
+  1: required RunStatusState status
+  2: required string runId
+  3: optional string outUri
+  4: optional string errUri
+  5: optional string error
+  6: optional i32 exitCode
+}
+
+
 struct Command {
   1: list<string> argv
 }
@@ -58,6 +80,7 @@ struct JobStatus {
   1: required string id,
   2: required Status status,
   3: optional map<string, Status> taskStatus,
+  4: optional map<string, RunStatus> taskData,
 }
 
 service CloudScoot {
