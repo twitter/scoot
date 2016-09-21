@@ -27,6 +27,7 @@ func (r *Repository) Run(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = r.dir
 	data, err := cmd.Output()
+	log.Println("repo.Repository.Run complete", err)
 	return string(data), err
 }
 
