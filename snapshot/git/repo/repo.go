@@ -28,9 +28,11 @@ func (r *Repository) Run(args ...string) (string, error) {
 	cmd.Dir = r.dir
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
-	if err != nil {
-		log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
-	}
+	// Print stderr, which exists only in go 1.6 and later.
+	// TODO(dbentley): reenable once we're on go 1.7
+	// if err != nil {
+	// 	log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
+	// }
 	return string(data), err
 }
 
@@ -50,10 +52,10 @@ func (r *Repository) Checkout(id string) error {
 }
 
 func validateSha(sha string) (string, error) {
-	if len(sha) != 41 || sha[40] != '\n' {
-		return "", fmt.Errorf("sha not 41 characters: %q", sha)
+	if len(sha) == 40 || len(sha) == 41 && sha[40] == '\n' {
+		return sha[0:40], nil
 	}
-	return sha[0:40], nil
+	return "", fmt.Errorf("sha not 40 or 41 (with a \\n) characters: %q", sha)
 }
 
 // NewRepo creates a new Repository for path `dir`.

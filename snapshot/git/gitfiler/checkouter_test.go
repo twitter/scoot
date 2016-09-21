@@ -83,6 +83,13 @@ func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Rep
 		return nil, err
 	}
 
+	if _, err = r.Run("config", "user.name", "Scoot Test"); err != nil {
+		return nil, err
+	}
+	if _, err = r.Run("config", "user.email", "scoottest@scootdev.github.io"); err != nil {
+		return nil, err
+	}
+
 	// Create a commit with file.txt = "first"
 	filename := filepath.Join(dir.Dir, "file.txt")
 	if err = ioutil.WriteFile(filename, []byte("first"), 0777); err != nil {

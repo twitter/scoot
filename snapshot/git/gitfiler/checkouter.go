@@ -74,7 +74,7 @@ func (c *RefRepoCloningCheckouter) Checkout(id string) (snapshot.Checkout, error
 
 	log.Println("gitfiler.RefRepoCloningCheckouter.Checkout done: ", clone.Dir())
 	needToClean = false
-	return &RefRepoCloningCheckout{r: clone, id: id, checkouter: c}, nil
+	return &RefRepoCloningCheckout{repo: clone, id: id, checkouter: c}, nil
 }
 
 func (c *RefRepoCloningCheckouter) clone() (*repo.Repository, error) {
@@ -94,13 +94,13 @@ func (c *RefRepoCloningCheckouter) clone() (*repo.Repository, error) {
 }
 
 type RefRepoCloningCheckout struct {
-	r          *repo.Repository
+	repo       *repo.Repository
 	id         string
 	checkouter *RefRepoCloningCheckouter
 }
 
 func (c *RefRepoCloningCheckout) Path() string {
-	return c.r.Dir()
+	return c.repo.Dir()
 }
 
 func (c *RefRepoCloningCheckout) ID() string {
@@ -108,5 +108,5 @@ func (c *RefRepoCloningCheckout) ID() string {
 }
 
 func (c *RefRepoCloningCheckout) Release() error {
-	return os.RemoveAll(c.r.Dir())
+	return os.RemoveAll(c.repo.Dir())
 }
