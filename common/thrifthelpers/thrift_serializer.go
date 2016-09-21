@@ -2,13 +2,12 @@ package thrifthelpers
 
 import "github.com/apache/thrift/lib/go/thrift"
 
-type Serializer interface {
-	Deserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error)
-	Serialize(sourceStruct thrift.TStruct) (b []byte, err error)
-}
-
 // Json behavior
 func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	if len(sourceBytes) == 0 {
+		return nil
+	}
+
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
 
@@ -18,6 +17,11 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 }
 
 func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
+
+	if sourceStruct == nil {
+		return nil, nil
+	}
+
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
 
@@ -28,12 +32,19 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 
 // Binary behavior
 func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
+	if len(sourceBytes) == 0 {
+		return nil
+	}
 	d := thrift.NewTDeserializer()
 	err = d.Read(targetStruct, sourceBytes)
 	return err
 }
 
 func BinarySerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
+
+	if sourceStruct == nil {
+		return nil, nil
+	}
 	d := thrift.NewTSerializer()
 	serializedValue, err := d.Write(sourceStruct)
 	return serializedValue, err
