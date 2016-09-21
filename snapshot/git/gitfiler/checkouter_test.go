@@ -92,6 +92,7 @@ func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Rep
 	if _, err = r.Run("add", "file.txt"); err != nil {
 		return nil, err
 	}
+	// Run it with just this thing
 	if _, err = r.Run("commit", "-am", "first post"); err != nil {
 		return nil, err
 	}
