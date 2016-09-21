@@ -12,21 +12,25 @@ const (
 	jobStatusSleepSeconds time.Duration = 3 * time.Second
 )
 
-func makeWatchJobCmd(c Client) *cobra.Command {
+type watchJobCmd struct {
+	jobId string
+}
+
+func (c *watchJobCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "watch_job",
 		Short: "Watch job",
-		RunE:  c.watchJob,
 	}
 
-	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.jobId, "job_id", "", "job ID to watch")
+
 	return r
 }
 
-func (c Client) watchJob(cmd *cobra.Command, args []string) error {
+func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 
-	log.Println("Checking Status for Scoot Job", args)
-	client, err := c.Dial()
+	log.Println("Watching job:", args)
+	client, err := cl.Dial()
 
 	if err != nil {
 		return err
