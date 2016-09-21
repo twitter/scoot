@@ -102,26 +102,21 @@ type TaskMessageMatcher struct {
 }
 
 func (c TaskMessageMatcher) Matches(x interface{}) bool {
-	fmt.Printf("******* in end message matcher\n")
 	sagaMessage, ok := x.(saga.SagaMessage)
 
 	if !ok {
-		fmt.Printf("****** not ok\n")
 		return false
 	}
 
 	if c.JobId != sagaMessage.SagaId {
-		fmt.Printf(fmt.Sprintf("****** jobid: %s, %s\n", c.JobId, sagaMessage.SagaId))
 		return false
 	}
 
 	if c.TaskId != sagaMessage.TaskId {
-		fmt.Printf(fmt.Sprintf("****** taskid: %s, %s\n", c.TaskId, sagaMessage.TaskId))
 		return false
 	}
 
 	if !c.Data.Matches(sagaMessage.Data) {
-		fmt.Printf("****** not any match\n")
 		return false
 	}
 
