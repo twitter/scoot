@@ -72,6 +72,7 @@ func (c *RefRepoCloningCheckouter) Checkout(id string) (snapshot.Checkout, error
 		return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.Checkout: could not git checkout: %v", err)
 	}
 
+	log.Println("gitfiler.RefRepoCloningCheckouter.Checkout done: ", clone.Dir())
 	needToClean = false
 	return &RefRepoCloningCheckout{r: clone, id: id, checkouter: c}, nil
 }
