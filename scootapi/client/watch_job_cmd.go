@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	jobStatusSleepMs = 15000
+	jobStatusSleepSeconds time.Duration = 3 * time.Second
 )
 
 func makeWatchJobCmd(c Client) *cobra.Command {
@@ -19,7 +19,7 @@ func makeWatchJobCmd(c Client) *cobra.Command {
 		RunE:  c.watchJob,
 	}
 
-	r.Flags().StringVar(c.GetAddr(), "addr", "localhost:9090", "address to connect to")
+	r.Flags().StringVar(&c.addr, "addr", "localhost:9090", "address to connect to")
 	return r
 }
 
@@ -34,27 +34,23 @@ func (c Client) watchJob(cmd *cobra.Command, args []string) error {
 
 	jobId := args[0]
 
-
 	for {
 		jobStatus, err := GetAndPrintStatus(jobId, client)
 
 		if err != nil {
-			fmt.Printf(err.Error())
 			return err
 		}
 
-		if jobStatus == scoot.Status_COMPLETED || jobStatus == scoot.Status_ROLLED_BACK {
+		if *jobStatus == scoot.Status_COMPLETED || *jobStatus == scoot.Status_ROLLED_BACK {
 			return nil
 		}
 
-		time.Sleep(jobStatusSleepMs)
+		time.Sleep(jobStatusSleepSeconds)
 	}
 
 }
 
-
-
-func GetAndPrintStatus(jobId string,  thriftClient *scoot.CloudScootClient) (scoot.Status, error) {
+func GetAndPrintStatus(jobId string, thriftClient *scoot.CloudScootClient) (*scoot.Status, error) {
 
 	status, err := thriftClient.GetStatus(jobId)
 
@@ -68,7 +64,7 @@ func GetAndPrintStatus(jobId string,  thriftClient *scoot.CloudScootClient) (sco
 	}
 	PrintJobStatus(status)
 
-	return status.Status
+	return &status.Status, nil
 
 }
 
@@ -77,7 +73,6 @@ func PrintJobStatus(jobStatus *scoot.JobStatus) {
 	fmt.Printf(fmt.Sprintf("Job status: %s\n", jobStatus.Status.String()))
 	for taskId, taskStatus := range jobStatus.TaskStatus {
 		fmt.Printf(fmt.Sprintf("\tTask id: %s\n", taskId))
-		fmt.Printf(fmt.Sprintf("\tTask status: %s\n",taskStatus.String()))
+		fmt.Printf(fmt.Sprintf("\tTask status: %s\n", taskStatus.String()))
 	}
 }
-
