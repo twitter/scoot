@@ -28,6 +28,9 @@ func (r *Repository) Run(args ...string) (string, error) {
 	cmd.Dir = r.dir
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
+	if err != nil {
+		log.Println("repo.Repository.Run error:", err.(*exec.ExitError).Stderr)
+	}
 	return string(data), err
 }
 
