@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -41,13 +42,14 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	// task := scoot.NewTaskDefinition()
 	// task.Command = scoot.NewCommand()
 	// task.Command.Argv = args
-	jobDef := scoot.NewJobDefinition()
-	jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
+	var newThriftJob = schedthrift.NewJob()
+	// jobDef := scoot.NewJobDefinition()
+	// jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
 	fmt.Println("before deserialize")
-	fmt.Println(jobDef)
-	err = thrifthelpers.JsonDeserialize(jobDef, f)
+	fmt.Println(newThriftJob)
+	err = thrifthelpers.JsonDeserialize(newThriftJob, f)
 	fmt.Println("after deserialize")
-	fmt.Println(jobDef)
+	fmt.Println(newThriftJob)
 	if err != nil {
 		return nil
 	}
