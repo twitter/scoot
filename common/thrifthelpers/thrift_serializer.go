@@ -1,7 +1,7 @@
 package thrifthelpers
 
 import (
-	// "fmt"
+	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -10,8 +10,8 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 	if len(sourceBytes) == 0 {
 		return nil
 	}
-	// fmt.Println("thrift deser before")
-	// fmt.Println(targetStruct)
+	fmt.Println("thrift deser before")
+	fmt.Println(targetStruct)
 
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
@@ -20,8 +20,8 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 	// fmt.Println(d.Transport.Write(sourceBytes))
 	// fmt.Println(targetStruct.Read(d.Protocol))
 	err = d.Read(targetStruct, sourceBytes)
-	// fmt.Println("thrift deser after")
-	// fmt.Println(targetStruct)
+	fmt.Println("thrift deser after")
+	fmt.Println(targetStruct)
 	return err
 }
 
