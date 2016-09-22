@@ -3,7 +3,6 @@ package client
 import (
 	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -54,7 +53,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 		return nil
 	}
 
-	_, err = client.RunJob(newThriftJob)
+	_, err = client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
