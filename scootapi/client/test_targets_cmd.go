@@ -1,14 +1,12 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
-	"os"
 )
 
 type testTargetsCmd struct {
@@ -20,7 +18,7 @@ func (t *testTargetsCmd) registerFlags() *cobra.Command {
 		Use:   "test_targets",
 		Short: "test targets",
 	}
-	r.Flags().StringVar(&c.filePath, "file_path", "", "file to read targets from")
+	r.Flags().StringVar(&t.filePath, "file_path", "", "file to read targets from")
 
 	return r
 }
@@ -33,7 +31,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 		return err
 	}
 	// translate read file into domain scoot job to be run
-	f, err := ioutil.ReadFile(cmd.filePath)
+	f, err := ioutil.ReadFile(t.filePath)
 	if err != nil {
 		return err
 	}
