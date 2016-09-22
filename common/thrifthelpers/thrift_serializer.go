@@ -17,6 +17,7 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 	protocol := thrift.NewTJSONProtocol(transport)
 
 	d := &thrift.TDeserializer{Transport: transport, Protocol: protocol}
+	fmt.Println(sourceBytes)
 	fmt.Println(d.Transport.Write(sourceBytes))
 	fmt.Println(targetStruct.Read(d.Protocol))
 	err = d.Read(targetStruct, sourceBytes)
