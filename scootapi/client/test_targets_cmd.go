@@ -42,14 +42,14 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	// task := scoot.NewTaskDefinition()
 	// task.Command = scoot.NewCommand()
 	// task.Command.Argv = args
-	var newThriftJob = schedthrift.NewJob()
-	// jobDef := scoot.NewJobDefinition()
+	// var newThriftJob = schedthrift.NewJob()
+	jobDef := scoot.NewJobDefinition()
 	// jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
 	fmt.Println("before deserialize")
-	fmt.Println(newThriftJob)
-	err = thrifthelpers.JsonDeserialize(newThriftJob, f)
+	fmt.Println(jobDef)
+	err = thrifthelpers.JsonDeserialize(jobDef, f)
 	fmt.Println("after deserialize")
-	fmt.Println(newThriftJob)
+	fmt.Println(jobDef)
 	if err != nil {
 		return nil
 	}
