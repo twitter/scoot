@@ -54,7 +54,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 		return nil
 	}
 
-	_, err = client.RunJob(jobDef)
+	_, err = client.RunJob(newThriftJob)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
