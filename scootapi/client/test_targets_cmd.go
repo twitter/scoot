@@ -41,7 +41,11 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	// task.Command.Argv = args
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
+	fmt.Println("before deserialize")
+	fmt.Println(jobDef)
 	err = thrifthelpers.JsonDeserialize(jobDef, f)
+	fmt.Println("after deserialize")
+	fmt.Println(jobDef)
 	if err != nil {
 		return nil
 	}
