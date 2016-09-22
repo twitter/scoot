@@ -41,7 +41,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	fmt.Println(asBytes)
 
 	jobDef := scoot.NewJobDefinition()
-	err = thrifthelpers.JsonDeserialize(jobDef, asBytes)
+	err = thrifthelpers.BinaryDeserialize(jobDef, asBytes)
 	if err != nil {
 		return nil
 	}
