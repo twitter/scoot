@@ -1,18 +1,25 @@
 package thrifthelpers
 
-import "github.com/apache/thrift/lib/go/thrift"
+import (
+	"fmt"
+	"github.com/apache/thrift/lib/go/thrift"
+)
 
 // Json behavior
 func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	if len(sourceBytes) == 0 {
 		return nil
 	}
+	fmt.Println("thrift deser before")
+	fmt.Println(targetStruct)
 
 	transport := thrift.NewTMemoryBufferLen(1024)
 	protocol := thrift.NewTJSONProtocol(transport)
 
 	d := &thrift.TDeserializer{Transport: transport, Protocol: protocol}
 	err = d.Read(targetStruct, sourceBytes)
+	fmt.Println("thrift deser after")
+	fmt.Println(targetStruct)
 	return err
 }
 

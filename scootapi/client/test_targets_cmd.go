@@ -35,6 +35,8 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	if err != nil {
 		return err
 	}
+	fmt.Println("FILEEEE")
+	fmt.Println(f)
 
 	// task := scoot.NewTaskDefinition()
 	// task.Command = scoot.NewCommand()
