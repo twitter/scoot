@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
@@ -19,6 +20,11 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 func (c *getStatusCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 
 	log.Println("Checking Status for Scoot Job", args)
+
+	if args == nil || len(args) == 0 {
+		return errors.New("a job id must be provided")
+	}
+
 	client, err := cl.Dial()
 
 	if err != nil {

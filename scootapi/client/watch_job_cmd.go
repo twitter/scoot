@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"log"
@@ -22,14 +23,17 @@ func (c *watchJobCmd) registerFlags() *cobra.Command {
 		Short: "Watch job",
 	}
 
-	r.Flags().StringVar(&c.jobId, "job_id", "", "job ID to watch")
-
 	return r
 }
 
 func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 
 	log.Println("Watching job:", args)
+
+	if args == nil || len(args) == 0 {
+		return errors.New("a job id must be provided")
+	}
+
 	client, err := cl.Dial()
 
 	if err != nil {

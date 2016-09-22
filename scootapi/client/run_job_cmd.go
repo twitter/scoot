@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
@@ -23,6 +24,10 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
+	if args == nil || len(args) == 0 {
+		return errors.New("a job id must be provided")
+	}
+
 	client, err := cl.Dial()
 	if err != nil {
 		return err
@@ -35,7 +40,7 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
 		"task1": task,
 	}
-	_, err = client.RunJob(jobDef)
+	jobId, err := client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
@@ -44,5 +49,9 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Error running job: %v %T", err, err)
 		}
 	}
+
+	log.Println(fmt.Printf("JobID:%s\n", jobId))
+	fmt.Println(fmt.Printf("JobID:%s\n", jobId)) // this did not show up
+
 	return nil
 }
