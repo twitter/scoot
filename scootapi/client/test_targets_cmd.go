@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 type testTargetsCmd struct {
@@ -31,24 +32,16 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 		return err
 	}
 	// translate read file into domain scoot job to be run
-	f, err := ioutil.ReadFile(t.filePath)
+	f, err := os.Open(t.filePath)
+	asBytes, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}
 	fmt.Println("FILEEEE")
-	fmt.Println(f)
+	fmt.Println(asBytes)
 
-	// task := scoot.NewTaskDefinition()
-	// task.Command = scoot.NewCommand()
-	// task.Command.Argv = args
-	// var newThriftJob = schedthrift.NewJob()
 	jobDef := scoot.NewJobDefinition()
-	// jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
-	fmt.Println("before deserialize")
-	fmt.Println(jobDef)
-	err = thrifthelpers.JsonDeserialize(jobDef, f)
-	fmt.Println("after deserialize")
-	fmt.Println(jobDef)
+	err = thrifthelpers.JsonDeserialize(jobDef, asBytes)
 	if err != nil {
 		return nil
 	}
