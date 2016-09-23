@@ -25,13 +25,14 @@ func (t *testTargetsCmd) registerFlags() *cobra.Command {
 }
 
 func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
-	log.Println("Running on scoot", args)
+	log.Println("Testing targets on scoot")
 
 	client, err := cl.Dial()
 	if err != nil {
 		return err
 	}
-	// translate read file into domain scoot job to be run
+
+	// translate file into scoot jobDef
 	f, err := os.Open(t.filePath)
 	asBytes, err := ioutil.ReadAll(f)
 	if err != nil {
@@ -40,6 +41,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 
 	jobDef := scoot.NewJobDefinition()
 	thrifthelpers.JsonDeserialize(jobDef, asBytes)
+
 	_, err = client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
