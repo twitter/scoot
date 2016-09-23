@@ -27,3 +27,4 @@ _testmain.go
 .DS_Store
 coverage.txt
 *~
+#*#

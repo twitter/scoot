@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"math"
 )
 
 //
@@ -50,6 +53,10 @@ func genSagaState(genParams *gopter.GenParameters) *SagaState {
 		// randomly decide if task has been completed
 		if genParams.NextBool() {
 			flags = flags | TaskCompleted
+			err := genTaskCompletedData(state, taskId, genParams)
+			if err != nil {
+				fmt.Printf(fmt.Sprintf("Error generating complete task data for %s, %s", taskId, err.Error()))
+			}
 		}
 
 		if isAborted {
@@ -87,6 +94,47 @@ func genSagaState(genParams *gopter.GenParameters) *SagaState {
 	}
 
 	return state
+}
+
+func genTaskCompletedData(state *SagaState, taskId string, genParams *gopter.GenParameters) error {
+
+	runStatus := scoot.RunStatus{}
+	runStatus.RunId = taskId
+	var statusVal scoot.RunStatusState
+	// status must be complete or higher
+	statusVal = scoot.RunStatusState(int64(math.Trunc(math.Abs(float64(genParams.NextInt64()%5)))) + 3)
+	// don't let the status be nil
+	if &statusVal == nil {
+		statusVal = scoot.RunStatusState_COMPLETE
+	} else {
+		statusVal = scoot.RunStatusState(statusVal)
+	}
+	runStatus.Status = statusVal
+
+	exitCodeStatus := int32(genParams.NextInt64() % 4)
+	var ok int32 = 0
+	var notOk int32 = -1
+	if exitCodeStatus == 0 {
+		runStatus.ExitCode = &ok
+	} else {
+		runStatus.ExitCode = &notOk
+	}
+	t1 := fmt.Sprintf("error %d", genParams.NextInt64())
+	runStatus.Error = &t1
+	t2 := fmt.Sprintf("error URI %d", genParams.NextInt64())
+	runStatus.ErrUri = &t2
+	t3 := fmt.Sprintf("out URI %d", genParams.NextInt64())
+	runStatus.OutUri = &t3
+
+	messageAsBytes, err := thrifthelpers.JsonSerialize(&runStatus)
+
+	if err != nil {
+		return err
+	}
+
+	state.addTaskData(taskId, EndTask, messageAsBytes)
+
+	return nil
 }
 
 // Generator for a valid SagaId or TaskId

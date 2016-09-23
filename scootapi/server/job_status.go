@@ -1,8 +1,10 @@
 package server
 
 import (
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
 func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {
@@ -45,6 +47,7 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.ID = sagaState.SagaId()
 	js.Status = scoot.Status_NOT_STARTED
 	js.TaskStatus = make(map[string]scoot.Status)
+	js.TaskData = make(map[string]*scoot.RunStatus)
 
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {
@@ -60,6 +63,9 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 		} else {
 			if sagaState.IsTaskCompleted(id) {
 				taskStatus = scoot.Status_COMPLETED
+				if thriftJobStatus, err := workerRunStatusToScootRunStatus(sagaState.GetEndTaskData(id)); err != nil {
+					js.TaskData[id] = thriftJobStatus
+				}
 			} else if sagaState.IsTaskStarted(id) {
 				taskStatus = scoot.Status_IN_PROGRESS
 			}
@@ -86,4 +92,25 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	}
 
 	return js
+}
+
+// this is a thrift to thrift structure translation.  We are doing this because we get invalid
+// import statements in the generated code when we use thrift import statements (this issue is supposed
+// to be fixed in thrift 10.0
+func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, error) {
+	if resultsFromSaga == nil {
+		return nil, nil
+	}
+
+	workerRunStatus := worker.RunStatus{}
+	thrifthelpers.JsonDeserialize(&workerRunStatus, resultsFromSaga)
+
+	status, err := scoot.RunStatusStateFromString(workerRunStatus.Status.String())
+	if err != nil {
+		return nil, err
+	}
+
+	scootRunStatus := scoot.RunStatus{RunId: workerRunStatus.RunId, Status: status, OutUri: workerRunStatus.OutUri, ErrUri: workerRunStatus.ErrUri, ExitCode: workerRunStatus.ExitCode, Error: workerRunStatus.Error}
+
+	return &scootRunStatus, nil
 }

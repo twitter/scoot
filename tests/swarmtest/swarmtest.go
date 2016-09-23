@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/scootdev/scoot/scootapi"
 )
 
 type SwarmTest struct {
@@ -21,6 +24,7 @@ type SwarmTest struct {
 	RepoDir    string
 	NumWorkers int
 	Compile    func() error
+	Setup      func() (string, error)
 	Run        func() error
 	NumJobs    int
 	Timeout    time.Duration
@@ -53,6 +57,7 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.RepoDir = *repoDir
 	s.NumWorkers = *numWorkers
 	s.Compile = func() error { return s.compile() }
+	s.Setup = func() (string, error) { return s.setup() }
 	s.Run = func() error { return s.run() }
 	s.NumJobs = *numJobs
 	s.Timeout = *timeout
@@ -141,40 +146,60 @@ func (s *SwarmTest) compile() error {
 	return s.RunCmd(true, "go", "install", "./binaries/...")
 }
 
-func (s *SwarmTest) run() error {
+func (s *SwarmTest) setup() (string, error) {
 	for i := 0; i < s.NumWorkers; i++ {
 		thriftPort := strconv.Itoa(s.GetPort())
 		httpPort := strconv.Itoa(s.GetPort())
 		args := []string{"-thrift_port", thriftPort, "-http_port", httpPort}
 		if err := s.RunCmd(false, "$GOPATH/bin/workerserver", args...); err != nil {
-			return err
+			return "", err
 		}
 	}
 	args := []string{"-sched_config", `{"Cluster": {"Type": "local"}}`}
 	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
-		return err
+		return "", err
 	}
 
+	return "localhost:9090", nil
+}
+
+func (s *SwarmTest) run() error {
 	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test", strconv.Itoa(s.NumJobs), s.Timeout.String())
+}
+
+// Implementation for Run that Waits instead of running the tests.
+// This lets us use swarmtest infrastructure to setup the swarm but not run the smoke test.
+func WaitDontRun() error {
+	select {}
 }
 
 func (s *SwarmTest) RunSwarmTest() error {
 	var err error
 	s.StartSignalHandler()
-	if err = s.SetupLog(s.LogDir); err == nil {
-		fmt.Println("Compiling...")
-		if err = s.Compile(); err == nil {
-			fmt.Println("Running...")
-			err = s.Run()
-			s.Kill()
-		}
+	if err = s.SetupLog(s.LogDir); err != nil {
+		return err
 	}
-	fmt.Println("Done")
-	return err
+
+	fmt.Println("Compiling")
+	if err = s.Compile(); err != nil {
+		return err
+	}
+
+	fmt.Println("Setting Up")
+	addr, err := s.Setup()
+	if err != nil {
+		return err
+	}
+	scootapi.SetScootapiAddr(addr)
+	log.Println("Scoot is running at", addr)
+
+	log.Println("Running")
+	return s.Run()
 }
 
 func (s *SwarmTest) Main() {
 	err := s.RunSwarmTest()
+	s.Kill()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
