@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -35,7 +36,9 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 
 	jobDef := scoot.NewJobDefinition()
 	switch {
-	case len(args) > 0 && c.jobFilePath == "":
+	case len(args) > 0 && c.jobFilePath != "":
+		return errors.New("You must provide either args or a file path")
+	case len(args) > 0:
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = args
@@ -44,7 +47,7 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 		jobDef.Tasks = map[string]*scoot.TaskDefinition{
 			"task1": task,
 		}
-	case len(args) == 0 && c.jobFilePath != "":
+	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
 		asBytes, err := ioutil.ReadAll(f)
 		if err != nil {
