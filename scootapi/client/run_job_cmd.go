@@ -45,7 +45,7 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 			"task1": task,
 		}
 	case len(args) == 0 && c.jobFilePath != "":
-		f, err := os.Open(t.jobFilePath)
+		f, err := os.Open(c.jobFilePath)
 		asBytes, err := ioutil.ReadAll(f)
 		if err != nil {
 			return err
