@@ -1,6 +1,7 @@
 package thrifthelpers
 
 import (
+	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -15,7 +16,7 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 
 	d := &thrift.TDeserializer{Transport: transport, Protocol: protocol}
 	err = d.Read(targetStruct, sourceBytes)
-
+	fmt.Println("error deserializing:", err)
 	return err
 }
 
