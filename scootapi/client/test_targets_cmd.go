@@ -11,7 +11,7 @@ import (
 )
 
 type testTargetsCmd struct {
-	filePath string
+	jobFilePath string
 }
 
 func (t *testTargetsCmd) registerFlags() *cobra.Command {
@@ -19,7 +19,7 @@ func (t *testTargetsCmd) registerFlags() *cobra.Command {
 		Use:   "test_targets",
 		Short: "test targets",
 	}
-	r.Flags().StringVar(&t.filePath, "file_path", "", "file to read targets from")
+	r.Flags().StringVar(&t.jobFilePath, "job_file_path", "", "file to read targets from")
 
 	return r
 }
@@ -33,7 +33,7 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	}
 
 	// translate file into scoot jobDef
-	f, err := os.Open(t.filePath)
+	f, err := os.Open(t.jobFilePath)
 	asBytes, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
