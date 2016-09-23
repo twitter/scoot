@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -37,10 +38,10 @@ func (t *testTargetsCmd) run(cl *Client, cmd *cobra.Command, args []string) erro
 	if err != nil {
 		return err
 	}
-	fmt.Println("FILEEEE")
-	fmt.Println(asBytes)
+	// fmt.Println("FILEEEE")
+	// fmt.Println(asBytes)
 
-	jobDef := scoot.NewJobDefinition()
+	schedThriftJobDef := schedthrift.NewJobDefinition()
 	err = thrifthelpers.BinaryDeserialize(jobDef, asBytes)
 	if err != nil {
 		return nil

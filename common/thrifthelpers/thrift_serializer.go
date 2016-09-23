@@ -21,7 +21,6 @@ func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error
 }
 
 func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
-
 	if sourceStruct == nil {
 		return nil, nil
 	}
@@ -39,19 +38,12 @@ func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err err
 	if len(sourceBytes) == 0 {
 		return nil
 	}
-	fmt.Println("thrift deser before")
-	fmt.Println(targetStruct)
 	d := thrift.NewTDeserializer()
-	fmt.Println(d.Transport.Write(sourceBytes))
-	fmt.Println(targetStruct.Read(d.Protocol))
 	err = d.Read(targetStruct, sourceBytes)
-	fmt.Println("thrift deser after")
-	fmt.Println(targetStruct)
 	return err
 }
 
 func BinarySerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
-
 	if sourceStruct == nil {
 		return nil, nil
 	}
