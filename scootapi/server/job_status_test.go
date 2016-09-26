@@ -297,15 +297,15 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 		return false
 	}
 	if !strings.Contains(*runResults.Error, "error ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid error string: %s\n", taskId, runResults.Error))
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid error string: %s\n", taskId, *runResults.Error))
 		return false
 	}
 	if !strings.Contains(*runResults.OutUri, "out URI ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid out URI: %s\n", taskId, runResults.OutUri))
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid out URI: %s\n", taskId, *runResults.OutUri))
 		return false
 	}
 	if !strings.Contains(*runResults.ErrUri, "error URI ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid err URI: %s\n", taskId, runResults.ErrUri))
+		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid err URI: %s\n", taskId, *runResults.ErrUri))
 		return false
 	}
 

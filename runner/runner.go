@@ -97,6 +97,18 @@ type ProcessStatus struct {
 	Error string
 }
 
+func (p ProcessStatus) String() string {
+	// TODO (dgassaway) respect above guidelines on struct member validity
+	return fmt.Sprintf(
+		"RunId:\t%v\n"+
+			"State:\t%v\n"+
+			"ExitCode:\t%v\n"+
+			"StdoutRef:\t%v\n"+
+			"StderrRef:\t%v\n"+
+			"Error:\t%v\n",
+		p.RunId, p.State, P.ExitCode, p.StdoutRef, p.StderrRef, p.Error)
+}
+
 type Runner interface {
 	// Run instructs the Runner to run cmd. It returns its status and any errors.
 	// Run may:
