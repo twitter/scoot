@@ -117,6 +117,7 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) (runner.ProcessSta
 		// We are ending the running task.
 		// depend on the invariant that there is at most 1 run with !state.IsDone(),
 		// so if we're changing a Process from not Done to Done it must be running
+		log.Printf("local.simpleRunner: run done. %+v", new)
 		close(r.running.doneCh)
 		r.running = nil
 	}

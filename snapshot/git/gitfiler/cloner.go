@@ -9,13 +9,18 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
+// A Reference Repository is a way to clone repos locally so that the clone takes less time and disk space.
+// By passing --reference <local path> to a git clone, the clone will not copy the whole ODB but instead
+// hardlink. This means the clone is much faster and also takes very little extra hard disk space.
+// Cf. https://git-scm.com/docs/git-clone
+
 // cloner clones a repo using --reference based on a reference repo
 type refCloner struct {
 	refPool   *RepoPool
 	clonesDir *temp.TempDir
 }
 
-// clone clones a repo
+// Get gets a repo with git clone --reference
 func (c *refCloner) Get() (*repo.Repository, error) {
 	ref, err := c.refPool.Get()
 	defer c.refPool.Release(ref, err)
