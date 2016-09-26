@@ -106,7 +106,7 @@ func (p ProcessStatus) String() string {
 			"StdoutRef:\t%v\n"+
 			"StderrRef:\t%v\n"+
 			"Error:\t%v\n",
-		p.RunId, p.State, P.ExitCode, p.StdoutRef, p.StderrRef, p.Error)
+		p.RunId, p.State, p.ExitCode, p.StdoutRef, p.StderrRef, p.Error)
 }
 
 type Runner interface {
