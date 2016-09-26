@@ -16,60 +16,67 @@ import (
 // hardlink. This means the clone is much faster and also takes very little extra hard disk space.
 // Cf. https://git-scm.com/docs/git-clone
 
-// RefRepoGetter lets a client get a Repository to use as a Reference Repository.
-type RefRepoGetter interface {
+// RepoGetter lets a client get a Repository to use as a Reference Repository.
+type RepoGetter interface {
 	// Get gets the Repository to use as a reference repository.
 	Get() (*repo.Repository, error)
 }
 
-// RefRepoCloningCheckouter checks out by cloning a Ref Repo.
-type RefRepoCloningCheckouter struct {
-	clones *repoPool
+func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
+	singlePool := NewRepoPool(nil, nil, doneCh)
+	go func() {
+		r, err := repoGetter.Get()
+		singlePool.Release(r, err)
+	}()
+	return singlePool
 }
 
-func NewRefRepoCloningCheckouter(getter RefRepoGetter, clonesDir *temp.TempDir, doneCh chan struct{}) *RefRepoCloningCheckouter {
-	cloner := &cloner{clonesDir: clonesDir}
-	cloner.wg.Add(1)
-	go func() {
-		cloner.ref, cloner.err = getter.Get()
-		cloner.wg.Done()
-	}()
+func NewSingeRepoCheckouter(repoGetter RepoGetter, doneCh chan struct{}) *Checkouter {
+	pool := NewSingleRepoPool(repoGetter, doneCh)
+	return NewCheckouter(pool)
+}
 
-	r := &RefRepoCloningCheckouter{
-		clones: newRepoPool(cloner, doneCh),
+func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh chan struct{}) *Checkouter {
+	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
+
+	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
+	var clones []*repo.Repository
+	fis, _ := ioutil.ReadDir(clonesDir.Dir)
+	for _, fi := range fis {
+		// TODO(dbentley): maybe we should check that these clones are in fact clones
+		// of the reference repo? Using some kind of git commands to determine its upstream?
+		if clone, err := repo.NewRepository(path.Join(clonesDir.Dir, fi.Name())); err == nil {
+			clones = append(clones, clone)
+		}
 	}
 
-	// Find existing clones and reuse them
-	go func() {
-		fis, _ := ioutil.ReadDir(clonesDir.Dir)
-		for _, fi := range fis {
-			// TODO(dbentley): maybe we should check that these clones are in fact clones
-			// of the reference repo? Using some kind of git commands to determine its upstream?
-			clone, err := repo.NewRepository(path.Join(clonesDir.Dir, fi.Name()))
-			if err != nil {
-				continue
-			}
-			r.clones.Release(clone)
-		}
-	}()
+	pool := NewRepoPool(cloner, clones, doneCh)
+	return NewCheckouter(pool)
+}
 
-	return r
+func NewCheckouter(repos *RepoPool) *Checkouter {
+	return &Checkouter{repos: repos}
+}
+
+// Checkouter checks out by checking out in a repo from pool
+type Checkouter struct {
+	repos *RepoPool
 }
 
 // Checkout checks out id (a raw git sha) into a Checkout.
 // It does this by making a new clone (via reference) and checking out id.
 // TODO(dbentley): if id is not found because it is present in upstream repos but not here,
 // we should fetch it and check it out.
-func (c *RefRepoCloningCheckouter) Checkout(id string) (co snapshot.Checkout, err error) {
-	clone, err := c.clones.Reserve()
-	if err != nil {
-		return nil, err
+func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
+	repo, repoErr := c.repos.Get()
+	if repoErr != nil {
+		return nil, repoErr
 	}
 
 	// release if we aren't using it
 	defer func() {
 		if err != nil || recover() != nil {
-			c.clones.Release(clone)
+			c.repos.Release(repo, repoErr)
 		}
 	}()
 
@@ -81,29 +88,29 @@ func (c *RefRepoCloningCheckouter) Checkout(id string) (co snapshot.Checkout, er
 	}
 
 	for _, argv := range cmds {
-		if _, err := clone.Run(argv...); err != nil {
-			return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.Checkout: %v", err)
+		if _, err := repo.Run(argv...); err != nil {
+			return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
 		}
 	}
-	return &RefRepoCloningCheckout{repo: clone, id: id, pool: c.clones}, nil
+	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
 }
 
-// RefRepoCloningCheckout holds one repo that is checked out to a specific ID
-type RefRepoCloningCheckout struct {
+// Checkout holds one repo that is checked out to a specific ID
+type Checkout struct {
 	repo *repo.Repository
 	id   string
-	pool *repoPool
+	pool *RepoPool
 }
 
-func (c *RefRepoCloningCheckout) Path() string {
+func (c *Checkout) Path() string {
 	return c.repo.Dir()
 }
 
-func (c *RefRepoCloningCheckout) ID() string {
+func (c *Checkout) ID() string {
 	return c.id
 }
 
-func (c *RefRepoCloningCheckout) Release() error {
-	c.pool.Release(c.repo)
+func (c *Checkout) Release() error {
+	c.pool.Release(c.repo, nil)
 	return nil
 }

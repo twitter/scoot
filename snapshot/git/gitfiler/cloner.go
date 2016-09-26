@@ -4,39 +4,36 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 // cloner clones a repo using --reference based on a reference repo
-type cloner struct {
+type refCloner struct {
+	refPool   *RepoPool
 	clonesDir *temp.TempDir
-
-	ref *repo.Repository
-	err error
-
-	// wg waits for init
-	wg sync.WaitGroup
 }
 
 // clone clones a repo
-func (c *cloner) clone() (*repo.Repository, error) {
-	c.wg.Wait()
-	if c.err != nil {
-		return nil, c.err
+func (c *refCloner) Get() (*repo.Repository, error) {
+	ref, err := c.refPool.Get()
+	defer c.refPool.Release(ref, err)
+	if err != nil {
+		return nil, err
 	}
+
 	cloneDir, err := c.clonesDir.TempDir("clone-")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.Command("git", "clone", "-n", "--reference", c.ref.Dir(), c.ref.Dir(), cloneDir.Dir)
-	log.Println("gitfiler.RefRepoCloningCheckouter.clone: Cloning", cmd)
+	// We probably ought to use a separate git dir so that processes can't mess up .git
+	cmd := exec.Command("git", "clone", "--reference", ref.Dir(), ref.Dir(), cloneDir.Dir)
+	log.Println("gitfiler.refCloner.clone: Cloning", cmd)
 	err = cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.clone: error cloning: %v", err)
+		return nil, fmt.Errorf("gitfiler.refCloner.clone: error cloning: %v", err)
 	}
 
 	return repo.NewRepository(cloneDir.Dir)
