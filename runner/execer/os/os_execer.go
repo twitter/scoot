@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"syscall"
 
+	"fmt"
+
 	"github.com/scootdev/scoot/runner/execer"
 )
 
@@ -28,7 +30,11 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
 	}
+
+	foundCommand(command.Argv[0])  //TODO remove when done debugging
+
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
+
 	cmd.Stdout, cmd.Stderr, cmd.Dir = command.Stdout, command.Stderr, command.Dir
 	// Make sure to get the best possible Writer, so if possible os/exec can connect
 	// the command's stdout/stderr directly to a file, instead of having to go through
@@ -39,11 +45,15 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	if stderrW, ok := cmd.Stderr.(WriterDelegater); ok {
 		cmd.Stderr = stderrW.WriterDelegate()
 	}
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	err = cmd.Start()
 	if err != nil {
+		fmt.Println("****** returning err from cmd.Start()", err.Error())
 		return nil, err
 	}
+	fmt.Println("****** command has started")
 	return &osProcess{cmd}, nil
 }
 
@@ -54,11 +64,13 @@ type osProcess struct {
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	err := p.cmd.Wait()
 	if err == nil {
+		fmt.Println("****** cmd.Wait() finished no erro")
 		result.State = execer.COMPLETE
 		result.ExitCode = 0
 		// TODO(dbentley): set stdout and stderr
 		return result
 	}
+	fmt.Println("****** cmd.Wait() finished with error")
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
 			result.State = execer.COMPLETE
@@ -99,4 +111,18 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		}
 	}
 	return result
+}
+
+
+//TODO remove when done debugging
+func foundCommand(command string) bool {
+	fmt.Println("********* about to create cmd:", command)
+	path, err := exec.LookPath(command)
+	if err != nil {
+		fmt.Println("*********LookPath returned err:", err.Error())
+		return false
+	} else {
+		fmt.Println("**********LookPath returned:", path)
+		return true
+	}
 }

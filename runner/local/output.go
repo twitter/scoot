@@ -35,6 +35,7 @@ func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 	}
 	// We don't need a / between hostname and path because absolute paths start with /
 	uri := fmt.Sprintf("file://%s%s", s.hostname, absPath)
+	fmt.Println("********* creating runner.Output, uri:", uri)
 	return &localOutput{f: f, uri: uri}, nil
 }
 
@@ -48,6 +49,7 @@ func (o *localOutput) URI() string {
 }
 
 func (o *localOutput) Write(p []byte) (n int, err error) {
+	fmt.Println("************ writing to output")
 	return o.f.Write(p)
 }
 
@@ -60,6 +62,7 @@ func (o *localOutput) Close() error {
 // directly to a new process's stdout/stderr.)
 // We care about this cleverness, so Output both is-a and has-a Writer
 func (o *localOutput) WriterDelegate() io.Writer {
+
 	return o.f
 }
 

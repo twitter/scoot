@@ -9,6 +9,7 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
+	"strings"
 )
 
 // Scheduler that keeps track of the state of running tasks & the cluster
@@ -235,7 +236,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		s.asyncRunner.RunAsync(
 			func() error {
-				fmt.Println("Starting task", taskId)
+				fmt.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv," "))
 				return runTaskAndLog(
 					saga,
 					wf,
@@ -243,7 +244,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					taskDef)
 			},
 			func(err error) {
-				fmt.Println("Ending task", taskId)
+				fmt.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				// update the jobState
 				if err == nil {
 					jobState.taskCompleted(taskId)
