@@ -45,12 +45,6 @@ func (r *Repository) RunSha(args ...string) (string, error) {
 	return validateSha(out)
 }
 
-// Checkout an id in r
-func (r *Repository) Checkout(id string) error {
-	_, err := r.Run("checkout", id)
-	return err
-}
-
 func validateSha(sha string) (string, error) {
 	if len(sha) == 40 || len(sha) == 41 && sha[40] == '\n' {
 		return sha[0:40], nil
