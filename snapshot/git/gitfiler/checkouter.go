@@ -2,111 +2,76 @@ package gitfiler
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"sync"
 
-	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// Utilities for Reference Repositories.
-// A Reference Repository is a way to clone repos locally so that the clone takes less time and disk space.
-// By passing --reference <local path> to a git clone, the clone will not copy the whole ODB but instead
-// hardlink. This means the clone is much faster and also takes very little extra hard disk space.
-// Cf. https://git-scm.com/docs/git-clone
-
-// RefRepoGetter lets a client get a Repository to use as a Reference Repository.
-type RefRepoGetter interface {
-	// Get gets the Repository to use as a reference repository.
-	Get() (*repo.Repository, error)
+func NewCheckouter(repos *RepoPool) *Checkouter {
+	return &Checkouter{repos: repos}
 }
 
-// RefRepoCloningCheckouter checks out by cloning a Ref Repo.
-type RefRepoCloningCheckouter struct {
-	getter RefRepoGetter
-	tmp    *temp.TempDir
-
-	repo *repo.Repository
-	mu   sync.Mutex
+// Checkouter checks out by checking out in a repo from pool
+type Checkouter struct {
+	repos *RepoPool
 }
 
-func NewRefRepoCloningCheckouter(getter RefRepoGetter, tmp *temp.TempDir) *RefRepoCloningCheckouter {
-	return &RefRepoCloningCheckouter{
-		getter: getter,
-		tmp:    tmp,
-		repo:   nil,
-	}
-}
+// An arbitrary revision. As mentioned below, we should get rid of this altogether
+const DEFAULT_REV = "1dda9fbde682e4922a0d5709c5539f573db4cc54"
 
 // Checkout checks out id (a raw git sha) into a Checkout.
 // It does this by making a new clone (via reference) and checking out id.
-func (c *RefRepoCloningCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.repo == nil {
-		repository, err := c.getter.Get()
-		if err != nil {
-			return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.clone: error getting: %v", err)
-		}
-		c.repo = repository
+// TODO(dbentley): if id is not found because it is present in upstream repos but not here,
+// we should fetch it and check it out.
+func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
+	repo, repoErr := c.repos.Get()
+	if repoErr != nil {
+		return nil, repoErr
 	}
 
-	clone, err := c.clone()
-	if err != nil {
-		return nil, err
-	}
-
-	// Make sure we clean up if we error
-	needToClean := true
+	// release if we aren't using it
 	defer func() {
-		if needToClean {
-			err := os.RemoveAll(clone.Dir())
-			log.Println("gitfiler.RefRepoCloningCheckouter.Checkout: had to clean in Checkout", err)
+		if err != nil || recover() != nil {
+			c.repos.Release(repo, repoErr)
 		}
 	}()
 
-	if err := clone.Checkout(id); err != nil {
-		return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.Checkout: could not git checkout: %v", err)
+	// TODO(dbentley): do more ot validate id. E.g., don't let "HEAD" or "master" slip through
+	if id == "" {
+		id = DEFAULT_REV
 	}
 
-	log.Println("gitfiler.RefRepoCloningCheckouter.Checkout done: ", clone.Dir())
-	needToClean = false
-	return &RefRepoCloningCheckout{repo: clone, id: id, checkouter: c}, nil
-}
-
-func (c *RefRepoCloningCheckouter) clone() (*repo.Repository, error) {
-	cloneDir, err := c.tmp.TempDir("clone-")
-	if err != nil {
-		return nil, err
+	// -d removes directories. -x ignores gitignore and removes everything.
+	// -f is force. -f the second time removes directories even if they're git repos themselves
+	cmds := [][]string{
+		{"clean", "-f", "-f", "-d", "-x"},
+		{"checkout", id},
 	}
 
-	cmd := exec.Command("git", "clone", "-n", "--reference", c.repo.Dir(), c.repo.Dir(), cloneDir.Dir)
-	log.Println("gitfiler.RefRepoCloningCheckouter.clone: Cloning", cmd)
-	err = cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("gitfiler.RefRepoCloningCheckouter.clone: error cloning: %v", err)
+	for _, argv := range cmds {
+		if _, err := repo.Run(argv...); err != nil {
+			return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
+		}
 	}
-
-	return repo.NewRepository(cloneDir.Dir)
+	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
 }
 
-type RefRepoCloningCheckout struct {
-	repo       *repo.Repository
-	id         string
-	checkouter *RefRepoCloningCheckouter
+// Checkout holds one repo that is checked out to a specific ID
+type Checkout struct {
+	repo *repo.Repository
+	id   string
+	pool *RepoPool
 }
 
-func (c *RefRepoCloningCheckout) Path() string {
+func (c *Checkout) Path() string {
 	return c.repo.Dir()
 }
 
-func (c *RefRepoCloningCheckout) ID() string {
+func (c *Checkout) ID() string {
 	return c.id
 }
 
-func (c *RefRepoCloningCheckout) Release() error {
-	return os.RemoveAll(c.repo.Dir())
+func (c *Checkout) Release() error {
+	c.pool.Release(c.repo, nil)
+	return nil
 }

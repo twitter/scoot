@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	osexecer "github.com/scootdev/scoot/runner/execer/os"
 )
@@ -16,7 +17,7 @@ type localOutputCreator struct {
 }
 
 // Create a new OutputCreator
-func NewOutputCreator() (runner.OutputCreator, error) {
+func NewOutputCreator(tmp *temp.TempDir) (runner.OutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
