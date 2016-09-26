@@ -16,6 +16,7 @@ type Checkouter struct {
 	repos *RepoPool
 }
 
+// An arbitrary revision. As mentioned below, we should get rid of this altogether
 const DEFAULT_REV = "1dda9fbde682e4922a0d5709c5539f573db4cc54"
 
 // Checkout checks out id (a raw git sha) into a Checkout.

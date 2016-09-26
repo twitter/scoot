@@ -2,6 +2,7 @@ package local
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -126,6 +127,7 @@ func (r *simpleRunner) updateStatus(new runner.ProcessStatus) (runner.ProcessSta
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed
 func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
+	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{}, 1)
 	go func() {
 		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
@@ -143,6 +145,8 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		return
 	}
 	defer checkout.Release()
+
+	log.Printf("local.simpleRunner.run checkout: %v", checkout.Path())
 
 	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
 	if err != nil {
