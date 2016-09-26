@@ -31,7 +31,7 @@ func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
 	return singlePool
 }
 
-func NewSingeRepoCheckouter(repoGetter RepoGetter, doneCh chan struct{}) *Checkouter {
+func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh chan struct{}) *Checkouter {
 	pool := NewSingleRepoPool(repoGetter, doneCh)
 	return NewCheckouter(pool)
 }
