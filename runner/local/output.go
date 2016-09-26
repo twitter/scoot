@@ -61,7 +61,6 @@ func (o *localOutput) Close() error {
 // directly to a new process's stdout/stderr.)
 // We care about this cleverness, so Output both is-a and has-a Writer
 func (o *localOutput) WriterDelegate() io.Writer {
-
 	return o.f
 }
 

@@ -21,7 +21,7 @@ func (c *getStatusCmd) run(cl *Client, cmd *cobra.Command, args []string) error 
 
 	log.Println("Checking Status for Scoot Job", args)
 
-	if args == nil || len(args) == 0 {
+	if len(args) == 0 {
 		return errors.New("a job id must be provided")
 	}
 

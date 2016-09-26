@@ -35,7 +35,6 @@ func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	}
 
 	client, err := cl.Dial()
-
 	if err != nil {
 		return err
 	}
@@ -44,7 +43,6 @@ func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 
 	for {
 		jobStatus, err := GetAndPrintStatus(jobId, client)
-
 		if err != nil {
 			return err
 		}
@@ -61,7 +59,6 @@ func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 func GetAndPrintStatus(jobId string, thriftClient *scoot.CloudScootClient) (*scoot.Status, error) {
 
 	status, err := thriftClient.GetStatus(jobId)
-
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:

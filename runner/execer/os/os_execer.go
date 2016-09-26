@@ -2,10 +2,11 @@ package os
 
 import (
 	"errors"
-	"github.com/scootdev/scoot/runner/execer"
 	"io"
 	"os/exec"
 	"syscall"
+
+	"github.com/scootdev/scoot/runner/execer"
 )
 
 func NewExecer() execer.Execer {

@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -9,7 +11,6 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
-	"strings"
 )
 
 // Scheduler that keeps track of the state of running tasks & the cluster

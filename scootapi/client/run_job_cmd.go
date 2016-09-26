@@ -29,10 +29,6 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
-	if args == nil || len(args) == 0 {
-		return errors.New("a job id must be provided")
-	}
-
 	client, err := cl.Dial()
 	if err != nil {
 		return err
@@ -72,8 +68,8 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	fmt.Println(jobId)
 	log.Println(fmt.Printf("JobID:%s\n", jobId))
-	fmt.Println(fmt.Printf("JobID:%s\n", jobId)) // this did not show up
 
 	return nil
 }
