@@ -44,6 +44,8 @@ test:
 	go test -v -race -tags=\!integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
+test-strict: format vet test
+
 test-integration:
 	# Runs all tests including integration
 	go test -v -tags=integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
