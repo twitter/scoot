@@ -70,7 +70,7 @@ func TempDirHere() (*TempDir, error) {
 	}
 
 	if err = os.Setenv("TMPDIR", cwd); err != nil {
-		return nil, fmt.Errorf("temp.TempDirHere: couldn't setenv", err)
+		return nil, fmt.Errorf("temp.TempDirHere: couldn't setenv %v", err)
 	}
 
 	return NewTempDir(cwd, "scoot-tmp-")
