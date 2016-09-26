@@ -31,6 +31,7 @@ func NewClient(dialer Dialer) (*Client, error) {
 	r.addCmd(&runJobCmd{})
 	r.addCmd(&getStatusCmd{})
 	r.addCmd(&smokeTestCmd{})
+	r.addCmd(&watchJobCmd{})
 
 	return r, nil
 }
