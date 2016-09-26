@@ -3,6 +3,7 @@ package snapshots
 import (
 	"sync"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 )
 
@@ -17,6 +18,26 @@ type noopCheckouter struct {
 func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	return &staticCheckout{
 		path: c.path,
+		id:   id,
+	}, nil
+}
+
+// MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
+func MakeTempCheckouter(tmp *temp.TempDir) snapshot.Checkouter {
+	return &tempCheckouter{tmp: tmp}
+}
+
+type tempCheckouter struct {
+	tmp *temp.TempDir
+}
+
+func (c *tempCheckouter) Checkout(id string) (snapshot.Checkout, error) {
+	t, err := c.tmp.TempDir("checkout-")
+	if err != nil {
+		return nil, err
+	}
+	return &staticCheckout{
+		path: t.Dir,
 		id:   id,
 	}, nil
 }

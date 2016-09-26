@@ -40,7 +40,7 @@ func main() {
 	}
 
 	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
-	run := localrunner.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	run := localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tempDir), outputCreator)
 	handler := server.NewHandler(stats, run)
 	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {

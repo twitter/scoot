@@ -236,7 +236,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		s.asyncRunner.RunAsync(
 			func() error {
-				fmt.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv," "))
+				fmt.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				return runTaskAndLog(
 					saga,
 					wf,
