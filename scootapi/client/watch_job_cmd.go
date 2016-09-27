@@ -74,10 +74,27 @@ func GetAndPrintStatus(jobId string, thriftClient *scoot.CloudScootClient) (*sco
 }
 
 func PrintJobStatus(jobStatus *scoot.JobStatus) {
-	fmt.Printf(fmt.Sprintf("Job id: %s\n", jobStatus.ID))
-	fmt.Printf(fmt.Sprintf("Job status: %s\n", jobStatus.Status.String()))
+	fmt.Printf("Job id: %s\n", jobStatus.ID)
+	fmt.Printf("Job status: %s\n", jobStatus.Status.String())
 	for taskId, taskStatus := range jobStatus.TaskStatus {
-		fmt.Printf(fmt.Sprintf("\tTask id: %s\n", taskId))
-		fmt.Printf(fmt.Sprintf("\tTask status: %s\n", taskStatus.String()))
+		fmt.Printf("\tTask %s {\n", taskId)
+		fmt.Printf("\t\tStatus: %s\n", taskStatus.String())
+		runStatus := jobStatus.TaskData[taskId]
+
+		// TODO(dbentley): it appears that runStatus is nil; figure that out
+		if taskStatus == scoot.Status_COMPLETED && runStatus != nil {
+			if runStatus.ExitCode != nil {
+				exitCode := *runStatus.ExitCode
+				fmt.Printf("\t\tExitCode: %d\n", exitCode)
+				if exitCode != 0 {
+					fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+					fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+				}
+			}
+			if runStatus.Error != nil {
+				fmt.Printf("\t\tError: %v\n", *runStatus.Error)
+			}
+		}
+		fmt.Printf("\t}\n")
 	}
 }
