@@ -84,12 +84,12 @@ func configInmemoryJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/inMemory.json", size: 60, mode: os.FileMode(420), modTime: time.Unix(1474666992, 0)}
+	info := bindataFileInfo{name: "config/inMemory.json", size: 60, mode: os.FileMode(420), modTime: time.Unix(1475000124, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _configLocalJson = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\xaa\xe6\x52\x50\x50\x72\xce\x29\x2d\x2e\x49\x2d\x52\xb2\x52\x00\x71\x81\x02\x21\x95\x05\xa9\x40\x9e\x52\x4e\x7e\x72\x62\x8e\x12\x50\xac\x96\xab\x16\x10\x00\x00\xff\xff\xf7\x73\x01\xa2\x2a\x00\x00\x00")
+var _configLocalJson = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\xaa\xe6\x52\x50\x50\x72\xce\x29\x2d\x2e\x49\x2d\x52\xb2\x52\x00\x71\x81\x02\x21\x95\x05\xa9\x40\x9e\x52\x4e\x7e\x72\x62\x8e\x12\x50\xac\x56\x07\xa4\x2e\x3c\xbf\x28\x3b\xb5\xa8\x18\x53\x5d\x51\x41\x32\x58\x15\x57\x2d\x20\x00\x00\xff\xff\x03\xdc\x1c\x93\x50\x00\x00\x00")
 
 func configLocalJsonBytes() ([]byte, error) {
 	return bindataRead(
@@ -104,7 +104,7 @@ func configLocalJson() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.json", size: 42, mode: os.FileMode(420), modTime: time.Unix(1474985765, 0)}
+	info := bindataFileInfo{name: "config/local.json", size: 80, mode: os.FileMode(420), modTime: time.Unix(1475000267, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
