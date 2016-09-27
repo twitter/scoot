@@ -1,17 +1,14 @@
 package server
 
 import (
-	"flag"
-	"fmt"
 	"log"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 
 	// For putting into ice.MagicBag
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
 
@@ -19,10 +16,6 @@ import (
 	"github.com/scootdev/scoot/config/scootconfig"
 	"github.com/scootdev/scoot/saga/sagalogs"
 )
-
-// Set Flags Needed by this Server
-var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
-var httpPort = flag.Int("http_port", 9091, "port to serve http on")
 
 type servers struct {
 	thrift thrift.TServer
@@ -39,13 +32,9 @@ func makeServers(
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*addr) },
 		endpoints.MakeStatsReceiver,
 		MakeServer,
 		NewHandler,
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(fmt.Sprintf(":%d", *httpPort), s)
-		},
 		makeServers,
 		saga.MakeSagaCoordinator,
 		sagalogs.MakeInMemorySagaLog,
@@ -78,8 +67,6 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 // Starts the Server based on the MagicBag and config schema provided
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
-	log.Println("Starting Cloud Scoot API Server & Scheduler on", *addr)
-
 	// Parse Config
 	mod, err := schema.Parse(config)
 	if err != nil {
