@@ -155,7 +155,7 @@ func (s *SwarmTest) setup() (string, error) {
 			return "", err
 		}
 	}
-	args := []string{"-config", "local"}
+	args := []string{"-config", "local.json"}
 	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
 		return "", err
 	}

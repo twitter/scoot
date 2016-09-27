@@ -10,10 +10,12 @@ import (
 	"log"
 )
 
-var configFileName = flag.String("config", "inMemory.json", "Scheduler Configuration.")
+var configFileName = flag.String("config", "local.json", "Scheduler Config File")
 
 func main() {
 
+	flag.Parse()
+	log.Printf("%+v", *configFileName)
 	config, err := config.Asset(fmt.Sprintf("config/%v", *configFileName))
 
 	if err != nil {
