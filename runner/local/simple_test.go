@@ -5,15 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
+	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot/snapshots"
-
-	"sync"
-	"testing"
 )
 
 func TestRun(t *testing.T) {
@@ -165,7 +165,12 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 func newRunner() (runner.Runner, *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
 	ex := execers.NewSimExecer(wg)
-	outputCreator, err := local.NewOutputCreator()
+	tempDir, err := temp.TempDirDefault()
+	if err != nil {
+		panic(err)
+	}
+
+	outputCreator, err := local.NewOutputCreator(tempDir)
 	if err != nil {
 		panic(err)
 	}

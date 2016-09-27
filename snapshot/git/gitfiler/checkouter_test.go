@@ -22,7 +22,9 @@ func TestCheckouter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkouter := NewRefRepoCloningCheckouter(&constantGetter{repo}, tmp)
+	doneCh := make(chan struct{})
+	defer close(doneCh)
+	checkouter := NewRefRepoCloningCheckouter(&constantGetter{repo}, tmp, doneCh)
 	c1, err := checkouter.Checkout(id1)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id1, err)
@@ -46,8 +48,28 @@ func TestCheckouter(t *testing.T) {
 		t.Fatalf("error reading file.txt: %q %v (expected \"second\" <nil>)", data, err)
 	}
 
+	// Write temporary data into checkouts to make sure it's cleaned
+	if err = ioutil.WriteFile(filepath.Join(c1.Path(), "scratch.txt"), []byte("1"), 0777); err != nil {
+		t.Fatal(err)
+	}
+	if err = ioutil.WriteFile(filepath.Join(c2.Path(), "scratch.txt"), []byte("2"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
 	c1.Release()
 	c2.Release()
+
+	c3, err := checkouter.Checkout(id1)
+	if err != nil {
+		t.Fatalf("error checking out %v, %v", id1, err)
+	}
+
+	data, err = ioutil.ReadFile(filepath.Join(c3.Path(), "scratch.txt"))
+	if err == nil {
+		t.Fatalf("scratch.txt existed in %v with contents %q; should not exist", id1, data)
+	}
+
+	c3.Release()
 
 	_, err = checkouter.Checkout("Not a valid git sha1")
 	if err == nil {

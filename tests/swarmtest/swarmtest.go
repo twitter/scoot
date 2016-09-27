@@ -48,6 +48,8 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	numJobs := flag.Int("num_jobs", d["num_jobs"].(int), "Number of Jobs to run")
 	timeout := flag.Duration("timeout", d["timeout"].(time.Duration), "Time to wait for jobs to complete")
 
+	wait := flag.Bool("setup_then_wait", false, "if true, don't run tests; just setup and wait")
+
 	flag.Parse()
 	if *numWorkers < 5 {
 		return errors.New("Need >5 workers (see scheduler.go:getNumNodes)")
@@ -58,7 +60,11 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.NumWorkers = *numWorkers
 	s.Compile = func() error { return s.compile() }
 	s.Setup = func() (string, error) { return s.setup() }
-	s.Run = func() error { return s.run() }
+	if *wait {
+		s.Run = func() error { return WaitDontRun() }
+	} else {
+		s.Run = func() error { return s.run() }
+	}
 	s.NumJobs = *numJobs
 	s.Timeout = *timeout
 	s.mutex = &sync.Mutex{}
@@ -155,6 +161,7 @@ func (s *SwarmTest) setup() (string, error) {
 			return "", err
 		}
 	}
+
 	args := []string{"-config", "local.json"}
 	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
 		return "", err

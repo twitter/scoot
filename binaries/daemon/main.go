@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/scootdev/scoot/daemon/server"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/execer/os"
@@ -26,7 +27,13 @@ func main() {
 	default:
 		log.Fatalf("Unknown execer type %v", *execerType)
 	}
-	outputCreator, err := local.NewOutputCreator()
+
+	tempDir, err := temp.TempDirDefault()
+	if err != nil {
+		log.Fatal("error creating temp dir: ", err)
+	}
+
+	outputCreator, err := local.NewOutputCreator(tempDir)
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}

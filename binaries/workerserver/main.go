@@ -8,6 +8,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
@@ -27,14 +28,19 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
 
+	tempDir, err := temp.TempDirDefault()
+	if err != nil {
+		log.Fatal("error creating temp dir: ", err)
+	}
+
 	stats := stat.Scope("workerserver")
-	outputCreator, err := localrunner.NewOutputCreator()
+	outputCreator, err := localrunner.NewOutputCreator(tempDir)
 	if err != nil {
 		log.Fatal("Error creating OutputCreatorr: ", err)
 	}
 
 	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
-	run := localrunner.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	run := localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tempDir), outputCreator)
 	handler := server.NewHandler(stats, run)
 	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
 	if err != nil {
