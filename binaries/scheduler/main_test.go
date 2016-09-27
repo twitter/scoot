@@ -9,7 +9,7 @@ import (
 
 var tests = []string{"inMemory.json", "local.json"}
 
-// Tests to ensure config is properly specified for all desired env/dc combos
+// Tests to ensure config is properly specified
 // and that they parse correctly
 func TestConfigParses(t *testing.T) {
 	_, schema := apiserver.Defaults()
