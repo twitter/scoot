@@ -2,20 +2,15 @@ package server
 
 import (
 	"fmt"
-	"strings"
-	"testing"
-
 	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
-
 	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/runner"
 	s "github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"strings"
+	"testing"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {
@@ -315,49 +310,4 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 	}
 
 	return true
-}
-
-func TestRunStatusRoundTrip(t *testing.T) {
-	sagaLog := sagalogs.MakeInMemorySagaLog()
-	sagaCoord := s.MakeSagaCoordinator(sagaLog)
-
-	jobID := "foo"
-	saga, err := sagaCoord.MakeSaga(jobID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	taskID := "t"
-	if err = saga.StartTask(taskID, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	stdoutRef := "http://example.com/stdout"
-
-	st := runner.ProcessStatus{
-		RunId:     runner.RunId("2"),
-		State:     runner.COMPLETE,
-		StdoutRef: stdoutRef,
-		StderrRef: "",
-		ExitCode:  0,
-		Error:     "",
-	}
-	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = saga.EndTask(taskID, statusAsBytes); err != nil {
-		t.Fatal(err)
-	}
-
-	jobStatus, err := GetJobStatus(jobID, sagaCoord)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	runStatus := jobStatus.TaskData[taskID]
-	if *runStatus.OutUri != stdoutRef {
-		t.Fatalf("runStatus.OutUri: %v (expected %v)", *runStatus.OutUri, stdoutRef)
-	}
 }
