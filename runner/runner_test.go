@@ -7,11 +7,11 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
-func TestCommandStringSimple (t *testing.T) {
+func TestCommandStringSimple(t *testing.T) {
 	c := runner.Command{
-		Argv: []string{"cat", "cats.in", "|", "cat.bin", ">", "cats.out"},
-		EnvVars: map[string]string{"CAT": "meow"},
-		Timeout: 10 * time.Minute,
+		Argv:       []string{"cat", "cats.in", "|", "cat.bin", ">", "cats.out"},
+		EnvVars:    map[string]string{"CAT": "meow"},
+		Timeout:    10 * time.Minute,
 		SnapshotId: "git-abcd1234",
 	}
 
@@ -26,10 +26,10 @@ func TestCommandStringSimple (t *testing.T) {
 	}
 }
 
-func TestProcStatusStringInit (t *testing.T) {
+func TestProcStatusStringInit(t *testing.T) {
 	ps := runner.ProcessStatus{
-		RunId: runner.RunId("1"),
-		State: runner.UNKNOWN,
+		RunId:     runner.RunId("1"),
+		State:     runner.UNKNOWN,
 		StdoutRef: "stdout",
 		StderrRef: "stderr",
 	}
@@ -45,13 +45,13 @@ func TestProcStatusStringInit (t *testing.T) {
 	}
 }
 
-func TestProcStatusStringCompleted (t *testing.T) {
+func TestProcStatusStringCompleted(t *testing.T) {
 	ps := runner.ProcessStatus{
-		RunId: runner.RunId("12"),
-		State: runner.COMPLETE,
+		RunId:     runner.RunId("12"),
+		State:     runner.COMPLETE,
 		StdoutRef: "stdout",
 		StderrRef: "stderr",
-		ExitCode: 9,
+		ExitCode:  9,
 	}
 
 	expected := `ProcessStatus - ID: 12
@@ -66,13 +66,13 @@ func TestProcStatusStringCompleted (t *testing.T) {
 	}
 }
 
-func TestProcStatusStringError (t *testing.T) {
+func TestProcStatusStringError(t *testing.T) {
 	ps := runner.ProcessStatus{
-		RunId: runner.RunId("aaaaa"),
-		State: runner.FAILED,
+		RunId:     runner.RunId("aaaaa"),
+		State:     runner.FAILED,
 		StdoutRef: "stdout",
 		StderrRef: "stderr",
-		Error: "The thing blew up.",
+		Error:     "The thing blew up.",
 	}
 
 	expected := `ProcessStatus - ID: aaaaa

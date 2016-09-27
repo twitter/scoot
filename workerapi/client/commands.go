@@ -31,7 +31,7 @@ func (c *runCmd) run(cmd *cobra.Command, args []string) error {
 	log.Printf("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
 
 	status, err := c.client.Run(cmdToRun)
-	log.Printf("%s\nError: %v\n", status, err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -50,7 +50,7 @@ func (c *abortCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
 	status, err := c.client.Abort(runner.RunId(c.runId))
-	log.Printf("%s\nError: %v\n", status, err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -65,7 +65,7 @@ func (c *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
 	status, err := c.client.QueryWorker()
-	log.Printf("%s\nError: %v\n", status, err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
