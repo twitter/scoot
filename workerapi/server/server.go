@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	domain "github.com/scootdev/scoot/workerapi"
@@ -93,7 +92,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Println("WorkerRunning", render.Render(cmd))
+	log.Printf("Worker Running:\n%s", cmd)
 
 	h.timeLastRpc = time.Now()
 	process, err := h.run.Run(domain.ThriftRunCommandToDomain(cmd))

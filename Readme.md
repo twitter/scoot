@@ -5,10 +5,6 @@
 * make format
 * make vet
 * make test
-Or just run:
-```bash
-make test-strict
-```
 
 ### Swarm Test
 Swarm Test will spin up a scheduler and cluster of worker nodes on your machine, send a bunch of randomly generated jobs to the server and then check the status of those jobs.  To run swarm test run:

@@ -34,7 +34,7 @@ const (
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == BADREQUEST
 }
 
 func (p ProcessState) String() string {
@@ -78,6 +78,24 @@ type Command struct {
 	SnapshotId string
 }
 
+func (c Command) String() string {
+	sfmt := "Command - Snapshot ID: %s\n"
+	sargs := []interface{}{c.SnapshotId}
+
+	sfmt += "\t%v\n\tTimeout:\t%v\n"
+	sargs = append(sargs, c.Argv, c.Timeout)
+
+	if len(c.EnvVars) > 0 {
+		sfmt += "\tEnv:\n"
+		for k, v := range c.EnvVars {
+			sfmt += "\t\t%s: %s\n"
+			sargs = append(sargs, k, v)
+		}
+	}
+
+	return fmt.Sprintf(sfmt, sargs...)
+}
+
 func NewCommand(argv []string, env map[string]string, timeout time.Duration, snapshotId string) *Command {
 	return &Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotId: snapshotId}
 }
@@ -98,15 +116,22 @@ type ProcessStatus struct {
 }
 
 func (p ProcessStatus) String() string {
-	// TODO (dgassaway) respect above guidelines on struct member validity
-	return fmt.Sprintf(
-		"RunId:\t%v\n"+
-			"State:\t%v\n"+
-			"ExitCode:\t%v\n"+
-			"StdoutRef:\t%v\n"+
-			"StderrRef:\t%v\n"+
-			"Error:\t%v\n",
-		p.RunId, p.State, p.ExitCode, p.StdoutRef, p.StderrRef, p.Error)
+	sfmt := "ProcessStatus - ID: %s\n\tState:\t\t%s\n"
+	sargs := []interface{}{p.RunId, p.State}
+
+	if p.State == COMPLETE {
+		sfmt += "\tExitCode:\t%d\n"
+		sargs = append(sargs, p.ExitCode)
+	}
+	if p.State == FAILED || p.State == BADREQUEST {
+		sfmt += "\tError:\t\t%s\n"
+		sargs = append(sargs, p.Error)
+	}
+
+	sfmt += "\tStdout:\t\t%s\n\tStderr:\t\t%s\n"
+	sargs = append(sargs, p.StdoutRef, p.StderrRef)
+
+	return fmt.Sprintf(sfmt, sargs...)
 }
 
 type Runner interface {
