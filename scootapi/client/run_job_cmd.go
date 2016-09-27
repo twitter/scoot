@@ -69,7 +69,7 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println(jobId.ID)
-	log.Println("JobID:%s\n", jobId.ID)
+	log.Printf("JobID:%s\n", jobId.ID)
 
 	return nil
 }
