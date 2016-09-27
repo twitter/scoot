@@ -161,7 +161,8 @@ func (s *SwarmTest) setup() (string, error) {
 			return "", err
 		}
 	}
-	args := []string{"-sched_config", `{"Cluster": {"Type": "local"}, "Workers": {"Type": "rpc"}}`}
+
+	args := []string{"-config", "local.json"}
 	if err := s.RunCmd(false, "$GOPATH/bin/scheduler", args...); err != nil {
 		return "", err
 	}

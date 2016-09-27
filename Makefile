@@ -24,6 +24,10 @@ dependencies:
 	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
 	go get github.com/golang/mock/mockgen
 
+	# Install go-bindata tool which is used to generate binary version of config file
+	# this is only used by go generate
+	go get github.com/jteeuwen/go-bindata/...
+
 check-dependencies:
 	# Run this whenever a dependency is added.
 	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
