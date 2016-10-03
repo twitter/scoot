@@ -1,14 +1,12 @@
-package runner_test
+package runner
 
 import (
 	"testing"
 	"time"
-
-	"github.com/scootdev/scoot/runner"
 )
 
 func TestCommandStringSimple(t *testing.T) {
-	c := runner.Command{
+	c := Command{
 		Argv:       []string{"./pants", "test", "science/src/go/twitter.biz::"},
 		EnvVars:    map[string]string{"GOOS": "linux"},
 		Timeout:    10 * time.Minute,
@@ -28,9 +26,9 @@ func TestCommandStringSimple(t *testing.T) {
 }
 
 func TestProcStatusStringCompleted(t *testing.T) {
-	ps := runner.ProcessStatus{
-		RunId:     runner.RunId("12"),
-		State:     runner.COMPLETE,
+	ps := ProcessStatus{
+		RunId:     RunId("12"),
+		State:     COMPLETE,
 		StdoutRef: "stdout",
 		StderrRef: "stderr",
 		ExitCode:  9,
@@ -50,9 +48,9 @@ func TestProcStatusStringCompleted(t *testing.T) {
 }
 
 func TestProcStatusStringError(t *testing.T) {
-	ps := runner.ProcessStatus{
-		RunId:     runner.RunId("aaaaa"),
-		State:     runner.FAILED,
+	ps := ProcessStatus{
+		RunId:     RunId("aaaaa"),
+		State:     FAILED,
 		StdoutRef: "stdout",
 		StderrRef: "stderr",
 		Error:     "The thing blew up.",

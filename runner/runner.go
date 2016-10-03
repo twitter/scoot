@@ -1,66 +1,10 @@
 package runner
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 )
-
-type RunId string
-type ProcessState int
-
-const (
-	// An unambiguous 0-value.
-	UNKNOWN ProcessState = iota
-	// Waiting to run.
-	PENDING
-	// Preparing to run (e.g., checking out the Snapshot)
-	PREPARING
-	// Running
-	RUNNING
-
-	// States below are end states
-	// a Process in an end state will not change its state
-
-	// Succeeded or failed yielding an exit code. Only state with an exit code.
-	COMPLETE
-	// Run mechanism failed and run is no longer active. Retry may or may not work.
-	FAILED
-	// User requested that the run be killed.
-	ABORTED
-	// Operation timed out and was killed.
-	TIMEDOUT
-	// Invalid or error'd request. Original runner state not affected. Retry may work after mutation.
-	BADREQUEST
-)
-
-func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
-}
-
-func (p ProcessState) String() string {
-	switch p {
-	case UNKNOWN:
-		return "UNKNOWN"
-	case PENDING:
-		return "PENDING"
-	case PREPARING:
-		return "PREPARING"
-	case RUNNING:
-		return "RUNNING"
-	case COMPLETE:
-		return "COMPLETE"
-	case FAILED:
-		return "FAILED"
-	case ABORTED:
-		return "ABORTED"
-	case TIMEDOUT:
-		return "TIMEDOUT"
-	case BADREQUEST:
-		return "BADREQUEST"
-	default:
-		panic(fmt.Sprintf("Unexpected ProcessState %v", int(p)))
-	}
-}
 
 // A command, execution environment, and timeout.
 type Command struct {
@@ -79,53 +23,24 @@ type Command struct {
 }
 
 func (c Command) String() string {
-	s := fmt.Sprintf("Command\n\tSnapshot ID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+	var b bytes.Buffer
+	b.WriteString(fmt.Sprintf("Command\n\tSnapshot ID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
 		c.SnapshotId,
 		c.Argv,
-		c.Timeout)
+		c.Timeout))
 
 	if len(c.EnvVars) > 0 {
-		s = fmt.Sprintf("%s\tEnv:\n", s)
+		b.WriteString("\tEnv:\n")
 		for k, v := range c.EnvVars {
-			s = fmt.Sprintf("%s\t\t%s: %s\n", s, k, v)
+			b.WriteString(fmt.Sprintf("\t\t%s: %s\n", k, v))
 		}
 	}
 
-	return s
+	return b.String()
 }
 
 func NewCommand(argv []string, env map[string]string, timeout time.Duration, snapshotId string) *Command {
 	return &Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotId: snapshotId}
-}
-
-// Returned by the coordinator when a run request is made.
-type ProcessStatus struct {
-	RunId RunId
-	State ProcessState
-	// References to stdout and stderr, not their text
-	StdoutRef string
-	StderrRef string
-
-	// Only valid if State == COMPLETE
-	ExitCode int
-
-	// Only valid if State == (FAILED || BADREQUEST)
-	Error string
-}
-
-func (p ProcessStatus) String() string {
-	s := fmt.Sprintf("--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.State)
-
-	if p.State == COMPLETE {
-		s = fmt.Sprintf("%s\tExitCode:\t%d\n", s, p.ExitCode)
-	}
-	if p.State == FAILED || p.State == BADREQUEST {
-		s = fmt.Sprintf("%s\tError:\t\t%s\n", s, p.Error)
-	}
-
-	s = fmt.Sprintf("%s\tStdout:\t\t%s\n\tStderr:\t\t%s\n", s, p.StdoutRef, p.StderrRef)
-
-	return s
 }
 
 type Runner interface {
