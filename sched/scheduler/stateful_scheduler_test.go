@@ -155,9 +155,9 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 	}
 
 	// The in memory workers aren't doing anything interesting except sleeping distribution
-	// should be even with in 190 - 210 nodes otherwise something is wrong.
+	// should be even with in 180 - 220 nodes otherwise something is wrong.
 	for nodeId, taskCount := range taskCountMap {
-		if taskCount < 190 || taskCount > 210 {
+		if taskCount < 180 || taskCount > 220 {
 			t.Fatalf(`Tasks were not evenly distributed across nodes.  Expected each node
 				to have 190 to 210 tasks executed on it. %v had an unequal number of tasks %v scheduled 
 				on it.  TaskCountMap: %+v`, nodeId, taskCount, taskCountMap)

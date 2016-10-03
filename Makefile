@@ -45,12 +45,12 @@ vet:
 
 test:
 	# Runs only unit tests
-	go test -v -race -tags=\!integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -race -tags=\!integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
 test-integration:
 	# Runs all tests including integration
-	go test -v -tags=integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -tags=integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 
