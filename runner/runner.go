@@ -24,15 +24,15 @@ type Command struct {
 
 func (c Command) String() string {
 	var b bytes.Buffer
-	b.WriteString(fmt.Sprintf("Command\n\tSnapshot ID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+	fmt.Fprintf(&b, "Command\n\tSnapshot ID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
 		c.SnapshotId,
 		c.Argv,
-		c.Timeout))
+		c.Timeout)
 
 	if len(c.EnvVars) > 0 {
-		b.WriteString("\tEnv:\n")
+		fmt.Fprintf(&b, "\tEnv:\n")
 		for k, v := range c.EnvVars {
-			b.WriteString(fmt.Sprintf("\t\t%s: %s\n", k, v))
+			fmt.Fprintf(&b, "\t\t%s: %s\n", k, v)
 		}
 	}
 

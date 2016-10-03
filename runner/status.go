@@ -79,16 +79,16 @@ type ProcessStatus struct {
 
 func (p ProcessStatus) String() string {
 	var b bytes.Buffer
-	b.WriteString(fmt.Sprintf("--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.State))
+	fmt.Fprintf(&b, "--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.State)
 
 	if p.State == COMPLETE {
-		b.WriteString(fmt.Sprintf("\tExitCode:\t%d\n", p.ExitCode))
+		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		b.WriteString(fmt.Sprintf("\tError:\t\t%s\n", p.Error))
+		fmt.Fprintf(&b, "\tError:\t\t%s\n", p.Error)
 	}
 
-	b.WriteString(fmt.Sprintf("\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef))
+	fmt.Fprintf(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
 
 	return b.String()
 }
