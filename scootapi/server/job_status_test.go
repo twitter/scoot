@@ -2,15 +2,20 @@ package server
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
+
 	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/runner"
 	s "github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
-	"strings"
-	"testing"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {
@@ -285,29 +290,74 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 	thrifthelpers.JsonDeserialize(&runResults, resultsAsByte)
 
 	if runResults.RunId != taskId {
-		fmt.Printf(fmt.Sprintf("Run ids didn't match. got: %s,  expected: %s\n", taskId, runResults.RunId))
+		fmt.Printf("Run ids didn't match. got: %s,  expected: %s\n", taskId, runResults.RunId)
 		return false
 	}
 	if runResults.Status < scoot.RunStatusState_COMPLETE {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid run status: %v\n", taskId, runResults.Status))
+		fmt.Printf("Taskid: %s, Invalid run status: %v\n", taskId, runResults.Status)
 		return false
 	}
 	if int(*runResults.ExitCode) != 0 && int(*runResults.ExitCode) != -1 {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid exit code: %d\n", taskId, runResults.ExitCode))
+		fmt.Printf("Taskid: %s, Invalid exit code: %d\n", taskId, runResults.ExitCode)
 		return false
 	}
 	if !strings.Contains(*runResults.Error, "error ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid error string: %s\n", taskId, *runResults.Error))
+		fmt.Printf("Taskid: %s, Invalid error string: %s\n", taskId, *runResults.Error)
 		return false
 	}
 	if !strings.Contains(*runResults.OutUri, "out URI ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid out URI: %s\n", taskId, *runResults.OutUri))
+		fmt.Printf("Taskid: %s, Invalid out URI: %s\n", taskId, *runResults.OutUri)
 		return false
 	}
 	if !strings.Contains(*runResults.ErrUri, "error URI ") {
-		fmt.Printf(fmt.Sprintf("Taskid: %s, Invalid err URI: %s\n", taskId, *runResults.ErrUri))
+		fmt.Printf("Taskid: %s, Invalid err URI: %s\n", taskId, *runResults.ErrUri)
 		return false
 	}
 
 	return true
+}
+
+func TestRunStatusRoundTrip(t *testing.T) {
+	sagaLog := sagalogs.MakeInMemorySagaLog()
+	sagaCoord := s.MakeSagaCoordinator(sagaLog)
+
+	jobID := "foo"
+	saga, err := sagaCoord.MakeSaga(jobID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	taskID := "t"
+	if err = saga.StartTask(taskID, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	stdoutRef := "http://example.com/stdout"
+
+	st := runner.ProcessStatus{
+		RunId:     runner.RunId("2"),
+		State:     runner.COMPLETE,
+		StdoutRef: stdoutRef,
+		StderrRef: "",
+		ExitCode:  0,
+		Error:     "",
+	}
+	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = saga.EndTask(taskID, statusAsBytes); err != nil {
+		t.Fatal(err)
+	}
+
+	jobStatus, err := GetJobStatus(jobID, sagaCoord)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runStatus := jobStatus.TaskData[taskID]
+	if *runStatus.OutUri != stdoutRef {
+		t.Fatalf("runStatus.OutUri: %v (expected %v)", *runStatus.OutUri, stdoutRef)
+	}
 }

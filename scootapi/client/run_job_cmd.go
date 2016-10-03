@@ -49,14 +49,16 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 		}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
+		if err != nil {
+			return err
+		}
 		asBytes, err := ioutil.ReadAll(f)
 		if err != nil {
 			return err
 		}
 		thrifthelpers.JsonDeserialize(jobDef, asBytes)
 	}
-
-	_, err = client.RunJob(jobDef)
+	jobId, err := client.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:
@@ -65,5 +67,9 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Error running job: %v %T", err, err)
 		}
 	}
+
+	fmt.Println(jobId.ID)
+	log.Printf("JobID:%s\n", jobId.ID)
+
 	return nil
 }

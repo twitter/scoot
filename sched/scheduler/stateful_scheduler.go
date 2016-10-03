@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -235,7 +237,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		s.asyncRunner.RunAsync(
 			func() error {
-				fmt.Println("Starting task", taskId)
+				fmt.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				return runTaskAndLog(
 					saga,
 					wf,
@@ -243,7 +245,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					taskDef)
 			},
 			func(err error) {
-				fmt.Println("Ending task", taskId)
+				fmt.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				// update the jobState
 				if err == nil {
 					jobState.taskCompleted(taskId)
