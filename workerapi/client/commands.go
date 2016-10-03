@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/runner"
 	"github.com/spf13/cobra"
 )
@@ -29,10 +28,10 @@ func (c *runCmd) run(cmd *cobra.Command, args []string) error {
 		Timeout:    c.timeout,
 		SnapshotId: c.snapshotID,
 	}
-	log.Println("Calling run rpc to cloud worker", render.Render(cmdToRun))
+	log.Printf("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
 
 	status, err := c.client.Run(cmdToRun)
-	log.Println(render.Render(status), err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -51,7 +50,7 @@ func (c *abortCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
 	status, err := c.client.Abort(runner.RunId(c.runId))
-	log.Println(render.Render(status), err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -66,7 +65,7 @@ func (c *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
 	status, err := c.client.QueryWorker()
-	log.Println(render.Render(status), err)
+	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }
 
