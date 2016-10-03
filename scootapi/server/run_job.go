@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -62,7 +63,6 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 
 // Validate a job, returning an *InvalidJobRequest if invalid.
 func validateJob(job sched.JobDefinition) error {
-	fmt.Println(len(job.Tasks))
 	if len(job.Tasks) == 0 {
 		return NewInvalidJobRequest("invalid job. Must have at least 1 task; was empty")
 	}
