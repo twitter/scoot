@@ -38,7 +38,7 @@ func (_mr *_MockSagaLogRecorder) StartSaga(arg0, arg1 interface{}) *gomock.Call 
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "StartSaga", arg0, arg1)
 }
 
-func (_m *MockSagaLog) LogMessage(message sagaMessage) error {
+func (_m *MockSagaLog) LogMessage(message SagaMessage) error {
 	ret := _m.ctrl.Call(_m, "LogMessage", message)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -48,9 +48,9 @@ func (_mr *_MockSagaLogRecorder) LogMessage(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "LogMessage", arg0)
 }
 
-func (_m *MockSagaLog) GetMessages(sagaId string) ([]sagaMessage, error) {
+func (_m *MockSagaLog) GetMessages(sagaId string) ([]SagaMessage, error) {
 	ret := _m.ctrl.Call(_m, "GetMessages", sagaId)
-	ret0, _ := ret[0].([]sagaMessage)
+	ret0, _ := ret[0].([]SagaMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -24,7 +24,10 @@ func (c *CliClient) status(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	process := conn.Status(runner.RunId(args[0]))
+	process, err := conn.Status(runner.RunId(args[0]))
+	if err != nil {
+		return err
+	}
 	log.Printf("Status of %v is %v", process.RunId, process.State)
 	return nil
 }

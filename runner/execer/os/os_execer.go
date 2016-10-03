@@ -1,8 +1,8 @@
 package os
 
 import (
-	"bytes"
 	"errors"
+	"io"
 	"os/exec"
 	"syscall"
 
@@ -15,14 +15,35 @@ func NewExecer() execer.Execer {
 
 type osExecer struct{}
 
+type WriterDelegater interface {
+	// Return an underlying Writer. Why? Because some methods type assert to
+	// a more specific type and are more clever (e.g., if it's an *os.File, hook it up
+	// directly to a new process's stdout/stderr.)
+	// We care about this cleverness, so Output both is-a and has-a Writer
+	// Cf. runner/local/output.go
+	WriterDelegate() io.Writer
+}
+
 func (e *osExecer) Exec(command execer.Command) (result execer.Process, err error) {
 	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
 	}
+
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdoutBuf, &stderrBuf
+
+	cmd.Stdout, cmd.Stderr, cmd.Dir = command.Stdout, command.Stderr, command.Dir
+	// Make sure to get the best possible Writer, so if possible os/exec can connect
+	// the command's stdout/stderr directly to a file, instead of having to go through
+	// our delegation
+	if stdoutW, ok := cmd.Stdout.(WriterDelegater); ok {
+		cmd.Stdout = stdoutW.WriterDelegate()
+	}
+	if stderrW, ok := cmd.Stderr.(WriterDelegater); ok {
+		cmd.Stderr = stderrW.WriterDelegate()
+	}
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	err = cmd.Start()
 	if err != nil {
 		return nil, err

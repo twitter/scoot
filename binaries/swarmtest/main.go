@@ -1,7 +1,7 @@
 package main
 
 import (
-	swarmtest "github.com/scootdev/scoot/tests/swarmtest"
+	"github.com/scootdev/scoot/tests/swarmtest"
 	"time"
 )
 

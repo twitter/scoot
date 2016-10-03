@@ -3,9 +3,16 @@ package testhelpers
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
+	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
+
+// generates a new random number seeded with
+func NewRand() *rand.Rand {
+	return rand.New(rand.NewSource(time.Now().UnixNano()))
+}
 
 // Test Helpers that are useful for Generating random Scoot Api Structs
 // To help with testing the Scoot API and Scheduler
@@ -32,7 +39,7 @@ func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
 func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{"sleep 500", "complete 0"}
+	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 500", "complete 0"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd
@@ -40,8 +47,18 @@ func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
 	return taskDef
 }
 
+// Generates a valid random JobId
+func GenJobId(rng *rand.Rand) string {
+	return GenRandomAlphaNumericString(rng)
+}
+
 // Generates a valid random TaskID
 func GenTaskId(rng *rand.Rand) string {
+	return GenRandomAlphaNumericString(rng)
+}
+
+// Generates an AlphaNumericString of random length (0, 21]
+func GenRandomAlphaNumericString(rng *rand.Rand) string {
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
 	length := rng.Intn(20) + 1
 	result := make([]byte, length)

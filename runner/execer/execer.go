@@ -1,5 +1,9 @@
 package execer
 
+import (
+	"io"
+)
+
 // Execer lets you run one Unix command. It differs from Runner in that it does not
 // know about Snapshots or Scoot. It's just a way to run a Unix process (or fake it).
 // It's at the level of os/exec, not exec-as-a-service.
@@ -7,6 +11,9 @@ package execer
 type Command struct {
 	Argv []string
 	Dir  string
+
+	Stdout io.Writer
+	Stderr io.Writer
 	// TODO(dbentley): environment variables?
 }
 
@@ -42,7 +49,4 @@ type ProcessStatus struct {
 	State    ProcessState
 	ExitCode int
 	Error    string
-
-	StdoutURI string
-	StderrURI string
 }

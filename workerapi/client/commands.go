@@ -2,7 +2,6 @@ package client
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/luci/go-render/render"
@@ -11,62 +10,59 @@ import (
 )
 
 // Run
-var runArgv *string
-var runcmd *runner.Command = &runner.Command{}
+type runCmd struct {
+	client *client
 
-func makeRunCmd(c *cliClient) *cobra.Command {
-	r := &cobra.Command{
-		Use:   "run",
-		Short: "runs a command",
-		RunE:  c.run,
-	}
-	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
-	runArgv = r.Flags().String("argv", "", "comma separated list of binary and args")
-	runcmd.SnapshotId = *r.Flags().String("snapshotid", "", "snapshot/patch id.")
-	runcmd.Timeout = time.Duration(*r.Flags().Int32("timeout_ms", 0, "timeout to abort cmd")) * time.Millisecond
-	return r
+	// Flags
+	snapshotID string
+	timeout    time.Duration
 }
-func (c *cliClient) run(cmd *cobra.Command, args []string) error {
-	runcmd.Argv = strings.Split(*runArgv, ",")
-	log.Println("Calling run rpc to cloud worker", args, render.Render(runcmd))
 
-	status, err := c.client.Run(runcmd)
+func (c *runCmd) registerFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&c.snapshotID, "snapshotid", "", "snapshot/patch id.")
+	cmd.Flags().DurationVar(&c.timeout, "timeout", 0, "how long to let the command run (0 for infinite)")
+}
+
+func (c *runCmd) run(cmd *cobra.Command, args []string) error {
+	cmdToRun := &runner.Command{
+		Argv:       args,
+		Timeout:    c.timeout,
+		SnapshotId: c.snapshotID,
+	}
+	log.Println("Calling run rpc to cloud worker", render.Render(cmdToRun))
+
+	status, err := c.client.Run(cmdToRun)
 	log.Println(render.Render(status), err)
 	return nil
 }
 
 // Abort
-var abortRunId *string
+type abortCmd struct {
+	client *client
 
-func makeAbortCmd(c *cliClient) *cobra.Command {
-	r := &cobra.Command{
-		Use:   "abort",
-		Short: "aborts a runId",
-		RunE:  c.abort,
-	}
-	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
-	abortRunId = r.Flags().String("id", "", "status of a run.")
-	return r
+	runId string
 }
-func (c *cliClient) abort(cmd *cobra.Command, args []string) error {
+
+func (c *abortCmd) registerFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&c.runId, "id", "", "run id to abort")
+}
+
+func (c *abortCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	status, err := c.client.Abort(*abortRunId)
+	status, err := c.client.Abort(runner.RunId(c.runId))
 	log.Println(render.Render(status), err)
 	return nil
 }
 
 // QueryWorker
-func makeQueryworkerCmd(c *cliClient) *cobra.Command {
-	r := &cobra.Command{
-		Use:   "queryworker",
-		Short: "queries worker status",
-		RunE:  c.queryworker,
-	}
-	r.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "address to connect to")
-	return r
+type queryWorkerCmd struct {
+	client *client
 }
-func (c *cliClient) queryworker(cmd *cobra.Command, args []string) error {
+
+func (c *queryWorkerCmd) registerFlags(cmd *cobra.Command) {}
+
+func (c *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling queryworker rpc to cloud worker", args)
 
 	status, err := c.client.QueryWorker()

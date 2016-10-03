@@ -146,7 +146,7 @@ func (s *Saga) EndCompensatingTask(taskId string, results []byte) error {
 
 // adds a message for updateSagaStateLoop to execute to the channel for the
 // specified saga.  blocks until the message has been applied
-func (s *Saga) updateSagaState(msg sagaMessage) error {
+func (s *Saga) updateSagaState(msg SagaMessage) error {
 	resultCh := make(chan error, 0)
 	s.updateCh <- sagaUpdate{
 		msg:      msg,
@@ -157,7 +157,7 @@ func (s *Saga) updateSagaState(msg sagaMessage) error {
 
 	// after we successfully log an EndSaga message close the channel
 	// no more messages should be logged
-	if msg.msgType == EndSaga {
+	if msg.MsgType == EndSaga {
 		close(s.updateCh)
 	}
 
@@ -191,14 +191,14 @@ func (s *Saga) itr(update sagaUpdate) {
 }
 
 type sagaUpdate struct {
-	msg      sagaMessage
+	msg      SagaMessage
 	resultCh chan error
 }
 
 //
 // logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
 //
-func logMessage(state *SagaState, msg sagaMessage, log SagaLog) (*SagaState, error) {
+func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
 
 	//verify that the applied message results in a valid state
 	newState, err := updateSagaState(state, msg)

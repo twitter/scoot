@@ -2,31 +2,64 @@ package local_test
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer/fake"
-	"github.com/scootdev/scoot/runner/local"
-	fakesnaps "github.com/scootdev/scoot/snapshots/fake"
-
+	"io/ioutil"
+	"os"
+	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 func TestRun(t *testing.T) {
-	exec := fake.NewSimExecer(nil)
-	r := local.NewSimpleRunner(exec, fakesnaps.MakeInvalidCheckouter())
+	r, _ := newRunner()
 	firstId := assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
 	// Now make sure that the first results are still available
 	assertWait(t, r, firstId, complete(0), "complete 0")
 }
 
+func TestOutput(t *testing.T) {
+	r, _ := newRunner()
+	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
+	id := assertRun(t, r, complete(0),
+		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
+	st, err := r.Status(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
+	uriPrefix := "file://" + hostname
+	stdoutFilename := strings.TrimPrefix(st.StdoutRef, uriPrefix)
+	stdoutActual, err := ioutil.ReadFile(stdoutFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdoutExpected != string(stdoutActual) {
+		t.Fatalf("stdout was %q; expected %q", stdoutActual, stdoutExpected)
+	}
+
+	stderrFilename := strings.TrimPrefix(st.StderrRef, uriPrefix)
+	stderrActual, err := ioutil.ReadFile(stderrFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stderrExpected != string(stderrActual) {
+		t.Fatalf("stderr was %q; expected %q", stderrActual, stderrExpected)
+	}
+}
+
 func TestSimul(t *testing.T) {
-	var wg sync.WaitGroup
+	r, wg := newRunner()
 	wg.Add(1)
-	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	assertWait(t, r, firstRun, running(), firstArgs...)
@@ -35,28 +68,33 @@ func TestSimul(t *testing.T) {
 	secondArgs := []string{"complete 3"}
 	cmd := &runner.Command{}
 	cmd.Argv = secondArgs
-	st := r.Run(cmd)
-	assertStatus(t, st, badreq("Runner is busy"), secondArgs...)
+	_, err := r.Run(cmd)
+	if err == nil {
+		t.Fatal(err)
+	}
 
 	wg.Done()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
 }
 
 func TestAbort(t *testing.T) {
-	var wg sync.WaitGroup
+	r, wg := newRunner()
 	wg.Add(1)
-	ex := fake.NewSimExecer(&wg)
-	r := local.NewSimpleRunner(ex, fakesnaps.MakeInvalidCheckouter())
 	args := []string{"pause", "complete 0"}
 	runId := run(t, r, args)
 	assertWait(t, r, runId, running(), args...)
 	r.Abort(runId)
 	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
-	st := r.Status(runId)
+	st, err := r.Status(runId)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertStatus(t, st, aborted(), args...)
 
-	st = r.Abort(runner.RunId("not-a-run-id"))
-	assertStatus(t, st, badreq("cannot find run not-a-run-id"))
+	st, err = r.Abort(runner.RunId("not-a-run-id"))
+	if err == nil {
+		t.Fatal(err)
+	}
 }
 
 func complete(exitCode int) runner.ProcessStatus {
@@ -69,10 +107,6 @@ func running() runner.ProcessStatus {
 
 func failed(errorText string) runner.ProcessStatus {
 	return runner.ErrorStatus(runner.RunId(""), fmt.Errorf(errorText))
-}
-
-func badreq(errorText string) runner.ProcessStatus {
-	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
 func aborted() runner.ProcessStatus {
@@ -108,9 +142,9 @@ func assertStatus(t *testing.T, actual runner.ProcessStatus, expected runner.Pro
 func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 	cmd := &runner.Command{}
 	cmd.Argv = args
-	status := r.Run(cmd)
-	if status.State == runner.BADREQUEST {
-		t.Fatal("Couldn't run: ", args, status.Error)
+	status, err := r.Run(cmd)
+	if err != nil {
+		t.Fatal("Couldn't run: ", args, err)
 	}
 	return status.RunId
 }
@@ -118,9 +152,28 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
 	for {
 		time.Sleep(100 * time.Microsecond)
-		status := r.Status(run)
+		status, err := r.Status(run)
+		if err != nil {
+			panic(err)
+		}
 		if status.State.IsDone() || status.State == expected.State {
 			return status
 		}
 	}
+}
+
+func newRunner() (runner.Runner, *sync.WaitGroup) {
+	wg := &sync.WaitGroup{}
+	ex := execers.NewSimExecer(wg)
+	tempDir, err := temp.TempDirDefault()
+	if err != nil {
+		panic(err)
+	}
+
+	outputCreator, err := local.NewOutputCreator(tempDir)
+	if err != nil {
+		panic(err)
+	}
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	return r, wg
 }

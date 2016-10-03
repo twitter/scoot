@@ -1,0 +1,8 @@
+{
+  "Cluster": {
+    "Type": "local"
+  },
+  "Workers": {
+    "Type": "rpc"
+  }
+}

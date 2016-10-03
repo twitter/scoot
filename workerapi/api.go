@@ -6,6 +6,7 @@ package workerapi
 import (
 	"time"
 
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -16,30 +17,23 @@ import (
 
 //TODO: test workerStatus.
 type WorkerStatus struct {
-	Runs      []*runner.ProcessStatus
-	VersionId string
-	Error     error
+	Runs []runner.ProcessStatus
 }
 
-func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) *WorkerStatus {
-	runs := make([]*runner.ProcessStatus, 0)
-	versionId := ""
+func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) WorkerStatus {
+	runs := make([]runner.ProcessStatus, 0)
 	for _, r := range thrift.Runs {
 		runs = append(runs, ThriftRunStatusToDomain(r))
 	}
-	if thrift.VersionId != nil {
-		versionId = *thrift.VersionId
-	}
-	return &WorkerStatus{runs, versionId, nil}
+	return WorkerStatus{runs}
 }
 
-func DomainWorkerStatusToThrift(domain *WorkerStatus) *worker.WorkerStatus {
+func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 	thrift := worker.NewWorkerStatus()
 	thrift.Runs = make([]*worker.RunStatus, 0)
 	for _, r := range domain.Runs {
 		thrift.Runs = append(thrift.Runs, DomainRunStatusToThrift(r))
 	}
-	thrift.VersionId = &domain.VersionId
 	return thrift
 }
 
@@ -73,8 +67,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	return thrift
 }
 
-func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
-	domain := &runner.ProcessStatus{}
+func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.ProcessStatus {
+	domain := runner.ProcessStatus{}
 	domain.RunId = runner.RunId(thrift.RunId)
 	switch thrift.Status {
 	case worker.Status_UNKNOWN:
@@ -109,7 +103,7 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) *runner.ProcessStatus {
 	return domain
 }
 
-func DomainRunStatusToThrift(domain *runner.ProcessStatus) *worker.RunStatus {
+func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 	thrift := worker.NewRunStatus()
 	thrift.RunId = string(domain.RunId)
 	switch domain.State {
@@ -136,4 +130,17 @@ func DomainRunStatusToThrift(domain *runner.ProcessStatus) *worker.RunStatus {
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
 	return thrift
+}
+
+func SerializeProcessStatus(processStatus runner.ProcessStatus) ([]byte, error) {
+
+	runStatus := DomainRunStatusToThrift(processStatus)
+
+	asBytes, err := thrifthelpers.JsonSerialize(runStatus)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return asBytes, err
 }

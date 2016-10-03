@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/memory"
 )
 
 // Poor man's dynamic localhost cluster nodes.
@@ -43,7 +42,7 @@ func (f *localFetcher) parseData(data []byte) ([]cluster.Node, error) {
 	for _, line := range strings.Split(lines, "\n") {
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 2 {
-			nodes = append(nodes, memory.NewIdNode("localhost:"+matches[1]))
+			nodes = append(nodes, cluster.NewIdNode("localhost:"+matches[1]))
 		}
 	}
 	return nodes, nil
@@ -71,7 +70,7 @@ func (f *fakeFetcher) setResult(nodes []cluster.Node, err error) {
 func nodes(ids ...string) []cluster.Node {
 	n := make([]cluster.Node, len(ids))
 	for idx, str := range ids {
-		n[idx] = memory.NewIdNode(str)
+		n[idx] = cluster.NewIdNode(str)
 	}
 	return n
 }

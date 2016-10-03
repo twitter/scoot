@@ -33,9 +33,30 @@ func NewCliClient(transportFactory thrift.TTransportFactory, protocolFactory thr
 
 	r.rootCmd = rootCmd
 
-	rootCmd.AddCommand(makeQueryworkerCmd(r))
-	rootCmd.AddCommand(makeRunCmd(r))
-	rootCmd.AddCommand(makeAbortCmd(r))
+	r.addCmd(&runCmd{client: &r.client}, &cobra.Command{
+		Use:   "run",
+		Short: "runs a command",
+	})
+	r.addCmd(&abortCmd{client: &r.client}, &cobra.Command{
+		Use:   "abort",
+		Short: "aborts a runId",
+	})
+	r.addCmd(&queryWorkerCmd{client: &r.client}, &cobra.Command{
+		Use:   "queryworker",
+		Short: "queries worker status",
+	})
 
 	return r
+}
+
+func (c *cliClient) addCmd(cmd cmd, cobraCmd *cobra.Command) {
+	cobraCmd.Flags().StringVar(&c.client.addr, "addr", "localhost:9090", "worker server address")
+	cmd.registerFlags(cobraCmd)
+	cobraCmd.RunE = cmd.run
+	c.rootCmd.AddCommand(cobraCmd)
+}
+
+type cmd interface {
+	registerFlags(cmd *cobra.Command)
+	run(cmd *cobra.Command, args []string) error
 }

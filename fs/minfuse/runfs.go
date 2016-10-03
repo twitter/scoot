@@ -15,7 +15,7 @@ import (
 
 	"github.com/scootdev/scoot/fs/min"
 	"github.com/scootdev/scoot/fuse"
-	"github.com/scootdev/scoot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type Options struct {
@@ -85,12 +85,12 @@ func InitFlags() (*Options, error) {
 }
 
 func Runfs(opts *Options) {
-	snap := snapshots.NewFileBackedSnapshot(opts.Src, "only")
+	snap := snapshot.NewFileBackedSnapshot(opts.Src, "only")
 	minfs := NewSlimMinFs(snap)
 
 	if opts.Trace {
 		fuse.Trace = true
-		snapshots.Trace = true
+		snapshot.Trace = true
 		min.Trace = true
 	}
 

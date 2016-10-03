@@ -1,5 +1,9 @@
 package cluster
 
+import (
+	"fmt"
+)
+
 type NodeId string
 
 type Node interface {
@@ -7,22 +11,35 @@ type Node interface {
 	Id() NodeId
 }
 
-type Nodes []Node
-
-// Len is part of sort.Interface.
-func (n Nodes) Len() int {
-	return len(n)
+type idNode struct {
+	id NodeId
 }
 
-// Swap is part of sort.Interface.
-func (n Nodes) Swap(i, j int) {
-	n[i], n[j] = n[j], n[i]
+func (n *idNode) String() string {
+	return string(n.id)
 }
 
-// Less is part of sort.Interface.
-func (n Nodes) Less(i, j int) bool {
-	return n[i].Id() < n[j].Id()
+func NewIdNode(id string) Node {
+	return &idNode{NodeId(id)}
 }
+
+func NewIdNodes(num int) []Node {
+	r := []Node{}
+	for i := 0; i < num; i++ {
+		r = append(r, NewIdNode(fmt.Sprintf("node%d", i+1)))
+	}
+	return r
+}
+
+func (n *idNode) Id() NodeId {
+	return n.id
+}
+
+type NodeSorter []Node
+
+func (n NodeSorter) Len() int           { return len(n) }
+func (n NodeSorter) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n NodeSorter) Less(i, j int) bool { return n[i].Id() < n[j].Id() }
 
 type NodeUpdateType int
 
@@ -30,3 +47,33 @@ const (
 	NodeAdded NodeUpdateType = iota
 	NodeRemoved
 )
+
+var _ Node = (*idNode)(nil)
+
+// NodeUpdate represents a change to the cluster
+type NodeUpdate struct {
+	UpdateType NodeUpdateType
+	Id         NodeId
+	Node       Node // Only set for adds
+}
+
+func (u *NodeUpdate) String() string {
+	return fmt.Sprintf("%v %v %v", u.UpdateType, u.Id, u.Node)
+}
+
+// Helper functions to create NodeUpdates
+
+func NewAdd(node Node) NodeUpdate {
+	return NodeUpdate{
+		NodeAdded,
+		node.Id(),
+		node,
+	}
+}
+
+func NewRemove(id NodeId) NodeUpdate {
+	return NodeUpdate{
+		UpdateType: NodeRemoved,
+		Id:         id,
+	}
+}

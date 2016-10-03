@@ -105,17 +105,17 @@ type Runner interface {
 	// check if cmd is well-formed, and reject it if not (leading to state FAILED)
 	// wait a very short period of time for cmd to finish
 	// Run may not wait indefinitely for cmd to finish. This is an async API.
-	Run(cmd *Command) ProcessStatus
+	Run(cmd *Command) (ProcessStatus, error)
 
 	// Status checks the status of run.
-	Status(run RunId) ProcessStatus
+	Status(run RunId) (ProcessStatus, error)
 
 	// Current status of all runs, running and finished, excepting any Erase()'s runs.
-	StatusAll() []ProcessStatus
+	StatusAll() ([]ProcessStatus, error)
 
 	// Kill the given run.
-	Abort(run RunId) ProcessStatus
+	Abort(run RunId) (ProcessStatus, error)
 
 	// Prunes the run history so StatusAll() can return a reasonable number of runs.
-	Erase(run RunId)
+	Erase(run RunId) error
 }
