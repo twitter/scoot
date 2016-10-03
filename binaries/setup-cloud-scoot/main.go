@@ -17,6 +17,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	s.Run = swarmtest.WaitDontRun
+	s.Wait = true
 	s.Main()
 }
