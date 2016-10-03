@@ -9,18 +9,18 @@ import (
 
 func TestCommandStringSimple(t *testing.T) {
 	c := runner.Command{
-		Argv:       []string{"cat", "cats.in", "|", "cat.bin", ">", "cats.out"},
-		EnvVars:    map[string]string{"CAT": "meow"},
+		Argv:       []string{"./pants", "test", "science/src/go/twitter.biz::"},
+		EnvVars:    map[string]string{"GOOS": "linux"},
 		Timeout:    10 * time.Minute,
 		SnapshotId: "git-abcd1234",
 	}
 
 	expected := `Command
 	Snapshot ID:	git-abcd1234
-	[cat cats.in | cat.bin > cats.out]
+	Argv:	["./pants" "test" "science/src/go/twitter.biz::"]
 	Timeout:	10m0s
 	Env:
-		CAT: meow
+		GOOS: linux
 `
 	if s := c.String(); s != expected {
 		t.Errorf("Got:\n%s\nExpected:\n%s\n", s, expected)

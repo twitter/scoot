@@ -34,7 +34,7 @@ const (
 )
 
 func (p ProcessState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == BADREQUEST
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
 func (p ProcessState) String() string {
@@ -79,21 +79,19 @@ type Command struct {
 }
 
 func (c Command) String() string {
-	sfmt := "Command\n\tSnapshot ID:\t%s\n"
-	sargs := []interface{}{c.SnapshotId}
-
-	sfmt += "\t%v\n\tTimeout:\t%v\n"
-	sargs = append(sargs, c.Argv, c.Timeout)
+	s := fmt.Sprintf("Command\n\tSnapshot ID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+		c.SnapshotId,
+		c.Argv,
+		c.Timeout)
 
 	if len(c.EnvVars) > 0 {
-		sfmt += "\tEnv:\n"
+		s = fmt.Sprintf("%s\tEnv:\n", s)
 		for k, v := range c.EnvVars {
-			sfmt += "\t\t%s: %s\n"
-			sargs = append(sargs, k, v)
+			s = fmt.Sprintf("%s\t\t%s: %s\n", s, k, v)
 		}
 	}
 
-	return fmt.Sprintf(sfmt, sargs...)
+	return s
 }
 
 func NewCommand(argv []string, env map[string]string, timeout time.Duration, snapshotId string) *Command {
@@ -116,22 +114,18 @@ type ProcessStatus struct {
 }
 
 func (p ProcessStatus) String() string {
-	sfmt := "--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n"
-	sargs := []interface{}{p.RunId, p.State}
+	s := fmt.Sprintf("--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.State)
 
 	if p.State == COMPLETE {
-		sfmt += "\tExitCode:\t%d\n"
-		sargs = append(sargs, p.ExitCode)
+		s = fmt.Sprintf("%s\tExitCode:\t%d\n", s, p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		sfmt += "\tError:\t\t%s\n"
-		sargs = append(sargs, p.Error)
+		s = fmt.Sprintf("%s\tError:\t\t%s\n", s, p.Error)
 	}
 
-	sfmt += "\tStdout:\t\t%s\n\tStderr:\t\t%s\n"
-	sargs = append(sargs, p.StdoutRef, p.StderrRef)
+	s = fmt.Sprintf("%s\tStdout:\t\t%s\n\tStderr:\t\t%s\n", s, p.StdoutRef, p.StderrRef)
 
-	return fmt.Sprintf(sfmt, sargs...)
+	return s
 }
 
 type Runner interface {
