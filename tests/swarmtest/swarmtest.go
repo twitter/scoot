@@ -48,7 +48,7 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	numWorkers := flag.Int("num_workers", d["num_workers"].(int), "Number of workerserver instances to spin up.")
 	numJobs := flag.Int("num_jobs", d["num_jobs"].(int), "Number of Jobs to run")
 	timeout := flag.Duration("timeout", d["timeout"].(time.Duration), "Time to wait for jobs to complete")
-
+	log.Println("Registering")
 	wait := flag.Bool("setup_then_wait", false, "if true, don't run tests; just setup and wait")
 
 	flag.Parse()
@@ -59,6 +59,7 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.LogDir = *logDir
 	s.RepoDir = *repoDir
 	s.NumWorkers = *numWorkers
+	log.Println("Setting", *wait)
 	s.Wait = *wait
 	s.Compile = func() error { return s.compile() }
 	s.Setup = func() (string, error) { return s.setup() }
@@ -172,12 +173,6 @@ func (s *SwarmTest) run() error {
 	return s.RunCmd(true, "$GOPATH/bin/scootapi", "run_smoke_test", strconv.Itoa(s.NumJobs), s.Timeout.String())
 }
 
-// Implementation for Run that Waits instead of running the tests.
-// This lets us use swarmtest infrastructure to setup the swarm but not run the smoke test.
-func WaitDontRun() error {
-	select {}
-}
-
 func (s *SwarmTest) RunSwarmTest() error {
 	var err error
 	s.StartSignalHandler()
@@ -198,6 +193,7 @@ func (s *SwarmTest) RunSwarmTest() error {
 	scootapi.SetScootapiAddr(addr)
 	log.Println("Scoot is running at", addr)
 
+	log.Println("Looking at wait", s.Wait)
 	if s.Wait {
 		select {}
 	} else {
