@@ -79,7 +79,7 @@ type Command struct {
 }
 
 func (c Command) String() string {
-	sfmt := "Command - Snapshot ID: %s\n"
+	sfmt := "Command\n\tSnapshot ID:\t%s\n"
 	sargs := []interface{}{c.SnapshotId}
 
 	sfmt += "\t%v\n\tTimeout:\t%v\n"
@@ -116,7 +116,7 @@ type ProcessStatus struct {
 }
 
 func (p ProcessStatus) String() string {
-	sfmt := "ProcessStatus - ID: %s\n\tState:\t\t%s\n"
+	sfmt := "--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n"
 	sargs := []interface{}{p.RunId, p.State}
 
 	if p.State == COMPLETE {
