@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"fmt"
+	"log"
 	"strings"
 
 	"github.com/nu7hatch/gouuid"
@@ -149,7 +149,6 @@ func (s *statefulScheduler) loop() {
 
 // run one loop iteration
 func (s *statefulScheduler) step() {
-	//fmt.Printf("JobState %+v \n", s.inProgressJobs["0"])
 	// update scheduler state with messages received since last loop
 	// nodes added or removed to cluster, new jobs scheduled,
 	// async functions completed & invoke callbacks
@@ -197,7 +196,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 				},
 				func(err error) {
 					if err == nil {
-						fmt.Printf("Job %v Completed \n", j.Job.Id)
+						log.Printf("Job %v Completed \n", j.Job.Id)
 						// This job is fully processed remove from
 						// InProgressJobs
 						delete(s.inProgressJobs, j.Job.Id)
@@ -230,14 +229,15 @@ func (s *statefulScheduler) scheduleTasks() {
 		saga := s.inProgressJobs[jobId].Saga
 		wf := s.workerFactory(ta.node)
 		jobState := s.inProgressJobs[jobId]
+		nodeId := ta.node.Id()
 
 		// Mark Task as Started
-		s.clusterState.taskScheduled(ta.node.Id(), taskId)
+		s.clusterState.taskScheduled(nodeId, taskId)
 		jobState.taskStarted(taskId)
 
 		s.asyncRunner.RunAsync(
 			func() error {
-				fmt.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+				log.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				return runTaskAndLog(
 					saga,
 					wf,
@@ -245,7 +245,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					taskDef)
 			},
 			func(err error) {
-				fmt.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+				log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				// update the jobState
 				if err == nil {
 					jobState.taskCompleted(taskId)
@@ -254,7 +254,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				}
 
 				// update cluster state that this node is now free
-				s.clusterState.taskCompleted(ta.node.Id(), taskId)
+				s.clusterState.taskCompleted(nodeId, taskId)
 			})
 	}
 }
