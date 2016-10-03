@@ -23,6 +23,7 @@ type SwarmTest struct {
 	LogDir     string
 	RepoDir    string
 	NumWorkers int
+	Wait       bool
 	Compile    func() error
 	Setup      func() (string, error)
 	Run        func() error
@@ -58,13 +59,10 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.LogDir = *logDir
 	s.RepoDir = *repoDir
 	s.NumWorkers = *numWorkers
+	s.Wait = *wait
 	s.Compile = func() error { return s.compile() }
 	s.Setup = func() (string, error) { return s.setup() }
-	if *wait {
-		s.Run = func() error { return WaitDontRun() }
-	} else {
-		s.Run = func() error { return s.run() }
-	}
+	s.Run = func() error { return s.run() }
 	s.NumJobs = *numJobs
 	s.Timeout = *timeout
 	s.mutex = &sync.Mutex{}
@@ -200,8 +198,12 @@ func (s *SwarmTest) RunSwarmTest() error {
 	scootapi.SetScootapiAddr(addr)
 	log.Println("Scoot is running at", addr)
 
-	log.Println("Running")
-	return s.Run()
+	if s.Wait {
+		select {}
+	} else {
+		log.Println("Running")
+		return s.Run()
+	}
 }
 
 func (s *SwarmTest) Main() {
