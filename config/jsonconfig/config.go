@@ -3,6 +3,9 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"path"
+	"regexp"
 
 	"github.com/scootdev/scoot/ice"
 )
@@ -84,4 +87,22 @@ func parseType(data json.RawMessage) (string, error) {
 		return "", err
 	}
 	return t.Type, nil
+}
+
+// GetConfigText finds the right text for a configFlag.
+// If configFlag looks like a filename (of the form foo.bar where foo and bar are just alphanumeric),
+// read it as an asset.
+// Otherwise, assume it's the literal json text.
+func GetConfigText(configFlag string, asset func(string) ([]byte, error)) ([]byte, error) {
+	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]$`, []byte(configFlag)); matched {
+		configFileName := path.Join("config", configFlag)
+		log.Printf("Scheduler: reading config filename %v", configFileName)
+		configText, err := asset(configFileName)
+		if err != nil {
+			return nil, fmt.Errorf("Scheduler: Error Loading Config File %v: %v", configFileName, err)
+		}
+		return configText, nil
+	}
+	log.Printf("Scheduler: using -config as JSON config: %v", configFlag)
+	return []byte(configFlag), nil
 }

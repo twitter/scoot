@@ -1,10 +1,10 @@
-package jsonconfig_test
+package jsonconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
-	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 )
 
@@ -101,7 +101,7 @@ func TestParse(t *testing.T) {
 		{config3, config2},
 	}
 	for _, test := range tests {
-		o := jsonconfig.Schema(map[string]jsonconfig.Implementations{
+		o := Schema(map[string]Implementations{
 			"Foo": {
 				"default": &fooDefaultConfig{},
 				"noarg":   &fooNoargConfig{},
@@ -129,6 +129,37 @@ func TestParse(t *testing.T) {
 		actual := string(bytes)
 		if actual != test.output {
 			t.Fatalf("unexpected output:\n%v\n######\n%v$", actual, test.output)
+		}
+	}
+}
+
+func TestGetConfigText(t *testing.T) {
+	assets := map[string][]byte{
+		"config/local.local": []byte("yes"),
+	}
+
+	asset := func(name string) ([]byte, error) {
+		a, ok := assets[name]
+		if !ok {
+			return nil, fmt.Errorf("no such file")
+		}
+		return a, nil
+	}
+
+	cases := []struct {
+		flag string
+		data string
+		err  error
+	}{
+		{"local.local", "yes", nil},
+		{"nocal.local", "", fmt.Errorf("no such file")},
+		{`{"json": "values"}`, `{"json": "values"}`, nil},
+	}
+
+	for i, c := range cases {
+		data, err := GetConfigText(c.flag, asset)
+		if string(data) != c.data || (err == nil) != (c.err == nil) {
+			t.Errorf("Error for %d %v: got %s, %v (expected %v, %v)", i, c.flag, data, err, c.data, c.err)
 		}
 	}
 }
