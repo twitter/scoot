@@ -19,8 +19,7 @@ func TestFetcher(t *testing.T) {
 		cluster.NewIdNode("localhost:9877"),
 	}
 
-	f := &localFetcher{}
-	nodes, err := f.parseData([]byte(psOutput))
+	nodes, err := parseData([]byte(psOutput))
 	if err != nil {
 		t.Fatalf("error parsing: %v", err)
 	}
