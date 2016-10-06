@@ -1,4 +1,4 @@
-// +build property
+// +build property_test
 
 package server
 

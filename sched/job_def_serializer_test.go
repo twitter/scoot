@@ -1,11 +1,8 @@
-// +build property
-
 package sched
 
 import (
 	"fmt"
 	"github.com/leanovate/gopter"
-	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
@@ -79,25 +76,6 @@ func Print(job *Job) {
 		}
 	}
 	fmt.Printf("\n")
-}
-
-func Test_RandomSerializerDeserializer(t *testing.T) {
-	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 1000
-	properties := gopter.NewProperties(parameters)
-
-	properties.Property("Serialize JobDef", prop.ForAll(
-		func(job *Job) bool {
-			ValidateSerialization(job, false, t)
-			ValidateSerialization(job, true, t)
-			return true
-		},
-
-		GopterGenJob(),
-	))
-
-	properties.TestingRun(t)
-
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
