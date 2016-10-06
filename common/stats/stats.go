@@ -216,8 +216,6 @@ func requestCapture(latchCh chan chan CapturedRegistry) CapturedRegistry {
 func clear(reg StatsRegistry) {
 	reg.Each(func(name string, i interface{}) {
 		switch m := i.(type) {
-		case metrics.Counter:
-			m.Clear()
 		case metrics.Histogram:
 			m.Clear()
 		}
