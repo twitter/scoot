@@ -48,7 +48,8 @@ type MarshalerPretty interface {
 //
 // Similar to the go-metrics registry but with most methods removed.
 //
-// Note: the default StatsRegistry does not support the Latency metric.
+// Note: the default StatsRegistry (from rcrowley) doesn't support the Latency metric,
+//       only finagleStatsRegistry has logic to check for and marshal latency.
 type StatsRegistry interface {
 	// Gets an existing metric or registers the given one.
 	// The interface can be the metric to register if not found in registry,

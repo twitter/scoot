@@ -99,13 +99,13 @@ func TestNonLatching(t *testing.T) {
 
 	rendered := string(stat.Render(false))
 	matched, err := regexp.MatchString(`"count":1,`, rendered)
-	if !matched || err != nil {
+	if !matched {
 		t.Fatal("Expected current stats in render", rendered, err)
 	}
 
 	rendered = string(stat.Render(false))
 	matched, err = regexp.MatchString(`"count":0,`, rendered)
-	if !matched || err != nil {
+	if !matched {
 		t.Fatal("Expected clearing of stats after render", rendered, err)
 	}
 }
@@ -117,7 +117,7 @@ func TestLatching(t *testing.T) {
 	stat := statIface.(*defaultStatsReceiver)
 	defer cancelFn()
 
-	// Captured registry should initially be empty even though we added a counter.
+	// Captured registry should initially be empty even though we added a latency metric.
 	stat.Latency("latency")
 	rendered := string(stat.Render(false))
 	if rendered != "{}" {
