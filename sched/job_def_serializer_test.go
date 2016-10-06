@@ -1,3 +1,5 @@
+// +build property
+
 package sched
 
 import (

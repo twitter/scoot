@@ -45,7 +45,7 @@ vet:
 
 test:
 	# Runs only unit tests
-	go test -race -tags=\!integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -race -tags=\!integration\!property $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
 test-integration:
