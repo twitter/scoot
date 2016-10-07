@@ -4,10 +4,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
@@ -34,21 +35,21 @@ type statefulScheduler struct {
 	inProgressJobs map[string]*jobState // map of inprogress jobId to jobState
 
 	// stats
-	stats stats.StatsReceiver
+	stat stats.StatsReceiver
 }
 
 func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
-	stats stats.StatsReceiver) Scheduler {
+	stat stats.StatsReceiver) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
 		sub.InitialMembers,
 		sub.Updates,
 		sc,
 		wf,
-		stats,
+		stat,
 		false)
 }
 
@@ -61,7 +62,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
-	stats stats.StatsReceiver,
+	stat stats.StatsReceiver,
 	debugMode bool,
 ) *statefulScheduler {
 
@@ -74,7 +75,7 @@ func NewStatefulScheduler(
 		clusterState:   newClusterState(initialCluster, clusterUpdates),
 		inProgressJobs: make(map[string]*jobState),
 
-		stats: stats,
+		stat: stat,
 	}
 
 	sched.startUp()
@@ -103,8 +104,8 @@ type jobAddedMsg struct {
 }
 
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
-	defer s.stats.Latency("schedJobLatency_ms").Time().Stop()
-	s.stats.Counter("schedJobRequests").Inc(1)
+	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
+	s.stat.Counter("schedJobRequestsCounter").Inc(1)
 
 	job := sched.Job{
 		Id:  generateJobId(),
@@ -119,6 +120,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 		return "", err
 	}
 
+	s.stat.Counter("schedJobsCounter").Inc(1)
 	s.addJobCh <- jobAddedMsg{
 		job:  job,
 		saga: sagaObj,
@@ -144,6 +146,8 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
+		s.stat.Gauge("schedInProgressGauge").Update(int64(len(s.inProgressJobs)))
+		s.stat.Gauge("schedNumRunningGauge").Update(int64(s.asyncRunner.NumRunning()))
 	}
 }
 
@@ -204,6 +208,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
+						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1)
 					}
 				})
 		}
@@ -238,11 +243,17 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.asyncRunner.RunAsync(
 			func() error {
 				log.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
-				return runTaskAndLog(
+				status, err := runTaskAndLog(
 					saga,
 					wf,
 					taskId,
 					taskDef)
+				if err == nil && status.State == runner.COMPLETE {
+					s.stat.Counter("schedCompletedTaskCounter").Inc(1)
+				} else {
+					s.stat.Counter("schedFailedTaskCounter").Inc(1)
+				}
+				return err
 			},
 			func(err error) {
 				log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))

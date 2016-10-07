@@ -5,12 +5,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/scheduler/config"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/scootapi/server"
-	"log"
 )
 
 // Set Flags Needed by this Server
@@ -31,6 +32,7 @@ func main() {
 
 	bag, schema := server.Defaults()
 	bag.PutMany(
+		func() endpoints.StatScope { return "scheduler" },
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*addr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(fmt.Sprintf(":%d", *httpPort), s)

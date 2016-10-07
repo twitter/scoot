@@ -27,7 +27,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
@@ -45,7 +45,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -66,7 +66,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
@@ -88,7 +88,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("starting error"))
-	err := runTaskAndLog(s, worker, "task1", task)
+	_, err := runTaskAndLog(s, worker, "task1", task)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned when Worker RunAndWait returns and error")

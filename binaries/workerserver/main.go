@@ -21,7 +21,7 @@ var httpPort = flag.Int("http_port", 9091, "port to serve http on")
 
 func main() {
 	flag.Parse()
-	stat := endpoints.MakeStatsReceiver().Precision(time.Millisecond)
+	stat := endpoints.MakeStatsReceiver("").Precision(time.Millisecond)
 	twServer := endpoints.NewTwitterServer(fmt.Sprintf("localhost:%d", *httpPort), stat)
 	go twServer.Serve()
 
