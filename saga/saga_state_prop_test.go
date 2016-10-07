@@ -1,3 +1,5 @@
+// +build property_test
+
 package saga
 
 import (
