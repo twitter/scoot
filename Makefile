@@ -44,13 +44,17 @@ vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
 test:
-	# Runs only unit tests
-	go test -race -tags=\!integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	# Runs only unit tests and property tests
+	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
+test-unit:
+	# Runs only unit tests
+	go test -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+
 test-integration:
-	# Runs all tests including integration
-	go test -tags=integration $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	# Runs all tests including integration and property tests
+	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 
