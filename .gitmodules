@@ -114,7 +114,7 @@
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify
-	branch = d77da356e56a7428ad25149ca77381849a6a5232
+	branch = 976c720a22c8eb4eb6a0b4348ad85ad12491a506
 [submodule "vendor/github.com/ugorji/go"]
 	path = vendor/github.com/ugorji/go
 	url = https://github.com/ugorji/go
@@ -178,9 +178,12 @@
 [submodule "vendor/github.com/stretchr/objx"]
 	path = vendor/github.com/stretchr/objx
 	url = https://github.com/stretchr/objx.git
+	branch = 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 [submodule "vendor/github.com/davecgh/go-spew"]
 	path = vendor/github.com/davecgh/go-spew
 	url = https://github.com/davecgh/go-spew.git
+	branch = 6d212800a42e8ab5c146b8ace3490ee17e5225f9
 [submodule "vendor/github.com/pmezard/go-difflib"]
 	path = vendor/github.com/pmezard/go-difflib
 	url = https://github.com/pmezard/go-difflib.git
+	branch = 792786c7400a136282c1664665ae0a8db921c6c2
