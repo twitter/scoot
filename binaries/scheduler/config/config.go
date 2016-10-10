@@ -182,9 +182,9 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"config/config.go": configConfigGo,
+	"config/config.go":     configConfigGo,
 	"config/inMemory.json": configInmemoryJson,
-	"config/local.json": configLocalJson,
+	"config/local.json":    configLocalJson,
 }
 
 // AssetDir returns the file names below a certain
@@ -226,11 +226,12 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"config": &bintree{nil, map[string]*bintree{
-		"config.go": &bintree{configConfigGo, map[string]*bintree{}},
+		"config.go":     &bintree{configConfigGo, map[string]*bintree{}},
 		"inMemory.json": &bintree{configInmemoryJson, map[string]*bintree{}},
-		"local.json": &bintree{configLocalJson, map[string]*bintree{}},
+		"local.json":    &bintree{configLocalJson, map[string]*bintree{}},
 	}},
 }}
 
@@ -280,4 +281,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
