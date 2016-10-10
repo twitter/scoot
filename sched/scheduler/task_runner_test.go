@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
@@ -27,7 +28,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, stats.CurrentStatsReceiver)
 
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
@@ -45,7 +46,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, stats.CurrentStatsReceiver)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -66,7 +67,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	_, err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task)
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, stats.CurrentStatsReceiver)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
@@ -88,7 +89,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("starting error"))
-	_, err := runTaskAndLog(s, worker, "task1", task)
+	err := runTaskAndLog(s, worker, "task1", task, stats.CurrentStatsReceiver)
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned when Worker RunAndWait returns and error")

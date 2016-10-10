@@ -8,7 +8,6 @@ import (
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
@@ -243,17 +242,12 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.asyncRunner.RunAsync(
 			func() error {
 				log.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
-				status, err := runTaskAndLog(
+				return runTaskAndLog(
 					saga,
 					wf,
 					taskId,
-					taskDef)
-				if err == nil && status.State == runner.COMPLETE {
-					s.stat.Counter("schedCompletedTaskCounter").Inc(1)
-				} else {
-					s.stat.Counter("schedFailedTaskCounter").Inc(1)
-				}
-				return err
+					taskDef,
+					s.stat)
 			},
 			func(err error) {
 				log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))

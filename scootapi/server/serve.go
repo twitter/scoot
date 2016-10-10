@@ -1,6 +1,7 @@
 package server
 
 import (
+	"sync"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -29,40 +30,36 @@ type Handler struct {
 	stat               stats.StatsReceiver
 	runJobStatCount    int64
 	jobStatusStatCount int64
+	mu                 sync.Mutex
 }
 
 func (h *Handler) loop() {
-	tickerS := time.NewTicker(time.Second)
-	tickerM := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(time.Minute)
 	for {
-		// Manually latch and reset until we find a better way to do req/sec within viz's one minute window.
-		// Takes max rps for every one minute window.
 		select {
-		case <-tickerS.C:
-			prevRunRps := h.stat.Gauge("runJobRpsGauge").Value()
-			prevStatusRps := h.stat.Gauge("jobStatusRpsGauge").Value()
-			if prevRunRps < h.runJobStatCount {
-				h.stat.Gauge("runJobRpsGauge").Update(h.runJobStatCount)
-			}
-			if prevStatusRps < h.jobStatusStatCount {
-				h.stat.Gauge("jobStatusRpsGauge").Update(h.jobStatusStatCount)
-			}
-		case <-tickerM.C:
-			h.stat.Gauge("runJobRpsGauge").Update(0)
+		case <-ticker.C:
+			h.mu.Lock()
+			h.stat.Gauge("runJobRpmGauge").Update(h.runJobStatCount)
+			h.stat.Gauge("jobStatusRpmGauge").Update(h.jobStatusStatCount)
 			h.runJobStatCount = 0
 			h.jobStatusStatCount = 0
+			h.mu.Unlock()
 		}
 	}
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
+	h.mu.Lock()
 	h.runJobStatCount++
+	h.mu.Unlock()
 	return runJob(h.scheduler, def, h.stat)
 }
 
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency("jobStatusLatency_ms").Time().Stop()
+	h.mu.Lock()
 	h.jobStatusStatCount++
+	h.mu.Unlock()
 	return GetJobStatus(jobId, h.sagaCoord)
 }
