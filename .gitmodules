@@ -177,10 +177,10 @@
 	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
 [submodule "vendor/github.com/stretchr/objx"]
 	path = vendor/github.com/stretchr/objx
-	url = git@github.com:stretchr/objx.git
+	url = https://github.com/stretchr/objx.git
 [submodule "vendor/github.com/davecgh/go-spew"]
 	path = vendor/github.com/davecgh/go-spew
-	url = git@github.com:davecgh/go-spew.git
+	url = https://github.com/davecgh/go-spew.git
 [submodule "vendor/github.com/pmezard/go-difflib"]
 	path = vendor/github.com/pmezard/go-difflib
-	url = git@github.com:pmezard/go-difflib.git
+	url = https://github.com/pmezard/go-difflib.git
