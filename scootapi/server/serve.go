@@ -13,7 +13,7 @@ import (
 
 func NewHandler(scheduler scheduler.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	handler := &Handler{scheduler: scheduler, sagaCoord: sc, stat: stat}
-	handler.loop()
+	go handler.loop()
 	return handler
 }
 

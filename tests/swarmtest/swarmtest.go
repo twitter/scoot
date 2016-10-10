@@ -166,9 +166,9 @@ func (s *SwarmTest) compile() error {
 // Creates multiple workers, a scheduler, and the scootapi smoketest to drive job requests.
 func (s *SwarmTest) setup() (string, error) {
 	for i := 0; i < s.NumWorkers; i++ {
-		thriftPort := strconv.Itoa(s.GetPort())
-		httpPort := strconv.Itoa(s.GetPort())
-		args := []string{"-thrift_port", thriftPort, "-http_port", httpPort}
+		thriftAddr := "localhost:" + strconv.Itoa(s.GetPort())
+		httpAddr := "localhost:" + strconv.Itoa(s.GetPort())
+		args := []string{"-thrift_addr", thriftAddr, "-http_addr", httpAddr}
 		if err := s.RunCmd(false, "$GOPATH/bin/workerserver", args...); err != nil {
 			return "", err
 		}

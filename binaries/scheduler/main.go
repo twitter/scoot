@@ -15,8 +15,8 @@ import (
 )
 
 // Set Flags Needed by this Server
-var addr = flag.String("addr", "localhost:9090", "Bind address for api server.")
-var httpPort = flag.Int("http_port", 9091, "port to serve http on")
+var thriftAddr = flag.String("thrit_addr", "localhost:9090", "Bind address for api server.")
+var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 
 var configFileName = flag.String("config", "local.json", "Scheduler Config File")
 
@@ -33,12 +33,12 @@ func main() {
 	bag, schema := server.Defaults()
 	bag.PutMany(
 		func() endpoints.StatScope { return "scheduler" },
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*addr) },
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(fmt.Sprintf(":%d", *httpPort), s)
+			return endpoints.NewTwitterServer(*httpAddr, s)
 		},
 	)
 
-	log.Println("Starting Cloud Scoot API Server & Scheduler on", *addr)
+	log.Println("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
 	server.RunServer(bag, schema, []byte(config))
 }
