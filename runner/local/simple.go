@@ -107,10 +107,10 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 	}
 
 	if newStatus.State.IsDone() {
-		if oldStatus.StdoutRef != "" && newStatus.StdoutRef == "" {
+		if newStatus.StdoutRef == "" {
 			newStatus.StdoutRef = oldStatus.StdoutRef
 		}
-		if oldStatus.StderrRef != "" && newStatus.StderrRef == "" {
+		if newStatus.StderrRef == "" {
 			newStatus.StderrRef = oldStatus.StderrRef
 		}
 
@@ -140,7 +140,9 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	case <-doneCh:
 		go func() {
 			<-checkoutDone
-			checkout.Release()
+			if checkout != nil {
+				checkout.Release()
+			}
 		}()
 		return
 	case <-checkoutDone:
