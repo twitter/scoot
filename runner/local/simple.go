@@ -93,37 +93,37 @@ func (r *simpleRunner) Erase(runId runner.RunId) error {
 	return nil
 }
 
-func (r *simpleRunner) updateStatus(new runner.ProcessStatus) (runner.ProcessStatus, error) {
+func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	old, ok := r.runs[new.RunId]
+	oldStatus, ok := r.runs[newStatus.RunId]
 	if !ok {
-		return runner.ProcessStatus{}, fmt.Errorf("cannot find run %v", new.RunId)
+		return runner.ProcessStatus{}, fmt.Errorf("cannot find run %v", newStatus.RunId)
 	}
 
-	if old.State.IsDone() {
-		return old, nil
+	if oldStatus.State.IsDone() {
+		return oldStatus, nil
 	}
 
-	if new.State.IsDone() {
-		if old.StdoutRef != "" && new.StdoutRef == "" {
-			new.StdoutRef = old.StdoutRef
+	if newStatus.State.IsDone() {
+		if oldStatus.StdoutRef != "" && newStatus.StdoutRef == "" {
+			newStatus.StdoutRef = oldStatus.StdoutRef
 		}
-		if old.StderrRef != "" && new.StderrRef == "" {
-			new.StderrRef = old.StderrRef
+		if oldStatus.StderrRef != "" && newStatus.StderrRef == "" {
+			newStatus.StderrRef = oldStatus.StderrRef
 		}
 
 		// We are ending the running task.
 		// depend on the invariant that there is at most 1 run with !state.IsDone(),
 		// so if we're changing a Process from not Done to Done it must be running
-		log.Printf("local.simpleRunner: run done. %+v", new)
+		log.Printf("local.simpleRunner: run done. %+v", newStatus)
 		close(r.running.doneCh)
 		r.running = nil
 	}
 
-	r.runs[new.RunId] = new
-	return new, nil
+	r.runs[newStatus.RunId] = newStatus
+	return newStatus, nil
 }
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed
