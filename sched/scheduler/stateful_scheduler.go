@@ -145,8 +145,13 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		s.stat.Gauge("schedInProgressGauge").Update(int64(len(s.inProgressJobs)))
-		s.stat.Gauge("schedNumRunningGauge").Update(int64(s.asyncRunner.NumRunning()))
+		numTasks := int64(0)
+		for _, job := range s.inProgressJobs {
+			numTasks += int64(len(job.Tasks))
+		}
+		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
+		s.stat.Gauge("schedInProgressTasksGauge").Update(numTasks)
+		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 	}
 }
 

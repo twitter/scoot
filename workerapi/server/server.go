@@ -63,15 +63,14 @@ func (h *handler) stats() {
 					numActive++
 				}
 			}
-			timeSinceLastContact_ms := int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
-			failed := h.stat.Counter("numFailed")
-			prevNumFailed := failed.Count()
-			if numFailed > prevNumFailed {
-				failed.Inc(numFailed - prevNumFailed)
+			timeSinceLastContact_ms := int64(0)
+			if numActive > 0 {
+				timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			}
-			h.stat.Gauge("numActiveRuns").Update(numActive)
-			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContact_ms").Update(timeSinceLastContact_ms)
+			h.stat.Gauge("activeRunsGauge").Update(numActive)
+			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
+			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
+			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
 			h.mu.Unlock()
 		}
 	}
