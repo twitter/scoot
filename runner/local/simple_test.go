@@ -1,4 +1,4 @@
-package local_test
+package local
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
@@ -98,11 +97,11 @@ func TestAbort(t *testing.T) {
 }
 
 func complete(exitCode int) runner.ProcessStatus {
-	return runner.CompleteStatus(runner.RunId(""), "", "", exitCode)
+	return runner.CompleteStatus(runner.RunId(""), exitCode)
 }
 
 func running() runner.ProcessStatus {
-	return runner.RunningStatus(runner.RunId(""))
+	return runner.RunningStatus(runner.RunId(""), "", "")
 }
 
 func failed(errorText string) runner.ProcessStatus {
@@ -170,10 +169,10 @@ func newRunner() (runner.Runner, *sync.WaitGroup) {
 		panic(err)
 	}
 
-	outputCreator, err := local.NewOutputCreator(tempDir)
+	outputCreator, err := NewOutputCreator(tempDir)
 	if err != nil {
 		panic(err)
 	}
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	r := NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
 	return r, wg
 }
