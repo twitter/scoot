@@ -114,7 +114,7 @@
 [submodule "vendor/github.com/stretchr/testify"]
 	path = vendor/github.com/stretchr/testify
 	url = https://github.com/stretchr/testify
-	branch = 976c720a22c8eb4eb6a0b4348ad85ad12491a506
+	branch = d77da356e56a7428ad25149ca77381849a6a5232
 [submodule "vendor/github.com/ugorji/go"]
 	path = vendor/github.com/ugorji/go
 	url = https://github.com/ugorji/go
