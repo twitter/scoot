@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"regexp"
 	"testing"
 	"time"
 )
@@ -94,16 +95,18 @@ func TestMarshal(t *testing.T) {
 
 func TestNonLatching(t *testing.T) {
 	stat := DefaultStatsReceiver().(*defaultStatsReceiver)
-	stat.Counter("counter").Inc(1)
+	stat.Latency("latency").Stop()
 
 	rendered := string(stat.Render(false))
-	if rendered != `{"counter":{"count":1}}` {
-		t.Fatal("Expected current stats in render", rendered)
+	matched, err := regexp.MatchString(`"count":1,`, rendered)
+	if !matched {
+		t.Fatal("Expected current stats in render", rendered, err)
 	}
 
 	rendered = string(stat.Render(false))
-	if rendered != `{"counter":{"count":0}}` {
-		t.Fatal("Expected clearing of stats after render", rendered)
+	matched, err = regexp.MatchString(`"count":0,`, rendered)
+	if !matched {
+		t.Fatal("Expected clearing of stats after render", rendered, err)
 	}
 }
 
@@ -114,24 +117,24 @@ func TestLatching(t *testing.T) {
 	stat := statIface.(*defaultStatsReceiver)
 	defer cancelFn()
 
-	// Captured registry should initially be empty even though we added a counter.
-	stat.Counter("counter")
-	rendered := string(stat.Render(true))
+	// Captured registry should initially be empty even though we added a latency metric.
+	stat.Latency("latency")
+	rendered := string(stat.Render(false))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=0: ", rendered)
 	}
 
 	// Captured registry should still be empty.
 	ct <- Time.Now().Add(1)
-	rendered = string(stat.Render(true))
+	rendered = string(stat.Render(false))
 	if rendered != "{}" {
 		t.Fatal("Expected empty latch with time=1: ", rendered)
 	}
 
 	// Should be captured after enough time has passed.
 	ct <- Time.Now().Add(time.Minute)
-	rendered = string(stat.Render(true))
+	rendered = string(stat.Render(false))
 	if rendered == "{}" {
-		t.Fatal("Expected non-empty latch with time=0: ", rendered)
+		t.Fatal("Expected non-empty latch with time=1m: ", rendered)
 	}
 }

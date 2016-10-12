@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"time"
 
@@ -16,13 +15,13 @@ import (
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
-var thriftPort = flag.Int("thrift_port", 9090, "port to serve thrift on")
-var httpPort = flag.Int("http_port", 9091, "port to serve http on")
+var thriftAddr = flag.String("thrift_addr", "localhost:9090", "port to serve thrift on")
+var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 
 func main() {
 	flag.Parse()
-	stat := endpoints.MakeStatsReceiver().Precision(time.Millisecond)
-	twServer := endpoints.NewTwitterServer(fmt.Sprintf("localhost:%d", *httpPort), stat)
+	stat := endpoints.MakeStatsReceiver("").Precision(time.Millisecond)
+	twServer := endpoints.NewTwitterServer(*httpAddr, stat)
 	go twServer.Serve()
 
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
@@ -42,7 +41,7 @@ func main() {
 	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
 	run := localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tempDir), outputCreator)
 	handler := server.NewHandler(stats, run)
-	err = server.Serve(handler, fmt.Sprintf("localhost:%d", *thriftPort), transportFactory, protocolFactory)
+	err = server.Serve(handler, *thriftAddr, transportFactory, protocolFactory)
 	if err != nil {
 		log.Fatal("Error serving Worker Server: ", err)
 	}

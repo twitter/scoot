@@ -26,6 +26,7 @@ type SwarmTest struct {
 	RepoDir    string
 	NumWorkers int
 	Wait       bool
+	DoCompile  bool
 	Compile    func() error
 	Setup      func() (string, error)
 	Run        func() error
@@ -52,6 +53,7 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	numJobs := flag.Int("num_jobs", d["num_jobs"].(int), "Number of Jobs to run")
 	timeout := flag.Duration("timeout", d["timeout"].(time.Duration), "Time to wait for jobs to complete")
 	wait := flag.Bool("setup_then_wait", false, "if true, don't run tests; just setup and wait")
+	doCompile := flag.Bool("compile", false, "Compile twitter scoot binaries prior to running swarm test.")
 
 	flag.Parse()
 	if *numWorkers < 5 {
@@ -62,6 +64,7 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	s.RepoDir = *repoDir
 	s.NumWorkers = *numWorkers
 	s.Wait = *wait
+	s.DoCompile = *doCompile
 	s.Compile = func() error { return s.compile() }
 	s.Setup = func() (string, error) { return s.setup() }
 	s.Run = func() error { return s.run() }
@@ -166,9 +169,9 @@ func (s *SwarmTest) compile() error {
 // Creates multiple workers, a scheduler, and the scootapi smoketest to drive job requests.
 func (s *SwarmTest) setup() (string, error) {
 	for i := 0; i < s.NumWorkers; i++ {
-		thriftPort := strconv.Itoa(s.GetPort())
-		httpPort := strconv.Itoa(s.GetPort())
-		args := []string{"-thrift_port", thriftPort, "-http_port", httpPort}
+		thriftAddr := "localhost:" + strconv.Itoa(s.GetPort())
+		httpAddr := "localhost:" + strconv.Itoa(s.GetPort())
+		args := []string{"-thrift_addr", thriftAddr, "-http_addr", httpAddr}
 		if err := s.RunCmd(false, "$GOPATH/bin/workerserver", args...); err != nil {
 			return "", err
 		}
@@ -194,9 +197,11 @@ func (s *SwarmTest) RunSwarmTest() error {
 		return err
 	}
 
-	fmt.Println("Compiling")
-	if err = s.Compile(); err != nil {
-		return err
+	if s.DoCompile {
+		fmt.Println("Compiling")
+		if err = s.Compile(); err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("Setting Up")

@@ -50,6 +50,10 @@ func NewRunner() Runner {
 	}
 }
 
+func (r *Runner) NumRunning() int {
+	return r.bx.Count()
+}
+
 // RunAsync creates a go routine to run the specified function f.
 // The callback, cb, is invoked once f is completed by calling ProcessMessages.
 func (r *Runner) RunAsync(f func() error, cb AsyncErrorResponseHandler) {

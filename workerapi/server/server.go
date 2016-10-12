@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -30,6 +31,7 @@ type handler struct {
 	stat        stats.StatsReceiver
 	run         runner.Runner
 	timeLastRpc time.Time
+	mu          sync.Mutex
 }
 
 func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
@@ -46,6 +48,7 @@ func (h *handler) stats() {
 	for {
 		select {
 		case <-ticker.C:
+			h.mu.Lock()
 			var numFailed int64
 			var numActive int64
 			processes, err := h.run.StatusAll()
@@ -60,24 +63,31 @@ func (h *handler) stats() {
 					numActive++
 				}
 			}
-			timeSinceLastContact_ms := int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
-			failed := h.stat.Counter("numFailed")
-			prevNumFailed := failed.Count()
-			if numFailed > prevNumFailed {
-				failed.Inc(numFailed - prevNumFailed)
+			timeSinceLastContact_ms := int64(0)
+			if numActive > 0 {
+				timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			}
-			h.stat.Gauge("numActiveRuns").Update(numActive)
-			h.stat.Gauge("numEndedRuns").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContact_ms").Update(timeSinceLastContact_ms)
+			h.stat.Gauge("activeRunsGauge").Update(numActive)
+			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
+			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
+			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
+			h.mu.Unlock()
 		}
 	}
+}
+
+// Convenience
+func (h *handler) updateTimeLastRpc() {
+	h.mu.Lock()
+	h.timeLastRpc = time.Now()
+	h.mu.Unlock()
 }
 
 // Implement thrift worker.Worker interface.
 //
 func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
-	h.timeLastRpc = time.Now()
+	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
 	st, err := h.run.StatusAll()
 	if err != nil {
@@ -94,7 +104,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	h.stat.Counter("runs").Inc(1)
 	log.Printf("Worker Running:\n%s", cmd)
 
-	h.timeLastRpc = time.Now()
+	h.updateTimeLastRpc()
 	process, err := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
 	if err != nil {
 		return nil, err
@@ -104,7 +114,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
-	h.timeLastRpc = time.Now()
+	h.updateTimeLastRpc()
 	process, err := h.run.Abort(runner.RunId(runId))
 	if err != nil {
 		return nil, err
@@ -114,7 +124,7 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
-	h.timeLastRpc = time.Now()
+	h.updateTimeLastRpc()
 	h.run.Erase(runner.RunId(runId))
 	return nil
 }
