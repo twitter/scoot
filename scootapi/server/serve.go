@@ -21,23 +21,19 @@ func MakeServer(handler scoot.CloudScoot,
 }
 
 type Handler struct {
-	scheduler          scheduler.Scheduler
-	sagaCoord          saga.SagaCoordinator
-	stat               stats.StatsReceiver
-	runJobStatCount    int64
-	jobStatusStatCount int64
+	scheduler scheduler.Scheduler
+	sagaCoord saga.SagaCoordinator
+	stat      stats.StatsReceiver
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
-	h.runJobStatCount++
-	h.stat.Counter("runJobRpmCounter").Update(h.runJobStatCount)
+	h.stat.Counter("runJobRpmCounter").Inc(1)
 	return runJob(h.scheduler, def, h.stat)
 }
 
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency("jobStatusLatency_ms").Time().Stop()
-	h.jobStatusStatCount++
-	h.stat.Counter("jobStatusRpmCounter").Update(h.jobStatusStatCount)
+	h.stat.Counter("jobStatusRpmCounter").Inc(1)
 	return GetJobStatus(jobId, h.sagaCoord)
 }
