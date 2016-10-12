@@ -121,24 +121,23 @@ func BadRequestStatus(runId RunId, err error) (r ProcessStatus) {
 	return r
 }
 
-func RunningStatus(runId RunId) (r ProcessStatus) {
+func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = RUNNING
+	r.StdoutRef = stdoutRef
+	r.StderrRef = stderrRef
 	return r
 }
 
-func CompleteStatus(runId RunId, stdoutRef string, stderrRef string, exitCode int) (r ProcessStatus) {
+func CompleteStatus(runId RunId, exitCode int) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = COMPLETE
-	r.StdoutRef = stdoutRef
-	r.StderrRef = stderrRef
 	r.ExitCode = exitCode
 	return r
 }
 
 func PreparingStatus(runId RunId) (r ProcessStatus) {
-	return ProcessStatus{
-		RunId: runId,
-		State: PREPARING,
-	}
+	r.RunId = runId
+	r.State = PREPARING
+	return r
 }
