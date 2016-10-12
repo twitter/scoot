@@ -1,9 +1,6 @@
 package server
 
 import (
-	"sync"
-	"time"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
@@ -13,7 +10,6 @@ import (
 
 func NewHandler(scheduler scheduler.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	handler := &Handler{scheduler: scheduler, sagaCoord: sc, stat: stat}
-	go handler.loop()
 	return handler
 }
 
@@ -30,36 +26,18 @@ type Handler struct {
 	stat               stats.StatsReceiver
 	runJobStatCount    int64
 	jobStatusStatCount int64
-	mu                 sync.Mutex
-}
-
-func (h *Handler) loop() {
-	ticker := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-ticker.C:
-			h.mu.Lock()
-			h.stat.Gauge("runJobRpmGauge").Update(h.runJobStatCount)
-			h.stat.Gauge("jobStatusRpmGauge").Update(h.jobStatusStatCount)
-			h.runJobStatCount = 0
-			h.jobStatusStatCount = 0
-			h.mu.Unlock()
-		}
-	}
 }
 
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
-	h.mu.Lock()
 	h.runJobStatCount++
-	h.mu.Unlock()
+	h.stat.Counter("runJobRpmCounter").Update(h.runJobStatCount)
 	return runJob(h.scheduler, def, h.stat)
 }
 
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency("jobStatusLatency_ms").Time().Stop()
-	h.mu.Lock()
 	h.jobStatusStatCount++
-	h.mu.Unlock()
+	h.stat.Counter("jobStatusRpmCounter").Update(h.jobStatusStatCount)
 	return GetJobStatus(jobId, h.sagaCoord)
 }
