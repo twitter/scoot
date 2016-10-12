@@ -15,7 +15,7 @@ import (
 )
 
 // Set Flags Needed by this Server
-var thriftAddr = flag.String("thrit_addr", "localhost:9090", "Bind address for api server.")
+var thriftAddr = flag.String("thrift_addr", "localhost:9090", "Bind address for api server.")
 var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 
 var configFileName = flag.String("config", "local.json", "Scheduler Config File")
