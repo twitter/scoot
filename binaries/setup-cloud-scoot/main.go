@@ -1,22 +1,36 @@
 package main
 
 import (
-	"github.com/scootdev/scoot/tests/swarmtest"
-	"time"
+	"flag"
+	"log"
+
+	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi/setup"
 )
 
-// Sets up a local swarm, then waits.
+// Sets up a local swarm that serves scootapi, then waits or runs
 func main() {
-	s := swarmtest.SwarmTest{}
+	strategy := flag.String("strategy", "", "strategy to setup")
+	workersFlag := flag.String("workers", "", "strategy-specific flag to configure workers")
+	flag.Parse()
 
-	err := s.InitOptions(map[string]interface{}{
-		"num_workers": 20,
-		"num_jobs":    100,
-		"timeout":     100 * time.Second,
-	})
+	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	s.Wait = true
-	s.Main()
+
+	cmds := setup.NewSignalHandlingCmds(tmp)
+	defer cmds.Kill()
+
+	builder := setup.NewGoBuilder(cmds)
+
+	strategies := map[string]setup.SchedulerStrategy{
+		"local.memory": setup.NewLocalMemory(*workersFlag, builder, cmds),
+		"local.local":  setup.NewLocalLocal(*workersFlag, builder, cmds),
+	}
+
+	if err := setup.Main(cmds, strategies, *strategy, flag.Args()); err != nil {
+		cmds.Kill()
+		log.Fatal(err)
+	}
 }

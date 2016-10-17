@@ -16,7 +16,7 @@ type RepoGetter interface {
 	Get() (*repo.Repository, error)
 }
 
-// A Pool that will only have a signle repo, populated by repoGetter, that serves as long as doneCh
+// A Pool that will only have a single repo, populated by repoGetter, that serves until doneCh is closed
 func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
 	singlePool := NewRepoPool(nil, nil, doneCh)
 	go func() {

@@ -4,13 +4,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/scootdev/scoot/binaries/scheduler/config"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/scootapi/server"
 )
 
@@ -18,18 +19,14 @@ import (
 var thriftAddr = flag.String("thrift_addr", "localhost:9090", "Bind address for api server.")
 var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 
-var configFileName = flag.String("config", "local.json", "Scheduler Config File")
+var configFlag = flag.String("config", "local.inmemory", "Scheduler Config (either a filename like local.inmemory or JSON text")
 
 func main() {
-
 	flag.Parse()
-	log.Printf("Scheduler: reading config %+v", *configFileName)
-	config, err := config.Asset(fmt.Sprintf("config/%v", *configFileName))
-
+	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {
-		log.Fatalf("Error Loading Config File: %v, with Error: %v", configFileName, err)
+		log.Fatal(err)
 	}
-
 	bag, schema := server.Defaults()
 	bag.PutMany(
 		func() endpoints.StatScope { return "scheduler" },
@@ -40,5 +37,5 @@ func main() {
 	)
 
 	log.Println("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
-	server.RunServer(bag, schema, []byte(config))
+	server.RunServer(bag, schema, configText)
 }
