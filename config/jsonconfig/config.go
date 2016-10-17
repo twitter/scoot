@@ -94,7 +94,7 @@ func parseType(data json.RawMessage) (string, error) {
 // read it as an asset.
 // Otherwise, assume it's the literal json text.
 func GetConfigText(configFlag string, asset func(string) ([]byte, error)) ([]byte, error) {
-	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]$`, []byte(configFlag)); matched {
+	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]*$`, []byte(configFlag)); matched {
 		configFileName := path.Join("config", configFlag)
 		log.Printf("Scheduler: reading config filename %v", configFileName)
 		configText, err := asset(configFileName)
