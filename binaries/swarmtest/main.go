@@ -10,11 +10,10 @@ import (
 // and ran on local instances of Workers.
 func main() {
 	s := swarmtest.SwarmTest{}
-	s.DoCompile = true
 
 	err := s.InitOptions(map[string]interface{}{
-		"num_workers": 1,
-		"num_jobs":    1,
+		"num_workers": 20,
+		"num_jobs":    100,
 		"timeout":     100 * time.Second,
 	})
 	if err != nil {
