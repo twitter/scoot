@@ -1,7 +1,6 @@
 package swarmtest
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -56,9 +55,6 @@ func (s *SwarmTest) InitOptions(defaults map[string]interface{}) error {
 	doCompile := flag.Bool("compile", false, "Compile twitter scoot binaries prior to running swarm test.")
 
 	flag.Parse()
-	if *numWorkers < 5 {
-		return errors.New("Need >5 workers (see scheduler.go:getNumNodes)")
-	}
 
 	s.LogDir = *logDir
 	s.RepoDir = *repoDir
