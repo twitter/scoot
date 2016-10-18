@@ -73,8 +73,17 @@ func RunServer(
 	schema jsonconfig.Schema,
 	config []byte) {
 
+	// Parse Config
+	mod, err := schema.Parse(config)
+	if err != nil {
+		log.Fatal("Error configuring Worker: ", err)
+	}
+
+	// Initialize Objects Based on Config Settings
+	bag.InstallModule(mod)
+
 	var servers servers
-	err := bag.Extract(&servers)
+	err = bag.Extract(&servers)
 	if err != nil {
 		log.Fatal("Error injecting servers", err)
 	}
