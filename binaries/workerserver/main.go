@@ -7,6 +7,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -18,11 +19,11 @@ func main() {
 
 	bag, schema := server.Defaults()
 	bag.PutMany(
-		func() endpoints.StatScope { return "workerserver" },
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*httpAddr, s)
 		},
+		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 	)
 	server.RunServer(bag, schema, nil)
 }

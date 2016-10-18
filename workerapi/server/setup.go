@@ -27,6 +27,11 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 
 // Creates the default MagicBag and JsonSchema for this Server and
 // returns them.  These can be modified before calling RunServer
+// Magic Bag does not include:
+// - thrift.TServerTransport
+// - *endpoints.TwitterServer
+// - *temp.TempDir
+// these should be added by callers before invoking RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
@@ -34,8 +39,9 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
+
 		endpoints.MakeStatsReceiver,
-		func() (*temp.TempDir, error) { return temp.TempDirDefault() }, // todo pull out
+		func() endpoints.StatScope { return "workerserver" },
 
 		// Create Execer Func
 		func() execer.Execer {
@@ -82,28 +88,3 @@ func RunServer(
 	}()
 	log.Fatal("Error serving: ", <-errCh)
 }
-
-// 	go twServer.Serve()
-
-// 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-// 	transportFactory := thrift.NewTTransportFactory()
-
-// 	tempDir, err := temp.TempDirDefault()
-// 	if err != nil {
-// 		log.Fatal("error creating temp dir: ", err)
-// 	}
-
-// 	stats := stat.Scope("workerserver")
-// 	outputCreator, err := localrunner.NewOutputCreator(tempDir)
-// 	if err != nil {
-// 		log.Fatal("Error creating OutputCreatorr: ", err)
-// 	}
-
-// 	ex := execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
-// 	run := localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tempDir), outputCreator)
-// 	handler := NewHandler(stats, run)
-// 	err = Serve(handler, thriftAddr, transportFactory, protocolFactory)
-// 	if err != nil {
-// 		log.Fatal("Error serving Worker Server: ", err)
-// 	}
-// }
