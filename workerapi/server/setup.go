@@ -13,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type servers struct {
@@ -31,6 +31,7 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 // - thrift.TServerTransport
 // - *endpoints.TwitterServer
 // - *temp.TempDir
+// - snapshot.Checkouter
 // these should be added by callers before invoking RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
@@ -43,19 +44,21 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		endpoints.MakeStatsReceiver,
 		func() endpoints.StatScope { return "workerserver" },
 
-		// Create Execer Func
 		func() execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
 		},
 
-		// Create Runner Func
-		func(ex execer.Execer, tmpDir *temp.TempDir) runner.Runner {
-			outputCreator, err := localrunner.NewOutputCreator(tmpDir)
-			if err != nil {
-				log.Fatal("Error creating OutputCreatorr: ", err)
-			}
-			return localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tmpDir), outputCreator)
+		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
+			return localrunner.NewOutputCreator(tmpDir)
 		},
+
+		func(
+			ex execer.Execer,
+			outputCreator runner.OutputCreator,
+			checkouter snapshot.Checkouter) runner.Runner {
+			return localrunner.NewSimpleRunner(ex, checkouter, outputCreator)
+		},
+
 		NewHandler,
 		MakeServer,
 		makeServers,
