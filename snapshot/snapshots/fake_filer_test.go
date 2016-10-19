@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -44,6 +45,28 @@ func TestIniting(t *testing.T) {
 	}
 }
 
+func assertFileContains(path, contents, msg string, t *testing.T) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatalf(msg + ", readfile: " + err.Error())
+	}
+	if string(b) != contents {
+		t.Fatalf(msg + ", contents: " + string(b))
+	}
+
+}
+
+func assertDirEntries(path string, count int, msg string, t *testing.T) {
+	fi, err := ioutil.ReadDir(path)
+	if err != nil {
+		t.Fatalf(msg + ", readdir: " + err.Error())
+	}
+	if len(fi) != count {
+		t.Fatalf(msg + ", entrycount: " + strconv.Itoa(len(fi)))
+	}
+
+}
+
 func TestTempFiler(t *testing.T) {
 	// Initialize snapshots tmpdir and filer.
 	snapTmp, _ := temp.NewTempDir(os.TempDir(), "snap")
@@ -82,51 +105,21 @@ func TestTempFiler(t *testing.T) {
 	defer co2.Release()
 
 	// Make sure first checkout only contains a single file.
-	var fi []os.FileInfo
-	fi, err = ioutil.ReadDir(co1.Path())
-	if err != nil {
-		t.Fatalf("read single file root: %v", err)
-	}
-	if len(fi) != 1 {
-		t.Fatalf("see exactly one file in root: %v", len(fi))
-	}
+	assertDirEntries(co1.Path(), 1, "co1", t)
 
 	// Read single file from first checkout.
-	var b []byte
-	b, err = ioutil.ReadFile(filepath.Join(co1.Path(), filepath.Base(localfile1)))
-	if err != nil {
-		t.Fatalf("read single file: %v", err)
-	}
-	if string(b) != "bar1" {
-		t.Fatalf("contents of single file: %v", string(b))
-	}
+	assertFileContains(filepath.Join(co1.Path(), filepath.Base(localfile1)), "bar1", "co1", t)
 
 	// Make sure second checkout contains a single entry.
-	fi, err = ioutil.ReadDir(co2.Path())
-	if err != nil {
-		t.Fatalf("read dir root: %v", err)
-	}
-	if len(fi) != 1 {
-		t.Fatalf("see exactly one dir in root: %v", len(fi))
-	}
+	assertDirEntries(co2.Path(), 1, "co2", t)
 
 	// Read first file from the second checkout subdirectory.
-	b, err = ioutil.ReadFile(filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile1)))
-	if err != nil {
-		t.Fatalf("read first file in dir: %v", err)
-	}
-	if string(b) != "bar1" {
-		t.Fatalf("contents of dir file1: %v", err)
-	}
+	p := filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile1))
+	assertFileContains(p, "bar1", "co2", t)
 
 	// Read second file from the second checkout subdirectory.
-	b, err = ioutil.ReadFile(filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile2)))
-	if err != nil {
-		t.Fatalf("read second file in dir: %v", err)
-	}
-	if string(b) != "bar2" {
-		t.Fatalf("contents of dir file2: %v", err)
-	}
+	p = filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile2))
+	assertFileContains(p, "bar2", "co2", t)
 
 	//TODO? test that checkouts can modify files without affecting stored snapshots.
 }
