@@ -10,7 +10,6 @@ import (
 
 	"strings"
 	"testing"
-	"log"
 )
 
 func TestNoRunners(t *testing.T) {

@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-const loopWaitTime time.Duration = 1 * time.Second
 const maxAccumulatedWaitTime time.Duration = 1 * time.Minute //TODO parameterize this
 
 type RunnerManager struct {
@@ -33,17 +32,8 @@ func NewRunnerManager(numRunners int, exec execer.Execer, checkouter snapshot.Ch
 	return &newRunnerManager
 }
 
-// find a runner that can run a command, (asynchronously) in an environment that has been
-// initialized with the specified snapshot.
-//
-// When the command is complete the output will have been stored in the snapshot id in the result
-// TODO implement storing output snapshot in worker's runner
-//
-
-// for a system defined retention period or until the user requests the results
-// whichever comes first
-//
-// TODO implement storing the output in a snapshot
+// find a runner that can run the requested command.  If all runners are currently processing commands
+// return an error, otherwise have the runner run the requested command.
 func (r *RunnerManager) Run(snapshotId string, cmd RunCommand, outputStrategy OutputStrategy) (runner.RunId, error) {
 
 	for _, runnerCandidate := range r.runners {
