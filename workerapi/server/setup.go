@@ -7,7 +7,6 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
@@ -32,6 +31,7 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 // - *endpoints.TwitterServer
 // - *temp.TempDir
 // - snapshot.Checkouter
+// - runner.OutputCreator
 // these should be added by callers before invoking RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
@@ -46,10 +46,6 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
-		},
-
-		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
-			return localrunner.NewOutputCreator(tmpDir)
 		},
 
 		func(
