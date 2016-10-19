@@ -13,8 +13,24 @@ import (
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
+// Creates a Worker Server
+func MakeServer(
+	handler worker.Worker,
+	transport thrift.TServerTransport,
+	transportFactory thrift.TTransportFactory,
+	protocolFactory thrift.TProtocolFactory) thrift.TServer {
+	return thrift.NewTSimpleServer4(
+		worker.NewWorkerProcessor(handler),
+		transport,
+		transportFactory,
+		protocolFactory)
+}
+
 // Called by a main binary. Blocks until the connection is terminated.
-func Serve(handler worker.Worker, addr string, transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory) error {
+func Serve(
+	handler worker.Worker,
+	addr string, transportFactory thrift.TTransportFactory,
+	protocolFactory thrift.TProtocolFactory) error {
 	transport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
 		return err
