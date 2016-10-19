@@ -29,6 +29,8 @@ type Checkout interface {
 	Release() error
 }
 
+// Ingester creates a Snapshot from a path in the local filesystem.
 type Ingester interface {
+	// Takes a file or dir path and stores the contents for later Checkout by id.
 	Ingest(path string) (id string, err error)
 }
