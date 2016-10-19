@@ -1,6 +1,6 @@
 package server
 
-// implement the Scoot Run and Wait requests for
+// implement the Scoot API Run requests for local processing
 
 import (
 	"github.com/scootdev/scoot/runner"
