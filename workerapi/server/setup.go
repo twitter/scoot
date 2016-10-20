@@ -5,14 +5,17 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 type servers struct {
@@ -25,17 +28,17 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 }
 
 // Creates the default MagicBag and JsonSchema for this Server and
-// returns them.  These can be modified before calling RunServer
-// Magic Bag does not include:
-// - thrift.TServerTransport
-// - *endpoints.TwitterServer
-// - *temp.TempDir
-// - snapshot.Checkouter
-// - runner.OutputCreator
-// these should be added by callers before invoking RunServer
+// returns them.  These functions can be overriddne before calling RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
+
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:2000") },
+
+		func(s stats.StatsReceiver) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:2001", s)
+		},
+
 		thrift.NewTTransportFactory,
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
@@ -46,6 +49,16 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
+		},
+
+		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
+
+		func(tmpDir *temp.TempDir) snapshot.Checkouter {
+			return snapshots.MakeTempCheckouter(tmpDir)
+		},
+
+		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
+			return localrunner.NewOutputCreator(tmpDir)
 		},
 
 		func(

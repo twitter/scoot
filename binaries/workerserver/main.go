@@ -11,11 +11,7 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	localrunner "github.com/scootdev/scoot/runner/local"
-	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -36,15 +32,6 @@ func main() {
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*httpAddr, s)
-		},
-		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
-
-		func(tmpDir *temp.TempDir) snapshot.Checkouter {
-			return snapshots.MakeTempCheckouter(tmpDir)
-		},
-
-		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
-			return localrunner.NewOutputCreator(tmpDir)
 		},
 	)
 
