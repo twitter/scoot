@@ -16,6 +16,7 @@ import (
 	localrunner "github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
 type servers struct {
@@ -28,24 +29,26 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 }
 
 // Creates the default MagicBag and JsonSchema for this Server and
-// returns them.  These functions can be overriddne before calling RunServer
+// returns them.  These functions can be overridden before calling RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
 
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:2000") },
 
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:2001", s)
-		},
+		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
 
-		thrift.NewTTransportFactory,
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 
-		endpoints.MakeStatsReceiver,
 		func() endpoints.StatScope { return "workerserver" },
+
+		func(scope endpoints.StatScope) stats.StatsReceiver { return endpoints.MakeStatsReceiver(scope) },
+
+		func(s stats.StatsReceiver) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:2001", s)
+		},
 
 		func() execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
@@ -68,9 +71,21 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return localrunner.NewSimpleRunner(ex, checkouter, outputCreator)
 		},
 
-		NewHandler,
-		MakeServer,
-		makeServers,
+		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
+			return NewHandler(stat, r)
+		},
+
+		func(
+			handler worker.Worker,
+			transport thrift.TServerTransport,
+			transportFactory thrift.TTransportFactory,
+			protocolFactory thrift.TProtocolFactory) thrift.TServer {
+			return MakeServer(handler, transport, transportFactory, protocolFactory)
+		},
+
+		func(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
+			return makeServers(thrift, http)
+		},
 	)
 
 	schema := jsonconfig.Schema(make(map[string]jsonconfig.Implementations))
