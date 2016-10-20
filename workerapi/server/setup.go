@@ -5,6 +5,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
@@ -13,7 +14,9 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
 type servers struct {
@@ -26,39 +29,63 @@ func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 }
 
 // Creates the default MagicBag and JsonSchema for this Server and
-// returns them.  These can be modified before calling RunServer
-// Magic Bag does not include:
-// - thrift.TServerTransport
-// - *endpoints.TwitterServer
-// - *temp.TempDir
-// these should be added by callers before invoking RunServer
+// returns them.  These functions can be overridden before calling RunServer
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		thrift.NewTTransportFactory,
+
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:2000") },
+
+		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
+
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 
-		endpoints.MakeStatsReceiver,
 		func() endpoints.StatScope { return "workerserver" },
 
-		// Create Execer Func
+		func(scope endpoints.StatScope) stats.StatsReceiver { return endpoints.MakeStatsReceiver(scope) },
+
+		func(s stats.StatsReceiver) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:2001", s)
+		},
+
 		func() execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
 		},
 
-		// Create Runner Func
-		func(ex execer.Execer, tmpDir *temp.TempDir) runner.Runner {
-			outputCreator, err := localrunner.NewOutputCreator(tmpDir)
-			if err != nil {
-				log.Fatal("Error creating OutputCreatorr: ", err)
-			}
-			return localrunner.NewSimpleRunner(ex, snapshots.MakeTempCheckouter(tmpDir), outputCreator)
+		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
+
+		func(tmpDir *temp.TempDir) snapshot.Checkouter {
+			return snapshots.MakeTempCheckouter(tmpDir)
 		},
-		NewHandler,
-		MakeServer,
-		makeServers,
+
+		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
+			return localrunner.NewOutputCreator(tmpDir)
+		},
+
+		func(
+			ex execer.Execer,
+			outputCreator runner.OutputCreator,
+			checkouter snapshot.Checkouter) runner.Runner {
+			return localrunner.NewSimpleRunner(ex, checkouter, outputCreator)
+		},
+
+		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
+			return NewHandler(stat, r)
+		},
+
+		func(
+			handler worker.Worker,
+			transport thrift.TServerTransport,
+			transportFactory thrift.TTransportFactory,
+			protocolFactory thrift.TProtocolFactory) thrift.TServer {
+			return MakeServer(handler, transport, transportFactory, protocolFactory)
+		},
+
+		func(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
+			return makeServers(thrift, http)
+		},
 	)
 
 	schema := jsonconfig.Schema(make(map[string]jsonconfig.Implementations))
