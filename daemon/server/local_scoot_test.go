@@ -9,25 +9,26 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 
-	//sysOS "os"
+	sysOS "os"
 	"strings"
 	"testing"
-	"log"
+	"time"
 )
 
 type testEnv struct {
 	execer            execer.Execer
 	tmpDirForCheckout string
 	checkouter        snapshot.Checkouter
-	outputCreater     runner.OutputCreator
+	outputCreator     runner.OutputCreator
 	localScoot        *LocalScoot
 }
 
-//
+// validate that we get the correct error message when no runners have been created
 func TestNoRunners(t *testing.T) {
 
 	// setup the test environment with no runners
-	testEnv := setup(t, 0)
+	timeout := 2 * time.Second
+	testEnv := setup(t, 0, timeout)
 	defer teardown(t, testEnv)
 	localScoot := testEnv.localScoot
 
@@ -41,13 +42,14 @@ func TestNoRunners(t *testing.T) {
 	}
 }
 
-// Start a runner whose processing will not be done by the
+// Start a runner whose processing will not be finished by the
 // time a second request comes in.
-// Validate that a runner could not be found for the second request
+// Validate that the second request returns a message indicating that a runner could not be found
 func TestAllRunnersBusyProcessing(t *testing.T) {
 
 	// setup the test environment with 1 runner
-	testEnv := setup(t, 1)
+	timeout := 2 * time.Second
+	testEnv := setup(t, 1, timeout)
 	defer teardown(t, testEnv)
 	localScoot := testEnv.localScoot
 
@@ -82,29 +84,26 @@ func TestAllRunnersBusyProcessing(t *testing.T) {
 }
 
 // setup the checkouter, execer, and output creator for the daemon tests
-func setup(t *testing.T, numRunners int) testEnv {
+func setup(t *testing.T, numRunners int, timeout time.Duration) testEnv {
 
-	tmpDir, err :=  temp.NewTempDir("./", "daemonTest")
+	tmpDir, err := temp.NewTempDir("/tmp", "daemonTest")
 	if err != nil {
-		t.Fatalf("couldn't create temp dir:%s\n",err.Error())
+		t.Fatalf("couldn't create temp dir:%s\n", err.Error())
 	}
-
-	noopCheckouter := snapshots.MakeTempCheckouter(tmpDir)
+	checkouter := snapshots.MakeTempCheckouter(tmpDir)
 
 	exec := os.NewExecer()
 	outputCreator := runners.NewNullOutputCreator()
-	localScoot := NewLocalScoot(numRunners, exec, noopCheckouter, outputCreator)
-	return testEnv{execer:exec, tmpDirForCheckout: tmpDir.Dir, checkouter: noopCheckouter, outputCreater: outputCreator, localScoot: localScoot}
+	localScoot := NewLocalScoot(numRunners, exec, checkouter, outputCreator, timeout)
+	return testEnv{execer: exec, tmpDirForCheckout: tmpDir.Dir, checkouter: checkouter, outputCreator: outputCreator, localScoot: localScoot}
 }
 
 // clean up after the test - remove the temp directory that was created by the temp checkouter
 func teardown(t *testing.T, env testEnv) {
 
-	log.Printf("teardown will delete %s\n", env.tmpDirForCheckout)
-
-	//err := sysOS.RemoveAll(env.tmpDirForCheckout)
-	//if err != nil {
-	//	t.Fatalf("error removing temp directory:%s\n", env.tmpDirForCheckout)
-	//}
+	err := sysOS.RemoveAll(env.tmpDirForCheckout)
+	if err != nil {
+		t.Fatalf("error removing temp directory:%s\n", env.tmpDirForCheckout)
+	}
 
 }

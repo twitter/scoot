@@ -12,21 +12,20 @@ import (
 	"time"
 )
 
-const maxAccumulatedWaitTime time.Duration = 1 * time.Minute //TODO parameterize this
-
 type LocalScoot struct {
 	runners          []runner.Runner
 	runIdToRunnerMap map[runner.RunId]runner.Runner // tracks which runid is being run by which runner
+	timeout          time.Duration
 }
 
-func NewLocalScoot(numRunners int, exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) *LocalScoot {
-	localScoot := LocalScoot{}
+func NewLocalScoot(numRunners int, exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator, timeoutIn time.Duration) *LocalScoot {
+	localScoot := LocalScoot{timeout: timeoutIn}
 
 	localScoot.runners = make([]runner.Runner, numRunners)
 	localScoot.runIdToRunnerMap = make(map[runner.RunId]runner.Runner)
 
 	for i := 0; i < numRunners; i++ {
-		localScoot.runners[i] = (runner.Runner)(local.NewSimpleRunner(exec, checkouter, outputCreator))
+		localScoot.runners[i] = local.NewSimpleRunner(exec, checkouter, outputCreator)
 	}
 
 	return &localScoot
@@ -40,7 +39,7 @@ func (r *LocalScoot) Run(snapshotId string, cmd RunCommand, outputStrategy Outpu
 		// loop through runners looking for an available runner
 
 		var env map[string]string
-		runnerCommand := runner.NewCommand(cmd, env, maxAccumulatedWaitTime, snapshotId)
+		runnerCommand := runner.NewCommand(cmd, env, r.timeout, snapshotId)
 
 		// start the command
 		status, err := runnerCandidate.Run(runnerCommand)
