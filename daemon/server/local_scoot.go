@@ -14,27 +14,27 @@ import (
 
 const maxAccumulatedWaitTime time.Duration = 1 * time.Minute //TODO parameterize this
 
-type RunnerManager struct {
+type LocalScoot struct {
 	runners          []runner.Runner
 	runIdToRunnerMap map[runner.RunId]runner.Runner // tracks which runid is being run by which runner
 }
 
-func NewRunnerManager(numRunners int, exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) *RunnerManager {
-	newRunnerManager := RunnerManager{}
+func NewLocalScoot(numRunners int, exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) *LocalScoot {
+	localScoot := LocalScoot{}
 
-	newRunnerManager.runners = make([]runner.Runner, numRunners)
-	newRunnerManager.runIdToRunnerMap = make(map[runner.RunId]runner.Runner)
+	localScoot.runners = make([]runner.Runner, numRunners)
+	localScoot.runIdToRunnerMap = make(map[runner.RunId]runner.Runner)
 
 	for i := 0; i < numRunners; i++ {
-		newRunnerManager.runners[i] = (runner.Runner)(local.NewSimpleRunner(exec, checkouter, outputCreator))
+		localScoot.runners[i] = (runner.Runner)(local.NewSimpleRunner(exec, checkouter, outputCreator))
 	}
 
-	return &newRunnerManager
+	return &localScoot
 }
 
 // find a runner that can run the requested command.  If all runners are currently processing commands
 // return an error, otherwise have the runner run the requested command.
-func (r *RunnerManager) Run(snapshotId string, cmd RunCommand, outputStrategy OutputStrategy) (runner.RunId, error) {
+func (r *LocalScoot) Run(snapshotId string, cmd RunCommand, outputStrategy OutputStrategy) (runner.RunId, error) {
 
 	for _, runnerCandidate := range r.runners {
 		// loop through runners looking for an available runner
