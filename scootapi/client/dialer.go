@@ -10,6 +10,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type Dialer interface {
+	// Returns a CloudScoot Client with open Transport, or an error
+	Dial(addr string) (*scoot.CloudScootClient, error)
+}
+
+type dialer struct {
+	transportFactory thrift.TTransportFactory
+	protocolFactory  thrift.TProtocolFactory
+}
+
 func (c *Client) Dial() (*scoot.CloudScootClient, error) {
 	if c.client == nil {
 		client, err := c.dialer.Dial(c.addr)
@@ -28,18 +38,8 @@ func (c *Client) Close(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type Dialer interface {
-	// Returns a CloudScoot Client with open Transport, or an error
-	Dial(addr string) (*scoot.CloudScootClient, error)
-}
-
 func NewDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Dialer {
 	return &dialer{tf, pf}
-}
-
-type dialer struct {
-	transportFactory thrift.TTransportFactory
-	protocolFactory  thrift.TProtocolFactory
 }
 
 func (d *dialer) Dial(addr string) (*scoot.CloudScootClient, error) {

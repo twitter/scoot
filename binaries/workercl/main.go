@@ -9,11 +9,13 @@ import (
 
 // Binary to talk to Cloud Worker
 func main() {
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	transportFactory := thrift.NewTTransportFactory()
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	client := client.NewCliClient(transportFactory, protocolFactory)
-	err := client.Cli()
+	dialer := client.NewSimpleDialer(transportFactory, protocolFactory)
+
+	client := client.NewSimpleCLIClient(dialer)
+	err := client.Exec()
 	if err != nil {
 		log.Fatal("error running workercl ", err)
 	}
