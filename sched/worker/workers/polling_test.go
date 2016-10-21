@@ -106,6 +106,53 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 	wg.Done()
 }
 
+func TestPollingWorker_Timeout(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ex := execers.NewSimExecer(&wg)
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+
+	w := NewPollingWorkerWithTimeout(
+		r,
+		time.Duration(10)*time.Microsecond,
+		true,
+		time.Duration(10)*time.Microsecond)
+
+	status, err := w.RunAndWait(task("sleep 500", "complete 43"))
+	if err != nil {
+		t.Errorf("Received Unexpected Error: %v", err)
+	}
+
+	if status.State != runner.TIMEDOUT {
+		t.Errorf("Expected status state to be TIMEDOUT. Status: %+v", status)
+	}
+}
+
+func TestPollingWorker_TimeoutDisabled(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	ex := execers.NewSimExecer(&wg)
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
+
+	w := NewPollingWorkerWithTimeout(
+		r,
+		time.Duration(10)*time.Microsecond,
+		false,
+		time.Duration(10)*time.Microsecond)
+
+	status, err := w.RunAndWait(task("sleep 50", "complete 43"))
+	if err != nil {
+		t.Errorf("Received Unexpected Error: %v", err)
+	}
+
+	if err != nil {
+		t.Errorf("Received Unexpected Error: %v", err)
+	}
+	if status.State != runner.COMPLETE {
+		t.Errorf("Expected task to complete running.  Status: %+v", status)
+	}
+}
+
 func task(argv ...string) sched.TaskDefinition {
 	return sched.TaskDefinition{
 		Command: runner.Command{
