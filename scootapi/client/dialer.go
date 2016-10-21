@@ -5,60 +5,38 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/spf13/cobra"
 )
 
+// Interface for initializing a thrift connection for a client
 type Dialer interface {
-	// Returns a CloudScoot Client with open Transport, or an error
-	Dial(addr string) (*scoot.CloudScootClient, error)
+	Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error)
 }
 
-type dialer struct {
+// Basic implementation of Dialer that manages thrift transport/protocol factories
+// Opens a thrift connection directly to the given address
+type simpleDialer struct {
 	transportFactory thrift.TTransportFactory
 	protocolFactory  thrift.TProtocolFactory
 }
 
-func (c *Client) Dial() (*scoot.CloudScootClient, error) {
-	if c.client == nil {
-		client, err := c.dialer.Dial(c.addr)
-		if err != nil {
-			return nil, err
-		}
-		c.client = client
-	}
-	return c.client, nil
+func NewSimpleDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Dialer {
+	return &simpleDialer{tf, pf}
 }
 
-func (c *Client) Close(cmd *cobra.Command, args []string) error {
-	if c.client != nil {
-		return c.client.Transport.Close()
-	}
-	return nil
-}
-
-func NewDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Dialer {
-	return &dialer{tf, pf}
-}
-
-func (d *dialer) Dial(addr string) (*scoot.CloudScootClient, error) {
-	if addr == "" {
-		addr = scootapi.GetScootapiAddr()
-		if addr == "" {
-			addr = "localhost:9090"
-		}
-	}
+func (d *simpleDialer) Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error) {
 	log.Println("Dialing", addr)
+
 	var transport thrift.TTransport
 	transport, err := thrift.NewTSocket(addr)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening socket: %v", err)
+		return nil, nil, fmt.Errorf("Error opening socket: %v", err)
 	}
+
 	transport = d.transportFactory.GetTransport(transport)
 	err = transport.Open()
 	if err != nil {
-		return nil, fmt.Errorf("Error opening transport: %v", err)
+		return nil, nil, fmt.Errorf("Error opening transport: %v", err)
 	}
-	return scoot.NewCloudScootClientFactory(transport, d.protocolFactory), nil
+
+	return transport, d.protocolFactory, nil
 }

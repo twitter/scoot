@@ -14,11 +14,15 @@ import (
 
 // Binary to talk to Cloud Scoot API
 func main() {
-	dialer := client.NewDialer(thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
-	client, err := client.NewClient(dialer)
+	transportFactory := thrift.NewTTransportFactory()
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+
+	dialer := client.NewSimpleDialer(transportFactory, protocolFactory)
+	client, err := client.NewSimpleCLIClient(dialer)
 	if err != nil {
 		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)
 	}
+
 	err = client.Exec()
 	if err != nil {
 		log.Fatal("error running scootapi ", err)

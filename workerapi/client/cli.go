@@ -19,8 +19,9 @@ func (c *simpleCLIClient) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func NewSimpleCLIClient(dialer Dialer) CLIClient {
+func NewSimpleCLIClient(dialer Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
+	c.client.dialer = dialer
 	// c.client.addr is provided as a cmdline flag.
 
 	rootCmd := &cobra.Command{
@@ -45,7 +46,7 @@ func NewSimpleCLIClient(dialer Dialer) CLIClient {
 		Short: "queries worker status",
 	})
 
-	return c
+	return c, nil
 }
 
 func (c *simpleCLIClient) addCmd(cmd command, cobraCmd *cobra.Command) {

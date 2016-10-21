@@ -25,16 +25,16 @@ type Client interface {
 
 // Basic implementation of Client interface for interaction with Scoot worker API
 type simpleClient struct {
-	addr   string
-	dialer Dialer
-	worker *worker.WorkerClient
+	addr         string
+	dialer       Dialer
+	workerClient *worker.WorkerClient
 }
 
-func NewSimpleClient(dialer Dialer, addr string) Client {
+func NewSimpleClient(dialer Dialer, addr string) (Client, error) {
 	cl := &simpleClient{}
 	cl.dialer = dialer
 	cl.addr = addr
-	return cl
+	return cl, nil
 }
 
 func (c *simpleClient) Dial() error {
@@ -43,7 +43,7 @@ func (c *simpleClient) Dial() error {
 }
 
 func (c *simpleClient) dial() (*worker.WorkerClient, error) {
-	if c.worker == nil {
+	if c.workerClient == nil {
 		if c.addr == "" {
 			c.addr = defaultWorkerAddr
 		}
@@ -53,14 +53,14 @@ func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 			return nil, fmt.Errorf("Error dialing to set up client connection: %v", err)
 		}
 
-		c.worker = worker.NewWorkerClientFactory(transport, protocolFactory)
+		c.workerClient = worker.NewWorkerClientFactory(transport, protocolFactory)
 	}
-	return c.worker, nil
+	return c.workerClient, nil
 }
 
 func (c *simpleClient) Close() error {
-	if c.worker != nil {
-		return c.worker.Transport.Close()
+	if c.workerClient != nil {
+		return c.workerClient.Transport.Close()
 	}
 	return nil
 }

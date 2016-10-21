@@ -53,7 +53,7 @@ const pollingPeriod = time.Duration(250) * time.Millisecond
 func MakeRpcWorkerFactory(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) worker.WorkerFactory {
 	return func(node cluster.Node) worker.Worker {
 		d := client.NewSimpleDialer(tf, pf)
-		c := client.NewSimpleClient(d, string(node.Id()))
+		c, _ := client.NewSimpleClient(d, string(node.Id()))
 		return workers.NewPollingWorker(c, pollingPeriod)
 	}
 }
