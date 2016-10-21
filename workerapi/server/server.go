@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -24,23 +23,6 @@ func MakeServer(
 		transport,
 		transportFactory,
 		protocolFactory)
-}
-
-// Called by a main binary. Blocks until the connection is terminated.
-func Serve(
-	handler worker.Worker,
-	addr string, transportFactory thrift.TTransportFactory,
-	protocolFactory thrift.TProtocolFactory) error {
-	transport, err := thrift.NewTServerSocket(addr)
-	if err != nil {
-		return err
-	}
-	processor := worker.NewWorkerProcessor(handler)
-	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
-
-	fmt.Println("Serving thrift: ", addr)
-
-	return server.Serve()
 }
 
 type handler struct {
