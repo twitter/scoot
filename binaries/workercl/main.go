@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
@@ -12,8 +13,8 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	dialer := client.NewSimpleDialer(transportFactory, protocolFactory)
-	client, err := client.NewSimpleCLIClient(dialer)
+	d := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	client, err := client.NewSimpleCLIClient(d)
 	if err != nil {
 		log.Fatal("Failed to create worker CLIClient: ", err)
 	}

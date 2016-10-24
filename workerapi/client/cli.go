@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +20,9 @@ func (c *simpleCLIClient) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func NewSimpleCLIClient(dialer Dialer) (CLIClient, error) {
+func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
-	c.client.dialer = dialer
+	c.client.dialer = d
 	// c.client.addr is provided as a cmdline flag.
 
 	rootCmd := &cobra.Command{

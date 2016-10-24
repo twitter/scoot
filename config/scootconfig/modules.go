@@ -7,6 +7,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
@@ -52,7 +53,7 @@ const pollingPeriod = time.Duration(250) * time.Millisecond
 
 func MakeRpcWorkerFactory(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) worker.WorkerFactory {
 	return func(node cluster.Node) worker.Worker {
-		d := client.NewSimpleDialer(tf, pf)
+		d := dialer.NewSimpleDialer(tf, pf)
 		c, _ := client.NewSimpleClient(d, string(node.Id()))
 		return workers.NewPollingWorker(c, pollingPeriod)
 	}

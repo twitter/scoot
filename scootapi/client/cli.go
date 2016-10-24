@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ type simpleCLIClient struct {
 	rootCmd *cobra.Command
 
 	addr        string
-	dialer      Dialer
+	dialer      dialer.Dialer
 	scootClient *scoot.CloudScootClient
 }
 
@@ -27,9 +28,9 @@ func (c *simpleCLIClient) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func NewSimpleCLIClient(dialer Dialer) (CLIClient, error) {
+func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
-	c.dialer = dialer
+	c.dialer = d
 	// c.addr is populated by flag
 
 	c.rootCmd = &cobra.Command{

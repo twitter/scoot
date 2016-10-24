@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/scootapi/client"
 	"log"
+
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/scootapi/client"
 )
 
 // Command line tool to talk to CloudScoot Server
@@ -17,8 +19,8 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	dialer := client.NewSimpleDialer(transportFactory, protocolFactory)
-	client, err := client.NewSimpleCLIClient(dialer)
+	d := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	client, err := client.NewSimpleCLIClient(d)
 	if err != nil {
 		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)
 	}

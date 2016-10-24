@@ -1,10 +1,9 @@
 package client
 
-// TODO workerapi/scootapi dialer consolidation
-
 import (
 	"fmt"
 
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -26,13 +25,13 @@ type Client interface {
 // Basic implementation of Client interface for interaction with Scoot worker API
 type simpleClient struct {
 	addr         string
-	dialer       Dialer
+	dialer       dialer.Dialer
 	workerClient *worker.WorkerClient
 }
 
-func NewSimpleClient(dialer Dialer, addr string) (Client, error) {
+func NewSimpleClient(d dialer.Dialer, addr string) (Client, error) {
 	cl := &simpleClient{}
-	cl.dialer = dialer
+	cl.dialer = d
 	cl.addr = addr
 	return cl, nil
 }
