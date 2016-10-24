@@ -17,18 +17,30 @@ func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputC
 		checkouter:    checkouter,
 		outputCreator: outputCreator,
 		runs:          make(map[runner.RunId]runner.ProcessStatus),
+		reportRunDoneCh:nil,
+	}
+}
+
+func NewSimpleReportBackRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator, runDoneCh chan runner.RunId) runner.Runner {
+	return &simpleRunner{
+		exec:          exec,
+		checkouter:    checkouter,
+		outputCreator: outputCreator,
+		runs:          make(map[runner.RunId]runner.ProcessStatus),
+		reportRunDoneCh:runDoneCh,
 	}
 }
 
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
-	exec          execer.Execer
-	checkouter    snapshot.Checkouter
-	outputCreator runner.OutputCreator
-	runs          map[runner.RunId]runner.ProcessStatus
-	running       *runInstance
-	nextRunId     int64
-	mu            sync.Mutex
+	exec            execer.Execer
+	checkouter      snapshot.Checkouter
+	outputCreator   runner.OutputCreator
+	runs            map[runner.RunId]runner.ProcessStatus
+	running         *runInstance
+	nextRunId       int64
+	reportRunDoneCh chan runner.RunId
+	mu              sync.Mutex
 }
 
 type runInstance struct {
@@ -50,7 +62,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.runs[runId] = runner.PreparingStatus(runId)
 
 	// Run in a new goroutine
-	go r.run(cmd, runId, r.running.doneCh)
+	go r.run(cmd, runId, r.running.doneCh, r.reportRunDoneCh)
 	if cmd.Timeout > 0 { // Timeout if applicable
 		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId)) })
 	}
@@ -127,8 +139,10 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 }
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed
-func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
+func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}, reportDone chan runner.RunId) {
 	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
+
+	defer reportRunDone(reportDone, runId)
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 	go func() {
 		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
@@ -200,5 +214,11 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)))
 	default:
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State)))
+	}
+}
+
+func reportRunDone(reportDoneCh chan runner.RunId, runId runner.RunId) {
+	if reportDoneCh != nil {
+		reportDoneCh <- runId
 	}
 }

@@ -25,7 +25,8 @@ type testEnv struct {
 // Wait a short time, and verify that the second run request was run.
 func TestQueueingAMessage(t *testing.T) {
 
-	testEnv, err := setup()
+	jobDoneCh := make(chan runner.RunId)
+	testEnv, err := setup(jobDoneCh)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -33,7 +34,7 @@ func TestQueueingAMessage(t *testing.T) {
 
 	ctx := context.TODO()
 
-	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 10)
+	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 10, jobDoneCh)
 
 	// send the first command telling sim execer to pause
 	timeout := 3 * time.Second
@@ -93,17 +94,17 @@ func TestQueueingAMessage(t *testing.T) {
 
 }
 
-func setup() (*testEnv, error) {
+func setup(jobDoneCh chan runner.RunId) (*testEnv, error) {
 
 	var runner runner.Runner
 	var wg *sync.WaitGroup
-	runner, wg = makeRunnerWithSimExecer()
+	runner, wg = makeRunnerWithSimExecer(jobDoneCh)
 
 	return &testEnv{commandRunner: runner, waitGroup: wg}, nil
 
 }
 
-func makeRunnerWithSimExecer() (runner.Runner, *sync.WaitGroup) {
+func makeRunnerWithSimExecer(jobDoneCh chan runner.RunId) (runner.Runner, *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
 	ex := execers.NewSimExecer(wg)
 	tempDir, err := temp.TempDirDefault()
@@ -115,7 +116,7 @@ func makeRunnerWithSimExecer() (runner.Runner, *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	r := NewSimpleReportBackRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator, jobDoneCh)
 	return r, wg
 }
 
