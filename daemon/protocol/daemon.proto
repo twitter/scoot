@@ -22,6 +22,7 @@ service ScootDaemon {
 }
 
 // Echo (for testing only).
+//
 message EchoRequest {
   string ping = 1;
 }
@@ -32,19 +33,25 @@ message EchoReply {
 
 
 // Create snapshot.
+//
 message CreateSnapshotRequest {
+  // Absolute path to a file or directory on the local filesystem.
   string path = 1;
 }
 
 message CreateSnapshotReply {
   string error = 1;
+  string snapshot_id = 2;
 }
 
 
 // Checkout snapshot.
+//
 message CheckoutSnapshotRequest {
   string snapshot_id = 1;
-  string path = 2;
+
+  // Absolute path to a directory on the local filesystem (need not exist yet).
+  string dir = 2;
 }
 
 message CheckoutSnapshotReply {
@@ -53,6 +60,7 @@ message CheckoutSnapshotReply {
 
 
 // Run
+//
 message RunRequest {
   message Command {
     repeated string argv = 1;
@@ -62,7 +70,14 @@ message RunRequest {
   message OutputPlan {
     bool stdout = 1;
     bool stderr = 2;
-    map<string, string> src_to_dest_paths = 3;
+
+    // After the run is done, generate a snapshot containing only the specified src paths.
+    // This copies the src files/dirs into the corresponding destination directories.
+    // The sources and destinations are all relative paths within the snapshot.
+    // An empty map will result in an empty snapshot (except for stdout/stderr).
+    // Behavior is undefined for duplicate entries within a destination.
+    // Sources may include the '*' wildcard.
+    map<string, string> src_paths_to_dest_dirs = 3;
   }
   string snapshot_id = 1;
   Command cmd = 2;
@@ -76,6 +91,7 @@ message RunReply {
 
 
 // Poll
+//
 message PollRequest {
   repeated string run_ids = 1;
   int64 timeout_ns = 2; // <0 to block indefinitely, 0 to return immediately, >0 to wait for results before returning.
@@ -90,10 +106,11 @@ message PollReply {
     FAILED = 4;
   }
   message Result {
-    State state = 1;
-    int32 exit_code = 2;
-    string error = 3;
-    string snapshot_id = 4;
+    string run_id = 1;
+    State state = 2;
+    int32 exit_code = 3;
+    string error = 4;
+    string snapshot_id = 5;
   }
   repeated Result results = 1;
 }
