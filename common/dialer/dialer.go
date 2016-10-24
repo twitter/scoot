@@ -20,7 +20,7 @@ type simpleDialer struct {
 }
 
 func NewSimpleDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Dialer {
-	return &simpleDialer{tf, pf}
+	return &simpleDialer{transportFactory: tf, protocolFactory: pf}
 }
 
 func (d *simpleDialer) Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error) {
