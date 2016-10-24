@@ -8,17 +8,20 @@ syntax = "proto3";
 // protoc -I . daemon.proto --go_out=plugins=grpc:.
 
 
-// Protocol for talking to a Local Scoot Server.
+// Protocol for talking to a Local Scoot Daemon.
 
 package protocol;
 
 service ScootDaemon {
   rpc Echo (EchoRequest) returns (EchoReply) {}
 
-  rpc Run(Command) returns (ProcessStatus) {}
-  rpc Status(StatusQuery) returns (ProcessStatus) {}
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotReply) {}
+  rpc CheckoutSnapshot(CheckoutSnapshotRequest) returns (CheckoutSnapshotReply) {}
+  rpc Run(RunRequest) returns (RunReply) {}
+  rpc Poll(PollRequest) returns (PollReply) {}
 }
 
+// Echo (for testing only).
 message EchoRequest {
   string ping = 1;
 }
@@ -27,31 +30,70 @@ message EchoReply {
   string pong = 1;
 }
 
-enum ProcessState {
-  UNKNOWN = 0;
-  PENDING = 1;
-  RUNNING = 2;
 
-  COMPLETED = 3;
-  FAILED = 4;
+// Create snapshot.
+message CreateSnapshotRequest {
+  string path = 1;
 }
 
-message Command {
-  repeated string argv = 1;
-  map<string, string> env = 2;
-  // Timeout in nanoseconds
-  int64 timeout = 3;
+message CreateSnapshotReply {
+  string error = 1;
 }
 
-message ProcessStatus {
+
+// Checkout snapshot.
+message CheckoutSnapshotRequest {
+  string snapshot_id = 1;
+  string path = 2;
+}
+
+message CheckoutSnapshotReply {
+  string error = 1;
+}
+
+
+// Run
+message RunRequest {
+  message Command {
+    repeated string argv = 1;
+    map<string, string> env = 2;
+    int64 timeout_ns = 3; //TODO: consistent special values for timeouts like PollRequest.timeout_ns?
+  }
+  message OutputPlan {
+    bool stdout = 1;
+    bool stderr = 2;
+    map<string, string> src_to_dest_paths = 3;
+  }
+  string snapshot_id = 1;
+  Command cmd = 2;
+  OutputPlan plan = 3;
+}
+
+message RunReply {
   string run_id = 1;
-  ProcessState state = 2;
-  string stdout_ref = 3;
-  string stderr_ref = 4;
-  int32 exit_code = 5;
-  string error = 6;
+  string error = 2;
 }
 
-message StatusQuery {
-  string run_id = 1;
+
+// Poll
+message PollRequest {
+  repeated string run_ids = 1;
+  int64 timeout_ns = 2; // <0 to block indefinitely, 0 to return immediately, >0 to wait for results before returning.
+}
+
+message PollReply {
+  enum State {
+    UNKNOWN = 0;
+    PENDING = 1;
+    RUNNING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+  }
+  message Result {
+    State state = 1;
+    int32 exit_code = 2;
+    string error = 3;
+    string snapshot_id = 4;
+  }
+  repeated Result results = 1;
 }

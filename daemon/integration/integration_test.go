@@ -2,18 +2,19 @@ package integration_test
 
 import (
 	"flag"
-	"github.com/scootdev/scoot/daemon/client/cli"
-	"github.com/scootdev/scoot/daemon/client/conn"
-	"github.com/scootdev/scoot/daemon/integration"
-	"github.com/scootdev/scoot/daemon/server"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/scootdev/scoot/daemon/client/cli"
+	"github.com/scootdev/scoot/daemon/client/conn"
+	"github.com/scootdev/scoot/daemon/integration"
+	"github.com/scootdev/scoot/daemon/server"
 )
 
-var s *server.Server
+var s server.Server
 
 func TestEcho(t *testing.T) {
 	stdout, _, err := run("echo", "foo")
@@ -55,9 +56,8 @@ func TestMain(m *testing.M) {
 		log.Fatal("could not make server", err)
 	}
 
-	l, err := server.Listen()
 	go func() {
-		s.Serve(l)
+		s.ListenAndServe()
 	}()
 
 	defer s.Stop()
