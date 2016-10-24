@@ -20,9 +20,9 @@ func (c *simpleCLIClient) Exec() error {
 	return c.rootCmd.Execute()
 }
 
-func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
+func NewSimpleCLIClient(di dialer.Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
-	c.client.dialer = d
+	c.client.dialer = di
 	// c.client.addr is provided as a cmdline flag.
 
 	rootCmd := &cobra.Command{

@@ -13,13 +13,13 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	d := dialer.NewSimpleDialer(transportFactory, protocolFactory)
-	client, err := client.NewSimpleCLIClient(d)
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
 		log.Fatal("Failed to create worker CLIClient: ", err)
 	}
 
-	err = client.Exec()
+	err = cl.Exec()
 	if err != nil {
 		log.Fatal("Error running workercl: ", err)
 	}

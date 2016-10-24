@@ -29,9 +29,9 @@ type simpleClient struct {
 	workerClient *worker.WorkerClient
 }
 
-func NewSimpleClient(d dialer.Dialer, addr string) (Client, error) {
+func NewSimpleClient(di dialer.Dialer, addr string) (Client, error) {
 	cl := &simpleClient{}
-	cl.dialer = d
+	cl.dialer = di
 	cl.addr = addr
 	return cl, nil
 }

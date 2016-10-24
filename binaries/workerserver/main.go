@@ -11,7 +11,7 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/os/temp"
+
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -33,7 +33,6 @@ func main() {
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*httpAddr, s)
 		},
-		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 	)
 
 	server.RunServer(bag, schema, configText)
