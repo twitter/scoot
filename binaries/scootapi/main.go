@@ -8,12 +8,6 @@ import (
 	"github.com/scootdev/scoot/scootapi/client"
 )
 
-// Command line tool to talk to CloudScoot Server
-// Check Job Status:
-// 			get_job_status "job1"
-// Run Smoke Test:
-//      run_smoke_test
-
 // Binary to talk to Cloud Scoot API
 func main() {
 	transportFactory := thrift.NewTTransportFactory()
@@ -22,11 +16,11 @@ func main() {
 	d := dialer.NewSimpleDialer(transportFactory, protocolFactory)
 	client, err := client.NewSimpleCLIClient(d)
 	if err != nil {
-		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)
+		log.Fatal("Failed to create new ScootAPI CLI client: ", err)
 	}
 
 	err = client.Exec()
 	if err != nil {
-		log.Fatal("error running scootapi ", err)
+		log.Fatal("Error running scootapi ", err)
 	}
 }
