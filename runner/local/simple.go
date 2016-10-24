@@ -43,7 +43,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.nextRunId++
 
 	if r.running != nil {
-		return runner.ProcessStatus{}, fmt.Errorf("Runner is busy")
+		return runner.ProcessStatus{}, fmt.Errorf(runner.RunnerBusyMsg)
 	}
 
 	r.running = &runInstance{id: runId, doneCh: make(chan struct{})}
