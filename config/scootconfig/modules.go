@@ -7,6 +7,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
@@ -78,7 +79,8 @@ func (c *WorkersThriftConfig) Create(
 	}
 
 	wf := func(node cluster.Node) worker.Worker {
-		cl := client.NewClient(tf, pf, string(node.Id()))
+		di := dialer.NewSimpleDialer(tf, pf)
+		cl, _ := client.NewSimpleClient(di, string(node.Id()))
 		return workers.NewPollingWorkerWithTimeout(cl, pp, c.EnforceTaskTimeout, tt)
 	}
 
