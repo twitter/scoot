@@ -28,6 +28,10 @@ type simExecer struct {
 //   pause until the simExecer's WaitGroup is Done
 // sleep <millis int>
 //   sleep for millis milliseconds
+// stdout <message>
+//   put <message> in stdout in the response
+// stderr <message>
+//   put <message> in stderr in the response
 func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 	steps, err := e.parse(command.Argv)
 	if err != nil {
