@@ -8,7 +8,15 @@ import (
 	"github.com/scootdev/scoot/scootapi/client"
 )
 
-// Binary to talk to Cloud Scoot API
+// CLI binary to talk to Cloud Scoot API
+//	Supported commands: (see "-h" for all options)
+//		run_job [command]
+// 		get_job_status [job id]
+//		watch_job [job id]
+//		run_smoke_test
+//	Global flags:
+//		--addr [<host:port> of cloud server]
+
 func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()

@@ -8,7 +8,14 @@ import (
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
-// Binary to talk to Cloud Worker
+// CLI binary to talk to Workerserver
+//  Supported commands: (see "-h" for all details)
+//      queryworker
+//      run [command]
+//      abort [run ID]
+//  Global flags:
+//      --addr [<host:port> of workerserver]
+
 func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
