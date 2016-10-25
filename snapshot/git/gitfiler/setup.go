@@ -17,7 +17,7 @@ type RepoGetter interface {
 }
 
 // A Pool that will only have a single repo, populated by repoGetter, that serves until doneCh is closed
-func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
+func NewSingleRepoPool(repoGetter RepoGetter, doneCh <-chan struct{}) *RepoPool {
 	singlePool := NewRepoPool(nil, nil, doneCh)
 	go func() {
 		r, err := repoGetter.Get()
@@ -27,13 +27,13 @@ func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
 }
 
 // A Checkouter that checks out from a single repo populated by a NewSingleRepoPool)
-func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh chan struct{}) *Checkouter {
+func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh <-chan struct{}) *Checkouter {
 	pool := NewSingleRepoPool(repoGetter, doneCh)
 	return NewCheckouter(pool)
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
-func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh chan struct{}) *Checkouter {
+func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh <-chan struct{}) *Checkouter {
 	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
 
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}

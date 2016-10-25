@@ -11,7 +11,7 @@ type repoAndError struct {
 }
 
 // NewRepoPool creates a new RepoPool populated with existing repos and a getter that can get new ones
-func NewRepoPool(getter RepoGetter, repos []*repo.Repository, doneCh chan struct{}) *RepoPool {
+func NewRepoPool(getter RepoGetter, repos []*repo.Repository, doneCh <-chan struct{}) *RepoPool {
 	freeList := make([]repoAndError, len(repos))
 	for i, v := range repos {
 		freeList[i] = repoAndError{repo: v}
@@ -38,7 +38,7 @@ type RepoPool struct {
 	releaseCh chan repoAndError
 	reserveCh chan repoAndError
 	getCh     chan repoAndError
-	doneCh    chan struct{}
+	doneCh    <-chan struct{}
 
 	freeList []repoAndError
 }
