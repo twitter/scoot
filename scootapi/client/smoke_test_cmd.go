@@ -73,7 +73,6 @@ func (r *smokeTestRunner) generateAndStartJob() (string, error) {
 	}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// We just want the JobDefinition here Id doesn't matter
 	job := testhelpers.GenJobDefinition(rng)
 	jobId, err := r.cl.scootClient.RunJob(job)
 	return jobId.ID, err

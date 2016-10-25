@@ -39,6 +39,7 @@ func (rc *runCmd) run(cmd *cobra.Command, args []string) error {
 type abortCmd struct {
 	client *simpleClient
 
+	// Flags
 	runId string
 }
 
