@@ -17,7 +17,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 	}
 }
 
-func (c *getStatusCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
+func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
 	log.Println("Checking Status for Scoot Job", args)
 
@@ -25,15 +25,14 @@ func (c *getStatusCmd) run(cl *Client, cmd *cobra.Command, args []string) error 
 		return errors.New("a job id must be provided")
 	}
 
-	client, err := cl.Dial()
-
+	err := cl.Dial()
 	if err != nil {
 		return err
 	}
 
 	jobId := args[0]
 
-	status, err := client.GetStatus(jobId)
+	status, err := cl.scootClient.GetStatus(jobId)
 
 	if err != nil {
 		switch err := err.(type) {

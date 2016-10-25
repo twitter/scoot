@@ -1,26 +1,34 @@
 package main
 
 import (
-	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/scootapi/client"
 	"log"
+
+	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/scootapi/client"
 )
 
-// Command line tool to talk to CloudScoot Server
-// Check Job Status:
-// 			get_job_status "job1"
-// Run Smoke Test:
-//      run_smoke_test
+// CLI binary to talk to Cloud Scoot API
+//	Supported commands: (see "-h" for all options)
+//		run_job [command]
+// 		get_job_status [job id]
+//		watch_job [job id]
+//		run_smoke_test
+//	Global flags:
+//		--addr [<host:port> of cloud server]
 
-// Binary to talk to Cloud Scoot API
 func main() {
-	dialer := client.NewDialer(thrift.NewTTransportFactory(), thrift.NewTBinaryProtocolFactoryDefault())
-	client, err := client.NewClient(dialer)
+	transportFactory := thrift.NewTTransportFactory()
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
-		log.Fatal("Cannot initialize Cloud Scoot CLI: ", err)
+		log.Fatal("Failed to create new ScootAPI CLI client: ", err)
 	}
-	err = client.Exec()
+
+	err = cl.Exec()
 	if err != nil {
-		log.Fatal("error running scootapi ", err)
+		log.Fatal("Error running scootapi ", err)
 	}
 }

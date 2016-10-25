@@ -4,17 +4,30 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
-// Binary to talk to Cloud Worker
-func main() {
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	transportFactory := thrift.NewTTransportFactory()
+// CLI binary to talk to Workerserver
+//  Supported commands: (see "-h" for all details)
+//      queryworker
+//      run [command]
+//      abort [run ID]
+//  Global flags:
+//      --addr [<host:port> of workerserver]
 
-	client := client.NewCliClient(transportFactory, protocolFactory)
-	err := client.Cli()
+func main() {
+	transportFactory := thrift.NewTTransportFactory()
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
-		log.Fatal("error running workercl ", err)
+		log.Fatal("Failed to create worker CLIClient: ", err)
+	}
+
+	err = cl.Exec()
+	if err != nil {
+		log.Fatal("Error running workercl: ", err)
 	}
 }

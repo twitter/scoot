@@ -2,117 +2,108 @@ package client
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
+const defaultWorkerAddr = "localhost:9090"
+
+// Interface for
 type Client interface {
+	// Connection funtions
 	Dial() error
 	Close() error
-	QueryWorker() (workerapi.WorkerStatus, error)
 
+	// Worker API Interactions
+	QueryWorker() (workerapi.WorkerStatus, error)
 	runner.Runner
 }
 
-type client struct {
-	addr             string
-	transportFactory thrift.TTransportFactory
-	protocolFactory  thrift.TProtocolFactory
-	worker           *worker.WorkerClient
+// Basic implementation of Client interface for interaction with Scoot worker API
+type simpleClient struct {
+	addr         string
+	dialer       dialer.Dialer
+	workerClient *worker.WorkerClient
 }
 
-func NewClient(
-	transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory, addr string,
-) Client {
-	r := &client{}
-	r.transportFactory = transportFactory
-	r.protocolFactory = protocolFactory
-	r.addr = addr
-	return r
+func NewSimpleClient(di dialer.Dialer, addr string) (Client, error) {
+	cl := &simpleClient{}
+	cl.dialer = di
+	cl.addr = addr
+	return cl, nil
 }
 
-func (c *client) Dial() error {
+func (c *simpleClient) Dial() error {
 	_, err := c.dial()
 	return err
 }
 
-func (c *client) dial() (*worker.WorkerClient, error) {
-	if c.worker == nil {
+func (c *simpleClient) dial() (*worker.WorkerClient, error) {
+	if c.workerClient == nil {
 		if c.addr == "" {
-			return nil, fmt.Errorf("Cannot dial: no address")
+			c.addr = defaultWorkerAddr
 		}
-		log.Println("Dialing", c.addr)
-		var transport thrift.TTransport
-		transport, err := thrift.NewTSocket(c.addr)
+
+		transport, protocolFactory, err := c.dialer.Dial(c.addr)
 		if err != nil {
-			return nil, fmt.Errorf("Error opening socket: %v", err)
+			return nil, fmt.Errorf("Error dialing to set up client connection: %v", err)
 		}
-		transport = c.transportFactory.GetTransport(transport)
-		err = transport.Open()
-		if err != nil {
-			return nil, fmt.Errorf("Error opening transport: %v", err)
-		}
-		c.worker = worker.NewWorkerClientFactory(transport, c.protocolFactory)
+
+		c.workerClient = worker.NewWorkerClientFactory(transport, protocolFactory)
 	}
-	return c.worker, nil
+	return c.workerClient, nil
 }
 
-func (c *client) Close() error {
-	if c.worker != nil {
-		return c.worker.Transport.Close()
+func (c *simpleClient) Close() error {
+	if c.workerClient != nil {
+		return c.workerClient.Transport.Close()
 	}
 	return nil
 }
 
-func (c *client) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	client, err := c.dial()
+func (c *simpleClient) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+	workerClient, err := c.dial()
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
 
-	status, err := client.Run(workerapi.DomainRunCommandToThrift(cmd))
-	if err != nil {
-		return runner.ProcessStatus{}, err
-	}
-	return workerapi.ThriftRunStatusToDomain(status), nil
-}
-
-func (c *client) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
-	client, err := c.dial()
-	if err != nil {
-		return runner.ProcessStatus{}, err
-	}
-
-	status, err := client.Abort(string(runId))
+	status, err := workerClient.Run(workerapi.DomainRunCommandToThrift(cmd))
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
-func (c *client) QueryWorker() (workerapi.WorkerStatus, error) {
-	client, err := c.dial()
+func (c *simpleClient) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+	workerClient, err := c.dial()
+	if err != nil {
+		return runner.ProcessStatus{}, err
+	}
+
+	status, err := workerClient.Abort(string(runId))
+	if err != nil {
+		return runner.ProcessStatus{}, err
+	}
+	return workerapi.ThriftRunStatusToDomain(status), nil
+}
+
+func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
+	workerClient, err := c.dial()
 	if err != nil {
 		return workerapi.WorkerStatus{}, err
 	}
 
-	status, err := client.QueryWorker()
+	status, err := workerClient.QueryWorker()
 	if err != nil {
 		return workerapi.WorkerStatus{}, err
 	}
 	return workerapi.ThriftWorkerStatusToDomain(status), nil
 }
 
-//TODO: implement erase
-func (c *client) Erase(run runner.RunId) error {
-	panic(fmt.Errorf("workerapi/client:Erase not yet implemented"))
-}
-
-func (c *client) Status(id runner.RunId) (runner.ProcessStatus, error) {
+func (c *simpleClient) Status(id runner.RunId) (runner.ProcessStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {
 		return runner.ProcessStatus{}, err
@@ -125,7 +116,7 @@ func (c *client) Status(id runner.RunId) (runner.ProcessStatus, error) {
 	return runner.ProcessStatus{}, fmt.Errorf("no such process %v", id)
 }
 
-func (c *client) StatusAll() ([]runner.ProcessStatus, error) {
+func (c *simpleClient) StatusAll() ([]runner.ProcessStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {
 		return nil, err
@@ -133,4 +124,7 @@ func (c *client) StatusAll() ([]runner.ProcessStatus, error) {
 	return st.Runs, nil
 }
 
-// func (c *client) Status()
+//TODO: implement erase
+func (c *simpleClient) Erase(run runner.RunId) error {
+	panic(fmt.Errorf("workerapi/client:Erase not yet implemented"))
+}
