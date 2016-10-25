@@ -78,9 +78,9 @@ func (c *Checkout) Release() error {
 
 // TODO placeholder
 type ConstantGetter struct {
-	repo *repo.Repository
+	Repo *repo.Repository
 }
 
 func (g *ConstantGetter) Get() (*repo.Repository, error) {
-	return g.repo, nil
+	return g.Repo, nil
 }
