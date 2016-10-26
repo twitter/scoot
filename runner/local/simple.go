@@ -64,7 +64,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	// Run in a new goroutine
 	go r.run(cmd, runId, r.running.doneCh, r.runnerAvailableCh)
 	if cmd.Timeout > 0 { // Timeout if applicable
-		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId), r.runnerAvailableCh) })
+		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId)) })
 	}
 	// TODO(dbentley): we return PREPARING now to defend against long-checkout
 	// But we could sleep short (50ms?), query status, and return that to capture the common, fast case
@@ -92,7 +92,7 @@ func (r *simpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
 }
 
 func (r *simpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
-	return r.updateStatus(runner.AbortStatus(runId), r.runnerAvailableCh)
+	return r.updateStatus(runner.AbortStatus(runId))
 }
 
 func (r *simpleRunner) Erase(runId runner.RunId) error {
@@ -105,7 +105,7 @@ func (r *simpleRunner) Erase(runId runner.RunId) error {
 	return nil
 }
 
-func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus, runnerAvailableCh chan struct{}) (runner.ProcessStatus, error) {
+func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -131,7 +131,7 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus, runnerAvaila
 		// so if we're changing a Process from not Done to Done it must be running
 		log.Printf("local.simpleRunner: run done. %+v", newStatus)
 		close(r.running.doneCh)
-		reportRunnerAvailable(runnerAvailableCh)
+		reportRunnerAvailable(r.runnerAvailableCh)
 		r.running = nil
 	}
 
@@ -161,7 +161,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		return
 	case <-checkoutDone:
 		if err != nil {
-			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)), r.runnerAvailableCh)
+			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)))
 			return
 		}
 	}
@@ -171,13 +171,13 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
 	if err != nil {
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)), r.runnerAvailableCh)
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)))
 		return
 	}
 	defer stdout.Close()
 	stderr, err := r.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
 	if err != nil {
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)), r.runnerAvailableCh)
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)))
 		return
 	}
 	defer stderr.Close()
@@ -189,11 +189,11 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		Stderr: stderr,
 	})
 	if err != nil {
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err)), r.runnerAvailableCh)
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err)))
 		return
 	}
 
-	r.updateStatus(runner.RunningStatus(runId, stdout.URI(), stderr.URI()), r.runnerAvailableCh)
+	r.updateStatus(runner.RunningStatus(runId, stdout.URI(), stderr.URI()))
 
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
@@ -209,11 +209,11 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	switch st.State {
 	case execer.COMPLETE:
-		r.updateStatus(runner.CompleteStatus(runId, st.ExitCode), r.runnerAvailableCh)
+		r.updateStatus(runner.CompleteStatus(runId, st.ExitCode))
 	case execer.FAILED:
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)), r.runnerAvailableCh)
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)))
 	default:
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State)), r.runnerAvailableCh)
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State)))
 	}
 }
 
