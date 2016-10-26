@@ -11,10 +11,10 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
+func NewSimpleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
 		exec:          exec,
-		checkouter:    checkouter,
+		filer:         filer,
 		outputCreator: outputCreator,
 		runs:          make(map[runner.RunId]runner.ProcessStatus),
 	}
@@ -23,7 +23,7 @@ func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputC
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
 	exec          execer.Execer
-	checkouter    snapshot.Checkouter
+	filer         snapshot.Filer
 	outputCreator runner.OutputCreator
 	runs          map[runner.RunId]runner.ProcessStatus
 	running       *runInstance
@@ -131,7 +131,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 	go func() {
-		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
+		checkout, err = r.filer.Checkout(cmd.SnapshotId)
 		close(checkoutDone)
 	}()
 
@@ -195,7 +195,24 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	switch st.State {
 	case execer.COMPLETE:
-		r.updateStatus(runner.CompleteStatus(runId, st.ExitCode))
+		snapshotId := ""
+		if cmd.SnapshotPlan == nil {
+			snapshotId, err = r.filer.Ingest(checkout.Path())
+		} else {
+			srcToDest := map[string]string{
+				stdout.AsFile(): "STDOUT",
+				stderr.AsFile(): "STDERR",
+			}
+			for src, dest := range cmd.SnapshotPlan {
+				srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
+			}
+			snapshotId, err = r.filer.IngestMap(srcToDest)
+		}
+		if err != nil {
+			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error ingesting results: %v", err)))
+		} else {
+			r.updateStatus(runner.CompleteStatus(runId, runner.SnapshotId(snapshotId), st.ExitCode))
+		}
 	case execer.FAILED:
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)))
 	default:

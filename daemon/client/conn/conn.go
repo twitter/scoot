@@ -103,24 +103,26 @@ func (c *conn) Echo(arg string) (string, error) {
 }
 
 func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	req := &protocol.Command{}
-	req.Argv = cmd.Argv
-	req.Env = cmd.EnvVars
-	req.Timeout = int64(cmd.Timeout)
+	panic("Run disabled in daemon code.")
+	// req := &protocol.Command{}
+	// req.Argv = cmd.Argv
+	// req.Env = cmd.EnvVars
+	// req.Timeout = int64(cmd.Timeout)
 
-	r, err := c.client.Run(context.Background(), req)
-	if err != nil {
-		return runner.ProcessStatus{}, err
-	}
-	return protocol.ToRunnerStatus(r), nil
+	// r, err := c.client.Run(context.Background(), req)
+	// if err != nil {
+	// 	return runner.ProcessStatus{}, err
+	// }
+	// return protocol.ToRunnerStatus(r), nil
 }
 
 func (c *conn) Status(run runner.RunId) (runner.ProcessStatus, error) {
-	r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
-	if err != nil {
-		return runner.ProcessStatus{}, err
-	}
-	return protocol.ToRunnerStatus(r), nil
+	panic("Status disabled in daemon code.")
+	// r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
+	// if err != nil {
+	// 	return runner.ProcessStatus{}, err
+	// }
+	// return protocol.ToRunnerStatus(r), nil
 }
 
 func (c *conn) StatusAll() ([]runner.ProcessStatus, error) {

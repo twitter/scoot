@@ -11,9 +11,14 @@ It is generated from these files:
 It has these top-level messages:
 	EchoRequest
 	EchoReply
-	Command
-	ProcessStatus
-	StatusQuery
+	CreateSnapshotRequest
+	CreateSnapshotReply
+	CheckoutSnapshotRequest
+	CheckoutSnapshotReply
+	RunRequest
+	RunReply
+	PollRequest
+	PollReply
 */
 package protocol
 
@@ -37,36 +42,41 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type ProcessState int32
+type PollReply_Status_State int32
 
 const (
-	ProcessState_UNKNOWN   ProcessState = 0
-	ProcessState_PENDING   ProcessState = 1
-	ProcessState_RUNNING   ProcessState = 2
-	ProcessState_COMPLETED ProcessState = 3
-	ProcessState_FAILED    ProcessState = 4
+	PollReply_Status_UNKNOWN   PollReply_Status_State = 0
+	PollReply_Status_PENDING   PollReply_Status_State = 1
+	PollReply_Status_PREPARING PollReply_Status_State = 2
+	PollReply_Status_RUNNING   PollReply_Status_State = 3
+	PollReply_Status_COMPLETED PollReply_Status_State = 4
+	PollReply_Status_FAILED    PollReply_Status_State = 5
 )
 
-var ProcessState_name = map[int32]string{
+var PollReply_Status_State_name = map[int32]string{
 	0: "UNKNOWN",
 	1: "PENDING",
-	2: "RUNNING",
-	3: "COMPLETED",
-	4: "FAILED",
+	2: "PREPARING",
+	3: "RUNNING",
+	4: "COMPLETED",
+	5: "FAILED",
 }
-var ProcessState_value = map[string]int32{
+var PollReply_Status_State_value = map[string]int32{
 	"UNKNOWN":   0,
 	"PENDING":   1,
-	"RUNNING":   2,
-	"COMPLETED": 3,
-	"FAILED":    4,
+	"PREPARING": 2,
+	"RUNNING":   3,
+	"COMPLETED": 4,
+	"FAILED":    5,
 }
 
-func (x ProcessState) String() string {
-	return proto.EnumName(ProcessState_name, int32(x))
+func (x PollReply_Status_State) String() string {
+	return proto.EnumName(PollReply_Status_State_name, int32(x))
 }
-func (ProcessState) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (PollReply_Status_State) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{9, 0, 0} }
 
+// Echo (for testing only).
+//
 type EchoRequest struct {
 	Ping string `protobuf:"bytes,1,opt,name=ping" json:"ping,omitempty"`
 }
@@ -85,55 +95,190 @@ func (m *EchoReply) String() string            { return proto.CompactTextString(
 func (*EchoReply) ProtoMessage()               {}
 func (*EchoReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-type Command struct {
-	Argv []string          `protobuf:"bytes,1,rep,name=argv" json:"argv,omitempty"`
-	Env  map[string]string `protobuf:"bytes,2,rep,name=env" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Timeout in nanoseconds
-	Timeout int64 `protobuf:"varint,3,opt,name=timeout" json:"timeout,omitempty"`
+// Create snapshot.
+//
+type CreateSnapshotRequest struct {
+	// Absolute path to a file or directory on the local filesystem.
+	Path string `protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
 }
 
-func (m *Command) Reset()                    { *m = Command{} }
-func (m *Command) String() string            { return proto.CompactTextString(m) }
-func (*Command) ProtoMessage()               {}
-func (*Command) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (m *CreateSnapshotRequest) Reset()                    { *m = CreateSnapshotRequest{} }
+func (m *CreateSnapshotRequest) String() string            { return proto.CompactTextString(m) }
+func (*CreateSnapshotRequest) ProtoMessage()               {}
+func (*CreateSnapshotRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *Command) GetEnv() map[string]string {
+type CreateSnapshotReply struct {
+	Error      string `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+}
+
+func (m *CreateSnapshotReply) Reset()                    { *m = CreateSnapshotReply{} }
+func (m *CreateSnapshotReply) String() string            { return proto.CompactTextString(m) }
+func (*CreateSnapshotReply) ProtoMessage()               {}
+func (*CreateSnapshotReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+// Checkout snapshot.
+//
+type CheckoutSnapshotRequest struct {
+	SnapshotId string `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+	// Absolute path to a directory on the local filesystem (need not exist yet).
+	Dir string `protobuf:"bytes,2,opt,name=dir" json:"dir,omitempty"`
+}
+
+func (m *CheckoutSnapshotRequest) Reset()                    { *m = CheckoutSnapshotRequest{} }
+func (m *CheckoutSnapshotRequest) String() string            { return proto.CompactTextString(m) }
+func (*CheckoutSnapshotRequest) ProtoMessage()               {}
+func (*CheckoutSnapshotRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+type CheckoutSnapshotReply struct {
+	Error string `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *CheckoutSnapshotReply) Reset()                    { *m = CheckoutSnapshotReply{} }
+func (m *CheckoutSnapshotReply) String() string            { return proto.CompactTextString(m) }
+func (*CheckoutSnapshotReply) ProtoMessage()               {}
+func (*CheckoutSnapshotReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+// Run
+//
+type RunRequest struct {
+	SnapshotId string                 `protobuf:"bytes,1,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+	Cmd        *RunRequest_Command    `protobuf:"bytes,2,opt,name=cmd" json:"cmd,omitempty"`
+	Plan       *RunRequest_OutputPlan `protobuf:"bytes,3,opt,name=plan" json:"plan,omitempty"`
+}
+
+func (m *RunRequest) Reset()                    { *m = RunRequest{} }
+func (m *RunRequest) String() string            { return proto.CompactTextString(m) }
+func (*RunRequest) ProtoMessage()               {}
+func (*RunRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *RunRequest) GetCmd() *RunRequest_Command {
+	if m != nil {
+		return m.Cmd
+	}
+	return nil
+}
+
+func (m *RunRequest) GetPlan() *RunRequest_OutputPlan {
+	if m != nil {
+		return m.Plan
+	}
+	return nil
+}
+
+type RunRequest_Command struct {
+	Argv      []string          `protobuf:"bytes,1,rep,name=argv" json:"argv,omitempty"`
+	Env       map[string]string `protobuf:"bytes,2,rep,name=env" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	TimeoutNs int64             `protobuf:"varint,3,opt,name=timeout_ns,json=timeoutNs" json:"timeout_ns,omitempty"`
+}
+
+func (m *RunRequest_Command) Reset()                    { *m = RunRequest_Command{} }
+func (m *RunRequest_Command) String() string            { return proto.CompactTextString(m) }
+func (*RunRequest_Command) ProtoMessage()               {}
+func (*RunRequest_Command) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6, 0} }
+
+func (m *RunRequest_Command) GetEnv() map[string]string {
 	if m != nil {
 		return m.Env
 	}
 	return nil
 }
 
-type ProcessStatus struct {
-	RunId     string       `protobuf:"bytes,1,opt,name=run_id,json=runId" json:"run_id,omitempty"`
-	State     ProcessState `protobuf:"varint,2,opt,name=state,enum=protocol.ProcessState" json:"state,omitempty"`
-	StdoutRef string       `protobuf:"bytes,3,opt,name=stdout_ref,json=stdoutRef" json:"stdout_ref,omitempty"`
-	StderrRef string       `protobuf:"bytes,4,opt,name=stderr_ref,json=stderrRef" json:"stderr_ref,omitempty"`
-	ExitCode  int32        `protobuf:"varint,5,opt,name=exit_code,json=exitCode" json:"exit_code,omitempty"`
-	Error     string       `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
+type RunRequest_OutputPlan struct {
+	// After the run is done, generate a snapshot containing only the specified src paths.
+	// This copies the src files/dirs into the corresponding destination directories.
+	// The sources and destinations are all relative paths within the snapshot.
+	// An empty map will result in an empty snapshot (except for stdout/stderr).
+	// Behavior is undefined for duplicate entries within a destination.
+	// Sources may include the '*' wildcard.
+	//
+	// Note: snapshots will always contain root STDOUT and STDERR text files.
+	SrcPathsToDestDirs map[string]string `protobuf:"bytes,3,rep,name=src_paths_to_dest_dirs,json=srcPathsToDestDirs" json:"src_paths_to_dest_dirs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
-func (m *ProcessStatus) Reset()                    { *m = ProcessStatus{} }
-func (m *ProcessStatus) String() string            { return proto.CompactTextString(m) }
-func (*ProcessStatus) ProtoMessage()               {}
-func (*ProcessStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (m *RunRequest_OutputPlan) Reset()                    { *m = RunRequest_OutputPlan{} }
+func (m *RunRequest_OutputPlan) String() string            { return proto.CompactTextString(m) }
+func (*RunRequest_OutputPlan) ProtoMessage()               {}
+func (*RunRequest_OutputPlan) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6, 1} }
 
-type StatusQuery struct {
+func (m *RunRequest_OutputPlan) GetSrcPathsToDestDirs() map[string]string {
+	if m != nil {
+		return m.SrcPathsToDestDirs
+	}
+	return nil
+}
+
+type RunReply struct {
 	RunId string `protobuf:"bytes,1,opt,name=run_id,json=runId" json:"run_id,omitempty"`
+	Error string `protobuf:"bytes,2,opt,name=error" json:"error,omitempty"`
 }
 
-func (m *StatusQuery) Reset()                    { *m = StatusQuery{} }
-func (m *StatusQuery) String() string            { return proto.CompactTextString(m) }
-func (*StatusQuery) ProtoMessage()               {}
-func (*StatusQuery) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (m *RunReply) Reset()                    { *m = RunReply{} }
+func (m *RunReply) String() string            { return proto.CompactTextString(m) }
+func (*RunReply) ProtoMessage()               {}
+func (*RunReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+// Poll
+//
+type PollRequest struct {
+	RunIds []string `protobuf:"bytes,1,rep,name=run_ids,json=runIds" json:"run_ids,omitempty"`
+	// <0 to block indefinitely waiting for at least one finished run.
+	//  0 to return immediately with finished runs, if any.
+	// >0 to wait at most timeout_ns for at least one finished run.
+	TimeoutNs int64 `protobuf:"varint,2,opt,name=timeout_ns,json=timeoutNs" json:"timeout_ns,omitempty"`
+	// Include an updated status for all the given runs.
+	All bool `protobuf:"varint,3,opt,name=all" json:"all,omitempty"`
+}
+
+func (m *PollRequest) Reset()                    { *m = PollRequest{} }
+func (m *PollRequest) String() string            { return proto.CompactTextString(m) }
+func (*PollRequest) ProtoMessage()               {}
+func (*PollRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+
+type PollReply struct {
+	Status []*PollReply_Status `protobuf:"bytes,1,rep,name=status" json:"status,omitempty"`
+}
+
+func (m *PollReply) Reset()                    { *m = PollReply{} }
+func (m *PollReply) String() string            { return proto.CompactTextString(m) }
+func (*PollReply) ProtoMessage()               {}
+func (*PollReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *PollReply) GetStatus() []*PollReply_Status {
+	if m != nil {
+		return m.Status
+	}
+	return nil
+}
+
+type PollReply_Status struct {
+	RunId      string                 `protobuf:"bytes,1,opt,name=run_id,json=runId" json:"run_id,omitempty"`
+	State      PollReply_Status_State `protobuf:"varint,2,opt,name=state,enum=protocol.PollReply_Status_State" json:"state,omitempty"`
+	SnapshotId string                 `protobuf:"bytes,3,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+	ExitCode   int32                  `protobuf:"varint,4,opt,name=exit_code,json=exitCode" json:"exit_code,omitempty"`
+	Error      string                 `protobuf:"bytes,5,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *PollReply_Status) Reset()                    { *m = PollReply_Status{} }
+func (m *PollReply_Status) String() string            { return proto.CompactTextString(m) }
+func (*PollReply_Status) ProtoMessage()               {}
+func (*PollReply_Status) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9, 0} }
 
 func init() {
 	proto.RegisterType((*EchoRequest)(nil), "protocol.EchoRequest")
 	proto.RegisterType((*EchoReply)(nil), "protocol.EchoReply")
-	proto.RegisterType((*Command)(nil), "protocol.Command")
-	proto.RegisterType((*ProcessStatus)(nil), "protocol.ProcessStatus")
-	proto.RegisterType((*StatusQuery)(nil), "protocol.StatusQuery")
-	proto.RegisterEnum("protocol.ProcessState", ProcessState_name, ProcessState_value)
+	proto.RegisterType((*CreateSnapshotRequest)(nil), "protocol.CreateSnapshotRequest")
+	proto.RegisterType((*CreateSnapshotReply)(nil), "protocol.CreateSnapshotReply")
+	proto.RegisterType((*CheckoutSnapshotRequest)(nil), "protocol.CheckoutSnapshotRequest")
+	proto.RegisterType((*CheckoutSnapshotReply)(nil), "protocol.CheckoutSnapshotReply")
+	proto.RegisterType((*RunRequest)(nil), "protocol.RunRequest")
+	proto.RegisterType((*RunRequest_Command)(nil), "protocol.RunRequest.Command")
+	proto.RegisterType((*RunRequest_OutputPlan)(nil), "protocol.RunRequest.OutputPlan")
+	proto.RegisterType((*RunReply)(nil), "protocol.RunReply")
+	proto.RegisterType((*PollRequest)(nil), "protocol.PollRequest")
+	proto.RegisterType((*PollReply)(nil), "protocol.PollReply")
+	proto.RegisterType((*PollReply_Status)(nil), "protocol.PollReply.Status")
+	proto.RegisterEnum("protocol.PollReply_Status_State", PollReply_Status_State_name, PollReply_Status_State_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -148,8 +293,10 @@ const _ = grpc.SupportPackageIsVersion3
 
 type ScootDaemonClient interface {
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error)
-	Run(ctx context.Context, in *Command, opts ...grpc.CallOption) (*ProcessStatus, error)
-	Status(ctx context.Context, in *StatusQuery, opts ...grpc.CallOption) (*ProcessStatus, error)
+	CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*CreateSnapshotReply, error)
+	CheckoutSnapshot(ctx context.Context, in *CheckoutSnapshotRequest, opts ...grpc.CallOption) (*CheckoutSnapshotReply, error)
+	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunReply, error)
+	Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollReply, error)
 }
 
 type scootDaemonClient struct {
@@ -169,8 +316,26 @@ func (c *scootDaemonClient) Echo(ctx context.Context, in *EchoRequest, opts ...g
 	return out, nil
 }
 
-func (c *scootDaemonClient) Run(ctx context.Context, in *Command, opts ...grpc.CallOption) (*ProcessStatus, error) {
-	out := new(ProcessStatus)
+func (c *scootDaemonClient) CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*CreateSnapshotReply, error) {
+	out := new(CreateSnapshotReply)
+	err := grpc.Invoke(ctx, "/protocol.ScootDaemon/CreateSnapshot", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scootDaemonClient) CheckoutSnapshot(ctx context.Context, in *CheckoutSnapshotRequest, opts ...grpc.CallOption) (*CheckoutSnapshotReply, error) {
+	out := new(CheckoutSnapshotReply)
+	err := grpc.Invoke(ctx, "/protocol.ScootDaemon/CheckoutSnapshot", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scootDaemonClient) Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunReply, error) {
+	out := new(RunReply)
 	err := grpc.Invoke(ctx, "/protocol.ScootDaemon/Run", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -178,9 +343,9 @@ func (c *scootDaemonClient) Run(ctx context.Context, in *Command, opts ...grpc.C
 	return out, nil
 }
 
-func (c *scootDaemonClient) Status(ctx context.Context, in *StatusQuery, opts ...grpc.CallOption) (*ProcessStatus, error) {
-	out := new(ProcessStatus)
-	err := grpc.Invoke(ctx, "/protocol.ScootDaemon/Status", in, out, c.cc, opts...)
+func (c *scootDaemonClient) Poll(ctx context.Context, in *PollRequest, opts ...grpc.CallOption) (*PollReply, error) {
+	out := new(PollReply)
+	err := grpc.Invoke(ctx, "/protocol.ScootDaemon/Poll", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -191,8 +356,10 @@ func (c *scootDaemonClient) Status(ctx context.Context, in *StatusQuery, opts ..
 
 type ScootDaemonServer interface {
 	Echo(context.Context, *EchoRequest) (*EchoReply, error)
-	Run(context.Context, *Command) (*ProcessStatus, error)
-	Status(context.Context, *StatusQuery) (*ProcessStatus, error)
+	CreateSnapshot(context.Context, *CreateSnapshotRequest) (*CreateSnapshotReply, error)
+	CheckoutSnapshot(context.Context, *CheckoutSnapshotRequest) (*CheckoutSnapshotReply, error)
+	Run(context.Context, *RunRequest) (*RunReply, error)
+	Poll(context.Context, *PollRequest) (*PollReply, error)
 }
 
 func RegisterScootDaemonServer(s *grpc.Server, srv ScootDaemonServer) {
@@ -217,8 +384,44 @@ func _ScootDaemon_Echo_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ScootDaemon_CreateSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScootDaemonServer).CreateSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protocol.ScootDaemon/CreateSnapshot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScootDaemonServer).CreateSnapshot(ctx, req.(*CreateSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScootDaemon_CheckoutSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckoutSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScootDaemonServer).CheckoutSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protocol.ScootDaemon/CheckoutSnapshot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScootDaemonServer).CheckoutSnapshot(ctx, req.(*CheckoutSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ScootDaemon_Run_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Command)
+	in := new(RunRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -230,25 +433,25 @@ func _ScootDaemon_Run_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/protocol.ScootDaemon/Run",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ScootDaemonServer).Run(ctx, req.(*Command))
+		return srv.(ScootDaemonServer).Run(ctx, req.(*RunRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ScootDaemon_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StatusQuery)
+func _ScootDaemon_Poll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PollRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ScootDaemonServer).Status(ctx, in)
+		return srv.(ScootDaemonServer).Poll(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/protocol.ScootDaemon/Status",
+		FullMethod: "/protocol.ScootDaemon/Poll",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ScootDaemonServer).Status(ctx, req.(*StatusQuery))
+		return srv.(ScootDaemonServer).Poll(ctx, req.(*PollRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -262,12 +465,20 @@ var _ScootDaemon_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ScootDaemon_Echo_Handler,
 		},
 		{
+			MethodName: "CreateSnapshot",
+			Handler:    _ScootDaemon_CreateSnapshot_Handler,
+		},
+		{
+			MethodName: "CheckoutSnapshot",
+			Handler:    _ScootDaemon_CheckoutSnapshot_Handler,
+		},
+		{
 			MethodName: "Run",
 			Handler:    _ScootDaemon_Run_Handler,
 		},
 		{
-			MethodName: "Status",
-			Handler:    _ScootDaemon_Status_Handler,
+			MethodName: "Poll",
+			Handler:    _ScootDaemon_Poll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -277,34 +488,50 @@ var _ScootDaemon_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("daemon.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 453 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x7c, 0x52, 0xc1, 0x6e, 0xd3, 0x40,
-	0x10, 0xad, 0xe3, 0xd8, 0x89, 0x27, 0x2d, 0x0a, 0x03, 0x05, 0x2b, 0x08, 0x01, 0x16, 0x07, 0x84,
-	0x50, 0x0e, 0x29, 0x42, 0xa8, 0x37, 0x94, 0x18, 0x14, 0x51, 0xdc, 0xb0, 0x50, 0x71, 0x8c, 0x8c,
-	0xbd, 0x2d, 0x11, 0x89, 0x37, 0xac, 0x77, 0x23, 0xf2, 0x31, 0xfc, 0x05, 0xbf, 0xc0, 0x7f, 0x31,
-	0xbb, 0x8e, 0x89, 0x05, 0x15, 0xa7, 0x9d, 0x37, 0xef, 0xcd, 0xce, 0xdb, 0xd9, 0x81, 0xc3, 0x3c,
-	0xe5, 0x2b, 0x51, 0x0c, 0xd7, 0x52, 0x28, 0x81, 0x5d, 0x7b, 0x64, 0x62, 0x19, 0x3d, 0x82, 0x5e,
-	0x9c, 0x7d, 0x11, 0x8c, 0x7f, 0xd3, 0xbc, 0x54, 0x88, 0xd0, 0x5e, 0x2f, 0x8a, 0xab, 0xd0, 0x79,
-	0xe8, 0x3c, 0x09, 0x98, 0x8d, 0xa3, 0x07, 0x10, 0x54, 0x92, 0xf5, 0x72, 0x6b, 0x05, 0xa2, 0x21,
-	0xa0, 0x38, 0xfa, 0xe1, 0x40, 0x67, 0x2c, 0x56, 0xab, 0xb4, 0xc8, 0x0d, 0x9f, 0xca, 0xab, 0x0d,
-	0xf1, 0xae, 0xe1, 0x4d, 0x8c, 0xcf, 0xc0, 0xe5, 0xc5, 0x26, 0x6c, 0x51, 0xaa, 0x37, 0x1a, 0x0c,
-	0xeb, 0xde, 0xc3, 0x5d, 0xcd, 0x30, 0x2e, 0x36, 0x71, 0xa1, 0xe4, 0x96, 0x19, 0x19, 0x86, 0xd0,
-	0x51, 0x8b, 0x15, 0x17, 0x5a, 0x85, 0x2e, 0x35, 0x71, 0x59, 0x0d, 0x07, 0x2f, 0xa0, 0x5b, 0x4b,
-	0xb1, 0x0f, 0xee, 0x57, 0xbe, 0xdd, 0xd9, 0x30, 0x21, 0xde, 0x06, 0x6f, 0x93, 0x2e, 0x35, 0xa7,
-	0x3e, 0x26, 0x57, 0x81, 0xd3, 0xd6, 0x4b, 0x27, 0xfa, 0xe5, 0xc0, 0xd1, 0x4c, 0x8a, 0x8c, 0x97,
-	0xe5, 0x07, 0x95, 0x2a, 0x5d, 0xe2, 0x31, 0xf8, 0x52, 0x17, 0xf3, 0x45, 0xbe, 0xbb, 0xc0, 0x23,
-	0x34, 0xcd, 0xc9, 0xa8, 0x57, 0x92, 0xa0, 0xba, 0xe2, 0xc6, 0xe8, 0xce, 0xde, 0x6a, 0xa3, 0x9c,
-	0xb3, 0x4a, 0x84, 0xf7, 0x01, 0x4a, 0x95, 0x93, 0xb1, 0xb9, 0xe4, 0x97, 0xd6, 0x6b, 0xc0, 0x82,
-	0x2a, 0xc3, 0xf8, 0xe5, 0x8e, 0xe6, 0x52, 0x5a, 0xba, 0xfd, 0x87, 0xa6, 0x8c, 0xa1, 0xef, 0x41,
-	0xc0, 0xbf, 0x2f, 0xd4, 0x3c, 0x13, 0x39, 0x0f, 0x3d, 0x62, 0x3d, 0xd6, 0x35, 0x89, 0x31, 0x61,
-	0xf3, 0x16, 0x92, 0x09, 0x19, 0xfa, 0x95, 0x3d, 0x0b, 0xa2, 0xc7, 0xd0, 0xab, 0xfc, 0xbf, 0xd7,
-	0x9c, 0x46, 0x70, 0xfd, 0x23, 0x9e, 0xce, 0xe0, 0xb0, 0xe9, 0x16, 0x7b, 0xd0, 0xb9, 0x48, 0xde,
-	0x26, 0xe7, 0x9f, 0x92, 0xfe, 0x81, 0x01, 0xb3, 0x38, 0x99, 0x4c, 0x93, 0x37, 0x7d, 0xc7, 0x00,
-	0x76, 0x91, 0x24, 0x06, 0xb4, 0xf0, 0x08, 0x82, 0xf1, 0xf9, 0xbb, 0xd9, 0x59, 0xfc, 0x31, 0x9e,
-	0xf4, 0x5d, 0x04, 0xf0, 0x5f, 0xbf, 0x9a, 0x9e, 0x51, 0xdc, 0x1e, 0xfd, 0x74, 0xa8, 0x71, 0x26,
-	0x84, 0x9a, 0xd8, 0x1d, 0xc2, 0xe7, 0xd0, 0x36, 0x0b, 0x81, 0xc7, 0xfb, 0xf9, 0x34, 0x76, 0x68,
-	0x70, 0xeb, 0xef, 0x34, 0xed, 0x4d, 0x74, 0x80, 0x27, 0xe0, 0x32, 0x5d, 0xe0, 0xcd, 0x7f, 0xfe,
-	0x7f, 0x70, 0xf7, 0xda, 0x39, 0xeb, 0x92, 0x8a, 0x4e, 0xc1, 0xaf, 0xbf, 0x6c, 0x2f, 0x6a, 0x0c,
-	0xe1, 0x3f, 0xb5, 0x9f, 0x7d, 0xcb, 0x9c, 0xfc, 0x0e, 0x00, 0x00, 0xff, 0xff, 0xfc, 0x73, 0x3a,
-	0xa3, 0xfb, 0x02, 0x00, 0x00,
+	// 720 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x94, 0x54, 0xdd, 0x4e, 0xdb, 0x4a,
+	0x10, 0x26, 0x76, 0x12, 0x92, 0xf1, 0x39, 0x28, 0x5a, 0xe0, 0x10, 0xf9, 0x1c, 0x14, 0xb0, 0x74,
+	0xa4, 0x4a, 0x55, 0x2d, 0x35, 0x54, 0x50, 0xf5, 0x0e, 0x25, 0x6e, 0x85, 0x4a, 0x4d, 0xb4, 0x01,
+	0xc1, 0x9d, 0xe5, 0xda, 0x2b, 0x12, 0xe1, 0x78, 0x53, 0x7b, 0x1d, 0x95, 0x07, 0xe0, 0x71, 0xfa,
+	0x0e, 0xbd, 0xeb, 0x3b, 0xf4, 0x69, 0xba, 0x3f, 0x4e, 0xe2, 0x9a, 0x84, 0xb6, 0x57, 0x9e, 0x9d,
+	0xfd, 0xe6, 0xf3, 0xcc, 0x37, 0xb3, 0x03, 0x7f, 0x85, 0x3e, 0x99, 0xd0, 0xd8, 0x9e, 0x26, 0x94,
+	0x51, 0xd4, 0x90, 0x9f, 0x80, 0x46, 0xd6, 0x21, 0x18, 0x4e, 0x30, 0xa2, 0x98, 0x7c, 0xca, 0x48,
+	0xca, 0x10, 0x82, 0xea, 0x74, 0x1c, 0xdf, 0xb6, 0x2b, 0x07, 0x95, 0x67, 0x4d, 0x2c, 0x6d, 0xab,
+	0x03, 0x4d, 0x05, 0x99, 0x46, 0xf7, 0x12, 0x40, 0x0b, 0x00, 0x6e, 0x5b, 0xcf, 0x61, 0xb7, 0x97,
+	0x10, 0x9f, 0x91, 0x61, 0xec, 0x4f, 0xd3, 0x11, 0x65, 0x45, 0x36, 0x9f, 0x8d, 0x16, 0x60, 0x6e,
+	0x5b, 0xe7, 0xb0, 0x5d, 0x06, 0x0b, 0xde, 0x1d, 0xa8, 0x91, 0x24, 0xa1, 0x49, 0x8e, 0x55, 0x07,
+	0xd4, 0x01, 0x23, 0xcd, 0x61, 0xde, 0x38, 0x6c, 0x6b, 0xf2, 0x0e, 0xe6, 0xae, 0xb3, 0x90, 0xb3,
+	0xed, 0xf5, 0x46, 0x24, 0xb8, 0xa3, 0x19, 0x2b, 0xff, 0xbc, 0x14, 0x5b, 0x29, 0xc7, 0xa2, 0x16,
+	0xe8, 0xe1, 0x38, 0xc9, 0x49, 0x85, 0x69, 0xbd, 0xe0, 0x85, 0x3c, 0x62, 0x5b, 0x9b, 0x9d, 0xf5,
+	0x50, 0x05, 0xc0, 0x59, 0xfc, 0xdb, 0x3f, 0xb4, 0x41, 0x0f, 0x26, 0xaa, 0x0a, 0xa3, 0xfb, 0x9f,
+	0x3d, 0xef, 0x81, 0xbd, 0xe4, 0xb0, 0x7b, 0x74, 0x32, 0xf1, 0xe3, 0x10, 0x0b, 0x20, 0x3a, 0xe2,
+	0xf2, 0x45, 0x7e, 0xdc, 0xd6, 0x65, 0x40, 0x67, 0x65, 0xc0, 0x45, 0xc6, 0xa6, 0x19, 0x1b, 0x70,
+	0x18, 0x96, 0x60, 0xf3, 0x4b, 0x05, 0x36, 0x73, 0x16, 0xa1, 0xbf, 0x9f, 0xdc, 0xce, 0x78, 0x2a,
+	0xba, 0xd0, 0x5f, 0xd8, 0xe8, 0x04, 0x74, 0x12, 0xcf, 0x78, 0x12, 0x3a, 0xe7, 0xfc, 0xff, 0xa9,
+	0x24, 0x6c, 0x27, 0x9e, 0x39, 0x31, 0x4b, 0xee, 0xb1, 0x88, 0x40, 0xfb, 0x00, 0x6c, 0x3c, 0x21,
+	0x5c, 0x1b, 0x2f, 0x4e, 0x65, 0x4e, 0x3a, 0x6e, 0xe6, 0x1e, 0x37, 0x35, 0x8f, 0xa1, 0x31, 0xc7,
+	0x0b, 0x65, 0xef, 0xc8, 0x7d, 0xae, 0x80, 0x30, 0x85, 0x80, 0x33, 0x3f, 0xca, 0x48, 0xae, 0xb6,
+	0x3a, 0xbc, 0xd1, 0x5e, 0x57, 0xcc, 0xaf, 0x15, 0x80, 0x65, 0x11, 0xe8, 0x0e, 0xfe, 0x49, 0x93,
+	0xc0, 0x13, 0xa3, 0x92, 0x7a, 0x8c, 0x7a, 0x21, 0x4f, 0xc8, 0xe3, 0xbd, 0x11, 0x7f, 0x14, 0x19,
+	0x9f, 0xfc, 0x42, 0x05, 0x7b, 0x98, 0x04, 0x03, 0x11, 0x7c, 0x49, 0xfb, 0xfc, 0xa6, 0xcf, 0x23,
+	0x55, 0x0d, 0x28, 0x7d, 0x74, 0x61, 0x3a, 0xb0, 0xb7, 0x06, 0xfe, 0x27, 0x25, 0x58, 0x27, 0xd0,
+	0x90, 0xb9, 0x88, 0x49, 0xd9, 0x85, 0x7a, 0x92, 0xc5, 0xcb, 0xfe, 0xd7, 0xf8, 0x89, 0xb7, 0x7e,
+	0x31, 0x40, 0x5a, 0x71, 0x80, 0xae, 0xc1, 0x18, 0xd0, 0x28, 0x9a, 0x0f, 0xd0, 0x1e, 0x6c, 0xaa,
+	0xd8, 0x34, 0xef, 0x58, 0x5d, 0x06, 0xa7, 0x25, 0xe9, 0xb5, 0x92, 0xf4, 0x22, 0x57, 0x3f, 0x8a,
+	0x64, 0x4b, 0x1a, 0x58, 0x98, 0xd6, 0x37, 0x0d, 0x9a, 0x8a, 0x59, 0xe4, 0xd4, 0x85, 0x7a, 0xca,
+	0x7c, 0x96, 0x29, 0x5a, 0xa3, 0x6b, 0x2e, 0x35, 0x5c, 0x80, 0xec, 0xa1, 0x44, 0xe0, 0x1c, 0x69,
+	0x3e, 0x68, 0x50, 0x57, 0xae, 0x75, 0x25, 0x1d, 0x43, 0x4d, 0x60, 0x95, 0x1e, 0x5b, 0xdd, 0x83,
+	0xf5, 0xa4, 0xf2, 0x43, 0xb0, 0x82, 0x97, 0x9f, 0x89, 0xfe, 0xe8, 0x99, 0xfc, 0x0b, 0x4d, 0xf2,
+	0x79, 0xcc, 0xbc, 0x80, 0x86, 0xa4, 0x5d, 0xe5, 0xd7, 0x35, 0xdc, 0x10, 0x8e, 0x1e, 0x3f, 0x2f,
+	0x85, 0xac, 0x15, 0x85, 0xbc, 0x81, 0x9a, 0xfc, 0x07, 0x32, 0x60, 0xf3, 0xca, 0x7d, 0xef, 0x5e,
+	0x5c, 0xbb, 0xad, 0x0d, 0x71, 0x18, 0x38, 0x6e, 0xff, 0xcc, 0x7d, 0xd7, 0xaa, 0xa0, 0xbf, 0xb9,
+	0x22, 0xd8, 0x19, 0x9c, 0x62, 0x71, 0xd4, 0xc4, 0x1d, 0xbe, 0x72, 0x5d, 0x71, 0xd0, 0xc5, 0x5d,
+	0xef, 0xe2, 0xc3, 0xe0, 0xdc, 0xb9, 0x74, 0xfa, 0xad, 0x2a, 0x02, 0xa8, 0xbf, 0x3d, 0x3d, 0x3b,
+	0xe7, 0x76, 0xad, 0xfb, 0x5d, 0x03, 0x63, 0x18, 0x50, 0xca, 0xfa, 0x72, 0x7f, 0xa2, 0x57, 0x50,
+	0x15, 0xcb, 0x10, 0xed, 0x2e, 0xcb, 0x2d, 0xec, 0x4f, 0x73, 0xbb, 0xec, 0xe6, 0x2a, 0x58, 0x1b,
+	0x08, 0xc3, 0xd6, 0xcf, 0x4b, 0x0f, 0x15, 0x5e, 0xf3, 0xca, 0xdd, 0x69, 0xee, 0xaf, 0x07, 0x28,
+	0xce, 0x1b, 0x68, 0x95, 0x97, 0x15, 0x3a, 0x2c, 0x04, 0xad, 0x5e, 0x8b, 0x66, 0xe7, 0x29, 0x88,
+	0x62, 0x7e, 0x09, 0x3a, 0x9f, 0x67, 0xb4, 0xb3, 0xea, 0xa9, 0x99, 0xa8, 0xe4, 0x55, 0x21, 0x5c,
+	0x16, 0xd1, 0xf5, 0xa2, 0x2c, 0x85, 0xc9, 0x2e, 0xca, 0xb2, 0x18, 0x0e, 0x6b, 0xe3, 0x63, 0x5d,
+	0x7a, 0x8f, 0x7e, 0x04, 0x00, 0x00, 0xff, 0xff, 0x3d, 0x02, 0xdb, 0x33, 0x9d, 0x06, 0x00, 0x00,
 }

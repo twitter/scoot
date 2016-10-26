@@ -68,15 +68,14 @@ message RunRequest {
     int64 timeout_ns = 3; //TODO: consistent special values for timeouts like PollRequest.timeout_ns?
   }
   message OutputPlan {
-    bool stdout = 1;
-    bool stderr = 2;
-
     // After the run is done, generate a snapshot containing only the specified src paths.
     // This copies the src files/dirs into the corresponding destination directories.
     // The sources and destinations are all relative paths within the snapshot.
     // An empty map will result in an empty snapshot (except for stdout/stderr).
     // Behavior is undefined for duplicate entries within a destination.
     // Sources may include the '*' wildcard.
+    //
+    // Note: snapshots will always contain root STDOUT and STDERR text files.
     map<string, string> src_paths_to_dest_dirs = 3;
   }
   string snapshot_id = 1;
@@ -94,23 +93,31 @@ message RunReply {
 //
 message PollRequest {
   repeated string run_ids = 1;
-  int64 timeout_ns = 2; // <0 to block indefinitely, 0 to return immediately, >0 to wait for results before returning.
+
+  // <0 to block indefinitely waiting for at least one finished run.
+  //  0 to return immediately with finished runs, if any.
+  // >0 to wait at most timeout_ns for at least one finished run.
+  int64 timeout_ns = 2;
+
+  // Include an updated status for all the given runs.
+  bool all = 3;
 }
 
 message PollReply {
-  enum State {
-    UNKNOWN = 0;
-    PENDING = 1;
-    RUNNING = 2;
-    COMPLETED = 3;
-    FAILED = 4;
-  }
-  message Result {
+  message Status {
+    enum State {
+      UNKNOWN = 0;
+      PENDING = 1;
+      PREPARING = 2;
+      RUNNING = 3;
+      COMPLETED = 4;
+      FAILED = 5;
+    }
     string run_id = 1;
     State state = 2;
-    int32 exit_code = 3;
-    string error = 4;
-    string snapshot_id = 5;
+    string snapshot_id = 3;
+    int32 exit_code = 4;
+    string error = 5;
   }
-  repeated Result results = 1;
+  repeated Status status = 1;
 }

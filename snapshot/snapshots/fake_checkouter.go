@@ -1,6 +1,9 @@
 package snapshots
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -57,6 +60,15 @@ func (c *staticCheckout) ID() string {
 
 func (c *staticCheckout) Release() error {
 	return nil
+}
+
+func (c *staticCheckout) Disown(newAbsDir string) error {
+	err := os.MkdirAll(newAbsDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("mv %s/* %s", c.Path(), newAbsDir))
+	return cmd.Run()
 }
 
 // Initer will do something once, e.g., clone a git repo (that might be expensive)

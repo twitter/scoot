@@ -37,8 +37,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
-	s, err := server.NewServer(r)
+	filer := snapshots.MakeTempFiler(tempDir)
+	r := local.NewSimpleRunner(ex, filer, outputCreator)
+	s, err := server.NewServer(r, filer)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)
 	}

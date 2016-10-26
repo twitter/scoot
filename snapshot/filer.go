@@ -25,12 +25,19 @@ type Checkout interface {
 	ID() string
 
 	// Releases this Checkout, allowing the Checkouter to clean/recycle this checkout.
-	// After Release(), the client may not look at files under Path()
+	// After Release(), the client may not look at files under Path().
 	Release() error
+
+	// Relocates the checkout contents to a caller controlled dir and then calls Release().
+	Disown(newAbsDir string) error
 }
 
 // Ingester creates a Snapshot from a path in the local filesystem.
 type Ingester interface {
-	// Takes a file or dir path and stores the contents for later Checkout by id.
+	// Takes a file or dir path and stores the contents in a snpashot which may then be checked out by id.
 	Ingest(path string) (id string, err error)
+
+	// Takes a mapping of source paths to be copied into corresponding destination directories.
+	// Source paths are absolute, and destination directories are relative to Checkout root.
+	IngestMap(srcToDest map[string]string) (id string, err error)
 }

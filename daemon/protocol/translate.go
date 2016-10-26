@@ -6,46 +6,48 @@ import (
 
 // TODO(dbentley): we should go generate with command protoc daemon.proto --go_out=plugins=grpc:.
 
-func FromRunnerStatus(status runner.ProcessStatus) *ProcessStatus {
-	state := ProcessState_UNKNOWN
+func FromRunnerStatus(status runner.ProcessStatus) *PollReply_Status {
+	state := PollReply_Status_UNKNOWN
 	switch status.State {
 	case runner.UNKNOWN:
-		state = ProcessState_UNKNOWN
+		state = PollReply_Status_UNKNOWN
 	case runner.PENDING:
-		state = ProcessState_PENDING
+		state = PollReply_Status_PENDING
+	case runner.PREPARING:
+		state = PollReply_Status_PREPARING
 	case runner.RUNNING:
-		state = ProcessState_RUNNING
+		state = PollReply_Status_RUNNING
 	case runner.FAILED, runner.ABORTED, runner.TIMEDOUT:
-		state = ProcessState_FAILED
+		state = PollReply_Status_FAILED
 	}
-	return &ProcessStatus{
+	return &PollReply_Status{
 		string(status.RunId),
 		state,
-		status.StdoutRef,
-		status.StderrRef,
+		string(status.SnapshotId),
 		int32(status.ExitCode),
 		status.Error,
 	}
 }
 
-func ToRunnerStatus(status *ProcessStatus) runner.ProcessStatus {
+func ToRunnerStatus(status *PollReply_Status) runner.ProcessStatus {
 	state := runner.UNKNOWN
 	switch status.State {
-	case ProcessState_UNKNOWN:
+	case PollReply_Status_UNKNOWN:
 		state = runner.UNKNOWN
-	case ProcessState_PENDING:
+	case PollReply_Status_PENDING:
 		state = runner.PENDING
-	case ProcessState_RUNNING:
+	case PollReply_Status_PREPARING:
+		state = runner.PREPARING
+	case PollReply_Status_RUNNING:
 		state = runner.RUNNING
-	case ProcessState_FAILED:
+	case PollReply_Status_FAILED:
 		state = runner.FAILED
 	}
 	return runner.ProcessStatus{
-		RunId:     runner.RunId(status.RunId),
-		State:     state,
-		StdoutRef: status.StdoutRef,
-		StderrRef: status.StderrRef,
-		ExitCode:  int(status.ExitCode),
-		Error:     status.Error,
+		RunId:      runner.RunId(status.RunId),
+		State:      state,
+		SnapshotId: runner.SnapshotId(status.SnapshotId),
+		ExitCode:   int(status.ExitCode),
+		Error:      status.Error,
 	}
 }
