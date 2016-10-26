@@ -16,6 +16,15 @@ type RepoGetter interface {
 	Get() (*repo.Repository, error)
 }
 
+// RepoGetter implementation
+type ConstantGetter struct {
+	Repo *repo.Repository
+}
+
+func (g *ConstantGetter) Get() (*repo.Repository, error) {
+	return g.Repo, nil
+}
+
 // A Pool that will only have a single repo, populated by repoGetter, that serves until doneCh is closed
 func NewSingleRepoPool(repoGetter RepoGetter, doneCh <-chan struct{}) *RepoPool {
 	singlePool := NewRepoPool(nil, nil, doneCh)
@@ -47,6 +56,7 @@ func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempD
 		}
 	}
 
+	// TODO why did we make 2 pools here
 	pool := NewRepoPool(cloner, clones, doneCh)
 	return NewCheckouter(pool)
 }

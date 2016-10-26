@@ -75,12 +75,3 @@ func (c *Checkout) Release() error {
 	c.pool.Release(c.repo, nil)
 	return nil
 }
-
-// TODO placeholder
-type ConstantGetter struct {
-	Repo *repo.Repository
-}
-
-func (g *ConstantGetter) Get() (*repo.Repository, error) {
-	return g.Repo, nil
-}
