@@ -196,18 +196,17 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	switch st.State {
 	case execer.COMPLETE:
 		snapshotId := ""
-		if cmd.SnapshotPlan == nil {
-			snapshotId, err = r.filer.Ingest(checkout.Path())
-		} else {
-			srcToDest := map[string]string{
-				stdout.AsFile(): "STDOUT",
-				stderr.AsFile(): "STDERR",
-			}
+		srcToDest := map[string]string{
+			checkout.Path(): "",
+			stdout.AsFile(): "STDOUT",
+			stderr.AsFile(): "STDERR",
+		}
+		if cmd.SnapshotPlan != nil {
 			for src, dest := range cmd.SnapshotPlan {
 				srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
 			}
-			snapshotId, err = r.filer.IngestMap(srcToDest)
 		}
+		snapshotId, err = r.filer.IngestMap(srcToDest)
 		if err != nil {
 			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error ingesting results: %v", err)))
 		} else {

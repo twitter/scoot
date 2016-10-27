@@ -69,11 +69,11 @@ message RunRequest {
   }
   message OutputPlan {
     // After the run is done, generate a snapshot containing only the specified src paths.
-    // This copies the src files/dirs into the corresponding destination directories.
+    // This copies the src files & dirs to the corresponding destination path=dir/base.
     // The sources and destinations are all relative paths within the snapshot.
     // An empty map will result in an empty snapshot (except for stdout/stderr).
     // Behavior is undefined for duplicate entries within a destination.
-    // Sources may include the '*' wildcard.
+    // Sources may include the '*' wildcard. If they do, corresponding destinations are treated as parent dirs.
     //
     // Note: snapshots will always contain root STDOUT and STDERR text files.
     map<string, string> src_paths_to_dest_dirs = 3;

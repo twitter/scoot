@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -34,13 +35,14 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 	}
 
 	for src, dest := range srcToDest {
-		_, err = os.Stat(src)
-		if err != nil {
-			return
-		}
-
 		absDest := filepath.Join(s.Dir, dest)
-		err = os.MkdirAll(absDest, os.ModePerm)
+		if strings.Contains(absDest, "*") {
+			// If wildcard is present, treat destination as a parent directory.
+			err = os.MkdirAll(absDest, os.ModePerm)
+		} else {
+			// If no wildcard, treat destination as dir/base.
+			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
+		}
 		if err != nil {
 			return
 		}

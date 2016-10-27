@@ -21,8 +21,8 @@ type Command struct {
 	SnapshotId string
 
 	// Runner can optionally use this to specify content if creating a new snapshot.
-	// Keys: relative src file/dir paths in SnapshotId checkout. May contain '*' wildcard.
-	// Values: relative dest dir paths in the new snapshot.
+	// Keys: relative src file & dir paths in SnapshotId checkout. May contain '*' wildcard.
+	// Values: relative dest path=dir/base in new snapshot (if src has a wildcard, then dest path is treated as a parent dir).
 	//
 	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
 	SnapshotPlan map[string]string

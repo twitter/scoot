@@ -48,32 +48,31 @@ func TestIniting(t *testing.T) {
 func assertFileContains(path, contents, msg string, t *testing.T) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		t.Fatalf(msg + ", readfile: " + err.Error())
+		t.Fatal(msg + ", readfile: " + err.Error())
 	}
 	if string(b) != contents {
-		t.Fatalf(msg + ", contents: " + string(b))
+		t.Fatal(msg + ", contents: " + string(b))
 	}
-
 }
 
 func assertDirEntries(path string, count int, msg string, t *testing.T) {
 	fi, err := ioutil.ReadDir(path)
 	if err != nil {
-		t.Fatalf(msg + ", readdir: " + err.Error())
+		t.Fatal(msg + ", readdir: " + err.Error())
 	}
 	if len(fi) != count {
-		t.Fatalf(msg + ", entrycount: " + strconv.Itoa(len(fi)))
+		t.Fatal(msg + ", entrycount: " + strconv.Itoa(len(fi)))
 	}
 
 }
 
 func TestTempFiler(t *testing.T) {
 	// Initialize snapshots tmpdir and filer.
-	snapTmp, _ := temp.NewTempDir(os.TempDir(), "snap")
+	snapTmp, _ := temp.NewTempDir(os.TempDir(), "TestTempFiler_filer")
 	filer := MakeTempFiler(snapTmp)
 
 	// Populate the paths we want to ingest.
-	localtmp, _ := temp.NewTempDir(os.TempDir(), "localpath")
+	localtmp, _ := temp.NewTempDir(os.TempDir(), "TestTempFiler_localpath")
 	localfile1 := filepath.Join(localtmp.Dir, "foo1")
 	localfile2 := filepath.Join(localtmp.Dir, "foo2")
 	ioutil.WriteFile(localfile1, []byte("bar1"), os.ModePerm)
