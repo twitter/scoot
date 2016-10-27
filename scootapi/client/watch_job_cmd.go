@@ -26,7 +26,7 @@ func (c *watchJobCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
+func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
 	log.Println("Watching job:", args)
 
@@ -34,7 +34,7 @@ func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 		return errors.New("a job id must be provided")
 	}
 
-	client, err := cl.Dial()
+	err := cl.Dial()
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (c *watchJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 	jobId := args[0]
 
 	for {
-		jobStatus, err := GetAndPrintStatus(jobId, client)
+		jobStatus, err := GetAndPrintStatus(jobId, cl.scootClient)
 		if err != nil {
 			return err
 		}
