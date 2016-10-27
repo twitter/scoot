@@ -139,8 +139,8 @@ func (qr *QueueingRunner) eventLoop() {
 			}
 
 		case qRunId := <-qr.statusRequestsCh:
-			mapEntry := qr.queueIdToRunnerIdMap[string(qRunId)]
-			qr.getRunStatus(mapEntry, qRunId)
+			mapEntry, ok := qr.queueIdToRunnerIdMap[string(qRunId)]
+			qr.getRunStatus(mapEntry, qRunId, ok)
 
 		}
 	}
@@ -173,7 +173,7 @@ func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) requestResponse
 
 // Run the first request on the queue and remove it from the queue
 func (qr *QueueingRunner) runNextCommandInQueue() {
-	
+
 	qr.runnerIsAvailable = false
 
 	request := qr.runQueue[0]
@@ -181,7 +181,7 @@ func (qr *QueueingRunner) runNextCommandInQueue() {
 	if err != nil {
 		mapEntry := mapEntry{state: runner.BADREQUEST, errorMsg: err.Error()}
 		qr.queueIdToRunnerIdMap[string(request.id)] = mapEntry // update the map entry with the current state
-		qr.runnerIsAvailable = true;
+		qr.runnerIsAvailable = true
 		return
 	}
 
@@ -202,30 +202,31 @@ func (qr *QueueingRunner) Status(qRunId runner.RunId) (runner.ProcessStatus, err
 }
 
 // the event loop is triggering getting the status
-func (qr *QueueingRunner) getRunStatus(entry mapEntry, qRunId runner.RunId) {
-	if (entry == mapEntry{}) {
-		s := runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
-		qr.statusResponseCh <- requestResponse{status: &s, err: nil}
+func (qr *QueueingRunner) getRunStatus(entry mapEntry, qRunId runner.RunId, foundMapEntry bool) {
+	var s runner.ProcessStatus
+	var err error
+	defer func() {
+		qr.statusResponseCh <- requestResponse{status: &s, err: err} // put the response on the channel
+	}()
+
+	if !foundMapEntry {
+		s = runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
 		return
 	}
 
 	if entry.state == runner.PENDING {
-		s := runner.ProcessStatus{RunId: qRunId, State: runner.PENDING}
-		qr.statusResponseCh <- requestResponse{status: &s, err: nil}
+		s = runner.ProcessStatus{RunId: qRunId, State: runner.PENDING}
 		return
 	}
 
 	if entry.state == runner.BADREQUEST {
-		s := runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: entry.errorMsg}
-		qr.statusResponseCh <- requestResponse{status: &s, err: nil}
+		s = runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: entry.errorMsg}
 		return
 	}
 
-	runnerStatus, err := qr.aRunner.Status(entry.runnerRunId) // get the current status from runner
+	s, err = qr.aRunner.Status(entry.runnerRunId) // get the current status from runner
 
-	runnerStatus.RunId = runner.RunId(qRunId) //overwrite the runner's runid with the queuing runner's runid
-
-	qr.statusResponseCh <- requestResponse{status: &runnerStatus, err: err} // put the status on the return channel
+	s.RunId = runner.RunId(qRunId) //overwrite the runner's runid with the queuing runner's runid
 }
 
 // Current status of all runs, running and finished, excepting any Erase()'s runs.

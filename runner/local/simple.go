@@ -111,6 +111,7 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 
 	oldStatus, ok := r.runs[newStatus.RunId]
 	if !ok {
+		reportRunnerAvailable(r.runnerAvailableCh)
 		return runner.ProcessStatus{}, fmt.Errorf("cannot find run %v", newStatus.RunId)
 	}
 
