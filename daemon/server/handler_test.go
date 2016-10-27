@@ -71,7 +71,7 @@ func TestDaemonExample(t *testing.T) {
 	if okStatuses[0].ExitCode != 0 {
 		t.Fatal("failure checking exit code of 'ok' run.", okStatuses[0].ExitCode)
 	}
-	if failStatuses[0].ExitCode != 1 {
+	if failStatuses[0].ExitCode == 0 {
 		t.Fatal("failure checking exit code of 'fail' run.", failStatuses[0].ExitCode)
 	}
 
