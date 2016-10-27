@@ -51,7 +51,7 @@ func TestMain(m *testing.M) {
 	scootDir := path.Join(tempDir, "scoot")
 	err = os.Setenv("SCOOTDIR", scootDir)
 
-	s, err = server.NewServer(nil, nil)
+	s, err = server.NewServer(nil)
 	if err != nil {
 		log.Fatal("could not make server", err)
 	}

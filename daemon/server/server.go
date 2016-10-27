@@ -6,19 +6,17 @@ import (
 
 	"github.com/scootdev/scoot/daemon/protocol"
 	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/snapshot"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
 // Create a protocol.ScootDaemonServer
-func NewServer(runner runner.Runner, filer snapshot.Filer) (Server, error) {
-	s := &server{
-		runner: runner,
-		filer:  filer,
-		server: grpc.NewServer(),
+func NewServer(handler *Handler) (Server, error) {
+	s := &daemonServer{
+		handler:    handler,
+		grpcServer: grpc.NewServer(),
 	}
-	protocol.RegisterScootDaemonServer(s.server, s)
+	protocol.RegisterScootDaemonServer(s.grpcServer, s)
 	return s, nil
 }
 
@@ -27,14 +25,12 @@ type Server interface {
 	Stop()
 }
 
-type server struct {
-	runner runner.Runner
-	filer  snapshot.Filer
-
-	server *grpc.Server
+type daemonServer struct {
+	handler    *Handler
+	grpcServer *grpc.Server
 }
 
-func (s *server) ListenAndServe() error {
+func (s *daemonServer) ListenAndServe() error {
 	l, err := Listen()
 	if err != nil {
 		return err
@@ -43,77 +39,48 @@ func (s *server) ListenAndServe() error {
 }
 
 // Serve serves Scoot Daemon at scootdir
-func (s *server) Serve(l net.Listener) error {
-	return s.server.Serve(l)
+func (s *daemonServer) Serve(l net.Listener) error {
+	return s.grpcServer.Serve(l)
 }
 
-// Stops the server, canceling all active RPCs
-func (s *server) Stop() {
-	s.server.Stop()
+// Stops the daemonServer, canceling all active RPCs
+func (s *daemonServer) Stop() {
+	s.grpcServer.Stop()
 }
 
-func (s *server) Echo(ctx context.Context, req *protocol.EchoRequest) (*protocol.EchoReply, error) {
+func (s *daemonServer) Echo(ctx context.Context, req *protocol.EchoRequest) (*protocol.EchoReply, error) {
 	return &protocol.EchoReply{Pong: req.Ping}, nil
 }
 
-func (s *server) CreateSnapshot(ctx context.Context, req *protocol.CreateSnapshotRequest) (*protocol.CreateSnapshotReply, error) {
-	id, err := s.filer.Ingest(req.Path)
+func (s *daemonServer) CreateSnapshot(ctx context.Context, req *protocol.CreateSnapshotRequest) (*protocol.CreateSnapshotReply, error) {
+	id, err := s.handler.CreateSnapshot(req.Path)
 	return &protocol.CreateSnapshotReply{SnapshotId: id, Error: err.Error()}, nil
 }
 
-func (s *server) CheckoutSnapshot(ctx context.Context, req *protocol.CheckoutSnapshotRequest) (*protocol.CheckoutSnapshotReply, error) {
-	errStr := ""
-	co, err := s.filer.Checkout(req.SnapshotId)
-	if err == nil {
-		err = co.Disown(req.Dir)
-	}
-	if err != nil {
-		errStr = err.Error()
-	}
-	return &protocol.CheckoutSnapshotReply{Error: errStr}, nil
+func (s *daemonServer) CheckoutSnapshot(ctx context.Context, req *protocol.CheckoutSnapshotRequest) (*protocol.CheckoutSnapshotReply, error) {
+	err := s.handler.CheckoutSnapshot(runner.SnapshotId(req.SnapshotId), req.Dir)
+	return &protocol.CheckoutSnapshotReply{Error: err.Error()}, nil
 }
 
-func (s *server) Run(ctx context.Context, req *protocol.RunRequest) (*protocol.RunReply, error) {
-	cmd := runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.SnapshotId)
-	cmd.SnapshotPlan = req.Plan.SrcPathsToDestDirs
-	status, err := s.runner.Run(cmd)
+func (s *daemonServer) Run(ctx context.Context, req *protocol.RunRequest) (*protocol.RunReply, error) {
+	status, err := s.handler.Run(runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.SnapshotId))
 	return &protocol.RunReply{RunId: string(status.RunId), Error: err.Error()}, nil
 }
 
-const pollInterval = time.Duration(50 * time.Millisecond)
-
-func (s *server) Poll(ctx context.Context, req *protocol.PollRequest) (*protocol.PollReply, error) {
+func (s *daemonServer) Poll(ctx context.Context, req *protocol.PollRequest) (*protocol.PollReply, error) {
 	reply := &protocol.PollReply{}
-	callerTimer := &time.Timer{}
-	if req.TimeoutNs > 0 {
-		callerTimer = time.NewTimer(time.Duration(req.TimeoutNs))
+
+	runIds := []runner.RunId{}
+	for _, runId := range req.RunIds {
+		runIds = append(runIds, runner.RunId(runId))
 	}
 
-	pollTimer := time.NewTimer(pollInterval)
-	if req.TimeoutNs == 0 {
-		pollTimer.Stop()
+	statuses := s.handler.Poll(runIds, time.Duration(req.TimeoutNs), req.All)
+	for _, status := range statuses {
+		reply.Status = append(reply.Status, protocol.FromRunnerStatus(status))
 	}
 
-	for {
-		select {
-		case <-callerTimer.C:
-			return reply, nil
-		case <-pollTimer.C:
-			completed := false
-			for runId := range req.RunIds {
-				status, _ := s.runner.Status(runner.RunId(runId))
-				if status.State.IsDone() {
-					completed = true
-				}
-				if req.All || status.State.IsDone() {
-					reply.Status = append(reply.Status, protocol.FromRunnerStatus(status))
-				}
-			}
-			if completed || req.TimeoutNs == 0 {
-				return reply, nil
-			}
-		}
-	}
+	return reply, nil
 }
 
 //

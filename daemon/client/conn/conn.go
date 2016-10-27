@@ -1,6 +1,8 @@
 package conn
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -103,26 +105,30 @@ func (c *conn) Echo(arg string) (string, error) {
 }
 
 func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	panic("Run disabled in daemon code.")
-	// req := &protocol.Command{}
-	// req.Argv = cmd.Argv
-	// req.Env = cmd.EnvVars
-	// req.Timeout = int64(cmd.Timeout)
+	req := &protocol.RunRequest{}
+	req.Cmd.Argv = cmd.Argv
+	req.Cmd.Env = cmd.EnvVars
+	req.Cmd.TimeoutNs = int64(cmd.Timeout)
 
-	// r, err := c.client.Run(context.Background(), req)
-	// if err != nil {
-	// 	return runner.ProcessStatus{}, err
-	// }
-	// return protocol.ToRunnerStatus(r), nil
+	r, err := c.client.Run(context.Background(), req)
+	if err != nil {
+		return runner.ProcessStatus{}, err
+	}
+	if r.Error != "" {
+		return runner.ProcessStatus{}, errors.New(r.Error)
+	}
+	return runner.RunningStatus(runner.RunId(r.RunId), "", ""), nil
 }
 
 func (c *conn) Status(run runner.RunId) (runner.ProcessStatus, error) {
-	panic("Status disabled in daemon code.")
-	// r, err := c.client.Status(context.Background(), &protocol.StatusQuery{RunId: string(run)})
-	// if err != nil {
-	// 	return runner.ProcessStatus{}, err
-	// }
-	// return protocol.ToRunnerStatus(r), nil
+	r, err := c.client.Poll(context.Background(), &protocol.PollRequest{RunIds: []string{string(run)}, All: true})
+	if err != nil {
+		return runner.ProcessStatus{}, err
+	}
+	if len(r.Status) != 1 {
+		return runner.ProcessStatus{}, fmt.Errorf("Expected 1 status entry, got %v", len(r.Status))
+	}
+	return protocol.ToRunnerStatus(r.Status[0]), nil
 }
 
 func (c *conn) StatusAll() ([]runner.ProcessStatus, error) {
