@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func TestDaemonExample(t *testing.T) {
 	assertFileContains(filepath.Join(okDir, "STDOUT"), "resource.txt\n", "ok", t)
 	assertFileContains(filepath.Join(okDir, "STDERR"), "", "ok", t)
 	assertFileContains(filepath.Join(failDir, "STDOUT"), "", "fail", t)
-	assertFileContains(filepath.Join(failDir, "STDERR"), "ls: resource.txt: No such file or directory\n", "fail", t)
+	assertFileContains(filepath.Join(failDir, "STDERR"), "No such file or directory\n", "fail", t)
 
 	//TODO: test OutputPlan.
 }
@@ -101,7 +102,7 @@ func assertFileContains(path, contents, msg string, t *testing.T) {
 	if err != nil {
 		t.Fatal(msg + ", readfile: \"" + err.Error() + "\" -- " + path)
 	}
-	if string(b) != contents {
+	if match, _ := regexp.Match(contents, b); !match {
 		t.Fatal(msg + ", contents: \"" + string(b) + "\" -- " + path)
 	}
 }
