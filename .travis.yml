@@ -1,6 +1,11 @@
-language: go
+
 
 # sudo: false
+
+sudo: required
+dist: trusty
+
+language: go
 
 go:
   - 1.6
@@ -31,7 +36,7 @@ script:
   - dpkg -l
   - echo 2@@@@@@@@@@@@@@@@@@@@@@@@@
 #  - pip install grpcio --user
-  - echo -e "import sys\nprint('\n'.join(sys.path))\nimport grpcio" | python
+  - echo -e "import sys\nprint '\n'.join(sys.path)\nimport grpcio" | python
 #  - make test
 
 #after_success:
