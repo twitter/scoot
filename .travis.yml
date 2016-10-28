@@ -19,7 +19,7 @@ git:
 
 script:
   - pip install grpcio
-  - echo -e "import sys\nprint(sys.path)\nimport grpcio" | python
+  - echo -e "import sys\nprint(sys.path)\nimport grpc" | python
 #  - make test
 
 #after_success:
