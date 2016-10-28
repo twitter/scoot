@@ -1,4 +1,4 @@
-package min
+package interface
 
 import (
 	"github.com/scootdev/scoot/fuse"
