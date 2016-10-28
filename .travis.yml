@@ -32,11 +32,8 @@ addons:
 
 script:
   - ls -al .local || true
-  - echo 1@@@@@@@@@@@@@@@@@@@@@@@@@
-  - dpkg -l
-  - echo 2@@@@@@@@@@@@@@@@@@@@@@@@@
-#  - pip install grpcio --user
-  - echo -e "import sys\nprint '\n'.join(sys.path)\nimport grpcio" | python
+  - pip install grpcio --user
+  - echo -e "import sys\nprint(sys.path)\nimport grpcio" | python
 #  - make test
 
 #after_success:
