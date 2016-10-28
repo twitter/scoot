@@ -1,6 +1,6 @@
 language: go
 
-sudo: false
+# sudo: false
 
 go:
   - 1.6
@@ -30,7 +30,7 @@ script:
   - echo 1@@@@@@@@@@@@@@@@@@@@@@@@@
   - dpkg -l
   - echo 2@@@@@@@@@@@@@@@@@@@@@@@@@
-  - pip install grpcio --user
+#  - pip install grpcio --user
   - echo -e "import sys\nprint('\n'.join(sys.path))\nimport grpcio" | python
 #  - make test
 
