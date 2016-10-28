@@ -5,6 +5,19 @@ sudo: false
 go:
   - 1.6
 
+git:
+    submodules: false
+
+cache:
+  directories:
+  - $HOME/.local
+
+#
+addons:
+  apt:
+    packages:
+    - gnulib
+
 #before_install:
 #  - make dependencies
 
@@ -13,6 +26,10 @@ go:
 #  - make vet
 
 script:
+  - ls -al .local || true
+  - echo 1@@@@@@@@@@@@@@@@@@@@@@@@@
+  - dpkg -l
+  - echo 2@@@@@@@@@@@@@@@@@@@@@@@@@
   - pip install grpcio --user
   - echo -e "import sys\nprint('\n'.join(sys.path))\nimport grpcio" | python
 #  - make test
