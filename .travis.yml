@@ -13,7 +13,7 @@ go:
 #  - make vet
 
 script:
-  - which pip
+  - pip install grpcio
 #  - make test
 
 #after_success:
