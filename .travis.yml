@@ -13,7 +13,8 @@ go:
 #  - make vet
 
 script:
-  - pip install grpcio
+  - pip install grpcio --user
+  - echo -e "import sys\nprint('\n'.join(sys.path))\nimport grpcio" | python
 #  - make test
 
 #after_success:
