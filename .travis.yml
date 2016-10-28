@@ -5,15 +5,16 @@ sudo: false
 go:
   - 1.6
 
-before_install:
-  - make dependencies
+#before_install:
+#  - make dependencies
 
-before_script:
-  - make format
-  - make vet
+#before_script:
+#  - make format
+#  - make vet
 
 script:
-  - make test
+  - which pip
+#  - make test
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash)
