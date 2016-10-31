@@ -11,6 +11,8 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+const RunnerBusyMsg = "Runner is busy"
+
 func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
 		exec:          exec,
@@ -43,7 +45,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.nextRunId++
 
 	if r.running != nil {
-		return runner.ProcessStatus{}, fmt.Errorf("Runner is busy")
+		return runner.ProcessStatus{}, fmt.Errorf(RunnerBusyMsg)
 	}
 
 	r.running = &runInstance{id: runId, doneCh: make(chan struct{})}
@@ -56,6 +58,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	}
 	// TODO(dbentley): we return PREPARING now to defend against long-checkout
 	// But we could sleep short (50ms?), query status, and return that to capture the common, fast case
+	log.Printf("Run() returning: runid:%s, state:%s, err:%s", r.runs[runId].RunId, r.runs[runId].State, r.runs[runId].Error)
 	return r.runs[runId], nil
 }
 
