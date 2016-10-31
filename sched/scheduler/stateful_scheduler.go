@@ -42,6 +42,7 @@ func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
+	maxRetriesPerTask int,
 	stat stats.StatsReceiver) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -49,6 +50,7 @@ func NewStatefulSchedulerFromCluster(
 		sub.Updates,
 		sc,
 		wf,
+		maxRetriesPerTask,
 		stat,
 		false)
 }
@@ -62,6 +64,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
+	maxRetriesPerTask int,
 	stat stats.StatsReceiver,
 	debugMode bool,
 ) *statefulScheduler {
@@ -74,7 +77,7 @@ func NewStatefulScheduler(
 
 		clusterState:      newClusterState(initialCluster, clusterUpdates),
 		inProgressJobs:    make(map[string]*jobState),
-		maxRetriesPerTask: 0,
+		maxRetriesPerTask: maxRetriesPerTask,
 		stat:              stat,
 	}
 
