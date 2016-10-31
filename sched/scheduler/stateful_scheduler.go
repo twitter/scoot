@@ -30,8 +30,9 @@ type statefulScheduler struct {
 	addJobCh      chan jobAddedMsg
 
 	// Scheduler State
-	clusterState   *clusterState
-	inProgressJobs map[string]*jobState // map of inprogress jobId to jobState
+	clusterState      *clusterState
+	inProgressJobs    map[string]*jobState // map of inprogress jobId to jobState
+	maxRetriesPerTask int
 
 	// stats
 	stat stats.StatsReceiver
@@ -71,10 +72,10 @@ func NewStatefulScheduler(
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates),
-		inProgressJobs: make(map[string]*jobState),
-
-		stat: stat,
+		clusterState:      newClusterState(initialCluster, clusterUpdates),
+		inProgressJobs:    make(map[string]*jobState),
+		maxRetriesPerTask: 0,
+		stat:              stat,
 	}
 
 	sched.startUp()
@@ -240,6 +241,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
+		markCompleteOnFailure := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
+
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)
 		jobState.taskStarted(taskId)
@@ -252,6 +255,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					wf,
 					taskId,
 					taskDef,
+					markCompleteOnFailure,
 					s.stat)
 			},
 			func(err error) {
