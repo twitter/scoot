@@ -13,6 +13,10 @@ import (
 	"github.com/scootdev/scoot/sched/worker"
 )
 
+type SchedulerConfig struct {
+	MaxRetriesPerTask int
+}
+
 // Scheduler that keeps track of the state of running tasks & the cluster
 // so that it can make smarter scheduling decisions
 //
@@ -42,7 +46,7 @@ func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
-	maxRetriesPerTask int,
+	config SchedulerConfig,
 	stat stats.StatsReceiver) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -50,7 +54,7 @@ func NewStatefulSchedulerFromCluster(
 		sub.Updates,
 		sc,
 		wf,
-		maxRetriesPerTask,
+		config,
 		stat,
 		false)
 }
@@ -64,7 +68,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
-	maxRetriesPerTask int,
+	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
 ) *statefulScheduler {
@@ -77,7 +81,7 @@ func NewStatefulScheduler(
 
 		clusterState:      newClusterState(initialCluster, clusterUpdates),
 		inProgressJobs:    make(map[string]*jobState),
-		maxRetriesPerTask: maxRetriesPerTask,
+		maxRetriesPerTask: config.MaxRetriesPerTask,
 		stat:              stat,
 	}
 

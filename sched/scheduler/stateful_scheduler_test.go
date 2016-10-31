@@ -16,11 +16,11 @@ import (
 
 // objects needed to initialize a stateful scheduler
 type schedulerDeps struct {
-	initialCl         []cluster.Node
-	clUpdates         chan []cluster.NodeUpdate
-	sc                saga.SagaCoordinator
-	wf                worker.WorkerFactory
-	maxRetriesPerTask int
+	initialCl []cluster.Node
+	clUpdates chan []cluster.NodeUpdate
+	sc        saga.SagaCoordinator
+	wf        worker.WorkerFactory
+	config    SchedulerConfig
 }
 
 // returns default scheduler deps populated with in memory fakes
@@ -34,7 +34,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		wf: func(cluster.Node) worker.Worker {
 			return workers.MakeSimWorker()
 		},
-		maxRetriesPerTask: 1,
+		config: SchedulerConfig{},
 	}
 }
 
@@ -45,7 +45,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.clUpdates,
 		deps.sc,
 		deps.wf,
-		deps.maxRetriesPerTask,
+		deps.config,
 		stats.NilStatsReceiver(),
 		true)
 }
@@ -144,7 +144,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	defer mockCtrl.Finish()
 
 	deps := getDefaultSchedDeps()
-	deps.maxRetriesPerTask = 2
+	deps.config.MaxRetriesPerTask = 3
 
 	// create a worker factory that always returns a worker that returns an error
 	deps.wf = func(cluster.Node) worker.Worker {
@@ -166,8 +166,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	}
 
 	// verify task was retried enough times.
-	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.maxRetriesPerTask+1 {
-		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.maxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
 	}
 
 	// advance scheduler until job gets marked completed
