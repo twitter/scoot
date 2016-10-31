@@ -7,6 +7,7 @@ import (
 )
 
 // Utilities to deal with Scoot instances.
+// Replicated in # Copied from daemon/protocol/client_lib.py
 
 // LocateScootDir locates a Scoot instance.
 func LocateScootDir() (string, error) {
