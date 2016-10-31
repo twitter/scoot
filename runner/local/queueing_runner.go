@@ -138,31 +138,10 @@ func (qr *QueueingRunner) eventLoop() {
 
 		case cmd := <-qr.runRequestCh:
 			response := qr.addRequestToQueue(cmd)
-			if strings.Compare(string(response.RunId), "5") == 0 {
-				//log.Printf("*****  runRequest added to q: runid 5, state:%s, qlen:%d", response.State.String(), len(qr.q))
-				//if len(qr.q) != 1 {
-				//	log.Printf("********** is %s is on the queue in front of 5", qr.q[0].id)
-				//}
-			}
-			if len(qr.q) == 1 && qr.runnerAvail {
-				//if strings.Compare(string(response.RunId), "5") == 0 {
-				//	log.Printf("**********  runNext from Run() runid 5, state:%s, qlen:%d", response.State.String(), len(qr.q))
-				//}
-				response = qr.runNextCommandInQueue()
-			}
-			//if strings.Compare(string(response.RunId), "5") == 0 {
-			//	log.Printf("********** back from runNext 5, state:%s, err:%s, len q:%d", response.State.String(), response.Error, len(qr.q))
-			//}
 			qr.runResponseCh <- response
 
 		case <-qr.notifyRunnerAvailCh:
 			qr.runnerAvail = true
-			if len(qr.q) > 0 {
-				//if strings.Compare(string(qr.q[0].id), "5") == 0 {
-				//	log.Printf("***** running 5 because runner available, len q:%d", len(qr.q))
-				//}
-				qr.runNextCommandInQueue()
-			}
 
 		case qRunId := <-qr.statusRequestCh:
 			s := qr.getRunStatus(qRunId)
@@ -179,6 +158,10 @@ func (qr *QueueingRunner) eventLoop() {
 		case id := <-qr.eraseRequestCh:
 			err := qr.eraseRun(id)
 			qr.eraseResponseCh <- err
+		}
+
+		if len(qr.q) > 0 && qr.runnerAvail {
+			qr.runNextCommandInQueue()
 		}
 
 	}
@@ -213,14 +196,6 @@ func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 
 	qr.runnerAvail = false
 
-	// pop any aborted requests off the queue
-	for len(qr.q) > 0 && qr.qIdToRunnerId[string(qr.q[0].id)].State == runner.ABORTED {
-		qr.q = qr.q[1:]
-	}
-	if len(qr.q) == 0 {
-		return runner.ProcessStatus{}
-	}
-
 	request := qr.q[0]
 	qr.q = qr.q[1:] // pop the top request off the queue
 
@@ -252,10 +227,6 @@ func (qr *QueueingRunner) Status(qRunId runner.RunId) (runner.ProcessStatus, err
 func (qr *QueueingRunner) getRunStatus(qRunId runner.RunId) runner.ProcessStatus {
 
 	entry, ok := qr.qIdToRunnerId[string(qRunId)]
-
-	//if qRunId == runner.RunId("5") || qRunId == runner.RunId("4") {
-	//	log.Printf("***** getting status: runid:%s, state:%s, len(q):%d", string(entry.RunId), entry.State.String(), len(qr.q))
-	//}
 
 	if !ok {
 		return runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
@@ -337,6 +308,12 @@ func (qr *QueueingRunner) abortRun(runId runner.RunId) runner.ProcessStatus {
 
 	if qs.State == runner.PENDING {
 		qs.State = runner.ABORTED
+
+		for i, e := range qr.q {
+			if e.id == runId {
+				qr.q = append(qr.q[:i], qr.q[i+1:]...)
+			}
+		}
 	} else {
 		rs, err := qr.delegate.Abort(qs.RunId)
 		if err != nil {

@@ -39,7 +39,7 @@ func TestQueueing2Messages(t *testing.T) {
 	testEnv.waitGroup.Add(1) // set the pause condition
 
 	// send the first command - it should pause
-	run1, _ := validateRunRequest("1st Run()", []string{"pause", "complete 0"}, []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	run1, _ := validateRunRequest("1st Run()", []string{"pause", "complete 0"}, []runner.ProcessState{runner.PENDING}, "", qr, t)
 
 	// send a second command
 	run2, _ := validateRunRequest("2nd Run()", []string{"complete 1"}, []runner.ProcessState{runner.PENDING}, "", qr, t)
@@ -76,7 +76,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 
 	// phase1: -----------------fill up the queue and send one extra overflow request
 	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
-	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
 	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
 
 	// send commands to fill up the queue
@@ -115,7 +115,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 
 	// phase 4: ------------refill the queue and send one extra overflow request
 	testEnv.waitGroup.Add(1)
-	validateRunRequest("phase4, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	validateRunRequest("phase4, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
 	waitForStatus("phase4, wait for 1st run running:", runner.RunId("5"), []runner.ProcessState{runner.RUNNING}, 2*time.Millisecond, qr, t)
 
 	for i := 1; i < 5; i++ {
@@ -159,7 +159,7 @@ func TestUnknownRunIdInStatusRequest(t *testing.T) {
 	testEnv.waitGroup.Add(1)
 	var args [6][]string
 	args[0] = []string{"pause", "complete 0"}
-	validateRunRequest("1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	validateRunRequest("1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
 
 	for i := 1; i < 3; i++ {
 		// send a second command
@@ -193,7 +193,7 @@ func SkipTestStatusAll(t *testing.T) {
 	var args [6][]string
 
 	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
-	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
 	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
 
 	for i := 1; i < 5; i++ {
@@ -234,7 +234,7 @@ func SkipTestAbortTop2ReuqestsWhenPaused(t *testing.T) {
 	var args [6][]string
 
 	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
-	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
 	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
 
 	for i := 1; i < 5; i++ {
