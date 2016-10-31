@@ -7,6 +7,7 @@ import (
 
 	"github.com/scootdev/scoot/runner"
 	"golang.org/x/net/context"
+	"strings"
 )
 
 // This runner manages multiple (possibly concurrent) run and status requests.
@@ -29,8 +30,8 @@ import (
 // The status of a request is obtained with the run id.
 
 const QueueFullMsg = "No resources available. Please try later."
-const UnspportedFeatureMsg = "Not implemented.  This feature is not available for QueueingRunner"
 const UnknownRunIdMsg = "Unknown run id."
+const RequestIsRunning = "Run %s is still running, please Abort it first."
 
 // The request queue entries are commandAndId structs
 type commandAndId struct {
@@ -38,38 +39,41 @@ type commandAndId struct {
 	cmd *runner.Command
 }
 
-// requestResponse structs are returned in the Run() and Status() response channels
-type requestResponse struct {
-	status *runner.ProcessStatus
-	err    error
-}
-
-type mapEntry struct {
-	runnerRunId runner.RunId
-	state       runner.ProcessState
-	errorMsg    string
-}
+//type mapEntry struct {
+//	//runnerRunId  runner.RunId
+//	runnerStatus runner.ProcessStatus
+//	//errorMsg     string
+//}
 
 type QueueingRunner struct {
-	aRunner           runner.Runner
-	done              bool
-	maxQueueLen       int
-	nextRunId         int // used to assign unique runIds to the run requests
-	runQueue          []commandAndId
-	runnerIsAvailable bool
+	delegate    runner.Runner
+	maxQLen     int
+	nextRunId   int // used to assign unique runIds to the run requests
+	q           []commandAndId
+	runnerAvail bool
 
 	notifyRunnerAvailCh chan struct{} // the runner will use this channel to signal it is available
 
-	runRequestsCh chan *runner.Command // channel for synchronizing calls to Run()
-	runResponseCh chan requestResponse
+	runRequestCh  chan *runner.Command // channel for synchronizing calls to Run()
+	runResponseCh chan runner.ProcessStatus
 
-	statusRequestsCh chan runner.RunId    // channel for synchronizing status requests
-	statusResponseCh chan requestResponse // channel for unblocking the status requests
+	statusRequestCh  chan runner.RunId         // channel for synchronizing status requests
+	statusResponseCh chan runner.ProcessStatus // channel for unblocking the status requests
 
-	// map the queueing runner run ids to the runner's run ids. We need runner's run id for Status()
-	queueIdToRunnerIdMap map[string]mapEntry
+	statusAllRequestCh  chan struct{}               // channel for synchroinizing status all requests
+	statusAllResponseCH chan []runner.ProcessStatus // channel for unblocking status all requests
 
-	context context.Context
+	abortRequestCh  chan runner.RunId         // channel for synchronizing abort requests
+	abortResponseCh chan runner.ProcessStatus // channel for unblocking abort request
+
+	eraseRequestCh  chan runner.RunId // channel for synchronizing erase requests
+	eraseResponseCh chan error        // channel for unblocking erase requests
+
+	// map the queueing runner run ids to the runner's run ids. The key is the queue's run id
+	// and the id in the entrie's ProcessStatus is the runner's run id
+	qIdToRunnerId map[string]runner.ProcessStatus
+
+	ctx context.Context
 }
 
 // This must be used to initialize QueueingRunner properly
@@ -79,18 +83,23 @@ func NewQueuingRunner(context context.Context,
 	runnerAvailableCh chan struct{}) runner.Runner {
 
 	qRunner := &QueueingRunner{
-		aRunner:              theRunner,
-		done:                 false,
-		maxQueueLen:          maxQueueLen,
-		nextRunId:            0,
-		runnerIsAvailable:    true,
-		notifyRunnerAvailCh:  runnerAvailableCh,
-		runRequestsCh:        make(chan *runner.Command),
-		runResponseCh:        make(chan requestResponse),
-		statusRequestsCh:     make(chan runner.RunId),
-		statusResponseCh:     make(chan requestResponse),
-		queueIdToRunnerIdMap: make(map[string]mapEntry),
-		context:              context,
+		delegate:            theRunner,
+		maxQLen:             maxQueueLen,
+		nextRunId:           0,
+		runnerAvail:         true,
+		notifyRunnerAvailCh: runnerAvailableCh,
+		runRequestCh:        make(chan *runner.Command),
+		runResponseCh:       make(chan runner.ProcessStatus),
+		statusRequestCh:     make(chan runner.RunId),
+		statusResponseCh:    make(chan runner.ProcessStatus),
+		statusAllRequestCh:  make(chan struct{}),
+		statusAllResponseCH: make(chan []runner.ProcessStatus),
+		abortRequestCh:      make(chan runner.RunId),
+		abortResponseCh:     make(chan runner.ProcessStatus),
+		eraseRequestCh:      make(chan runner.RunId),
+		eraseResponseCh:     make(chan error),
+		qIdToRunnerId:       make(map[string]runner.ProcessStatus),
+		ctx:                 context,
 	}
 
 	// start the request event processor
@@ -107,12 +116,12 @@ func (qr *QueueingRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error)
 	log.Printf("local.queueingRunner: in qr.Run() args:%v\n", cmd.Argv)
 
 	// put the request on the process requests channel
-	qr.runRequestsCh <- cmd
+	qr.runRequestCh <- cmd
 
 	// get and return the 'on queue' response from this request's channel
-	requestQueued := <-qr.runResponseCh
+	status := <-qr.runResponseCh
 
-	return *requestQueued.status, requestQueued.err
+	return status, nil
 }
 
 // The 'events' include: Run() request, Status() request, or a signal that the runner is available.
@@ -123,125 +132,246 @@ func (qr *QueueingRunner) eventLoop() {
 	for {
 
 		select {
-		case <-qr.context.Done(): // stop processing commands
+		case <-qr.ctx.Done():
+			// stop processing commands
 			return
-		case cmd := <-qr.runRequestsCh:
+
+		case cmd := <-qr.runRequestCh:
 			response := qr.addRequestToQueue(cmd)
-			if len(qr.runQueue) == 1 && qr.runnerIsAvailable {
-				qr.runNextCommandInQueue()
+			if strings.Compare(string(response.RunId), "5") == 0 {
+				//log.Printf("*****  runRequest added to q: runid 5, state:%s, qlen:%d", response.State.String(), len(qr.q))
+				//if len(qr.q) != 1 {
+				//	log.Printf("********** is %s is on the queue in front of 5", qr.q[0].id)
+				//}
 			}
+			if len(qr.q) == 1 && qr.runnerAvail {
+				//if strings.Compare(string(response.RunId), "5") == 0 {
+				//	log.Printf("**********  runNext from Run() runid 5, state:%s, qlen:%d", response.State.String(), len(qr.q))
+				//}
+				response = qr.runNextCommandInQueue()
+			}
+			//if strings.Compare(string(response.RunId), "5") == 0 {
+			//	log.Printf("********** back from runNext 5, state:%s, err:%s, len q:%d", response.State.String(), response.Error, len(qr.q))
+			//}
 			qr.runResponseCh <- response
 
 		case <-qr.notifyRunnerAvailCh:
-			qr.runnerIsAvailable = true
-			if len(qr.runQueue) > 0 {
+			qr.runnerAvail = true
+			if len(qr.q) > 0 {
+				//if strings.Compare(string(qr.q[0].id), "5") == 0 {
+				//	log.Printf("***** running 5 because runner available, len q:%d", len(qr.q))
+				//}
 				qr.runNextCommandInQueue()
 			}
 
-		case qRunId := <-qr.statusRequestsCh:
-			mapEntry, ok := qr.queueIdToRunnerIdMap[string(qRunId)]
-			qr.getRunStatus(mapEntry, qRunId, ok)
+		case qRunId := <-qr.statusRequestCh:
+			s := qr.getRunStatus(qRunId)
+			qr.statusResponseCh <- s
 
+		case <-qr.statusAllRequestCh:
+			a := qr.getStatusAll()
+			qr.statusAllResponseCH <- a
+
+		case id := <-qr.abortRequestCh:
+			s := qr.abortRun(id)
+			qr.abortResponseCh <- s
+
+		case id := <-qr.eraseRequestCh:
+			err := qr.eraseRun(id)
+			qr.eraseResponseCh <- err
 		}
+
 	}
 }
 
 // If there is room on the queue, assign a new runid and add the request to the queue.
 // Otherwise return queue full error message
-func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) requestResponse {
+func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) runner.ProcessStatus {
 
-	if len(qr.runQueue) == qr.maxQueueLen {
+	if len(qr.q) == qr.maxQLen {
 		// the queue is full
 		s := runner.ProcessStatus{State: runner.FAILED, Error: QueueFullMsg}
-		return requestResponse{status: &s, err: fmt.Errorf(QueueFullMsg)}
+		return s
 	}
 
 	// add the request to the queue
 	runId := runner.RunId(strconv.Itoa(qr.nextRunId))
 	commandAndId := commandAndId{id: runId, cmd: cmd}
-	qr.runQueue = append(qr.runQueue, commandAndId)
+	qr.q = append(qr.q, commandAndId)
 
-	qr.queueIdToRunnerIdMap[string(runId)] = mapEntry{state: runner.PENDING} // put runner's runid in the map
+	s := runner.ProcessStatus{State: runner.PENDING}
+	qr.qIdToRunnerId[string(runId)] = s // put runner's runid in the map
 
 	qr.nextRunId++ // for next run request
 
-	// use the request's response channel to return the run id and 'pending' status
-	s := runner.ProcessStatus{RunId: runId, State: runner.PENDING}
-	return requestResponse{status: &s, err: nil}
+	return qr.makeStatusWithQId(runId, s)
 
 }
 
 // Run the first request on the queue and remove it from the queue
-func (qr *QueueingRunner) runNextCommandInQueue() {
+func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 
-	qr.runnerIsAvailable = false
+	qr.runnerAvail = false
 
-	request := qr.runQueue[0]
-	rStatus, err := qr.aRunner.Run(request.cmd) // run the command
+	// pop any aborted requests off the queue
+	for len(qr.q) > 0 && qr.qIdToRunnerId[string(qr.q[0].id)].State == runner.ABORTED {
+		qr.q = qr.q[1:]
+	}
+	if len(qr.q) == 0 {
+		return runner.ProcessStatus{}
+	}
+
+	request := qr.q[0]
+	qr.q = qr.q[1:] // pop the top request off the queue
+
+	rStatus, err := qr.delegate.Run(request.cmd) // run the command
 	if err != nil {
-		mapEntry := mapEntry{state: runner.BADREQUEST, errorMsg: err.Error()}
-		qr.queueIdToRunnerIdMap[string(request.id)] = mapEntry // update the map entry with the current state
-		qr.runnerIsAvailable = true
-		return
+		if err != nil {
+			rStatus = qr.putErrorMsgInProcessStatus(rStatus, err.Error())
+		}
+		qr.runnerAvail = true
 	}
 
 	// update the map entry with the current state
-	qr.queueIdToRunnerIdMap[string(request.id)] = mapEntry{runnerRunId: rStatus.RunId, state: rStatus.State}
+	qr.qIdToRunnerId[string(request.id)] = rStatus
 
-	qr.runQueue = qr.runQueue[1:] // pop the top request off the queue
+	return qr.makeStatusWithQId(request.id, rStatus)
 }
 
 // Status get the status of a run.
 func (qr *QueueingRunner) Status(qRunId runner.RunId) (runner.ProcessStatus, error) {
 
-	qr.statusRequestsCh <- qRunId // block next status request
+	qr.statusRequestCh <- qRunId // block next status request
 
-	statusResponse := <-qr.statusResponseCh // wait till get the status
+	s := <-qr.statusResponseCh // wait till get the status
 
-	return *statusResponse.status, statusResponse.err
+	return s, nil
 }
 
 // the event loop is triggering getting the status
-func (qr *QueueingRunner) getRunStatus(entry mapEntry, qRunId runner.RunId, foundMapEntry bool) {
-	var s runner.ProcessStatus
-	var err error
-	defer func() {
-		qr.statusResponseCh <- requestResponse{status: &s, err: err} // put the response on the channel
-	}()
+func (qr *QueueingRunner) getRunStatus(qRunId runner.RunId) runner.ProcessStatus {
 
-	if !foundMapEntry {
-		s = runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
-		return
+	entry, ok := qr.qIdToRunnerId[string(qRunId)]
+
+	//if qRunId == runner.RunId("5") || qRunId == runner.RunId("4") {
+	//	log.Printf("***** getting status: runid:%s, state:%s, len(q):%d", string(entry.RunId), entry.State.String(), len(qr.q))
+	//}
+
+	if !ok {
+		return runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
 	}
 
-	if entry.state == runner.PENDING {
-		s = runner.ProcessStatus{RunId: qRunId, State: runner.PENDING}
-		return
+	if entry.State == runner.PENDING || entry.State.IsDone() {
+		return qr.makeStatusWithQId(qRunId, entry)
 	}
 
-	if entry.state == runner.BADREQUEST {
-		s = runner.ProcessStatus{RunId: qRunId, State: runner.BADREQUEST, Error: entry.errorMsg}
-		return
+	// get the current status from the runner
+	s, err := qr.delegate.Status(entry.RunId)
+
+	if err != nil {
+		s = qr.putErrorMsgInProcessStatus(s, err.Error())
 	}
 
-	s, err = qr.aRunner.Status(entry.runnerRunId) // get the current status from runner
+	qr.qIdToRunnerId[string(qRunId)] = s
 
-	s.RunId = runner.RunId(qRunId) //overwrite the runner's runid with the queuing runner's runid
+	return qr.makeStatusWithQId(qRunId, s)
 }
 
 // Current status of all runs, running and finished, excepting any Erase()'s runs.
 func (qr *QueueingRunner) StatusAll() ([]runner.ProcessStatus, error) {
-	return []runner.ProcessStatus{runner.ProcessStatus{}}, fmt.Errorf(UnspportedFeatureMsg)
+	qr.statusAllRequestCh <- struct{}{}
+
+	a := <-qr.statusAllResponseCH
+	return a, nil
+}
+
+func (qr *QueueingRunner) getStatusAll() []runner.ProcessStatus {
+	var rVal []runner.ProcessStatus
+	for qId, s := range qr.qIdToRunnerId {
+		r := qr.makeStatusWithQId(runner.RunId(qId), s)
+		rVal = append(rVal, r)
+	}
+
+	return rVal
+}
+
+func (qr *QueueingRunner) makeStatusWithQId(qId runner.RunId, s runner.ProcessStatus) runner.ProcessStatus {
+	r := runner.ProcessStatus{RunId: runner.RunId(qId),
+		State:     s.State,
+		StdoutRef: s.StdoutRef,
+		StderrRef: s.StderrRef,
+		ExitCode:  s.ExitCode,
+		Error:     s.Error}
+	return r
+}
+
+func (qr *QueueingRunner) putErrorMsgInProcessStatus(ps runner.ProcessStatus, msg string) runner.ProcessStatus {
+	if strings.Compare(ps.Error, "") == 0 {
+		ps.Error = fmt.Sprintf("%s", msg)
+	} else {
+		ps.Error = fmt.Sprintf("%s, %s", ps.Error, msg)
+	}
+	return ps
+
 }
 
 // Kill the queued run if no runid is supplied kill all runs.
-func (qr *QueueingRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
-	//TODO implement killing one run
-	return runner.ProcessStatus{RunId: run}, fmt.Errorf(UnspportedFeatureMsg)
+func (qr *QueueingRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+	qr.abortRequestCh <- runId
+
+	s := <-qr.abortResponseCh
+
+	return s, nil
+}
+
+func (qr *QueueingRunner) abortRun(runId runner.RunId) runner.ProcessStatus {
+	qs, ok := qr.qIdToRunnerId[string(runId)]
+	if !ok {
+		return runner.ProcessStatus{RunId: runId, State: runner.BADREQUEST, Error: UnknownRunIdMsg}
+	}
+
+	if qs.State.IsDone() {
+		// if its already done, don't do anything, return it's status
+		return qr.makeStatusWithQId(runId, qs)
+	}
+
+	if qs.State == runner.PENDING {
+		qs.State = runner.ABORTED
+	} else {
+		rs, err := qr.delegate.Abort(qs.RunId)
+		if err != nil {
+			qs = qr.putErrorMsgInProcessStatus(rs, err.Error())
+		}
+		qr.qIdToRunnerId[string(runId)] = qs
+	}
+
+	retS := qr.makeStatusWithQId(runId, qs)
+
+	return retS
 
 }
 
 // Prunes the run history so StatusAll() can return a reasonable number of runs.
-func (qr *QueueingRunner) Erase(run runner.RunId) error {
-	return fmt.Errorf(UnspportedFeatureMsg)
+func (qr *QueueingRunner) Erase(runId runner.RunId) error {
+	qr.eraseRequestCh <- runId
+
+	e := <-qr.eraseResponseCh
+
+	return e
+}
+
+func (qr *QueueingRunner) eraseRun(runId runner.RunId) error {
+	rs, ok := qr.qIdToRunnerId[string(runId)]
+
+	if !ok {
+		return fmt.Errorf(UnknownRunIdMsg)
+	}
+
+	if !rs.State.IsDone() {
+		return fmt.Errorf(RequestIsRunning, runId)
+	}
+
+	delete(qr.qIdToRunnerId, string(runId))
+
+	return nil
 }

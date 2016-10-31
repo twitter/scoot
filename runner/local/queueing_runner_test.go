@@ -18,6 +18,8 @@ import (
 type testEnv struct {
 	commandRunner runner.Runner
 	waitGroup     *sync.WaitGroup
+	qr            *QueueingRunner
+	maxQLen       int
 }
 
 const errorMsgFromRunner = "Error in fakeRunner Run()"
@@ -29,21 +31,15 @@ const errorMsgFromRunner = "Error in fakeRunner Run()"
 // Wait 1ms then verify that the second run request was run.
 func TestQueueing2Messages(t *testing.T) {
 
-	runnerAvailableCh := make(chan struct{})
-	testEnv, err := setup(runnerAvailableCh, false)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+	testEnv := setup(false, 10, t)
 	defer teardown(testEnv)
 
-	ctx := context.TODO()
-
-	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 10, runnerAvailableCh).(*QueueingRunner)
+	qr := testEnv.qr
 
 	testEnv.waitGroup.Add(1) // set the pause condition
 
 	// send the first command - it should pause
-	run1, _ := validateRunRequest("1st Run()", []string{"pause", "complete 0"}, []runner.ProcessState{runner.PENDING}, "", qr, t)
+	run1, _ := validateRunRequest("1st Run()", []string{"pause", "complete 0"}, []runner.ProcessState{runner.PREPARING}, "", qr, t)
 
 	// send a second command
 	run2, _ := validateRunRequest("2nd Run()", []string{"complete 1"}, []runner.ProcessState{runner.PENDING}, "", qr, t)
@@ -69,16 +65,10 @@ func TestQueueing2Messages(t *testing.T) {
 // 5. unpause the first command from 3 and let the queued empty again
 // 6. verify that the runIds now go to 9
 func TestQueueingMoreThanMaxMessage(t *testing.T) {
-	runnerAvailableCh := make(chan struct{})
-	testEnv, err := setup(runnerAvailableCh, false)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+
+	testEnv := setup(false, 4, t)
 	defer teardown(testEnv)
-
-	ctx := context.TODO()
-
-	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 4, runnerAvailableCh).(*QueueingRunner)
+	qr := testEnv.qr
 
 	testEnv.waitGroup.Add(1) // set the pause condition
 
@@ -86,7 +76,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 
 	// phase1: -----------------fill up the queue and send one extra overflow request
 	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
-	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
 	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
 
 	// send commands to fill up the queue
@@ -117,7 +107,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	// wait for the first run to complete
 	waitForStatus("phase2, wait for 1st run complete:", runner.RunId("0"), []runner.ProcessState{runner.COMPLETE}, 2*time.Millisecond, qr, t)
 	// wait for the requests to be placed on the queue
-	waitForStatus("phase2, wiat for 4th run complete:", runner.RunId("4"), []runner.ProcessState{runner.COMPLETE}, 10*time.Millisecond, qr, t)
+	waitForStatus("phase2, wait for 4th run complete:", runner.RunId("4"), []runner.ProcessState{runner.COMPLETE}, 10*time.Millisecond, qr, t)
 
 	// phase 3: ----------- verify runids
 	// validate that runids only go up to 4 (0th run started immediately, then queue held 1-4)
@@ -125,7 +115,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 
 	// phase 4: ------------refill the queue and send one extra overflow request
 	testEnv.waitGroup.Add(1)
-	validateRunRequest("phase4, 1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	validateRunRequest("phase4, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
 	waitForStatus("phase4, wait for 1st run running:", runner.RunId("5"), []runner.ProcessState{runner.RUNNING}, 2*time.Millisecond, qr, t)
 
 	for i := 1; i < 5; i++ {
@@ -143,7 +133,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	// wait for the 5th run (first run in second set) to complete
 	waitForStatus("phase5, wait for 1st run complete:", runner.RunId("5"), []runner.ProcessState{runner.COMPLETE}, 2*time.Millisecond, qr, t)
 
-	waitForStatus("phase5, wait for 4th run complete:", runner.RunId("9"), []runner.ProcessState{runner.COMPLETE}, 10*time.Millisecond, qr, t)
+	waitForStatus("phase5, wait for 4th run complete:", runner.RunId("9"), []runner.ProcessState{runner.COMPLETE}, 20*time.Millisecond, qr, t)
 
 	// phase 6: ------------- validate that the runids only go to 9
 	validateRunIds("phase 6", 9, qr, t)
@@ -156,26 +146,20 @@ func validateRunIds(tagPrefix string, maxRunId int, qr *QueueingRunner, t *testi
 		validateStatus(tag, runner.RunId(strconv.Itoa(i)), "", []runner.ProcessState{runner.COMPLETE}, qr, t)
 	}
 	tag := fmt.Sprintf("%s RunId %d should not exist", tagPrefix, maxRunId+1)
-	validateStatus(tag, runner.RunId(maxRunId+1), "", []runner.ProcessState{runner.BADREQUEST}, qr, t)
+	validateStatus(tag, runner.RunId(maxRunId+1), UnknownRunIdMsg, []runner.ProcessState{runner.BADREQUEST}, qr, t)
 }
 
 func TestUnknownRunIdInStatusRequest(t *testing.T) {
-	runnerAvailableCh := make(chan struct{})
-	testEnv, err := setup(runnerAvailableCh, false)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+
+	testEnv := setup(false, 4, t)
 	defer teardown(testEnv)
-
-	ctx := context.TODO()
-
-	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 4, runnerAvailableCh).(*QueueingRunner)
+	qr := testEnv.qr
 
 	// send the first command telling sim execer to pause
 	testEnv.waitGroup.Add(1)
 	var args [6][]string
 	args[0] = []string{"pause", "complete 0"}
-	validateRunRequest("1st Run():", args[0], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	validateRunRequest("1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
 
 	for i := 1; i < 3; i++ {
 		// send a second command
@@ -184,38 +168,181 @@ func TestUnknownRunIdInStatusRequest(t *testing.T) {
 		validateRunRequest(tag, args[i], []runner.ProcessState{runner.PENDING}, "", qr, t)
 	}
 
-	expectedStatus := []runner.ProcessState{runner.BADREQUEST}
-	processStatus := validateStatus("unknown runID:", "badRunId", "", expectedStatus, qr, t)
-	if strings.Compare(UnknownRunIdMsg, processStatus.Error) != 0 || strings.Compare("badRunId", string(processStatus.RunId)) != 0 {
-		t.Fatalf("Expected '%s' message or '%s' runid, got '%s' message and '%s' runid", UnknownRunIdMsg, "badRunId", processStatus.Error, string(processStatus.RunId))
-	}
+	validateStatus("unknown runID:", "badRunId", UnknownRunIdMsg, []runner.ProcessState{runner.BADREQUEST}, qr, t)
+	testEnv.waitGroup.Done()
 }
 
 func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
-	testEnv, err := setup(nil, true)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+
+	testEnv := setup(true, 4, t)
 	defer teardown(testEnv)
+	qr := testEnv.qr
 
-	ctx := context.TODO()
+	validateRunRequest("Run():", []string{"Command:", "Run", "return", "error", "test"}, []runner.ProcessState{runner.BADREQUEST}, errorMsgFromRunner, qr, t)
+}
 
-	qr := NewQueuingRunner(ctx, testEnv.commandRunner, 4, nil).(*QueueingRunner)
+func SkipTestStatusAll(t *testing.T) {
 
-	// send the first command telling sim execer to pause
-	status, _ := validateRunRequest("Run():", []string{"Command:", "Run", "return", "error", "test"}, []runner.ProcessState{runner.PENDING}, "", qr, t)
-	time.Sleep(2 * time.Millisecond)
-	validateStatus("Status():", status.RunId, errorMsgFromRunner, []runner.ProcessState{runner.BADREQUEST}, qr, t)
+	testEnv := setup(false, 10, t)
+	defer teardown(testEnv)
+	qr := testEnv.qr
+
+	testEnv.waitGroup.Add(1) // set the pause condition
+
+	// put commands in the queue with the first command paused
+	var args [6][]string
+
+	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
+
+	for i := 1; i < 5; i++ {
+		// send a second command
+		args[i] = []string{"complete " + strconv.Itoa(i)}
+		tag := fmt.Sprintf("phase1, Run() %d:", i)
+		validateRunRequest(tag, args[i], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	}
+
+	// check the status
+	statuss := qr.getStatusAll()
+
+	if len(statuss) != 5 {
+		t.Fatalf("Wrong length on statusAll response: expected 5, got %d", len(statuss))
+	}
+
+	if statuss[0].State != runner.RUNNING && statuss[0].State != runner.PREPARING && statuss[0].State != runner.PENDING {
+		t.Fatalf("Wrong statuss[0]: expected Running, Preparing or Pending, got %s", statuss[0].State)
+	}
+
+	for i := 1; i < 5; i++ {
+		if statuss[i].State != runner.PENDING {
+			t.Fatalf("Wrong statuss[%d]: expected Pending, got %s", i, statuss[i].State)
+		}
+	}
+	testEnv.waitGroup.Done()
+
+}
+
+func SkipTestAbortTop2ReuqestsWhenPaused(t *testing.T) {
+	testEnv := setup(false, 10, t)
+	defer teardown(testEnv)
+	qr := testEnv.qr
+
+	testEnv.waitGroup.Add(1) // set the pause condition
+
+	// put commands in the queue with the first command paused
+	var args [6][]string
+
+	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
+
+	for i := 1; i < 5; i++ {
+		// send a second command
+		args[i] = []string{"complete " + strconv.Itoa(i)}
+		tag := fmt.Sprintf("phase1, Run() %d:", i)
+		validateRunRequest(tag, args[i], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	}
+
+	for i := 0; i < 2; i++ {
+		s, err := qr.Abort(runner.RunId(strconv.Itoa(i)))
+
+		if err != nil {
+			t.Fatalf("Error aborting run(%d):'%s'", i, err.Error())
+		}
+
+		if s.State != runner.ABORTED {
+			t.Fatalf("Aborted run(%d) did not return 'Aborted' state, got: '%s'", i, s.State)
+		}
+
+		s, err = qr.Status(runner.RunId(strconv.Itoa(i)))
+		if err != nil {
+			t.Fatalf("Error getting status of run(%d):'%s'", i, err.Error())
+		}
+		if s.State != runner.ABORTED {
+			t.Fatalf("Error getting status of run(%d) expected state 'Aborted', got '%s'", i, s.State)
+		}
+
+	}
+
+	testEnv.waitGroup.Done()
+
+	sAll, err := qr.StatusAll()
+
+	if err != nil {
+		t.Fatalf("Error getting status All '%s'", err.Error())
+	}
+
+	if sAll[0].State != runner.ABORTED {
+		t.Fatalf("Error, statusAll state for run(0), expected 'Aborted', got '%s'", sAll[0].State)
+	}
+	if sAll[1].State != runner.ABORTED {
+		t.Fatalf("Error, statusAll state for run(1), expected 'Aborted', got '%s'", sAll[1].State)
+	}
+	for i := 2; i < 5; i++ {
+		if sAll[i].State == runner.ABORTED {
+			t.Fatalf("Error, statusAll state for run(%d), expected anything but 'Aborted', got 'Aborted'", i)
+		}
+	}
+}
+
+func SkipTestAbortingFirst3RequestsInQueue(t *testing.T) {
+	testEnv := setup(false, 10, t)
+	defer teardown(testEnv)
+	qr := testEnv.qr
+
+	testEnv.waitGroup.Add(1) // set the pause condition
+
+	// put commands in the queue with the first command paused
+	var args [6][]string
+
+	args[0] = []string{"pause", "complete 0"} // send the first command - it should pause
+	validateRunRequest("phase1, 1st Run():", args[0], []runner.ProcessState{runner.PREPARING}, "", qr, t)
+	waitForStatus("phase1, wait for first run running:", runner.RunId("0"), []runner.ProcessState{runner.RUNNING}, 10*time.Millisecond, qr, t)
+
+	for i := 1; i < 5; i++ {
+		// send a second command
+		args[i] = []string{"complete " + strconv.Itoa(i)}
+		tag := fmt.Sprintf("phase1, Run() %d:", i)
+		validateRunRequest(tag, args[i], []runner.ProcessState{runner.PENDING}, "", qr, t)
+	}
+
+	for i := 0; i < 3; i++ {
+		s, err := qr.Abort(runner.RunId(strconv.Itoa(i)))
+
+		if err != nil {
+			t.Fatalf("Error aborting run (%d), %s", i, err.Error())
+		}
+		if s.State != runner.ABORTED {
+			t.Fatalf("Error expected Aborted state for run(%d), got '%s'", i, s.State)
+		}
+	}
+
+	// let the rest of the run requests run
+	testEnv.waitGroup.Done()
+
+	sAll, err := qr.StatusAll()
+
+	if err != nil {
+		t.Fatalf("Error getting status All '%s'", err.Error())
+	}
+
+	for i := 3; i < 5; i++ {
+		if sAll[i].State == runner.ABORTED {
+			t.Fatalf("Error, statusAll state for run(%d), expected anything but 'Aborted', got 'Aborted'", i)
+		}
+	}
+
 }
 
 func validateRunRequest(tag string, args []string, expectedStates []runner.ProcessState, expectedErrorClause string, qr *QueueingRunner, t *testing.T) (runner.ProcessStatus, error) {
-	cmd := &runner.Command{Argv: args[:], Timeout: 30 * time.Second}
+	cmd := &runner.Command{Argv: args[:], Timeout: 30 * time.Minute}
 	status, err := qr.Run(cmd)
-	if err != nil && !strings.Contains(err.Error(), expectedErrorClause) {
-		t.Fatalf("%s:Run request %v. Expected error:'%s', got error: '%s'\n", tag, args, expectedErrorClause, err.Error())
+	if err != nil {
+		t.Fatalf("%s:Run request %v. Expected nil error,  got error: '%s'\n", tag, args, err.Error())
 	}
-	if strings.Compare(expectedErrorClause, "") != 0 && err == nil {
-		t.Fatalf("%s: Run request %v. Expected error:'%s', got nil\n", tag, args, expectedErrorClause)
+	if strings.Compare(expectedErrorClause, status.Error) != 0 {
+		t.Fatalf("%s: Run request %v. Expected error:'%s', got %s\n", tag, args, expectedErrorClause, status.Error)
 	}
 	if len(expectedStates) == 0 {
 		return status, err // don't check the state
@@ -232,8 +359,11 @@ func validateRunRequest(tag string, args []string, expectedStates []runner.Proce
 
 func validateStatus(tag string, runId runner.RunId, expectedErrorClause string, expectedStates []runner.ProcessState, qr *QueueingRunner, t *testing.T) runner.ProcessStatus {
 	status, err := qr.Status(runId)
-	if err != nil && !strings.Contains(err.Error(), expectedErrorClause) {
-		t.Fatalf("%s:Status request error for runId:'%s'. expected nil got: '%s'\n", tag, string(runId), err.Error())
+	if err != nil {
+		t.Fatalf("%s:Run request %s. Expected  nil error,  got error: '%s'\n", tag, string(runId), err.Error())
+	}
+	if strings.Compare(expectedErrorClause, status.Error) != 0 {
+		t.Fatalf("%s: Run request %s. Expected error:'%s', got %s\n", tag, string(runId), expectedErrorClause, status.Error)
 	}
 
 	if len(expectedStates) == 0 {
@@ -279,37 +409,40 @@ func waitForStatus(tag string, runId runner.RunId, allowedStates []runner.Proces
 	}
 }
 
-func setup(runnerAvailableCh chan struct{}, useFakeRunner bool) (*testEnv, error) {
+func setup(useFakeRunner bool, qLen int, t *testing.T) *testEnv {
 
-	if useFakeRunner {
-		return &testEnv{commandRunner: getFakeRunner()}, nil
-	}
+	runnerAvailableCh := make(chan struct{})
+
+	ctx := context.TODO()
 
 	var runner runner.Runner
 	var wg *sync.WaitGroup
-	runner, wg, err := makeRunnerWithSimExecer(runnerAvailableCh)
-	if err != nil {
-		return &testEnv{commandRunner: runner, waitGroup: wg}, err
+	if useFakeRunner {
+		runner = getFakeRunner()
+	} else {
+		runner, wg = makeRunnerWithSimExecer(runnerAvailableCh, t)
 	}
 
-	return &testEnv{commandRunner: runner, waitGroup: wg}, nil
+	qr := NewQueuingRunner(ctx, runner, qLen, runnerAvailableCh).(*QueueingRunner)
+
+	return &testEnv{commandRunner: runner, waitGroup: wg, qr: qr, maxQLen: qLen}
 
 }
 
-func makeRunnerWithSimExecer(runnerAvailableCh chan struct{}) (runner.Runner, *sync.WaitGroup, error) {
+func makeRunnerWithSimExecer(runnerAvailableCh chan struct{}, t *testing.T) (runner.Runner, *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
 	ex := execers.NewSimExecer(wg)
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
-		return nil, wg, err
+		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
 	}
 
 	outputCreator, err := NewOutputCreator(tempDir)
 	if err != nil {
-		return nil, wg, err
+		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
 	r := NewSimpleReportBackRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator, runnerAvailableCh)
-	return r, wg, nil
+	return r, wg
 }
 
 func teardown(testEnv *testEnv) {
@@ -319,7 +452,7 @@ func teardown(testEnv *testEnv) {
 type fakeRunner struct{}
 
 func (er *fakeRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	return runner.ProcessStatus{}, fmt.Errorf(errorMsgFromRunner)
+	return runner.ProcessStatus{State: runner.BADREQUEST}, fmt.Errorf(errorMsgFromRunner)
 }
 
 // Status checks the status of run.
