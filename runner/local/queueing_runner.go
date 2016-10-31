@@ -2,7 +2,6 @@ package local
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/scootdev/scoot/runner"
@@ -45,6 +44,12 @@ type commandAndId struct {
 //	//errorMsg     string
 //}
 
+type runRequest struct {
+	cmd      *runner.Command
+	statusCh chan runner.ProcessStatus
+	errCh    chan error
+}
+
 type QueueingRunner struct {
 	delegate    runner.Runner
 	maxQLen     int
@@ -54,8 +59,7 @@ type QueueingRunner struct {
 
 	notifyRunnerAvailCh chan struct{} // the runner will use this channel to signal it is available
 
-	runRequestCh  chan *runner.Command // channel for synchronizing calls to Run()
-	runResponseCh chan runner.ProcessStatus
+	runCh chan runRequest
 
 	statusRequestCh  chan runner.RunId         // channel for synchronizing status requests
 	statusResponseCh chan runner.ProcessStatus // channel for unblocking the status requests
@@ -83,13 +87,7 @@ func NewQueuingRunner(context context.Context,
 	runnerAvailableCh chan struct{}) runner.Runner {
 
 	qRunner := &QueueingRunner{
-		delegate:            theRunner,
-		maxQLen:             maxQueueLen,
-		nextRunId:           0,
-		runnerAvail:         true,
-		notifyRunnerAvailCh: runnerAvailableCh,
-		runRequestCh:        make(chan *runner.Command),
-		runResponseCh:       make(chan runner.ProcessStatus),
+		runCh:               make(chan runRequest),
 		statusRequestCh:     make(chan runner.RunId),
 		statusResponseCh:    make(chan runner.ProcessStatus),
 		statusAllRequestCh:  make(chan struct{}),
@@ -98,6 +96,12 @@ func NewQueuingRunner(context context.Context,
 		abortResponseCh:     make(chan runner.ProcessStatus),
 		eraseRequestCh:      make(chan runner.RunId),
 		eraseResponseCh:     make(chan error),
+
+		delegate:            theRunner,
+		maxQLen:             maxQueueLen,
+		nextRunId:           0,
+		runnerAvail:         true,
+		notifyRunnerAvailCh: runnerAvailableCh,
 		qIdToRunnerId:       make(map[string]runner.ProcessStatus),
 		ctx:                 context,
 	}
@@ -113,15 +117,9 @@ func NewQueuingRunner(context context.Context,
 // queued the request's runid, its queued status and any error will be returned
 // via the request's callback channel
 func (qr *QueueingRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	log.Printf("local.queueingRunner: in qr.Run() args:%v\n", cmd.Argv)
-
-	// put the request on the process requests channel
-	qr.runRequestCh <- cmd
-
-	// get and return the 'on queue' response from this request's channel
-	status := <-qr.runResponseCh
-
-	return status, nil
+	statusCh, errCh := make(chan runner.ProcessStatus), make(chan error)
+	qr.runCh <- runRequest{cmd, statusCh, errCh}
+	return <-statusCh, <-errCh
 }
 
 // The 'events' include: Run() request, Status() request, or a signal that the runner is available.
@@ -136,9 +134,10 @@ func (qr *QueueingRunner) eventLoop() {
 			// stop processing commands
 			return
 
-		case cmd := <-qr.runRequestCh:
-			response := qr.addRequestToQueue(cmd)
-			qr.runResponseCh <- response
+		case req := <-qr.runCh:
+			st, err := qr.addRequestToQueue(req.cmd)
+			req.statusCh <- st
+			req.errCh <- err
 
 		case <-qr.notifyRunnerAvailCh:
 			qr.runnerAvail = true
@@ -169,25 +168,23 @@ func (qr *QueueingRunner) eventLoop() {
 
 // If there is room on the queue, assign a new runid and add the request to the queue.
 // Otherwise return queue full error message
-func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) runner.ProcessStatus {
+func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) (runner.ProcessStatus, error) {
 
 	if len(qr.q) >= qr.maxQLen {
 		// the queue is full
-		s := runner.ProcessStatus{State: runner.FAILED, Error: QueueFullMsg}
-		return s
+		return runner.ProcessStatus{}, fmt.Errorf(QueueFullMsg)
 	}
 
 	// add the request to the queue
 	runId := runner.RunId(strconv.Itoa(qr.nextRunId))
-	commandAndId := commandAndId{id: runId, cmd: cmd}
-	qr.q = append(qr.q, commandAndId)
+	qr.nextRunId++ // for next run request
+
+	qr.q = append(qr.q, commandAndId{id: runId, cmd: cmd})
 
 	s := runner.ProcessStatus{State: runner.PENDING}
 	qr.qIdToRunnerId[string(runId)] = s // put runner's runid in the map
 
-	qr.nextRunId++ // for next run request
-
-	return qr.makeStatusWithQId(runId, s)
+	return qr.makeStatusWithQId(runId, s), nil
 
 }
 

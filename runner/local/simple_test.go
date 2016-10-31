@@ -116,6 +116,10 @@ func aborted() runner.ProcessStatus {
 	return runner.AbortStatus(runner.RunId(""))
 }
 
+func badRequest(errorText string) runner.ProcessStatus {
+	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
+}
+
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, expected, args...)
