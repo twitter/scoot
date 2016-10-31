@@ -2,6 +2,7 @@ package local
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -9,13 +10,14 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 type testEnv struct {
-	wg   *sync.WaitGroup
-	qr   *QueueingRunner
-	size int
+	chaos *runners.ChaosRunner
+	wg    *sync.WaitGroup
+	qr    *QueueingRunner
 }
 
 const errorMsgFromRunner = "Error in fakeRunner Run()"
@@ -26,7 +28,7 @@ const errorMsgFromRunner = "Error in fakeRunner Run()"
 // Then send a signal to allow the first (paused) run request to finish.
 // Wait 1ms then verify that the second run request was run.
 func TestQueueing2Messages(t *testing.T) {
-	testEnv := setup(false, 10, t)
+	testEnv := setup(10, t)
 	defer teardown(testEnv)
 	qr := testEnv.qr
 	testEnv.wg.Add(1) // set the pause condition
@@ -40,7 +42,7 @@ func TestQueueing2Messages(t *testing.T) {
 }
 
 func TestQueueingMoreThanMaxMessage(t *testing.T) {
-	testEnv := setup(false, 4, t)
+	testEnv := setup(4, t)
 	defer teardown(testEnv)
 	qr := testEnv.qr
 	testEnv.wg.Add(1) // set the pause condition
@@ -91,21 +93,36 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 }
 
 func TestUnknownRunIdInStatusRequest(t *testing.T) {
-	testEnv := setup(false, 4, t)
+	testEnv := setup(4, t)
 	defer teardown(testEnv)
 	qr := testEnv.qr
 
 	assertWait(t, qr, runner.RunId("not a real run id"), badRequest(UnknownRunIdMsg), "n/a")
 }
 
-// func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
+func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
 
-// 	testEnv := setup(true, 4, t)
-// 	defer teardown(testEnv)
-// 	qr := testEnv.qr
+	testEnv := setup(4, t)
+	defer teardown(testEnv)
+	qr := testEnv.qr
+	testEnv.wg.Add(1)
 
-// 	validateRunRequest("Run():", []string{"Command:", "Run", "return", "error", "test"}, []runner.ProcessState{runner.BADREQUEST}, errorMsgFromRunner, qr, t)
-// }
+	// fill the queue
+	run1 := assertRun(t, qr, running(), "pause", "complete 0")
+	run2 := assertRun(t, qr, pending(), "complete 0")
+	run3 := assertRun(t, qr, pending(), "complete 0")
+	run4 := assertRun(t, qr, pending(), "complete 0")
+	run5 := assertRun(t, qr, pending(), "complete 0")
+
+	// Now kill the connection to the runner
+	testEnv.chaos.SetError(fmt.Errorf("can't even"))
+	testEnv.wg.Done()
+	assertWait(t, qr, run1, complete(0), "n/a")
+	assertWait(t, qr, run2, failed("huh"), "n/a")
+	assertWait(t, qr, run3, failed("huh"), "n/a")
+	assertWait(t, qr, run4, failed("huh"), "n/a")
+	assertWait(t, qr, run5, failed("huh"), "n/a")
+}
 
 // func SkipTestStatusAll(t *testing.T) {
 
@@ -261,23 +278,17 @@ func TestUnknownRunIdInStatusRequest(t *testing.T) {
 
 // }
 
-func setup(useFakeRunner bool, size int, t *testing.T) *testEnv {
+func setup(size int, t *testing.T) *testEnv {
 
 	runnerAvailableCh := make(chan struct{})
 
 	ctx := context.TODO()
 
-	var runner runner.Runner
-	var wg *sync.WaitGroup
-	if useFakeRunner {
-		runner = nil
-	} else {
-		runner, wg = makeRunnerWithSimExecer(runnerAvailableCh, t)
-	}
+	runner, wg := makeRunnerWithSimExecer(runnerAvailableCh, t)
+	chaos := runners.NewChaosRunner(runner)
+	qr := NewQueuingRunner(ctx, chaos, size, runnerAvailableCh).(*QueueingRunner)
 
-	qr := NewQueuingRunner(ctx, runner, size, runnerAvailableCh).(*QueueingRunner)
-
-	return &testEnv{wg: wg, qr: qr, size: size}
+	return &testEnv{chaos: chaos, wg: wg, qr: qr}
 }
 
 func makeRunnerWithSimExecer(runnerAvailableCh chan struct{}, t *testing.T) (runner.Runner, *sync.WaitGroup) {
