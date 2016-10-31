@@ -63,8 +63,9 @@ func (p *RepoPool) loop() {
 			// buffer of 1 to unblock background get if we're done before it finishes
 			p.getCh = make(chan repoAndError, 1)
 			go func() {
-				log.Println("In RepoPool's loop Get and send to getCh")
+				log.Println("RepoPool's gofunc - getter.Get")
 				r, err := p.getter.Get()
+				log.Println("RepoPool's gofunc - send status into getCh")
 				p.getCh <- repoAndError{r, err}
 			}()
 		}
@@ -78,15 +79,15 @@ func (p *RepoPool) loop() {
 		// Serve, either receiving or sending repos
 		select {
 		case reserveCh <- free:
-			log.Println("Repo reserverd via RepoPool.Get - freeList:", len(p.freeList))
 			p.freeList = p.freeList[1:]
+			log.Println("Repo reserved via reserveCh - freeList:", len(p.freeList))
 		case r := <-p.releaseCh:
-			log.Println("Repo released via RepoPool.Release - freeList:", len(p.freeList))
 			p.freeList = append(p.freeList, r)
+			log.Println("Repo released via releaseCh - freeList:", len(p.freeList))
 		case r := <-p.getCh:
-			log.Println("Repo added via getCh <- getter.Get - freeList:", len(p.freeList))
 			p.freeList = append(p.freeList, r)
 			p.getCh = nil
+			log.Println("Repo added via getCh - freeList:", len(p.freeList))
 		case <-p.doneCh:
 			log.Println("RepoPool exiting via doneCh")
 			return

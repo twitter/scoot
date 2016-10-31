@@ -33,8 +33,9 @@ func NewSingleRepoPool(repoGetter RepoGetter, doneCh <-chan struct{}) *RepoPool 
 	//	'Release' the repo into the pool async (this func already returned)
 	singlePool := NewRepoPool(nil, nil, doneCh)
 	go func() {
-		log.Println("In NewSingleRepoPool's Get() and Release() gofunc")
+		log.Println("NewSingleRepoPool's gofunc repoGetter.Get()")
 		r, err := repoGetter.Get()
+		log.Println("NewSingleRepoPool's gofunc singlePool.Release()")
 		singlePool.Release(r, err)
 	}()
 	return singlePool
@@ -47,10 +48,12 @@ func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh <-chan struct{}) *Che
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
+// sci workerserver main entry point (w/ a constantgetter)
 func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh <-chan struct{}) *Checkouter {
 	log.Println("New single repo pool")
 	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
 
+	// TODO this whole section is for adding clones that already exist
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
 	var clones []*repo.Repository
 	fis, _ := ioutil.ReadDir(clonesDir.Dir)
