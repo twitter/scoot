@@ -50,6 +50,7 @@ func runTaskAndLog(
 				TaskDef: %+v, Saga Id: %v, Error: %v`,
 				taskId, task, saga.GetState().SagaId(), err)
 		} else {
+			//TODO: Check error to see if its retryable.
 			return err
 		}
 	}
