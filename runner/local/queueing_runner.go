@@ -171,7 +171,7 @@ func (qr *QueueingRunner) eventLoop() {
 // Otherwise return queue full error message
 func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) runner.ProcessStatus {
 
-	if len(qr.q) == qr.maxQLen {
+	if len(qr.q) >= qr.maxQLen {
 		// the queue is full
 		s := runner.ProcessStatus{State: runner.FAILED, Error: QueueFullMsg}
 		return s
@@ -194,8 +194,6 @@ func (qr *QueueingRunner) addRequestToQueue(cmd *runner.Command) runner.ProcessS
 // Run the first request on the queue and remove it from the queue
 func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 
-	qr.runnerAvail = false
-
 	request := qr.q[0]
 	qr.q = qr.q[1:] // pop the top request off the queue
 
@@ -204,8 +202,9 @@ func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 		if err != nil {
 			rStatus = qr.putErrorMsgInProcessStatus(rStatus, err.Error())
 		}
-		qr.runnerAvail = true
 	}
+
+	qr.runnerAvail = false
 
 	// update the map entry with the current state
 	qr.qIdToRunnerId[string(request.id)] = rStatus

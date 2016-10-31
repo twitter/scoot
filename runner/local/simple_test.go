@@ -100,6 +100,10 @@ func complete(exitCode int) runner.ProcessStatus {
 	return runner.CompleteStatus(runner.RunId(""), exitCode)
 }
 
+func pending() runner.ProcessStatus {
+	return runner.PendingStatus(runner.RunId(""))
+}
+
 func running() runner.ProcessStatus {
 	return runner.RunningStatus(runner.RunId(""), "", "")
 }

@@ -121,6 +121,12 @@ func BadRequestStatus(runId RunId, err error) (r ProcessStatus) {
 	return r
 }
 
+func PendingStatus(runId RunId) (r ProcessStatus) {
+	r.RunId = runId
+	r.State = PENDING
+	return r
+}
+
 func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = RUNNING
