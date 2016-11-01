@@ -29,7 +29,7 @@ func NewRepoPool(getter RepoGetter,
 		reserveCh: make(chan repoAndError),
 		doneCh:    doneCh,
 		freeList:  freeList,
-		size:      0,
+		size:      len(repos),
 		capacity:  capacity,
 	}
 	go p.loop()
