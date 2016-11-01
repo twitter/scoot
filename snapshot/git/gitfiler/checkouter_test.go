@@ -24,7 +24,7 @@ func TestCheckouter(t *testing.T) {
 	}
 	doneCh := make(chan struct{})
 	defer close(doneCh)
-	checkouter := NewRefRepoCloningCheckouter(&ConstantGetter{repo}, tmp, doneCh, 0)
+	checkouter := NewRefRepoCloningCheckouter(&ConstantIniter{repo}, tmp, doneCh, 0)
 	c1, err := checkouter.Checkout(id1)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id1, err)

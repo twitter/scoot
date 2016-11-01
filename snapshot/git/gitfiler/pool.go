@@ -10,8 +10,8 @@ type repoAndError struct {
 	err  error
 }
 
-// NewRepoPool creates a new RepoPool populated with existing repos and a getter that can get new ones
-func NewRepoPool(getter RepoGetter,
+// NewRepoPool creates a new RepoPool populated with existing repos and a initer that can get new ones
+func NewRepoPool(initer RepoIniter,
 	repos []*repo.Repository,
 	doneCh <-chan struct{},
 	capacity int) *RepoPool {
@@ -22,7 +22,7 @@ func NewRepoPool(getter RepoGetter,
 	}
 
 	p := &RepoPool{
-		getter:    getter,
+		initer:    initer,
 		releaseCh: make(chan repoAndError),
 		reserveCh: make(chan repoAndError),
 		doneCh:    doneCh,
@@ -35,16 +35,16 @@ func NewRepoPool(getter RepoGetter,
 }
 
 // RepoPool lets clients Get a Repository for an operation, and then Release it when done
-// RepoPool can create a new Repository by using a supplied RepoGetter.
+// RepoPool can create a new Repository by using a supplied RepoIniter.
 // New repos can be added by the client by Release'ing a new Repository
 // Cf. sync's Pool
 // Supports maximum pool capacity - 0 is unlimited
 type RepoPool struct {
-	getter RepoGetter
+	initer RepoIniter
 
 	releaseCh chan repoAndError
 	reserveCh chan repoAndError
-	getCh     chan repoAndError
+	initCh    chan repoAndError
 	doneCh    <-chan struct{}
 
 	freeList []repoAndError
@@ -65,16 +65,16 @@ func (p *RepoPool) Release(repo *repo.Repository, err error) {
 
 func (p *RepoPool) loop() {
 	for {
-		// kick off a get if: empty, have room, have non-nil getter, aren't getting
+		// kick off a get if: empty, have room, have initer, not initializing
 		if len(p.freeList) == 0 &&
 			(p.capacity == 0 || p.size < p.capacity) &&
-			p.getter != nil &&
-			p.getCh == nil {
+			p.initer != nil &&
+			p.initCh == nil {
 			// buffer of 1 to unblock background get if we're done before it finishes
-			p.getCh = make(chan repoAndError, 1)
+			p.initCh = make(chan repoAndError, 1)
 			go func() {
-				r, err := p.getter.Get()
-				p.getCh <- repoAndError{r, err}
+				r, err := p.initer.Init()
+				p.initCh <- repoAndError{r, err}
 			}()
 		}
 
@@ -90,10 +90,10 @@ func (p *RepoPool) loop() {
 			p.freeList = p.freeList[1:]
 		case r := <-p.releaseCh:
 			p.freeList = append(p.freeList, r)
-		case r := <-p.getCh:
+		case r := <-p.initCh:
 			p.freeList = append(p.freeList, r)
 			p.size++
-			p.getCh = nil
+			p.initCh = nil
 		case <-p.doneCh:
 			return
 		}
