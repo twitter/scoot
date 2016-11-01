@@ -2,55 +2,38 @@ package local
 
 import (
 	"fmt"
-	"golang.org/x/net/context"
 	"strconv"
 
 	"github.com/scootdev/scoot/runner"
 )
 
-// This runner manages multiple (possibly concurrent) run and status requests.
-// One request is run at a time, additional requests are queued till the current request is finished running.
-
-// QueueingRunner is initialized with the runner to use to run the requests, the maximum number of requests to
-// manage on the queue, and the 'callback' channel the runner will use to tell queueing runner that it has
-// completed the last request.
-//
-// When a request is received it is immediately added to the queue.  As the runner becomes available, if
-// if there is are requests on the queue, the top request on the queue is sent to the runner
-//
-// If the max queue length is exceed, QueueingRunner rejects any new request till length of the queue is below
-// the max.
-//
-// QueueingRunner assigns a unique id (run id) to each new request.  The Run() function returns this id and a
-// status indicating if the request has been successfully queued or if the request has been denied (due to queue
-// length exceeded or some other error).
-
-// The status of a request is obtained with the run id.
+// TODO(dbentley): should this be in queue.go
+// TODO(dbentley): should this whole package move to runner/runners?
 
 const QueueFullMsg = "No resources available. Please try later."
 const UnknownRunIdMsg = "Unknown run id."
 const RequestIsRunning = "Run %s is still running, please Abort it first."
 
-// The request queue entries are commandAndId structs
-type commandAndId struct {
-	id  runner.RunId
-	cmd *runner.Command
-}
-
+// QueueingRunner manages a queue of commands.
+// One request is run at a time, via an underlying delegate runner
+// (We expect, for now, the delegate runner will ultimately be a simpleRunner
+// QueueingRunner will reject requests if the queue is full (i.e., its length == its capacity)
 type QueueingRunner struct {
+	// channel for methods to send communication to eventLoop()
 	reqCh chan interface{}
 
+	// delegate that will run (we expect it to ultimately be a simpleRunner)
 	delegate    runner.Runner
-	maxQLen     int
+	capacity    int
 	nextRunId   int // used to assign unique runIds to the run requests
 	runnerAvail bool
 
-	// Runs are in one of three places in our system:
+	// Runs are in one of three meta-states in QueueingRunner:
 	// *) queued
 	// *) errored (we couldn't delegate them)
 	// *) delegated
 
-	// q holds pending commands (and assigned ids)
+	// q holds queued commands (and assigned ids)
 	q []commandAndId
 
 	// errored holds info for runs that have errored.
@@ -58,25 +41,27 @@ type QueueingRunner struct {
 	// or they were aborted before running
 	errored map[runner.RunId]runner.ProcessStatus
 
-	// delegated. Run() returned without an error, so we trust the delegate
-	// to hold their status. We hold both a forward and a reverse mapping.
+	// delegated runs are stored in both qToDel and delToQ. Together, these
+	// form a BiMap (but Go doesn't make that easy), so we have two maps.
 	// qToDel maps IDs in our namespace to IDs in the delegate's namespace
 	// delToQ is vice versa
 	qToDel map[runner.RunId]runner.RunId
 	delToQ map[runner.RunId]runner.RunId
 }
 
-// This must be used to initialize QueueingRunner properly
-func NewQueuingRunner(context context.Context,
-	delegate runner.Runner,
-	maxQueueLen int,
+// NewQueueingRunner creates a new QueueingRunner.
+// delegate will be used to run.
+// capacity is the maximum entries to hold in the queue
+// runnerAvailableCh should send a struct whenever the runner is available
+func NewQueuingRunner(delegate runner.Runner,
+	capacity int,
 	runnerAvailableCh chan struct{}) runner.Runner {
 
 	qRunner := &QueueingRunner{
 		reqCh: make(chan interface{}),
 
 		delegate:  delegate,
-		maxQLen:   maxQueueLen,
+		capacity:  capacity,
 		nextRunId: 0,
 
 		runnerAvail: true,
@@ -132,6 +117,12 @@ func (qr *QueueingRunner) Erase(id runner.RunId) error {
 	return <-errCh
 }
 
+// commandAndId is a command waiting to run in the queue and the ID we've assigned
+type commandAndId struct {
+	id  runner.RunId
+	cmd *runner.Command
+}
+
 // Helper types for sending requests
 type runRequest struct {
 	cmd      *runner.Command
@@ -161,14 +152,16 @@ type eraseRequest struct {
 	errCh chan error
 }
 
-// The 'events' include: Run() request, Status() request, or a signal that the runner is available.
-// Run() events are put on the queue, Status() and runner available events are processed immediately
-// Cycles that don't process Run(), Status() or runner avaialable events (default case) are used to
-// run the next command in the queue.
+type closeRequest struct{}
+
+// Wait for input and respond (and then run the next command if applicable)
 func (qr *QueueingRunner) eventLoop() {
 	for req := range qr.reqCh {
 		switch req := req.(type) {
+		case closeRequest:
+			break
 		case struct{}:
+			// struct{} is what comes from simpleRunner's runnerAvailable channel
 			qr.runnerAvail = true
 		case runRequest:
 			st, err := qr.enqueue(req.cmd)
@@ -188,17 +181,25 @@ func (qr *QueueingRunner) eventLoop() {
 			req.errCh <- err
 		case eraseRequest:
 			req.errCh <- qr.erase(req.id)
+		default:
+			panic(fmt.Errorf("unexpected value on QueueingRunner.reqCh: %T %v", req, req))
 		}
 		if len(qr.q) > 0 && qr.runnerAvail {
 			qr.runNextCommandInQueue()
 		}
+	}
+	if !qr.runnerAvail {
+		// drain reqCh
+		// We need to let our delegate tell us we're available again, then we can close it
+		<-qr.reqCh
+		close(qr.reqCh)
 	}
 }
 
 // If there is room on the queue, assign a new runid and add the request to the queue.
 // Otherwise return queue full error message
 func (qr *QueueingRunner) enqueue(cmd *runner.Command) (runner.ProcessStatus, error) {
-	if len(qr.q) >= qr.maxQLen {
+	if len(qr.q) >= qr.capacity {
 		// the queue is full
 		return runner.ProcessStatus{}, fmt.Errorf(QueueFullMsg)
 	}
@@ -218,7 +219,12 @@ func (qr *QueueingRunner) enqueue(cmd *runner.Command) (runner.ProcessStatus, er
 
 func (qr *QueueingRunner) status(id runner.RunId) (runner.ProcessStatus, error) {
 	if delID, ok := qr.qToDel[id]; ok {
-		return qr.delegate.Status(delID)
+		st, err := qr.delegate.Status(delID)
+		if err != nil {
+			return runner.ProcessStatus{}, err
+		}
+		st.RunId = id
+		return st, nil
 	}
 
 	if st, ok := qr.errored[id]; ok {
@@ -250,12 +256,12 @@ func (qr *QueueingRunner) statusAll() ([]runner.ProcessStatus, error) {
 		r[i].RunId = qID
 	}
 
-	for _, cmdAndId := range qr.q {
-		r = append(r, runner.PendingStatus(cmdAndId.id))
-	}
-
 	for _, st := range qr.errored {
 		r = append(r, st)
+	}
+
+	for _, cmdAndId := range qr.q {
+		r = append(r, runner.PendingStatus(cmdAndId.id))
 	}
 
 	return r, nil
@@ -325,4 +331,9 @@ func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 
 	st.RunId = request.id
 	return st
+}
+
+func (qr *QueueingRunner) Close() error {
+	qr.reqCh <- closeRequest{}
+	return nil
 }
