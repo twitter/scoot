@@ -248,7 +248,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
-		markCompleteOnFailure := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
+		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)
@@ -262,7 +262,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					wf,
 					taskId,
 					taskDef,
-					markCompleteOnFailure,
+					preventRetries,
 					s.stat)
 			},
 			func(err error) {

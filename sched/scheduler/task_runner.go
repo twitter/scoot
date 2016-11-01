@@ -10,7 +10,7 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
-const DeadLetterExitCode = -100
+const DeadLetterExitCode = -200
 
 // Run the task on the specified worker, and update the SagaLog appropriately.  Returns an error if one
 // occurs while running a task or writing to the SagaLog.  This method blocks until all saga messages
