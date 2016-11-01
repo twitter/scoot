@@ -53,18 +53,28 @@ func (s *daemonServer) Echo(ctx context.Context, req *protocol.EchoRequest) (*pr
 }
 
 func (s *daemonServer) CreateSnapshot(ctx context.Context, req *protocol.CreateSnapshotRequest) (*protocol.CreateSnapshotReply, error) {
-	id, err := s.handler.CreateSnapshot(req.Path)
-	return &protocol.CreateSnapshotReply{SnapshotId: id, Error: err.Error()}, nil
+	if id, err := s.handler.CreateSnapshot(req.Path); err == nil {
+		return &protocol.CreateSnapshotReply{SnapshotId: id}, nil
+	} else {
+		return &protocol.CreateSnapshotReply{SnapshotId: id, Error: err.Error()}, nil
+	}
 }
 
 func (s *daemonServer) CheckoutSnapshot(ctx context.Context, req *protocol.CheckoutSnapshotRequest) (*protocol.CheckoutSnapshotReply, error) {
-	err := s.handler.CheckoutSnapshot(runner.SnapshotId(req.SnapshotId), req.Dir)
-	return &protocol.CheckoutSnapshotReply{Error: err.Error()}, nil
+	if err := s.handler.CheckoutSnapshot(runner.SnapshotId(req.SnapshotId), req.Dir); err == nil {
+		return &protocol.CheckoutSnapshotReply{}, nil
+	} else {
+		return &protocol.CheckoutSnapshotReply{Error: err.Error()}, nil
+	}
 }
 
 func (s *daemonServer) Run(ctx context.Context, req *protocol.RunRequest) (*protocol.RunReply, error) {
-	status, err := s.handler.Run(runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.SnapshotId))
-	return &protocol.RunReply{RunId: string(status.RunId), Error: err.Error()}, nil
+	cmd := runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.SnapshotId)
+	if status, err := s.handler.Run(cmd); err == nil {
+		return &protocol.RunReply{RunId: string(status.RunId)}, nil
+	} else {
+		return &protocol.RunReply{RunId: string(status.RunId), Error: err.Error()}, nil
+	}
 }
 
 func (s *daemonServer) Poll(ctx context.Context, req *protocol.PollRequest) (*protocol.PollReply, error) {
