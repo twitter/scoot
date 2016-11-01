@@ -25,13 +25,15 @@ type SimExecer struct {
 // complete <exitcode int>
 //   complete with exitcode
 // pause
-//   pause until the SimExecer's WaitGroup is Done
+//   pause until SimExecer.Resume() is called
 // sleep <millis int>
 //   sleep for millis milliseconds
 // stdout <message>
 //   put <message> in stdout in the response
 // stderr <message>
 //   put <message> in stderr in the response
+// NB: SimExecer is often hid behind an InterceptExecer, so you should pass
+// argv[0] as "#! sim execer" (Cf. intercept.go)
 func (e *SimExecer) Exec(command execer.Command) (execer.Process, error) {
 	steps, err := e.parse(command.Argv)
 	if err != nil {
@@ -163,13 +165,15 @@ type pauseStep struct {
 }
 
 func (s *pauseStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
-	waitCh := make(chan struct{})
+	abortCh := make(chan struct{})
 	go func() {
+		// Waits until this process is stopped (by being aborted)
 		p.Wait()
-		close(waitCh)
+		close(abortCh)
 	}()
+	// wait for the first of being aborted or SimExecer.Resume()
 	select {
-	case <-waitCh:
+	case <-abortCh:
 	case <-s.ch:
 	}
 	return status

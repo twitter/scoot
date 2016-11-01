@@ -52,7 +52,7 @@ type QueueingRunner struct {
 // NewQueueingRunner creates a new QueueingRunner.
 // delegate will be used to run.
 // capacity is the maximum entries to hold in the queue
-// runnerAvailableCh should send a struct whenever the runner is available
+// runnerAvailableCh strobes when the delegate runner is available (from NewSimpleReportBackRunner)
 func NewQueuingRunner(delegate runner.Runner,
 	capacity int,
 	runnerAvailableCh chan struct{}) runner.Runner {

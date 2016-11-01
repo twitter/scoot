@@ -62,7 +62,6 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	for _, id := range runIDs {
 		assertWait(t, qr, id, complete(0), "n/a")
 	}
-	runIDs = nil
 
 	// repeat
 	runID = assertRun(t, qr, running(), "pause", "complete 0")
@@ -87,7 +86,7 @@ func TestUnknownRunIdInStatusRequest(t *testing.T) {
 	qr := env.qr
 
 	st, err := qr.Status(runner.RunId("not a real run id"))
-	if err == nil {
+	if err == nil || !strings.Contains(err.Error(), UnknownRunIdMsg) {
 		t.Fatal("Should not be able to get status", err, st)
 	}
 }
