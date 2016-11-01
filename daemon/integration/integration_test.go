@@ -48,6 +48,7 @@ func TestRunSimpleCommand(t *testing.T) {
 
 // send 2 run commands, where the first one sleeps for a short while to block the second one
 // expected results: first request runs, second request returns an error
+// TODO when the server uses queueing runner, fix the 2nd request to expect queue, not rejection
 func TestRun2Commands(t *testing.T) {
 	// run the first command
 	var statusReq []string = []string{"run", "sleep 10"}
@@ -130,6 +131,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+//TODO update this to use queuing runner
 func getRunner() runner.Runner {
 	wg := &sync.WaitGroup{}
 	ex := execers.NewSimExecer(wg)
