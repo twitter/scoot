@@ -28,6 +28,7 @@ func (c *CliClient) status(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Status of %v is %v", process.RunId, process.State)
+	log.Printf("Status of %v is %v", process.RunId, process.State) // this ends up on stderr
+	fmt.Printf("%s", process.State)                                // this ends up on stdout
 	return nil
 }
