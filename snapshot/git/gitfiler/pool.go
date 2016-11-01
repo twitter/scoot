@@ -1,8 +1,6 @@
 package gitfiler
 
 import (
-	"log"
-
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -74,9 +72,7 @@ func (p *RepoPool) loop() {
 			// buffer of 1 to unblock background get if we're done before it finishes
 			p.getCh = make(chan repoAndError, 1)
 			go func() {
-				log.Println("RepoPool's gofunc - getter.Get")
 				r, err := p.getter.Get()
-				log.Println("RepoPool's gofunc - send status into getCh")
 				p.getCh <- repoAndError{r, err}
 			}()
 		}
@@ -91,17 +87,13 @@ func (p *RepoPool) loop() {
 		select {
 		case reserveCh <- free:
 			p.freeList = p.freeList[1:]
-			log.Println("Repo reserved via reserveCh - freeList:", len(p.freeList))
 		case r := <-p.releaseCh:
 			p.freeList = append(p.freeList, r)
-			log.Println("Repo released via releaseCh - freeList:", len(p.freeList))
 		case r := <-p.getCh:
 			p.freeList = append(p.freeList, r)
 			p.size++
 			p.getCh = nil
-			log.Println("Repo added via getCh - freeList:", len(p.freeList))
 		case <-p.doneCh:
-			log.Println("RepoPool exiting via doneCh")
 			return
 		}
 

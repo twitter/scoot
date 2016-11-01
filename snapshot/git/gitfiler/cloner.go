@@ -40,7 +40,7 @@ func (c *refCloner) Get() (*repo.Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gitfiler.refCloner.clone: error cloning: %v", err)
 	}
-	log.Println("gitfiler.refClones.clone: cloning complete")
+	log.Println("gitfiler.refCloner.clone: Cloning complete")
 
 	return repo.NewRepository(cloneDir.Dir)
 }
