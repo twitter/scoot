@@ -133,6 +133,10 @@ def run(snapshot_id, argv, env=None, timeout_ns=0, src_paths_to_dest_dirs=None, 
   global _client
   if not is_started():
     raise ScootException("Not started.")
+  if env == None:
+    env = {}
+  if src_paths_to_dest_dirs == None:
+    src_paths_to_dest_dirs = {}
   cmd = daemon_pb2.RunRequest.Command(timeout_ns=timeout_ns)
   cmd.argv.extend(argv)
   for key, val in env.iteritems():
@@ -188,27 +192,29 @@ if __name__ == '__main__':
     fail_id = create_snapshot(script)
 
     # Run scripts serially in their respective snapshots. Block until each run finishes.
-    ok_run_id = run(argv=["./script.sh"], timeout_ns=500*1e6, snapshotId=ok_id)
-    ok_statuses = poll(run_ids=[ok_run_id], timeout_ns=500*1e6)
+    ok_run_id = run(argv=["sh", "./script.sh"], timeout_ns=int(500*1e6), snapshot_id=ok_id)
+    ok_statuses = poll(run_ids=[ok_run_id], timeout_ns=int(500*1e6))
     if len(ok_statuses) != 1:
       raise ScootException("expected one poll result for ok_run_id.")
 
-    fail_run_id = run(argv=["./script.sh"], timeout_ns=500*1e6, snapshotId=fail_id)
-    fail_statuses = poll(run_ids=[fail_run_id], timeout_ns=500*1e6)
+    fail_run_id = run(argv=["sh", "./script.sh"], timeout_ns=int(500*1e6), snapshot_id=fail_id)
+    fail_statuses = poll(run_ids=[fail_run_id], timeout_ns=int(500*1e6))
     if len(fail_statuses) != 1:
       raise ScootException("expected one poll result for fail_run_id.")
 
     # Make sure 'ok' and 'fail' returned the correct exit code.
     if ok_statuses[0].exit_code != 0:
-      raise ScootException("failure checking exit code of 'ok' run." + ok_statuses[0].exit_code)
+      raise ValueError("failure checking exit code of 'ok' run: " + str(ok_statuses[0].exit_code))
+      #raise ScootException("failure checking exit code of 'ok' run: " + str(ok_statuses[0].exit_code))
     if fail_statuses[0].exit_code == 0:
-      raise ScootException("failure checking exit code of 'fail' run." + fail_statuses[0].exit_code)
+      raise ValueError("failure checking exit code of 'fail' run: " + str(fail_statuses[0].exit_code)) #FIXME remove
+      #raise ScootException("failure checking exit code of 'fail' run: " + fail_statuses[0].exit_code)
 
     # Checkout result snapshots for both runs.
     ok_dir = os.path.join(tmpdir, "okco")
     fail_dir = os.path.join(tmpdir, "failco")
-    checkoutSnapshot(snapshot_id=ok_statuses[0].snapshot_id, dirpath=ok_dir)
-    checkoutSnapshot(snapshot_id=fail_statuses[0].snapshot_id, dirpath=fail_dir)
+    checkout_snapshot(snapshot_id=ok_statuses[0].snapshot_id, dirpath=ok_dir)
+    checkout_snapshot(snapshot_id=fail_statuses[0].snapshot_id, dirpath=fail_dir)
 
     # Check that 'ok' and 'fail' populated only STDOUT or STDERR respectively.
     def assert_file_contains(filepath, contents, msg):
