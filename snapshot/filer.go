@@ -6,8 +6,7 @@ package snapshot
 // A Filer lets clients deal with Snapshots as files in the local filesystem.
 type Filer interface {
 	Checkouter
-	// TODO(dbentley): support ingestion
-	// Ingester
+	Ingester
 }
 
 // Checkouter allows reading a Snapshot into the local filesystem.
@@ -28,4 +27,10 @@ type Checkout interface {
 	// Releases this Checkout, allowing the Checkouter to clean/recycle this checkout.
 	// After Release(), the client may not look at files under Path()
 	Release() error
+}
+
+// Ingester creates a Snapshot from a path in the local filesystem.
+type Ingester interface {
+	// Takes a file or dir path and stores the contents for later Checkout by id.
+	Ingest(path string) (id string, err error)
 }

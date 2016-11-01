@@ -3,6 +3,9 @@
     "Type": "local"
   },
   "Workers": {
-    "Type": "rpc"
+    "Type": "rpc",
+    "PollingPeriod": "250ms",
+    "EnforceTaskTimeout": true,
+    "TaskTimeout": "30m"
   }
 }

@@ -23,7 +23,7 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *smokeTestCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
+func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
 
 	numJobs := 100
@@ -49,7 +49,7 @@ func (c *smokeTestCmd) run(cl *Client, cmd *cobra.Command, args []string) error 
 }
 
 type smokeTestRunner struct {
-	cl *Client
+	cl *simpleCLIClient
 }
 
 func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
@@ -67,15 +67,14 @@ func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 }
 
 func (r *smokeTestRunner) generateAndStartJob() (string, error) {
-	client, err := r.cl.Dial()
+	err := r.cl.Dial()
 	if err != nil {
 		return "", err
 	}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// We just want the JobDefinition here Id doesn't matter
 	job := testhelpers.GenJobDefinition(rng)
-	jobId, err := client.RunJob(job)
+	jobId, err := r.cl.scootClient.RunJob(job)
 	return jobId.ID, err
 }
 
@@ -125,7 +124,7 @@ func printJobs(jobs map[string]*scoot.JobStatus) {
 }
 
 func (r *smokeTestRunner) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
-	client, err := r.cl.Dial()
+	err := r.cl.Dial()
 	if err != nil {
 		return true, err
 	}
@@ -134,7 +133,7 @@ func (r *smokeTestRunner) updateJobStatus(jobId string, jobs map[string]*scoot.J
 	if done(status) {
 		return true, nil
 	}
-	status, err = client.GetStatus(jobId)
+	status, err = r.cl.scootClient.GetStatus(jobId)
 	if err != nil {
 		return true, err
 	}

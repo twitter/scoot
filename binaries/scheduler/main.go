@@ -19,7 +19,7 @@ import (
 var thriftAddr = flag.String("thrift_addr", "localhost:9090", "Bind address for api server.")
 var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 
-var configFlag = flag.String("config", "local.inmemory", "Scheduler Config (either a filename like local.inmemory or JSON text")
+var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 
 func main() {
 	flag.Parse()
