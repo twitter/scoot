@@ -31,7 +31,7 @@ func NewSingleRepoPool(repoGetter RepoGetter, doneCh <-chan struct{}) *RepoPool 
 	// TODO create a pool with nothing
 	//	then manually create a repo via the getter with Get()
 	//	'Release' the repo into the pool async (this func already returned)
-	singlePool := NewRepoPool(nil, nil, doneCh)
+	singlePool := NewRepoPool(nil, nil, doneCh, 1)
 	go func() {
 		log.Println("NewSingleRepoPool's gofunc repoGetter.Get()")
 		r, err := repoGetter.Get()
@@ -53,7 +53,6 @@ func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempD
 	log.Println("New single repo pool")
 	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
 
-	// TODO this whole section is for adding clones that already exist
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
 	var clones []*repo.Repository
 	fis, _ := ioutil.ReadDir(clonesDir.Dir)
@@ -66,8 +65,7 @@ func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempD
 		}
 	}
 
-	// TODO why did we make 2 pools here
 	log.Println("Another new repo pool, w/ cloners")
-	pool := NewRepoPool(cloner, clones, doneCh)
+	pool := NewRepoPool(cloner, clones, doneCh, 1)
 	return NewCheckouter(pool)
 }

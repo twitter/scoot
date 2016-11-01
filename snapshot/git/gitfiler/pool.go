@@ -13,7 +13,11 @@ type repoAndError struct {
 }
 
 // NewRepoPool creates a new RepoPool populated with existing repos and a getter that can get new ones
-func NewRepoPool(getter RepoGetter, repos []*repo.Repository, doneCh <-chan struct{}) *RepoPool {
+func NewRepoPool(getter RepoGetter,
+	repos []*repo.Repository,
+	doneCh <-chan struct{},
+	capacity int) *RepoPool {
+
 	freeList := make([]repoAndError, len(repos))
 	for i, v := range repos {
 		freeList[i] = repoAndError{repo: v}
@@ -25,6 +29,8 @@ func NewRepoPool(getter RepoGetter, repos []*repo.Repository, doneCh <-chan stru
 		reserveCh: make(chan repoAndError),
 		doneCh:    doneCh,
 		freeList:  freeList,
+		size:      0,
+		capacity:  capacity,
 	}
 	go p.loop()
 	return p
@@ -43,6 +49,8 @@ type RepoPool struct {
 	doneCh    <-chan struct{}
 
 	freeList []repoAndError
+	size     int
+	capacity int
 }
 
 // Get gets a repo, or returns an error if it can't be gotten
@@ -58,8 +66,11 @@ func (p *RepoPool) Release(repo *repo.Repository, err error) {
 
 func (p *RepoPool) loop() {
 	for {
-		// kick off a get if we're empty, know how to get, and aren't already getting
-		if len(p.freeList) == 0 && p.getter != nil && p.getCh == nil {
+		// kick off a get if: empty, have room, have non-nil getter, aren't getting
+		if len(p.freeList) == 0 &&
+			p.size < p.capacity &&
+			p.getter != nil &&
+			p.getCh == nil {
 			// buffer of 1 to unblock background get if we're done before it finishes
 			p.getCh = make(chan repoAndError, 1)
 			go func() {
@@ -86,6 +97,7 @@ func (p *RepoPool) loop() {
 			log.Println("Repo released via releaseCh - freeList:", len(p.freeList))
 		case r := <-p.getCh:
 			p.freeList = append(p.freeList, r)
+			p.size++
 			p.getCh = nil
 			log.Println("Repo added via getCh - freeList:", len(p.freeList))
 		case <-p.doneCh:
