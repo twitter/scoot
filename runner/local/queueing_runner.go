@@ -159,7 +159,13 @@ func (qr *QueueingRunner) eventLoop() {
 	for req := range qr.reqCh {
 		switch req := req.(type) {
 		case closeRequest:
-			break
+			if !qr.runnerAvail {
+				// drain reqCh
+				// We need to let our delegate tell us we're available again, then we can close it
+				<-qr.reqCh
+			}
+			close(qr.reqCh)
+			return
 		case struct{}:
 			// struct{} is what comes from simpleRunner's runnerAvailable channel
 			qr.runnerAvail = true
@@ -187,12 +193,6 @@ func (qr *QueueingRunner) eventLoop() {
 		if len(qr.q) > 0 && qr.runnerAvail {
 			qr.runNextCommandInQueue()
 		}
-	}
-	if !qr.runnerAvail {
-		// drain reqCh
-		// We need to let our delegate tell us we're available again, then we can close it
-		<-qr.reqCh
-		close(qr.reqCh)
 	}
 }
 

@@ -51,7 +51,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func() execer.Execer {
-			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
+			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewExecer())
 		},
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },

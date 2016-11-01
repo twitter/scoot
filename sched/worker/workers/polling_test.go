@@ -2,7 +2,6 @@ package workers
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 )
 
 func TestPollingWorker_Simple(t *testing.T) {
-	ex := execers.NewSimExecer(nil)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
@@ -26,9 +25,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ex := execers.NewSimExecer(&wg)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
@@ -47,7 +44,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 	default:
 	}
 
-	wg.Done()
+	ex.Resume()
 	st, err := <-stCh, <-errCh
 
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
@@ -56,7 +53,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 }
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
-	ex := execers.NewSimExecer(nil)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
@@ -71,9 +68,7 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 }
 
 func TestPollingWorker_ErrorPolling(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ex := execers.NewSimExecer(&wg)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
@@ -103,13 +98,11 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 	}
 
 	// Now let it finish
-	wg.Done()
+	ex.Resume()
 }
 
 func TestPollingWorker_Timeout(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ex := execers.NewSimExecer(&wg)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(
@@ -129,9 +122,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 }
 
 func TestPollingWorker_TimeoutDisabled(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ex := execers.NewSimExecer(&wg)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(

@@ -1,11 +1,8 @@
-// +build !race
-
 package local
 
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -17,29 +14,6 @@ import (
 
 const errorMsgFromRunner = "Error in fakeRunner Run()"
 
-// TODO(dbentley): figure out the alleged data race
-// This doesn't seem right: we Wait() in sim, and then Add once we've gotten back from it
-// WARNING: DATA RACE
-// Read at 0x00c42006ac4c by goroutine 75:
-//   internal/race.Read()
-//       /usr/local/go/src/internal/race/race.go:37 +0x38
-//   sync.(*WaitGroup).Add()
-//       /usr/local/go/src/sync/waitgroup.go:71 +0x292
-//   github.com/scootdev/scoot/runner/local.TestStatus()
-//       /Users/dbentley/work/src/github.com/scootdev/scoot/runner/local/queueing_runner_test.go:167 +0x15ca
-//   testing.tRunner()
-//       /usr/local/go/src/testing/testing.go:610 +0xc9
-
-// Previous write at 0x00c42006ac4c by goroutine 80:
-//   internal/race.Write()
-//       /usr/local/go/src/internal/race/race.go:41 +0x38
-//   sync.(*WaitGroup).Wait()
-//       /usr/local/go/src/sync/waitgroup.go:129 +0x151
-//   github.com/scootdev/scoot/runner/execer/execers.(*pauseStep).run()
-//       /Users/dbentley/work/src/github.com/scootdev/scoot/runner/execer/execers/sim.go:162 +0x4c
-//   github.com/scootdev/scoot/runner/execer/execers.(*simProcess).run()
-//       /Users/dbentley/work/src/github.com/scootdev/scoot/runner/execer/execers/sim.go:139 +0xe7
-
 // Send a run request that pauses, then another run request.
 // Verify that the status of the first run request is running, and
 // the status of the second request is queued.
@@ -49,12 +23,11 @@ func TestQueueing2Messages(t *testing.T) {
 	env := setup(10, t)
 	defer env.teardown()
 	qr := env.qr
-	env.wg.Add(1) // set the pause condition
 
 	// send the first command - it should pause
 	run1 := assertRun(t, qr, running(), "pause", "complete 0")
 	run2 := assertRun(t, qr, pending(), "complete 1")
-	env.wg.Done() // send signal to end first (paused) request
+	env.sim.Resume()
 	assertWait(t, qr, run1, complete(0), "n/a")
 	assertWait(t, qr, run2, complete(1), "n/a")
 }
@@ -63,7 +36,6 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	env := setup(4, t)
 	defer env.teardown()
 	qr := env.qr
-	env.wg.Add(1) // set the pause condition
 
 	var runIDs []runner.RunId
 
@@ -84,7 +56,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	}
 
 	// resume
-	env.wg.Done()
+	env.sim.Resume()
 
 	// drain
 	for _, id := range runIDs {
@@ -93,7 +65,6 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	runIDs = nil
 
 	// repeat
-	env.wg.Add(1)
 	runID = assertRun(t, qr, running(), "pause", "complete 0")
 	runIDs = append(runIDs, runID)
 	for i := 0; i < 4; i++ {
@@ -104,7 +75,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	if err == nil || strings.Compare(QueueFullMsg, err.Error()) != 0 {
 		t.Fatal("Should not be able to schedule: ", err)
 	}
-	env.wg.Done()
+	env.sim.Resume()
 	for _, id := range runIDs {
 		assertWait(t, qr, id, complete(0), "n/a")
 	}
@@ -125,7 +96,6 @@ func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
 	env := setup(4, t)
 	defer env.teardown()
 	qr := env.qr
-	env.wg.Add(1)
 
 	// fill the queue
 	_ = assertRun(t, qr, running(), "pause", "complete 0")
@@ -136,21 +106,20 @@ func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
 
 	// Now kill the connection to the runner
 	env.chaos.SetError(fmt.Errorf("can't even"))
-	env.wg.Done()
+	env.sim.Resume()
 	// The next line will fail because we can't talk to the underlying
 	// Runner anymore
 	// assertWait(t, qr, run1, complete(0), "n/a")
-	assertWait(t, qr, run2, failed("can't even"), "n/a")
-	assertWait(t, qr, run3, failed("can't even"), "n/a")
-	assertWait(t, qr, run4, failed("can't even"), "n/a")
-	assertWait(t, qr, run5, failed("can't even"), "n/a")
+	assertWait(t, qr, run2, failed("can't even"))
+	assertWait(t, qr, run3, failed("can't even"))
+	assertWait(t, qr, run4, failed("can't even"))
+	assertWait(t, qr, run5, failed("can't even"))
 }
 
 func TestStatus(t *testing.T) {
 	env := setup(4, t)
 	defer env.teardown()
 	qr := env.qr
-	env.wg.Add(1)
 
 	// We want to get lots of runs with statuses in different places:
 	// *) in the queue
@@ -159,8 +128,7 @@ func TestStatus(t *testing.T) {
 	// *) in delegate (running, aborted, and complete)
 
 	env.chaos.SetError(fmt.Errorf("can't even"))
-	st, _ := qr.Run(&runner.Command{Argv: []string{"complete 5"}})
-	run1 := st.RunId
+	run1 := assertRun(t, qr, failed("can't even"), "complete 5")
 	env.chaos.SetError(nil)
 	// run1 is in errored (because delegate refused it)
 	assertWait(t, qr, run1, failed("can't even"))
@@ -182,20 +150,16 @@ func TestStatus(t *testing.T) {
 	// run2 is delegated (aborted)
 	assertWait(t, qr, run2, aborted())
 
-	env.wg.Done()
-
 	// run3 and 4 are in delegate, complete
 	assertWait(t, qr, run3, complete(0))
 	assertWait(t, qr, run4, complete(0))
 
-	env.wg.Add(1)
-
 	// run6 is in delegate, running
-	assertRun(t, qr, running(), "pause", "complete 2")
+	run6 := assertRun(t, qr, running(), "pause", "complete 2")
 
 	// run7 and 8 are in queue
-	assertRun(t, qr, pending(), "complete 0")
-	assertRun(t, qr, pending(), "complete 0")
+	run7 := assertRun(t, qr, pending(), "complete 0")
+	run8 := assertRun(t, qr, pending(), "complete 0")
 
 	all, err := qr.StatusAll()
 	if err != nil {
@@ -214,13 +178,17 @@ func TestStatus(t *testing.T) {
 			t.Fatalf("status for id %v unequal: %v vs %v", st.RunId, st, st2)
 		}
 	}
+
+	env.sim.Resume()
+	assertWait(t, qr, run6, complete(2))
+	assertWait(t, qr, run7, complete(0))
+	assertWait(t, qr, run8, complete(0))
 }
 
 func setup(size int, t *testing.T) *env {
 	runnerAvailableCh := make(chan struct{}, 1)
 
-	wg := &sync.WaitGroup{}
-	ex := execers.NewSimExecer(wg)
+	sim := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
@@ -230,16 +198,16 @@ func setup(size int, t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
-	sr := NewSimpleReportBackRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator, runnerAvailableCh)
+	sr := NewSimpleReportBackRunner(sim, snapshots.MakeInvalidCheckouter(), outputCreator, runnerAvailableCh)
 	chaos := runners.NewChaosRunner(sr)
 	qr := NewQueuingRunner(chaos, size, runnerAvailableCh).(*QueueingRunner)
 
-	return &env{chaos: chaos, wg: wg, qr: qr, sr: sr}
+	return &env{chaos: chaos, sim: sim, qr: qr, sr: sr}
 }
 
 type env struct {
 	chaos *runners.ChaosRunner
-	wg    *sync.WaitGroup
+	sim   *execers.SimExecer
 	qr    *QueueingRunner
 	sr    *simpleRunner
 }

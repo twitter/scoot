@@ -55,7 +55,7 @@ func (d *connDialer) Close() error {
 }
 
 func newFakeConn() conn.Conn {
-	ex := execers.NewSimExecer(nil)
+	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), runners.NewNullOutputCreator())
 	return &fakeConn{r, nil}
 }

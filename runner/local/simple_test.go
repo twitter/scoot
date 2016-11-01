@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -57,8 +56,7 @@ func TestOutput(t *testing.T) {
 }
 
 func TestSimul(t *testing.T) {
-	r, wg := newRunner()
-	wg.Add(1)
+	r, sim := newRunner()
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	assertWait(t, r, firstRun, running(), firstArgs...)
@@ -72,13 +70,12 @@ func TestSimul(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wg.Done()
+	sim.Resume()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
 }
 
 func TestAbort(t *testing.T) {
-	r, wg := newRunner()
-	wg.Add(1)
+	r, _ := newRunner()
 	args := []string{"pause", "complete 0"}
 	runId := run(t, r, args)
 	assertWait(t, r, runId, running(), args...)
@@ -170,9 +167,8 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 	}
 }
 
-func newRunner() (runner.Runner, *sync.WaitGroup) {
-	wg := &sync.WaitGroup{}
-	ex := execers.NewSimExecer(wg)
+func newRunner() (runner.Runner, *execers.SimExecer) {
+	sim := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		panic(err)
@@ -182,6 +178,6 @@ func newRunner() (runner.Runner, *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
-	return r, wg
+	r := NewSimpleRunner(sim, snapshots.MakeInvalidCheckouter(), outputCreator)
+	return r, sim
 }

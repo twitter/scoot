@@ -11,28 +11,28 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 )
 
-func NewSimExecer(wait *sync.WaitGroup) execer.Execer {
-	return &simExecer{wait}
+func NewSimExecer() *SimExecer {
+	return &SimExecer{resumeCh: make(chan struct{})}
 }
 
-type simExecer struct {
-	wait *sync.WaitGroup
+type SimExecer struct {
+	resumeCh chan struct{}
 }
 
-// simExecer execs by simulating running argv.
+// SimExecer execs by simulating running argv.
 // each arg in command.argv is simulated in order.
 // valid args are:
 // complete <exitcode int>
 //   complete with exitcode
 // pause
-//   pause until the simExecer's WaitGroup is Done
+//   pause until the SimExecer's WaitGroup is Done
 // sleep <millis int>
 //   sleep for millis milliseconds
 // stdout <message>
 //   put <message> in stdout in the response
 // stderr <message>
 //   put <message> in stderr in the response
-func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
+func (e *SimExecer) Exec(command execer.Command) (execer.Process, error) {
 	steps, err := e.parse(command.Argv)
 	if err != nil {
 		return nil, err
@@ -44,8 +44,12 @@ func (e *simExecer) Exec(command execer.Command) (execer.Process, error) {
 	return r, nil
 }
 
+func (e *SimExecer) Resume() {
+	e.resumeCh <- struct{}{}
+}
+
 // parse parses an argv into sim steps
-func (e *simExecer) parse(argv []string) (steps []simStep, err error) {
+func (e *SimExecer) parse(argv []string) (steps []simStep, err error) {
 	for _, arg := range argv {
 		s, err := e.parseArg(arg)
 		if err != nil {
@@ -56,7 +60,7 @@ func (e *simExecer) parse(argv []string) (steps []simStep, err error) {
 	return steps, nil
 }
 
-func (e *simExecer) parseArg(arg string) (simStep, error) {
+func (e *SimExecer) parseArg(arg string) (simStep, error) {
 	if strings.HasPrefix(arg, "#") {
 		return &noopStep{}, nil
 	}
@@ -73,7 +77,7 @@ func (e *simExecer) parseArg(arg string) (simStep, error) {
 		}
 		return &completeStep{i}, nil
 	case "pause":
-		return &pauseStep{e.wait}, nil
+		return &pauseStep{e.resumeCh}, nil
 	case "sleep":
 		i, err := strconv.Atoi(rest)
 		if err != nil {
@@ -155,11 +159,19 @@ func (s *completeStep) run(status execer.ProcessStatus, p *simProcess) execer.Pr
 }
 
 type pauseStep struct {
-	wait *sync.WaitGroup
+	ch chan struct{}
 }
 
 func (s *pauseStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
-	s.wait.Wait()
+	waitCh := make(chan struct{})
+	go func() {
+		p.Wait()
+		close(waitCh)
+	}()
+	select {
+	case <-waitCh:
+	case <-s.ch:
+	}
 	return status
 }
 
