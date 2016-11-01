@@ -38,6 +38,7 @@ func NewRepoPool(getter RepoGetter,
 // RepoPool can create a new Repository by using a supplied RepoGetter.
 // New repos can be added by the client by Release'ing a new Repository
 // Cf. sync's Pool
+// Supports maximum pool capacity - 0 is unlimited
 type RepoPool struct {
 	getter RepoGetter
 
@@ -66,7 +67,7 @@ func (p *RepoPool) loop() {
 	for {
 		// kick off a get if: empty, have room, have non-nil getter, aren't getting
 		if len(p.freeList) == 0 &&
-			p.size < p.capacity &&
+			(p.capacity == 0 || p.size < p.capacity) &&
 			p.getter != nil &&
 			p.getCh == nil {
 			// buffer of 1 to unblock background get if we're done before it finishes

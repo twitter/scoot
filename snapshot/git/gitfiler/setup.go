@@ -42,8 +42,10 @@ func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh <-chan struct{}) *Che
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
-// sci workerserver main entry point (w/ a constantgetter)
-func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh <-chan struct{}) *Checkouter {
+func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter,
+	clonesDir *temp.TempDir,
+	doneCh <-chan struct{},
+	maxClones int) *Checkouter {
 	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
 
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
@@ -57,6 +59,6 @@ func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempD
 		}
 	}
 
-	pool := NewRepoPool(cloner, clones, doneCh, 1)
+	pool := NewRepoPool(cloner, clones, doneCh, maxClones)
 	return NewCheckouter(pool)
 }
