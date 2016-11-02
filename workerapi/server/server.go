@@ -41,6 +41,8 @@ func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
+// TODO uptime stat
+// TODO worker start time metrics (how to get h.stat)
 func (h *handler) stats() {
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
