@@ -24,7 +24,7 @@ func TestCheckouter(t *testing.T) {
 	}
 	doneCh := make(chan struct{})
 	defer close(doneCh)
-	checkouter := NewRefRepoCloningCheckouter(&constantGetter{repo}, tmp, doneCh)
+	checkouter := NewRefRepoCloningCheckouter(&ConstantIniter{repo}, tmp, doneCh, 0)
 	c1, err := checkouter.Checkout(id1)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id1, err)
@@ -75,14 +75,6 @@ func TestCheckouter(t *testing.T) {
 	if err == nil {
 		t.Fatalf("should not have been able to check out; %v", c1)
 	}
-}
-
-type constantGetter struct {
-	repo *repo.Repository
-}
-
-func (g *constantGetter) Get() (*repo.Repository, error) {
-	return g.repo, nil
 }
 
 func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Repository, error) {

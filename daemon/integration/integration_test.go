@@ -21,6 +21,8 @@ import (
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
+// TODO prefer deterministic sequencing vs sleep
+
 var s *server.Server
 
 func TestEcho(t *testing.T) {
@@ -39,7 +41,7 @@ func TestRunSimpleCommand(t *testing.T) {
 	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
 
 	// give the command time to finish running
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// get the status
 	statusReq = []string{"status", runId}
@@ -51,7 +53,7 @@ func TestRunSimpleCommand(t *testing.T) {
 // TODO when the server uses queueing runner, fix the 2nd request to expect queue, not rejection
 func TestRun2Commands(t *testing.T) {
 	// run the first command
-	var statusReq []string = []string{"run", "sleep 10"}
+	var statusReq []string = []string{"run", "sleep 1000"}
 	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
 
 	// run the second command, it should get runner busy message
@@ -59,7 +61,7 @@ func TestRun2Commands(t *testing.T) {
 	assertRun("ignore", "ignore", local.RunnerBusyMsg, statusReq[:], t)
 
 	// wait for the command to finish running
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 
 	// get the status of the first run
 	statusReq = []string{"status", runId}

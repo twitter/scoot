@@ -10,31 +10,43 @@ import (
 
 // Utilities for creating Checkouters.
 
-// RepoGetter lets a client get a Repository to use as a Reference Repository.
-type RepoGetter interface {
-	// Get gets the Repository to use as a reference repository.
-	Get() (*repo.Repository, error)
+// RepoIniter lets a client initialize a Repository to use as a Reference Repository.
+type RepoIniter interface {
+	// Init initializes the Repository to use as a reference repository.
+	Init() (*repo.Repository, error)
 }
 
-// A Pool that will only have a single repo, populated by repoGetter, that serves until doneCh is closed
-func NewSingleRepoPool(repoGetter RepoGetter, doneCh chan struct{}) *RepoPool {
-	singlePool := NewRepoPool(nil, nil, doneCh)
+// RepoIniter implementation
+type ConstantIniter struct {
+	Repo *repo.Repository
+}
+
+func (g *ConstantIniter) Init() (*repo.Repository, error) {
+	return g.Repo, nil
+}
+
+// A Pool that will only have a single repo, populated by repoIniter, that serves until doneCh is closed
+func NewSingleRepoPool(repoIniter RepoIniter, doneCh <-chan struct{}) *RepoPool {
+	singlePool := NewRepoPool(nil, nil, doneCh, 1)
 	go func() {
-		r, err := repoGetter.Get()
+		r, err := repoIniter.Init()
 		singlePool.Release(r, err)
 	}()
 	return singlePool
 }
 
 // A Checkouter that checks out from a single repo populated by a NewSingleRepoPool)
-func NewSingleRepoCheckouter(repoGetter RepoGetter, doneCh chan struct{}) *Checkouter {
-	pool := NewSingleRepoPool(repoGetter, doneCh)
+func NewSingleRepoCheckouter(repoIniter RepoIniter, doneCh <-chan struct{}) *Checkouter {
+	pool := NewSingleRepoPool(repoIniter, doneCh)
 	return NewCheckouter(pool)
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
-func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempDir, doneCh chan struct{}) *Checkouter {
-	refPool := NewSingleRepoPool(refRepoGetter, doneCh)
+func NewRefRepoCloningCheckouter(refRepoIniter RepoIniter,
+	clonesDir *temp.TempDir,
+	doneCh <-chan struct{},
+	maxClones int) *Checkouter {
+	refPool := NewSingleRepoPool(refRepoIniter, doneCh)
 
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
 	var clones []*repo.Repository
@@ -47,6 +59,6 @@ func NewRefRepoCloningCheckouter(refRepoGetter RepoGetter, clonesDir *temp.TempD
 		}
 	}
 
-	pool := NewRepoPool(cloner, clones, doneCh)
+	pool := NewRepoPool(cloner, clones, doneCh, maxClones)
 	return NewCheckouter(pool)
 }
