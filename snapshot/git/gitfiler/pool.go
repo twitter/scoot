@@ -27,7 +27,7 @@ func NewRepoPool(initer RepoIniter,
 		reserveCh: make(chan repoAndError),
 		doneCh:    doneCh,
 		freeList:  freeList,
-		size:      len(repos),
+		numInited: len(repos),
 		capacity:  capacity,
 	}
 	go p.loop()
@@ -47,9 +47,9 @@ type RepoPool struct {
 	initCh    chan repoAndError
 	doneCh    <-chan struct{}
 
-	freeList []repoAndError
-	size     int
-	capacity int
+	freeList  []repoAndError
+	numInited int
+	capacity  int
 }
 
 // Get gets a repo, or returns an error if it can't be gotten
@@ -67,7 +67,7 @@ func (p *RepoPool) loop() {
 	for {
 		// kick off a get if: empty, have room, have initer, not initializing
 		if len(p.freeList) == 0 &&
-			(p.capacity == 0 || p.size < p.capacity) &&
+			(p.capacity == 0 || p.numInited < p.capacity) &&
 			p.initer != nil &&
 			p.initCh == nil {
 			// buffer of 1 to unblock background get if we're done before it finishes
@@ -92,7 +92,7 @@ func (p *RepoPool) loop() {
 			p.freeList = append(p.freeList, r)
 		case r := <-p.initCh:
 			p.freeList = append(p.freeList, r)
-			p.size++
+			p.numInited++
 			p.initCh = nil
 		case <-p.doneCh:
 			return
