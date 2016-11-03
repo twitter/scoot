@@ -204,11 +204,9 @@ if __name__ == '__main__':
 
     # Make sure 'ok' and 'fail' returned the correct exit code.
     if ok_statuses[0].exit_code != 0:
-      raise ValueError("failure checking exit code of 'ok' run: " + str(ok_statuses[0].exit_code))
-      #raise ScootException("failure checking exit code of 'ok' run: " + str(ok_statuses[0].exit_code))
+      raise ScootException("failure checking exit code of 'ok' run: " + str(ok_statuses[0].exit_code))
     if fail_statuses[0].exit_code == 0:
-      raise ValueError("failure checking exit code of 'fail' run: " + str(fail_statuses[0].exit_code)) #FIXME remove
-      #raise ScootException("failure checking exit code of 'fail' run: " + fail_statuses[0].exit_code)
+      raise ScootException("failure checking exit code of 'fail' run: " + fail_statuses[0].exit_code)
 
     # Checkout result snapshots for both runs.
     ok_dir = os.path.join(tmpdir, "okco")
