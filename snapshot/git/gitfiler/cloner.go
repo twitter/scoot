@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"time"
 
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
@@ -31,7 +30,7 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 		return nil, err
 	}
 
-	startTime := time.Now()
+	initTime := stat.Latency("clonerInitLatency_ms").Time()
 
 	cloneDir, err := c.clonesDir.TempDir("clone-")
 	if err != nil {
@@ -47,6 +46,6 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	}
 	log.Println("gitfiler.refCloner.clone: Cloning complete")
 
-	stat.Gauge("clonerRepoInit_ms").Update(int64(time.Since(startTime) / time.Millisecond))
+	initTime.Stop()
 	return repo.NewRepository(cloneDir.Dir)
 }
