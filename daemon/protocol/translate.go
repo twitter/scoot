@@ -13,9 +13,11 @@ func FromRunnerStatus(status runner.ProcessStatus) *ProcessStatus {
 		state = ProcessState_UNKNOWN
 	case runner.PENDING:
 		state = ProcessState_PENDING
-	case runner.RUNNING:
+	case runner.RUNNING, runner.PREPARING:
 		state = ProcessState_RUNNING
-	case runner.FAILED, runner.ABORTED, runner.TIMEDOUT:
+	case runner.COMPLETE:
+		state = ProcessState_COMPLETED
+	case runner.FAILED, runner.ABORTED, runner.TIMEDOUT, runner.BADREQUEST:
 		state = ProcessState_FAILED
 	}
 	return &ProcessStatus{
@@ -39,6 +41,8 @@ func ToRunnerStatus(status *ProcessStatus) runner.ProcessStatus {
 		state = runner.RUNNING
 	case ProcessState_FAILED:
 		state = runner.FAILED
+	case ProcessState_COMPLETED:
+		state = runner.COMPLETE
 	}
 	return runner.ProcessStatus{
 		RunId:     runner.RunId(status.RunId),

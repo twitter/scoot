@@ -2,5 +2,9 @@
   "Cluster": {
     "Type": "memory",
     "Count": 10
+  },
+  "SchedulerConfig": {
+    "Type": "stateful",
+    "MaxRetriesPerTask" : 2
   }
 }
