@@ -59,6 +59,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			"rpc":   &scootconfig.WorkersThriftConfig{},
 			"":      &scootconfig.WorkersLocalConfig{Type: "local"},
 		},
+		"SchedulerConfig": {
+			"stateful": &scootconfig.StatefulSchedulerConfig{},
+			"":         &scootconfig.StatefulSchedulerConfig{Type: "stateful", MaxRetriesPerTask: 0},
+		},
 	})
 
 	return bag, schema

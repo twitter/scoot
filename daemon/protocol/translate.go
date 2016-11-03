@@ -17,7 +17,7 @@ func FromRunnerStatus(status runner.ProcessStatus) *PollReply_Status {
 		state = PollReply_Status_PREPARING
 	case runner.RUNNING:
 		state = PollReply_Status_RUNNING
-	case runner.FAILED, runner.ABORTED, runner.TIMEDOUT:
+	case runner.FAILED, runner.ABORTED, runner.TIMEDOUT, runner.BADREQUEST:
 		state = PollReply_Status_FAILED
 	}
 	return &PollReply_Status{
@@ -42,6 +42,8 @@ func ToRunnerStatus(status *PollReply_Status) runner.ProcessStatus {
 		state = runner.RUNNING
 	case PollReply_Status_FAILED:
 		state = runner.FAILED
+	case ProcessState_COMPLETED:
+		state = runner.COMPLETE
 	}
 	return runner.ProcessStatus{
 		RunId:      runner.RunId(status.RunId),
