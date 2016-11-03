@@ -25,15 +25,9 @@ func (g *ConstantIniter) Init() (*repo.Repository, error) {
 	return g.Repo, nil
 }
 
-// A Pool that will only have a single repo, populated by repoIniter, that serves until doneCh is closed
-// TODO don't manually call init here. Now that we have capacity support, we should let the pool do it
-// this is some hack to make sure only a single repo exists in the pool (by nil-ing out the fcns)
+// Util for creating a Pool that will only have a single repo
 func NewSingleRepoPool(repoIniter RepoIniter, doneCh <-chan struct{}) *RepoPool {
-	singlePool := NewRepoPool(nil, nil, doneCh, 1)
-	go func() {
-		r, err := repoIniter.Init()
-		singlePool.Release(r, err)
-	}()
+	singlePool := NewRepoPool(repoIniter, []*repo.Repository{}, doneCh, 1)
 	return singlePool
 }
 
