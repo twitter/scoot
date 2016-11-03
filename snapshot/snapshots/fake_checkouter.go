@@ -60,6 +60,7 @@ func (c *staticCheckout) Release() error {
 }
 
 // Initer will do something once, e.g., clone a git repo (that might be expensive)
+// TODO what? why is this here? dups RepoIniter?
 type Initer interface {
 	Init() error
 }

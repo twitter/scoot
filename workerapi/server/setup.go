@@ -56,8 +56,6 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		// TODO some stats around this?
-		//	this is the right-ish area to be measuring clone time or hdfs downloader init time
 		func(tmpDir *temp.TempDir) snapshot.Checkouter {
 			return snapshots.MakeTempCheckouter(tmpDir)
 		},
@@ -109,8 +107,6 @@ func RunServer(
 	}
 
 	// Initialize Objects Based on Config Settings
-	// TODO useful to measure init time here?
-	//	we can either measure this entire process, or pass stats handler down further to get individual metrics
 	bag.InstallModule(mod)
 
 	var servers servers

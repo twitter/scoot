@@ -1,6 +1,7 @@
 package gitfiler
 
 import (
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -12,6 +13,7 @@ type repoAndError struct {
 
 // NewRepoPool creates a new RepoPool populated with existing repos and a initer that can get new ones
 func NewRepoPool(initer RepoIniter,
+	stat stats.StatsReceiver,
 	repos []*repo.Repository,
 	doneCh <-chan struct{},
 	capacity int) *RepoPool {
@@ -23,6 +25,7 @@ func NewRepoPool(initer RepoIniter,
 
 	p := &RepoPool{
 		initer:    initer,
+		statRec:   stat,
 		releaseCh: make(chan repoAndError),
 		reserveCh: make(chan repoAndError),
 		doneCh:    doneCh,
@@ -40,7 +43,8 @@ func NewRepoPool(initer RepoIniter,
 // Cf. sync's Pool
 // Supports maximum pool capacity - 0 is unlimited
 type RepoPool struct {
-	initer RepoIniter
+	initer  RepoIniter
+	statRec stats.StatsReceiver
 
 	releaseCh chan repoAndError
 	reserveCh chan repoAndError
@@ -73,7 +77,7 @@ func (p *RepoPool) loop() {
 			// buffer of 1 to unblock background get if we're done before it finishes
 			p.initCh = make(chan repoAndError, 1)
 			go func() {
-				r, err := p.initer.Init()
+				r, err := p.initer.Init(p.statRec)
 				p.initCh <- repoAndError{r, err}
 			}()
 		}

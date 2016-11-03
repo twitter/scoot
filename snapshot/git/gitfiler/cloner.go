@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
@@ -22,12 +23,15 @@ type refCloner struct {
 }
 
 // Get gets a repo with git clone --reference
-func (c *refCloner) Init() (*repo.Repository, error) {
+func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	ref, err := c.refPool.Get()
 	defer c.refPool.Release(ref, err)
 	if err != nil {
 		return nil, err
 	}
+
+	// output only on success
+	initTime := stat.Latency("clonerRepoInit_ms").Time()
 
 	cloneDir, err := c.clonesDir.TempDir("clone-")
 	if err != nil {
@@ -43,5 +47,6 @@ func (c *refCloner) Init() (*repo.Repository, error) {
 	}
 	log.Println("gitfiler.refCloner.clone: Cloning complete")
 
+	initTime.Stop()
 	return repo.NewRepository(cloneDir.Dir)
 }
