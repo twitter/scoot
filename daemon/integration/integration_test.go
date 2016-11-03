@@ -22,6 +22,7 @@ import (
 )
 
 // TODO prefer deterministic sequencing vs sleep
+// TestRun2Commands has failed in current form, although it's unlikely
 
 var s *server.Server
 

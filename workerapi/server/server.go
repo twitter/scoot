@@ -42,8 +42,6 @@ func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 // TODO uptime stat
-// TODO worker start time metrics (how to get h.stat)
-// TODO CurrentStatsReceiver?
 func (h *handler) stats() {
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
@@ -101,7 +99,6 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 }
 
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
-	// TODO is default precision ns or ms?
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
 	log.Printf("Worker Running:\n%s", cmd)
