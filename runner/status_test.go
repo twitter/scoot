@@ -27,15 +27,17 @@ func TestCommandStringSimple(t *testing.T) {
 
 func TestProcStatusStringCompleted(t *testing.T) {
 	ps := ProcessStatus{
-		RunId:     RunId("12"),
-		State:     COMPLETE,
-		StdoutRef: "stdout",
-		StderrRef: "stderr",
-		ExitCode:  9,
+		RunId:      RunId("12"),
+		SnapshotId: SnapshotId("21"),
+		State:      COMPLETE,
+		StdoutRef:  "stdout",
+		StderrRef:  "stderr",
+		ExitCode:   9,
 	}
 
 	expected := `--- Process Status ---
-	ID:		12
+	Run:		12
+	Snapshot:		21
 	State:		COMPLETE
 	ExitCode:	9
 	Stdout:		stdout
@@ -49,15 +51,17 @@ func TestProcStatusStringCompleted(t *testing.T) {
 
 func TestProcStatusStringError(t *testing.T) {
 	ps := ProcessStatus{
-		RunId:     RunId("aaaaa"),
-		State:     FAILED,
-		StdoutRef: "stdout",
-		StderrRef: "stderr",
-		Error:     "The thing blew up.",
+		RunId:      RunId("aaaaa"),
+		SnapshotId: SnapshotId("bb"),
+		State:      FAILED,
+		StdoutRef:  "stdout",
+		StderrRef:  "stderr",
+		Error:      "The thing blew up.",
 	}
 
 	expected := `--- Process Status ---
-	ID:		aaaaa
+	Run:		aaaaa
+	Snapshot:		bb
 	State:		FAILED
 	Error:		The thing blew up.
 	Stdout:		stdout

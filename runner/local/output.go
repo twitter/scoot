@@ -35,17 +35,21 @@ func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 		return nil, err
 	}
 	// We don't need a / between hostname and path because absolute paths start with /
-	uri := fmt.Sprintf("file://%s%s", s.hostname, absPath)
-	return &localOutput{f: f, uri: uri}, nil
+	return &localOutput{f: f, hostname: s.hostname, absPath: absPath}, nil
 }
 
 type localOutput struct {
-	f   *os.File
-	uri string
+	f        *os.File
+	hostname string
+	absPath  string
 }
 
 func (o *localOutput) URI() string {
-	return o.uri
+	return fmt.Sprintf("file://%s%s", o.hostname, o.absPath)
+}
+
+func (o *localOutput) AsFile() string {
+	return o.absPath
 }
 
 func (o *localOutput) Write(p []byte) (n int, err error) {

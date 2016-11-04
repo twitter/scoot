@@ -97,7 +97,7 @@ func TestAbort(t *testing.T) {
 }
 
 func complete(exitCode int) runner.ProcessStatus {
-	return runner.CompleteStatus(runner.RunId(""), exitCode)
+	return runner.CompleteStatus(runner.RunId(""), runner.SnapshotId(""), exitCode)
 }
 
 func running() runner.ProcessStatus {
@@ -173,6 +173,6 @@ func newRunner() (runner.Runner, *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	r := NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
 	return r, wg
 }
