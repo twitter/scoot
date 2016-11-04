@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 	"time"
 
 	"github.com/scootdev/scoot/daemon/server"
@@ -34,7 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error creating temp dir: ", err)
 	}
-	defer os.RemoveAll(tempDir.Dir)
+	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
 	outputCreator, err := local.NewOutputCreator(tempDir)
 	if err != nil {
