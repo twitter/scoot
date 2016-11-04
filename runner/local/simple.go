@@ -13,23 +13,37 @@ import (
 
 const RunnerBusyMsg = "Runner is busy"
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
+// NewSimpleRunner creates a runner that will run using the supplied helpers
+func NewSimpleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) runner.Runner {
 	return &simpleRunner{
 		exec:          exec,
-		checkouter:    checkouter,
+		filer:         filer,
 		outputCreator: outputCreator,
 		runs:          make(map[runner.RunId]runner.ProcessStatus),
+		availCh:       nil,
+	}
+}
+
+// NewSimpleReportBackRunner is like NewSimpleRunner, but will also send to availCh when the runner is available
+func NewSimpleReportBackRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator, availCh chan struct{}) *simpleRunner {
+	return &simpleRunner{
+		exec:          exec,
+		filer:         filer,
+		outputCreator: outputCreator,
+		runs:          make(map[runner.RunId]runner.ProcessStatus),
+		availCh:       availCh,
 	}
 }
 
 // simpleRunner runs one process at a time and stores results.
 type simpleRunner struct {
 	exec          execer.Execer
-	checkouter    snapshot.Checkouter
+	filer         snapshot.Filer
 	outputCreator runner.OutputCreator
 	runs          map[runner.RunId]runner.ProcessStatus
 	running       *runInstance
 	nextRunId     int64
+	availCh       chan struct{}
 	mu            sync.Mutex
 }
 
@@ -45,7 +59,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.nextRunId++
 
 	if r.running != nil {
-		return runner.ProcessStatus{}, fmt.Errorf(RunnerBusyMsg)
+		return runner.ProcessStatus{}, fmt.Errorf(runner.RunnerBusyMsg)
 	}
 
 	r.running = &runInstance{id: runId, doneCh: make(chan struct{})}
@@ -58,7 +72,6 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	}
 	// TODO(dbentley): we return PREPARING now to defend against long-checkout
 	// But we could sleep short (50ms?), query status, and return that to capture the common, fast case
-	log.Printf("Run() returning: runid:%s, state:%s, err:%s", r.runs[runId].RunId, r.runs[runId].State, r.runs[runId].Error)
 	return r.runs[runId], nil
 }
 
@@ -84,6 +97,13 @@ func (r *simpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
 
 func (r *simpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	return r.updateStatus(runner.AbortStatus(runId))
+}
+
+func (r *simpleRunner) Close() error {
+	if r.availCh != nil {
+		close(r.availCh)
+	}
+	return nil
 }
 
 func (r *simpleRunner) Erase(runId runner.RunId) error {
@@ -122,6 +142,9 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 		// so if we're changing a Process from not Done to Done it must be running
 		log.Printf("local.simpleRunner: run done. %+v", newStatus)
 		close(r.running.doneCh)
+		if r.availCh != nil {
+			r.availCh <- struct{}{}
+		}
 		r.running = nil
 	}
 
@@ -132,9 +155,10 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 // run cmd in the background, writing results to r as id, unless doneCh is closed
 func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
 	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
+
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 	go func() {
-		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
+		checkout, err = r.filer.Checkout(cmd.SnapshotId)
 		close(checkoutDone)
 	}()
 
@@ -198,7 +222,24 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	switch st.State {
 	case execer.COMPLETE:
-		r.updateStatus(runner.CompleteStatus(runId, st.ExitCode))
+		snapshotId := ""
+		srcToDest := map[string]string{
+			checkout.Path(): "",
+			stdout.AsFile(): "STDOUT",
+			stderr.AsFile(): "STDERR",
+		}
+		// TODO(jschiller): get consensus on design and either implement or delete.
+		// if cmd.SnapshotPlan != nil {
+		// 	for src, dest := range cmd.SnapshotPlan {
+		// 		srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
+		// 	}
+		// }
+		snapshotId, err = r.filer.IngestMap(srcToDest)
+		if err != nil {
+			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error ingesting results: %v", err)))
+		} else {
+			r.updateStatus(runner.CompleteStatus(runId, runner.SnapshotId(snapshotId), st.ExitCode))
+		}
 	case execer.FAILED:
 		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error)))
 	default:

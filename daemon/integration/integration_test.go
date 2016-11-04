@@ -2,11 +2,9 @@ package integration_test
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -109,21 +107,23 @@ func run(args ...string) (string, string, error) {
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	tempDir, err := ioutil.TempDir("", "scoot-listen-")
+	tempDir, err := temp.NewTempDir("", "scoot-listen-")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir.Dir)
 
-	scootDir := path.Join(tempDir, "scoot")
+	scootDir := path.Join(tempDir.Dir, "scoot")
 	err = os.Setenv("SCOOTDIR", scootDir)
 
-	s, err = server.NewServer(getRunner())
+	filer := snapshots.MakeTempFiler(tempDir)
+	h := server.NewHandler(getRunner(), filer, 50*time.Millisecond)
+	s, err := server.NewServer(h)
 	if err != nil {
 		panic(err)
 	}
 
-	l, err := server.Listen()
+	l, _ := s.Listen()
 	go func() {
 		s.Serve(l)
 	}()
@@ -135,8 +135,7 @@ func TestMain(m *testing.M) {
 
 //TODO update this to use queuing runner
 func getRunner() runner.Runner {
-	wg := &sync.WaitGroup{}
-	ex := execers.NewSimExecer(wg)
+	ex := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		panic(err)
@@ -146,5 +145,5 @@ func getRunner() runner.Runner {
 	if err != nil {
 		panic(err)
 	}
-	return local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	return local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
 }

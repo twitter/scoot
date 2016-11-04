@@ -3,10 +3,11 @@ package integration
 
 import (
 	"bytes"
-	"github.com/scootdev/scoot/daemon/client/cli"
 	"io"
 	"log"
 	"os"
+
+	"github.com/scootdev/scoot/daemon/client/cli"
 )
 
 // Run cl with args, return its output
@@ -74,10 +75,10 @@ func (o *output) Reset() {
 	if o.stdout == nil {
 		return
 	}
-	o.stdout.Close()
-	o.stderr.Close()
 	os.Stdout, os.Stderr = o.oldStdout, o.oldStderr
 	log.SetOutput(os.Stderr)
+	o.stdout.Close()
+	o.stderr.Close()
 	// Zero out fields
 	o.stdout, o.stderr, o.stdoutCh, o.stderrCh, o.oldStdout, o.oldStderr = nil, nil, nil, nil, nil, nil
 }

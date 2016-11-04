@@ -21,6 +21,10 @@ func (o *nullOutput) URI() string {
 	return "file:///dev/null"
 }
 
+func (o *nullOutput) AsFile() string {
+	return "/dev/null"
+}
+
 func (o *nullOutput) Write(p []byte) (int, error) {
 	return len(p), nil
 }
