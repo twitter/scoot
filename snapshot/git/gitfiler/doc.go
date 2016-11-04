@@ -1,7 +1,7 @@
 // gitfiler offers Scoot Snapshot Filer operations access to git
 // It does this with a few related by separate structures:
 //
-// RepoGetter is an interface to get a Repository.
+// RepoIniter is an interface to initialize a Repository.
 //
 // refCloner gets new repos by running git clone --reference against a reference repo
 //

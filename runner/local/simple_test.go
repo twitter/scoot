@@ -95,7 +95,7 @@ func TestAbort(t *testing.T) {
 
 // Here below should maybe move to a common file, as it's also used by queueing_runner_test.go
 func complete(exitCode int) runner.ProcessStatus {
-	return runner.CompleteStatus(runner.RunId(""), exitCode)
+	return runner.CompleteStatus(runner.RunId(""), runner.SnapshotId(""), exitCode)
 }
 
 func pending() runner.ProcessStatus {
@@ -178,6 +178,6 @@ func newRunner() (runner.Runner, *execers.SimExecer) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(sim, snapshots.MakeInvalidCheckouter(), outputCreator)
+	r := NewSimpleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator)
 	return r, sim
 }

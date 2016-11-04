@@ -7,5 +7,9 @@
     "PollingPeriod": "250ms",
     "EnforceTaskTimeout": true,
     "TaskTimeout": "30m"
+  },
+  "SchedulerConfig": {
+    "Type": "stateful",
+    "MaxRetriesPerTask" : 2
   }
 }

@@ -3,9 +3,11 @@ package integration
 
 import (
 	"bytes"
-	"github.com/scootdev/scoot/daemon/client/cli"
 	"io"
+	"log"
 	"os"
+
+	"github.com/scootdev/scoot/daemon/client/cli"
 )
 
 // Run cl with args, return its output
@@ -40,6 +42,7 @@ func captureOutput() *output {
 	stdout, stdoutCh := makeDiversion()
 	stderr, stderrCh := makeDiversion()
 	os.Stdout, os.Stderr = stdout, stderr
+	log.SetOutput(os.Stderr)
 	return &output{stdout, stdoutCh, stderr, stderrCh, oldStdout, oldStderr}
 }
 
@@ -72,9 +75,10 @@ func (o *output) Reset() {
 	if o.stdout == nil {
 		return
 	}
+	os.Stdout, os.Stderr = o.oldStdout, o.oldStderr
+	log.SetOutput(os.Stderr)
 	o.stdout.Close()
 	o.stderr.Close()
-	os.Stdout, os.Stderr = o.oldStdout, o.oldStderr
 	// Zero out fields
 	o.stdout, o.stderr, o.stdoutCh, o.stderrCh, o.oldStdout, o.oldStderr = nil, nil, nil, nil, nil, nil
 }
