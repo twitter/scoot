@@ -8,11 +8,11 @@ import (
 )
 
 // TODO(dbentley): should this be in queue.go
-// TODO(dbentley): should this whole package move to runner/runners?
+// TODO(dbentley): Move this whole package to runner/runners?
 
 const QueueFullMsg = "No resources available. Please try later."
 const UnknownRunIdMsg = "Unknown run id."
-const RequestIsRunning = "Run %s is still running, please Abort it first."
+const RequestIsNotDone = "Run %s is not done, please Abort it first."
 
 // QueueingRunner manages a queue of commands.
 // One request is run at a time, via an underlying delegate runner
@@ -241,30 +241,31 @@ func (qr *QueueingRunner) status(id runner.RunId) (runner.ProcessStatus, error) 
 }
 
 func (qr *QueueingRunner) statusAll() ([]runner.ProcessStatus, error) {
-	r, err := qr.delegate.StatusAll()
+	stats, err := qr.delegate.StatusAll()
 	if err != nil {
 		return nil, err
 	}
 
 	// translate the RunID from the delegate's namespace to ours
 	// (this is why we need the reverse mapping as well)
-	for i, st := range r {
-		qID, ok := qr.delToQ[st.RunId]
+	for i, stat := range stats {
+		delID := stat.RunId
+		qID, ok := qr.delToQ[delID]
 		if !ok {
-			return nil, fmt.Errorf("Unknown run ID in delegate %v", st.RunId)
+			return nil, fmt.Errorf("Unknown run ID in delegate %v", delID)
 		}
-		r[i].RunId = qID
+		stats[i].RunId = qID
 	}
 
 	for _, st := range qr.errored {
-		r = append(r, st)
+		stats = append(stats, st)
 	}
 
 	for _, cmdAndId := range qr.q {
-		r = append(r, runner.PendingStatus(cmdAndId.id))
+		stats = append(stats, runner.PendingStatus(cmdAndId.id))
 	}
 
-	return r, nil
+	return stats, nil
 }
 
 func (qr *QueueingRunner) abort(id runner.RunId) (runner.ProcessStatus, error) {
@@ -304,7 +305,7 @@ func (qr *QueueingRunner) erase(id runner.RunId) error {
 
 	for _, cmdAndId := range qr.q {
 		if cmdAndId.id == id {
-			return fmt.Errorf(RequestIsRunning, id)
+			return fmt.Errorf(RequestIsNotDone, id)
 		}
 	}
 
