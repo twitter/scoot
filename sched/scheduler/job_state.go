@@ -73,11 +73,6 @@ func (j *jobState) taskCompleted(taskId string) {
 // Update JobState to reflect that an error has occurred running this Task
 func (j *jobState) errorRunningTask(taskId string, err error) {
 	taskState := j.Tasks[taskId]
-
-	//TODO: Check error to see if its retryable.  If a task has
-	// failed a certain number of times move it to the dead-letter queue
-
-	// For now just set to NotStarted so it will get rescheduled
 	taskState.Status = sched.NotStarted
 }
 

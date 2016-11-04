@@ -13,6 +13,10 @@ import (
 	"github.com/scootdev/scoot/sched/worker"
 )
 
+type SchedulerConfig struct {
+	MaxRetriesPerTask int
+}
+
 // Scheduler that keeps track of the state of running tasks & the cluster
 // so that it can make smarter scheduling decisions
 //
@@ -30,8 +34,9 @@ type statefulScheduler struct {
 	addJobCh      chan jobAddedMsg
 
 	// Scheduler State
-	clusterState   *clusterState
-	inProgressJobs map[string]*jobState // map of inprogress jobId to jobState
+	clusterState      *clusterState
+	inProgressJobs    map[string]*jobState // map of inprogress jobId to jobState
+	maxRetriesPerTask int
 
 	// stats
 	stat stats.StatsReceiver
@@ -41,6 +46,7 @@ func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
+	config SchedulerConfig,
 	stat stats.StatsReceiver) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -48,6 +54,7 @@ func NewStatefulSchedulerFromCluster(
 		sub.Updates,
 		sc,
 		wf,
+		config,
 		stat,
 		false)
 }
@@ -61,6 +68,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
+	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
 ) *statefulScheduler {
@@ -71,10 +79,10 @@ func NewStatefulScheduler(
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates),
-		inProgressJobs: make(map[string]*jobState),
-
-		stat: stat,
+		clusterState:      newClusterState(initialCluster, clusterUpdates),
+		inProgressJobs:    make(map[string]*jobState),
+		maxRetriesPerTask: config.MaxRetriesPerTask,
+		stat:              stat,
 	}
 
 	sched.startUp()
@@ -240,6 +248,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
+		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
+
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)
 		jobState.taskStarted(taskId)
@@ -252,6 +262,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					wf,
 					taskId,
 					taskDef,
+					preventRetries,
 					s.stat)
 			},
 			func(err error) {

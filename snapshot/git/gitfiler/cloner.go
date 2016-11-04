@@ -14,6 +14,7 @@ import (
 // hardlink. This means the clone is much faster and also takes very little extra hard disk space.
 // Cf. https://git-scm.com/docs/git-clone
 
+// RepoIniter implementation
 // cloner clones a repo using --reference based on a reference repo
 type refCloner struct {
 	refPool   *RepoPool
@@ -21,7 +22,7 @@ type refCloner struct {
 }
 
 // Get gets a repo with git clone --reference
-func (c *refCloner) Get() (*repo.Repository, error) {
+func (c *refCloner) Init() (*repo.Repository, error) {
 	ref, err := c.refPool.Get()
 	defer c.refPool.Release(ref, err)
 	if err != nil {
@@ -40,6 +41,7 @@ func (c *refCloner) Get() (*repo.Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gitfiler.refCloner.clone: error cloning: %v", err)
 	}
+	log.Println("gitfiler.refCloner.clone: Cloning complete")
 
 	return repo.NewRepository(cloneDir.Dir)
 }
