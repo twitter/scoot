@@ -59,25 +59,30 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 }
 
 func (t *tempFiler) Checkout(id string) (snapshot.Checkout, error) {
+	dir, err := t.tmp.TempDir("checkout-" + id + "__")
+	if err != nil {
+		return nil, err
+	}
+	co, err := t.CheckoutAt(id, dir.Dir)
+	if err != nil {
+		os.RemoveAll(dir.Dir)
+		return nil, err
+	}
+	return co, nil
+}
+
+func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
 	snap, ok := t.snapshots[id]
 	if !ok {
 		return nil, errors.New("No snapshot with id: " + id)
 	}
 
-	var err error
-	var co *temp.TempDir
-	co, err = t.tmp.TempDir("checkout-")
-	if err != nil {
-		return nil, err
-	}
 	// Copy contents of snapshot dir to the output dir using cp '.' terminator syntax (incompatible with path/filepath).
-	err = exec.Command("cp", "-rf", snap+"/.", co.Dir).Run()
-	if err != nil {
+	if err := exec.Command("cp", "-rf", snap+"/.", dir).Run(); err != nil {
 		return nil, err
 	}
-
 	return &staticCheckout{
-		path: co.Dir,
+		path: dir,
 		id:   id,
 	}, nil
 }

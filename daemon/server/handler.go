@@ -8,6 +8,8 @@ import (
 )
 
 // Create a new handler that implements daemon protocol and works with domain types.
+//
+// TODO: when Runner eventually implements Poll(), we could get rid of handler and use runner directly in server.
 func NewHandler(runner runner.Runner, filer snapshot.Filer, pollInterval time.Duration) *Handler {
 	return &Handler{
 		runner:       runner,
@@ -28,10 +30,7 @@ func (h *Handler) CreateSnapshot(path string) (snapshotId string, err error) {
 
 func (h *Handler) CheckoutSnapshot(snapshotId runner.SnapshotId, dir string) error {
 	// Checkout snapshot in a default directory then move that checkout to the specified dir.
-	co, err := h.filer.Checkout(string(snapshotId))
-	if err == nil {
-		err = co.Disown(dir)
-	}
+	_, err := h.filer.CheckoutAt(string(snapshotId), dir)
 	return err
 }
 
@@ -47,7 +46,9 @@ func (h *Handler) Poll(runIds []runner.RunId, timeout time.Duration, returnAll b
 	callerTimer := &time.Timer{}
 	if timeout > 0 {
 		callerTimer = time.NewTimer(timeout)
+		defer callerTimer.Stop()
 	}
+	defer pollTicker.Stop()
 
 	// Helper that loops over the provided runIds and stores a status if it's finished or if all==true.
 	// Returns true if any of the status entries are finished.

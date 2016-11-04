@@ -2,7 +2,6 @@ package gitfiler
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/scootdev/scoot/snapshot"
@@ -58,6 +57,20 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
 }
 
+func (c *Checkouter) CheckoutAt(id string, dir string) (co snapshot.Checkout, err error) {
+	co, err = c.Checkout(id)
+	if err != nil {
+		return nil, err
+	}
+	defer co.Release()
+
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("cp -r %s/* %s", co.Path(), dir))
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return &UnmanagedCheckout{id: id, dir: dir}, nil
+}
+
 // Implement noop ingest so this Checkouter can be passed around as a Filer.
 func (c *Checkouter) Ingest(string) (string, error)               { return "", nil }
 func (c *Checkouter) IngestMap(map[string]string) (string, error) { return "", nil }
@@ -86,15 +99,20 @@ func (c *Checkout) Release() error {
 	return nil
 }
 
-func (c *Checkout) Disown(newAbsDir string) error {
-	err := os.MkdirAll(newAbsDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("cp -r %s/* %s", c.Path(), newAbsDir))
-	err = cmd.Run()
-	if err == nil {
-		return c.Release()
-	}
-	return err
+// User-owned checkout.
+type UnmanagedCheckout struct {
+	id  string
+	dir string
+}
+
+func (c *UnmanagedCheckout) Path() string {
+	return c.dir
+}
+
+func (c *UnmanagedCheckout) ID() string {
+	return c.id
+}
+
+func (c *UnmanagedCheckout) Release() error {
+	return nil
 }

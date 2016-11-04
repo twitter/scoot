@@ -1,9 +1,6 @@
 package snapshots
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -19,8 +16,12 @@ type noopCheckouter struct {
 }
 
 func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
+	return c.CheckoutAt(id, c.path)
+}
+
+func (c *noopCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
 	return &staticCheckout{
-		path: c.path,
+		path: dir,
 		id:   id,
 	}, nil
 }
@@ -39,8 +40,12 @@ func (c *tempCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	if err != nil {
 		return nil, err
 	}
+	return c.CheckoutAt(id, t.Dir)
+}
+
+func (c *tempCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
 	return &staticCheckout{
-		path: t.Dir,
+		path: dir,
 		id:   id,
 	}, nil
 }
@@ -60,15 +65,6 @@ func (c *staticCheckout) ID() string {
 
 func (c *staticCheckout) Release() error {
 	return nil
-}
-
-func (c *staticCheckout) Disown(newAbsDir string) error {
-	err := os.MkdirAll(newAbsDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("mv %s/* %s", c.Path(), newAbsDir))
-	return cmd.Run()
 }
 
 // Initer will do something once, e.g., clone a git repo (that might be expensive)
@@ -94,9 +90,13 @@ type initingCheckouter struct {
 }
 
 func (c *initingCheckouter) Checkout(id string) (snapshot.Checkout, error) {
+	return c.CheckoutAt(id, c.path)
+}
+
+func (c *initingCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
 	c.wg.Wait()
 	return &staticCheckout{
-		path: c.path,
+		path: dir,
 		id:   id,
 	}, nil
 }

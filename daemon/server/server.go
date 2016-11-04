@@ -21,6 +21,8 @@ func NewServer(handler *Handler) (Server, error) {
 }
 
 type Server interface {
+	Listen() (net.Listener, error)
+	Serve(net.Listener) error
 	ListenAndServe() error
 	Stop()
 }
@@ -30,17 +32,23 @@ type daemonServer struct {
 	grpcServer *grpc.Server
 }
 
-func (s *daemonServer) ListenAndServe() error {
-	l, err := Listen()
-	if err != nil {
-		return err
-	}
-	return s.Serve(l)
+// Return a net.Listener suitable as input to Serve().
+func (s *daemonServer) Listen() (net.Listener, error) {
+	return Listen()
 }
 
 // Serve serves Scoot Daemon at scootdir
 func (s *daemonServer) Serve(l net.Listener) error {
 	return s.grpcServer.Serve(l)
+}
+
+// Convenience function which can be used if the caller doesn't need to know when Listen() is completes.
+func (s *daemonServer) ListenAndServe() error {
+	l, err := s.Listen()
+	if err != nil {
+		return err
+	}
+	return s.Serve(l)
 }
 
 // Stops the daemonServer, canceling all active RPCs
@@ -69,7 +77,7 @@ func (s *daemonServer) CheckoutSnapshot(ctx context.Context, req *protocol.Check
 }
 
 func (s *daemonServer) Run(ctx context.Context, req *protocol.RunRequest) (*protocol.RunReply, error) {
-	cmd := runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.SnapshotId)
+	cmd := runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.Cmd.SnapshotId)
 	if status, err := s.handler.Run(cmd); err == nil {
 		return &protocol.RunReply{RunId: string(status.RunId)}, nil
 	} else {

@@ -105,7 +105,7 @@ func (c *conn) Echo(arg string) (string, error) {
 }
 
 func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
-	req := &protocol.RunRequest{}
+	req := &protocol.RunRequest{Cmd: &protocol.RunRequest_Command{}}
 	req.Cmd.Argv = cmd.Argv
 	req.Cmd.Env = cmd.EnvVars
 	req.Cmd.TimeoutNs = int64(cmd.Timeout)

@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"time"
 
 	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/execer/os"
+	os_exec "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
@@ -24,7 +25,7 @@ func main() {
 	case "sim":
 		ex = execers.NewSimExecer(nil)
 	case "os":
-		ex = os.NewExecer()
+		ex = os_exec.NewExecer()
 	default:
 		log.Fatalf("Unknown execer type %v", *execerType)
 	}
@@ -33,6 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error creating temp dir: ", err)
 	}
+	defer os.RemoveAll(tempDir.Dir)
 
 	outputCreator, err := local.NewOutputCreator(tempDir)
 	if err != nil {

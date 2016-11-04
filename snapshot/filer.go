@@ -13,6 +13,9 @@ type Filer interface {
 type Checkouter interface {
 	// Checkout checks out the Snapshot identified by id, or an error if it fails.
 	Checkout(id string) (Checkout, error)
+
+	// Create checkout in a caller controlled dir.
+	CheckoutAt(id string, dir string) (Checkout, error)
 }
 
 // Checkout represents one checkout of a Snapshot.
@@ -27,9 +30,6 @@ type Checkout interface {
 	// Releases this Checkout, allowing the Checkouter to clean/recycle this checkout.
 	// After Release(), the client may not look at files under Path().
 	Release() error
-
-	// Relocates the checkout contents to a caller controlled dir and then calls Release().
-	Disown(newAbsDir string) error
 }
 
 // Ingester creates a Snapshot from a path in the local filesystem.
