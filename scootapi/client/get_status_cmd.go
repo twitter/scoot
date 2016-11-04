@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -43,7 +44,8 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		}
 	}
 
-	fmt.Println("Job Status: ", status)
+	asJson, err := json.MarshalIndent(status, "", "  ")
+	fmt.Printf("%s\n", asJson)
 
 	return nil
 }
