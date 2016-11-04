@@ -197,7 +197,7 @@ func setup(size int, t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
-	sr := NewSimpleReportBackRunner(sim, snapshots.MakeInvalidCheckouter(), outputCreator, runnerAvailableCh)
+	sr := NewSimpleReportBackRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, runnerAvailableCh)
 	chaos := runners.NewChaosRunner(sr)
 	qr := NewQueuingRunner(chaos, size, runnerAvailableCh).(*QueueingRunner)
 
