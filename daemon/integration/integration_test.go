@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -136,8 +135,7 @@ func TestMain(m *testing.M) {
 
 //TODO update this to use queuing runner
 func getRunner() runner.Runner {
-	wg := &sync.WaitGroup{}
-	ex := execers.NewSimExecer(wg)
+	ex := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		panic(err)
