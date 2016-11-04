@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -36,14 +37,9 @@ func TestEcho(t *testing.T) {
 func TestRunSimpleCommand(t *testing.T) {
 	// run the command
 	var statusReq []string = []string{"run", "complete 0"}
-	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
+	runId := assertRun("first run", "nil", statusReq[:], t)
 
-	// give the command time to finish running
-	time.Sleep(30 * time.Millisecond)
-
-	// get the status
-	statusReq = []string{"status", runId}
-	assertRun("complete", "ignore", "nil", statusReq[:], t)
+	waitForState("first wait", runId, "complete", 100*time.Millisecond, t)
 }
 
 // send 2 run commands, where the first one sleeps for a short while to block the second one
@@ -52,40 +48,26 @@ func TestRunSimpleCommand(t *testing.T) {
 func TestRun2Commands(t *testing.T) {
 	// run the first command
 	var statusReq []string = []string{"run", "sleep 10"}
-	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
+	runId := assertRun("first run", "nil", statusReq[:], t)
 
 	// run the second command, it should get runner busy message
 	statusReq = []string{"run", "complete 0"}
-	assertRun("ignore", "ignore", local.RunnerBusyMsg, statusReq[:], t)
+	assertRun("second run", local.RunnerBusyMsg, statusReq[:], t)
 
-	// wait for the command to finish running
-	time.Sleep(20 * time.Millisecond)
-
-	// get the status of the first run
-	statusReq = []string{"status", runId}
-
-	assertRun("complete", "ignore", "nil", statusReq[:], t)
+	waitForState("first wait", runId, "complete", 200*time.Millisecond, t)
 }
 
-func assertRun(expectedStdout, stderrSubstring, errSubstring string, runArgs []string, t *testing.T) string {
+func assertRun(tag string, errSubstring string, runArgs []string, t *testing.T) string {
 	stdout, stderr, err := run(runArgs[0:]...)
 
 	if strings.Compare(errSubstring, "nil") != 0 {
 		if err == nil {
-			t.Fatalf("Run(%v) failed, expected err to be %s, got: nil", runArgs, errSubstring)
+			panic(fmt.Sprintf("%s: Run(%v) failed, expected err to be %s, got: nil", tag, runArgs, errSubstring))
 		} else if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(errSubstring)) {
-			t.Fatalf("Run(%v) failed, expected to find '%s' in err, got: '%s'", runArgs, stderrSubstring, stderr)
+			panic(fmt.Sprintf("%s: Run(%v) failed, expected to find '%s' in err, got: '%s'", tag, runArgs, errSubstring, stderr))
 		}
 	} else if err != nil {
-		t.Fatalf("Run(%v) failed, expected err to be nil, got: %s", runArgs, err.Error())
-	}
-
-	if strings.Compare(expectedStdout, "ignore") != 0 && strings.Compare(strings.ToLower(stdout), strings.ToLower(expectedStdout)) != 0 {
-		t.Fatalf("Run(%v) failed, expected stdout to be '%s', got '%s'", runArgs, expectedStdout, stdout)
-	}
-
-	if strings.Compare(stderrSubstring, "ignore") != 0 && len(stderrSubstring) != 0 && !strings.Contains(strings.ToLower(stderr), strings.ToLower(stderrSubstring)) {
-		t.Fatalf("Run(%v) failed, expected to find '%s' in stderr, got: '%s'", runArgs, stderrSubstring, stderr)
+		panic(fmt.Sprintf("%s: Run(%v) failed, expected err to be nil, got: %s", tag, runArgs, err.Error()))
 	}
 
 	return stdout
@@ -103,6 +85,32 @@ func run(args ...string) (string, string, error) {
 	}
 	defer cl.Close()
 	return integration.Run(cl, args...)
+}
+
+func waitForState(tag string, runId string, expectedStatus string, timeout time.Duration, t *testing.T) {
+
+	start := time.Now().Nanosecond()
+
+	for {
+		// get the status
+		statusReq := []string{"status", runId}
+		status := assertRun(tag, "nil", statusReq[:], t)
+
+		if strings.Compare(strings.ToLower(expectedStatus), strings.ToLower(status)) == 0 {
+			return
+		}
+
+		// timeout?
+		now := time.Now()
+		elapsedNs := time.Duration(now.Nanosecond() - start)
+		if elapsedNs < 0 || elapsedNs.Nanoseconds() > timeout.Nanoseconds() {
+			panic(fmt.Sprintf("%s test timed out waiting for state %s on runid %s", tag, expectedStatus, runId))
+		}
+
+		// stall 10ms
+		time.Sleep(10 * time.Millisecond)
+	}
+
 }
 
 func TestMain(m *testing.M) {
