@@ -10,7 +10,6 @@ import (
 )
 
 const QueueFullMsg = "No resources available. Please try later."
-const RequestIsNotDone = "Run %s is not done, please Abort it first."
 
 // commandAndID is a command waiting to run in the queue and the ID we've assigned
 type commandAndID struct {
@@ -18,6 +17,7 @@ type commandAndID struct {
 	id  runner.RunId
 }
 
+// NewQueueRunner creates a new runner with a queue of capacity
 func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator, capacity int) runner.Runner {
 	statuses := NewStatuses()
 	invoker := NewInvoker(exec, filer, outputCreator)
@@ -39,6 +39,7 @@ type QueueController struct {
 	mu        sync.Mutex
 }
 
+// Run runs cmd, returning its initial status or an error
 func (c *QueueController) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -55,6 +56,7 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.ProcessStatus, error)
 	}
 }
 
+// Abort aborts runId, returning the current (final) status of runId
 func (c *QueueController) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 
@@ -77,6 +79,7 @@ func (c *QueueController) Abort(runId runner.RunId) (runner.ProcessStatus, error
 	return c.statuses.StatusQuerySingle(runner.RunDone(runId), runner.Wait())
 }
 
+// start starts a command, returning the current status
 func (c *QueueController) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
 	c.runningID = id
 	c.abortCh = make(chan struct{})
@@ -89,11 +92,13 @@ func (c *QueueController) start(cmd *runner.Command, id runner.RunId) (runner.Pr
 
 	go func() {
 		st := c.invoker.Run(cmd, c.runningID, c.abortCh, updateCh)
+		close(updateCh)
 		c.finish(st)
 	}()
 	return c.statuses.Status(id)
 }
 
+// finish is a callback to be called when a process is finished with its final state
 func (c *QueueController) finish(st runner.ProcessStatus) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
