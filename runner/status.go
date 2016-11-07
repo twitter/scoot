@@ -72,7 +72,7 @@ type ProcessStatus struct {
 	StderrRef string
 
 	// Only valid if State == COMPLETE
-	SnapshotId string
+	SnapshotID string
 	ExitCode   int
 
 	// Only valid if State == (FAILED || BADREQUEST)
@@ -81,7 +81,7 @@ type ProcessStatus struct {
 
 func (p ProcessStatus) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "--- Process Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.SnapshotId, p.State)
+	fmt.Fprintf(&b, "--- Process Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.SnapshotID, p.State)
 
 	if p.State == COMPLETE {
 		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
@@ -137,9 +137,10 @@ func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
 	return r
 }
 
-func CompleteStatus(runId RunId, exitCode int) (r ProcessStatus) {
+func CompleteStatus(runId RunId, snapshotID string, exitCode int) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = COMPLETE
+	r.SnapshotID = snapshotID
 	r.ExitCode = exitCode
 	return r
 }

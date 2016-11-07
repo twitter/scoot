@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -341,9 +341,9 @@ type commandAndID struct {
 // 	return nil
 // }
 
-func NewQueueRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator, capacity int) runner.Runner {
+func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator, capacity int) runner.Runner {
 	statuses := NewStatuses()
-	invoker := NewInvoker(exec, checkouter, outputCreator)
+	invoker := NewInvoker(exec, filer, outputCreator)
 	controller := &QueueController{statuses: statuses, invoker: invoker, capacity: capacity}
 	return NewControllerAndStatuserRunner(controller, statuses)
 }

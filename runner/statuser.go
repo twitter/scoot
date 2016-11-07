@@ -2,6 +2,7 @@ package runner
 
 import (
 	"math"
+	"time"
 )
 
 type StateMask uint64
@@ -23,26 +24,22 @@ const (
 	ALL_MASK = math.MaxUint64
 )
 
-func MaskForState(state ProcessState) StateMask {
-	return 1 << uint(state)
-}
-
 type StatusQuery struct {
 	Runs    []RunId
 	AllRuns bool
 	States  StateMask
 }
 
-func RunDone(id RunId) StatusQuery {
-	return StatusQuery{Runs: []RunId{id}, States: DONE_MASK}
-}
+// PollOpts describes options for our Poll.
+// It differs from StatusQuery because StatusQuery describes what ProcessStatus'es to match, but
+// PollOpts describes the mechanics of how to perform the query.
+type PollOpts struct {
+	// How long to wait for new Events
+	Timeout time.Duration
 
-func RunCurrent(id RunId) StatusQuery {
-	return StatusQuery{Runs: []RunId{id}, States: ALL_MASK}
-}
-
-func RunState(id RunId, state ProcessState) StatusQuery {
-	return StatusQuery{Runs: []RunId{id}, States: MaskForState(state)}
+	// We might add:
+	// maximum number of evens to return
+	// MaxEvents int
 }
 
 type Statuser interface {
@@ -59,8 +56,37 @@ type Statuser interface {
 	Erase(run RunId) error
 }
 
-func (m StateMask) Matches(st ProcessStatus) bool {
-	return (1<<uint(st.State))&m != 0
+// Helper Functions to create StatusQuery's
+
+func RunDone(id RunId) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: DONE_MASK}
+}
+
+func RunCurrent(id RunId) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: ALL_MASK}
+}
+
+func RunState(id RunId, state ProcessState) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: MaskForState(state)}
+}
+
+// Helper Function to create StateMasks
+func MaskForState(state ProcessState) StateMask {
+	return 1 << uint(state)
+}
+
+// Helper Functions to create PollOpts's
+func Current() PollOpts {
+	return PollOpts{Timeout: time.Duration(0)}
+}
+
+func Wait() PollOpts {
+	return PollOpts{Timeout: time.Duration(-1)}
+}
+
+// Implementations of Query Objects
+func (m StateMask) Matches(state ProcessStatus) bool {
+	return MaskForState(state)&m != 0
 }
 
 func (q StatusQuery) Matches(st ProcessStatus) bool {

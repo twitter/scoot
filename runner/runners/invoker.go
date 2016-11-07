@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -10,13 +10,17 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
-func NewInvoker(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) *Invoker {
-	return &Invoker{exec, checkouter, outputCreator}
+// NewInvoker creates a NewExecer that will use the supplied helpers
+func NewInvoker(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) *Invoker {
+	return &Invoker{exec, filer, outputCreator}
 }
 
+// Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
+// (E.g., checking out a Snapshot, or saving the Output once it's done)
+// Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
 	execer        execer.Execer
-	checkouter    snapshot.Checkouter
+	filer         snapshot.Filer
 	outputCreator runner.OutputCreator
 }
 
@@ -25,6 +29,10 @@ type checkoutAndError struct {
 	err      error
 }
 
+// Run runs cmd as run id returning the final ProcessStatus
+// Run will send updates the process is running to updateCh.
+// Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
+// Run will not return until the process is not running.
 func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct{}, updateCh chan runner.ProcessStatus) runner.ProcessStatus {
 	log.Printf("runner/local/invoker.go: Run id %v with cmd %+v", id, cmd)
 
@@ -39,7 +47,7 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 	var checkout snapshot.Checkout
 	var err error
 	go func() {
-		checkout, err = in.checkouter.Checkout(cmd.SnapshotId)
+		checkout, err = in.filer.Checkout(cmd.SnapshotId)
 		checkoutCh <- checkoutAndError{checkout, err}
 	}()
 
@@ -106,7 +114,21 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 
 	switch st.State {
 	case execer.COMPLETE:
-		return runner.CompleteStatus(id, st.ExitCode)
+		srcToDest := map[string]string{
+			stdout.AsFile(): "STDOUT",
+			stderr.AsFile(): "STDERR",
+		}
+		// TODO(jschiller): get consensus on design and either implement or delete.
+		// if cmd.SnapshotPlan != nil {
+		// 	for src, dest := range cmd.SnapshotPlan {
+		// 		srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
+		// 	}
+		// }
+		snapshotID, err := in.filer.IngestMap(srcToDest)
+		if err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))
+		}
+		return runner.CompleteStatus(id, snapshotID, st.ExitCode)
 	case execer.FAILED:
 		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error))
 	default:

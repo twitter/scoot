@@ -1,13 +1,15 @@
-package local
+package runners
 
 import (
 	"github.com/scootdev/scoot/runner"
 )
 
+// Create a new ControllerAndStatuserRunner than uses cont for the controller and stat for the Statuser
 func NewControllerAndStatuserRunner(cont runner.Controller, stat runner.Statuser) *ControllerAndStatuserRunner {
 	return &ControllerAndStatuserRunner{cont, stat}
 }
 
+// ControllerAndStatuserRunner combines a Controller and a Statuser to make a Runner.
 type ControllerAndStatuserRunner struct {
 	cont runner.Controller
 	stat runner.Statuser

@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"

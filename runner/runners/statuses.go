@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -11,10 +11,13 @@ import (
 
 const UnknownRunIdMsg = "unknown run id %v"
 
+// NewStatuses creates a new empty Statuses
 func NewStatuses() *Statuses {
 	return &Statuses{runs: make(map[runner.RunId]runner.ProcessStatus)}
 }
 
+// Statuses is a database of ProcessStatus'es. It allows clients to Write Statuses, Query the
+// current status, and listen for updates to status. It implements runner.ProcessStatus
 type Statuses struct {
 	mu        sync.Mutex
 	runs      map[runner.RunId]runner.ProcessStatus
@@ -27,6 +30,9 @@ type queryAndCh struct {
 	ch chan runner.ProcessStatus
 }
 
+// Writer interface
+
+// NewRun creates a new run, with a new RunId in status Preparing
 func (s *Statuses) NewRun() runner.ProcessStatus {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -42,21 +48,44 @@ func (s *Statuses) NewRun() runner.ProcessStatus {
 	return st
 }
 
+// Update writes a new status.
+// It enforces several rules:
+//   cannot change a status once it is Done
+//   cannot erase Stdout/Stderr Refs
 func (s *Statuses) Update(newStatus runner.ProcessStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.updateUnderLock(newStatus)
-}
-
-func (s *Statuses) StatusQuery(q runner.StatusQuery, poll runner.PollOpts) ([]runner.ProcessStatus, error) {
-	if poll.Timeout == 0 {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		return s.queryUnderLock(q)
+	oldStatus, ok := s.runs[newStatus.RunId]
+	if ok && oldStatus.State.IsDone() {
+		return
 	}
 
-	current, future, err := s.queryAndListen(q)
-	if err != nil || len(current) > 0 {
+	if newStatus.StdoutRef == "" {
+		newStatus.StdoutRef = oldStatus.StdoutRef
+	}
+	if newStatus.StderrRef == "" {
+		newStatus.StderrRef = oldStatus.StderrRef
+	}
+
+	s.runs[newStatus.RunId] = newStatus
+
+	listeners := make([]queryAndCh, 0, len(s.listeners))
+	for _, listener := range s.listeners {
+		if listener.q.Matches(newStatus) {
+			listener.ch <- newStatus
+			close(listener.ch)
+		} else {
+			listeners = append(listeners, listener)
+		}
+	}
+	s.listeners = listeners
+}
+
+// Reader interface (implements runner.Statuser)
+
+func (s *Statuses) StatusQuery(q runner.StatusQuery, poll runner.PollOpts) ([]runner.ProcessStatus, error) {
+	current, future, err := s.queryAndListen(q, poll.Timeout != 0)
+	if err != nil || len(current) > 0 || poll.Timeout == 0 {
 		return current, err
 	}
 
@@ -106,62 +135,30 @@ func (s *Statuses) Erase(run runner.RunId) error {
 	return nil
 }
 
-func (s *Statuses) updateUnderLock(newStatus runner.ProcessStatus) {
-	oldStatus, ok := s.runs[newStatus.RunId]
-	if ok && oldStatus.State.IsDone() {
-		return
-	}
-
-	if newStatus.StdoutRef == "" {
-		newStatus.StdoutRef = oldStatus.StdoutRef
-	}
-	if newStatus.StderrRef == "" {
-		newStatus.StderrRef = oldStatus.StderrRef
-	}
-
-	s.runs[newStatus.RunId] = newStatus
-
-	s.notifyAndUpdateListeners(newStatus)
-}
-
-func (s *Statuses) notifyAndUpdateListeners(newStatus runner.ProcessStatus) {
-	listeners := make([]queryAndCh, 0, len(s.listeners))
-	for _, listener := range s.listeners {
-		if listener.q.Matches(newStatus) {
-			listener.ch <- newStatus
-			close(listener.ch)
-		} else {
-			listeners = append(listeners, listener)
-		}
-	}
-	s.listeners = listeners
-}
-
-func (s *Statuses) queryAndListen(q runner.StatusQuery) (current []runner.ProcessStatus, future chan runner.ProcessStatus, err error) {
+// queryAndListen performs a query, returning the current results and optionally listens to the query
+// returns:
+//   the current results
+//   a channel that will hold the next result (if current is empty and err is nil)
+//   error
+func (s *Statuses) queryAndListen(q runner.StatusQuery, listen bool) (current []runner.ProcessStatus, future chan runner.ProcessStatus, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	r, err := s.queryUnderLock(q)
-	if err != nil || len(r) > 0 {
-		return r, nil, err
+
+	for _, runID := range q.Runs {
+		st, ok := s.runs[runID]
+		if !ok {
+			return nil, nil, fmt.Errorf(UnknownRunIdMsg, runID)
+		}
+		if q.States.Matches(st) {
+			current = append(current, st)
+		}
+	}
+
+	if err != nil || len(current) > 0 || !listen {
+		return current, nil, err
 	}
 
 	ch := make(chan runner.ProcessStatus, 1)
 	s.listeners = append(s.listeners, queryAndCh{q: q, ch: ch})
 	return nil, ch, nil
-}
-
-func (s *Statuses) queryUnderLock(q runner.StatusQuery) ([]runner.ProcessStatus, error) {
-	var result []runner.ProcessStatus
-
-	for _, runID := range q.Runs {
-		st, ok := s.runs[runID]
-		if !ok {
-			return nil, fmt.Errorf(UnknownRunIdMsg, runID)
-		}
-		if q.States.Matches(st) {
-			result = append(result, st)
-		}
-	}
-
-	return result, nil
 }

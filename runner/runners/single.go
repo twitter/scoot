@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 
 const RunnerBusyMsg = "Runner is busy"
 
-func NewSingleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
+func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) runner.Runner {
 	statuses := NewStatuses()
-	invoker := NewInvoker(exec, checkouter, outputCreator)
+	invoker := NewInvoker(exec, filer, outputCreator)
 	controller := &SimpleController{statuses: statuses, invoker: invoker}
 	return NewControllerAndStatuserRunner(controller, statuses)
 }
