@@ -30,6 +30,7 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 		return nil, err
 	}
 
+	// don't defer - measure only successful clones
 	initTime := stat.Latency("clonerInitLatency_ms").Time()
 
 	cloneDir, err := c.clonesDir.TempDir("clone-")
@@ -42,6 +43,7 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	log.Println("gitfiler.refCloner.clone: Cloning", cmd)
 	err = cmd.Run()
 	if err != nil {
+		stat.Counter("clonerInitFailures").Inc(1)
 		return nil, fmt.Errorf("gitfiler.refCloner.clone: error cloning: %v", err)
 	}
 	log.Println("gitfiler.refCloner.clone: Cloning complete")
