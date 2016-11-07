@@ -46,7 +46,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.sc,
 		deps.wf,
 		deps.config,
-		stats.CurrentStatsReceiver,
+		stats.NilStatsReceiver(),
 		true)
 }
 

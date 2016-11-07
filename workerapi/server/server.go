@@ -70,7 +70,7 @@ func (h *handler) stats() {
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
 			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
 			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
-			h.stat.Gauge("uptime_ms").Update(int64(time.Since(startTime) / time.Millisecond))
+			h.stat.Gauge("uptimeGauge_ms").Update(int64(time.Since(startTime) / time.Millisecond))
 			h.mu.Unlock()
 		}
 	}
