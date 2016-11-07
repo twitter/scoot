@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='daemon.proto',
   package='protocol',
   syntax='proto3',
-  serialized_pb=_b('\n\x0c\x64\x61\x65mon.proto\x12\x08protocol\"\x1b\n\x0b\x45\x63hoRequest\x12\x0c\n\x04ping\x18\x01 \x01(\t\"\x19\n\tEchoReply\x12\x0c\n\x04pong\x18\x01 \x01(\t\"%\n\x15\x43reateSnapshotRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"9\n\x13\x43reateSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\x12\x13\n\x0bsnapshot_id\x18\x02 \x01(\t\";\n\x17\x43heckoutSnapshotRequest\x12\x13\n\x0bsnapshot_id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ir\x18\x02 \x01(\t\"&\n\x15\x43heckoutSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\"\xac\x03\n\nRunRequest\x12\x13\n\x0bsnapshot_id\x18\x01 \x01(\t\x12)\n\x03\x63md\x18\x02 \x01(\x0b\x32\x1c.protocol.RunRequest.Command\x12-\n\x04plan\x18\x03 \x01(\x0b\x32\x1f.protocol.RunRequest.OutputPlan\x1a\x8b\x01\n\x07\x43ommand\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x32\n\x03\x65nv\x18\x02 \x03(\x0b\x32%.protocol.RunRequest.Command.EnvEntry\x12\x12\n\ntimeout_ns\x18\x03 \x01(\x03\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\xa0\x01\n\nOutputPlan\x12W\n\x16src_paths_to_dest_dirs\x18\x03 \x03(\x0b\x32\x37.protocol.RunRequest.OutputPlan.SrcPathsToDestDirsEntry\x1a\x39\n\x17SrcPathsToDestDirsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\")\n\x08RunReply\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"?\n\x0bPollRequest\x12\x0f\n\x07run_ids\x18\x01 \x03(\t\x12\x12\n\ntimeout_ns\x18\x02 \x01(\x03\x12\x0b\n\x03\x61ll\x18\x03 \x01(\x08\"\x94\x02\n\tPollReply\x12*\n\x06status\x18\x01 \x03(\x0b\x32\x1a.protocol.PollReply.Status\x1a\xda\x01\n\x06Status\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12/\n\x05state\x18\x02 \x01(\x0e\x32 .protocol.PollReply.Status.State\x12\x13\n\x0bsnapshot_id\x18\x03 \x01(\t\x12\x11\n\texit_code\x18\x04 \x01(\x05\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"X\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07PENDING\x10\x01\x12\r\n\tPREPARING\x10\x02\x12\x0b\n\x07RUNNING\x10\x03\x12\r\n\tCOMPLETED\x10\x04\x12\n\n\x06\x46\x41ILED\x10\x05\x32\xda\x02\n\x0bScootDaemon\x12\x34\n\x04\x45\x63ho\x12\x15.protocol.EchoRequest\x1a\x13.protocol.EchoReply\"\x00\x12R\n\x0e\x43reateSnapshot\x12\x1f.protocol.CreateSnapshotRequest\x1a\x1d.protocol.CreateSnapshotReply\"\x00\x12X\n\x10\x43heckoutSnapshot\x12!.protocol.CheckoutSnapshotRequest\x1a\x1f.protocol.CheckoutSnapshotReply\"\x00\x12\x31\n\x03Run\x12\x14.protocol.RunRequest\x1a\x12.protocol.RunReply\"\x00\x12\x34\n\x04Poll\x12\x15.protocol.PollRequest\x1a\x13.protocol.PollReply\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0c\x64\x61\x65mon.proto\x12\x08protocol\"\x1b\n\x0b\x45\x63hoRequest\x12\x0c\n\x04ping\x18\x01 \x01(\t\"\x19\n\tEchoReply\x12\x0c\n\x04pong\x18\x01 \x01(\t\"%\n\x15\x43reateSnapshotRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"9\n\x13\x43reateSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\x12\x13\n\x0bsnapshot_id\x18\x02 \x01(\t\";\n\x17\x43heckoutSnapshotRequest\x12\x13\n\x0bsnapshot_id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ir\x18\x02 \x01(\t\"&\n\x15\x43heckoutSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\"\xda\x01\n\nRunRequest\x12)\n\x03\x63md\x18\x01 \x01(\x0b\x32\x1c.protocol.RunRequest.Command\x1a\xa0\x01\n\x07\x43ommand\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x32\n\x03\x65nv\x18\x02 \x03(\x0b\x32%.protocol.RunRequest.Command.EnvEntry\x12\x12\n\ntimeout_ns\x18\x03 \x01(\x03\x12\x13\n\x0bsnapshot_id\x18\x04 \x01(\t\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\")\n\x08RunReply\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"?\n\x0bPollRequest\x12\x0f\n\x07run_ids\x18\x01 \x03(\t\x12\x12\n\ntimeout_ns\x18\x02 \x01(\x03\x12\x0b\n\x03\x61ll\x18\x03 \x01(\x08\"\x94\x02\n\tPollReply\x12*\n\x06status\x18\x01 \x03(\x0b\x32\x1a.protocol.PollReply.Status\x1a\xda\x01\n\x06Status\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12/\n\x05state\x18\x02 \x01(\x0e\x32 .protocol.PollReply.Status.State\x12\x13\n\x0bsnapshot_id\x18\x03 \x01(\t\x12\x11\n\texit_code\x18\x04 \x01(\x05\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"X\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07PENDING\x10\x01\x12\r\n\tPREPARING\x10\x02\x12\x0b\n\x07RUNNING\x10\x03\x12\r\n\tCOMPLETED\x10\x04\x12\n\n\x06\x46\x41ILED\x10\x05\x32\xda\x02\n\x0bScootDaemon\x12\x34\n\x04\x45\x63ho\x12\x15.protocol.EchoRequest\x1a\x13.protocol.EchoReply\"\x00\x12R\n\x0e\x43reateSnapshot\x12\x1f.protocol.CreateSnapshotRequest\x1a\x1d.protocol.CreateSnapshotReply\"\x00\x12X\n\x10\x43heckoutSnapshot\x12!.protocol.CheckoutSnapshotRequest\x1a\x1f.protocol.CheckoutSnapshotReply\"\x00\x12\x31\n\x03Run\x12\x14.protocol.RunRequest\x1a\x12.protocol.RunReply\"\x00\x12\x34\n\x04Poll\x12\x15.protocol.PollRequest\x1a\x13.protocol.PollReply\"\x00\x62\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -58,8 +58,8 @@ _POLLREPLY_STATUS_STATE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=1009,
-  serialized_end=1097,
+  serialized_start=799,
+  serialized_end=887,
 )
 _sym_db.RegisterEnumDescriptor(_POLLREPLY_STATUS_STATE)
 
@@ -297,8 +297,8 @@ _RUNREQUEST_COMMAND_ENVENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=505,
-  serialized_end=547,
+  serialized_start=458,
+  serialized_end=500,
 )
 
 _RUNREQUEST_COMMAND = _descriptor.Descriptor(
@@ -329,6 +329,13 @@ _RUNREQUEST_COMMAND = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='snapshot_id', full_name='protocol.RunRequest.Command.snapshot_id', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -341,75 +348,8 @@ _RUNREQUEST_COMMAND = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=408,
-  serialized_end=547,
-)
-
-_RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY = _descriptor.Descriptor(
-  name='SrcPathsToDestDirsEntry',
-  full_name='protocol.RunRequest.OutputPlan.SrcPathsToDestDirsEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='protocol.RunRequest.OutputPlan.SrcPathsToDestDirsEntry.key', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='protocol.RunRequest.OutputPlan.SrcPathsToDestDirsEntry.value', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=_descriptor._ParseOptions(descriptor_pb2.MessageOptions(), _b('8\001')),
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=653,
-  serialized_end=710,
-)
-
-_RUNREQUEST_OUTPUTPLAN = _descriptor.Descriptor(
-  name='OutputPlan',
-  full_name='protocol.RunRequest.OutputPlan',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='src_paths_to_dest_dirs', full_name='protocol.RunRequest.OutputPlan.src_paths_to_dest_dirs', index=0,
-      number=3, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[_RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY, ],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=550,
-  serialized_end=710,
+  serialized_start=340,
+  serialized_end=500,
 )
 
 _RUNREQUEST = _descriptor.Descriptor(
@@ -420,22 +360,8 @@ _RUNREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='snapshot_id', full_name='protocol.RunRequest.snapshot_id', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='cmd', full_name='protocol.RunRequest.cmd', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='plan', full_name='protocol.RunRequest.plan', index=2,
-      number=3, type=11, cpp_type=10, label=1,
+      name='cmd', full_name='protocol.RunRequest.cmd', index=0,
+      number=1, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -443,7 +369,7 @@ _RUNREQUEST = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_RUNREQUEST_COMMAND, _RUNREQUEST_OUTPUTPLAN, ],
+  nested_types=[_RUNREQUEST_COMMAND, ],
   enum_types=[
   ],
   options=None,
@@ -453,7 +379,7 @@ _RUNREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=282,
-  serialized_end=710,
+  serialized_end=500,
 )
 
 
@@ -490,8 +416,8 @@ _RUNREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=712,
-  serialized_end=753,
+  serialized_start=502,
+  serialized_end=543,
 )
 
 
@@ -535,8 +461,8 @@ _POLLREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=755,
-  serialized_end=818,
+  serialized_start=545,
+  serialized_end=608,
 )
 
 
@@ -595,8 +521,8 @@ _POLLREPLY_STATUS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=879,
-  serialized_end=1097,
+  serialized_start=669,
+  serialized_end=887,
 )
 
 _POLLREPLY = _descriptor.Descriptor(
@@ -625,18 +551,14 @@ _POLLREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=821,
-  serialized_end=1097,
+  serialized_start=611,
+  serialized_end=887,
 )
 
 _RUNREQUEST_COMMAND_ENVENTRY.containing_type = _RUNREQUEST_COMMAND
 _RUNREQUEST_COMMAND.fields_by_name['env'].message_type = _RUNREQUEST_COMMAND_ENVENTRY
 _RUNREQUEST_COMMAND.containing_type = _RUNREQUEST
-_RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY.containing_type = _RUNREQUEST_OUTPUTPLAN
-_RUNREQUEST_OUTPUTPLAN.fields_by_name['src_paths_to_dest_dirs'].message_type = _RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY
-_RUNREQUEST_OUTPUTPLAN.containing_type = _RUNREQUEST
 _RUNREQUEST.fields_by_name['cmd'].message_type = _RUNREQUEST_COMMAND
-_RUNREQUEST.fields_by_name['plan'].message_type = _RUNREQUEST_OUTPUTPLAN
 _POLLREPLY_STATUS.fields_by_name['state'].enum_type = _POLLREPLY_STATUS_STATE
 _POLLREPLY_STATUS.containing_type = _POLLREPLY
 _POLLREPLY_STATUS_STATE.containing_type = _POLLREPLY_STATUS
@@ -709,20 +631,6 @@ RunRequest = _reflection.GeneratedProtocolMessageType('RunRequest', (_message.Me
     # @@protoc_insertion_point(class_scope:protocol.RunRequest.Command)
     ))
   ,
-
-  OutputPlan = _reflection.GeneratedProtocolMessageType('OutputPlan', (_message.Message,), dict(
-
-    SrcPathsToDestDirsEntry = _reflection.GeneratedProtocolMessageType('SrcPathsToDestDirsEntry', (_message.Message,), dict(
-      DESCRIPTOR = _RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY,
-      __module__ = 'daemon_pb2'
-      # @@protoc_insertion_point(class_scope:protocol.RunRequest.OutputPlan.SrcPathsToDestDirsEntry)
-      ))
-    ,
-    DESCRIPTOR = _RUNREQUEST_OUTPUTPLAN,
-    __module__ = 'daemon_pb2'
-    # @@protoc_insertion_point(class_scope:protocol.RunRequest.OutputPlan)
-    ))
-  ,
   DESCRIPTOR = _RUNREQUEST,
   __module__ = 'daemon_pb2'
   # @@protoc_insertion_point(class_scope:protocol.RunRequest)
@@ -730,8 +638,6 @@ RunRequest = _reflection.GeneratedProtocolMessageType('RunRequest', (_message.Me
 _sym_db.RegisterMessage(RunRequest)
 _sym_db.RegisterMessage(RunRequest.Command)
 _sym_db.RegisterMessage(RunRequest.Command.EnvEntry)
-_sym_db.RegisterMessage(RunRequest.OutputPlan)
-_sym_db.RegisterMessage(RunRequest.OutputPlan.SrcPathsToDestDirsEntry)
 
 RunReply = _reflection.GeneratedProtocolMessageType('RunReply', (_message.Message,), dict(
   DESCRIPTOR = _RUNREPLY,
@@ -765,8 +671,6 @@ _sym_db.RegisterMessage(PollReply.Status)
 
 _RUNREQUEST_COMMAND_ENVENTRY.has_options = True
 _RUNREQUEST_COMMAND_ENVENTRY._options = _descriptor._ParseOptions(descriptor_pb2.MessageOptions(), _b('8\001'))
-_RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY.has_options = True
-_RUNREQUEST_OUTPUTPLAN_SRCPATHSTODESTDIRSENTRY._options = _descriptor._ParseOptions(descriptor_pb2.MessageOptions(), _b('8\001'))
 import grpc
 from grpc.beta import implementations as beta_implementations
 from grpc.beta import interfaces as beta_interfaces
