@@ -1,6 +1,10 @@
 package runner
 
-type StateMask int64
+import (
+	"math"
+)
+
+type StateMask uint64
 
 const (
 	UNKNOWN_MASK    StateMask = StateMask(1 << uint(UNKNOWN))
@@ -16,7 +20,12 @@ const (
 		1<<uint(FAILED) |
 		1<<uint(ABORTED) |
 		1<<uint(TIMEDOUT))
+	ALL_MASK = math.MaxUint64
 )
+
+func MaskForState(state ProcessState) StateMask {
+	return 1 << uint(state)
+}
 
 type StatusQuery struct {
 	Runs    []RunId
@@ -26,6 +35,14 @@ type StatusQuery struct {
 
 func RunDone(id RunId) StatusQuery {
 	return StatusQuery{Runs: []RunId{id}, States: DONE_MASK}
+}
+
+func RunCurrent(id RunId) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: ALL_MASK}
+}
+
+func RunState(id RunId, state ProcessState) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: MaskForState(state)}
 }
 
 type Statuser interface {

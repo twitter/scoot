@@ -15,7 +15,7 @@ func NewSingleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputC
 	statuses := NewStatuses()
 	invoker := NewInvoker(exec, checkouter, outputCreator)
 	controller := &SimpleController{statuses: statuses, invoker: invoker}
-	return NewRunner(controller, statuses)
+	return NewControllerAndStatuserRunner(controller, statuses)
 }
 
 type SimpleController struct {

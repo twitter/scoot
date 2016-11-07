@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -155,16 +154,11 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
 }
 
 func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
-	for {
-		time.Sleep(100 * time.Microsecond)
-		status, err := r.Status(run)
-		if err != nil {
-			panic(err)
-		}
-		if status.State.IsDone() || status.State == expected.State {
-			return status
-		}
+	st, err := r.StatusQuerySingle(runner.RunState(run, expected.State), runner.Wait())
+	if err != nil {
+		panic(err)
 	}
+	return st
 }
 
 func newRunner() (runner.Runner, *execers.SimExecer) {
@@ -178,6 +172,6 @@ func newRunner() (runner.Runner, *execers.SimExecer) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator)
+	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator)
 	return r, sim
 }

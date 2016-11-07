@@ -14,6 +14,10 @@ type queryAndCh struct {
 	ch chan runner.ProcessStatus
 }
 
+func NewStatuses() *Statuses {
+	return &Statuses{runs: make(map[runner.RunId]runner.ProcessStatus)}
+}
+
 type Statuses struct {
 	mu        sync.Mutex
 	runs      map[runner.RunId]runner.ProcessStatus
@@ -75,7 +79,7 @@ func (s *Statuses) StatusQuerySingle(q runner.StatusQuery, poll runner.PollOpts)
 		return runner.ProcessStatus{}, err
 	}
 
-	if len(statuses) > 1 {
+	if len(statuses) != 1 {
 		return runner.ProcessStatus{}, fmt.Errorf("StatusQuerySingle expected 1 result; got %d: %v", len(statuses), statuses)
 	}
 
@@ -83,7 +87,21 @@ func (s *Statuses) StatusQuerySingle(q runner.StatusQuery, poll runner.PollOpts)
 }
 
 func (s *Statuses) Status(id runner.RunId) (runner.ProcessStatus, error) {
-	return s.StatusQuerySingle(runner.RunDone(id), runner.Current())
+	return s.StatusQuerySingle(runner.RunCurrent(id), runner.Current())
+}
+
+func (s *Statuses) StatusAll() ([]runner.ProcessStatus, error) {
+	return s.StatusQuery(runner.StatusQuery{AllRuns: true, States: runner.ALL_MASK}, runner.Current())
+}
+
+func (s *Statuses) Erase(run runner.RunId) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.runs[run]
+	if st.State.IsDone() {
+		delete(s.runs, run)
+	}
+	return nil
 }
 
 func (s *Statuses) updateUnderLock(newStatus runner.ProcessStatus) {
@@ -106,7 +124,7 @@ func (s *Statuses) updateUnderLock(newStatus runner.ProcessStatus) {
 
 func (s *Statuses) notifyAndUpdateListeners(newStatus runner.ProcessStatus) {
 	listeners := make([]queryAndCh, 0, len(s.listeners))
-	for i, listener := range s.listeners {
+	for _, listener := range s.listeners {
 		if listener.q.Matches(newStatus) {
 			listener.ch <- newStatus
 			close(listener.ch)

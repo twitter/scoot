@@ -10,6 +10,10 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+func NewInvoker(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) *Invoker {
+	return &Invoker{exec, checkouter, outputCreator}
+}
+
 type Invoker struct {
 	execer        execer.Execer
 	checkouter    snapshot.Checkouter
