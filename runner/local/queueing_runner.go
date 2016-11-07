@@ -10,9 +10,9 @@ package local
 // // TODO(dbentley): should this be in queue.go
 // // TODO(dbentley): Move this whole package to runner/runners?
 
-// const QueueFullMsg = "No resources available. Please try later."
-// const UnknownRunIdMsg = "Unknown run id."
-// const RequestIsNotDone = "Run %s is not done, please Abort it first."
+const QueueFullMsg = "No resources available. Please try later."
+const UnknownRunIdMsg = "Unknown run id."
+const RequestIsNotDone = "Run %s is not done, please Abort it first."
 
 // // QueueingRunner manages a queue of commands.
 // // One request is run at a time, via an underlying delegate runner
@@ -117,11 +117,11 @@ package local
 // 	return <-errCh
 // }
 
-// // commandAndId is a command waiting to run in the queue and the ID we've assigned
-// type commandAndId struct {
-// 	id  runner.RunId
-// 	cmd *runner.Command
-// }
+// commandAndId is a command waiting to run in the queue and the ID we've assigned
+type commandAndId struct {
+	id  runner.RunId
+	cmd *runner.Command
+}
 
 // // Helper types for sending requests
 // type runRequest struct {
@@ -338,3 +338,25 @@ package local
 // 	qr.reqCh <- closeRequest{}
 // 	return nil
 // }
+
+type QueueController struct {
+	statuses *Statuses
+	invoker  *Invoker
+
+	runnerID runner.RunId
+	abortCh  chan struct{}
+	queue    []commandAndID
+	mu       sync.Mutex
+}
+
+func (c *QueueController) Run(cmd *Runner.Command) (runner.ProcessStatus, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.runningID == "" {
+		st := c.statuses.NewRun()
+
+		return c.start(cmd, st.RunId)
+	}
+
+	return runner.ProcessStatus{}, fmt.Errorf(RunnerBusyMsg)
+}
