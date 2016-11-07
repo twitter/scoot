@@ -107,6 +107,9 @@ func (s *Statuses) StatusQuery(q runner.StatusQuery, poll runner.PollOpts) ([]ru
 }
 
 func (s *Statuses) StatusQuerySingle(q runner.StatusQuery, poll runner.PollOpts) (runner.ProcessStatus, error) {
+	if len(q.Runs) != 1 {
+		return runner.ProcessStatus{}, fmt.Errorf("StatusQuerySingle expeected 1 run; got %d: %v", len(q.Runs), q.Runs)
+	}
 	statuses, err := s.StatusQuery(q, poll)
 	if err != nil {
 		return runner.ProcessStatus{}, err
