@@ -6,7 +6,6 @@ import (
 )
 
 type RunId string
-type SnapshotId string
 type ProcessState int
 
 const (
@@ -73,7 +72,7 @@ type ProcessStatus struct {
 	StderrRef string
 
 	// Only valid if State == COMPLETE
-	SnapshotId SnapshotId
+	SnapshotId string
 	ExitCode   int
 
 	// Only valid if State == (FAILED || BADREQUEST)
@@ -132,10 +131,9 @@ func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
 	return r
 }
 
-func CompleteStatus(runId RunId, snapshotId SnapshotId, exitCode int) (r ProcessStatus) {
+func CompleteStatus(runId RunId, exitCode int) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = COMPLETE
-	r.SnapshotId = snapshotId
 	r.ExitCode = exitCode
 	return r
 }

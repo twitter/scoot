@@ -14,13 +14,10 @@ type PollOpts struct {
 	// MaxEvents int
 }
 
-const NoPoll = PollOpts{Timeout: time.Duration(0)}
-
-type StatusQuery struct {
-	Runs   []RunId
-	States StateMask
+func Current() PollOpts {
+	return PollOpts{Timeout: time.Duration(0)}
 }
 
-type Statuses interface {
-	Query(q StatusQuery, poll PollOpts) ([]ProcessStatus, error)
+func Wait() PollOpts {
+	return PollOpts{Timeout: time.Duration(-1)}
 }

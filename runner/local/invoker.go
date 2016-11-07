@@ -1,10 +1,13 @@
 package local
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/snapshot"
 )
 
 type Invoker struct {
@@ -21,7 +24,7 @@ type checkoutAndError struct {
 func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct{}, updateCh chan runner.ProcessStatus) runner.ProcessStatus {
 	log.Printf("runner/local/invoker.go: Run id %v with cmd %+v", id, cmd)
 
-	var timeoutCh chan time.Time
+	var timeoutCh <-chan time.Time
 	if cmd.Timeout > 0 { // Timeout if applicable
 		timeout := time.NewTicker(cmd.Timeout)
 		timeoutCh = timeout.C
@@ -32,7 +35,7 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 	var checkout snapshot.Checkout
 	var err error
 	go func() {
-		checkout, err = r.checkouter.Checkout(cmd.SnapshotId)
+		checkout, err = in.checkouter.Checkout(cmd.SnapshotId)
 		checkoutCh <- checkoutAndError{checkout, err}
 	}()
 
@@ -59,15 +62,14 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 
 	log.Printf("runner.local.invoker.Run cmd: %+v checkout: %v", cmd, checkout.Path())
 
-	stdout, err := in.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
+	stdout, err := in.outputCreator.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
-		return runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err))
+		return runner.ErrorStatus(id, fmt.Errorf("could not create stdout: %v", err))
 	}
 	defer stdout.Close()
-	stderr, err := in.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
+	stderr, err := in.outputCreator.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
-		return runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err))
-		return
+		return runner.ErrorStatus(id, fmt.Errorf("could not create stderr: %v", err))
 	}
 	defer stderr.Close()
 
@@ -78,10 +80,10 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 		Stderr: stderr,
 	})
 	if err != nil {
-		return runner.ErrorStatus(runId, fmt.Errorf("could not exec: %v", err))
+		return runner.ErrorStatus(id, fmt.Errorf("could not exec: %v", err))
 	}
 
-	updateCh <- runner.RunningStatus(runId, stdout.URI(), stderr.URI())
+	updateCh <- runner.RunningStatus(id, stdout.URI(), stderr.URI())
 
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
@@ -100,10 +102,10 @@ func (in *Invoker) Run(cmd *runner.Command, id runner.RunId, abortCh chan struct
 
 	switch st.State {
 	case execer.COMPLETE:
-		return runner.CompleteStatus(runId, st.ExitCode)
+		return runner.CompleteStatus(id, st.ExitCode)
 	case execer.FAILED:
-		return runner.ErrorStatus(runId, fmt.Errorf("error execing: %v", st.Error))
+		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error))
 	default:
-		return runner.ErrorStatus(runId, fmt.Errorf("unexpected exec state: %v", st.State))
+		return runner.ErrorStatus(id, fmt.Errorf("unexpected exec state: %v", st.State))
 	}
 }

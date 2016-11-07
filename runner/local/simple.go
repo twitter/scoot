@@ -2,9 +2,7 @@ package local
 
 import (
 	"fmt"
-	"log"
 	"sync"
-	"time"
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -13,11 +11,14 @@ import (
 
 const RunnerBusyMsg = "Runner is busy"
 
-func NewSimpleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
-	return &simpleRunner{}
+func NewSingleRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator) runner.Runner {
+	statuses := NewStatuses()
+	invoker := NewInvoker(exec, checkouter, outputCreator)
+	controller := &SimpleController{statuses: statuses, invoker: invoker}
+	return NewRunner(controller, statuses)
 }
 
-type SimpleRunner struct {
+type SimpleController struct {
 	statuses *Statuses
 	invoker  *Invoker
 
@@ -26,10 +27,10 @@ type SimpleRunner struct {
 	mu        sync.Mutex
 }
 
-func (c *SimpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (c *SimpleController) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if r.runningID != "" {
+	if c.runningID != "" {
 		return runner.ProcessStatus{}, fmt.Errorf(RunnerBusyMsg)
 	}
 
@@ -38,11 +39,11 @@ func (c *SimpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	return c.start(cmd, st.RunId)
 }
 
-func (c *SimpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+func (c *SimpleController) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	if runId != c.runningID {
 		c.mu.Unlock()
-		return c.Statuses.Status(runId)
+		return c.statuses.StatusQuerySingle(runner.RunDone(runId), runner.Current())
 	}
 
 	if c.abortCh != nil {
@@ -52,31 +53,31 @@ func (c *SimpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	// Unlock so the abort can call finish()
 	c.mu.Unlock()
 
-	return c.Statuses.QuerySingle(runner.RunDone(runId), runner.Wait())
+	return c.statuses.StatusQuerySingle(runner.RunDone(runId), runner.Wait())
 }
 
-func (c *SimpleRunner) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
+func (c *SimpleController) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
 	c.runningID = id
 	c.abortCh = make(chan struct{})
 	updateCh := make(chan runner.ProcessStatus)
 	go func() {
-		for st := range c.updateCh {
+		for st := range updateCh {
 			c.statuses.Update(st)
 		}
 	}()
 
 	go func() {
-		st := c.invoker.Run(cmd, c.runningID, updateCh, c.abortCh)
+		st := c.invoker.Run(cmd, c.runningID, c.abortCh, updateCh)
 		c.finish(st)
 	}()
-	return st, nil
+	return c.statuses.Status(id)
 }
 
-func (c *SimpleRunner) finish(st runner.ProcessStatus) {
+func (c *SimpleController) finish(st runner.ProcessStatus) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.runningID = ""
 	c.abortCh = nil
-	c.statuses.Update(final)
+	c.statuses.Update(st)
 }

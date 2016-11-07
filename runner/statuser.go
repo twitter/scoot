@@ -3,21 +3,29 @@ package runner
 type StateMask int64
 
 const (
-	UNKNOWN_MASK    StateMask = 1 << UNKNOWN
-	PENDING_MASK              = 1 << PENDING
-	PREPARING_MASK            = 1 << PREPARING
-	RUNNING_MASK              = 1 << RUNNING
-	COMPLETE_MASK             = 1 << COMPLETE
-	FAILED_MASK               = 1 << FAILED
-	ABORTED_MASK              = 1 << ABORTED
-	TIMEDOUT_MASK             = 1 << TIMEDOUT
-	BADREQUEST_MASK           = 1 << BADREQUEST
+	UNKNOWN_MASK    StateMask = StateMask(1 << uint(UNKNOWN))
+	PENDING_MASK              = 1 << uint(PENDING)
+	PREPARING_MASK            = 1 << uint(PREPARING)
+	RUNNING_MASK              = 1 << uint(RUNNING)
+	COMPLETE_MASK             = 1 << uint(COMPLETE)
+	FAILED_MASK               = 1 << uint(FAILED)
+	ABORTED_MASK              = 1 << uint(ABORTED)
+	TIMEDOUT_MASK             = 1 << uint(TIMEDOUT)
+	BADREQUEST_MASK           = 1 << uint(BADREQUEST)
+	DONE_MASK                 = (1<<uint(COMPLETE) |
+		1<<uint(FAILED) |
+		1<<uint(ABORTED) |
+		1<<uint(TIMEDOUT))
 )
 
 type StatusQuery struct {
 	Runs    []RunId
 	AllRuns bool
 	States  StateMask
+}
+
+func RunDone(id RunId) StatusQuery {
+	return StatusQuery{Runs: []RunId{id}, States: DONE_MASK}
 }
 
 type Statuser interface {
@@ -35,7 +43,7 @@ type Statuser interface {
 }
 
 func (m StateMask) Matches(st ProcessStatus) bool {
-	return (1 << st.State) & m
+	return (1<<uint(st.State))&m != 0
 }
 
 func (q StatusQuery) Matches(st ProcessStatus) bool {

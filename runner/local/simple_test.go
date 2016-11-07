@@ -97,7 +97,7 @@ func TestAbort(t *testing.T) {
 }
 
 func complete(exitCode int) runner.ProcessStatus {
-	return runner.CompleteStatus(runner.RunId(""), runner.SnapshotId(""), exitCode)
+	return runner.CompleteStatus(runner.RunId(""), exitCode)
 }
 
 func running() runner.ProcessStatus {
