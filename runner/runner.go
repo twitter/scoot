@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+const NoRunnersMsg = "No runners available."
+const RunnerBusyMsg = "Runner is busy"
+
 // A command, execution environment, and timeout.
 type Command struct {
 	// Command line to run

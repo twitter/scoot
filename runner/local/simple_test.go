@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -57,8 +56,7 @@ func TestOutput(t *testing.T) {
 }
 
 func TestSimul(t *testing.T) {
-	r, wg := newRunner()
-	wg.Add(1)
+	r, sim := newRunner()
 	firstArgs := []string{"pause", "complete 0"}
 	firstRun := run(t, r, firstArgs)
 	assertWait(t, r, firstRun, running(), firstArgs...)
@@ -72,13 +70,12 @@ func TestSimul(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wg.Done()
+	sim.Resume()
 	assertWait(t, r, firstRun, complete(0), firstArgs...)
 }
 
 func TestAbort(t *testing.T) {
-	r, wg := newRunner()
-	wg.Add(1)
+	r, _ := newRunner()
 	args := []string{"pause", "complete 0"}
 	runId := run(t, r, args)
 	assertWait(t, r, runId, running(), args...)
@@ -96,8 +93,13 @@ func TestAbort(t *testing.T) {
 	}
 }
 
+// Here below should maybe move to a common file, as it's also used by queueing_runner_test.go
 func complete(exitCode int) runner.ProcessStatus {
 	return runner.CompleteStatus(runner.RunId(""), exitCode)
+}
+
+func pending() runner.ProcessStatus {
+	return runner.PendingStatus(runner.RunId(""))
 }
 
 func running() runner.ProcessStatus {
@@ -110,6 +112,10 @@ func failed(errorText string) runner.ProcessStatus {
 
 func aborted() runner.ProcessStatus {
 	return runner.AbortStatus(runner.RunId(""))
+}
+
+func badRequest(errorText string) runner.ProcessStatus {
+	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
 func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
@@ -161,9 +167,8 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 	}
 }
 
-func newRunner() (runner.Runner, *sync.WaitGroup) {
-	wg := &sync.WaitGroup{}
-	ex := execers.NewSimExecer(wg)
+func newRunner() (runner.Runner, *execers.SimExecer) {
+	sim := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		panic(err)
@@ -173,6 +178,6 @@ func newRunner() (runner.Runner, *sync.WaitGroup) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
-	return r, wg
+	r := NewSimpleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator)
+	return r, sim
 }
