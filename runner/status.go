@@ -6,6 +6,7 @@ import (
 )
 
 type RunId string
+type SnapshotId string
 type ProcessState int
 
 const (
@@ -65,13 +66,15 @@ func (p ProcessState) String() string {
 // Returned by the coordinator when a run request is made.
 type ProcessStatus struct {
 	RunId RunId
+
 	State ProcessState
 	// References to stdout and stderr, not their text
 	StdoutRef string
 	StderrRef string
 
 	// Only valid if State == COMPLETE
-	ExitCode int
+	SnapshotId SnapshotId
+	ExitCode   int
 
 	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
@@ -79,7 +82,7 @@ type ProcessStatus struct {
 
 func (p ProcessStatus) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "--- Process Status ---\n\tID:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.State)
+	fmt.Fprintf(&b, "--- Process Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.SnapshotId, p.State)
 
 	if p.State == COMPLETE {
 		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
@@ -129,9 +132,10 @@ func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
 	return r
 }
 
-func CompleteStatus(runId RunId, exitCode int) (r ProcessStatus) {
+func CompleteStatus(runId RunId, snapshotId SnapshotId, exitCode int) (r ProcessStatus) {
 	r.RunId = runId
 	r.State = COMPLETE
+	r.SnapshotId = snapshotId
 	r.ExitCode = exitCode
 	return r
 }

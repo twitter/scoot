@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -20,6 +19,8 @@ import (
 	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
+
+// TODO prefer deterministic sequencing vs sleep
 
 var s *server.Server
 
@@ -39,7 +40,7 @@ func TestRunSimpleCommand(t *testing.T) {
 	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
 
 	// give the command time to finish running
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// get the status
 	statusReq = []string{"status", runId}
@@ -51,7 +52,7 @@ func TestRunSimpleCommand(t *testing.T) {
 // TODO when the server uses queueing runner, fix the 2nd request to expect queue, not rejection
 func TestRun2Commands(t *testing.T) {
 	// run the first command
-	var statusReq []string = []string{"run", "sleep 10"}
+	var statusReq []string = []string{"run", "sleep 1000"}
 	runId := assertRun("ignore", "running", "nil", statusReq[:], t)
 
 	// run the second command, it should get runner busy message
@@ -59,7 +60,7 @@ func TestRun2Commands(t *testing.T) {
 	assertRun("ignore", "ignore", local.RunnerBusyMsg, statusReq[:], t)
 
 	// wait for the command to finish running
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 
 	// get the status of the first run
 	statusReq = []string{"status", runId}
@@ -107,21 +108,23 @@ func run(args ...string) (string, string, error) {
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	tempDir, err := ioutil.TempDir("", "scoot-listen-")
+	tempDir, err := temp.NewTempDir("", "scoot-listen-")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir.Dir)
 
-	scootDir := path.Join(tempDir, "scoot")
+	scootDir := path.Join(tempDir.Dir, "scoot")
 	err = os.Setenv("SCOOTDIR", scootDir)
 
-	s, err = server.NewServer(getRunner())
+	filer := snapshots.MakeTempFiler(tempDir)
+	h := server.NewHandler(getRunner(), filer, 50*time.Millisecond)
+	s, err := server.NewServer(h)
 	if err != nil {
 		panic(err)
 	}
 
-	l, err := server.Listen()
+	l, _ := s.Listen()
 	go func() {
 		s.Serve(l)
 	}()
@@ -144,5 +147,5 @@ func getRunner() runner.Runner {
 	if err != nil {
 		panic(err)
 	}
-	return local.NewSimpleRunner(ex, snapshots.MakeInvalidCheckouter(), outputCreator)
+	return local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
 }
