@@ -113,7 +113,7 @@ func (m StateMask) Matches(state ProcessState) bool {
 
 // Matches checks if st matches q
 func (q StatusQuery) Matches(st ProcessStatus) bool {
-	if !q.States.Matches(st.Sate) {
+	if !q.States.Matches(st.State) {
 		return false
 	}
 
