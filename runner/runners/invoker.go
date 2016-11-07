@@ -15,6 +15,8 @@ func NewInvoker(exec execer.Execer, filer snapshot.Filer, outputCreator runner.O
 	return &Invoker{exec, filer, outputCreator}
 }
 
+// TODO(dbentley): test this separately from the end-to-end runner tests
+
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.

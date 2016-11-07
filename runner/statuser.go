@@ -53,6 +53,7 @@ type PollOpts struct {
 type Statuser interface {
 
 	// StatusQuery queries the statuses for statuses that match q, waiting according to opts
+	// TODO(dbentley): rename to Status once legacy Status is removed
 	StatusQuery(q StatusQuery, opts PollOpts) ([]ProcessStatus, error)
 
 	// StatusQuerySingle is a convenience function. Its semantics are the same as StatusQuery,
