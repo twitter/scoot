@@ -1,17 +1,18 @@
 package local
 
-// import (
-// 	"fmt"
-// 	"strconv"
+import (
+	"fmt"
+	"sync"
 
-// 	"github.com/scootdev/scoot/runner"
-// )
+	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/snapshot"
+)
 
 // // TODO(dbentley): should this be in queue.go
 // // TODO(dbentley): Move this whole package to runner/runners?
 
 const QueueFullMsg = "No resources available. Please try later."
-const UnknownRunIdMsg = "Unknown run id."
 const RequestIsNotDone = "Run %s is not done, please Abort it first."
 
 // // QueueingRunner manages a queue of commands.
@@ -117,10 +118,10 @@ const RequestIsNotDone = "Run %s is not done, please Abort it first."
 // 	return <-errCh
 // }
 
-// commandAndId is a command waiting to run in the queue and the ID we've assigned
-type commandAndId struct {
-	id  runner.RunId
+// commandAndID is a command waiting to run in the queue and the ID we've assigned
+type commandAndID struct {
 	cmd *runner.Command
+	id  runner.RunId
 }
 
 // // Helper types for sending requests
@@ -225,6 +226,7 @@ type commandAndId struct {
 // 		}
 // 		st.RunId = id
 // 		return st, nil
+
 // 	}
 
 // 	if st, ok := qr.errored[id]; ok {
@@ -339,24 +341,91 @@ type commandAndId struct {
 // 	return nil
 // }
 
+func NewQueueRunner(exec execer.Execer, checkouter snapshot.Checkouter, outputCreator runner.OutputCreator, capacity int) runner.Runner {
+	statuses := NewStatuses()
+	invoker := NewInvoker(exec, checkouter, outputCreator)
+	controller := &QueueController{statuses: statuses, invoker: invoker, capacity: capacity}
+	return NewControllerAndStatuserRunner(controller, statuses)
+}
+
 type QueueController struct {
 	statuses *Statuses
 	invoker  *Invoker
+	capacity int
 
-	runnerID runner.RunId
-	abortCh  chan struct{}
-	queue    []commandAndID
-	mu       sync.Mutex
+	runningID runner.RunId
+	abortCh   chan struct{}
+	queue     []commandAndID
+	mu        sync.Mutex
 }
 
-func (c *QueueController) Run(cmd *Runner.Command) (runner.ProcessStatus, error) {
+func (c *QueueController) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.runningID == "" {
-		st := c.statuses.NewRun()
 
+	if len(c.queue) >= c.capacity {
+		return runner.ProcessStatus{}, fmt.Errorf(QueueFullMsg)
+	}
+	st := c.statuses.NewRun()
+	if c.runningID == runner.RunId("") {
 		return c.start(cmd, st.RunId)
+	} else {
+		c.queue = append(c.queue, commandAndID{cmd, st.RunId})
+		return st, nil
+	}
+}
+
+func (c *QueueController) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+	c.mu.Lock()
+
+	if runId == c.runningID {
+		if c.abortCh != nil {
+			close(c.abortCh)
+			c.abortCh = nil
+		}
+	} else {
+		for i, cmdAndID := range c.queue {
+			if runId == cmdAndID.id {
+				c.queue = append(c.queue[:i], c.queue[i+1:]...)
+				c.statuses.Update(runner.AbortStatus(runId))
+			}
+		}
 	}
 
-	return runner.ProcessStatus{}, fmt.Errorf(RunnerBusyMsg)
+	// Unlock so the abort can call finish()
+	c.mu.Unlock()
+	return c.statuses.StatusQuerySingle(runner.RunDone(runId), runner.Wait())
+}
+
+func (c *QueueController) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
+	c.runningID = id
+	c.abortCh = make(chan struct{})
+	updateCh := make(chan runner.ProcessStatus)
+	go func() {
+		for st := range updateCh {
+			c.statuses.Update(st)
+		}
+	}()
+
+	go func() {
+		st := c.invoker.Run(cmd, c.runningID, c.abortCh, updateCh)
+		c.finish(st)
+	}()
+	return c.statuses.Status(id)
+}
+
+func (c *QueueController) finish(st runner.ProcessStatus) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.runningID = ""
+	c.abortCh = nil
+
+	if len(c.queue) > 0 {
+		cmdAndID := c.queue[0]
+		c.queue = c.queue[1:]
+		c.start(cmdAndID.cmd, cmdAndID.id)
+	}
+
+	c.statuses.Update(st)
 }

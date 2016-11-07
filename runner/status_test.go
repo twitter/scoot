@@ -28,7 +28,7 @@ func TestCommandStringSimple(t *testing.T) {
 func TestProcStatusStringCompleted(t *testing.T) {
 	ps := ProcessStatus{
 		RunId:      RunId("12"),
-		SnapshotId: SnapshotId("21"),
+		SnapshotId: "21",
 		State:      COMPLETE,
 		StdoutRef:  "stdout",
 		StderrRef:  "stderr",
@@ -52,7 +52,7 @@ func TestProcStatusStringCompleted(t *testing.T) {
 func TestProcStatusStringError(t *testing.T) {
 	ps := ProcessStatus{
 		RunId:      RunId("aaaaa"),
-		SnapshotId: SnapshotId("bb"),
+		SnapshotId: "bb",
 		State:      FAILED,
 		StdoutRef:  "stdout",
 		StderrRef:  "stderr",

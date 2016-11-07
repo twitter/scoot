@@ -9,10 +9,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
-type queryAndCh struct {
-	q  runner.StatusQuery
-	ch chan runner.ProcessStatus
-}
+const UnknownRunIdMsg = "unknown run id %v"
 
 func NewStatuses() *Statuses {
 	return &Statuses{runs: make(map[runner.RunId]runner.ProcessStatus)}
@@ -23,6 +20,11 @@ type Statuses struct {
 	runs      map[runner.RunId]runner.ProcessStatus
 	nextRunId int64
 	listeners []queryAndCh
+}
+
+type queryAndCh struct {
+	q  runner.StatusQuery
+	ch chan runner.ProcessStatus
 }
 
 func (s *Statuses) NewRun() runner.ProcessStatus {
@@ -154,7 +156,7 @@ func (s *Statuses) queryUnderLock(q runner.StatusQuery) ([]runner.ProcessStatus,
 	for _, runID := range q.Runs {
 		st, ok := s.runs[runID]
 		if !ok {
-			return nil, fmt.Errorf("cannot find run %v", runID)
+			return nil, fmt.Errorf(UnknownRunIdMsg, runID)
 		}
 		if q.States.Matches(st) {
 			result = append(result, st)
