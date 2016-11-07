@@ -16,6 +16,8 @@ func NewStatuses() *Statuses {
 	return &Statuses{runs: make(map[runner.RunId]runner.ProcessStatus)}
 }
 
+// TODO(dbentley): create statuses_test.go to test this impl independent of running
+
 // Statuses is a database of ProcessStatus'es. It allows clients to Write Statuses, Query the
 // current status, and listen for updates to status. It implements runner.ProcessStatus
 type Statuses struct {
@@ -149,7 +151,7 @@ func (s *Statuses) queryAndListen(q runner.StatusQuery, listen bool) (current []
 		if !ok {
 			return nil, nil, fmt.Errorf(UnknownRunIdMsg, runID)
 		}
-		if q.States.Matches(st) {
+		if q.States.Matches(st.State) {
 			current = append(current, st)
 		}
 	}

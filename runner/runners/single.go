@@ -11,14 +11,16 @@ import (
 
 const RunnerBusyMsg = "Runner is busy"
 
+// NewSingleRunner creates a new Runner that will run a single Process at a time
 func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) runner.Runner {
 	statuses := NewStatuses()
 	invoker := NewInvoker(exec, filer, outputCreator)
-	controller := &SimpleController{statuses: statuses, invoker: invoker}
+	controller := &SingleController{statuses: statuses, invoker: invoker}
 	return NewControllerAndStatuserRunner(controller, statuses)
 }
 
-type SimpleController struct {
+// SingleController will run a single Process at a time, with no queue
+type SingleController struct {
 	statuses *Statuses
 	invoker  *Invoker
 
@@ -27,7 +29,7 @@ type SimpleController struct {
 	mu        sync.Mutex
 }
 
-func (c *SimpleController) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (c *SingleController) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.runningID != "" {
@@ -39,7 +41,7 @@ func (c *SimpleController) Run(cmd *runner.Command) (runner.ProcessStatus, error
 	return c.start(cmd, st.RunId)
 }
 
-func (c *SimpleController) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+func (c *SingleController) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	c.mu.Lock()
 	if runId != c.runningID {
 		c.mu.Unlock()
@@ -56,7 +58,7 @@ func (c *SimpleController) Abort(runId runner.RunId) (runner.ProcessStatus, erro
 	return c.statuses.StatusQuerySingle(runner.RunDone(runId), runner.Wait())
 }
 
-func (c *SimpleController) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
+func (c *SingleController) start(cmd *runner.Command, id runner.RunId) (runner.ProcessStatus, error) {
 	c.runningID = id
 	c.abortCh = make(chan struct{})
 	updateCh := make(chan runner.ProcessStatus)
@@ -73,7 +75,7 @@ func (c *SimpleController) start(cmd *runner.Command, id runner.RunId) (runner.P
 	return c.statuses.Status(id)
 }
 
-func (c *SimpleController) finish(st runner.ProcessStatus) {
+func (c *SingleController) finish(st runner.ProcessStatus) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

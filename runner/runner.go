@@ -53,6 +53,7 @@ func NewCommand(argv []string, env map[string]string, timeout time.Duration, sna
 	return &Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotId: snapshotId}
 }
 
+// Controller lets clients Control commands.
 type Controller interface {
 	// Run instructs the Runner to run cmd. It returns its status and any errors.
 	// Run may:
@@ -67,6 +68,7 @@ type Controller interface {
 	Abort(run RunId) (ProcessStatus, error)
 }
 
+// Runner lets clients Control commands and also learn about their status.
 type Runner interface {
 	Controller
 	Statuser
