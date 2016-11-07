@@ -53,14 +53,20 @@ type PollOpts struct {
 type Statuser interface {
 
 	// StatusQuery queries the statuses for statuses that match q, waiting according to opts
+	// Returns the ProcessStatus'es that match the Query.
+	// (i.e., if the query is for 3 RunIds but only one matches the StateMask,
+	// only one will be returned)
 	// TODO(dbentley): rename to Status once legacy Status is removed
 	StatusQuery(q StatusQuery, opts PollOpts) ([]ProcessStatus, error)
 
 	// StatusQuerySingle is a convenience function. Its semantics are the same as StatusQuery,
-	// but returns the only status (or an error if not 1 result)
+	// but returns a single ProcessStatus instead of a slice, which is
+	// more convenient to use if you know the only status (or an error if not 1 result)
 	StatusQuerySingle(q StatusQuery, opts PollOpts) (ProcessStatus, error)
 
 	// Legacy Functions
+	//
+
 	// Status checks the status of run.
 	Status(run RunId) (ProcessStatus, error)
 
