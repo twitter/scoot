@@ -11,16 +11,14 @@ git:
 
 before_install:
   - pip install -U grpcio==1.0.1
-#  - make dependencies
+  - make dependencies
 
-#before_script:
-#  - make format
-#  - make vet
+before_script:
+  - make format
+  - make vet
 
 script:
-  - pip install grpcio
-  - echo -e "import sys\nprint(sys.path)\nimport grpc" | python
-#  - make test
+  - make test
 
-#after_success:
-#  - bash <(curl -s https://codecov.io/bash)
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

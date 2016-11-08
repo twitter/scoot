@@ -1,4 +1,4 @@
-package integration_test_py
+package integration_py_test
 
 import (
 	"flag"
