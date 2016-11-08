@@ -31,6 +31,10 @@ type Conn interface {
 	// A Conn is also a Runner
 	runner.Runner
 
+	CreateSnapshot(path string) (snapshotId string, err error)
+	CheckoutSnapshot(checkoutId string, rootDir string) error
+	Poll(runIds []string, timeout int64, all bool) (statuses []protocol.RunStatus, err error)
+
 	Close() error
 }
 
@@ -93,11 +97,11 @@ func (d *dialer) Close() error {
 
 type conn struct {
 	conn   *grpc.ClientConn
-	client protocol.ScootDaemonClient
+	Client protocol.ScootDaemonClient
 }
 
 func (c *conn) Echo(arg string) (string, error) {
-	r, err := c.client.Echo(context.Background(), &protocol.EchoRequest{Ping: arg})
+	r, err := c.Client.Echo(context.Background(), &protocol.EchoRequest{Ping: arg})
 	if err != nil {
 		return "", err
 	}
@@ -108,9 +112,10 @@ func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	req := &protocol.RunRequest{Cmd: &protocol.RunRequest_Command{}}
 	req.Cmd.Argv = cmd.Argv
 	req.Cmd.Env = cmd.EnvVars
-	req.Cmd.TimeoutNs = int64(cmd.Timeout)
+	req.Cmd.TimeoutNs = cmd.Timeout.Nanoseconds()
+	req.Cmd.SnapshotId = cmd.SnapshotId
 
-	r, err := c.client.Run(context.Background(), req)
+	r, err := c.Client.Run(context.Background(), req)
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
@@ -121,7 +126,7 @@ func (c *conn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 }
 
 func (c *conn) Status(run runner.RunId) (runner.ProcessStatus, error) {
-	r, err := c.client.Poll(context.Background(), &protocol.PollRequest{RunIds: []string{string(run)}, All: true})
+	r, err := c.Client.Poll(context.Background(), &protocol.PollRequest{RunIds: []string{string(run)}, All: true})
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
@@ -145,4 +150,47 @@ func (c *conn) Erase(run runner.RunId) error {
 
 func (c *conn) Close() error {
 	return c.conn.Close()
+}
+
+func (c *conn) CreateSnapshot(path string) (snapshotId string, err error) {
+	reply, err := c.Client.CreateSnapshot(context.Background(), &protocol.CreateSnapshotRequest{Path: path})
+	if err != nil {
+		return "", err
+	}
+
+	if len(reply.Error) != 0 {
+		return "", fmt.Errorf(reply.Error)
+	}
+
+	return reply.SnapshotId, nil
+}
+
+func (c *conn) CheckoutSnapshot(checkoutId string, rootDir string) error {
+	reply, err := c.Client.CheckoutSnapshot(context.Background(), &protocol.CheckoutSnapshotRequest{SnapshotId: checkoutId, Dir: rootDir})
+
+	if err != nil {
+		return err
+	}
+
+	if len(reply.Error) > 0 {
+		return fmt.Errorf(reply.Error)
+	}
+
+	return nil
+}
+
+func (c *conn) Poll(runIds []string, timeout int64, all bool) (statuses []protocol.RunStatus, err error) {
+	replies, err := c.Client.Poll(context.Background(), &protocol.PollRequest{RunIds: runIds, TimeoutNs: timeout, All: all})
+
+	statuses = []protocol.RunStatus{}
+	if err != nil {
+		return statuses, err
+	}
+
+	for _, pbReply := range replies.Status {
+		status := protocol.ToRunStatus(pbReply)
+		statuses = append(statuses, status)
+	}
+
+	return
 }
