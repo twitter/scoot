@@ -58,7 +58,7 @@ func TestManyCommands(t *testing.T) {
 	if err != nil && strings.Compare("", err.Error()) != 0 {
 		panic(fmt.Sprintf("poll for runids: %v, err: %s", runIds, err.Error()))
 	}
-	validateOutput("STDERR", "command not found", statuses[0].SnapshotId, client)
+	validateOutput("STDERR", "not found", statuses[0].SnapshotId, client)
 
 	// validate messages in the output's stdout
 	// submit the echo request and make sure the echo value is in the snapshot's stdout

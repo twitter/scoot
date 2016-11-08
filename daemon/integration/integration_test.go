@@ -91,7 +91,6 @@ func run(args ...string) (string, string, error) {
 	return integration.Run(cl, args...)
 }
 
-
 // wait function that uses sleep - for comparing code complexity to using ticker and timer
 // (see function below)
 func waitForState(tag string, runId string, expectedStatus string, timeout time.Duration, t *testing.T) {
