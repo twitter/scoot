@@ -16,15 +16,6 @@ type StatusQuery struct {
 	States  StateMask // What States to match
 }
 
-// StatusesSync allows Querying the status of Processes synchronously
-type StatusesSync interface {
-	// QuerySync queries the current statuses for statuses that match q.
-	// Returns the ProcessStatus'es that match the Query.
-	// (i.e., if the query is for 3 RunIds but only one matches the StateMask,
-	// only one will be returned)
-	QuerySync(q StatusQuery) ([]ProcessStatus, error)
-}
-
 // Statuses allows Querying the status of Processes
 type Statuses interface {
 	// QueryWait queries the statuses for statuses that match q, waiting if none match now.
@@ -48,6 +39,20 @@ type StatusWriter interface {
 	//   cannot change a status once it is Done
 	//   cannot erase Stdout/Stderr Refs (but can update to new values)
 	Update(ProcessStatus) error
+}
+
+// QUESTION(dbentley):
+// Clearly, some impls won't allow general waiting.
+// E.g., thrift RPCs can't stay open for that long. So we need
+// to have some implementations that aren't fully general Statuses.
+// Should we have a separate interface (a subset) like below that they can implement? Or should we just have them implement Statuses and error if timeout != 0?
+// StatusesSync allows Querying the status of Processes synchronously
+type StatusesSync interface {
+	// QuerySync queries the current statuses for statuses that match q.
+	// Returns the ProcessStatus'es that match the Query.
+	// (i.e., if the query is for 3 RunIds but only one matches the StateMask,
+	// only one will be returned)
+	QuerySync(q StatusQuery) ([]ProcessStatus, error)
 }
 
 // LegacyStatuses is the old Read API. Statuses can do everything it can do (and more),
