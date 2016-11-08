@@ -67,12 +67,14 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			ex execer.Execer,
 			outputCreator runner.OutputCreator,
-			filer snapshot.Filer) runner.Runner {
+			filer snapshot.Filer) *localrunner.SimpleRunner {
 			return localrunner.NewSimpleRunner(ex, filer, outputCreator)
 		},
+		func(r *localrunner.SimpleRunner) runner.Controller { return r },
+		func(r *localrunner.SimpleRunner) runner.LegacyStatuses { return r },
 
-		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
-			return NewHandler(stat, r)
+		func(stat stats.StatsReceiver, c runner.Controller, sts runner.LegacyStatuses) worker.Worker {
+			return NewHandler(stat, c, sts)
 		},
 
 		func(

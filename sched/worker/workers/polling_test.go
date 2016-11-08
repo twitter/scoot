@@ -16,7 +16,7 @@ import (
 func TestPollingWorker_Simple(t *testing.T) {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
+	w := NewPollingWorker(r, r, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 42 {
 		t.Fatalf("got status %v, error %v; expected {0 COMPLETE file:///dev/null file:///dev/null 42 } <nil>", st, err)
@@ -27,7 +27,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 func TestPollingWorker_Wait(t *testing.T) {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
+	w := NewPollingWorker(r, r, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
@@ -55,8 +55,8 @@ func TestPollingWorker_Wait(t *testing.T) {
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	chaos := runners.NewChaosRunner(r)
-	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
+	chaos := runners.NewChaosRunner(r, r)
+	w := NewPollingWorker(chaos, chaos, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("could not run"))
 	// Now make the runner error
@@ -70,8 +70,8 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 func TestPollingWorker_ErrorPolling(t *testing.T) {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	chaos := runners.NewChaosRunner(r)
-	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
+	chaos := runners.NewChaosRunner(r, r)
+	w := NewPollingWorker(chaos, chaos, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
@@ -106,7 +106,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(
-		r,
+		r, r,
 		time.Duration(10)*time.Microsecond,
 		true,
 		time.Duration(10)*time.Microsecond)
@@ -126,7 +126,7 @@ func TestPollingWorker_TimeoutDisabled(t *testing.T) {
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(
-		r,
+		r, r,
 		time.Duration(10)*time.Microsecond,
 		false,
 		time.Duration(10)*time.Microsecond)

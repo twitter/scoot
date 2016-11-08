@@ -10,19 +10,22 @@ import (
 
 // NewPollingWorker creates a PollingWorker
 func NewPollingWorker(
-	runner runner.Runner,
+	controller runner.Controller,
+	statuses runner.LegacyStatuses,
 	period time.Duration) worker.Worker {
-	return NewPollingWorkerWithTimeout(runner, period, false, 0*time.Minute)
+	return NewPollingWorkerWithTimeout(controller, statuses, period, false, 0*time.Minute)
 }
 
 // Creates a New Polling Worker which enforces a Timeout on Tasks
 func NewPollingWorkerWithTimeout(
-	runner runner.Runner,
+	controller runner.Controller,
+	statuses runner.LegacyStatuses,
 	period time.Duration,
 	enforceTimout bool,
 	timeout time.Duration) worker.Worker {
 	return &PollingWorker{
-		runner:         runner,
+		controller:     controller,
+		statuses:       statuses,
 		pollingPeriod:  period,
 		enforceTimeout: enforceTimout,
 		timeout:        timeout,
@@ -31,7 +34,8 @@ func NewPollingWorkerWithTimeout(
 
 // PollingWorker acts as a Worker by polling the underlying runner every period
 type PollingWorker struct {
-	runner         runner.Runner
+	controller     runner.Controller
+	statuses       runner.LegacyStatuses
 	pollingPeriod  time.Duration
 	enforceTimeout bool
 	timeout        time.Duration
@@ -39,7 +43,7 @@ type PollingWorker struct {
 
 func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
 	// schedule the task
-	status, err := r.runner.Run(&task.Command)
+	status, err := r.controller.Run(&task.Command)
 	if err != nil {
 		return status, err
 	}
@@ -52,14 +56,14 @@ func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessSta
 		time.Sleep(r.pollingPeriod)
 		timeSpent += r.pollingPeriod
 
-		status, err = r.runner.Status(id)
+		status, err = r.statuses.Status(id)
 		if err != nil || status.State.IsDone() {
 			return status, err
 		}
 	}
 
-	// The Task took to long to run. Tell the runner to abort before returning
+	// The Task took too long to run. Tell the runner to abort before returning
 	status.State = runner.TIMEDOUT
-	_, err = r.runner.Abort(status.RunId)
+	_, err = r.controller.Abort(status.RunId)
 	return status, err
 }

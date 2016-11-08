@@ -15,14 +15,14 @@ import (
 func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	ex := execers.NewDoneExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	chaos := runners.NewChaosRunner(r)
+	chaos := runners.NewChaosRunner(r, r)
 	chaos.SetDelay(time.Duration(500) * time.Millisecond)
-	return NewPollingWorker(chaos, time.Duration(250)*time.Millisecond)
+	return NewPollingWorker(chaos, chaos, time.Duration(250)*time.Millisecond)
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
 func MakeSimWorker() worker.Worker {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	return NewPollingWorker(r, time.Duration(10)*time.Microsecond)
+	return NewPollingWorker(r, r, time.Duration(10)*time.Microsecond)
 }

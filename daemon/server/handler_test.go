@@ -25,7 +25,7 @@ func TestDaemonExample(t *testing.T) {
 	filer := snapshots.MakeTempFiler(filerTmp)
 	ex := execer.NewExecer()
 	run := localrunner.NewSimpleRunner(ex, filer, out)
-	handler := NewHandler(run, filer, 50*time.Millisecond)
+	handler := NewHandler(run, run, filer, 50*time.Millisecond)
 
 	// Populate the paths we want to ingest.
 	okScript := filepath.Join(localTmp.Dir, "ok.sh")

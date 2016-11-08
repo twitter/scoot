@@ -16,8 +16,8 @@ import (
 
 func TestRun(t *testing.T) {
 	r, _ := newRunner()
-	firstId := assertRun(t, r, complete(0), "complete 0")
-	assertRun(t, r, complete(1), "complete 1")
+	firstId := assertRun(t, r, r, complete(0), "complete 0")
+	assertRun(t, r, r, complete(1), "complete 1")
 	// Now make sure that the first results are still available
 	assertWait(t, r, firstId, complete(0), "complete 0")
 }
@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 func TestOutput(t *testing.T) {
 	r, _ := newRunner()
 	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
-	id := assertRun(t, r, complete(0),
+	id := assertRun(t, r, r, complete(0),
 		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
 	st, err := r.Status(id)
 	if err != nil {
@@ -118,14 +118,14 @@ func badRequest(errorText string) runner.ProcessStatus {
 	return runner.BadRequestStatus(runner.RunId(""), fmt.Errorf(errorText))
 }
 
-func assertRun(t *testing.T, r runner.Runner, expected runner.ProcessStatus, args ...string) runner.RunId {
-	runId := run(t, r, args)
-	assertWait(t, r, runId, expected, args...)
+func assertRun(t *testing.T, c runner.Controller, sts runner.LegacyStatuses, expected runner.ProcessStatus, args ...string) runner.RunId {
+	runId := run(t, c, args)
+	assertWait(t, sts, runId, expected, args...)
 	return runId
 }
 
-func assertWait(t *testing.T, r runner.Runner, runId runner.RunId, expected runner.ProcessStatus, args ...string) {
-	actual := wait(r, runId, expected)
+func assertWait(t *testing.T, sts runner.LegacyStatuses, runId runner.RunId, expected runner.ProcessStatus, args ...string) {
+	actual := wait(sts, runId, expected)
 	assertStatus(t, actual, expected, args...)
 }
 
@@ -144,20 +144,20 @@ func assertStatus(t *testing.T, actual runner.ProcessStatus, expected runner.Pro
 	}
 }
 
-func run(t *testing.T, r runner.Runner, args []string) runner.RunId {
+func run(t *testing.T, c runner.Controller, args []string) runner.RunId {
 	cmd := &runner.Command{}
 	cmd.Argv = args
-	status, err := r.Run(cmd)
+	status, err := c.Run(cmd)
 	if err != nil {
 		t.Fatal("Couldn't run: ", args, err)
 	}
 	return status.RunId
 }
 
-func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
+func wait(sts runner.LegacyStatuses, run runner.RunId, expected runner.ProcessStatus) runner.ProcessStatus {
 	for {
 		time.Sleep(100 * time.Microsecond)
-		status, err := r.Status(run)
+		status, err := sts.Status(run)
 		if err != nil {
 			panic(err)
 		}
@@ -167,7 +167,7 @@ func wait(r runner.Runner, run runner.RunId, expected runner.ProcessStatus) runn
 	}
 }
 
-func newRunner() (runner.Runner, *execers.SimExecer) {
+func newRunner() (*SimpleRunner, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {

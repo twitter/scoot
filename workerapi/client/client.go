@@ -19,7 +19,8 @@ type Client interface {
 
 	// Worker API Interactions
 	QueryWorker() (workerapi.WorkerStatus, error)
-	runner.Runner
+	runner.Controller
+	runner.LegacyStatuses
 }
 
 // Basic implementation of Client interface for interaction with Scoot worker API

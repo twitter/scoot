@@ -97,7 +97,7 @@ func (c *WorkersThriftConfig) Create(
 	wf := func(node cluster.Node) worker.Worker {
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
-		return workers.NewPollingWorkerWithTimeout(cl, pp, c.EnforceTaskTimeout, tt)
+		return workers.NewPollingWorkerWithTimeout(cl, cl, pp, c.EnforceTaskTimeout, tt)
 	}
 
 	return wf, nil
