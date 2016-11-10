@@ -47,7 +47,6 @@ test:
 	# Runs only unit tests and property tests
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
-	swarmtest
 
 test-unit:
 	# Runs only unit tests
@@ -75,3 +74,5 @@ clean: clean-mockgen
 	go clean ./...
 
 fullbuild: dependencies generate test
+
+travis: test swarmtest
