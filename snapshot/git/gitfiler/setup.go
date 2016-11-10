@@ -4,16 +4,18 @@ import (
 	"io/ioutil"
 	"path"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 // Utilities for creating Checkouters.
 
-// RepoIniter lets a client initialize a Repository to use as a Reference Repository.
+// RepoIniter is an interface for initializing repositories
 type RepoIniter interface {
-	// Init initializes the Repository to use as a reference repository.
-	Init() (*repo.Repository, error)
+	// Init initializes the Repository to use as a reference repository
+	// Takes a StatsReceiver to support instrumenting repo initialization
+	Init(stat stats.StatsReceiver) (*repo.Repository, error)
 }
 
 // RepoIniter implementation
@@ -21,32 +23,33 @@ type ConstantIniter struct {
 	Repo *repo.Repository
 }
 
-func (g *ConstantIniter) Init() (*repo.Repository, error) {
+func (g *ConstantIniter) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	return g.Repo, nil
 }
 
-// A Pool that will only have a single repo, populated by repoIniter, that serves until doneCh is closed
-func NewSingleRepoPool(repoIniter RepoIniter, doneCh <-chan struct{}) *RepoPool {
-	singlePool := NewRepoPool(nil, nil, doneCh, 1)
-	go func() {
-		r, err := repoIniter.Init()
-		singlePool.Release(r, err)
-	}()
+// Util for creating a Pool that will only have a single repo
+func NewSingleRepoPool(repoIniter RepoIniter,
+	stat stats.StatsReceiver,
+	doneCh <-chan struct{}) *RepoPool {
+	singlePool := NewRepoPool(repoIniter, stat, []*repo.Repository{}, doneCh, 1)
 	return singlePool
 }
 
 // A Checkouter that checks out from a single repo populated by a NewSingleRepoPool)
-func NewSingleRepoCheckouter(repoIniter RepoIniter, doneCh <-chan struct{}) *Checkouter {
-	pool := NewSingleRepoPool(repoIniter, doneCh)
+func NewSingleRepoCheckouter(repoIniter RepoIniter,
+	stat stats.StatsReceiver,
+	doneCh <-chan struct{}) *Checkouter {
+	pool := NewSingleRepoPool(repoIniter, stat, doneCh)
 	return NewCheckouter(pool)
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
 func NewRefRepoCloningCheckouter(refRepoIniter RepoIniter,
+	stat stats.StatsReceiver,
 	clonesDir *temp.TempDir,
 	doneCh <-chan struct{},
 	maxClones int) *Checkouter {
-	refPool := NewSingleRepoPool(refRepoIniter, doneCh)
+	refPool := NewSingleRepoPool(refRepoIniter, stat, doneCh)
 
 	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
 	var clones []*repo.Repository
@@ -59,6 +62,6 @@ func NewRefRepoCloningCheckouter(refRepoIniter RepoIniter,
 		}
 	}
 
-	pool := NewRepoPool(cloner, clones, doneCh, maxClones)
+	pool := NewRepoPool(cloner, stat, clones, doneCh, maxClones)
 	return NewCheckouter(pool)
 }
