@@ -1,6 +1,16 @@
 package protocol
 
-import "github.com/scootdev/scoot/runner"
+import (
+	"github.com/scootdev/scoot/runner"
+)
+
+type RunStatus struct {
+	RunId      string
+	State      string
+	SnapshotId string
+	ExitCode   int
+	Error      string
+}
 
 // TODO(dbentley): we should go generate with command protoc daemon.proto --go_out=plugins=grpc:.
 
@@ -49,6 +59,31 @@ func ToRunnerStatus(status *PollReply_Status) runner.ProcessStatus {
 		RunId:      runner.RunId(status.RunId),
 		State:      state,
 		SnapshotId: runner.SnapshotId(status.SnapshotId),
+		ExitCode:   int(status.ExitCode),
+		Error:      status.Error,
+	}
+}
+
+func ToRunStatus(status *PollReply_Status) RunStatus {
+	state := runner.UNKNOWN
+	switch status.State {
+	case PollReply_Status_UNKNOWN:
+		state = runner.UNKNOWN
+	case PollReply_Status_PENDING:
+		state = runner.PENDING
+	case PollReply_Status_PREPARING:
+		state = runner.PREPARING
+	case PollReply_Status_RUNNING:
+		state = runner.RUNNING
+	case PollReply_Status_FAILED:
+		state = runner.FAILED
+	case PollReply_Status_COMPLETED:
+		state = runner.COMPLETE
+	}
+	return RunStatus{
+		RunId:      status.RunId,
+		State:      state.String(),
+		SnapshotId: status.SnapshotId,
 		ExitCode:   int(status.ExitCode),
 		Error:      status.Error,
 	}

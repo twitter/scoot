@@ -8,6 +8,7 @@ import (
 	"github.com/scootdev/scoot/daemon/client/cli"
 	"github.com/scootdev/scoot/daemon/client/conn"
 	"github.com/scootdev/scoot/daemon/integration"
+	"github.com/scootdev/scoot/daemon/protocol"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/local"
@@ -106,6 +107,18 @@ func (c *fakeConn) Erase(run runner.RunId) error {
 
 func (c *fakeConn) Close() error {
 	return nil
+}
+
+func (c *fakeConn) CreateSnapshot(path string) (snapshotId string, err error) {
+	return "", nil
+}
+
+func (c *fakeConn) CheckoutSnapshot(checkoutId string, rootDir string) error {
+	return nil
+}
+
+func (c *fakeConn) Poll(runIds []string, timeout int64, all bool) (statuses []protocol.RunStatus, err error) {
+	return []protocol.RunStatus{}, nil
 }
 
 func TestNoArgs(t *testing.T) {

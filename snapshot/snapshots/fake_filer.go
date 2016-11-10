@@ -72,6 +72,7 @@ func (t *tempFiler) Checkout(id string) (snapshot.Checkout, error) {
 }
 
 func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+
 	snap, ok := t.snapshots[id]
 	if !ok {
 		return nil, errors.New("No snapshot with id: " + id)

@@ -3,12 +3,13 @@ package client
 import (
 	"errors"
 	"fmt"
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/spf13/cobra"
 )
 
 type runJobCmd struct {

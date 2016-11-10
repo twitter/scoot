@@ -3,6 +3,7 @@ package local
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -156,31 +157,36 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
 	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
 
-	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
-	go func() {
-		checkout, err = r.filer.Checkout(cmd.SnapshotId)
-		close(checkoutDone)
-	}()
-
-	// Wait for checkout or cancel
-	select {
-	case <-doneCh:
+	checkoutPath := ""
+	if strings.Compare("", cmd.SnapshotId) != 0 {
+		checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 		go func() {
-			<-checkoutDone
-			if checkout != nil {
-				checkout.Release()
-			}
+			checkout, err = r.filer.Checkout(cmd.SnapshotId)
+			close(checkoutDone)
 		}()
-		return
-	case <-checkoutDone:
-		if err != nil {
-			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)))
-			return
-		}
-	}
-	defer checkout.Release()
 
-	log.Printf("local.simpleRunner.run checkout: %v", checkout.Path())
+		// Wait for checkout or cancel
+		select {
+		case <-doneCh:
+			go func() {
+				<-checkoutDone
+				if checkout != nil {
+					checkout.Release()
+				}
+			}()
+			return
+		case <-checkoutDone:
+			if err != nil {
+				r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not checkout: %v", err)))
+				return
+			}
+		}
+		defer checkout.Release()
+
+		checkoutPath = checkout.Path()
+		log.Printf("local.simpleRunner.run checkout: %v", checkout.Path())
+
+	}
 
 	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
 	if err != nil {
@@ -197,7 +203,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	p, err := r.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
-		Dir:    checkout.Path(),
+		Dir:    checkoutPath,
 		Stdout: stdout,
 		Stderr: stderr,
 	})
@@ -224,9 +230,11 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	case execer.COMPLETE:
 		snapshotId := ""
 		srcToDest := map[string]string{
-			checkout.Path(): "",
 			stdout.AsFile(): "STDOUT",
 			stderr.AsFile(): "STDERR",
+		}
+		if strings.Compare("", checkoutPath) != 0 {
+			srcToDest[checkoutPath] = ""
 		}
 		// TODO(jschiller): get consensus on design and either implement or delete.
 		// if cmd.SnapshotPlan != nil {

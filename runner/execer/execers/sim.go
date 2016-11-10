@@ -185,7 +185,7 @@ type sleepStep struct {
 
 func (s *sleepStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
 	time.Sleep(s.duration)
-	status.State = execer.COMPLETE
+	//status.State = execer.COMPLETE
 	return status
 }
 

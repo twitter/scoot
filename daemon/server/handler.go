@@ -42,6 +42,9 @@ func (h *Handler) Run(cmd *runner.Command) (status runner.ProcessStatus, err err
 func (h *Handler) Poll(runIds []runner.RunId, timeout time.Duration, returnAll bool) (statuses []runner.ProcessStatus) {
 	// Set up pollTicker to periodically query runner for status.
 	// Set up callerTimer to handle user-specified timeout.
+	if len(runIds) == 0 {
+		return []runner.ProcessStatus{}
+	}
 	pollTicker := time.NewTicker(h.pollInterval)
 	callerTimer := &time.Timer{}
 	if timeout > 0 {
