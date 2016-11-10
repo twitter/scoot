@@ -2,10 +2,10 @@ package scheduler
 
 import (
 	"errors"
-	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
@@ -20,6 +20,7 @@ type schedulerDeps struct {
 	clUpdates chan []cluster.NodeUpdate
 	sc        saga.SagaCoordinator
 	wf        worker.WorkerFactory
+	config    SchedulerConfig
 }
 
 // returns default scheduler deps populated with in memory fakes
@@ -33,6 +34,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		wf: func(cluster.Node) worker.Worker {
 			return workers.MakeSimWorker()
 		},
+		config: SchedulerConfig{},
 	}
 }
 
@@ -43,6 +45,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.clUpdates,
 		deps.sc,
 		deps.wf,
+		deps.config,
 		stats.NilStatsReceiver(),
 		true)
 }
@@ -128,43 +131,49 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 	}
 }
 
-// verify that jobs are distributed evenly
-func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
-	jobDef := sched.GenJobDef(1000)
-	s := makeDefaultStatefulScheduler()
+// verifies that task gets retried maxRetryTimes and then marked as completed
+func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T) {
+	jobDef := sched.GenJobDef(1)
+	var taskIds []string
+	for taskId, _ := range jobDef.Tasks {
+		taskIds = append(taskIds, taskId)
+	}
+	taskId := taskIds[0]
 
-	//initialize NodeMap to keep track of tasks per node
-	taskMap := make(map[string]cluster.NodeId)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-	/*jobId, _ :=*/ s.ScheduleJob(jobDef)
-	s.step()
+	deps := getDefaultSchedDeps()
+	deps.config.MaxRetriesPerTask = 3
 
+	// create a worker factory that always returns a worker that returns an error
+	deps.wf = func(cluster.Node) worker.Worker {
+		workerMock := worker.NewMockWorker(mockCtrl)
+
+		retStatus := runner.RunningStatus("run1", "", "")
+		testErr := errors.New("Test Error, Failed Running Task On Worker")
+		workerMock.EXPECT().RunAndWait(gomock.Any()).Return(retStatus, testErr).MinTimes(1)
+
+		return workerMock
+	}
+
+	s := makeStatefulSchedulerDeps(deps)
+	jobId, _ := s.ScheduleJob(jobDef)
+
+	// advance scheduler until job gets scheduled & marked completed
+	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+		s.step()
+	}
+
+	// verify task was retried enough times.
+	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	}
+
+	// advance scheduler until job gets marked completed
 	for len(s.inProgressJobs) > 0 {
 		s.step()
-
-		for nodeId, state := range s.clusterState.nodes {
-			if state.runningTask != noTask {
-				taskMap[state.runningTask] = nodeId
-			}
-		}
 	}
-
-	taskCountMap := make(map[cluster.NodeId]int)
-	for _, nodeId := range taskMap {
-		taskCountMap[nodeId]++
-	}
-
-	// The in memory workers aren't doing anything interesting except sleeping distribution
-	// should be even with in 180 - 220 nodes otherwise something is wrong.
-	for nodeId, taskCount := range taskCountMap {
-		if taskCount < 180 || taskCount > 220 {
-			t.Fatalf(`Tasks were not evenly distributed across nodes.  Expected each node
-				to have 190 to 210 tasks executed on it. %v had an unequal number of tasks %v scheduled 
-				on it.  TaskCountMap: %+v`, nodeId, taskCount, taskCountMap)
-		}
-	}
-
-	fmt.Printf("Task to Node Distribution: %+v", taskCountMap)
 }
 
 // Ensure a single job with one task runs to completion, updates

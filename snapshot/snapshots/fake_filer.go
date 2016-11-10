@@ -1,90 +1,118 @@
 package snapshots
 
 import (
-	"sync"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 )
 
-func MakeInvalidCheckouter() snapshot.Checkouter {
-	return &noopCheckouter{path: "/path/is/invalid"}
+// Creates a filer that copies ingested paths in and then back out for checkouts.
+func MakeTempFiler(tmp *temp.TempDir) snapshot.Filer {
+	return &tempFiler{tmp: tmp, snapshots: make(map[string]string)}
 }
 
-type noopCheckouter struct {
-	path string
+type tempFiler struct {
+	tmp       *temp.TempDir
+	snapshots map[string]string
 }
 
-func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	return &staticCheckout{
-		path: c.path,
-		id:   id,
-	}, nil
+func (t *tempFiler) Ingest(path string) (id string, err error) {
+	return t.IngestMap(map[string]string{path: ""})
 }
 
-// MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
-func MakeTempCheckouter(tmp *temp.TempDir) snapshot.Checkouter {
-	return &tempCheckouter{tmp: tmp}
+func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error) {
+	var s *temp.TempDir
+	s, err = t.tmp.TempDir("snapshot-")
+	if err != nil {
+		return "", err
+	}
+
+	for src, dest := range srcToDest {
+		absDest := filepath.Join(s.Dir, dest)
+		if strings.Contains(absDest, "*") {
+			// If wildcard is present, treat destination as a parent directory.
+			err = os.MkdirAll(absDest, os.ModePerm)
+		} else {
+			// If no wildcard, treat destination as dir/base.
+			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
+		}
+		if err != nil {
+			return
+		}
+
+		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s %s", src, absDest)).Run()
+		if err != nil {
+			return
+		}
+	}
+
+	id = strconv.Itoa(len(t.snapshots))
+	t.snapshots[id] = s.Dir
+	return
 }
 
-type tempCheckouter struct {
-	tmp *temp.TempDir
-}
-
-func (c *tempCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	t, err := c.tmp.TempDir("checkout-")
+func (t *tempFiler) Checkout(id string) (snapshot.Checkout, error) {
+	dir, err := t.tmp.TempDir("checkout-" + id + "__")
 	if err != nil {
 		return nil, err
 	}
+	co, err := t.CheckoutAt(id, dir.Dir)
+	if err != nil {
+		os.RemoveAll(dir.Dir)
+		return nil, err
+	}
+	return co, nil
+}
+
+func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+	snap, ok := t.snapshots[id]
+	if !ok {
+		return nil, errors.New("No snapshot with id: " + id)
+	}
+
+	// Copy contents of snapshot dir to the output dir using cp '.' terminator syntax (incompatible with path/filepath).
+	if err := exec.Command("cp", "-rf", snap+"/.", dir).Run(); err != nil {
+		return nil, err
+	}
 	return &staticCheckout{
-		path: t.Dir,
+		path: dir,
 		id:   id,
 	}, nil
 }
 
-type staticCheckout struct {
-	path string
-	id   string
+// Ingester that does nothing.
+type noopIngester struct{}
+
+func (n *noopIngester) Ingest(string) (string, error) {
+	return "", nil
+}
+func (n *noopIngester) IngestMap(map[string]string) (string, error) {
+	return "", nil
 }
 
-func (c *staticCheckout) Path() string {
-	return c.path
+// Make in invalid Filer
+func MakeInvalidFiler() snapshot.Filer {
+	return &noopFiler{}
 }
 
-func (c *staticCheckout) ID() string {
-	return c.id
+type noopFiler struct {
+	noopCheckouter
+	noopIngester
 }
 
-func (c *staticCheckout) Release() error {
-	return nil
+// Make a Filer that can Checkout() but does a noop Ingest().
+func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
+	return &tempCheckouterFiler{Checkouter: MakeTempCheckouter(tmp)}
 }
 
-// Initer will do something once, e.g., clone a git repo (that might be expensive)
-type Initer interface {
-	Init() error
-}
-
-func MakeInitingCheckouter(path string, initer Initer) snapshot.Checkouter {
-	r := &initingCheckouter{path: path}
-	// Start the Initer as soon as we know we'll need to
-	r.wg.Add(1)
-	go func() {
-		initer.Init()
-		r.wg.Done()
-	}()
-	return r
-}
-
-// initingCheckout waits for an Initer to be done Initing before checking out.
-type initingCheckouter struct {
-	wg   sync.WaitGroup
-	path string
-}
-
-func (c *initingCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	c.wg.Wait()
-	return &staticCheckout{
-		path: c.path,
-		id:   id,
-	}, nil
+type tempCheckouterFiler struct {
+	snapshot.Checkouter
+	noopIngester
 }

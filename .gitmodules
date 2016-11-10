@@ -175,3 +175,15 @@
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
 	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
+[submodule "vendor/github.com/stretchr/objx"]
+	path = vendor/github.com/stretchr/objx
+	url = https://github.com/stretchr/objx.git
+	branch = 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
+[submodule "vendor/github.com/davecgh/go-spew"]
+	path = vendor/github.com/davecgh/go-spew
+	url = https://github.com/davecgh/go-spew.git
+	branch = 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+[submodule "vendor/github.com/pmezard/go-difflib"]
+	path = vendor/github.com/pmezard/go-difflib
+	url = https://github.com/pmezard/go-difflib.git
+	branch = 792786c7400a136282c1664665ae0a8db921c6c2

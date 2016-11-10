@@ -1,6 +1,0 @@
-{
-  "Cluster": {
-    "Type": "memory",
-    "Count": 10
-  }
-}

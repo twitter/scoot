@@ -1,11 +1,16 @@
+sudo: required
+dist: trusty
+
 language: go
 
-sudo: false
-
 go:
-  - 1.6
+  - 1.7
+
+git:
+    submodules: false
 
 before_install:
+  - pip install -U grpcio==1.0.1
   - make dependencies
 
 before_script:

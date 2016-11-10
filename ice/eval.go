@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"runtime"
 	"runtime/debug"
 )
 
@@ -54,7 +55,7 @@ func (s stack) String() string {
 	fmt.Fprintln(b)
 	fmt.Fprintln(b, "goice stacktrace:")
 	for _, f := range s {
-		fmt.Fprintf(b, "\t%v\n", f.key.String())
+		fmt.Fprintf(b, "\t%s\n", f.key)
 	}
 	fmt.Fprintln(b, "end goice stacktrace")
 	return b.String()
@@ -104,7 +105,7 @@ func (e *evaluation) construct(key Key) Value {
 		var err error
 		reflect.ValueOf(&err).Elem().Set(results[1])
 		if err != nil {
-			throw("provider %v threw error %v", provider, err)
+			throw("provider %s threw error: %v", getFunctionName(provider), err)
 		}
 	}
 	e.values[key] = Value(results[0])
@@ -162,4 +163,8 @@ func (e *InjectionError) Error() string {
 
 func throw(format string, a ...interface{}) {
 	panic(fmt.Errorf(format, a...))
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }

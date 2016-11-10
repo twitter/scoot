@@ -3,13 +3,15 @@ package server
 import (
 	"fmt"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
 // Implementation of the RunJob API
-func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition) (*scoot.JobId, error) {
+func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.StatsReceiver) (*scoot.JobId, error) {
+	stat.Counter("runJobRequestsCounter").Inc(1)
 
 	jobDef, err := thriftJobToScoot(def)
 	// TODO: change to return scoot.NewInvalidRequest()

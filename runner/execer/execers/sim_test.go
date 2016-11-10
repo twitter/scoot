@@ -2,23 +2,20 @@ package execers
 
 import (
 	"bytes"
-	"sync"
 	"testing"
 
 	"github.com/scootdev/scoot/runner/execer"
 )
 
 func TestSimExec(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	ex := NewSimExecer(&wg)
+	ex := NewSimExecer()
 	assertRun(ex, t, complete(0), "complete 0")
 	assertRun(ex, t, complete(1), "complete 1")
 	assertRun(ex, t, complete(0), "sleep 1", "complete 0")
 	assertRun(ex, t, complete(0), "#this is a comment", "complete 0")
 	argv := []string{"pause", "complete 0"}
 	p := assertStart(ex, t, argv...)
-	wg.Done()
+	ex.Resume()
 	assertStatus(t, complete(0), p, argv...)
 }
 
@@ -31,7 +28,7 @@ func TestOutput(t *testing.T) {
 		Stderr: &stderr,
 	}
 
-	ex := NewSimExecer(nil)
+	ex := NewSimExecer()
 	p, err := ex.Exec(cmd)
 	if err != nil {
 		t.Fatal("Error running cmd", err)

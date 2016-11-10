@@ -26,10 +26,10 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
+func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
-	client, err := cl.Dial()
+	err := cl.Dial()
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (c *runJobCmd) run(cl *Client, cmd *cobra.Command, args []string) error {
 		}
 		thrifthelpers.JsonDeserialize(jobDef, asBytes)
 	}
-	jobId, err := client.RunJob(jobDef)
+	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:

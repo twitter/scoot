@@ -1,17 +1,18 @@
 package local
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
 	"reflect"
 	"testing"
+
+	"github.com/scootdev/scoot/cloud/cluster"
 )
 
 func TestFetcher(t *testing.T) {
 	psOutput := `
 77595   ??  S      0:00.38 /usr/libexec/USBAgent
 73170 s004  T      0:01.54 emacs -nw scoot.rb
-79003 s004  S+     0:00.02 ./workerserver -thrift_port 9876
-79004 s004  S+     0:00.02 ./workerserver -thrift_port 9877
+79003 s004  S+     0:00.02 ./workerserver -thrift_addr localhost:9876
+79004 s004  S+     0:00.02 ./workerserver -thrift_addr localhost:9877
  8440 s005  Ss     0:01.58 /bin/bash
 `
 	expected := []cluster.Node{

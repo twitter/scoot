@@ -52,9 +52,11 @@ func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func MakeStatsReceiver() stats.StatsReceiver {
+type StatScope string
+
+func MakeStatsReceiver(scope StatScope) stats.StatsReceiver {
 	s, _ := stats.NewCustomStatsReceiver(
 		stats.NewFinagleStatsRegistry,
 		15*time.Second)
-	return s
+	return s.Scope(string(scope))
 }

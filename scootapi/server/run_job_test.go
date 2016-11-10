@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
@@ -32,7 +33,7 @@ func CreateSchedulerMock(t *testing.T) *scheduler.MockScheduler {
 func Test_RunJob_WithNoTasks(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
 
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef)
+	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.CurrentStatsReceiver)
 	if err == nil {
 		t.Errorf("expected error running Job with no command")
 	}
@@ -54,7 +55,7 @@ func Test_RunJob_InvalidTaskId(t *testing.T) {
 		"": task,
 	}
 
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef)
+	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.CurrentStatsReceiver)
 
 	if !IsInvalidJobRequest(err) {
 		t.Errorf("expected error to be InvalidJobRequest not %v", reflect.TypeOf(err))
@@ -74,7 +75,7 @@ func Test_RunJob_NoCommand(t *testing.T) {
 		"1": task,
 	}
 
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef)
+	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.CurrentStatsReceiver)
 
 	if !IsInvalidJobRequest(err) {
 		t.Errorf("expected error to be InvalidJobRequest not %v", reflect.TypeOf(err))
@@ -91,7 +92,7 @@ func Test_RunJob_ValidJob(t *testing.T) {
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("testJobId", nil)
 
-	jobId, err := runJob(scheduler, jobDef)
+	jobId, err := runJob(scheduler, jobDef, stats.CurrentStatsReceiver)
 
 	if err != nil {
 		t.Errorf("expected job to be successfully scheduled.  Instead error returned: %v", err)
@@ -108,7 +109,7 @@ func Test_RunJob_SchedulerError(t *testing.T) {
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("", errors.New("test error"))
 
-	jobId, err := runJob(scheduler, jobDef)
+	jobId, err := runJob(scheduler, jobDef, stats.CurrentStatsReceiver)
 
 	if err == nil {
 		t.Error("expected error when scheduler returns an error")

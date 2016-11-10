@@ -88,6 +88,10 @@ func NewMailbox() *Mailbox {
 	}
 }
 
+func (bx *Mailbox) Count() int {
+	return len(bx.msgs)
+}
+
 // Creates a NewAsyncError and assocaites the supplied callback with it.
 // Once the AsyncError has been completed, SetValue called, the callback
 // will be invoked on the next execution of ProcessMessages

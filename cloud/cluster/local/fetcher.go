@@ -37,11 +37,11 @@ func parseData(data []byte) ([]cluster.Node, error) {
 	nodes := []cluster.Node{}
 	lines := string(data)
 	// This is ugly but it works for now.
-	re := regexp.MustCompile("workerserver.*thrift_port(?: *|=)(\\d*)")
+	re := regexp.MustCompile("workerserver.*thrift_addr(?: +|=)([^ ]*)")
 	for _, line := range strings.Split(lines, "\n") {
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 2 {
-			nodes = append(nodes, cluster.NewIdNode("localhost:"+matches[1]))
+			nodes = append(nodes, cluster.NewIdNode(matches[1]))
 		}
 	}
 	return nodes, nil

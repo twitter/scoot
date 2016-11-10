@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// TODO(dbentley): port this to use scootapi/setup (and make sure it's reliable enough for automation)
 func Test_RunSwarmTest(t *testing.T) {
 	s := SwarmTest{}
 	err := s.InitOptions(map[string]interface{}{

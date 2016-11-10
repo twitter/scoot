@@ -3,6 +3,9 @@
 *.a
 *.so
 
+# Compiled Python files
+*.pyc
+
 # Folders
 _obj
 _test

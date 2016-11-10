@@ -71,5 +71,4 @@ func TestErrors(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when provider returns error")
 	}
-
 }

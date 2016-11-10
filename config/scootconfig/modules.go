@@ -7,11 +7,28 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
+	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
+
+type StatefulSchedulerConfig struct {
+	Type              string
+	MaxRetriesPerTask int
+}
+
+func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
+	bag.Put(c.Create)
+}
+
+func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
+	return scheduler.SchedulerConfig{
+		MaxRetriesPerTask: c.MaxRetriesPerTask,
+	}
+}
 
 type ClusterMemoryConfig struct {
 	Type  string
@@ -45,20 +62,49 @@ func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
 }
 
 type WorkersThriftConfig struct {
-	Type string
+	Type               string
+	PollingPeriod      string // will be parsed to a time.Duration
+	EnforceTaskTimeout bool
+	TaskTimeout        string // will be parsed to a time.Duration
 }
 
-const pollingPeriod = time.Duration(250) * time.Millisecond
+const defaultPollingPeriod = time.Duration(250) * time.Millisecond
+const defaultTaskTimeout = time.Duration(30) * time.Minute
 
-func MakeRpcWorkerFactory(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) worker.WorkerFactory {
-	return func(node cluster.Node) worker.Worker {
-		c := client.NewClient(tf, pf, string(node.Id()))
-		return workers.NewPollingWorker(c, pollingPeriod)
+func (c *WorkersThriftConfig) Create(
+	tf thrift.TTransportFactory,
+	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
+
+	pp := defaultPollingPeriod
+	tt := defaultTaskTimeout
+	var err error
+
+	// apply defaults
+	if c.PollingPeriod != "" {
+		pp, err = time.ParseDuration(c.PollingPeriod)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	if c.TaskTimeout != "" {
+		tt, err = time.ParseDuration(c.TaskTimeout)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	wf := func(node cluster.Node) worker.Worker {
+		di := dialer.NewSimpleDialer(tf, pf)
+		cl, _ := client.NewSimpleClient(di, string(node.Id()))
+		return workers.NewPollingWorkerWithTimeout(cl, pp, c.EnforceTaskTimeout, tt)
+	}
+
+	return wf, nil
 }
 
 func (c *WorkersThriftConfig) Install(bag *ice.MagicBag) {
-	bag.Put(MakeRpcWorkerFactory)
+	bag.Put(c.Create)
 }
 
 type WorkersLocalConfig struct {
