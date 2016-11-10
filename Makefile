@@ -61,20 +61,19 @@ testlocal: generate test
 swarmtest:
 	go install github.com/scootdev/scoot/binaries/setup-cloud-scoot
 	# TODO(dbentley): loop to stress test to see if it's flaky; remove before submitting
-	# TODO(dbentley): run just 1 job for now to see if it works at all
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 1 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
+	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
 
 clean-mockgen:
 	rm */*_mock.go
