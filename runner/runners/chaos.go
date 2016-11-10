@@ -78,7 +78,7 @@ func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
-	return r.Abort(run)
+	return r.del.Abort(run)
 }
 
 func (r *ChaosRunner) Erase(run runner.RunId) error {

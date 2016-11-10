@@ -54,13 +54,13 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func() execer.Execer {
-			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(nil), osexec.NewExecer())
+			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewExecer())
 		},
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		func(tmpDir *temp.TempDir) snapshot.Checkouter {
-			return snapshots.MakeTempCheckouter(tmpDir)
+		func(tmpDir *temp.TempDir) snapshot.Filer {
+			return snapshots.MakeTempCheckouterFiler(tmpDir)
 		},
 
 		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
@@ -70,8 +70,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			ex execer.Execer,
 			outputCreator runner.OutputCreator,
-			checkouter snapshot.Checkouter) runner.Runner {
-			return localrunner.NewSimpleRunner(ex, checkouter, outputCreator)
+			filer snapshot.Filer) runner.Runner {
+			return localrunner.NewSimpleRunner(ex, filer, outputCreator)
 		},
 
 		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {

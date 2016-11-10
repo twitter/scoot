@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+const NoRunnersMsg = "No runners available."
+const RunnerBusyMsg = "Runner is busy"
+
 // A command, execution environment, and timeout.
 type Command struct {
 	// Command line to run
@@ -18,8 +21,15 @@ type Command struct {
 	Timeout time.Duration
 
 	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.
-	//TODO: plumb this through.
 	SnapshotId string
+
+	// TODO(jschiller): get consensus on design and either implement or delete.
+	// Runner can optionally use this to specify content if creating a new snapshot.
+	// Keys: relative src file & dir paths in SnapshotId checkout. May contain '*' wildcard.
+	// Values: relative dest path=dir/base in new snapshot (if src has a wildcard, then dest path is treated as a parent dir).
+	//
+	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
+	// SnapshotPlan map[string]string
 }
 
 func (c Command) String() string {
