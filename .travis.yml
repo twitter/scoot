@@ -11,7 +11,7 @@ git:
 
 before_install:
   # - pip install -U grpcio==1.0.1
-  # - make dependencies
+  - make dependencies
 
 before_script:
   - make format
