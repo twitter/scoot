@@ -60,20 +60,6 @@ testlocal: generate test
 
 swarmtest:
 	go install github.com/scootdev/scoot/binaries/setup-cloud-scoot
-	# TODO(dbentley): loop to stress test to see if it's flaky; remove before submitting
-	# comment to change content to make new commit
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
-	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
 	${GOPATH}/bin/setup-cloud-scoot --strategy local.local run ${GOPATH}/bin/scootapi run_smoke_test 10 1m
 
 clean-mockgen:
@@ -84,4 +70,4 @@ clean: clean-mockgen
 
 fullbuild: dependencies generate test
 
-travis: swarmtest
+travis: fullbuild swarmtest
