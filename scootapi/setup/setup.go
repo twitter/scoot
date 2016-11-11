@@ -30,7 +30,7 @@ func startup(strategies map[string]SchedulerStrategy, strategyName string) error
 
 	strategy, ok := strategies[strategyName]
 	if !ok {
-		return fmt.Errorf("%q is not a valid strategy; valid choices are %v", strategyName, keys)
+		return fmt.Errorf("--strategy=%q is not a valid strategy; valid choices are %v", strategyName, keys)
 	}
 
 	addr, err := strategy.Startup()
