@@ -30,5 +30,7 @@ _testmain.go
 .DS_Store
 coverage.txt
 *~
+# Emacs save files have literal pound signs/octothorpes/hashtags in them
+# So the \# escapes # as comment syntax
 \#*#
 .\#*
