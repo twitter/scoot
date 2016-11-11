@@ -2,13 +2,13 @@ package client
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
-
-const defaultSchedulerAddr = "localhost:9090"
 
 // Scoot API Client interface that includes CLI handling
 type CLIClient interface {
@@ -56,7 +56,11 @@ func (c *simpleCLIClient) Dial() error {
 func (c *simpleCLIClient) dial() (*scoot.CloudScootClient, error) {
 	if c.scootClient == nil {
 		if c.addr == "" {
-			c.addr = defaultSchedulerAddr
+			c.addr = scootapi.GetScootapiAddr()
+			if c.addr == "" {
+				return nil, fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
+			}
+			log.Printf("scootapi cli: using addr %v (from %v)", c.addr, scootapi.GetScootapiAddrPath())
 		}
 
 		transport, protocolFactory, err := c.dialer.Dial(c.addr)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"time"
 
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
@@ -9,6 +10,7 @@ import (
 	// For putting into ice.MagicBag
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
 
@@ -32,7 +34,9 @@ func makeServers(
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		endpoints.MakeStatsReceiver,
+		func(scope endpoints.StatScope) stats.StatsReceiver {
+			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
+		},
 		MakeServer,
 		NewHandler,
 		makeServers,
