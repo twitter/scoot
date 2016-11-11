@@ -54,6 +54,7 @@ test-unit:
 
 test-integration:
 	# Runs all tests including integration and property tests
+	# We don't currently have any integration tests, but we're leaving this so we can add more.
 	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
