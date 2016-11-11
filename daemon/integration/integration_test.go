@@ -118,7 +118,8 @@ func TestMain(m *testing.M) {
 	err = os.Setenv("SCOOTDIR", scootDir)
 
 	filer := snapshots.MakeTempFiler(tempDir)
-	h := server.NewHandler(getRunner(), filer, 50*time.Millisecond)
+	controller, statuses := getControllerAndStatuses()
+	h := server.NewHandler(controller, statuses, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {
 		panic(err)
@@ -135,7 +136,7 @@ func TestMain(m *testing.M) {
 }
 
 //TODO update this to use queuing runner
-func getRunner() runner.Runner {
+func getControllerAndStatuses() (runner.Controller, runner.LegacyStatuses) {
 	ex := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
@@ -146,5 +147,6 @@ func getRunner() runner.Runner {
 	if err != nil {
 		panic(err)
 	}
-	return local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
+	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), outputCreator)
+	return r, r
 }

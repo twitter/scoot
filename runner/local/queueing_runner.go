@@ -22,8 +22,9 @@ type QueueingRunner struct {
 	// channel for methods to send communication to eventLoop()
 	reqCh chan interface{}
 
-	// delegate that will run (we expect it to ultimately be a simpleRunner)
-	delegate    runner.Runner
+	// delegates we use (we expect each to point to the same SimpleRunner)
+	delC        runner.Controller
+	delSts      runner.LegacyStatuses
 	capacity    int
 	nextRunId   int // used to assign unique runIds to the run requests
 	runnerAvail bool
@@ -53,14 +54,16 @@ type QueueingRunner struct {
 // delegate will be used to run.
 // capacity is the maximum entries to hold in the queue
 // runnerAvailableCh strobes when the delegate runner is available (from NewSimpleReportBackRunner)
-func NewQueuingRunner(delegate runner.Runner,
+func NewQueuingRunner(delC runner.Controller,
+	delSts runner.LegacyStatuses,
 	capacity int,
-	runnerAvailableCh chan struct{}) runner.Runner {
+	runnerAvailableCh chan struct{}) *QueueingRunner {
 
 	qRunner := &QueueingRunner{
 		reqCh: make(chan interface{}),
 
-		delegate:  delegate,
+		delC:      delC,
+		delSts:    delSts,
 		capacity:  capacity,
 		nextRunId: 0,
 
@@ -219,7 +222,7 @@ func (qr *QueueingRunner) enqueue(cmd *runner.Command) (runner.ProcessStatus, er
 
 func (qr *QueueingRunner) status(id runner.RunId) (runner.ProcessStatus, error) {
 	if delID, ok := qr.qToDel[id]; ok {
-		st, err := qr.delegate.Status(delID)
+		st, err := qr.delSts.Status(delID)
 		if err != nil {
 			return runner.ProcessStatus{}, err
 		}
@@ -241,7 +244,7 @@ func (qr *QueueingRunner) status(id runner.RunId) (runner.ProcessStatus, error) 
 }
 
 func (qr *QueueingRunner) statusAll() ([]runner.ProcessStatus, error) {
-	stats, err := qr.delegate.StatusAll()
+	stats, err := qr.delSts.StatusAll()
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +273,7 @@ func (qr *QueueingRunner) statusAll() ([]runner.ProcessStatus, error) {
 
 func (qr *QueueingRunner) abort(id runner.RunId) (runner.ProcessStatus, error) {
 	if delID, ok := qr.qToDel[id]; ok {
-		return qr.delegate.Abort(delID)
+		return qr.delC.Abort(delID)
 	}
 
 	if errSt, ok := qr.errored[id]; ok {
@@ -292,7 +295,7 @@ func (qr *QueueingRunner) abort(id runner.RunId) (runner.ProcessStatus, error) {
 
 func (qr *QueueingRunner) erase(id runner.RunId) error {
 	if delID, ok := qr.qToDel[id]; ok {
-		err := qr.delegate.Erase(delID)
+		err := qr.delSts.Erase(delID)
 		delete(qr.qToDel, id)
 		delete(qr.delToQ, delID)
 		return err
@@ -317,7 +320,7 @@ func (qr *QueueingRunner) runNextCommandInQueue() runner.ProcessStatus {
 	request := qr.q[0]
 	qr.q = qr.q[1:] // pop the top request off the queue
 
-	st, err := qr.delegate.Run(request.cmd) // run the command
+	st, err := qr.delC.Run(request.cmd) // run the command
 	if err != nil {
 		errSt := runner.ErrorStatus(request.id, err)
 		qr.errored[request.id] = errSt

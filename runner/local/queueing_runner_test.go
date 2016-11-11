@@ -25,8 +25,8 @@ func TestQueueing2Messages(t *testing.T) {
 	qr := env.qr
 
 	// send the first command - it should pause
-	run1 := assertRun(t, qr, running(), "pause", "complete 0")
-	run2 := assertRun(t, qr, pending(), "complete 1")
+	run1 := assertRun(t, qr, qr, running(), "pause", "complete 0")
+	run2 := assertRun(t, qr, qr, pending(), "complete 1")
 	env.sim.Resume()
 	assertWait(t, qr, run1, complete(0), "n/a")
 	assertWait(t, qr, run2, complete(1), "n/a")
@@ -40,12 +40,12 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	var runIDs []runner.RunId
 
 	// block the runner
-	runID := assertRun(t, qr, running(), "pause", "complete 0")
+	runID := assertRun(t, qr, qr, running(), "pause", "complete 0")
 	runIDs = append(runIDs, runID)
 
 	// fill the queue
 	for i := 0; i < 4; i++ {
-		runID := assertRun(t, qr, pending(), "complete 0")
+		runID := assertRun(t, qr, qr, pending(), "complete 0")
 		runIDs = append(runIDs, runID)
 	}
 
@@ -64,10 +64,10 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	}
 
 	// repeat
-	runID = assertRun(t, qr, running(), "pause", "complete 0")
+	runID = assertRun(t, qr, qr, running(), "pause", "complete 0")
 	runIDs = append(runIDs, runID)
 	for i := 0; i < 4; i++ {
-		runID := assertRun(t, qr, pending(), "complete 0")
+		runID := assertRun(t, qr, qr, pending(), "complete 0")
 		runIDs = append(runIDs, runID)
 	}
 	_, err = qr.Run(&runner.Command{Argv: []string{"complete 5"}})
@@ -97,11 +97,11 @@ func TestRunnerReturningAnErrorOnRunRequest(t *testing.T) {
 	qr := env.qr
 
 	// fill the queue
-	_ = assertRun(t, qr, running(), "pause", "complete 0")
-	run2 := assertRun(t, qr, pending(), "complete 0")
-	run3 := assertRun(t, qr, pending(), "complete 0")
-	run4 := assertRun(t, qr, pending(), "complete 0")
-	run5 := assertRun(t, qr, pending(), "complete 0")
+	_ = assertRun(t, qr, qr, running(), "pause", "complete 0")
+	run2 := assertRun(t, qr, qr, pending(), "complete 0")
+	run3 := assertRun(t, qr, qr, pending(), "complete 0")
+	run4 := assertRun(t, qr, qr, pending(), "complete 0")
+	run5 := assertRun(t, qr, qr, pending(), "complete 0")
 
 	// Now kill the connection to the runner
 	env.chaos.SetError(fmt.Errorf("can't even"))
@@ -127,15 +127,15 @@ func TestStatus(t *testing.T) {
 	// *) in delegate (running, aborted, and complete)
 
 	env.chaos.SetError(fmt.Errorf("can't even"))
-	run1 := assertRun(t, qr, failed("can't even"), "complete 5")
+	run1 := assertRun(t, qr, qr, failed("can't even"), "complete 5")
 	env.chaos.SetError(nil)
 	// run1 is in errored (because delegate refused it)
 	assertWait(t, qr, run1, failed("can't even"))
 
-	run2 := assertRun(t, qr, running(), "pause", "complete 1")
-	run3 := assertRun(t, qr, pending(), "complete 0")
-	run4 := assertRun(t, qr, pending(), "complete 0")
-	run5 := assertRun(t, qr, pending(), "complete 0")
+	run2 := assertRun(t, qr, qr, running(), "pause", "complete 1")
+	run3 := assertRun(t, qr, qr, pending(), "complete 0")
+	run4 := assertRun(t, qr, qr, pending(), "complete 0")
+	run5 := assertRun(t, qr, qr, pending(), "complete 0")
 
 	// run5 is in errored (because it was aborted while in the queue)
 	if _, err := qr.Abort(run5); err != nil {
@@ -154,11 +154,11 @@ func TestStatus(t *testing.T) {
 	assertWait(t, qr, run4, complete(0))
 
 	// run6 is in delegate, running
-	run6 := assertRun(t, qr, running(), "pause", "complete 2")
+	run6 := assertRun(t, qr, qr, running(), "pause", "complete 2")
 
 	// run7 and 8 are in queue
-	run7 := assertRun(t, qr, pending(), "complete 0")
-	run8 := assertRun(t, qr, pending(), "complete 0")
+	run7 := assertRun(t, qr, qr, pending(), "complete 0")
+	run8 := assertRun(t, qr, qr, pending(), "complete 0")
 
 	all, err := qr.StatusAll()
 	if err != nil {
@@ -198,8 +198,8 @@ func setup(size int, t *testing.T) *env {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
 	sr := NewSimpleReportBackRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, runnerAvailableCh)
-	chaos := runners.NewChaosRunner(sr)
-	qr := NewQueuingRunner(chaos, size, runnerAvailableCh).(*QueueingRunner)
+	chaos := runners.NewChaosRunner(sr, sr)
+	qr := NewQueuingRunner(chaos, chaos, size, runnerAvailableCh)
 
 	return &env{chaos: chaos, sim: sim, qr: qr, sr: sr}
 }
@@ -208,7 +208,7 @@ type env struct {
 	chaos *runners.ChaosRunner
 	sim   *execers.SimExecer
 	qr    *QueueingRunner
-	sr    *simpleRunner
+	sr    *SimpleRunner
 }
 
 func (t *env) teardown() {

@@ -26,10 +26,8 @@ type Dialer interface {
 type Conn interface {
 	Echo(arg string) (string, error)
 
-	// TODO(dbentley): this feels weird. We shouldn't expose our internal
-	// API to the client. But it also feels weird to copy everything.
-	// A Conn is also a Runner
-	runner.Runner
+	runner.Controller
+	runner.LegacyStatuses
 
 	Close() error
 }

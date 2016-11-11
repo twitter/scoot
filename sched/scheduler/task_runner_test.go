@@ -88,8 +88,8 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	chaos := runners.NewChaosRunner(nil)
-	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
+	chaos := runners.NewChaosRunner(nil, nil)
+	worker := workers.NewPollingWorker(chaos, chaos, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("starting error"))
 	err := runTaskAndLog(s, worker, "task1", task, false, stats.NilStatsReceiver())

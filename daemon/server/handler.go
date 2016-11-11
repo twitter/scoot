@@ -9,17 +9,19 @@ import (
 
 // Create a new handler that implements daemon protocol and works with domain types.
 //
-// TODO: when Runner eventually implements Poll(), we could get rid of handler and use runner directly in server.
-func NewHandler(runner runner.Runner, filer snapshot.Filer, pollInterval time.Duration) *Handler {
+// TODO: when runner.Statuses is implemented, we can use it directly in server.
+func NewHandler(controller runner.Controller, statuses runner.LegacyStatuses, filer snapshot.Filer, pollInterval time.Duration) *Handler {
 	return &Handler{
-		runner:       runner,
+		controller:   controller,
+		statuses:     statuses,
 		filer:        filer,
 		pollInterval: pollInterval,
 	}
 }
 
 type Handler struct {
-	runner       runner.Runner
+	controller   runner.Controller
+	statuses     runner.LegacyStatuses
 	filer        snapshot.Filer
 	pollInterval time.Duration
 }
@@ -36,7 +38,7 @@ func (h *Handler) CheckoutSnapshot(snapshotId runner.SnapshotId, dir string) err
 
 func (h *Handler) Run(cmd *runner.Command) (status runner.ProcessStatus, err error) {
 	// Direct delegation to underlying runner.
-	return h.runner.Run(cmd)
+	return h.controller.Run(cmd)
 }
 
 func (h *Handler) Poll(runIds []runner.RunId, timeout time.Duration, returnAll bool) (statuses []runner.ProcessStatus) {
@@ -56,7 +58,7 @@ func (h *Handler) Poll(runIds []runner.RunId, timeout time.Duration, returnAll b
 		completed := false
 		statuses = nil
 		for _, runId := range runIds {
-			status, _ := h.runner.Status(runId)
+			status, _ := h.statuses.Status(runId)
 			if status.State.IsDone() {
 				completed = true
 			}

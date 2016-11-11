@@ -9,14 +9,15 @@ import (
 )
 
 // Creates a new Chaos Runner
-func NewChaosRunner(delegate runner.Runner) *ChaosRunner {
-	return &ChaosRunner{del: delegate}
+func NewChaosRunner(delC runner.Controller, delSts runner.LegacyStatuses) *ChaosRunner {
+	return &ChaosRunner{delC: delC, delSts: delSts}
 }
 
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,
 // but delaying a random time between 0 and MaxDelay, or returning an error
 type ChaosRunner struct {
-	del      runner.Runner
+	delC     runner.Controller
+	delSts   runner.LegacyStatuses
 	mu       sync.Mutex
 	maxDelay time.Duration
 	err      error
@@ -54,7 +55,7 @@ func (r *ChaosRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
-	return r.del.Run(cmd)
+	return r.delC.Run(cmd)
 }
 
 func (r *ChaosRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
@@ -62,7 +63,7 @@ func (r *ChaosRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
-	return r.del.Status(run)
+	return r.delSts.Status(run)
 }
 
 func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
@@ -70,7 +71,7 @@ func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	return r.del.StatusAll()
+	return r.delSts.StatusAll()
 }
 
 func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
@@ -78,7 +79,7 @@ func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	if err != nil {
 		return runner.ProcessStatus{}, err
 	}
-	return r.del.Abort(run)
+	return r.delC.Abort(run)
 }
 
 func (r *ChaosRunner) Erase(run runner.RunId) error {
@@ -86,5 +87,5 @@ func (r *ChaosRunner) Erase(run runner.RunId) error {
 	if err != nil {
 		return err
 	}
-	return r.Erase(run)
+	return r.delSts.Erase(run)
 }

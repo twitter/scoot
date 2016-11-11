@@ -14,8 +14,8 @@ import (
 const RunnerBusyMsg = "Runner is busy"
 
 // NewSimpleRunner creates a runner that will run using the supplied helpers
-func NewSimpleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) runner.Runner {
-	return &simpleRunner{
+func NewSimpleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator) *SimpleRunner {
+	return &SimpleRunner{
 		exec:          exec,
 		filer:         filer,
 		outputCreator: outputCreator,
@@ -25,8 +25,8 @@ func NewSimpleRunner(exec execer.Execer, filer snapshot.Filer, outputCreator run
 }
 
 // NewSimpleReportBackRunner is like NewSimpleRunner, but will also send to availCh when the runner is available
-func NewSimpleReportBackRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator, availCh chan struct{}) *simpleRunner {
-	return &simpleRunner{
+func NewSimpleReportBackRunner(exec execer.Execer, filer snapshot.Filer, outputCreator runner.OutputCreator, availCh chan struct{}) *SimpleRunner {
+	return &SimpleRunner{
 		exec:          exec,
 		filer:         filer,
 		outputCreator: outputCreator,
@@ -35,8 +35,8 @@ func NewSimpleReportBackRunner(exec execer.Execer, filer snapshot.Filer, outputC
 	}
 }
 
-// simpleRunner runs one process at a time and stores results.
-type simpleRunner struct {
+// SimpleRunner runs one process at a time and stores results.
+type SimpleRunner struct {
 	exec          execer.Execer
 	filer         snapshot.Filer
 	outputCreator runner.OutputCreator
@@ -52,7 +52,7 @@ type runInstance struct {
 	doneCh chan struct{}
 }
 
-func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (r *SimpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	runId := runner.RunId(fmt.Sprintf("%d", r.nextRunId))
@@ -75,7 +75,7 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	return r.runs[runId], nil
 }
 
-func (r *simpleRunner) Status(runId runner.RunId) (runner.ProcessStatus, error) {
+func (r *SimpleRunner) Status(runId runner.RunId) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	result, ok := r.runs[runId]
@@ -85,7 +85,7 @@ func (r *simpleRunner) Status(runId runner.RunId) (runner.ProcessStatus, error) 
 	return result, nil
 }
 
-func (r *simpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
+func (r *SimpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	statuses := []runner.ProcessStatus{}
@@ -95,18 +95,18 @@ func (r *simpleRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	return statuses, nil
 }
 
-func (r *simpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+func (r *SimpleRunner) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	return r.updateStatus(runner.AbortStatus(runId))
 }
 
-func (r *simpleRunner) Close() error {
+func (r *SimpleRunner) Close() error {
 	if r.availCh != nil {
 		close(r.availCh)
 	}
 	return nil
 }
 
-func (r *simpleRunner) Erase(runId runner.RunId) error {
+func (r *SimpleRunner) Erase(runId runner.RunId) error {
 	// Best effort is fine here.
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -116,7 +116,7 @@ func (r *simpleRunner) Erase(runId runner.RunId) error {
 	return nil
 }
 
-func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.ProcessStatus, error) {
+func (r *SimpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.ProcessStatus, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -140,7 +140,7 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 		// We are ending the running task.
 		// depend on the invariant that there is at most 1 run with !state.IsDone(),
 		// so if we're changing a Process from not Done to Done it must be running
-		log.Printf("local.simpleRunner: run done. %+v", newStatus)
+		log.Printf("local.SimpleRunner: run done. %+v", newStatus)
 		close(r.running.doneCh)
 		if r.availCh != nil {
 			r.availCh <- struct{}{}
@@ -153,8 +153,8 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 }
 
 // run cmd in the background, writing results to r as id, unless doneCh is closed
-func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
-	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
+func (r *SimpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
+	log.Printf("local.SimpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
 
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 	go func() {
@@ -180,7 +180,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	}
 	defer checkout.Release()
 
-	log.Printf("local.simpleRunner.run checkout: %v", checkout.Path())
+	log.Printf("local.SimpleRunner.run checkout: %v", checkout.Path())
 
 	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
 	if err != nil {

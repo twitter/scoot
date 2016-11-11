@@ -41,7 +41,7 @@ func main() {
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
 	r := local.NewSimpleRunner(ex, filer, outputCreator)
-	h := server.NewHandler(r, filer, 50*time.Millisecond)
+	h := server.NewHandler(r, r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

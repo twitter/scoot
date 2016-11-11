@@ -57,12 +57,13 @@ func (d *connDialer) Close() error {
 func newFakeConn() conn.Conn {
 	ex := execers.NewSimExecer()
 	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	return &fakeConn{r, nil}
+	return &fakeConn{r, r, nil}
 }
 
 type fakeConn struct {
-	runner runner.Runner
-	err    error
+	controller runner.Controller
+	statuses   runner.LegacyStatuses
+	err        error
 }
 
 func (c *fakeConn) Echo(arg string) (string, error) {
@@ -76,28 +77,28 @@ func (c *fakeConn) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	if c.err != nil {
 		return runner.ProcessStatus{}, c.err
 	}
-	return c.runner.Run(cmd)
+	return c.controller.Run(cmd)
 }
 
 func (c *fakeConn) Status(run runner.RunId) (runner.ProcessStatus, error) {
 	if c.err != nil {
 		return runner.ProcessStatus{}, c.err
 	}
-	return c.runner.Status(run)
+	return c.statuses.Status(run)
 }
 
 func (c *fakeConn) StatusAll() ([]runner.ProcessStatus, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
-	return c.runner.StatusAll()
+	return c.statuses.StatusAll()
 }
 
 func (c *fakeConn) Abort(run runner.RunId) (runner.ProcessStatus, error) {
 	if c.err != nil {
 		return runner.ProcessStatus{}, c.err
 	}
-	return c.runner.Abort(run)
+	return c.controller.Abort(run)
 }
 
 func (c *fakeConn) Erase(run runner.RunId) error {
