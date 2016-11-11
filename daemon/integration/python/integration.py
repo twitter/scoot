@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 
-sys.path.append('../../protocol')
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
 import client_lib as proto
 
 
