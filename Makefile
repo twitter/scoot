@@ -60,8 +60,7 @@ test-integration:
 testlocal: generate test
 
 swarmtest:
-	go install ./binaries/setup-cloud-scoot ./binaries/scootapi
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test 10 1m
+	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run go run ./binaries/scootapi/main.go run_smoke_test 10 1m
 
 clean-mockgen:
 	rm */*_mock.go
