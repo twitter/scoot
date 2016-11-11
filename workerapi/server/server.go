@@ -42,6 +42,7 @@ func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 func (h *handler) stats() {
+	startTime := time.Now()
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
 		select {
@@ -69,6 +70,7 @@ func (h *handler) stats() {
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
 			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
 			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
+			h.stat.Gauge("uptimeGauge_ms").Update(int64(time.Since(startTime) / time.Millisecond))
 			h.mu.Unlock()
 		}
 	}

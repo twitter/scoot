@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
@@ -44,7 +45,9 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() endpoints.StatScope { return "workerserver" },
 
-		func(scope endpoints.StatScope) stats.StatsReceiver { return endpoints.MakeStatsReceiver(scope) },
+		func(scope endpoints.StatScope) stats.StatsReceiver {
+			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
+		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer("localhost:2001", s)

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
@@ -24,7 +25,7 @@ func TestCheckouter(t *testing.T) {
 	}
 	doneCh := make(chan struct{})
 	defer close(doneCh)
-	checkouter := NewRefRepoCloningCheckouter(&ConstantIniter{repo}, tmp, doneCh, 0)
+	checkouter := NewRefRepoCloningCheckouter(&ConstantIniter{repo}, stats.NilStatsReceiver(), tmp, doneCh, 0)
 	c1, err := checkouter.Checkout(id1)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id1, err)
