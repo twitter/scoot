@@ -3,7 +3,6 @@ package snapshots
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,13 +46,11 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
 		}
 		if err != nil {
-			log.Print("mkdir err: ", err) //FIXME: tmp dbg
 			return
 		}
 
 		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s%s %s", src, slashDot, absDest)).Run()
 		if err != nil {
-			log.Print("sh cp err: ", err) //FIXME: tmp dbg
 			return
 		}
 	}
