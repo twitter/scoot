@@ -123,7 +123,7 @@ def create_snapshot(path):
   """ Requests that Daemon server store and assign an id to the given file system path.
 
   @type path: string
-  @param path: A file or directory to be ingested by Daemon server.
+  @param path: An absolute path on the local fs. Only directory paths are allowed at this time (ingesting contents not the dir itself).
 
   @rtype: string
   @return The id associated with the newly stored path.
@@ -148,7 +148,7 @@ def checkout_snapshot(snapshot_id, dirpath):
   @param snapshot_id: A snapshot id returned from an earlier call to create_snapshot().
 
   @type dirpath: string
-  @param dirpath: The directory in which to place snapshot contents.
+  @param dirpath: The local absolute directory path in which to place snapshot contents.
   """
   global _client
   if not is_started():
