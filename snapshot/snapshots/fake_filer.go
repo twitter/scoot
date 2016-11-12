@@ -3,6 +3,7 @@ package snapshots
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,21 +37,23 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 		// absDest is a parent directory in which we place the contents of src.
 		absDest := filepath.Join(s.Dir, dest)
 
-		dirSlash := ""
+		slashDot := ""
 		if fi, err := os.Stat(src); err == nil && fi.IsDir() {
-			// If src is a dir, we append a slash to copy contents rather than the dir itself.
-			dirSlash = "/"
+			// If src is a dir, we append a slash dot to copy contents rather than the dir itself.
+			slashDot = "/."
 			err = os.MkdirAll(absDest, os.ModePerm)
 		} else {
 			// If src is a file, we treat the base of absDest as a file instead of a directory.
 			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
 		}
 		if err != nil {
+			log.Print("mkdir err: ", err) //FIXME: tmp dbg
 			return
 		}
 
-		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s%s %s", src, dirSlash, absDest)).Run()
+		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s%s %s", src, slashDot, absDest)).Run()
 		if err != nil {
+			log.Print("sh cp err: ", err) //FIXME: tmp dbg
 			return
 		}
 	}

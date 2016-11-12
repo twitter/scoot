@@ -2,6 +2,7 @@ package snapshots
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -61,6 +62,7 @@ func assertDirEntries(path string, count int, msg string, t *testing.T) {
 		t.Fatal(msg + ", readdir: " + err.Error())
 	}
 	if len(fi) != count {
+		log.Print("entries: ", fi) //FIXME: tmp dbg.
 		t.Fatal(msg + ", entrycount: " + strconv.Itoa(len(fi)))
 	}
 
