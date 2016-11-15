@@ -1,9 +1,9 @@
 # Runner Design #
-package runner is structs and interfaces to run Scoot processes. package runners contains implementations. This doc describes both.
+package runner is structs and interfaces to run Commands in Scoot. package runners contains implementations. This doc describes both.
 
 ## Summary ##
 * Service (interface) combines Controller and StatusReader
-* Controller (interface) controls when to Run something
+* Controller (interface) controls when to Run a Command.
   * Controller calls Invoker
   * Controller writes to StatusWriter
 * runners.Invoker (struct) runs one command using Execer and snapshot.Filer
@@ -16,9 +16,9 @@ Invoker runs a Scoot command. This involves:
 * setup (check out a snapshot)
 * post-processing (save output)
 * babysitting (implement timeout and abort)
-* status updates while running/once finished
+* streaming RunStatus'es over the course of a run
 
-Conceptually, it lowers a Scoot Command from a high-level abstraction (Snapshots, etc.) to an Execer command (about directories that are paths in the local filesystem).
+Conceptually, it lowers a Scoot Command from a high-level abstraction (Snapshots, etc.) to an Execer command (about directories that are paths in the local filesystem). Concretely,  it checks out the input snapshot's files, then uses an Execer to run the command. When the command has finished, it created a snapshot of the command's output.
 
 ## Controller (runner/controller.go) ##
 Controller controls the Runs, starting a new one (Run()) or ending one (Abort()). It implements:
