@@ -1,3 +1,6 @@
+// Package server provides the daemon Server interface and an
+// implementation accessible by NewServer, consisting of an API Handler
+// and Protobuf server.
 package server
 
 import (

@@ -1,3 +1,5 @@
+// Package saga provides a generic implementation of the Saga pattern
+// that can be used as a durability mechanism for the Scoot scheduler.
 package saga
 
 import (

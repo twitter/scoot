@@ -1,3 +1,5 @@
+// Wrappers for receivers from the common/stats package and setting
+// up an HTTP server with endpoints to make the stats data accessible.
 package endpoints
 
 import (

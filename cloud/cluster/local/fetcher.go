@@ -1,3 +1,4 @@
+// 
 package local
 
 import (
@@ -16,6 +17,7 @@ func MakeFetcher() cluster.Fetcher {
 
 type localFetcher struct{}
 
+// Implements cluster.Fetcher interface for local Nodes via ps
 func (f *localFetcher) Fetch() (nodes []cluster.Node, err error) {
 	var data []byte
 	if data, err = f.fetchData(); err != nil {

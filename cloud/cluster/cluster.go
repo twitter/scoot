@@ -1,3 +1,6 @@
+// Cluster provides the means for coordinating the schedulers and workers that
+// make up a Scoot system. This is achieved mainly through the Cluster type,
+// individual Nodes, and Subscriptions to cluster changes.
 package cluster
 
 import (

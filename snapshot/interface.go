@@ -1,3 +1,6 @@
+// Package snapshot provides interfaces and implementations for Scoot
+// snapshots, which represent immutable filesystem state. This includes
+// concepts for Files, and various sim/test implementations.
 package snapshot
 
 import "syscall"

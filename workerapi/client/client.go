@@ -1,3 +1,5 @@
+// The client package provides an interface and implementation for the
+// Scoot Worker API, as well as a CLI client that wraps it.
 package client
 
 import (
