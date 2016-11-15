@@ -87,6 +87,7 @@ func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error)
 	}, nil
 }
 
+// Make an Ingester that does nothing
 func MakeNoopIngester() *NoopIngester {
 	return &NoopIngester{}
 }
@@ -106,11 +107,13 @@ func MakeInvalidFiler() snapshot.Filer {
 	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester())
 }
 
+// FilerFacade creates a Filer from a Checkouter and Ingester
 type FilerFacade struct {
 	snapshot.Checkouter
 	snapshot.Ingester
 }
 
+// Make a Filer from a Checkouter and Ingester
 func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
 	return &FilerFacade{checkouter, ingester}
 }
