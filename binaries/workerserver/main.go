@@ -33,6 +33,9 @@ func main() {
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*httpAddr, s)
 		},
+		func(tmpDir *temp.TempDir) snapshot.Filer {
+			return snapshots.MakeTempCheckouterFiler(tmpDir)
+		},
 	)
 
 	server.RunServer(bag, schema, configText)

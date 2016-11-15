@@ -16,7 +16,6 @@ import (
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	localrunner "github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/snapshots"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -58,10 +57,6 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
-
-		func(tmpDir *temp.TempDir) snapshot.Filer {
-			return snapshots.MakeTempCheckouterFiler(tmpDir)
-		},
 
 		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
 			return localrunner.NewOutputCreator(tmpDir)
