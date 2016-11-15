@@ -87,32 +87,38 @@ func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error)
 	}, nil
 }
 
+// Make an Ingester that does nothing
+func MakeNoopIngester() *NoopIngester {
+	return &NoopIngester{}
+}
+
 // Ingester that does nothing.
-type noopIngester struct{}
+type NoopIngester struct{}
 
-func (n *noopIngester) Ingest(string) (string, error) {
+func (n *NoopIngester) Ingest(string) (string, error) {
 	return "", nil
 }
-func (n *noopIngester) IngestMap(map[string]string) (string, error) {
+func (n *NoopIngester) IngestMap(map[string]string) (string, error) {
 	return "", nil
 }
 
-// Make in invalid Filer
+// Make an invalid Filer
 func MakeInvalidFiler() snapshot.Filer {
-	return &noopFiler{}
+	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester())
 }
 
-type noopFiler struct {
-	noopCheckouter
-	noopIngester
+// FilerFacade creates a Filer from a Checkouter and Ingester
+type FilerFacade struct {
+	snapshot.Checkouter
+	snapshot.Ingester
+}
+
+// Make a Filer from a Checkouter and Ingester
+func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
+	return &FilerFacade{checkouter, ingester}
 }
 
 // Make a Filer that can Checkout() but does a noop Ingest().
 func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
-	return &tempCheckouterFiler{Checkouter: MakeTempCheckouter(tmp)}
-}
-
-type tempCheckouterFiler struct {
-	snapshot.Checkouter
-	noopIngester
+	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester())
 }
