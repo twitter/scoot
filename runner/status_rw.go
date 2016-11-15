@@ -5,8 +5,33 @@ import (
 	"time"
 )
 
+// status_rw.go is how to read/write RunStatus'es
+
 // StateMask describes a set of States as a bitmask.
 type StateMask uint64
+
+// Useful StateMask constants
+const (
+	UNKNOWN_MASK    StateMask = StateMask(1 << uint(UNKNOWN))
+	PENDING_MASK              = 1 << uint(PENDING)
+	PREPARING_MASK            = 1 << uint(PREPARING)
+	RUNNING_MASK              = 1 << uint(RUNNING)
+	COMPLETE_MASK             = 1 << uint(COMPLETE)
+	FAILED_MASK               = 1 << uint(FAILED)
+	ABORTED_MASK              = 1 << uint(ABORTED)
+	TIMEDOUT_MASK             = 1 << uint(TIMEDOUT)
+	BADREQUEST_MASK           = 1 << uint(BADREQUEST)
+	DONE_MASK                 = (1<<uint(COMPLETE) |
+		1<<uint(FAILED) |
+		1<<uint(ABORTED) |
+		1<<uint(TIMEDOUT))
+	ALL_MASK = math.MaxUint64
+)
+
+// Helper Function to create StateMask that matches exactly state
+func MaskForState(state ProcessState) StateMask {
+	return 1 << uint(state)
+}
 
 // Query describes a query for RunStatuses.
 // The Runs and States are and'ed: a RunStatus matches a Query
@@ -36,6 +61,7 @@ type StatusQuerier interface {
 }
 
 // StatusQueryNower allows Query'ing Statuses but with no Waiting
+// We will implement a PollingQueuer that wraps a StatusQueryNower and satisfies QueryNower
 type StatusQueryNower interface {
 	// QueryNow returns all RunStatus'es matching q in their current state
 	QueryNow(q Query) ([]RunStatus, error)
@@ -45,6 +71,7 @@ type StatusQueryNower interface {
 
 // Status returns the current status of id from q.
 func Status(q StatusQueryNower, id RunID) (RunStatus, error) {
+	return q.QueryNow(Query{Runs: {id}, States: ALL_MASK})
 	return RunStatus{}, fmt.Errorf("Not yet implemented")
 }
 
