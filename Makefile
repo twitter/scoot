@@ -60,6 +60,8 @@ test-integration:
 testlocal: generate test
 
 swarmtest:
+	# Setup a local schedule against local workers (--strategy local.local)
+	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run go run ./binaries/scootapi/main.go run_smoke_test 10 1m
 
 clean-mockgen:
