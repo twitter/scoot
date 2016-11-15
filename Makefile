@@ -16,7 +16,7 @@ dependencies:
 
 	# Checkout our vendored dependencies.
 	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
-	#       When used as a library, the vendor folder will be empty by default (if 'go get'd). 
+	#       When used as a library, the vendor folder will be empty by default (if 'go get'd).
 	git submodule update --init --recursive
 
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
@@ -54,9 +54,15 @@ test-unit:
 
 test-integration:
 	# Runs all tests including integration and property tests
+	# We don't currently have any integration tests, but we're leaving this so we can add more.
 	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
+
+swarmtest:
+	# Setup a local schedule against local workers (--strategy local.local)
+	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
+	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run go run ./binaries/scootapi/main.go run_smoke_test 10 1m
 
 clean-mockgen:
 	rm */*_mock.go
@@ -65,3 +71,5 @@ clean: clean-mockgen
 	go clean ./...
 
 fullbuild: dependencies generate test
+
+travis: fullbuild swarmtest
