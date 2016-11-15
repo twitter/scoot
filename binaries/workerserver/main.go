@@ -11,6 +11,9 @@ import (
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 
 	"github.com/scootdev/scoot/workerapi/server"
 )
