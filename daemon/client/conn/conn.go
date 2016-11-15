@@ -1,3 +1,4 @@
+// Package conn provides a Scoot Daemon client connection implementation.
 package conn
 
 import (

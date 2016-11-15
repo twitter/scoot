@@ -20,6 +20,8 @@ func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
 	}
 }
 
+// A stats receiver that provides HTTP access for metric scraping with
+// Twitter-style endpoints.
 type TwitterServer struct {
 	Addr  string
 	Stats stats.StatsReceiver

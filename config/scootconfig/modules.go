@@ -1,3 +1,5 @@
+// Scootconfig provides modules for creating and initializing configs
+// for Scoot components (Scheduler, Cluster, Workers) via Ice.
 package scootconfig
 
 import (

@@ -1,6 +1,6 @@
 // Package server provides the daemon Server interface and an
-// implementation accessible by NewServer, consisting of an API Handler
-// and Protobuf server.
+// implementation, which includes an API Handler and Protobuf server,
+// that fulfils daemon.proto.
 package server
 
 import (
@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Create a protocol.ScootDaemonServer
+// Create a protocol.ScootDaemonServer.
 func NewServer(handler *Handler) (Server, error) {
 	s := &daemonServer{
 		handler:    handler,

@@ -34,6 +34,7 @@ type handler struct {
 	mu          sync.Mutex
 }
 
+// Creates a new Handler which combines a Runner to do work and a StatsReceiver
 func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run}
@@ -85,8 +86,7 @@ func (h *handler) updateTimeLastRpc() {
 	h.mu.Unlock()
 }
 
-// Implement thrift worker.Worker interface.
-//
+// Implements thrift worker.Worker interface
 func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.updateTimeLastRpc()
@@ -101,6 +101,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	return ws, nil
 }
 
+// Implements thrift worker.Worker interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
@@ -114,6 +115,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	return domain.DomainRunStatusToThrift(process), nil
 }
 
+// Implements thrift worker.Worker interface
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
@@ -124,6 +126,7 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	return domain.DomainRunStatusToThrift(process), nil
 }
 
+// Implements thrift worker.Worker interface
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()

@@ -7,6 +7,7 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+// Create a Checkouter that always fails due to invalid path
 func MakeInvalidCheckouter() snapshot.Checkouter {
 	return &noopCheckouter{path: "/path/is/invalid"}
 }
@@ -72,6 +73,7 @@ type Initer interface {
 	Init() error
 }
 
+// Creates a checkouter that waits for an Initer to be done Initing before checking out.
 func MakeInitingCheckouter(path string, initer Initer) snapshot.Checkouter {
 	r := &initingCheckouter{path: path}
 	// Start the Initer as soon as we know we'll need to
@@ -83,7 +85,6 @@ func MakeInitingCheckouter(path string, initer Initer) snapshot.Checkouter {
 	return r
 }
 
-// initingCheckout waits for an Initer to be done Initing before checking out.
 type initingCheckouter struct {
 	wg   sync.WaitGroup
 	path string

@@ -7,7 +7,7 @@ import (
 	"sort"
 )
 
-// Cluster represents a cluster of Nodes.
+// Cluster represents a group of Nodes and has mechanisms for receiving updates.
 type Cluster struct {
 	state    *state
 	reqCh    chan interface{}
