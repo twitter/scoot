@@ -61,7 +61,11 @@ type StatusQuerier interface {
 }
 
 // StatusQueryNower allows Query'ing Statuses but with no Waiting
-// We will implement a PollingQueuer that wraps a StatusQueryNower and satisfies QueryNower
+// This is separate from StatusQuerier because talking to the Worker, e.g., we will be able to
+// QueryNow easily, but because Thrift doesn't like long waits on RPCs, it can't do
+// Query with a decent wait. We want our type system to help protect us from this blowing up
+// at runtime, so the RPC client will implement StatusQueryNower.
+// We will implement a PollingQueuer that wraps a StatusQueryNower and satisfies StatusQuerier.
 type StatusQueryNower interface {
 	// QueryNow returns all RunStatus'es matching q in their current state
 	QueryNow(q Query) ([]RunStatus, error)
