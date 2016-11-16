@@ -1,3 +1,5 @@
+// Package worker provides the main inferface for the scheduler to
+// run and manage jobs on the workers.
 package worker
 
 //go:generate mockgen -source=worker.go -package=worker -destination=worker_mock.go
