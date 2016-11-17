@@ -3,7 +3,7 @@
 [![codecov.io](https://codecov.io/github/Kitware/candela/coverage.svg?branch=master)](https://codecov.io/gh/scootdev/scoot?branch=master)
 [![GoDoc](https://godoc.org/github.com/scootdev/scoot?status.svg)](https://godoc.org/github.com/scootdev/scoot)
 
-Scoot is infrastructure to make developer tools smaller, simpler, and more distributed. The core concept of Scoot is the Snapshot, which represents an immutable filesystem state. Scoot allows for execution of commands against input Snapshots to create new output Snapshots. [Godoc][godoc].
+Scoot is infrastructure to make developer tools smaller, simpler, and more distributed. The core concept of Scoot is the Snapshot, which represents an immutable filesystem state. Scoot allows for execution of commands against input Snapshots to create new output Snapshots.
 
 ### Scoot Components
 
