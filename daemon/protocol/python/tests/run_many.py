@@ -16,8 +16,11 @@ import client_lib as proto
 
 class TestManyRunRequests(unittest.TestCase):
     daemonProcess = None
+    tmpdir = None
       
     def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
         # Note: the following does not work - the process from the pool does not have GOPATH defined so it can't find the binary
         gopath = os.environ['GOPATH']
         self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-test_q_len", "50"])
@@ -42,6 +45,7 @@ class TestManyRunRequests(unittest.TestCase):
                         
     def tearDown(self):
         self.daemonProcess.kill()
+        shutil.rmtree(self.tmpdir)
         unittest.TestCase.tearDown(self)
         
     sleep_ss_key = "sleep_s_id"
@@ -86,59 +90,56 @@ class TestManyRunRequests(unittest.TestCase):
         
         runs = {}
         
-        try:
         # Make the snapshots.
-            ss_ids = self.make_snapshots()
+        ss_ids = self.make_snapshots()
+    
+        # Run the sleep script
+        id = proto.run(argv=self.sleepDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.sleepDef.snapshot_key])
+        runs[id] = "sleep"
         
-            # Run the sleep script
-            id = proto.run(argv=self.sleepDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.sleepDef.snapshot_key])
-            runs[id] = "sleep"
-            
-            # run ~200 requests, 10 repetitions of 20 successful, 1 error
-            for i in range(5):
-                for j in range(10):
-                    try:
-                        id = proto.run(argv=self.lsDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.lsDef.snapshot_key])
-                        runs[id] = "ls"
-                    except proto.ScootException as e:
-                        if re.search("No resources available", str(e)) is None:
-                            raise Exception("Run error, not resource limitation.")
-                
-                # TODO check that as is queue full
+        # run ~200 requests, 10 repetitions of 20 successful, 1 error
+        for i in range(5):
+            for j in range(10):
                 try:
-                    id = proto.run(argv=self.failDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.failDef.snapshot_key])
+                    id = proto.run(argv=self.lsDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.lsDef.snapshot_key])
+                    runs[id] = "ls"
                 except proto.ScootException as e:
                     if re.search("No resources available", str(e)) is None:
                         raise Exception("Run error, not resource limitation.")
-                    
-                runs[id] = "fail"
-        
-                    
-            # get all statuses
-            statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=True)
-            self.assertIntermediateStatuses(statuses, runs)
             
-            # get status of every run that has completed so far
-            statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=False)
-            self.assertCompleteStatuses(statuses, runs)
-            
-            # wait for all runs to finish and validate their status
-            start = time.time()
-            allDone = False
-            elapsedTime = 0
-            while not allDone and elapsedTime < 3.0:
-                ids = runs.keys()
-                statuses = proto.poll(run_ids=ids, timeout_ns=-1, return_all=False)
-                if len(statuses) == len(ids):
-                    allDone = True
-                elapsedTime = time.time() - start
-                print("len keys:{0}, len statuses:{1}".format(len(ids), len(statuses)))
+            # TODO check that as is queue full
+            try:
+                id = proto.run(argv=self.failDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.failDef.snapshot_key])
+            except proto.ScootException as e:
+                if re.search("No resources available", str(e)) is None:
+                    raise Exception("Run error, not resource limitation.")
                 
-            self.assertTrue(len(ids) == len(statuses), "runs did not finish.")
-            self.assertCompleteStatuses(statuses, runs)
+            runs[id] = "fail"
+    
+                
+        # get all statuses
+        statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=True)
+        self.assertIntermediateStatuses(statuses, runs)
+        
+        # get status of every run that has completed so far
+        statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=False)
+        self.assertCompleteStatuses(statuses, runs)
+        
+        # wait for all runs to finish and validate their status
+        start = time.time()
+        allDone = False
+        elapsedTime = 0
+        while not allDone and elapsedTime < 3.0:
+            ids = runs.keys()
+            statuses = proto.poll(run_ids=ids, timeout_ns=-1, return_all=False)
+            if len(statuses) == len(ids):
+                allDone = True
+            elapsedTime = time.time() - start
+            print("len keys:{0}, len statuses:{1}".format(len(ids), len(statuses)))
             
-        finally:
-            shutil.rmtree(tmpdir)
+        self.assertTrue(len(ids) == len(statuses), "runs did not finish.")
+        self.assertCompleteStatuses(statuses, runs)
+            
     
     # make the following snapshots
     # sleep snapshot: has a "sleep_script.sh" that sleeps for 0.5 seconds
@@ -146,23 +147,21 @@ class TestManyRunRequests(unittest.TestCase):
     # ls fail snapshot: has an "ls_script.sh" that issues a failing ls command
     # will return a dict of the snapshot ids
     def make_snapshots(self):
-        # make the files that will go into the snapshots
-        tmpdir = tempfile.mkdtemp()
-        
-        sleep_script = os.path.join(tmpdir, "sleep_script.sh")
+        # make the files that will go into the snapshots        
+        sleep_script = os.path.join(self.tmpdir, "sleep_script.sh")
         open(sleep_script, 'w').write("#!/bin/sh\nsleep 0.5")
         os.chmod(sleep_script, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
-        ls_script = os.path.join(tmpdir, "ls_script.sh")
+        ls_script = os.path.join(self.tmpdir, "ls_script.sh")
         open(ls_script, 'w').write("#!/bin/sh\nls resource.txt")
         os.chmod(ls_script, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
-        resource = os.path.join(tmpdir, "resource.txt")
+        resource = os.path.join(self.tmpdir, "resource.txt")
         open(resource, 'w').write("content")
     
         # make the snapshots
         sleep_ss_id = proto.create_snapshot(sleep_script)
-        ls_ss_id = proto.create_snapshot(os.path.join(tmpdir, "*"))
+        ls_ss_id = proto.create_snapshot(os.path.join(self.tmpdir, "*"))
         fail_ls_ss_id = proto.create_snapshot(ls_script)
         
         # return a dict of the snapshot ids
