@@ -80,12 +80,9 @@ class TestManyRunRequests(unittest.TestCase):
                                     proto.ScootStatus.State.PREPARING, 
                                     proto.ScootStatus.State.RUNNING, 
                                     proto.ScootStatus.State.COMPLETED, 
-                                    proto.ScootStatus.State.FAILED], 
                      final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:failed
 
-    # TODO start the server    
     def test_many(self):
-        tmpdir = tempfile.mkdtemp()
         rpc_timeout_ns = int(1000 * 1e6)
         
         runs = {}
@@ -107,7 +104,6 @@ class TestManyRunRequests(unittest.TestCase):
                     if re.search("No resources available", str(e)) is None:
                         raise Exception("Run error, not resource limitation.")
             
-            # TODO check that as is queue full
             try:
                 id = proto.run(argv=self.failDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.failDef.snapshot_key])
             except proto.ScootException as e:
@@ -120,10 +116,6 @@ class TestManyRunRequests(unittest.TestCase):
         # get all statuses
         statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=True)
         self.assertIntermediateStatuses(statuses, runs)
-        
-        # get status of every run that has completed so far
-        statuses = proto.poll(run_ids=runs.keys(), timeout_ns=0, return_all=False)
-        self.assertCompleteStatuses(statuses, runs)
         
         # wait for all runs to finish and validate their status
         start = time.time()
