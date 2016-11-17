@@ -49,23 +49,23 @@ func (r *ChaosRunner) delay() error {
 }
 
 // Implement Runner
-func (r *ChaosRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return r.del.Run(cmd)
 }
 
-func (r *ChaosRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return r.del.Status(run)
 }
 
-func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
+func (r *ChaosRunner) StatusAll() ([]runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
 		return nil, err
@@ -73,15 +73,15 @@ func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	return r.del.StatusAll()
 }
 
-func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Abort(run runner.RunID) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return r.del.Abort(run)
 }
 
-func (r *ChaosRunner) Erase(run runner.RunId) error {
+func (r *ChaosRunner) Erase(run runner.RunID) error {
 	err := r.delay()
 	if err != nil {
 		return err

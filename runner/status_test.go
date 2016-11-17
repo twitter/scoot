@@ -10,11 +10,11 @@ func TestCommandStringSimple(t *testing.T) {
 		Argv:       []string{"./pants", "test", "science/src/go/twitter.biz::"},
 		EnvVars:    map[string]string{"GOOS": "linux"},
 		Timeout:    10 * time.Minute,
-		SnapshotId: "git-abcd1234",
+		SnapshotID: "git-abcd1234",
 	}
 
 	expected := `Command
-	Snapshot ID:	git-abcd1234
+	SnapshotID:	git-abcd1234
 	Argv:	["./pants" "test" "science/src/go/twitter.biz::"]
 	Timeout:	10m0s
 	Env:
@@ -26,16 +26,16 @@ func TestCommandStringSimple(t *testing.T) {
 }
 
 func TestProcStatusStringCompleted(t *testing.T) {
-	ps := ProcessStatus{
-		RunId:      RunId("12"),
-		SnapshotId: SnapshotId("21"),
+	ps := RunStatus{
+		RunID:      RunID("12"),
+		SnapshotID: "21",
 		State:      COMPLETE,
 		StdoutRef:  "stdout",
 		StderrRef:  "stderr",
 		ExitCode:   9,
 	}
 
-	expected := `--- Process Status ---
+	expected := `--- Run Status ---
 	Run:		12
 	Snapshot:		21
 	State:		COMPLETE
@@ -50,16 +50,16 @@ func TestProcStatusStringCompleted(t *testing.T) {
 }
 
 func TestProcStatusStringError(t *testing.T) {
-	ps := ProcessStatus{
-		RunId:      RunId("aaaaa"),
-		SnapshotId: SnapshotId("bb"),
+	ps := RunStatus{
+		RunID:      RunID("aaaaa"),
+		SnapshotID: "bb",
 		State:      FAILED,
 		StdoutRef:  "stdout",
 		StderrRef:  "stderr",
 		Error:      "The thing blew up.",
 	}
 
-	expected := `--- Process Status ---
+	expected := `--- Run Status ---
 	Run:		aaaaa
 	Snapshot:		bb
 	State:		FAILED
