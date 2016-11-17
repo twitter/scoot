@@ -79,7 +79,7 @@ class TestManyRunRequests(unittest.TestCase):
                      interm_states=[proto.ScootStatus.State.PENDING,
                                     proto.ScootStatus.State.PREPARING, 
                                     proto.ScootStatus.State.RUNNING, 
-                                    proto.ScootStatus.State.COMPLETED, 
+                                    proto.ScootStatus.State.COMPLETED], 
                      final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:failed
 
     def test_many(self):
@@ -121,9 +121,9 @@ class TestManyRunRequests(unittest.TestCase):
         start = time.time()
         allDone = False
         elapsedTime = 0
-        while not allDone and elapsedTime < 3.0:
+        while not allDone and elapsedTime < 4.0:
             ids = runs.keys()
-            statuses = proto.poll(run_ids=ids, timeout_ns=-1, return_all=False)
+            statuses = proto.poll(run_ids=ids, timeout_ns=int(3000 * 1e6), return_all=False)
             if len(statuses) == len(ids):
                 allDone = True
             elapsedTime = time.time() - start
