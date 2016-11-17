@@ -4,6 +4,7 @@ import subprocess
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 import time
@@ -12,10 +13,6 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
 import client_lib as proto
 
-# def StartDaemon():
-# #     call(["$GOPATH/bin/daemon", "-execer_type", "os", "-q_len", "200"])
-#     (["/Users/jbruno/workspace/bin/daemon", "-execer_type", "os", "-q_len", "200"])
-
 
 class TestManyRunRequests(unittest.TestCase):
     daemonProcess = None
@@ -23,12 +20,26 @@ class TestManyRunRequests(unittest.TestCase):
     def setUp(self):
         # Note: the following does not work - the process from the pool does not have GOPATH defined so it can't find the binary
         gopath = os.environ['GOPATH']
-        print("keys {0}".format(os.environ))
-        print("gopath:{0}",gopath)
-        self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-q_len", "200"])
-        time.sleep(1.0)
+        self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-q_len", "50"])
+
         proto.start()
+
+        #wait up to 1 second for daemon to start 
+        start = time.time()
+        elapsedTime = 0
+        started = False
+
+        while not started and elapsedTime < 1.0:    
+            try:
+                echo = proto.echo("ping")
+                if echo == "ping":
+                    started = True
+            except proto.ScootException as e:
+                elapsedTime = time.time() - start
         
+        if not started:
+            self.fail("Daemon didn't start within {0}".format(elapsedTime))
+                        
     def tearDown(self):
         self.daemonProcess.kill()
         unittest.TestCase.tearDown(self)
@@ -45,14 +56,33 @@ class TestManyRunRequests(unittest.TestCase):
             self.interm_states = interm_states
             self.final_state = final_state
         
-    sleepDef = CmdDef(cmd=["sh", "./sleep.sh"], snapshot_key="sleep_s_id", interm_states=[proto.ScootStatus.State.PENDING, proto.ScootStatus.State.RUNNING, proto.ScootStatus.State.COMPLETED], final_state=proto.ScootStatus.State.COMPLETED)  # run sleep 1, expect complete or running, final status:complete
-    lsDef = CmdDef(cmd=["sh", "./ls_script.sh"], snapshot_key="ls_s_id", interm_states=[proto.ScootStatus.State.PREPARING, proto.ScootStatus.State.PENDING, proto.ScootStatus.State.RUNNING, proto.ScootStatus.State.COMPLETED], final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:complete
-    failDef = CmdDef(cmd=["sh", "./ls_script.sh"], snapshot_key="ls_fail_s_id", interm_states=[proto.ScootStatus.State.PENDING, proto.ScootStatus.State.RUNNING, proto.ScootStatus.State.COMPLETED, proto.ScootStatus.State.FAILED], final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:failed
+    sleepDef = CmdDef(cmd=["./sleep_script.sh"], 
+                      snapshot_key="sleep_s_id", 
+                      interm_states=[proto.ScootStatus.State.PENDING, 
+                                     proto.ScootStatus.State.PREPARING,
+                                     proto.ScootStatus.State.RUNNING, 
+                                     proto.ScootStatus.State.COMPLETED], 
+                      final_state=proto.ScootStatus.State.COMPLETED)  # run sleep 1, expect complete or running, final status:complete
+    lsDef = CmdDef(cmd=["./ls_script.sh"], 
+                   snapshot_key="ls_s_id", 
+                   interm_states=[proto.ScootStatus.State.PREPARING, 
+                                  proto.ScootStatus.State.PENDING, 
+                                  proto.ScootStatus.State.RUNNING, 
+                                  proto.ScootStatus.State.COMPLETED], 
+                   final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:complete
+    failDef = CmdDef(cmd=["./ls_script.sh"], 
+                     snapshot_key="ls_fail_s_id", 
+                     interm_states=[proto.ScootStatus.State.PENDING,
+                                    proto.ScootStatus.State.PREPARING, 
+                                    proto.ScootStatus.State.RUNNING, 
+                                    proto.ScootStatus.State.COMPLETED, 
+                                    proto.ScootStatus.State.FAILED], 
+                     final_state=proto.ScootStatus.State.COMPLETED)  # run ls script 5 times expect complete, running or queued, final status:failed
 
     # TODO start the server    
     def test_many(self):
         tmpdir = tempfile.mkdtemp()
-        rpc_timeout_ns = int(500 * 1e6)
+        rpc_timeout_ns = int(1000 * 1e6)
         
         runs = {}
         
@@ -65,8 +95,8 @@ class TestManyRunRequests(unittest.TestCase):
             runs[id] = "sleep"
             
             # run ~200 requests, 10 repetitions of 20 successful, 1 error
-            for i in range (0, 10):
-                for j in range(0, 19):
+            for i in range(5):
+                for j in range(10):
                     try:
                         id = proto.run(argv=self.lsDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.lsDef.snapshot_key])
                         runs[id] = "ls"
@@ -93,7 +123,18 @@ class TestManyRunRequests(unittest.TestCase):
             self.assertCompleteStatuses(statuses, runs)
             
             # wait for all runs to finish and validate their status
-            statuses = proto.poll(run_ids=runs.keys(), timeout_ns=-1, return_all=False)
+            start = time.time()
+            allDone = False
+            elapsedTime = 0
+            while not allDone and elapsedTime < 3.0:
+                ids = runs.keys()
+                statuses = proto.poll(run_ids=ids, timeout_ns=-1, return_all=False)
+                if len(statuses) == len(ids):
+                    allDone = True
+                elapsedTime = time.time() - start
+                print("len keys:{0}, len statuses:{1}".format(len(ids), len(statuses)))
+                
+            self.assertTrue(len(ids) == len(statuses), "runs did not finish.")
             self.assertCompleteStatuses(statuses, runs)
             
         finally:
@@ -110,9 +151,11 @@ class TestManyRunRequests(unittest.TestCase):
         
         sleep_script = os.path.join(tmpdir, "sleep_script.sh")
         open(sleep_script, 'w').write("#!/bin/sh\nsleep 0.5")
+        os.chmod(sleep_script, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
         ls_script = os.path.join(tmpdir, "ls_script.sh")
         open(ls_script, 'w').write("#!/bin/sh\nls resource.txt")
+        os.chmod(ls_script, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
     
         resource = os.path.join(tmpdir, "resource.txt")
         open(resource, 'w').write("content")
@@ -155,4 +198,3 @@ class TestManyRunRequests(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
   
-

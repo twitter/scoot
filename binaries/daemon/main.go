@@ -15,7 +15,7 @@ import (
 )
 
 var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
-var q_len = flag.Int("q_len", 200, "queue length")
+var q_len = flag.Int("test_q_len", 1000000, "queue length for testing")
 
 // A Scoot Daemon server.
 func main() {
