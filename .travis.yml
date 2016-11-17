@@ -18,7 +18,7 @@ before_script:
   - make vet
 
 script:
-  - make test
+  - make travis
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

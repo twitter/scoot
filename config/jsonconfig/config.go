@@ -96,7 +96,7 @@ func parseType(data json.RawMessage) (string, error) {
 func GetConfigText(configFlag string, asset func(string) ([]byte, error)) ([]byte, error) {
 	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]*$`, []byte(configFlag)); matched {
 		configFileName := path.Join("config", configFlag)
-		log.Printf("Scheduler: reading config filename %v", configFileName)
+		log.Printf("reading config filename %v", configFileName)
 		configText, err := asset(configFileName)
 		if err != nil {
 			return nil, fmt.Errorf("Scheduler: Error Loading Config File %v: %v", configFileName, err)
