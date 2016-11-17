@@ -35,7 +35,8 @@ type Checkout interface {
 
 // Ingester creates a Snapshot from a path in the local filesystem.
 type Ingester interface {
-	// Takes a file or dir path and stores the contents in a snapshot which may then be checked out by id.
+	// Takes an absolute path on the local filesystem.
+	// The contents of path will be stored in a snapshot which may then be checked out by id.
 	Ingest(path string) (id string, err error)
 
 	// Takes a mapping of source paths to be copied into corresponding destination directories.

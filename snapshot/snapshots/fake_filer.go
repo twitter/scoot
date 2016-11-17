@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -54,21 +53,24 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 	if err != nil {
 		return "", err
 	}
-
 	for src, dest := range srcToDest {
+		// absDest is a parent directory in which we place the contents of src.
 		absDest := filepath.Join(s.Dir, dest)
-		if strings.Contains(absDest, "*") {
-			// If wildcard is present, treat destination as a parent directory.
+
+		slashDot := ""
+		if fi, err := os.Stat(src); err == nil && fi.IsDir() {
+			// If src is a dir, we append a slash dot to copy contents rather than the dir itself.
+			slashDot = "/."
 			err = os.MkdirAll(absDest, os.ModePerm)
 		} else {
-			// If no wildcard, treat destination as dir/base.
+			// If src is a file, we treat the base of absDest as a file instead of a directory.
 			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
 		}
 		if err != nil {
 			return
 		}
 
-		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s %s", src, absDest)).Run()
+		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s%s %s", src, slashDot, absDest)).Run()
 		if err != nil {
 			return
 		}

@@ -2,8 +2,36 @@
 
 The protocol betweeen Scoot Local Server and Scoot Local Clients.
 This includes the protocol buffers, and any other utilities that should be shared by client and server.
+There is an official daemon client library provided in Python on Pypi.
 
 __This still needs to be integrated into the build__
+
+### Installing from Scoot Pypi
+
+Prerequisites:
+* pip
+
+```sh
+pip install scoot
+```
+
+### Publishing to Scoot Pypi
+
+Prerequisites:
+* Register at __https://pypi.python.org__ and then create ~/.pypirc with:
+```
+    [server-login]
+    username:USER
+    password:PASS
+```
+* Request someone on scoot-team to add you as an owner
+
+###### Publishing
+* Bump the version in daemon/protocol/python/setup.py
+* Run:
+```sh
+daemon/protocol/python/deploy.sh
+```
 
 #### Compiling for Go (daemon.pb.go)
 
@@ -30,3 +58,4 @@ brew uninstall protobuf
 ```sh
 python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
 ```
+

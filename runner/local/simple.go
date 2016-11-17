@@ -222,7 +222,6 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 
 	switch st.State {
 	case execer.COMPLETE:
-		snapshotId := ""
 		srcToDest := map[string]string{
 			checkout.Path(): "",
 			stdout.AsFile(): "STDOUT",
@@ -234,7 +233,7 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		// 		srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
 		// 	}
 		// }
-		snapshotId, err = r.filer.IngestMap(srcToDest)
+		snapshotId, err := r.filer.IngestMap(srcToDest)
 		if err != nil {
 			r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("error ingesting results: %v", err)))
 		} else {

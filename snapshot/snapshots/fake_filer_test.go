@@ -75,15 +75,15 @@ func TestTempFiler(t *testing.T) {
 	// Read single file from first checkout.
 	assertFileContains(filepath.Join(co1.Path(), filepath.Base(localfile1)), "bar1", "co1", t)
 
-	// Make sure second checkout contains a single entry.
-	assertDirEntries(co2.Path(), 1, "co2", t)
+	// Make sure second checkout contains both files.
+	assertDirEntries(co2.Path(), 2, "co2", t)
 
 	// Read first file from the second checkout subdirectory.
-	p := filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile1))
+	p := filepath.Join(co2.Path(), filepath.Base(localfile1))
 	assertFileContains(p, "bar1", "co2", t)
 
 	// Read second file from the second checkout subdirectory.
-	p = filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile2))
+	p = filepath.Join(co2.Path(), filepath.Base(localfile2))
 	assertFileContains(p, "bar2", "co2", t)
 
 	//TODO? test that checkouts can modify files without affecting stored snapshots.
