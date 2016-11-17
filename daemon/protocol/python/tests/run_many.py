@@ -10,7 +10,7 @@ import tempfile
 import time
 import unittest
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../scoot'))
 import client_lib as proto
 
 
@@ -20,7 +20,7 @@ class TestManyRunRequests(unittest.TestCase):
     def setUp(self):
         # Note: the following does not work - the process from the pool does not have GOPATH defined so it can't find the binary
         gopath = os.environ['GOPATH']
-        self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-q_len", "50"])
+        self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-test_q_len", "50"])
 
         proto.start()
 
