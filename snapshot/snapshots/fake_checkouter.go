@@ -1,30 +1,28 @@
 package snapshots
 
 import (
-	"sync"
-
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 )
 
 // Create a Checkouter that essentially does nothing, based on a static path
 func MakeNoopCheckouter() snapshot.Checkouter {
-    return &noopCheckouter{path: "/path/is/invalid"}
+	return &noopCheckouter{path: "/path/is/invalid"}
 }
 
 type noopCheckouter struct {
-    path string
+	path string
 }
 
 func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-    return c.CheckoutAt(id, c.path)
+	return c.CheckoutAt(id, c.path)
 }
 
 func (c *noopCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
-    return &staticCheckout{
-        path: dir,
-        id:   id,
-    }, nil
+	return &staticCheckout{
+		path: dir,
+		id:   id,
+	}, nil
 }
 
 // MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
@@ -67,4 +65,3 @@ func (c *staticCheckout) ID() string {
 func (c *staticCheckout) Release() error {
 	return nil
 }
-
