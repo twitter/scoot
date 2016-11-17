@@ -1,4 +1,5 @@
-// 
+// Package local provides a cluster Fetcher implementation for
+// obtaining state of nodes running on the local machine.
 package local
 
 import (

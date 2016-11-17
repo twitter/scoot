@@ -1,5 +1,5 @@
 // Library for establishing Thrift network connections for clients.
-// Provides Dailer interface with basic implementation.
+// Provides Dialer interface with basic implementation.
 package dialer
 
 import (

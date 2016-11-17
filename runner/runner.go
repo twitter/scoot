@@ -1,6 +1,6 @@
 // Package runner provides for execution of Scoot work and retrieval
 // of the results of that work. The core of this is the Runner interface.
-// This package includes the a standard runner as well as test and simulation
+// This package includes a standard runner as well as test and simulation
 // implementations.
 package runner
 

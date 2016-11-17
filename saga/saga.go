@@ -1,5 +1,8 @@
-// Package saga provides a generic implementation of the Saga pattern
-// that can be used as a durability mechanism for the Scoot scheduler.
+// Package saga provides a generic implementation of the Saga pattern.
+// Scoot uses the Saga pattern to track the state of long-lived Jobs
+// for reporting and failure recovery.
+// For info on the Saga pattern, see:
+// https://speakerdeck.com/caitiem20/applying-the-saga-pattern
 package saga
 
 import (

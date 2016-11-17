@@ -7,24 +7,24 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
-// Create a Checkouter that always fails due to invalid path
-func MakeInvalidCheckouter() snapshot.Checkouter {
-	return &noopCheckouter{path: "/path/is/invalid"}
+// Create a Checkouter that essentially does nothing, based on a static path
+func MakeNoopCheckouter() snapshot.Checkouter {
+    return &noopCheckouter{path: "/path/is/invalid"}
 }
 
 type noopCheckouter struct {
-	path string
+    path string
 }
 
 func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	return c.CheckoutAt(id, c.path)
+    return c.CheckoutAt(id, c.path)
 }
 
 func (c *noopCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
-	return &staticCheckout{
-		path: dir,
-		id:   id,
-	}, nil
+    return &staticCheckout{
+        path: dir,
+        id:   id,
+    }, nil
 }
 
 // MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
@@ -68,36 +68,3 @@ func (c *staticCheckout) Release() error {
 	return nil
 }
 
-// Initer will do something once, e.g., clone a git repo (that might be expensive)
-type Initer interface {
-	Init() error
-}
-
-// Creates a checkouter that waits for an Initer to be done Initing before checking out.
-func MakeInitingCheckouter(path string, initer Initer) snapshot.Checkouter {
-	r := &initingCheckouter{path: path}
-	// Start the Initer as soon as we know we'll need to
-	r.wg.Add(1)
-	go func() {
-		initer.Init()
-		r.wg.Done()
-	}()
-	return r
-}
-
-type initingCheckouter struct {
-	wg   sync.WaitGroup
-	path string
-}
-
-func (c *initingCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	return c.CheckoutAt(id, c.path)
-}
-
-func (c *initingCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
-	c.wg.Wait()
-	return &staticCheckout{
-		path: dir,
-		id:   id,
-	}, nil
-}

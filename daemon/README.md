@@ -8,7 +8,7 @@ both locally or remotely in a Scoot Cloud. The Daemon supports:
 * collecting results of runs
 
 The daemon is a local persistent process that has a Protobuf listening
-interface, servers the Scoot Daemon API.
+interface, and serves the Scoot Daemon API.
 
 ### Scoot Daemon API
 

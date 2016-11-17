@@ -11,4 +11,4 @@ Scoot is built with many libraries which will get assembled into several binarie
 * __scootapi__ - CLI client for Cloud Scoot API (scheduler)
 * __workercl__ - CLI client for workers
 * __scootcl__ - CLI client for daemon
-* __minfs__ - Min FS...
+* __minfs__ - TODO

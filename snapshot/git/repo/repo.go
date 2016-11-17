@@ -1,4 +1,4 @@
-// Pacakge repo provides utilities for operating on a git repo.
+// Package repo provides utilities for operating on a git repo.
 // Scoot often ends up with multiple git repos. E.g., one reference repo
 // and then each checkout is in its own repo.
 package repo

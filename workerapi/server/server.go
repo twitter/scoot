@@ -86,7 +86,7 @@ func (h *handler) updateTimeLastRpc() {
 	h.mu.Unlock()
 }
 
-// Implements thrift worker.Worker interface
+// Implements worker.thrift Worker.QueryWorker interface
 func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.updateTimeLastRpc()
@@ -101,7 +101,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	return ws, nil
 }
 
-// Implements thrift worker.Worker interface
+// Implements worker.thrift Worker.Run interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
@@ -115,7 +115,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	return domain.DomainRunStatusToThrift(process), nil
 }
 
-// Implements thrift worker.Worker interface
+// Implements worker.thrift Worker.Abort interface
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
@@ -126,7 +126,7 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	return domain.DomainRunStatusToThrift(process), nil
 }
 
-// Implements thrift worker.Worker interface
+// Implements worker.thrift Worker.Erase interface
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()

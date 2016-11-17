@@ -14,15 +14,13 @@ __This still needs to be integrated into the build__
 protoc -I . daemon.proto --go_out=plugins=grpc:.
 ```
 
+_TODO: replace this with 3rd party deps and code gen instructions in top-level readme_
 #### Compiling for Python (daemon_pb2.py)
 
 * Install latest protobuf and grpc+tools packages:
 ```sh
 pip install grpcio-tools
 ```
-
-_Editor's note_: we should think about using a _virtualenv_ for a fully portable process, and to
-prevent potential corruption of system Python installs.
 
 * If necessary, remove any conflicting or older versions of Protobuf:
 ```sh
