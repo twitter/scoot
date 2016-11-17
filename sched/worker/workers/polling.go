@@ -1,3 +1,7 @@
+// Package workers provides Worker implementations that can
+// be used to run Tasks. The workers generally differ in how
+// they run and manage the underlying Tasks - whether they support
+// polling, run timeout enforcement, test and simulated runs, etc.
 package workers
 
 import (

@@ -1,3 +1,6 @@
+// Package repo provides utilities for operating on a git repo.
+// Scoot often ends up with multiple git repos. E.g., one reference repo
+// and then each checkout is in its own repo.
 package repo
 
 import (
@@ -6,10 +9,6 @@ import (
 	"os/exec"
 	"strings"
 )
-
-// Utilities for operating on a git repo.
-// Scoot often ends up with multiple git repos. E.g., one reference repo and then each
-// checkout is in its own repo.
 
 // Repository represents a valid Git repository.
 type Repository struct {

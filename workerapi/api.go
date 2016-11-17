@@ -1,8 +1,5 @@
 package workerapi
 
-// We should use go generate to run:
-//   thrift --gen go:package_prefix=github.com/scootdev/scoot/workerapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
-
 import (
 	"time"
 

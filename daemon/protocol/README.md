@@ -1,32 +1,61 @@
+# Scoot Daemon Protocol
+
 The protocol betweeen Scoot Local Server and Scoot Local Clients.
-
 This includes the protocol buffers, and any other utilities that should be shared by client and server.
+There is an official daemon client library provided in Python on Pypi.
 
-// TODO(dbentley): integrate this into our go build
-// For now, to compile into daemon.pb.go, you need to:
-// install a protoc with libproto version >= 3.0.0 from https://github.com/google/protobuf
-// install protoc-gen-go from https://github.com/golang/protobuf (you need this to be on your $PATH, not your GOPATH)
-// in this directory (github.com/scootdev/scoot/daemon/protocol), run:
-// protoc -I . daemon.proto --go_out=plugins=grpc:.
-//
-// To compile into daemon_pb2.py:
-//  pip install grpcio-tools # Install latest protobuf and grpc+tools packages.
-//  brew uninstall protobuf # Be sure to remove any conflicting/older versions of protobuf.
-//  python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
-//
-// To upload to the Scoot pypi project, register at https://pypi.python.org and then create ~/.pypirc with:
-//
-//   [server-login]
-//   username:USER
-//   password:PASS
-//
-// Then:
-// - Ask someone on scoot-team to add you as an owner.
-// - Bump the version in daemon/protocol/python/setup.py
-//
-// Then run:
-//    daemon/protocol/python/deploy.sh
-//
-// To install the latest scoot lib from pypi:
-//    pip install scoot
-//
+__This still needs to be integrated into the build__
+
+### Installing from Scoot Pypi
+
+Prerequisites:
+* pip
+
+```sh
+pip install scoot
+```
+
+### Publishing to Scoot Pypi
+
+Prerequisites:
+* Register at __https://pypi.python.org__ and then create ~/.pypirc with:
+```
+    [server-login]
+    username:USER
+    password:PASS
+```
+* Request someone on scoot-team to add you as an owner
+
+###### Publishing
+* Bump the version in daemon/protocol/python/setup.py
+* Run:
+```sh
+daemon/protocol/python/deploy.sh
+```
+
+#### Compiling for Go (daemon.pb.go)
+
+* Install a protoc with libproto version >= 3.0.0 from https://github.com/google/protobuf
+* install protoc-gen-go from https://github.com/golang/protobuf (you need this to be on your $PATH, not your GOPATH)
+* In this directory (github.com/scootdev/scoot/daemon/protocol), run:
+```sh
+protoc -I . daemon.proto --go_out=plugins=grpc:.
+```
+
+_TODO: replace this with 3rd party deps and code gen instructions in top-level readme_
+#### Compiling for Python (daemon_pb2.py)
+
+* Install latest protobuf and grpc+tools packages:
+```sh
+pip install grpcio-tools
+```
+
+* If necessary, remove any conflicting or older versions of Protobuf:
+```sh
+brew uninstall protobuf
+```
+
+```sh
+python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
+```
+

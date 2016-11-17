@@ -1,3 +1,5 @@
+// Library for establishing Thrift network connections for clients.
+// Provides Dialer interface with basic implementation.
 package dialer
 
 import (
@@ -12,13 +14,13 @@ type Dialer interface {
 	Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error)
 }
 
-// Basic implementation of Dialer that manages thrift transport/protocol factories
-// Opens a thrift connection directly to the given address
 type simpleDialer struct {
 	transportFactory thrift.TTransportFactory
 	protocolFactory  thrift.TProtocolFactory
 }
 
+// Create instance of basic Dialer that manages thrift transport/protocol factories.
+// Opens a thrift connection directly to the given address.
 func NewSimpleDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Dialer {
 	return &simpleDialer{transportFactory: tf, protocolFactory: pf}
 }

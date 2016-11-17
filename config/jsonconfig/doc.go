@@ -1,5 +1,5 @@
 /*
-jsonconfig implements configuration, reading json into an ice Module.
+Jsonconfig implements configuration, reading json into an ice Module.
 
 To use:
 
