@@ -14,3 +14,19 @@ This includes the protocol buffers, and any other utilities that should be share
 //  brew uninstall protobuf # Be sure to remove any conflicting/older versions of protobuf.
 //  python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
 //
+// To upload to the Scoot pypi project, register at https://pypi.python.org and then create ~/.pypirc with:
+//
+//   [server-login]
+//   username:USER
+//   password:PASS
+//
+// Then:
+// - Ask someone on scoot-team to add you as an owner.
+// - Bump the version in daemon/protocol/python/setup.py
+//
+// Then run:
+//    daemon/protocol/python/deploy.sh
+//
+// To install the latest scoot lib from pypi:
+//    pip install scoot
+//

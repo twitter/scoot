@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestPython(t *testing.T) {
-	cmd := exec.Command("./integration.py")
+	cmd := exec.Command("../../protocol/python/tests/integration.py")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

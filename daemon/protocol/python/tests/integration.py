@@ -7,26 +7,37 @@ import shutil
 import sys
 import tempfile
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
-import client_lib as proto
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from scoot import client_lib as proto
 
 
 # TODO: use a tmp domain socket instead of the default.
 # Adapted from daemon/server/handler_test.go
 def example_test():
-  proto.start()
   tmpdir = tempfile.mkdtemp()
   rpc_timeout_ns = int(500*1e6)
+
   try:
+    # Connect to the daemon server.
+    proto.start()
+
+    # Create paths to ingest.
+    tmpdir_ok = os.path.join(tmpdir, 'ok')
+    tmpdir_fail = os.path.join(tmpdir, 'fail')
+    os.mkdir(tmpdir_ok)
+    os.mkdir(tmpdir_fail)
+
     # Populate the paths we want to ingest.
-    script = os.path.join(tmpdir, "script.sh")
-    resource = os.path.join(tmpdir, "resource.txt")
-    open(script, 'w').write("#!/bin/sh\nls resource.txt")
-    open(resource, 'w').write("content")
+    resource_ok = os.path.join(tmpdir_ok, "resource.txt")
+    script_ok = os.path.join(tmpdir_ok, "script.sh")
+    script_fail = os.path.join(tmpdir_fail, "script.sh")
+    open(resource_ok, 'w').write("content")
+    open(script_ok, 'w').write("ls resource.txt")
+    open(script_fail, 'w').write("ls resource.txt")
 
     # Ingest scripts into their own snapshots. The 'fail' snapshot will be missing resource.txt.
-    ok_id = proto.create_snapshot(os.path.join(tmpdir, "*"))
-    fail_id = proto.create_snapshot(script)
+    ok_id = proto.create_snapshot(tmpdir_ok)
+    fail_id = proto.create_snapshot(tmpdir_fail)
 
     # Run scripts serially in their respective snapshots. Block until each run finishes.
     ok_run_id = proto.run(argv=["sh", "./script.sh"], timeout_ns=rpc_timeout_ns, snapshot_id=ok_id)
