@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol/python'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from scoot import client_lib as proto
 
 
