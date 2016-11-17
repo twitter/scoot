@@ -35,7 +35,7 @@ message EchoReply {
 // Create snapshot.
 //
 message CreateSnapshotRequest {
-  // Absolute path to a file or directory on the local filesystem.
+  // Absolute path on the local filesystem. Only directory paths are allowed at this time.
   string path = 1;
 }
 
