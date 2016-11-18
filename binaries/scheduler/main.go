@@ -29,7 +29,6 @@ func main() {
 	}
 	bag, schema := server.Defaults()
 	bag.PutMany(
-		func() endpoints.StatScope { return "scheduler" },
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*httpAddr, s)
