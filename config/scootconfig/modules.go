@@ -15,11 +15,29 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
+
+// InMemorySagaLog struct is used by goice to create an InMemory instance
+// of the SagaLog interface.
+type InMemorySagaLogConfig struct {
+	Type string
+}
+
+// Adds the InMemorySagaLog Create function to the goice MagicBag
+func (c *InMemorySagaLogConfig) Install(bag *ice.MagicBag) {
+	bag.Put(c.Create)
+}
+
+// Creates an instance of an InMemorySagaLog
+func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
+	return sagalogs.MakeInMemorySagaLog()
+}
 
 // Parameters for configuring a statefulScheduler
 type StatefulSchedulerConfig struct {
