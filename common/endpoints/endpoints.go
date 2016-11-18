@@ -1,3 +1,5 @@
+// Wrappers for receivers from the common/stats package and setting
+// up an HTTP server with endpoints to make the stats data accessible.
 package endpoints
 
 import (
@@ -18,6 +20,8 @@ func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
 	}
 }
 
+// A stats receiver that provides HTTP access for metric scraping with
+// Twitter-style endpoints.
 type TwitterServer struct {
 	Addr  string
 	Stats stats.StatsReceiver

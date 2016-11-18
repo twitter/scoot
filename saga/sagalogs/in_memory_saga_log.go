@@ -1,3 +1,5 @@
+// Package sagalogs provides an implementation of Saga Log.
+// Currently, this is an in-memory impl, and is not durable.
 package sagalogs
 
 import (

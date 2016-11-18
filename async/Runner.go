@@ -1,3 +1,4 @@
+// Async provides tools for asynchronous callback processing using Goroutines
 package async
 
 // An AsyncRunner is a helper class to spawn Go Routines to run

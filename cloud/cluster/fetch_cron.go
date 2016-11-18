@@ -10,11 +10,13 @@ type fetchCron struct {
 	outCh  chan ClusterUpdate
 }
 
-// Returns a full list of visible nodes.
+// Defines the way in which a full set of Nodes in a Cluster is retrieved
 type Fetcher interface {
 	Fetch() ([]Node, error)
 }
 
+// Given a Fetcher implementation and a Ticker, returns a channel over which
+// ClusterUpdates will be sent to periodically from a new Goroutine
 func MakeFetchCron(f Fetcher, tickCh <-chan time.Time) chan ClusterUpdate {
 	outCh := make(chan ClusterUpdate)
 	c := &fetchCron{

@@ -1,1 +1,0 @@
-Library to implement a command-line interface for a Scoot client.

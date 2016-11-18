@@ -1,3 +1,6 @@
+// Package snapshot provides interfaces and implementations for Scoot
+// snapshots, which represent immutable filesystem state. This includes
+// concepts for Files, and various sim/test implementations.
 package snapshot
 
 import "syscall"
@@ -8,7 +11,7 @@ type Snapshots interface {
 	Get(id string) (Snapshot, error)
 }
 
-// a read-only, immutable Snapshot of filesystem state
+// A read-only, immutable Snapshot of filesystem state
 type Snapshot interface {
 	// The identifier of this Snapshot
 	// Should be opaque to the client (they are handed IDs from somewhere and hand them to Snapshots).
@@ -45,7 +48,7 @@ type Snapshot interface {
 }
 
 // File represents a file open for reading. An implementation of Snapshots
-// may not keep a file open,
+// may not keep a file open.
 type File interface {
 	// ReadAt reads len(b) bytes from the File starting at byte offset off.
 	// It returns the number of bytes read and the error, if any.
