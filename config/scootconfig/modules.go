@@ -15,11 +15,25 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
+
+type InMemorySagaLogConfig struct {
+	Type string
+}
+
+func (c *InMemorySagaLogConfig) Install(bag *ice.MagicBag) {
+	bag.Put(c.Create)
+}
+
+func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
+	return sagalogs.MakeInMemorySagaLog()
+}
 
 // Parameters for configuring a statefulScheduler
 type StatefulSchedulerConfig struct {
