@@ -23,14 +23,18 @@ import (
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
+// InMemorySagaLog struct is used by goice to create an InMemory instance
+// of the SagaLog interface.
 type InMemorySagaLogConfig struct {
 	Type string
 }
 
+// Adds the InMemorySagaLog Create function to the goice MagicBag
 func (c *InMemorySagaLogConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
+// Creates an instance of an InMemorySagaLog
 func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
 	return sagalogs.MakeInMemorySagaLog()
 }
