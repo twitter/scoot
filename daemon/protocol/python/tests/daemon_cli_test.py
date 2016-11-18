@@ -7,11 +7,10 @@ import subprocess
 import tempfile
 import time
 import unittest
-from matplotlib.compat.subprocess import CalledProcessError
 
 gopath = os.environ['GOPATH']
 pypath = gopath + '/src/github.com/scootdev/scoot/daemon/protocol/python/scoot'
-cliRef = ['python', pypath + '/daemon_cli.py']
+cliRef = ['python', pypath + '/scoot.py']
 createS = ['snapshot', 'create']
 checkoutS = ['snapshot', 'checkout']
 runE = ['exec', 'run']
@@ -101,7 +100,7 @@ class TestCliCommands(unittest.TestCase):
       cmd = cliRef + pollE + pollIds 
       r = subprocess.check_output(cmd)
       self.verifyOut(r, 'COMPLETE', True)
-    except CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
       self.fail(str(e))
 
   def get_run_id(self, out):   
