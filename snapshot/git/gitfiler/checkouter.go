@@ -74,7 +74,7 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 func (c *Checkouter) runGitCmds(cmds [][]string, repo *repo.Repository) error {
 	for _, argv := range cmds {
 		if _, err := repo.Run(argv...); err != nil {
-			return fmt.Errorf("Unable to run git commands: %v", err)
+			return fmt.Errorf("Unable to run git %v: %v", argv..., err)
 		}
 	}
 	return nil
