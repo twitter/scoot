@@ -73,7 +73,7 @@ class TestCliCommands(unittest.TestCase):
       m = re.findall(r'[0-9]+', r)
       sId = m[0]
       
-      # issue createSnapshot without a path validate get error message and usage prompt 
+      # issue checkoutSnapshot without a path validate get error message and usage prompt 
       cmd = self.cliPath + self.checkoutSReq + [sId, self.tmpdir]
       r = subprocess.check_output(cmd).rstrip()
       self.assertTrue(r == '', "Error: expected '' from checkout, got '{0}'".format(r))
@@ -172,7 +172,7 @@ class TestCliCommands(unittest.TestCase):
     cmd = self.cliPath + self.createSReq + [self.tmpdir]
     self.assert_invalid_command(cmd)
     
-    # issue createSnapshot without a path validate get error message and usage prompt 
+    # issue checkoutSnapshot without a path validate get error message and usage prompt 
     cmd = self.cliPath + self.checkoutSReq + ["1", self.tmpdir]
     self.assert_invalid_command(cmd)
 
