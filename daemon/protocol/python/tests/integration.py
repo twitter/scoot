@@ -73,6 +73,7 @@ def example_test():
     assert_file_contains(os.path.join(fail_dir, "STDERR"), "No such file or directory\n", "fail")
 
   finally:
+    proto.stop()
     shutil.rmtree(tmpdir)
 
 

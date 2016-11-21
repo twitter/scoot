@@ -179,3 +179,5 @@ if __name__ == '__main__':
     sys.exit("Abort not implemented yet.")
   else:
     echo(cmd)
+    
+  proto.stop()

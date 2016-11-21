@@ -26,33 +26,8 @@ class TestCliCommands(unittest.TestCase):
      
   def setUp(self):
     self.tmpdir = tempfile.mkdtemp()
-    self.daemonStarted = False
-
-    # Note: the following does not work - the process from the pool does not have GOPATH defined so it can't find the binary
-    try:
-      self.daemonProcess = subprocess.Popen(['{0}/bin/daemon'.format(self.gopath), '-execer_type', 'os'])
-    except subprocess.CalledProcessError as e:
-      self.fail('Fail:{0}'.format(e))  
-    start = time.time()
-    elapsedTime = 0
-    cmd = self.cliPath + self.echoReq + ['ping']
-    while not self.daemonStarted and elapsedTime < 4.0:
-      try:    
-        r = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        if self.verifyOut(r, 'ping', False):
-          self.daemonStarted = True
-      except subprocess.CalledProcessError as e:
-        elapsedTime = time.time() - start
-        time.sleep(0.25)
-       
-    if not self.daemonStarted:
-      shutil.rmtree(self.tmpdir)
-      self.fail("Daemon didn't start within '{0}'".format(elapsedTime))
 
   def tearDown(self):
-    if self.daemonStarted:
-      self.daemonProcess.kill()
-      self.daemonStarted = False
     if tempfile._exists(self.tmpdir):
       shutil.rmtree(self.tmpdir)
     unittest.TestCase.tearDown(self)
@@ -120,7 +95,7 @@ class TestCliCommands(unittest.TestCase):
       if re.search("UNAVAILABLE", r) > 0:
         return
       self.tearDown()
-      self.fail("'{0}' did not return an error. Instead got: {1}".format(cmd), r)
+      self.fail("'{0}' did not return an error. Instead got: {1}".format(cmd, r))
     except subprocess.CalledProcessError:
       return
 
@@ -164,31 +139,6 @@ class TestCliCommands(unittest.TestCase):
     self.assert_invalid_command(cmd)
 
   
-  def test_daemon_not_started(self):
-    self.daemonProcess.kill()
-    self.daemonStarted = False
-
-    # issue createSnapshot validate that get a snapShot id 
-    cmd = self.cliPath + self.createSReq + [self.tmpdir]
-    self.assert_invalid_command(cmd)
-    
-    # issue checkoutSnapshot without a path validate get error message and usage prompt 
-    cmd = self.cliPath + self.checkoutSReq + ["1", self.tmpdir]
-    self.assert_invalid_command(cmd)
-
-    # run with snapshot id and timeout        
-    cmd = self.cliPath + self.runEReq + ['ls', '--snapshotId=1', '--timeout=2']
-    self.assert_invalid_command(cmd)
- 
-    # poll with wait and all
-    cmd = self.cliPath + self.pollEReq + ['1', '--wait=0', '--all']
-    self.assert_invalid_command(cmd)
-
-    cmd = self.cliPath + self.echoReq + ['ping']
-    self.assert_invalid_command(cmd)
-        
-
-    
 if __name__ == '__main__':
   unittest.main()
   
