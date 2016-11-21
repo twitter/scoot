@@ -49,12 +49,34 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 		{"checkout", id},
 	}
 
-	for _, argv := range cmds {
-		if _, err := repo.Run(argv...); err != nil {
-			return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
+	// fetchCmds  := [][]string{
+	// 	{"fetch"},
+	// 	{"clean", "-f", "-f", "-d", "-x"},
+	// 	{"checkout", id}
+	// }
+
+	if err := c.runGitCmds(cmds, repo); err != nil {
+		// try fetching for new commits
+		err = c.runGitCmds(append([][]string{{"fetch"}}, cmds...), repo)
+		if err != nil {
+			return nil, err
 		}
 	}
+
+	// for _, argv := range cmds {
+	// 	if _, err := repo.Run(argv...); err != nil {
+	// 		return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
+	// 	}
+	// }
 	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
+}
+
+func (c *Checkouter) runGitCmds([][]string cmds, *repo.Repository repo) error {
+	for _, argv := range cmds {
+		if _, err := repo.Run(argv...); err != nil {
+			return fmt.Errorf("Unable to run git commands: %v", err)
+		}
+	}
 }
 
 func (c *Checkouter) CheckoutAt(id string, dir string) (co snapshot.Checkout, err error) {
