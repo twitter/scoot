@@ -77,6 +77,7 @@ func (c *Checkouter) runGitCmds(cmds [][]string, repo *repo.Repository) error {
 			return fmt.Errorf("Unable to run git commands: %v", err)
 		}
 	}
+	return nil
 }
 
 func (c *Checkouter) CheckoutAt(id string, dir string) (co snapshot.Checkout, err error) {
