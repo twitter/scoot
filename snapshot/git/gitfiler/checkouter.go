@@ -71,7 +71,7 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
 }
 
-func (c *Checkouter) runGitCmds([][]string cmds, *repo.Repository repo) error {
+func (c *Checkouter) runGitCmds(cmds [][]string, repo *repo.Repository) error {
 	for _, argv := range cmds {
 		if _, err := repo.Run(argv...); err != nil {
 			return fmt.Errorf("Unable to run git commands: %v", err)
