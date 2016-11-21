@@ -4,12 +4,12 @@
 #for both parsing the command line into a dict and for displaying help.
 """
 Usage:
-  scoot snapshot create <srcDir>
-  scoot snapshot checkout <snapshotId> <destDir>
-  scoot exec run <command> ... --snapshotId=<sid> [--timeout=<ns>]
-  scoot exec poll <runId> ... [--wait=<wait>] [--all]
-  scoot exec abort <runId>
-  scoot echo <ping>
+  scoot.py snapshot create <srcDir>
+  scoot.py snapshot checkout <snapshotId> <destDir>
+  scoot.py exec run <command> ... --snapshotId=<sid> [--timeout=<seconds>]
+  scoot.py exec poll <runId> ... [--wait=<wait>] [--all]
+  scoot.py exec abort <runId>
+  scoot.py echo <ping>
 
   
 Submit commands to the Scoot daemon:
@@ -40,12 +40,12 @@ echo            The Scoot daemon echo's <ping> back to the client.  Use this com
 
 Options:
   -h --help               Show this screen.
-  --snapshotId=<sid>      Snapshot to install before running the command.
-  --timeout=<seconds>     Maximum time(ms) to allow the command to run. Default 500ms
-  --wait=<wait>           <0:wait indefinitely for at least one run to complete. 
-                          0: return immediately with the status(s).  
-                          >0: wait up to this time(seconds) for at least one of the runs to finish.  
-                          Default: 0
+  --snapshotId=<sid>      Install the snapshot with <sid> before running the command.
+  --timeout=<seconds>     Maximum time(seconds) to allow the command to run. Default 1 second.
+  --wait=<wait>           <0: wait indefinitely for at least one run to complete. 
+                          0:  return immediately with the status(s) of the runs.  
+                          >0: wait up to <wait>(seconds) for at least one of the runs to finish.  
+                          Default: 0.
   --all                   Return the status of all the runs not just finished runs.
 
 """
@@ -60,14 +60,10 @@ import client_lib as proto
 
 def display_statuses(statuses):
   for status in statuses:
-    print("\nRunId:{0},\n\tState:{1},\n\tExitCode:{2},\n\tError:{3},\n\tSnapshot:{4}\n".format(status.run_id, proto.display_state(status.state), status.exit_code, status.error, status.snapshot_id))
+    print("\nRunId:{},\n\tState:{},\n\tExitCode:{},\n\tError:{},\n\tSnapshot:{}\n".format(status.run_id, proto.display_state(status.state), status.exit_code, status.error, status.snapshot_id))
 
 
 def snapshot_create(cmd):
-    #verify args
-  if not cmd['<srcDir>']:
-    raise docopt.DocoptExit("Must provide srcDir!")
-  
   #run the command
   try:
     sid = proto.create_snapshot(cmd['<srcDir>'])
@@ -75,23 +71,23 @@ def snapshot_create(cmd):
     print("snapshot id = {0}".format(sid))
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", e) > 0 or re.search("UNAVAILABLE", e) > 0:
-      raise docopt.DocoptExit("Scoot Daemon is not running!\n")
-    raise docopt.DocoptExit("create snapshot error: '{0}'.".format(str(e)))       
+    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+      sys.exit("Create snapshot failed. Scoot Daemon is not running!\n")
+    sys.exit("create snapshot error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
 
 def snapshot_checkout(cmd):
-    #verify args
-  if not cmd['<snapshotId>']:
-    raise docopt.DocoptExit("Must supply a snapshot id.")
-  if not cmd["<destDir>"]:
-    raise docopt.DocoptExit("Must supply a destination directory.")
   #run the command
   try:
     r = proto.checkout_snapshot(snapshot_id=cmd['<snapshotId>'], dirpath=cmd["<destDir>"])
   #handle errors running the command
+  except proto.ScootException as e:
+    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+      sys.exit("Checkout snapshot failed. Scoot Daemon is not running!\n")
+    else:
+      sys.exit("Snapshot checkout error: '{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
   except Exception as e:
-    raise docopt.DocoptExit("snapshot checkout error: '{0}'.".format(str(e)))
+    sys.exit("Snapshot checkout error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
   
   
 def run(cmd):
@@ -103,25 +99,23 @@ def run(cmd):
     try:
       timeout_ns = int(int(timeout) * 1e9)
     except Exception as e:
-      raise docopt.DocoptExit("invalid value for timeout, must be an integer or decimal number.")
-  snapshotId = cmd['--snapshotId']
-  args = cmd['<command>']
+      sys.exit("Invalid value for timeout, must be an integer or decimal number.%s".format(str(e)))
 
   #run the command
   try:
-    runId = proto.run(snapshot_id=snapshotId, argv=args, timeout_ns=timeout_ns)
+    runId = proto.run(snapshot_id=cmd['--snapshotId'], argv=cmd['<command>'], timeout_ns=timeout_ns)
     #print the output
     print("run id = {0}".format(runId))
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("No resources available", e) is None:
-      print(e)
-    elif re.search("Not started", e) > 0 or re.search("UNAVAILABLE", e) > 0:
-      raise docopt.DocoptExit("Scoot Daemon is not running!\n")
+    if re.search("No resources available", str(e)) is not None:
+      print(str(e))
+    elif re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+      sys.exit("Run failed. Scoot Daemon is not running!\n")
     else:
-      raise docopt.DocoptExit("run request error: '{0}'".format(str(e)))
+      sys.exit("run request error: '{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
   except Exception as e1:
-    raise docopt.DocoptExit("run request error:'{0}'".format(str(e1)))
+    sys.exit("run request error:'{0}'".format(str(e1))) #TODO: should be 'contact scoot support'?
 
 
 def poll(cmd):
@@ -132,10 +126,7 @@ def poll(cmd):
   try:
     wait = int(wait)
   except Exception as e:
-    raise docopt.DocoptExit("Wait must be an integer.")
-  runIds = cmd["<runId>"]
-  if not cmd["<runId>"]:
-    raise docopt.DocoptExit("RunId list is empty!")
+    sys.exit("Wait must be an integer. {0}".format(str(e)))
   
   #run the command
   try:
@@ -144,16 +135,12 @@ def poll(cmd):
     display_statuses(statuses)
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", e) > 0 or re.search("UNAVAILABLE", e) > 0:
-      raise docopt.DocoptExit("Scoot Daemon is not running!\n")
-    raise docopt.DocoptExit("poll request error:'{0}'.".format(str(e)))
+    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+      sys.exit("Poll failed. Scoot Daemon is not running!\n") #TODO: should be 'contact scoot support'?
+    sys.exit("poll request error:'{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
 
 def echo(cmd):
-  #verify args
-  if not cmd['<ping>']:
-    raise docopt.DocoptExit("Must supply <ping> value to echo.")
-  
   #run the command
   try:
     echo = proto.echo(ping=cmd['<ping>'])
@@ -162,25 +149,22 @@ def echo(cmd):
   #handle errors running the command
   except proto.ScootException as e:
     if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
-      raise docopt.DocoptExit("Scoot Daemon is not running!\n")
-    raise docopt.DocoptExit("echo request error:'{0}'".format(str(e)))
+      sys.exit("Echo failed. Scoot Daemon is not running!\n")
+    sys.exit("echo request error:'{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
 
 
 if __name__ == '__main__':
   # parse the command line
-  try:
-    cmd = docopt.docopt(__doc__)
-  except Exception as e:
-    raise docopt.DocoptExit("error parsing command: '{0}'.".format(str(e)))
+  cmd = docopt.docopt(__doc__)
   
   # make the client connection
   try:
     proto.start()
   #handle errors making the client connection
   except proto.ScootException as e:
-    if re.search("UNAVAILABLE", e) > 0:
-      raise docopt.DocoptExit("Scoot Daemon is not running!\n")
-    raise docopt.DocoptExit("connecting to daemon error: '{0}' (make sure you have started the daemon).".format(str(e)))       
+    if re.search("UNAVAILABLE", str(e)) > 0:
+      sys.exit("Cannot establish connection. Is Scoot Daemon running?\n")
+    sys.exit("connecting to daemon error: '{0}' (make sure you have started the daemon).".format(str(e))) #TODO: should be 'contact scoot support'?
    
   #process the command     
   if cmd['create']:
@@ -192,8 +176,6 @@ if __name__ == '__main__':
   elif cmd['poll']:
     poll(cmd)
   elif cmd['abort']:
-    raise docopt.DocoptExit("Abort not implemented yet.")
-  elif cmd['echo']:
-    echo(cmd)
+    sys.exit("Abort not implemented yet.")
   else:
-    raise docopt.DocoptExit("Unknown command:'{0}'".format(cmd))
+    echo(cmd)
