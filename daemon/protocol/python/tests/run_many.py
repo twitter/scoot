@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess
 import os
-import re
 import shutil
 import stat
 import sys
@@ -97,13 +95,13 @@ class TestManyRunRequests(unittest.TestCase):
                     id = proto.run(argv=self.lsDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.lsDef.snapshot_key])
                     runs[id] = "ls"
                 except proto.ScootException as e:
-                    if re.search("Runner is busy", str(e)) is None:
+                    if "Runner is busy" not in str(e):
                         raise Exception("Run error, not resource limitation.{}".format(str(e)))
             
             try:
                 id = proto.run(argv=self.failDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.failDef.snapshot_key])
             except proto.ScootException as e:
-                if re.search("Runner is busy", str(e)) is None:
+                if "Runner is busy" not in str(e):
                     raise Exception("Run error, not resource limitation.{}".format(str(e)))
                 
             runs[id] = "fail"

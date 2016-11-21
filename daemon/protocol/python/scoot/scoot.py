@@ -52,7 +52,6 @@ Options:
 import docopt
 import os
 import sys
-import re
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
 import client_lib as proto
@@ -71,7 +70,7 @@ def snapshot_create(cmd):
     print("snapshot id = {0}".format(sid))
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+    if "Not started" in str(e) or "UNAVAILABLE" in str(e):
       sys.exit("Create snapshot failed. Scoot Daemon is not running!\n")
     sys.exit("create snapshot error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
@@ -82,7 +81,7 @@ def snapshot_checkout(cmd):
     r = proto.checkout_snapshot(snapshot_id=cmd['<snapshotId>'], dirpath=cmd["<destDir>"])
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+    if "Not started" in str(e) or "UNAVAILABLE" in str(e):
       sys.exit("Checkout snapshot failed. Scoot Daemon is not running!\n")
     else:
       sys.exit("Snapshot checkout error: '{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
@@ -108,9 +107,9 @@ def run(cmd):
     print("run id = {0}".format(runId))
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("No resources available", str(e)) is not None:
+    if "No resources available" in str(e):
       print(str(e))
-    elif re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+    elif "Not started" in str(e) or "UNAVAILABLE" in str(e):
       sys.exit("Run failed. Scoot Daemon is not running!\n")
     else:
       sys.exit("run request error: '{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
@@ -135,7 +134,7 @@ def poll(cmd):
     display_statuses(statuses)
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+    if "Not started" in str(e) or "UNAVAILABLE" in str(e):
       sys.exit("Poll failed. Scoot Daemon is not running!\n") #TODO: should be 'contact scoot support'?
     sys.exit("poll request error:'{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
@@ -148,7 +147,7 @@ def echo(cmd):
     print("{0}".format(echo)) 
   #handle errors running the command
   except proto.ScootException as e:
-    if re.search("Not started", str(e)) > 0 or re.search("UNAVAILABLE", str(e)) > 0:
+    if "Not started" in str(e) or "UNAVAILABLE" in str(e):
       sys.exit("Echo failed. Scoot Daemon is not running!\n")
     sys.exit("echo request error:'{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
 
@@ -162,7 +161,7 @@ if __name__ == '__main__':
     proto.start()
   #handle errors making the client connection
   except proto.ScootException as e:
-    if re.search("UNAVAILABLE", str(e)) > 0:
+    if "UNAVAILABLE" in str(e):
       sys.exit("Cannot establish connection. Is Scoot Daemon running?\n")
     sys.exit("connecting to daemon error: '{0}' (make sure you have started the daemon).".format(str(e))) #TODO: should be 'contact scoot support'?
    

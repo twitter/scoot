@@ -92,7 +92,7 @@ class TestCliCommands(unittest.TestCase):
   def assert_invalid_command(self, cmd):
     try:
       r = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-      if re.search("UNAVAILABLE", r) > 0:
+      if "UNAVAILABLE" in r:
         return
       self.tearDown()
       self.fail("'{0}' did not return an error. Instead got: {1}".format(cmd, r))
