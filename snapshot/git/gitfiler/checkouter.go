@@ -57,7 +57,7 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 
 	if err := c.runGitCmds(cmds, repo); err != nil {
 		// try fetching for new commits
-		err = c.runGitCmds(append([][]string{{"fetch"}}, cmds...), repo)
+		err = c.runGitCmds(append(cmds, [][]string{{"fetch"}}...), repo)
 		if err != nil {
 			return nil, err
 		}
