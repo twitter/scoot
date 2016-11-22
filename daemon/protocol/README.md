@@ -18,6 +18,15 @@ Prerequisites:
 pip install scoot
 ```
 
+## Accessing the Daemon API
+### client_lib.py
+a library for connecting to the Scoot Daemon and issuing commands to it.
+
+### scoot.py
+a command line tool for submitting commands to the Scoot Daemon.
+
+---
+## Development Instructions:
 ### Publishing to Scoot Pypi
 
 Prerequisites:
