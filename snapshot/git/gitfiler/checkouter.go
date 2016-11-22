@@ -22,8 +22,6 @@ const DEFAULT_REV = "1dda9fbde682e4922a0d5709c5539f573db4cc54"
 
 // Checkout checks out id (a raw git sha) into a Checkout.
 // It does this by making a new clone (via reference) and checking out id.
-// TODO(dbentley): if id is not found because it is present in upstream repos but not here,
-// we should fetch it and check it out.
 func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 	repo, repoErr := c.repos.Get()
 	if repoErr != nil {
