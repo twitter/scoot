@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess
 import os
-import re
 import shutil
 import stat
 import sys
@@ -20,10 +18,6 @@ class TestManyRunRequests(unittest.TestCase):
       
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
-
-        # Note: the following does not work - the process from the pool does not have GOPATH defined so it can't find the binary
-        gopath = os.environ['GOPATH']
-        self.daemonProcess = subprocess.Popen(["{0}/bin/daemon".format(gopath), "-execer_type", "os", "-test_q_len", "50"])
 
         proto.start()
 
@@ -44,9 +38,9 @@ class TestManyRunRequests(unittest.TestCase):
             self.fail("Daemon didn't start within {0}".format(elapsedTime))
                         
     def tearDown(self):
-        self.daemonProcess.kill()
         shutil.rmtree(self.tmpdir)
         unittest.TestCase.tearDown(self)
+        proto.stop()
         
     sleep_ss_key = "sleep_s_id"
     ls_ss_key = "ls_s_id"
@@ -101,14 +95,14 @@ class TestManyRunRequests(unittest.TestCase):
                     id = proto.run(argv=self.lsDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.lsDef.snapshot_key])
                     runs[id] = "ls"
                 except proto.ScootException as e:
-                    if re.search("No resources available", str(e)) is None:
-                        raise Exception("Run error, not resource limitation.")
+                    if "Runner is busy" not in str(e):
+                        raise Exception("Run error, not resource limitation.{}".format(str(e)))
             
             try:
                 id = proto.run(argv=self.failDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=ss_ids[self.failDef.snapshot_key])
             except proto.ScootException as e:
-                if re.search("No resources available", str(e)) is None:
-                    raise Exception("Run error, not resource limitation.")
+                if "Runner is busy" not in str(e):
+                    raise Exception("Run error, not resource limitation.{}".format(str(e)))
                 
             runs[id] = "fail"
     

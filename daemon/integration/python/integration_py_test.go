@@ -56,6 +56,24 @@ func TestPython(t *testing.T) {
 	}
 }
 
+func TestPythonCli(t *testing.T) {
+	cmd := exec.Command("../../protocol/python/tests/daemon_cli_test.py")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("TestPythonCli failed: %v", err)
+	}
+}
+
+func TestRunMany(t *testing.T) {
+	cmd := exec.Command("../../protocol/python/tests/run_many.py")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("TestPythonCli failed: %v", err)
+	}
+}
+
 func getRunner(filer snapshot.Filer) runner.Runner {
 	ex := os_execers.NewExecer()
 
