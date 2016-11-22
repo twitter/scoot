@@ -7,7 +7,7 @@ There is an official daemon client library provided in Python on Pypi.
 __This still needs to be integrated into the build__
 
 ### 3rd Party Prerequisites:
-Install thrift protobuf, python grpcio and docopt.  See Scoot/Readme.md for instructions.
+Install *protobuf*, (python's) *grpcio* and *docopt*.  See Scoot/Readme.md for instructions.
 
 ### Installing from Scoot Pypi
 
