@@ -61,3 +61,35 @@ __Generating thrift files (scootapi used as an example)__
 ```sh
 thrift --gen go:package_prefix=github.com/scootdev/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
 ```
+
+# Installation Instructions
+## Install 3rd party tools:
+###Thrift (version >= 0.9.3)
+macOS:
+```sh
+brew install thrift
+```
+### Thrift for go:
+```sh
+go get github.com/apache/thrift/lib/go/thrift
+```
+
+### Protobuf for the Scoot Daemon
+* If necessary, remove any conflicting or older versions of Protobuf:
+```sh
+brew uninstall protobuf
+```
+
+```sh
+python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
+```
+
+### grpcio for python
+```sh
+pip install grpcio-tools
+```
+
+### docopt for python
+```sh
+pip install docopt==0.6.2
+```

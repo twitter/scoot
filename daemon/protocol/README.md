@@ -6,6 +6,9 @@ There is an official daemon client library provided in Python on Pypi.
 
 __This still needs to be integrated into the build__
 
+### 3rd Party Prerequisites:
+Install thrift protobuf, python grpcio and docopt.  See Scoot/Readme.md for instructions.
+
 ### Installing from Scoot Pypi
 
 Prerequisites:
@@ -40,22 +43,5 @@ daemon/protocol/python/deploy.sh
 * In this directory (github.com/scootdev/scoot/daemon/protocol), run:
 ```sh
 protoc -I . daemon.proto --go_out=plugins=grpc:.
-```
-
-_TODO: replace this with 3rd party deps and code gen instructions in top-level readme_
-#### Compiling for Python (daemon_pb2.py)
-
-* Install latest protobuf and grpc+tools packages:
-```sh
-pip install grpcio-tools
-```
-
-* If necessary, remove any conflicting or older versions of Protobuf:
-```sh
-brew uninstall protobuf
-```
-
-```sh
-python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
 ```
 
