@@ -49,25 +49,15 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 		{"checkout", id},
 	}
 
-	// fetchCmds  := [][]string{
-	// 	{"fetch"},
-	// 	{"clean", "-f", "-f", "-d", "-x"},
-	// 	{"checkout", id}
-	// }
-
 	if err := c.runGitCmds(cmds, repo); err != nil {
-		// try fetching for new commits
-		err = c.runGitCmds(append(cmds, [][]string{{"fetch"}}...), repo)
+		// try fetching for new commits before returning error
+		// takes a long time (~5 min)
+		err = c.runGitCmds(append([][]string{{"fetch"}}, cmds...), repo)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// for _, argv := range cmds {
-	// 	if _, err := repo.Run(argv...); err != nil {
-	// 		return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
-	// 	}
-	// }
 	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
 }
 
