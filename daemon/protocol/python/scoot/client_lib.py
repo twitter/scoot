@@ -9,9 +9,7 @@ API required to ingest or checkout filesystem snapshots, and to execute
 commands against those snapshots.
 """
 
-
 import os
-import sys
 
 import daemon_pb2
 import grpc
@@ -69,6 +67,20 @@ class ScootStatus(object):
     self.exit_code = exit_code
     self.error = error
 
+def display_state(val):
+  if val == 0:
+    return "UNKNONW"
+  if val == 1:
+    return "PENDING"
+  if val == 2:
+    return "PREPARING"
+  if val == 3:
+    return "RUNNING"
+  if val == 4:
+    return "COMPLETED"
+  if val == 5:
+    return "FAILED"
+  raise ScootException("Invalid state value {0}.".format(val))
 
 def start():
   """ Must be called before interacting with the Daemon server.
