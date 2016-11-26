@@ -1,3 +1,9 @@
+// Scootconfig provides modules for creating and initializing configs
+// for Scoot components within Setup Cloud Scoot, via Ice.
+// Modules include a type that defines what fields make up the config,
+// and Install and Create methods that are used by Ice to initialize
+// a var of the type. See scoot/ice for more info on the Ice
+// dependency injection system.
 package scootconfig
 
 import (
@@ -9,12 +15,31 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
+// InMemorySagaLog struct is used by goice to create an InMemory instance
+// of the SagaLog interface.
+type InMemorySagaLogConfig struct {
+	Type string
+}
+
+// Adds the InMemorySagaLog Create function to the goice MagicBag
+func (c *InMemorySagaLogConfig) Install(bag *ice.MagicBag) {
+	bag.Put(c.Create)
+}
+
+// Creates an instance of an InMemorySagaLog
+func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
+	return sagalogs.MakeInMemorySagaLog()
+}
+
+// Parameters for configuring a statefulScheduler
 type StatefulSchedulerConfig struct {
 	Type              string
 	MaxRetriesPerTask int
@@ -30,6 +55,8 @@ func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
 	}
 }
 
+// Parameters for configuring an in-memory Scoot cluster
+// Count - number of in-memory workers
 type ClusterMemoryConfig struct {
 	Type  string
 	Count int
@@ -47,6 +74,7 @@ func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
 	return cluster.NewCluster(workerNodes, nil), nil
 }
 
+// Parameters for configuring a Scoot cluster that will have locally-run components.
 type ClusterLocalConfig struct {
 	Type string
 }
@@ -61,6 +89,7 @@ func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
 	return cluster.NewCluster(nil, updates), nil
 }
 
+// Parameters for configuring connections to remote (Thrift) workers.
 type WorkersThriftConfig struct {
 	Type               string
 	PollingPeriod      string // will be parsed to a time.Duration
@@ -107,6 +136,7 @@ func (c *WorkersThriftConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
+// Parameters for configuring locally started workers
 type WorkersLocalConfig struct {
 	Type string
 	// TODO(dbentley): allow specifying what the runner/execer underneath this local worker is like

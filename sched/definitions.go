@@ -1,3 +1,4 @@
+// Package sched provides definitions for Scoot Jobs and Tasks
 package sched
 
 import (

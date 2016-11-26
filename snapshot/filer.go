@@ -3,6 +3,7 @@ package snapshot
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
 // This is useful for tools that want one file at a time, or for ScootFS to offer the data.
 // Many tools want a higher-level construct: a Filer.
+
 // A Filer lets clients deal with Snapshots as files in the local filesystem.
 type Filer interface {
 	Checkouter
@@ -34,7 +35,8 @@ type Checkout interface {
 
 // Ingester creates a Snapshot from a path in the local filesystem.
 type Ingester interface {
-	// Takes a file or dir path and stores the contents in a snpashot which may then be checked out by id.
+	// Takes an absolute path on the local filesystem.
+	// The contents of path will be stored in a snapshot which may then be checked out by id.
 	Ingest(path string) (id string, err error)
 
 	// Takes a mapping of source paths to be copied into corresponding destination directories.

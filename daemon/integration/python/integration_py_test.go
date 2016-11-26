@@ -48,11 +48,29 @@ func TestMain(m *testing.M) {
 }
 
 func TestPython(t *testing.T) {
-	cmd := exec.Command("./integration.py")
+	cmd := exec.Command("../../protocol/python/tests/integration.py")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("TestPython failed: %v", err)
+	}
+}
+
+func TestPythonCli(t *testing.T) {
+	cmd := exec.Command("../../protocol/python/tests/daemon_cli_test.py")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("TestPythonCli failed: %v", err)
+	}
+}
+
+func TestRunMany(t *testing.T) {
+	cmd := exec.Command("../../protocol/python/tests/run_many.py")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("TestPythonCli failed: %v", err)
 	}
 }
 

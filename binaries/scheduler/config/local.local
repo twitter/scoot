@@ -11,5 +11,8 @@
   "SchedulerConfig": {
     "Type": "stateful",
     "MaxRetriesPerTask" : 2
+  },
+  "SagaLog": {
+    "Type": "memory"
   }
 }

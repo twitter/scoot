@@ -7,11 +7,31 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 )
+
+// Make an invalid Filer
+func MakeInvalidFiler() snapshot.Filer {
+	return MakeFilerFacade(MakeNoopCheckouter(), MakeNoopIngester())
+}
+
+// FilerFacade creates a Filer from a Checkouter and Ingester
+type FilerFacade struct {
+	snapshot.Checkouter
+	snapshot.Ingester
+}
+
+// Make a Filer from a Checkouter and Ingester
+func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
+	return &FilerFacade{checkouter, ingester}
+}
+
+// Make a Filer that can Checkout() but does a noop Ingest().
+func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
+	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester())
+}
 
 // Creates a filer that copies ingested paths in and then back out for checkouts.
 func MakeTempFiler(tmp *temp.TempDir) snapshot.Filer {
@@ -33,21 +53,24 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 	if err != nil {
 		return "", err
 	}
-
 	for src, dest := range srcToDest {
+		// absDest is a parent directory in which we place the contents of src.
 		absDest := filepath.Join(s.Dir, dest)
-		if strings.Contains(absDest, "*") {
-			// If wildcard is present, treat destination as a parent directory.
+
+		slashDot := ""
+		if fi, err := os.Stat(src); err == nil && fi.IsDir() {
+			// If src is a dir, we append a slash dot to copy contents rather than the dir itself.
+			slashDot = "/."
 			err = os.MkdirAll(absDest, os.ModePerm)
 		} else {
-			// If no wildcard, treat destination as dir/base.
+			// If src is a file, we treat the base of absDest as a file instead of a directory.
 			err = os.MkdirAll(filepath.Dir(absDest), os.ModePerm)
 		}
 		if err != nil {
 			return
 		}
 
-		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s %s", src, absDest)).Run()
+		err = exec.Command("sh", "-c", fmt.Sprintf("cp -r %s%s %s", src, slashDot, absDest)).Run()
 		if err != nil {
 			return
 		}
@@ -87,32 +110,17 @@ func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error)
 	}, nil
 }
 
+// Make an Ingester that does nothing
+func MakeNoopIngester() *NoopIngester {
+	return &NoopIngester{}
+}
+
 // Ingester that does nothing.
-type noopIngester struct{}
+type NoopIngester struct{}
 
-func (n *noopIngester) Ingest(string) (string, error) {
+func (n *NoopIngester) Ingest(string) (string, error) {
 	return "", nil
 }
-func (n *noopIngester) IngestMap(map[string]string) (string, error) {
+func (n *NoopIngester) IngestMap(map[string]string) (string, error) {
 	return "", nil
-}
-
-// Make in invalid Filer
-func MakeInvalidFiler() snapshot.Filer {
-	return &noopFiler{}
-}
-
-type noopFiler struct {
-	noopCheckouter
-	noopIngester
-}
-
-// Make a Filer that can Checkout() but does a noop Ingest().
-func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
-	return &tempCheckouterFiler{Checkouter: MakeTempCheckouter(tmp)}
-}
-
-type tempCheckouterFiler struct {
-	snapshot.Checkouter
-	noopIngester
 }

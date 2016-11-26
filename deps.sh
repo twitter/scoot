@@ -7,11 +7,12 @@ echo "DO NOT install dependencies with go get before running this script, this s
 
 set -euo pipefail
 trap "exit" INT TERM
-trap 'rm -rf ${GOPATH}' EXIT
+trap 'rm -rf ${GOPATH_NEW}' EXIT
 
 SCOOT_ORIG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GOPATH_ORIG="${GOPATH}"
-export GOPATH="$(mktemp -d -t TEMP.XXXXXXX)"
+GOPATH_NEW="$(mktemp -d -t TEMP.XXXXXXX)"
+export GOPATH="${GOPATH_NEW}"
 
 get_deps() {
     cd "${GOPATH}/src/$1"

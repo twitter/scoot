@@ -5,45 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 )
-
-type wgIniter struct {
-	wg sync.WaitGroup
-}
-
-func (i *wgIniter) Init() error {
-	i.wg.Wait()
-	return nil
-}
-
-func TestIniting(t *testing.T) {
-	i := &wgIniter{}
-	i.wg.Add(1)
-
-	c := MakeInitingCheckouter("/fake/path", i)
-	resultCh := make(chan snapshot.Checkout)
-	go func() {
-		result, _ := c.Checkout("foo")
-		resultCh <- result
-	}()
-
-	select {
-	case <-resultCh:
-		t.Fatalf("should't be able to checkout until init is done")
-	default:
-	}
-
-	i.wg.Done()
-	checkout := <-resultCh
-	if checkout.Path() != "/fake/path" {
-		t.Fatalf("surprising path: %q", checkout.Path())
-	}
-}
 
 func assertFileContains(path, contents, msg string, t *testing.T) {
 	b, err := ioutil.ReadFile(path)
@@ -109,15 +75,15 @@ func TestTempFiler(t *testing.T) {
 	// Read single file from first checkout.
 	assertFileContains(filepath.Join(co1.Path(), filepath.Base(localfile1)), "bar1", "co1", t)
 
-	// Make sure second checkout contains a single entry.
-	assertDirEntries(co2.Path(), 1, "co2", t)
+	// Make sure second checkout contains both files.
+	assertDirEntries(co2.Path(), 2, "co2", t)
 
 	// Read first file from the second checkout subdirectory.
-	p := filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile1))
+	p := filepath.Join(co2.Path(), filepath.Base(localfile1))
 	assertFileContains(p, "bar1", "co2", t)
 
 	// Read second file from the second checkout subdirectory.
-	p = filepath.Join(co2.Path(), filepath.Base(localtmp.Dir), filepath.Base(localfile2))
+	p = filepath.Join(co2.Path(), filepath.Base(localfile2))
 	assertFileContains(p, "bar2", "co2", t)
 
 	//TODO? test that checkouts can modify files without affecting stored snapshots.

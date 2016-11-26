@@ -1,4 +1,4 @@
-// gitfiler offers Scoot Snapshot Filer operations access to git
+// Package gitfiler offers Scoot Snapshot Filer operations access to git.
 // It does this with a few related by separate structures:
 //
 // RepoIniter is an interface to initialize a Repository.

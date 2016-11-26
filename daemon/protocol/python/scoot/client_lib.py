@@ -9,9 +9,7 @@ API required to ingest or checkout filesystem snapshots, and to execute
 commands against those snapshots.
 """
 
-
 import os
-import sys
 
 import daemon_pb2
 import grpc
@@ -69,6 +67,20 @@ class ScootStatus(object):
     self.exit_code = exit_code
     self.error = error
 
+def display_state(val):
+  if val == 0:
+    return "UNKNONW"
+  if val == 1:
+    return "PENDING"
+  if val == 2:
+    return "PREPARING"
+  if val == 3:
+    return "RUNNING"
+  if val == 4:
+    return "COMPLETED"
+  if val == 5:
+    return "FAILED"
+  raise ScootException("Invalid state value {0}.".format(val))
 
 def start():
   """ Must be called before interacting with the Daemon server.
@@ -123,7 +135,7 @@ def create_snapshot(path):
   """ Requests that Daemon server store and assign an id to the given file system path.
 
   @type path: string
-  @param path: A file or directory to be ingested by Daemon server.
+  @param path: An absolute path on the local fs. Only directory paths are allowed at this time (ingesting contents not the dir itself).
 
   @rtype: string
   @return The id associated with the newly stored path.
@@ -148,7 +160,7 @@ def checkout_snapshot(snapshot_id, dirpath):
   @param snapshot_id: A snapshot id returned from an earlier call to create_snapshot().
 
   @type dirpath: string
-  @param dirpath: The directory in which to place snapshot contents.
+  @param dirpath: The local absolute directory path in which to place snapshot contents.
   """
   global _client
   if not is_started():

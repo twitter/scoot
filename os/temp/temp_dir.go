@@ -1,4 +1,4 @@
-// temp makes hierarchical temporary directories
+// Package temp makes hierarchical temporary directories
 // it offers the same interface as ioutil, but recursive.
 // The more you use this to create temporary directories, the fewer places
 // we need to change when we want to relocate all our tempfiles.
