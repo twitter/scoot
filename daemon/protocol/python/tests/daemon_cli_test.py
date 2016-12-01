@@ -5,20 +5,18 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
 import unittest
 
 
+gopath = re.split(":", os.environ['GOPATH'])[0]
+pypath = gopath + '/src/github.com/scootdev/scoot/daemon/protocol/python/scoot'
+cliPath = ['python', pypath + '/scoot.py']
 
 class TestCliCommands(unittest.TestCase):
-  gopath = re.split(":", os.environ['GOPATH'])[0]
-  pypath = gopath + '/src/github.com/scootdev/scoot/daemon/protocol/python/scoot'
-  cliPath = ['python', pypath + '/scoot.py']
   createSReq = ['snapshot', 'create']
   checkoutSReq = ['snapshot', 'checkout']
   runEReq = ['exec', 'run']
   pollEReq = ['exec', 'poll']
-  
   echoReq = ['echo']
 
   daemonProcess = None
@@ -40,44 +38,46 @@ class TestCliCommands(unittest.TestCase):
     return m != None
 
   def test_happy_path(self):
+    global cliPath
     try:
       # issue createSnapshot validate that get a snapShot id 
-      cmd = self.cliPath + self.createSReq + [self.tmpdir]
-      r = subprocess.check_output(cmd)
-      self.verifyOut(r, 'snapshot id = [0-9]+', True)
-      m = re.findall(r'[0-9]+', r)
+      cmd = cliPath + self.createSReq + [self.tmpdir]
+      # this test only passes if the validation of create snapshot uses the following code instead of subprocess.check_output()
+      out = self.usePopenForCommand(cmd)
+      self.verifyOut(out[0], 'snapshot id = [0-9]+', True)
+      m = re.findall(r'[0-9]+', out[0])
       sId = m[0]
       
       # issue checkoutSnapshot without a path validate get error message and usage prompt 
-      cmd = self.cliPath + self.checkoutSReq + [sId, self.tmpdir]
+      cmd = cliPath + self.checkoutSReq + [sId, self.tmpdir]
       r = subprocess.check_output(cmd).rstrip()
       self.assertTrue(r == '', "Error: expected '' from checkout, got '{0}'".format(r))
 
       # run with snapshot id and timeout        
-      cmd = self.cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), '--timeout={0}'.format('2')]
+      cmd = cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), '--timeout={0}'.format('2')]
       r = subprocess.check_output(cmd).rstrip()
       self.verifyOut(r, 'run id = [0-9]+', True)
       r1 = self.get_run_id(r)
    
       # run with snapshot id         
-      cmd = self.cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), ]
+      cmd = cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), ]
       r = subprocess.check_output(cmd).rstrip()
       self.verifyOut(r, 'run id = [0-9]+', True)
       r2 = self.get_run_id(r)
       
       pollIds = [r1, r2]
       # poll with wait and all
-      cmd = self.cliPath + self.pollEReq + pollIds + ['--wait=0', '--all']
+      cmd = cliPath + self.pollEReq + pollIds + ['--wait=0', '--all']
       r = subprocess.check_output(cmd)
       self.verifyOut(r, 'COMPLETE', True)
 
       # poll with wait
-      cmd = self.cliPath + self.pollEReq + pollIds + ['--wait=0']
+      cmd = cliPath + self.pollEReq + pollIds + ['--wait=0']
       r = subprocess.check_output(cmd)
       self.verifyOut(r, 'COMPLETE', True)
   
       # poll with just ids
-      cmd = self.cliPath + self.pollEReq + pollIds 
+      cmd = cliPath + self.pollEReq + pollIds 
       r = subprocess.check_output(cmd)
       self.verifyOut(r, 'COMPLETE', True)
     except subprocess.CalledProcessError as e:
@@ -88,57 +88,84 @@ class TestCliCommands(unittest.TestCase):
     m = re.findall(r'[0-9]+', out)
     return m[0]
        
+  def usePopenForCommand(self, cmd):
+      outDir = tempfile.mkdtemp()
+      sOut = outDir+"/commandOut.txt"
+      sOutFD = open(sOut, 'w')
+      sErr = outDir+ "/commandErr.txt"
+      sErrFD = open(sErr, 'w')
+      r = subprocess.Popen(cmd, stdout=sOutFD, stderr=sErrFD)
+      r.wait()
+      sOutFDR = open(sOut, 'r')
+      cmdOut = sOutFDR.read()
+      sErrFDR = open(sErr, 'r')
+      cmdErr = sErrFDR.read()
+
+      shutil.rmtree(outDir)
+
+      return [cmdOut, cmdErr]
        
-  def assert_invalid_command(self, cmd):
+  def assert_invalid_command(self, cmd, expectedOut, expectedErr):
     try:
-      r = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-      if "UNAVAILABLE" in r:
-        return
-      self.tearDown()
-      self.fail("'{0}' did not return an error. Instead got: {1}".format(cmd, r))
-    except subprocess.CalledProcessError:
+      # this test only passes if the validation of create snapshot uses the following code instead of subprocess.check_output()
+      out = self.usePopenForCommand(cmd)
+      
+      if expectedOut != '' and expectedOut not in out[0]:
+        self.fail("cmd:'{0}'\nexpected {1}, got {2}".format(cmd, expectedOut, out[0])) 
+      if expectedErr != '' and expectedErr not in out[1]:
+        self.fail("cmd:'{0}'\nexpected {1}, got {2}".format(cmd, expectedErr, out[1])) 
       return
+
+    except subprocess.CalledProcessError as e:
+      self.fail(str(e))
+#       return
 
         
   def test_cmd_errors(self):
+    global cliPath
   
     # issue createSnapshot without a path validate get error message and usage prompt 
-    cmd = self.cliPath + self.createSReq
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.createSReq
+    self.assert_invalid_command(cmd, '', 'Usage')
       
     # checkout without snapshot nor dest
-    cmd = self.cliPath + self.checkoutSReq
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.checkoutSReq
+    self.assert_invalid_command(cmd, '', 'Usage')
   
     # checkout without dest
-    cmd = self.cliPath + self.checkoutSReq + ['34']
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.checkoutSReq + ['34']
+    self.assert_invalid_command(cmd, '', 'Usage')
   
     # checkout with invalid snapshot
-    cmd = self.cliPath + self.checkoutSReq + ['34', self.tmpdir + "/checkout"]
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.checkoutSReq + ['344444', self.tmpdir + "/checkout"]
+    self.assert_invalid_command(cmd, '', 'No snapshot')
      
     # run with no command
-    cmd = self.cliPath + self.runEReq 
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.runEReq 
+    self.assert_invalid_command(cmd, '', 'Usage')
      
     # run without snapshot id
-    cmd = self.cliPath + self.runEReq + ['ls']
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.runEReq + ['ls']
+    self.assert_invalid_command(cmd, '', 'Usage')
      
     # run with invalid timeout
-    cmd = self.cliPath + self.runEReq + ['ls', '--snapshotId=0', '--timeout=badValue']
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.runEReq + ['ls', '--snapshotId=0', '--timeout=badValue']
+    self.assert_invalid_command(cmd, '', 'Invalid value for timeout')
      
     # poll with no run ids
-    cmd = self.cliPath + self.pollEReq
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.pollEReq
+    self.assert_invalid_command(cmd, '', 'Usage')
         
       # poll with bad wait value
-    cmd = self.cliPath + self.pollEReq +['--wait=notNumber']
-    self.assert_invalid_command(cmd)
+    cmd = cliPath + self.pollEReq +['1', '--wait=notNumber']
+    self.assert_invalid_command(cmd, '', 'Wait must be an integer')
 
   
 if __name__ == '__main__':
-  unittest.main()
-  
+  try:
+    unittest.main()
+  finally:
+    stopReq = ['daemon', 'stop']
+    cmd = cliPath + stopReq
+    subprocess.call(cmd)
+    

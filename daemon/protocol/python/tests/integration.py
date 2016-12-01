@@ -6,6 +6,8 @@ import re
 import shutil
 import sys
 import tempfile
+import time
+from matplotlib.cbook import Null
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from scoot import client_lib as proto
@@ -72,9 +74,9 @@ def example_test():
     assert_file_contains(os.path.join(fail_dir, "STDOUT"), "", "fail")
     assert_file_contains(os.path.join(fail_dir, "STDERR"), "No such file or directory\n", "fail")
 
-  finally:
-    proto.stop()
+  finally:      
     shutil.rmtree(tmpdir)
+    proto.stop_daemon()
 
 
 if __name__ == '__main__':

@@ -56,6 +56,6 @@ brew uninstall protobuf
 ```
 
 ```sh
-python -m grpc.tools.protoc -I. --python_out=. --grpc_python_out=. daemon.proto
+python -m grpc.tools.protoc -I. --python_out=./python/scoot --grpc_python_out=./python/scoot daemon.proto
 ```
 

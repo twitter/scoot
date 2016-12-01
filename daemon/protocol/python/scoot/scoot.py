@@ -7,9 +7,10 @@ Usage:
   scoot.py snapshot create <srcDir>
   scoot.py snapshot checkout <snapshotId> <destDir>
   scoot.py exec run <command> ... --snapshotId=<sid> [--timeout=<seconds>]
-  scoot.py exec poll <runId> ... [--wait=<wait>] [--all]
+  scoot.py exec poll <runId> ... [--wait=<waitSeconds>] [--all]
   scoot.py exec abort <runId>
   scoot.py echo <ping>
+  scoot.py daemon stop
 
   
 Submit commands to the Scoot daemon:
@@ -34,26 +35,25 @@ poll            Get the status of runs.  RunIds must be a comma delimited list o
 
 abort           Abort the specified run.
 
-check daemon running:
+miscellaneous commands:
 echo            The Scoot daemon echo's <ping> back to the client.  Use this command to verify that the daemon
                 is running.
+daemon stop     Stops the daemon
 
 Options:
   -h --help               Show this screen.
   --snapshotId=<sid>      Install the snapshot with <sid> before running the command.
   --timeout=<seconds>     Maximum time(seconds) to allow the command to run. Default 1 second.
-  --wait=<wait>           <0: wait indefinitely for at least one run to complete. 
+  --wait=<waitSeconds>    <0: wait indefinitely for at least one run to complete. 
                           0:  return immediately with the status(s) of the runs.  
-                          >0: wait up to <wait>(seconds) for at least one of the runs to finish.  
+                          >0: wait up to <waitSeconds> for at least one of the runs to finish.  
                           Default: 0.
   --all                   Return the status of all the runs not just finished runs.
 
 """
 import docopt
-import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../protocol'))
 import client_lib as proto
 
 
@@ -62,8 +62,9 @@ def display_statuses(statuses):
     print("\nRunId:{},\n\tState:{},\n\tExitCode:{},\n\tError:{},\n\tSnapshot:{}\n".format(status.run_id, proto.display_state(status.state), status.exit_code, status.error, status.snapshot_id))
 
 
-def snapshot_create(cmd):
+def snapshot_create_cli(cmd):
   #run the command
+  startConnection()
   try:
     sid = proto.create_snapshot(cmd['<srcDir>'])
     # print the output
@@ -75,7 +76,8 @@ def snapshot_create(cmd):
     sys.exit("create snapshot error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
 
-def snapshot_checkout(cmd):
+def snapshot_checkout_cli(cmd):
+  startConnection()
   #run the command
   try:
     r = proto.checkout_snapshot(snapshot_id=cmd['<snapshotId>'], dirpath=cmd["<destDir>"])
@@ -89,7 +91,7 @@ def snapshot_checkout(cmd):
     sys.exit("Snapshot checkout error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
   
   
-def run(cmd):
+def run_cli(cmd):
   #verfiy args
   timeout = cmd['--timeout']
   if not timeout:
@@ -100,6 +102,7 @@ def run(cmd):
     except Exception as e:
       sys.exit("Invalid value for timeout, must be an integer or decimal number.%s".format(str(e)))
 
+  startConnection()
   #run the command
   try:
     runId = proto.run(snapshot_id=cmd['--snapshotId'], argv=cmd['<command>'], timeout_ns=timeout_ns)
@@ -117,7 +120,7 @@ def run(cmd):
     sys.exit("run request error:'{0}'".format(str(e1))) #TODO: should be 'contact scoot support'?
 
 
-def poll(cmd):
+def poll_cli(cmd):
   #verify args
   wait = cmd["--wait"]
   if not wait:
@@ -127,6 +130,7 @@ def poll(cmd):
   except Exception as e:
     sys.exit("Wait must be an integer. {0}".format(str(e)))
   
+  startConnection()
   #run the command
   try:
     statuses = proto.poll(run_ids=cmd["<runId>"], timeout_ns=wait, return_all=cmd['--all'])
@@ -139,7 +143,8 @@ def poll(cmd):
     sys.exit("poll request error:'{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
 
 
-def echo(cmd):
+def echo_cli(cmd):
+  startConnection()
   #run the command
   try:
     echo = proto.echo(ping=cmd['<ping>'])
@@ -151,32 +156,37 @@ def echo(cmd):
       sys.exit("Echo failed. Scoot Daemon is not running!\n")
     sys.exit("echo request error:'{0}'".format(str(e))) #TODO: should be 'contact scoot support'?
 
-
-if __name__ == '__main__':
-  # parse the command line
-  cmd = docopt.docopt(__doc__)
-  
-  # make the client connection
+def startConnection():
   try:
     proto.start()
   #handle errors making the client connection
   except proto.ScootException as e:
     if "UNAVAILABLE" in str(e):
       sys.exit("Cannot establish connection. Is Scoot Daemon running?\n")
-    sys.exit("connecting to daemon error: '{0}' (make sure you have started the daemon).".format(str(e))) #TODO: should be 'contact scoot support'?
-   
+    sys.exit("Connecting to daemon error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
+  except Exception as e:
+    sys.exit("Connecting to daemon error: '{0}'.".format(str(e)))
+
+def stop_daemon_cli():
+  startConnection()
+  proto.stop_daemon()
+
+if __name__ == '__main__':
+  # parse the command line
+  cmd = docopt.docopt(__doc__)
+  
   #process the command     
   if cmd['create']:
-    snapshot_create(cmd)
+    snapshot_create_cli(cmd)
   elif cmd['checkout']:
-    snapshot_checkout(cmd)
+    snapshot_checkout_cli(cmd)
   elif cmd['run']:
-    run(cmd)
+    run_cli(cmd)
   elif cmd['poll']:
-    poll(cmd)
+    poll_cli(cmd)
   elif cmd['abort']:
     sys.exit("Abort not implemented yet.")
+  elif cmd['daemon']:
+    stop_daemon_cli()
   else:
-    echo(cmd)
-    
-  proto.stop()
+    echo_cli(cmd)

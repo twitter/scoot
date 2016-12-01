@@ -9,10 +9,13 @@ API required to ingest or checkout filesystem snapshots, and to execute
 commands against those snapshots.
 """
 
-import os
-
 import daemon_pb2
 import grpc
+import os
+import re
+import subprocess
+import time
+import uuid
 
 
 # Copied from daemon/protocol/locate.go
@@ -93,10 +96,43 @@ def start():
   channel = grpc.insecure_channel("unix://%s" % _domain_sock)
   #channel.subscribe(lambda x: sys.stdout.write(str(x)+"\n"), try_to_connect=True)
   _client = daemon_pb2.ScootDaemonStub(channel)
+  
+  # verify the connection
+  echoReturn = None
+  if _client is not None:
+    ping = str(uuid.uuid4())
+    try:
+      echoReturn = echo(ping=ping)
+    except ScootException as e:
+      if "UNAVAILABLE" in str(e):
+        echoReturn = str(e)
+      else:
+        raise e
+          
+  if _client is None or "UNAVAILABLE" in echoReturn:
+    #the echo failed, try starting the daemon 
+    gopath = re.split(":", os.environ['GOPATH'])[0]
+    daemon = gopath + '/bin/daemon'
+    subprocess.Popen([daemon,"-execer_type", "os"])
+    start = time.time()
+      
+    # give the daemon up to 3 seconds to start
+    while True:
+      if _client is None: # try to create a connection
+        _client = daemon_pb2.ScootDaemonStub(channel)
+      # send an echo request
+      ping = str(uuid.uuid4())
+      echoReturn = echo(ping=ping)
+      if ping in echoReturn:
+        break
+        
+      now = time.time()
+      if now - start > 3.0: #wait up to 3 seconds for the daemon to start
+        raise ScootException(Exception("The daemon did not start within 3 seconds"))
 
 
 def stop():
-  """ Set the Daemon server connection to None.
+  """ Terminate the connection to the daemon server.
   """
   global _client
   if not is_started():
@@ -246,3 +282,17 @@ def poll(run_ids, timeout_ns=0, return_all=False):
                  exit_code=status.exit_code,
                  error=status.error)
   return [domain(x) for x in resp.status]
+
+
+def stop_daemon():
+  """ Request that the daemon be Stopped
+  """
+  global _client
+  if not is_started():
+    raise ScootException(Exception("Connection not started."))
+  req = daemon_pb2.EmptyStruct()
+  try:
+    _client.StopDaemon(req)
+  except Exception:
+      pass #  the call stops the daemon, but the grpc connection returns an error: swallow the error
+    

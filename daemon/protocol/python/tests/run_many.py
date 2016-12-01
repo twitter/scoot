@@ -13,7 +13,6 @@ import client_lib as proto
 
 
 class TestManyRunRequests(unittest.TestCase):
-    daemonProcess = None
     tmpdir = None
       
     def setUp(self):
@@ -35,12 +34,12 @@ class TestManyRunRequests(unittest.TestCase):
                 elapsedTime = time.time() - start
         
         if not started:
-            self.fail("Daemon didn't start within {0}".format(elapsedTime))
+            self.fail("Connection to daemon couldn't be established in {0} seconds".format(elapsedTime))
                         
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
+        proto.stop_daemon()
         unittest.TestCase.tearDown(self)
-        proto.stop()
         
     sleep_ss_key = "sleep_s_id"
     ls_ss_key = "ls_s_id"
@@ -121,7 +120,6 @@ class TestManyRunRequests(unittest.TestCase):
             if len(statuses) == len(ids):
                 allDone = True
             elapsedTime = time.time() - start
-            print("len keys:{0}, len statuses:{1}".format(len(ids), len(statuses)))
             
         self.assertTrue(len(ids) == len(statuses), "runs did not finish.")
         self.assertCompleteStatuses(statuses, runs)

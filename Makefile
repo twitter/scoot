@@ -47,6 +47,9 @@ test:
 	# Runs only unit tests and property tests
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
+	python ./daemon/protocol/python/tests/run_many.py
+	python ./daemon/protocol/python/tests/integration.py
+	python ./daemon/protocol/python/tests/daemon_cli_test.py
 
 test-unit:
 	# Runs only unit tests
