@@ -86,7 +86,7 @@ def display_state(val):
   raise ScootException("Invalid state value {0}.".format(val))
 
 def start():
-  """ Must be called before interacting with the Daemon server.
+  """ Establish a connection to the Daemon Server.  Must be called before interacting with the Daemon server.
   """
   global _client, _domain_sock
   if _domain_sock is None:
@@ -141,14 +141,14 @@ def stop():
 
 
 def is_started():
-  """ If the Daemon server connection is started.
+  """ Returns true if the Daemon server connection is started.
   """
   global _client
   return _client is not None
 
 
 def echo(ping):
-  """ Test ping/pong command. Not useful outside of testing.
+  """ Request that the Daemon echo the 'ping' value. Used to validate that the Daemon is running and connection has been established.
 
   @type ping: string
   @param ping: Text to send to and get back from the Daemon server.

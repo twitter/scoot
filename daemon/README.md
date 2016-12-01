@@ -20,7 +20,10 @@ The API supports the following actions. See the .proto or client files for more 
 * __Run__ - run a command, with options for run environment (snapshot) and output (new snapshot creation)
 * __Poll__ - determine the status of run commands
 
-### Scoot Daemon CLI
+TODO: provide installation instructions
 
-A Python client that supports some of the above API is available, see the client for details.
+# Scoot Daemon CLI
+A command line tool that supports submitting API requests to the Scoot Daemon.  See daemon/protocol for installation and access.
 
+# Scoot Daemon Client Library (Python)
+A python library for issuing API requests to the Scoot Daemon.  See daemon/protocol for installation and access.
