@@ -22,8 +22,6 @@ const DEFAULT_REV = "1dda9fbde682e4922a0d5709c5539f573db4cc54"
 
 // Checkout checks out id (a raw git sha) into a Checkout.
 // It does this by making a new clone (via reference) and checking out id.
-// TODO(dbentley): if id is not found because it is present in upstream repos but not here,
-// we should fetch it and check it out.
 func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 	repo, repoErr := c.repos.Get()
 	if repoErr != nil {
@@ -49,12 +47,25 @@ func (c *Checkouter) Checkout(id string) (co snapshot.Checkout, err error) {
 		{"checkout", id},
 	}
 
-	for _, argv := range cmds {
-		if _, err := repo.Run(argv...); err != nil {
-			return nil, fmt.Errorf("gitfiler.Checkouter.Checkout: %v", err)
+	if err := c.runGitCmds(cmds, repo); err != nil {
+		// try fetching for new commits before returning error
+		// takes a long time (~5 min)
+		err = c.runGitCmds(append([][]string{{"fetch"}}, cmds...), repo)
+		if err != nil {
+			return nil, err
 		}
 	}
+
 	return &Checkout{repo: repo, id: id, pool: c.repos}, nil
+}
+
+func (c *Checkouter) runGitCmds(cmds [][]string, repo *repo.Repository) error {
+	for _, argv := range cmds {
+		if _, err := repo.Run(argv...); err != nil {
+			return fmt.Errorf("Unable to run git %v: %v", argv, err)
+		}
+	}
+	return nil
 }
 
 func (c *Checkouter) CheckoutAt(id string, dir string) (co snapshot.Checkout, err error) {
