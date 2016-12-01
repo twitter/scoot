@@ -2,13 +2,35 @@
 package sched
 
 import (
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 )
 
 // Job is the job Scoot can schedule
 type Job struct {
 	Id  string
 	Def JobDefinition
+}
+
+func (j *Job) Serialize() ([]byte, error) {
+	thriftJob, err := makeThriftJobFromDomainJob(j)
+	if err != nil {
+		return nil, err
+	}
+	return thrifthelpers.BinarySerialize(thriftJob)
+}
+
+func DeserializeJob(input []byte) (*Job, error) {
+	var thriftJob *schedthrift.Job
+	err := thrifthelpers.BinaryDeserialize(thriftJob, input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	job := makeDomainJobFromThriftJob(thriftJob)
+	return job, nil
 }
 
 // JobDefinition is the definition the client sent us

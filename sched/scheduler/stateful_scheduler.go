@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -56,13 +57,17 @@ func NewStatefulSchedulerFromCluster(
 		wf,
 		config,
 		stat,
-		false)
+		false,
+		true, // TODO: make this a configurable parameter
+	)
 }
 
 // Create a New StatefulScheduler that implements the Scheduler interface
 // specifying debugMode true, starts the scheduler up but does not start
 // the update loop.  Instead the loop must be advanced manulaly by calling
 // step(), intended for debugging and test cases
+// If recoverSagas is true Active Sagas in the saga log will be recovered
+// and rescheduled, otherwise no recovery will be done on startup
 func NewStatefulScheduler(
 	initialCluster []cluster.Node,
 	clusterUpdates chan []cluster.NodeUpdate,
@@ -71,6 +76,7 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
+	recoverSagas bool,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
@@ -85,7 +91,9 @@ func NewStatefulScheduler(
 		stat:              stat,
 	}
 
-	sched.startUp()
+	if recoverSagas {
+		sched.startUp()
+	}
 
 	if !debugMode {
 		// start the scheduler loop
@@ -101,12 +109,53 @@ func NewStatefulScheduler(
 // Starts the scheduler, must be called before any other
 // methods on the scheduler can be called
 func (s *statefulScheduler) startUp() {
-	// TODO: Recover form SagaLog Any In Process Tasks
-	// Return only once all those have been scheduled
+
+	activeSagas, err := s.sagaCoord.Startup()
+	if err != nil {
+		// TODO: retry until we succeed,  This has to eventually succeed
+		// for us to make progress.  Add metrics for failure rate,
+		// this would be something we would alert on.
+	}
+
+	// TODO: Spin off separate go routines for each active saga.  This way we can
+	// do recovery in parallel.
+	for _, sagaId := range activeSagas {
+		activeSaga, err := s.sagaCoord.RecoverSagaState(sagaId, saga.ForwardRecovery)
+		if err != nil {
+			// TODO: must keep retrying this as well should eventually succeed
+			panic(fmt.Sprintf("couldn't recover saga %v, error: %v", sagaId, err))
+		}
+
+		// If Saga doesn't exist anymore skip
+		if activeSaga == nil {
+			continue
+		}
+
+		// If Saga is Completed, discard
+		if activeSaga.GetState().IsSagaCompleted() {
+			continue
+		}
+
+		job, err := sched.DeserializeJob(activeSaga.GetState().Job())
+		if err != nil {
+			// TODO: Increment counter? A breaking change was made
+			// if this happens or data was corrupted.
+			// TODO: Abort the saga, either add all start/end comp task messages or allow
+			// Aborted Sagas with Forward Recovery without comp tasks?
+			log.Printf("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
+			continue
+		}
+
+		// If in progress - reschedule
+		s.addJobCh <- jobAddedMsg{
+			job:  job,
+			saga: activeSaga,
+		}
+	}
 }
 
 type jobAddedMsg struct {
-	job  sched.Job
+	job  *sched.Job
 	saga *saga.Saga
 }
 
@@ -114,15 +163,18 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
 	s.stat.Counter("schedJobRequestsCounter").Inc(1)
 
-	job := sched.Job{
+	job := &sched.Job{
 		Id:  generateJobId(),
 		Def: jobDef,
 	}
 
+	asBytes, err := job.Serialize()
+	if err != nil {
+		return "", err
+	}
+
 	// Log StartSaga Message
-	// TODO: need to serialize job into binary and pass in here
-	// so we can recover the job in case of failure
-	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, nil)
+	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, asBytes)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +236,6 @@ func (s *statefulScheduler) step() {
 // Checks if any new jobs have been scheduled since the last loop and adds
 // them to the scheduler state
 func (s *statefulScheduler) addJobs() {
-	// Add New Jobs to State
 	select {
 	case newJobMsg := <-s.addJobCh:
 		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)
