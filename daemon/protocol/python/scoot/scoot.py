@@ -163,9 +163,9 @@ def startConnection():
   except proto.ScootException as e:
     if "UNAVAILABLE" in str(e):
       sys.exit("Cannot establish connection. Is Scoot Daemon running?\n")
-    sys.exit("Connecting to daemon error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
+    sys.exit("ScootException connecting to daemon error: '{0}'.".format(str(e))) #TODO: should be 'contact scoot support'?
   except Exception as e:
-    sys.exit("Connecting to daemon error: '{0}'.".format(str(e)))
+    sys.exit("Exception connecting to daemon error: '{0}'.".format(str(e)))
 
 def stop_daemon_cli():
   startConnection()

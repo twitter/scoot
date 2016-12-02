@@ -111,7 +111,10 @@ def start():
       if "UNAVAILABLE" in str(e):
         echoReturn = str(e)
       else:
-        raise e
+        raise ScootException("ScootException verifying connection: echo:'{}', '{}'". format(ping,e))
+    except Exception as e:
+        raise ScootException("Exception verifying connection: echo:'{}', '{}'". format(ping,e))
+      
           
   if _client is None or "UNAVAILABLE" in echoReturn:
     #the echo failed, try starting the daemon 
