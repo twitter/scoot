@@ -93,7 +93,11 @@ def start():
     raise ScootException(Exception("Could not find domain socket path."))
   if is_started():
     raise ScootException(Exception("Already started."))
-  channel = grpc.insecure_channel("unix://%s" % _domain_sock)
+  channel = None
+  try:
+    channel = grpc.insecure_channel("unix://%s" % _domain_sock)
+  except Exception as e:
+    raise ScootException("Error getting channel:'unix://{}'".format(_domain_sock))
   #channel.subscribe(lambda x: sys.stdout.write(str(x)+"\n"), try_to_connect=True)
   _client = daemon_pb2.ScootDaemonStub(channel)
   
@@ -163,7 +167,7 @@ def echo(ping):
   try:
     resp = _client.Echo(req)
   except Exception as e:
-    raise ScootException(e)
+    raise ScootException("Echo returned error:'{}'".format(str(e)))
   return resp.pong
 
 
@@ -183,9 +187,10 @@ def create_snapshot(path):
   try:
     resp = _client.CreateSnapshot(req)
   except Exception as e:
-    raise ScootException(e)
+    raise ScootException("Calling create snapshot with path:'{}' returned error: '{}'".format(path, str(e)))
   if resp.error:
-    raise ScootException(Exception(resp.error))
+    raise ScootException("Create snapshot with path:'{}' returned error: '{}'".format(path, resp.error))
+  
   return resp.snapshot_id
 
 
@@ -205,9 +210,10 @@ def checkout_snapshot(snapshot_id, dirpath):
   try:
     resp = _client.CheckoutSnapshot(req)
   except Exception as e:
-    raise ScootException(e)
+    raise ScootException("Calling checkout with snapshot id:'{0}' into '{1}' returned error: '{2}'".format(snapshot_id, dirpath, str(e)))
+                       
   if resp.error:
-    raise ScootException(Exception(resp.error))
+    raise ScootException("Checkout snapshot id:'{0}' into '{1}' response contained error: '{2}'".format(snapshot_id, dirpath, resp.error))
   return
 
 
@@ -241,9 +247,10 @@ def run(snapshot_id, argv, env=None, timeout_ns=0):
   try:
     resp = _client.Run(req)
   except Exception as e:
-    raise ScootException(e)
+    raise ScootException("Calling run with snapshotId:'{}', argv:'{}', env:'{}', timeout:'{}', returned error: '{}'".format(snapshot_id, argv, env, timeout_ns, str(e)))
   if resp.error:
-    raise ScootException(Exception(resp.error))
+    raise ScootException("Run with snapshotId:'{}', argv:'{}', env:'{}', timeout:'{}', returned error: '{}'".format(snapshot_id, argv, env, timeout_ns, resp.error))
+  
   return resp.run_id
 
 
@@ -273,7 +280,7 @@ def poll(run_ids, timeout_ns=0, return_all=False):
   try:
     resp = _client.Poll(req)
   except Exception as e:
-    raise ScootException(e)
+    raise ScootException("Calling poll with runIds:'{}' and timeout:'{}' returned error: '{}'".format(run_ids, timeout_ns, str(e)))
 
   def domain(status):
     return ScootStatus(run_id=status.run_id,
