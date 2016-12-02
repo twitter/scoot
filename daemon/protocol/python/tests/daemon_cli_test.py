@@ -30,19 +30,19 @@ class TestCliCommands(unittest.TestCase):
       shutil.rmtree(self.tmpdir)
     unittest.TestCase.tearDown(self)
 
-  def verifyOut(self, stdout, expected, stderr, expectedErr, failImmediately):
+  def verifyOut(self, stdout, expectedRE, stderr, expectedErr, failImmediately):
     stdoutOk = True
     stderrOk = True
-    if expected != '':
-      m = re.search(expected, stdout)
-      stdoutOk = m != None
-    if expectedErr != '':
-      m = re.search(expectedErr, stderr)
-      stderrOk = m != None
-    if (not stdoutOk or not stderrOk) and failImmediately:
-      self.assertTrue(m != None, "expected to find {0} in '{1}' and {2} in {3}".format(expected, stdout, expectedErr, stderr))
+    if expectedRE != '':
+      found = re.search(expectedRE, stdout) >= 0
+    if (expectedRE != '' and not found) or (expectedRE == '' and stdout != ''):
+      stdoutOk = False
+    if (expectedErr != '' and stderr not in expectedErr) or (expectedErr == '' and stderr != ''):
+      stderrOk = False
+    if (not stdoutOk or not stderrOk) and failImmediately: 
+      self.fail("expected match:'{0}' in '{1}' and expected error: '{2}' got '{3}'".format(expectedRE, stdout, expectedErr, stderr))
            
-    return m != None
+    return True
 
   def test_happy_path(self):
     global cliPath
@@ -116,11 +116,14 @@ class TestCliCommands(unittest.TestCase):
     try:
       # this test only passes if the validation of create snapshot uses the following code instead of subprocess.check_output()
       out = self.usePopenForCommand(cmd)
+      fail = False
       
-      if expectedOut != '' and expectedOut not in out[0]:
-        self.fail("cmd:'{0}'\nexpected {1}, got {2}".format(cmd, expectedOut, out[0])) 
-      if expectedErr != '' and expectedErr not in out[1]:
-        self.fail("cmd:'{0}'\nexpected {1}, got {2}".format(cmd, expectedErr, out[1])) 
+      if (expectedOut != '' and expectedOut not in out[0]) or (expectedOut == '' and out[0] != ''):
+        fail = True
+      if (expectedErr != '' and expectedErr not in out[1]) or (expectedErr == '' and out[1] != ''):
+        fail = True 
+      if fail:
+        self.fail("cmd:'{0}'\nexpected: '{1}', got '{2}' and expected error: '{3}' got '{4}'".format(cmd, expectedOut, out[0], expectedErr, out[1])) 
       return
 
     except subprocess.CalledProcessError as e:
