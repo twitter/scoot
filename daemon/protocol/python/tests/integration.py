@@ -6,8 +6,6 @@ import re
 import shutil
 import sys
 import tempfile
-import time
-from matplotlib.cbook import Null
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from scoot import client_lib as proto
