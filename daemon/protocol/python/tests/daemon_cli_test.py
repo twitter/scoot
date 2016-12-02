@@ -30,10 +30,17 @@ class TestCliCommands(unittest.TestCase):
       shutil.rmtree(self.tmpdir)
     unittest.TestCase.tearDown(self)
 
-  def verifyOut(self, out, expected, failImmediately):
-    m = re.search(expected, out)
-    if failImmediately:
-      self.assertTrue(m != None, "expected to find {0} in '{1}'".format(expected, out))
+  def verifyOut(self, stdout, expected, stderr, expectedErr, failImmediately):
+    stdoutOk = True
+    stderrOk = True
+    if expected != '':
+      m = re.search(expected, stdout)
+      stdoutOk = m != None
+    if expectedErr != '':
+      m = re.search(expectedErr, stderr)
+      stderrOk = m != None
+    if (not stdoutOk or not stderrOk) and failImmediately:
+      self.assertTrue(m != None, "expected to find {0} in '{1}' and {2} in {3}".format(expected, stdout, expectedErr, stderr))
            
     return m != None
 
@@ -44,7 +51,7 @@ class TestCliCommands(unittest.TestCase):
       cmd = cliPath + self.createSReq + [self.tmpdir]
       # this test only passes if the validation of create snapshot uses the following code instead of subprocess.check_output()
       out = self.usePopenForCommand(cmd)
-      self.verifyOut(out[0], 'snapshot id = [0-9]+', True)
+      self.verifyOut(out[0], 'snapshot id = [0-9]+', out[1], '', True)
       m = re.findall(r'[0-9]+', out[0])
       sId = m[0]
       
@@ -56,30 +63,30 @@ class TestCliCommands(unittest.TestCase):
       # run with snapshot id and timeout        
       cmd = cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), '--timeout={0}'.format('2')]
       r = subprocess.check_output(cmd).rstrip()
-      self.verifyOut(r, 'run id = [0-9]+', True)
+      self.verifyOut(r, 'run id = [0-9]+',  out[1], '', True)
       r1 = self.get_run_id(r)
    
       # run with snapshot id         
       cmd = cliPath + self.runEReq + ['ls', '--snapshotId={0}'.format(sId), ]
       r = subprocess.check_output(cmd).rstrip()
-      self.verifyOut(r, 'run id = [0-9]+', True)
+      self.verifyOut(r, 'run id = [0-9]+',  out[1], '', True)
       r2 = self.get_run_id(r)
       
       pollIds = [r1, r2]
       # poll with wait and all
       cmd = cliPath + self.pollEReq + pollIds + ['--wait=0', '--all']
       r = subprocess.check_output(cmd)
-      self.verifyOut(r, 'COMPLETE', True)
+      self.verifyOut(r, 'COMPLETE',  out[1], '', True)
 
       # poll with wait
       cmd = cliPath + self.pollEReq + pollIds + ['--wait=0']
       r = subprocess.check_output(cmd)
-      self.verifyOut(r, 'COMPLETE', True)
+      self.verifyOut(r, 'COMPLETE',  out[1], '', True)
   
       # poll with just ids
       cmd = cliPath + self.pollEReq + pollIds 
       r = subprocess.check_output(cmd)
-      self.verifyOut(r, 'COMPLETE', True)
+      self.verifyOut(r, 'COMPLETE',  out[1], '', True)
     except subprocess.CalledProcessError as e:
       self.tearDown()
       self.fail(str(e))
