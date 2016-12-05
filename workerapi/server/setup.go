@@ -24,6 +24,8 @@ type servers struct {
 	http   *endpoints.TwitterServer
 }
 
+type WorkerUri string
+
 func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 	return servers{thrift, http}
 }
@@ -58,8 +60,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
-			return localrunner.NewOutputCreator(tmpDir)
+		func(tmpDir *temp.TempDir, ts *endpoints.TwitterServer) (runner.OutputCreator, error) {
+			return localrunner.NewOutputCreator(tmpDir, ts.ResourceHandler)
 		},
 
 		func(
@@ -69,8 +71,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return localrunner.NewSimpleRunner(ex, filer, outputCreator)
 		},
 
-		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
-			return NewHandler(stat, r)
+		func() WorkerUri {
+			return "http://localhost:2001"
+		},
+
+		func(stat stats.StatsReceiver, r runner.Runner, uri WorkerUri) worker.Worker {
+			return NewHandler(stat, r, string(uri))
 		},
 
 		func(

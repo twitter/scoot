@@ -1,6 +1,7 @@
 package local
 
 import (
+	"errors"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -36,13 +37,26 @@ func (f *localFetcher) fetchData() ([]byte, error) {
 func parseData(data []byte) ([]cluster.Node, error) {
 	nodes := []cluster.Node{}
 	lines := string(data)
-	// This is ugly but it works for now.
-	re := regexp.MustCompile("workerserver.*thrift_addr(?: +|=)([^ ]*)")
 	for _, line := range strings.Split(lines, "\n") {
-		matches := re.FindStringSubmatch(line)
-		if len(matches) == 2 {
-			nodes = append(nodes, cluster.NewIdNode(matches[1]))
+		thrift, err := parseFlag("thrift_addr", line)
+		http, err2 := parseFlag("http_addr", line)
+		if err == nil {
+			if err2 == nil {
+				http = "http://" + http
+			}
+			nodes = append(nodes, cluster.NewIdStatusNode(thrift, http))
 		}
 	}
 	return nodes, nil
+}
+
+func parseFlag(flag, line string) (string, error) {
+	// This is ugly but it works for now.
+	re := regexp.MustCompile("workerserver.*" + flag + "(?: +|=)([^ ]*)")
+	matches := re.FindStringSubmatch(line)
+	if len(matches) == 2 {
+		return matches[1], nil
+	}
+	return "", errors.New("Could not parse flag:'" + flag + "', from line:'" + line + "'")
+
 }

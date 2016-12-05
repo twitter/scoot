@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
@@ -11,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
-	"testing"
+	"github.com/scootdev/scoot/workerapi"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -152,7 +154,10 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 
 		retStatus := runner.RunningStatus("run1", "", "")
 		testErr := errors.New("Test Error, Failed Running Task On Worker")
-		workerMock.EXPECT().RunAndWait(gomock.Any()).Return(retStatus, testErr).MinTimes(1)
+		// Each attempted call to runTaskAndLog gets a new workerMock.
+		// Start() gets called once per workerMock and Wait() gets called once only in the last workerMock.
+		workerMock.EXPECT().Start(gomock.Any()).Return(retStatus, testErr).Times(1)
+		workerMock.EXPECT().Wait(gomock.Any()).Return(retStatus, testErr).MaxTimes(1)
 
 		return workerMock
 	}
@@ -170,7 +175,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
 	}
 
-	// advance scheduler until job gets marked completed
+	// // advance scheduler until job gets marked completed
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
@@ -206,7 +211,8 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
+	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, startStatus))
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))

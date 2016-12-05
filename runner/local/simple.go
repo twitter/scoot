@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
@@ -194,6 +195,8 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 		return
 	}
 	defer stderr.Close()
+	stdout.Register(string(runId), endpoints.StdoutName)
+	stderr.Register(string(runId), endpoints.StderrName)
 
 	p, err := r.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,

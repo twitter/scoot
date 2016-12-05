@@ -25,13 +25,14 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
+	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus))
 	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "", "task1", task, false, stats.NilStatsReceiver())
 
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
@@ -45,11 +46,12 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil)).Return(errors.New("test error"))
+	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus)).Return(errors.New("test error"))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "", "task1", task, false, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -63,14 +65,15 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
+	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus))
 	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher).Return(errors.New("test error"))
 
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(), "", "task1", task, false, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
@@ -84,7 +87,6 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
@@ -92,7 +94,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("starting error"))
-	err := runTaskAndLog(s, worker, "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, worker, "", "task1", task, false, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned when Worker RunAndWait returns and error")
@@ -108,17 +110,15 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	workerMock := worker.NewMockWorker(mockCtrl)
 	testErr := errors.New("Test Error, Failed Running Task On Worker")
 	retStatus := runner.RunningStatus("run1", "", "")
-	workerMock.EXPECT().RunAndWait(task).Return(retStatus, testErr)
+	workerMock.EXPECT().Start(task).Return(retStatus, testErr)
 
 	// set up a mock saga log that verifies task is started and completed with a failed task
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-
-	// create expectedProcessStatus that should be looged
 	retStatus.Error = testErr.Error()
 	retStatus.ExitCode = DeadLetterExitCode
 	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(retStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", expectedProcessStatus))
 	sagaLogMock.EXPECT().LogMessage(
 		saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
 
@@ -126,7 +126,7 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	err := runTaskAndLog(
-		s, workerMock, "task1", task, true, stats.NilStatsReceiver())
+		s, workerMock, "", "task1", task, true, stats.NilStatsReceiver())
 
 	if err != nil {
 		t.Errorf("Expected error to be nil not, %v", err)

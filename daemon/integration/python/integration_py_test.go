@@ -64,7 +64,7 @@ func getRunner(filer snapshot.Filer) runner.Runner {
 		panic(err)
 	}
 
-	outputCreator, err := local.NewOutputCreator(tempDir)
+	outputCreator, err := local.NewOutputCreator(tempDir, nil)
 	if err != nil {
 		panic(err)
 	}

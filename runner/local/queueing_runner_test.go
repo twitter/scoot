@@ -193,7 +193,7 @@ func setup(size int, t *testing.T) *env {
 		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
 	}
 
-	outputCreator, err := NewOutputCreator(tempDir)
+	outputCreator, err := NewOutputCreator(tempDir, nil)
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}

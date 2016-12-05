@@ -30,6 +30,39 @@ func (_m *MockWorker) EXPECT() *_MockWorkerRecorder {
 	return _m.recorder
 }
 
+func (_m *MockWorker) Start(task sched.TaskDefinition) (runner.ProcessStatus, error) {
+	ret := _m.ctrl.Call(_m, "Start", task)
+	ret0, _ := ret[0].(runner.ProcessStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockWorkerRecorder) Start(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
+}
+
+func (_m *MockWorker) Status(runId runner.RunId) (runner.ProcessStatus, error) {
+	ret := _m.ctrl.Call(_m, "Status", runId)
+	ret0, _ := ret[0].(runner.ProcessStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockWorkerRecorder) Status(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Status", arg0)
+}
+
+func (_m *MockWorker) Wait(runId runner.RunId) (runner.ProcessStatus, error) {
+	ret := _m.ctrl.Call(_m, "Wait", runId)
+	ret0, _ := ret[0].(runner.ProcessStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockWorkerRecorder) Wait(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Wait", arg0)
+}
+
 func (_m *MockWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
 	ret := _m.ctrl.Call(_m, "RunAndWait", task)
 	ret0, _ := ret[0].(runner.ProcessStatus)

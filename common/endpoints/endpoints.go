@@ -13,26 +13,28 @@ import (
 
 func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
 	return &TwitterServer{
-		Addr:  addr,
-		Stats: stats,
+		Addr:            addr,
+		Stats:           stats,
+		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string)},
 	}
 }
 
 type TwitterServer struct {
-	Addr  string
-	Stats stats.StatsReceiver
+	Addr            string
+	Stats           stats.StatsReceiver
+	ResourceHandler *ResourceHandler
 }
 
 func (s *TwitterServer) Serve() error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", healthHandler)
-	mux.HandleFunc("/admin/metrics.json", s.statsHandler)
-	server := &http.Server{
-		Addr:    s.Addr,
-		Handler: mux,
-	}
+	http.HandleFunc("/", helpHandler)
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/admin/metrics.json", s.statsHandler)
 	log.Println("Serving http & stats on", s.Addr)
-	return server.ListenAndServe()
+	return http.ListenAndServe(s.Addr, nil)
+}
+
+func helpHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Common paths: '/health', '/admin/metrics.json', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'", 501)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -59,4 +61,30 @@ func MakeStatsReceiver(scope StatScope) stats.StatsReceiver {
 		stats.NewFinagleStatsRegistry,
 		15*time.Second)
 	return s.Scope(string(scope))
+}
+
+const StdoutName = "stdout"
+const StderrName = "stderr"
+
+type ResourceHandler struct {
+	//defines: map[Namespace]map[ResourceName]ResourcePath
+	resources map[string]map[string]string
+}
+
+func (h *ResourceHandler) AddResource(namespace, name, path string) {
+	if _, ok := h.resources[namespace]; !ok {
+		h.resources[namespace] = make(map[string]string)
+	}
+	h.resources[namespace][name] = path
+	http.Handle(fmt.Sprintf("/%s/%s", namespace, name), h)
+}
+
+func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//TODO:
+	//Add a second option beyond text - serve barebones vanilla javascript that does ajax updates to tail resource.
+	// id := ""
+	// pos := 0
+	// name := ""
+	// path := h.idToNamedPaths[id][name]
+	// io.Copy(w, path[pos], len)
 }

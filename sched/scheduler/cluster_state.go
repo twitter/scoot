@@ -86,7 +86,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		case cluster.NodeAdded:
 			// add the node if it doesn't already exist
 			_, ok := c.nodes[update.Node.Id()]
-			if !ok {
+			if !ok || c.nodes[update.Node.Id()].node.Status() != update.Node.Status() {
 				c.nodes[update.Node.Id()] = newNodeState(update.Node)
 			}
 

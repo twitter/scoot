@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	osexecer "github.com/scootdev/scoot/runner/execer/os"
@@ -14,15 +15,16 @@ import (
 
 type localOutputCreator struct {
 	hostname string
+	handler  *endpoints.ResourceHandler
 }
 
 // Create a new OutputCreator
-func NewOutputCreator(tmp *temp.TempDir) (runner.OutputCreator, error) {
+func NewOutputCreator(tmp *temp.TempDir, handler *endpoints.ResourceHandler) (runner.OutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
-	return &localOutputCreator{hostname: hostname}, nil
+	return &localOutputCreator{hostname: hostname, handler: handler}, nil
 }
 
 func (s *localOutputCreator) Create(id string) (runner.Output, error) {
@@ -35,13 +37,14 @@ func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 		return nil, err
 	}
 	// We don't need a / between hostname and path because absolute paths start with /
-	return &localOutput{f: f, hostname: s.hostname, absPath: absPath}, nil
+	return &localOutput{f: f, hostname: s.hostname, absPath: absPath, handler: s.handler}, nil
 }
 
 type localOutput struct {
 	f        *os.File
 	hostname string
 	absPath  string
+	handler  *endpoints.ResourceHandler
 }
 
 func (o *localOutput) URI() string {
@@ -58,6 +61,12 @@ func (o *localOutput) Write(p []byte) (n int, err error) {
 
 func (o *localOutput) Close() error {
 	return o.f.Close()
+}
+
+func (o *localOutput) Register(namespace, name string) {
+	if o.handler != nil {
+		o.handler.AddResource(namespace, name, o.AsFile())
+	}
 }
 
 // Return an underlying Writer. Why? Because some methods type assert to

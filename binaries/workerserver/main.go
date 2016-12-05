@@ -39,6 +39,9 @@ func main() {
 		func(tmpDir *temp.TempDir) snapshot.Filer {
 			return snapshots.MakeTempCheckouterFiler(tmpDir)
 		},
+		func() server.WorkerUri {
+			return server.WorkerUri("http://" + *httpAddr)
+		},
 	)
 
 	server.RunServer(bag, schema, configText)

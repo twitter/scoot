@@ -68,6 +68,10 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 				}
 			} else if sagaState.IsTaskStarted(id) {
 				taskStatus = scoot.Status_IN_PROGRESS
+				if thriftJobStatus, err := workerRunStatusToScootRunStatus(sagaState.GetStartTaskData(id)); err == nil {
+					js.TaskData[id] = thriftJobStatus
+				}
+
 			}
 		}
 

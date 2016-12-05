@@ -35,7 +35,7 @@ func main() {
 	}
 	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
-	outputCreator, err := local.NewOutputCreator(tempDir)
+	outputCreator, err := local.NewOutputCreator(tempDir, nil)
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
