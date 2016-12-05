@@ -39,13 +39,8 @@ type handler struct {
 	statusUri   string
 }
 
-<<<<<<< HEAD
 //
 func NewHandler(stat stats.StatsReceiver, run runner.Runner, statusUri string) worker.Worker {
-=======
-// Creates a new Handler which combines a Runner to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
->>>>>>> origin/master
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, statusUri: statusUri}
 	go h.stats()
