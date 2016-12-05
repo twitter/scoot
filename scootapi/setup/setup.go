@@ -1,3 +1,6 @@
+// Package setup provides Cloud Scoot Setup, which is a mechanism for
+// running Scoot with local components, or initializing a connection
+// to remote ones, depending on configuration.
 package setup
 
 import (

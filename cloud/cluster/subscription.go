@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Subscription is a subscription to cluster changes.
+// Subscription is way to monitor updates to cluster changes
 type Subscription struct {
 	InitialMembers []Node            // The members at the time the subscription started
 	Updates        chan []NodeUpdate // Updates as they happen

@@ -3,6 +3,7 @@ package snapshot
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
 // This is useful for tools that want one file at a time, or for ScootFS to offer the data.
 // Many tools want a higher-level construct: a Filer.
+
 // A Filer lets clients deal with Snapshots as files in the local filesystem.
 type Filer interface {
 	Checkouter

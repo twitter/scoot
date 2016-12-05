@@ -1,3 +1,5 @@
+// The client package provides an interface and implementation for the
+// Scoot Worker API, as well as a CLI client that wraps it.
 package client
 
 import (
@@ -11,7 +13,6 @@ import (
 
 const defaultWorkerAddr = "localhost:9090"
 
-// Interface for
 type Client interface {
 	// Connection funtions
 	Dial() error
@@ -22,13 +23,13 @@ type Client interface {
 	runner.Runner
 }
 
-// Basic implementation of Client interface for interaction with Scoot worker API
 type simpleClient struct {
 	addr         string
 	dialer       dialer.Dialer
 	workerClient *worker.WorkerClient
 }
 
+// Create basic implementation of Client interface for interaction with Scoot worker API
 func NewSimpleClient(di dialer.Dialer, addr string) (Client, error) {
 	cl := &simpleClient{}
 	cl.dialer = di
@@ -64,6 +65,7 @@ func (c *simpleClient) Close() error {
 	return nil
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
@@ -77,6 +79,7 @@ func (c *simpleClient) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
@@ -90,6 +93,7 @@ func (c *simpleClient) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
@@ -103,6 +107,7 @@ func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 	return workerapi.ThriftWorkerStatusToDomain(status), nil
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) Status(id runner.RunId) (runner.ProcessStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {
@@ -116,6 +121,7 @@ func (c *simpleClient) Status(id runner.RunId) (runner.ProcessStatus, error) {
 	return runner.ProcessStatus{}, fmt.Errorf("no such process %v", id)
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) StatusAll() ([]runner.ProcessStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {

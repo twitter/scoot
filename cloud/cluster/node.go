@@ -4,8 +4,10 @@ import (
 	"fmt"
 )
 
+// A unique node identifier, like 'host:port'
 type NodeId string
 
+// This defines what can represent a Scoot node in a cluster
 type Node interface {
 	// A unique node identifier, like 'host:thriftPort'
 	Id() NodeId
@@ -39,6 +41,7 @@ func NewIdNodes(num int) []Node {
 	return r
 }
 
+// Implements interface Node.Id()
 func (n *idNode) Id() NodeId {
 	return n.id
 }

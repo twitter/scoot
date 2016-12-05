@@ -12,6 +12,27 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+// Make an invalid Filer
+func MakeInvalidFiler() snapshot.Filer {
+	return MakeFilerFacade(MakeNoopCheckouter(), MakeNoopIngester())
+}
+
+// FilerFacade creates a Filer from a Checkouter and Ingester
+type FilerFacade struct {
+	snapshot.Checkouter
+	snapshot.Ingester
+}
+
+// Make a Filer from a Checkouter and Ingester
+func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
+	return &FilerFacade{checkouter, ingester}
+}
+
+// Make a Filer that can Checkout() but does a noop Ingest().
+func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
+	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester())
+}
+
 // Creates a filer that copies ingested paths in and then back out for checkouts.
 func MakeTempFiler(tmp *temp.TempDir) snapshot.Filer {
 	return &tempFiler{tmp: tmp, snapshots: make(map[string]string)}
@@ -102,25 +123,4 @@ func (n *NoopIngester) Ingest(string) (string, error) {
 }
 func (n *NoopIngester) IngestMap(map[string]string) (string, error) {
 	return "", nil
-}
-
-// Make an invalid Filer
-func MakeInvalidFiler() snapshot.Filer {
-	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester())
-}
-
-// FilerFacade creates a Filer from a Checkouter and Ingester
-type FilerFacade struct {
-	snapshot.Checkouter
-	snapshot.Ingester
-}
-
-// Make a Filer from a Checkouter and Ingester
-func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
-	return &FilerFacade{checkouter, ingester}
-}
-
-// Make a Filer that can Checkout() but does a noop Ingest().
-func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
-	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester())
 }

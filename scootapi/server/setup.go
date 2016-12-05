@@ -4,19 +4,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/ice"
-
-	// For putting into ice.MagicBag
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/config/scootconfig"
+	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
-
-	// For putting into jsonconfig.Options
-	"github.com/scootdev/scoot/config/scootconfig"
-	"github.com/scootdev/scoot/saga/sagalogs"
+	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
 type servers struct {
@@ -34,22 +32,62 @@ func makeServers(
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:9090") },
+
+		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
+
+		func() endpoints.StatScope { return "scheduler" },
+
 		func(scope endpoints.StatScope) stats.StatsReceiver {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
-		MakeServer,
-		NewHandler,
-		makeServers,
-		saga.MakeSagaCoordinator,
-		sagalogs.MakeInMemorySagaLog,
-		scheduler.NewStatefulSchedulerFromCluster,
-		thrift.NewTTransportFactory,
+
+		func(
+			cl *cluster.Cluster,
+			sc saga.SagaCoordinator,
+			wf worker.WorkerFactory,
+			config scheduler.SchedulerConfig,
+			stat stats.StatsReceiver) scheduler.Scheduler {
+			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, wf, config, stat)
+		},
+
+		func(
+			s scheduler.Scheduler,
+			sc saga.SagaCoordinator,
+			stat stats.StatsReceiver) scoot.CloudScoot {
+			return NewHandler(s, sc, stat)
+		},
+
+		func(
+			h scoot.CloudScoot,
+			t thrift.TServerTransport,
+			tf thrift.TTransportFactory,
+			pf thrift.TProtocolFactory) thrift.TServer {
+			return MakeServer(h, t, tf, pf)
+		},
+
+		func(s stats.StatsReceiver) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:9091", s)
+		},
+
+		func(t thrift.TServer, h *endpoints.TwitterServer) servers {
+			return makeServers(t, h)
+		},
+
+		func(log saga.SagaLog) saga.SagaCoordinator {
+			return saga.MakeSagaCoordinator(log)
+		},
+
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 	)
 
 	schema := jsonconfig.Schema(map[string]jsonconfig.Implementations{
+		"SagaLog": {
+			"memory": &scootconfig.InMemorySagaLogConfig{},
+			"":       &scootconfig.InMemorySagaLogConfig{},
+		},
 		"Cluster": {
 			"memory": &scootconfig.ClusterMemoryConfig{},
 			"local":  &scootconfig.ClusterLocalConfig{},

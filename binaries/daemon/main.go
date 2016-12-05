@@ -15,6 +15,7 @@ import (
 )
 
 var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
+var qLen = flag.Int("test_q_len", 1000000, "queue length for testing")
 
 // A Scoot Daemon server.
 func main() {
@@ -40,8 +41,10 @@ func main() {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
-	r := local.NewSimpleRunner(ex, filer, outputCreator)
-	h := server.NewHandler(r, filer, 50*time.Millisecond)
+	rCh := make(chan struct{})
+	r := local.NewSimpleReportBackRunner(ex, filer, outputCreator, rCh)
+	qr := local.NewQueuingRunner(r, *qLen, rCh)
+	h := server.NewHandler(qr, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)

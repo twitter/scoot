@@ -1,3 +1,4 @@
+// Package scheduler provides the main job scheduling interface for Scoot
 package scheduler
 
 //go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go

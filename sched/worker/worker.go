@@ -1,3 +1,6 @@
+// Package worker provides the main Worker inferface that the scheduler uses to
+// run Tasks on worker nodes. This also includes a WorkerFactory which allows
+// for access of a Worker from a cluster Node.
 package worker
 
 //go:generate mockgen -source=worker.go -package=worker -destination=worker_mock.go
