@@ -4,18 +4,10 @@ import (
 	"os"
 	"os/exec"
 	"testing"
-
-	"github.com/scootdev/scoot/daemon/server"
 )
 
-var s *server.Server
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
-
+// each test starts and stops the daemon, run the tests one at a time
 func TestPython(t *testing.T) {
-	// each test starts and stops the daemon, run the tests one at a time
 	cmd := exec.Command("../../protocol/python/tests/integration.py")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

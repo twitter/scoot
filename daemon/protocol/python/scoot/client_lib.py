@@ -87,13 +87,17 @@ def display_state(val):
 
 def start():
   """ Establish a connection to the Daemon Server.  Must be called before interacting with the Daemon server.
+  
+  This function starts a client connection and verified that the echo command works.  If echo doesn't work,
+  then the function starts a daemon and verfies the connection to the new daemon with another echo command.
+  
+  If no connection is verified, a ScootException is raised.
   """
   global _client, _domain_sock
   if _domain_sock is None:
     raise ScootException(Exception("Could not find domain socket path."))
   if is_started():
     raise ScootException(Exception("Already started."))
-  channel = None
   try:
     channel = grpc.insecure_channel("unix://%s" % _domain_sock)
   except Exception as e:
@@ -116,6 +120,7 @@ def start():
         raise ScootException("Exception verifying connection: echo:'{}', '{}'". format(ping,e))
       
           
+  # if the connection was not verified, try starting the daemon and checking the connection again
   if _client is None or "UNAVAILABLE" in echoReturn:
     #the echo failed, try starting the daemon 
     gopath = re.split(":", os.environ['GOPATH'])[0]
@@ -303,6 +308,7 @@ def stop_daemon():
   req = daemon_pb2.EmptyStruct()
   try:
     _client.StopDaemon(req)
+    _client = None
   except Exception:
-      pass #  the call stops the daemon, but the grpc connection returns an error: swallow the error
+      pass  # the call stops the daemon, but the grpc connection returns an error: swallow the error
     
