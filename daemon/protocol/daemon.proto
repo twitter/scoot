@@ -6,6 +6,8 @@ syntax = "proto3";
 // install protoc-gen-go from https://github.com/golang/protobuf (you need this to be on your $PATH, not your GOPATH)
 // in this directory (github.com/scootdev/scoot/daemon/protocol), run:
 // protoc -I . daemon.proto --go_out=plugins=grpc:.
+// if the generated daemon.pb.go contains "const _ = grpc.SupportPackageIsVersion4" (around line 414)
+// change it to "const _ = grpc.SupportPackageIsVersion3"
 
 
 // Protocol for talking to a Local Scoot Daemon.
@@ -19,6 +21,7 @@ service ScootDaemon {
   rpc CheckoutSnapshot(CheckoutSnapshotRequest) returns (CheckoutSnapshotReply) {}
   rpc Run(RunRequest) returns (RunReply) {}
   rpc Poll(PollRequest) returns (PollReply) {}
+  rpc StopDaemon(EmptyStruct) returns (EmptyStruct) {}
 }
 
 // Echo (for testing only).
@@ -124,4 +127,7 @@ message PollReply {
     string error = 5;
   }
   repeated Status status = 1;
+}
+
+message EmptyStruct {
 }
