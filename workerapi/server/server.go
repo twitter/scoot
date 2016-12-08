@@ -110,6 +110,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	if h.statusUri != "" && len(cmd.Argv) == 1 && cmd.Argv[0] == GetStatusDirective {
 		status := worker.NewRunStatus()
+		status.Status = worker.Status_BADREQUEST
 		status.Error = &h.statusUri
 		return status, nil
 	}

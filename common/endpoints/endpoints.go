@@ -8,16 +8,20 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/scootdev/scoot/common/stats"
 )
 
 func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
+	hostname, _ := os.Hostname()
 	return &TwitterServer{
 		Addr:            addr,
 		Stats:           stats,
-		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string)},
+		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string), hostname: hostname},
 	}
 }
 
@@ -38,7 +42,8 @@ func (s *TwitterServer) Serve() error {
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Common paths: '/health', '/admin/metrics.json', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'", 501)
+	msg := "Common paths: '/health', '/admin/metrics.json', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'"
+	http.Error(w, msg, http.StatusNotImplemented)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +58,7 @@ func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 	pretty := r.URL.Query().Get("pretty") == "true"
 	str := s.Stats.Render(pretty)
 	if _, err := io.Copy(w, bytes.NewBuffer(str)); err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -73,9 +78,14 @@ const StderrName = "stderr"
 type ResourceHandler struct {
 	//defines: map[Namespace]map[ResourceName]ResourcePath
 	resources map[string]map[string]string
+	hostname  string
+	mutex     sync.Mutex
 }
 
 func (h *ResourceHandler) AddResource(namespace, name, path string) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
 	if _, ok := h.resources[namespace]; !ok {
 		h.resources[namespace] = make(map[string]string)
 	}
@@ -84,11 +94,58 @@ func (h *ResourceHandler) AddResource(namespace, name, path string) {
 }
 
 func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//TODO:
-	//Add a second option beyond text - serve barebones vanilla javascript that does ajax updates to tail resource.
-	// id := ""
-	// pos := 0
-	// name := ""
-	// path := h.idToNamedPaths[id][name]
-	// io.Copy(w, path[pos], len)
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	clientHtml :=
+		`<html>
+<title>%s</title>
+<script type="text/javascript">
+  var prevLength = 0
+  checkAtBottom = function() {
+    //scrolling: http://stackoverflow.com/a/22394544
+    var scrollTop = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
+    var scrollHeight = (document.documentElement && document.documentElement.scrollHeight) || document.body.scrollHeight;
+    return (scrollTop + window.innerHeight) >= scrollHeight;
+  }
+  gotoBottom = function() {
+    var scrollHeight = (document.documentElement && document.documentElement.scrollHeight) || document.body.scrollHeight;
+    var scrollLeft = (document.documentElement && document.documentElement.scrollLeft) || document.body.scrollLeft;
+    window.scrollTo(scrollLeft, scrollHeight);
+  }
+  sendRequest = function() {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+      var DONE=4, OK=200;
+      if (xhr.readyState === DONE && xhr.status == OK) {
+        var wasAtBottom = checkAtBottom()
+        document.body.innerText += xhr.responseText.substring(prevLength);
+        if (wasAtBottom)
+          gotoBottom()
+        prevLength = xhr.responseText.length
+      }
+    }
+    xhr.open("GET", location.href+"?content=true"); //TODO: request range
+    xhr.send();
+  };
+  setInterval(sendRequest, 2500)
+</script>
+</html>
+`
+	paths := strings.Split(r.URL.Path, "/")
+	namespace := paths[1]
+	name := paths[2]
+	resourcePath := h.resources[namespace][name]
+	if resource, err := os.Open(resourcePath); err != nil {
+		http.Error(w, "", http.StatusGone)
+	} else if info, err := resource.Stat(); err != nil {
+		http.Error(w, "", http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if r.URL.Query().Get("content") == "true" {
+			http.ServeContent(w, r, "", info.ModTime(), resource)
+		} else {
+			fmt.Fprintf(w, clientHtml, h.hostname+resourcePath)
+		}
+	}
 }
