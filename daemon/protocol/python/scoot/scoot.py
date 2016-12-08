@@ -53,9 +53,9 @@ Options:
 """
 import sys
 try:
-	import docopt
+  import docopt
 except ImportError as e:
-    sys.exit("Error importing docopt.\nMake sure you have docopt installed: 'pip install docopt'")
+  sys.exit("Error importing docopt.\nMake sure you have docopt installed: 'pip install docopt'")
 
 import client_lib as proto
 
