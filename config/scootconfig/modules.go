@@ -95,11 +95,11 @@ type WorkersThriftConfig struct {
 	Type               string
 	PollingPeriod      string // will be parsed to a time.Duration
 	EnforceTaskTimeout bool
-	Timeout            string // will be parsed to a time.Duration
+	TaskTimeout        string // will be parsed to a time.Duration
 }
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond
-const defaultTimeout = time.Duration(30) * time.Minute
+const defaultTaskTimeout = time.Duration(30) * time.Minute
 const defaultOverhead = time.Duration(5) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
@@ -107,7 +107,7 @@ func (c *WorkersThriftConfig) Create(
 	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
 
 	pollingPeriod := defaultPollingPeriod
-	timeout := defaultTimeout
+	taskTimeout := defaultTaskTimeout
 	var err error
 
 	// apply defaults
@@ -118,8 +118,8 @@ func (c *WorkersThriftConfig) Create(
 		}
 	}
 
-	if c.Timeout != "" {
-		timeout, err = time.ParseDuration(c.Timeout)
+	if c.TaskTimeout != "" {
+		taskTimeout, err = time.ParseDuration(c.TaskTimeout)
 		if err != nil {
 			return nil, err
 		}

@@ -20,6 +20,6 @@ type Worker interface {
 	RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error)
 }
 
-// We suspect we will only have 1 implementation of this interface for a long time: workers.PollingWorker
+// We suspect we will only have 1 implementation of this interface for a long time: workers.ServiceWorkerAdapter
 // Eventually, we may want the worker to push results to the scheduler instead of
 // having to pull.

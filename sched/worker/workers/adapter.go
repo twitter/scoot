@@ -11,16 +11,20 @@ import (
 	"github.com/scootdev/scoot/sched"
 )
 
+// NewServiceWorker creates a new Worker that uses the delegate runner.Service and adds a
+// default Timeout to tasks (and waits up to overhead extra for them to be done).
 func NewServiceWorker(del runner.Service, timeout time.Duration, overhead time.Duration) *ServiceWorkerAdapter {
 	return &ServiceWorkerAdapter{del, timeout, overhead}
 }
 
+// ServiceWorkerAdapter turns a runner.Service into a Worker
 type ServiceWorkerAdapter struct {
 	del      runner.Service
 	timeout  time.Duration
 	overhead time.Duration
 }
 
+// RunAndWait satisfies the worker.Worker interface
 func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
 	cmd := task.Command
 	if cmd.Timeout == 0 {

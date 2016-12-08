@@ -53,11 +53,6 @@ func (c Command) String() string {
 	return b.String()
 }
 
-// XXX(dbentley): remove this
-// func NewCommand(argv []string, env map[string]string, timeout time.Duration) *Command {
-// 	return &Command{Argv: argv, EnvVars: env, Timeout: timeout}
-// }
-
 // Service allows starting/abort'ing runs and checking on their status.
 type Service interface {
 	Controller
