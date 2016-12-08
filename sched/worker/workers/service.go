@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/sched"
 )
 
 func NewServiceWorker(del runner.Service, overhead time.Duration) *ServiceWorkerAdapter {
@@ -22,13 +23,13 @@ type ServiceWorkerAdapter struct {
 func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
 	cmd := task.Command
 	st, err := a.del.Run(&cmd)
-	if err != nil || st.State().IsDone() {
+	if err != nil || st.State.IsDone() {
 		return st, err
 	}
 
-	q := runner.SingleRun(st.RunID)
+	q := runner.SingleRunQ(st.RunID)
 	w := runner.Wait{Timeout: task.Command.Timeout.Add(a.overhead)}
-	stats, err := r.querier.Query(q, w)
+	stats, err := a.del.Query(q, w)
 	if err != nil {
 		return nil, err
 	}

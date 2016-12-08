@@ -21,9 +21,9 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 	}
 	end := time.Now().Add(wait.Timeout)
 	for time.Now().Before(end) {
-		r, err := r.del.QueryNow(q)
-		if err != nil || len(r) > 0 {
-			return r, err
+		st, err := r.del.QueryNow(q)
+		if err != nil || len(st) > 0 {
+			return st, err
 		}
 		time.Sleep(r.period)
 	}

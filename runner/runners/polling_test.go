@@ -1,6 +1,8 @@
 package runners
 
-import ()
+import (
+	"testing"
+)
 
 func TestPolling_Simple(t *testing.T) {
 }
