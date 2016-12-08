@@ -65,11 +65,11 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			ex execer.Execer,
 			outputCreator runner.OutputCreator,
-			filer snapshot.Filer) runner.Runner {
+			filer snapshot.Filer) runner.Service {
 			return runners.NewSingleRunner(ex, filer, outputCreator)
 		},
 
-		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
+		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
 			return NewHandler(stat, r)
 		},
 

@@ -10,7 +10,7 @@ import (
 // Create a new handler that implements daemon protocol and works with domain types.
 //
 // TODO: when Runner eventually implements Poll(), we could get rid of handler and use runner directly in server.
-func NewHandler(runner runner.Runner, filer snapshot.Filer, pollInterval time.Duration) *Handler {
+func NewHandler(runner runner.Service, filer snapshot.Filer, pollInterval time.Duration) *Handler {
 	return &Handler{
 		runner:       runner,
 		filer:        filer,
@@ -19,7 +19,7 @@ func NewHandler(runner runner.Runner, filer snapshot.Filer, pollInterval time.Du
 }
 
 type Handler struct {
-	runner       runner.Runner
+	runner       runner.Service
 	filer        snapshot.Filer
 	pollInterval time.Duration
 }

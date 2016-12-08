@@ -29,13 +29,13 @@ func MakeServer(
 
 type handler struct {
 	stat        stats.StatsReceiver
-	run         runner.Runner
+	run         runner.Service
 	timeLastRpc time.Time
 	mu          sync.Mutex
 }
 
-// Creates a new Handler which combines a Runner to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
+// Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
+func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run}
 	go h.stats()

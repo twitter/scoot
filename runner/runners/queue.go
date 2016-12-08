@@ -17,14 +17,14 @@ type cmdAndID struct {
 }
 
 // NewQueueRunner creates a new Service that uses a Queue
-func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, capacity int) runner.Runner {
+func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, capacity int) runner.Service {
 	statuses := NewStatuses()
 	inv := NewInvoker(exec, filer, output)
 	controller := &QueueController{statuses: statuses, inv: inv, capacity: capacity}
 	return ServiceFacade{controller, statuses, statuses}
 }
 
-func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) runner.Runner {
+func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) runner.Service {
 	return NewQueueRunner(exec, filer, output, 0)
 }
 

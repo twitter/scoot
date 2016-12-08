@@ -167,7 +167,7 @@ func setup(capacity int, t *testing.T) *env {
 
 type env struct {
 	sim *execers.SimExecer
-	r   runner.Runner
+	r   runner.Service
 }
 
 func (t *env) teardown() {

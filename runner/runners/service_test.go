@@ -40,13 +40,13 @@ func badRequest(errorText string) runner.RunStatus {
 	return runner.BadRequestStatus(runner.RunID(""), fmt.Errorf(errorText))
 }
 
-func assertRun(t *testing.T, r runner.Runner, expected runner.RunStatus, args ...string) runner.RunID {
+func assertRun(t *testing.T, r runner.Service, expected runner.RunStatus, args ...string) runner.RunID {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, expected, args...)
 	return runId
 }
 
-func assertWait(t *testing.T, r runner.Runner, runId runner.RunID, expected runner.RunStatus, args ...string) {
+func assertWait(t *testing.T, r runner.Service, runId runner.RunID, expected runner.RunStatus, args ...string) {
 	actual := wait(r, runId, expected)
 	assertStatus(t, actual, expected, args...)
 }
@@ -70,7 +70,7 @@ func assertStatus(t *testing.T, actual runner.RunStatus, expected runner.RunStat
 	}
 }
 
-func run(t *testing.T, r runner.Runner, args []string) runner.RunID {
+func run(t *testing.T, r runner.Service, args []string) runner.RunID {
 	cmd := &runner.Command{}
 	cmd.Argv = args
 	status, err := r.Run(cmd)
@@ -80,7 +80,7 @@ func run(t *testing.T, r runner.Runner, args []string) runner.RunID {
 	return status.RunID
 }
 
-func wait(r runner.Runner, run runner.RunID, expected runner.RunStatus) runner.RunStatus {
+func wait(r runner.Service, run runner.RunID, expected runner.RunStatus) runner.RunStatus {
 	st, err := runner.WaitForState(r, run, expected.State)
 	if err != nil {
 		panic(err)

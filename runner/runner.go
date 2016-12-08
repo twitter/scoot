@@ -62,9 +62,3 @@ type Service interface {
 	// but we have it for legacy reasons.
 	StatusEraser
 }
-
-// XXX(dbentley): remove Runner
-// Alias that exists just to make refactor PR smaller.
-type Runner interface {
-	Service
-}

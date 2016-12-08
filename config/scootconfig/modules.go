@@ -129,7 +129,7 @@ func (c *WorkersThriftConfig) Create(
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
 		q := runners.NewPollingService(cl, cl, cl, pollingPeriod)
-		return workers.NewServiceWorker(q, timeout, defaultOverhead)
+		return workers.NewServiceWorker(q, taskTimeout, defaultOverhead)
 	}
 
 	return wf, nil

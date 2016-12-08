@@ -95,7 +95,7 @@ func TestAbort(t *testing.T) {
 	}
 }
 
-func newRunner() (runner.Runner, *execers.SimExecer) {
+func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
