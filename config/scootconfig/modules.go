@@ -95,18 +95,19 @@ type WorkersThriftConfig struct {
 	Type               string
 	PollingPeriod      string // will be parsed to a time.Duration
 	EnforceTaskTimeout bool
-	Overhead           string // will be parsed to a time.Duration
+	Timeout            string // will be parsed to a time.Duration
 }
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond
-const defaultOverhead = time.Duration(30) * time.Minute
+const defaultTimeout = time.Duration(30) * time.Minute
+const defaultOverhead = time.Duration(5) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,
 	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
 
 	pollingPeriod := defaultPollingPeriod
-	overhead := defaultOverhead
+	timeout := defaultTimeout
 	var err error
 
 	// apply defaults
@@ -117,8 +118,8 @@ func (c *WorkersThriftConfig) Create(
 		}
 	}
 
-	if c.Overhead != "" {
-		overhead, err = time.ParseDuration(c.Overhead)
+	if c.Timeout != "" {
+		timeout, err = time.ParseDuration(c.Timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +129,7 @@ func (c *WorkersThriftConfig) Create(
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
 		q := runners.NewPollingService(cl, cl, cl, pollingPeriod)
-		return workers.NewServiceWorker(q, overhead)
+		return workers.NewServiceWorker(q, timeout, defaultOverhead)
 	}
 
 	return wf, nil

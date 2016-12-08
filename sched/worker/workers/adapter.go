@@ -11,17 +11,21 @@ import (
 	"github.com/scootdev/scoot/sched"
 )
 
-func NewServiceWorker(del runner.Service, overhead time.Duration) *ServiceWorkerAdapter {
-	return &ServiceWorkerAdapter{del, overhead}
+func NewServiceWorker(del runner.Service, timeout time.Duration, overhead time.Duration) *ServiceWorkerAdapter {
+	return &ServiceWorkerAdapter{del, timeout, overhead}
 }
 
 type ServiceWorkerAdapter struct {
 	del      runner.Service
+	timeout  time.Duration
 	overhead time.Duration
 }
 
 func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
 	cmd := task.Command
+	if cmd.Timeout == 0 {
+		cmd.Timeout = a.timeout
+	}
 	st, err := a.del.Run(&cmd)
 	if err != nil || st.State.IsDone() {
 		return st, err
@@ -30,7 +34,7 @@ func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.Run
 	id := st.RunID
 
 	q := runner.Query{Runs: []runner.RunID{id}, States: runner.DONE_MASK}
-	w := runner.Wait{Timeout: task.Command.Timeout + a.overhead}
+	w := runner.Wait{Timeout: cmd.Timeout + a.overhead}
 	stats, err := a.del.Query(q, w)
 	if err != nil {
 		return runner.RunStatus{}, err

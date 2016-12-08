@@ -45,6 +45,7 @@ vet:
 
 test:
 	# Runs only unit tests and property tests
+	go install ./binaries/...
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 

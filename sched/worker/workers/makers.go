@@ -16,12 +16,12 @@ func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	chaos.SetDelay(time.Duration(500) * time.Millisecond)
-	return NewServiceWorker(chaos, time.Second)
+	return NewServiceWorker(chaos, 0, time.Second)
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
 func MakeSimWorker() worker.Worker {
 	ex := execers.NewSimExecer()
 	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	return NewServiceWorker(r, time.Second)
+	return NewServiceWorker(r, 0, time.Second)
 }
