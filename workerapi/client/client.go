@@ -24,6 +24,7 @@ type Client interface {
 	runner.Controller
 	runner.StatusQueryNower
 	runner.LegacyStatusReader
+	runner.StatusEraser
 }
 
 type simpleClient struct {

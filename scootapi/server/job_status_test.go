@@ -204,7 +204,7 @@ func TestRunStatusRoundTrip(t *testing.T) {
 	stdoutRef := "http://example.com/stdout"
 
 	st := runner.RunStatus{
-		RunId:     runner.RunID("2"),
+		RunID:     runner.RunID("2"),
 		State:     runner.COMPLETE,
 		StdoutRef: stdoutRef,
 		StderrRef: "",

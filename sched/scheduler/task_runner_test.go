@@ -89,7 +89,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	chaos := runners.NewChaosRunner(nil)
-	worker := workers.NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
+	worker := workers.NewServiceWorker(chaos, time.Duration(2)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("starting error"))
 	err := runTaskAndLog(s, worker, "task1", task, false, stats.NilStatsReceiver())

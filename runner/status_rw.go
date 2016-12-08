@@ -100,7 +100,7 @@ type StatusWriter interface {
 	StatusEraser
 }
 
-// StatusErraser allows Erasing a Status
+// StatusEraser allows Erasing a Status
 type StatusEraser interface {
 	// Prunes the run history so StatusAll() can return a reasonable number of runs.
 	Erase(run RunID) error

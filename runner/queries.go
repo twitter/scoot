@@ -11,8 +11,8 @@ func WaitForever() Wait {
 	return Wait{Timeout: time.Duration(math.MaxInt64)}
 }
 
-func SingleRunQ(id RunID) RunStatus {
-	return Query{Runs: []RunId{id}, States: ALL_MASK}
+func SingleRunQ(id RunID) Query {
+	return Query{Runs: []RunID{id}, States: ALL_MASK}
 }
 
 // Status returns the current status of id from q.

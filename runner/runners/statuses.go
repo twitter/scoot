@@ -141,17 +141,25 @@ func (s *Statuses) queryAndListen(q runner.Query, listen bool) (current []runner
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for _, runID := range q.Runs {
-		st, ok := s.runs[runID]
-		if !ok {
-			return nil, nil, fmt.Errorf(UnknownRunIDMsg, runID)
+	if q.AllRuns {
+		for _, st := range s.runs {
+			if q.States.Matches(st.State) {
+				current = append(current, st)
+			}
 		}
-		if q.States.Matches(st.State) {
-			current = append(current, st)
+	} else {
+		for _, runID := range q.Runs {
+			st, ok := s.runs[runID]
+			if !ok {
+				return nil, nil, fmt.Errorf(UnknownRunIDMsg, runID)
+			}
+			if q.States.Matches(st.State) {
+				current = append(current, st)
+			}
 		}
 	}
 
-	if err != nil || len(current) > 0 || !listen {
+	if len(current) > 0 || !listen {
 		return current, nil, err
 	}
 

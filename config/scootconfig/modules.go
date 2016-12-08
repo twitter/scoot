@@ -15,6 +15,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched/scheduler"
@@ -94,30 +95,30 @@ type WorkersThriftConfig struct {
 	Type               string
 	PollingPeriod      string // will be parsed to a time.Duration
 	EnforceTaskTimeout bool
-	TaskTimeout        string // will be parsed to a time.Duration
+	Overhead           string // will be parsed to a time.Duration
 }
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond
-const defaultTaskTimeout = time.Duration(30) * time.Minute
+const defaultOverhead = time.Duration(30) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,
 	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
 
-	pp := defaultPollingPeriod
-	tt := defaultTaskTimeout
+	pollingPeriod := defaultPollingPeriod
+	overhead := defaultOverhead
 	var err error
 
 	// apply defaults
 	if c.PollingPeriod != "" {
-		pp, err = time.ParseDuration(c.PollingPeriod)
+		pollingPeriod, err = time.ParseDuration(c.PollingPeriod)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if c.TaskTimeout != "" {
-		tt, err = time.ParseDuration(c.TaskTimeout)
+	if c.Overhead != "" {
+		overhead, err = time.ParseDuration(c.Overhead)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +127,8 @@ func (c *WorkersThriftConfig) Create(
 	wf := func(node cluster.Node) worker.Worker {
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
-		return workers.NewPollingWorkerWithTimeout(cl, pp, c.EnforceTaskTimeout, tt)
+		q := runners.NewPollingService(cl, cl, cl, pollingPeriod)
+		return workers.NewServiceWorker(q, overhead)
 	}
 
 	return wf, nil

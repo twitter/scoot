@@ -48,7 +48,7 @@ type checkoutAndError struct {
 // Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
 // Run will not return until the process is not running.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
-	log.Printf("runner/runners/invoke.go: Run id %v cmd %+v", id, cmd)
+	log.Printf("runner/runners/invoke.go: run. id %v cmd %+v", id, cmd)
 	defer func() {
 		updateCh <- r
 		close(updateCh)
@@ -78,7 +78,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	defer checkout.Release()
 
-	log.Printf("runner.local.invoker.Run cmd: %+v checkout: %v", cmd, checkout.Path())
+	log.Printf("runner/runners/invoke.go: checkout done. id %v cmd: %+v checkout: %v", id, cmd, checkout.Path())
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
@@ -124,6 +124,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.TimeoutStatus(id)
 	case st = <-processCh:
 	}
+
+	log.Printf("runner/runners/invoke.go: run done. id %v status %+v cmd: %+v checkout: %v", id, st, cmd, checkout.Path())
 
 	switch st.State {
 	case execer.COMPLETE:

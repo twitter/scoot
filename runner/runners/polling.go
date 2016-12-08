@@ -6,6 +6,15 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
+func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) *PollingStatusQuerier {
+	return &PollingStatusQuerier{del, period}
+}
+
+func NewPollingService(c runner.Controller, e runner.StatusEraser, nower runner.StatusQueryNower, period time.Duration) runner.Service {
+	q := NewPollingStatusQuerier(nower, period)
+	return &ServiceFacade{c, q, e}
+}
+
 type PollingStatusQuerier struct {
 	del    runner.StatusQueryNower
 	period time.Duration
@@ -29,4 +38,14 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 	}
 
 	return nil, nil
+}
+
+// Status returns the current status of id from q.
+func (r *PollingStatusQuerier) Status(id runner.RunID) (runner.RunStatus, error) {
+	return runner.StatusNow(r, id)
+}
+
+// StatusAll returns the Current status of all runs
+func (r *PollingStatusQuerier) StatusAll() ([]runner.RunStatus, error) {
+	return runner.StatusAll(r)
 }

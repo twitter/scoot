@@ -27,14 +27,16 @@ func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.Run
 		return st, err
 	}
 
-	q := runner.SingleRunQ(st.RunID)
-	w := runner.Wait{Timeout: task.Command.Timeout.Add(a.overhead)}
+	id := st.RunID
+
+	q := runner.Query{Runs: []runner.RunID{id}, States: runner.DONE_MASK}
+	w := runner.Wait{Timeout: task.Command.Timeout + a.overhead}
 	stats, err := a.del.Query(q, w)
 	if err != nil {
-		return nil, err
+		return runner.RunStatus{}, err
 	}
 	if len(stats) == 1 {
-		return stats[0]
+		return stats[0], nil
 	}
-	return runner.TimeoutStatus(st.RunID)
+	return runner.TimeoutStatus(st.RunID), nil
 }
