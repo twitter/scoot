@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"fmt"
+	"math"
 	"time"
 )
 
@@ -29,13 +29,13 @@ const (
 )
 
 // Helper Function to create StateMask that matches exactly state
-func MaskForState(state ProcessState) StateMask {
+func MaskForState(state RunState) StateMask {
 	return 1 << uint(state)
 }
 
 // Query describes a query for RunStatuses.
-// The Runs and States are and'ed: a RunStatus matches a Query
-// if its ID is in q.Runs (or q.AllRuns) and its state is in q.States
+// The Runs and States are and'ed: a RunStatus matches a Query if its ID is in q.Runs (or q.AllRuns)
+// and its state is in q.States
 type Query struct {
 	Runs    []RunID   // Runs to query for
 	AllRuns bool      // Whether to match all runs
@@ -71,19 +71,6 @@ type StatusQueryNower interface {
 	QueryNow(q Query) ([]RunStatus, error)
 }
 
-// Convenience methods for common queries in terms of the more general Query interface.
-
-// Status returns the current status of id from q.
-func Status(q StatusQueryNower, id RunID) (RunStatus, error) {
-	return q.QueryNow(Query{Runs: {id}, States: ALL_MASK})
-	return RunStatus{}, fmt.Errorf("Not yet implemented")
-}
-
-// StatusAll returns the Current status of all runs
-func StatusAll(q StatusQueryNower) ([]RunStatus, error) {
-	return nil, fmt.Errorf("not yet implemented")
-}
-
 // LegacyStatusReader contains legacy methods to read Status'es.
 // Prefer using the convenience methods above.
 type LegacyStatusReader interface {
@@ -117,4 +104,27 @@ type StatusWriter interface {
 type StatusEraser interface {
 	// Prunes the run history so StatusAll() can return a reasonable number of runs.
 	Erase(run RunID) error
+}
+
+func (m StateMask) Matches(state RunState) bool {
+	return MaskForState(state)&m != 0
+}
+
+// Matches checks if st matches q
+func (q Query) Matches(st RunStatus) bool {
+	if !q.States.Matches(st.State) {
+		return false
+	}
+
+	if q.AllRuns {
+		return true
+	}
+
+	for _, id := range q.Runs {
+		if id == st.RunID {
+			return true
+		}
+	}
+
+	return false
 }

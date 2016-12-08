@@ -28,18 +28,17 @@ func (h *Handler) CreateSnapshot(path string) (snapshotId string, err error) {
 	return h.filer.Ingest(path)
 }
 
-func (h *Handler) CheckoutSnapshot(snapshotId runner.SnapshotId, dir string) error {
-	// Checkout snapshot in a default directory then move that checkout to the specified dir.
-	_, err := h.filer.CheckoutAt(string(snapshotId), dir)
+func (h *Handler) CheckoutSnapshot(snapshotID string, dir string) error {
+	_, err := h.filer.CheckoutAt(snapshotID, dir)
 	return err
 }
 
-func (h *Handler) Run(cmd *runner.Command) (status runner.ProcessStatus, err error) {
+func (h *Handler) Run(cmd *runner.Command) (status runner.RunStatus, err error) {
 	// Direct delegation to underlying runner.
 	return h.runner.Run(cmd)
 }
 
-func (h *Handler) Poll(runIds []runner.RunId, timeout time.Duration, returnAll bool) (statuses []runner.ProcessStatus) {
+func (h *Handler) Poll(runIds []runner.RunID, timeout time.Duration, returnAll bool) (statuses []runner.RunStatus) {
 	// Set up pollTicker to periodically query runner for status.
 	// Set up callerTimer to handle user-specified timeout.
 	pollTicker := time.NewTicker(h.pollInterval)

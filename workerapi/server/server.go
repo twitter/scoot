@@ -119,7 +119,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
-	process, err := h.run.Abort(runner.RunId(runId))
+	process, err := h.run.Abort(runner.RunID(runId))
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +130,6 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()
-	h.run.Erase(runner.RunId(runId))
+	h.run.Erase(runner.RunID(runId))
 	return nil
 }

@@ -9,14 +9,14 @@ import (
 )
 
 // Creates a new Chaos Runner
-func NewChaosRunner(delegate runner.Runner) *ChaosRunner {
+func NewChaosRunner(delegate runner.Service) *ChaosRunner {
 	return &ChaosRunner{del: delegate}
 }
 
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,
 // but delaying a random time between 0 and MaxDelay, or returning an error
 type ChaosRunner struct {
-	del      runner.Runner
+	del      runner.Service
 	mu       sync.Mutex
 	maxDelay time.Duration
 	err      error
@@ -55,6 +55,22 @@ func (r *ChaosRunner) Run(cmd *runner.Command) (runner.RunStatus, error) {
 		return runner.RunStatus{}, err
 	}
 	return r.del.Run(cmd)
+}
+
+func (r *ChaosRunner) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, error) {
+	err := r.delay()
+	if err != nil {
+		return nil, err
+	}
+	return r.del.Query(q, w)
+}
+
+func (r *ChaosRunner) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+	err := r.delay()
+	if err != nil {
+		return nil, err
+	}
+	return r.del.QueryNow(q)
 }
 
 func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, error) {

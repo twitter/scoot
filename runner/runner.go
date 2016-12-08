@@ -53,9 +53,10 @@ func (c Command) String() string {
 	return b.String()
 }
 
-func NewCommand(argv []string, env map[string]string, timeout time.Duration) *Command {
-	return &Command{Argv: argv, EnvVars: env, Timeout: timeout}
-}
+// XXX(dbentley): remove this
+// func NewCommand(argv []string, env map[string]string, timeout time.Duration) *Command {
+// 	return &Command{Argv: argv, EnvVars: env, Timeout: timeout}
+// }
 
 // Service allows starting/abort'ing runs and checking on their status.
 type Service interface {
@@ -67,7 +68,7 @@ type Service interface {
 	StatusEraser
 }
 
-// TODO(dbentley): remove Runner
+// XXX(dbentley): remove Runner
 // Alias that exists just to make refactor PR smaller.
 type Runner interface {
 	Service

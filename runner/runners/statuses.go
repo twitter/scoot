@@ -2,7 +2,9 @@ package runners
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/scootdev/scoot/runner"
 )
@@ -20,13 +22,30 @@ type Statuses struct {
 	mu        sync.Mutex
 	runs      map[runner.RunID]runner.RunStatus
 	nextRunID int64
+	listeners []queryAndCh
+}
+
+type queryAndCh struct {
+	q  runner.Query
+	ch chan runner.RunStatus
 }
 
 // Writer interface
 
 // NewRun creates a new RunID in state Preparing
 func (s *Statuses) NewRun() (runner.RunStatus, error) {
-	return runner.RunStatus{}, fmt.Errorf("not yet implemented")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	id := runner.RunID(strconv.FormatInt(s.nextRunID, 10))
+	s.nextRunID++
+
+	st := runner.RunStatus{
+		RunID: id,
+		State: runner.PENDING,
+	}
+	s.runs[id] = st
+	return st, nil
 }
 
 // Update writes a new status.
@@ -34,24 +53,67 @@ func (s *Statuses) NewRun() (runner.RunStatus, error) {
 //   cannot change a status once it is Done
 //   cannot erase Stdout/Stderr Refs
 func (s *Statuses) Update(newStatus runner.RunStatus) error {
-	return fmt.Errorf("not yet implemented")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	oldStatus, ok := s.runs[newStatus.RunID]
+	if ok && oldStatus.State.IsDone() {
+		return nil
+	}
+
+	if newStatus.StdoutRef == "" {
+		newStatus.StdoutRef = oldStatus.StdoutRef
+	}
+	if newStatus.StderrRef == "" {
+		newStatus.StderrRef = oldStatus.StderrRef
+	}
+
+	s.runs[newStatus.RunID] = newStatus
+
+	listeners := make([]queryAndCh, 0, len(s.listeners))
+	for _, listener := range s.listeners {
+		if listener.q.Matches(newStatus) {
+			listener.ch <- newStatus
+			close(listener.ch)
+		} else {
+			listeners = append(listeners, listener)
+		}
+	}
+	s.listeners = listeners
+	return nil
 }
 
 // Reader interface (implements runner.StatusQuerier)
 
 // Query returns all RunStatus'es matching q, waiting as described by w
 func (s *Statuses) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
-	return nil, fmt.Errorf("not yet implemented")
+	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
+	if err != nil || len(current) > 0 || wait.Timeout == 0 {
+		return current, err
+	}
+
+	var timeout <-chan time.Time
+	if wait.Timeout > 0 {
+		ticker := time.NewTicker(wait.Timeout)
+		timeout = ticker.C
+		defer ticker.Stop()
+	}
+
+	select {
+	case st := <-future:
+		return []runner.RunStatus{st}, nil
+	case <-timeout:
+		return nil, nil
+	}
 }
 
 // QueryNow returns all RunStatus'es matching q in their current state
 func (s *Statuses) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
-	return nil, fmt.Errorf("not yet implemented")
+	return s.Query(q, runner.Wait{})
 }
 
 // Status returns the current status of id from q.
 func (s *Statuses) Status(id runner.RunID) (runner.RunStatus, error) {
-	return runner.Status(s, id)
+	return runner.StatusNow(s, id)
 }
 
 // StatusAll returns the Current status of all runs
@@ -61,5 +123,39 @@ func (s *Statuses) StatusAll() ([]runner.RunStatus, error) {
 
 // Prunes the run history so StatusAll() can return a reasonable number of runs.
 func (s *Statuses) Erase(run runner.RunID) error {
-	return fmt.Errorf("not yet implemented")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.runs[run]
+	if st.State.IsDone() {
+		delete(s.runs, run)
+	}
+	return nil
+}
+
+// queryAndListen performs a query, returning the current results and optionally listens to the query
+// returns:
+//   the current results
+//   a channel that will hold the next result (if current is empty and err is nil)
+//   error
+func (s *Statuses) queryAndListen(q runner.Query, listen bool) (current []runner.RunStatus, future chan runner.RunStatus, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, runID := range q.Runs {
+		st, ok := s.runs[runID]
+		if !ok {
+			return nil, nil, fmt.Errorf(UnknownRunIDMsg, runID)
+		}
+		if q.States.Matches(st.State) {
+			current = append(current, st)
+		}
+	}
+
+	if err != nil || len(current) > 0 || !listen {
+		return current, nil, err
+	}
+
+	ch := make(chan runner.RunStatus, 1)
+	s.listeners = append(s.listeners, queryAndCh{q: q, ch: ch})
+	return nil, ch, nil
 }

@@ -35,35 +35,25 @@ func NewPollingWorkerWithTimeout(
 
 // PollingWorker acts as a Worker by polling the underlying runner every period
 type PollingWorker struct {
-	runner         runner.Runner
-	pollingPeriod  time.Duration
-	enforceTimeout bool
-	timeout        time.Duration
+	controller runner.Controller
+	querier    runner.StatusQuerier
 }
 
-func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
+func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
 	// schedule the task
-	status, err := r.runner.Run(&task.Command)
+	st, err := r.controller.Run(&task.Command)
+	if err != nil || st.State().IsDone() {
+		return st, err
+	}
+
+	q := runner.SingleRun(st.RunID)
+	w := runner.Wait{Timeout: task.Command.Timeout}
+	stats, err := r.querier.Query(q, w)
 	if err != nil {
-		return status, err
+		return nil, err
 	}
-
-	timeSpent := 0 * time.Second
-	id := status.RunId
-
-	// Periodically check in with the worker to get a task update
-	for !r.enforceTimeout || (r.enforceTimeout && timeSpent < r.timeout) {
-		time.Sleep(r.pollingPeriod)
-		timeSpent += r.pollingPeriod
-
-		status, err = r.runner.Status(id)
-		if err != nil || status.State.IsDone() {
-			return status, err
-		}
+	if len(stats) == 1 {
+		return stats[0]
 	}
-
-	// The Task took to long to run. Tell the runner to abort before returning
-	status.State = runner.TIMEDOUT
-	_, err = r.runner.Abort(status.RunId)
-	return status, err
+	return runner.TimeoutStatus(st.RunID)
 }

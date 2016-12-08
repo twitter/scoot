@@ -72,7 +72,7 @@ func (s *daemonServer) CreateSnapshot(ctx context.Context, req *protocol.CreateS
 }
 
 func (s *daemonServer) CheckoutSnapshot(ctx context.Context, req *protocol.CheckoutSnapshotRequest) (*protocol.CheckoutSnapshotReply, error) {
-	if err := s.handler.CheckoutSnapshot(runner.SnapshotId(req.SnapshotId), req.Dir); err == nil {
+	if err := s.handler.CheckoutSnapshot(req.SnapshotId, req.Dir); err == nil {
 		return &protocol.CheckoutSnapshotReply{}, nil
 	} else {
 		return &protocol.CheckoutSnapshotReply{Error: err.Error()}, nil
@@ -80,23 +80,24 @@ func (s *daemonServer) CheckoutSnapshot(ctx context.Context, req *protocol.Check
 }
 
 func (s *daemonServer) Run(ctx context.Context, req *protocol.RunRequest) (*protocol.RunReply, error) {
-	cmd := runner.NewCommand(req.Cmd.Argv, req.Cmd.Env, time.Duration(req.Cmd.TimeoutNs), req.Cmd.SnapshotId)
+	c := req.Cmd
+	cmd := &runner.Command{Argv: c.Argv, EnvVars: c.Env, Timeout: time.Duration(c.TimeoutNs), SnapshotID: c.SnapshotId}
 	if status, err := s.handler.Run(cmd); err == nil {
-		return &protocol.RunReply{RunId: string(status.RunId)}, nil
+		return &protocol.RunReply{RunId: string(status.RunID)}, nil
 	} else {
-		return &protocol.RunReply{RunId: string(status.RunId), Error: err.Error()}, nil
+		return &protocol.RunReply{RunId: string(status.RunID), Error: err.Error()}, nil
 	}
 }
 
 func (s *daemonServer) Poll(ctx context.Context, req *protocol.PollRequest) (*protocol.PollReply, error) {
 	reply := &protocol.PollReply{}
 
-	runIds := []runner.RunId{}
-	for _, runId := range req.RunIds {
-		runIds = append(runIds, runner.RunId(runId))
+	runIDs := []runner.RunID{}
+	for _, runID := range req.RunIds {
+		runIDs = append(runIDs, runner.RunID(runID))
 	}
 
-	statuses := s.handler.Poll(runIds, time.Duration(req.TimeoutNs), req.All)
+	statuses := s.handler.Poll(runIDs, time.Duration(req.TimeoutNs), req.All)
 	for _, status := range statuses {
 		reply.Status = append(reply.Status, protocol.FromRunnerStatus(status))
 	}

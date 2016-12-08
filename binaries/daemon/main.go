@@ -10,7 +10,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	os_exec "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
@@ -36,21 +36,19 @@ func main() {
 	}
 	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
-	outputCreator, err := local.NewOutputCreator(tempDir)
+	outputCreator, err := runners.NewLocalOutputCreator(tempDir)
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
-	rCh := make(chan struct{})
-	r := local.NewSimpleReportBackRunner(ex, filer, outputCreator, rCh)
-	qr := local.NewQueuingRunner(r, *qLen, rCh)
-	h := server.NewHandler(qr, filer, 50*time.Millisecond)
+	r := runners.NewQueueRunner(ex, filer, outputCreator, *qLen)
+	h := server.NewHandler(r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {
 		log.Fatal("Cannot create Scoot server: ", err)
 	}
 	err = s.ListenAndServe()
 	if err != nil {
-		log.Fatal("Error serving Local Scoot: ", err)
+		log.Fatal("Error serving Scoot Daemon: ", err)
 	}
 }

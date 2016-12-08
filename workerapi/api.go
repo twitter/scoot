@@ -14,11 +14,11 @@ import (
 
 //TODO: test workerStatus.
 type WorkerStatus struct {
-	Runs []runner.ProcessStatus
+	Runs []runner.RunStatus
 }
 
 func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) WorkerStatus {
-	runs := make([]runner.ProcessStatus, 0)
+	runs := make([]runner.RunStatus, 0)
 	for _, r := range thrift.Runs {
 		runs = append(runs, ThriftRunStatusToDomain(r))
 	}
@@ -38,7 +38,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
-	snapshotId := ""
+	snapshotID := ""
 	if thrift.Argv != nil {
 		argv = thrift.Argv
 	}
@@ -49,9 +49,9 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 		timeout = time.Millisecond * time.Duration(*thrift.TimeoutMs)
 	}
 	if thrift.SnapshotId != nil {
-		snapshotId = *thrift.SnapshotId
+		snapshotID = *thrift.SnapshotId
 	}
-	return runner.NewCommand(argv, env, timeout, snapshotId)
+	return &runner.Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotID: snapshotID}
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
@@ -60,13 +60,14 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TimeoutMs = &timeoutMs
 	thrift.Env = domain.EnvVars
 	thrift.Argv = domain.Argv
-	thrift.SnapshotId = &domain.SnapshotId
+	snapID := domain.SnapshotID
+	thrift.SnapshotId = &snapID
 	return thrift
 }
 
-func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.ProcessStatus {
-	domain := runner.ProcessStatus{}
-	domain.RunId = runner.RunId(thrift.RunId)
+func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
+	domain := runner.RunStatus{}
+	domain.RunID = runner.RunID(thrift.RunId)
 	switch thrift.Status {
 	case worker.Status_UNKNOWN:
 		domain.State = runner.UNKNOWN
@@ -100,9 +101,9 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.ProcessStatus {
 	return domain
 }
 
-func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
+func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift := worker.NewRunStatus()
-	thrift.RunId = string(domain.RunId)
+	thrift.RunId = string(domain.RunID)
 	switch domain.State {
 	case runner.UNKNOWN:
 		thrift.Status = worker.Status_UNKNOWN
@@ -129,7 +130,7 @@ func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 	return thrift
 }
 
-func SerializeProcessStatus(processStatus runner.ProcessStatus) ([]byte, error) {
+func SerializeProcessStatus(processStatus runner.RunStatus) ([]byte, error) {
 
 	runStatus := DomainRunStatusToThrift(processStatus)
 

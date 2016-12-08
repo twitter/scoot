@@ -7,7 +7,6 @@ import (
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/snapshot/snapshots"
@@ -15,7 +14,7 @@ import (
 
 func TestPollingWorker_Simple(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 42 {
@@ -26,9 +25,9 @@ func TestPollingWorker_Simple(t *testing.T) {
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
-	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
 		stCh <- st
@@ -54,7 +53,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
 
@@ -69,10 +68,10 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 
 func TestPollingWorker_ErrorPolling(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
-	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
 		stCh <- st
@@ -103,7 +102,7 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 
 func TestPollingWorker_Timeout(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(
 		r,
@@ -123,7 +122,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 
 func TestPollingWorker_TimeoutDisabled(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 
 	w := NewPollingWorkerWithTimeout(
 		r,

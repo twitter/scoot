@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type localOutputCreator struct {
 }
 
 // Create a new OutputCreator
-func NewOutputCreator(tmp *temp.TempDir) (runner.OutputCreator, error) {
+func NewLocalOutputCreator(tmp *temp.TempDir) (runner.OutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -25,6 +25,7 @@ func NewOutputCreator(tmp *temp.TempDir) (runner.OutputCreator, error) {
 	return &localOutputCreator{hostname: hostname}, nil
 }
 
+// Create creates an output for id
 func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 	f, err := ioutil.TempFile("", id)
 	if err != nil {
@@ -44,18 +45,22 @@ type localOutput struct {
 	absPath  string
 }
 
+// URI returns a URI to this Output
 func (o *localOutput) URI() string {
 	return fmt.Sprintf("file://%s%s", o.hostname, o.absPath)
 }
 
+// AsFile returns an absolute path to a file with this content
 func (o *localOutput) AsFile() string {
 	return o.absPath
 }
 
+// Write implements io.Writer
 func (o *localOutput) Write(p []byte) (n int, err error) {
 	return o.f.Write(p)
 }
 
+// Close implements io.Closer
 func (o *localOutput) Close() error {
 	return o.f.Close()
 }

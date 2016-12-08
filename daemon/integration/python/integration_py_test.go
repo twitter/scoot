@@ -12,7 +12,7 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	os_execers "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
@@ -82,10 +82,10 @@ func getRunner(filer snapshot.Filer) runner.Runner {
 		panic(err)
 	}
 
-	outputCreator, err := local.NewOutputCreator(tempDir)
+	outputCreator, err := runners.NewLocalOutputCreator(tempDir)
 	if err != nil {
 		panic(err)
 	}
 
-	return local.NewSimpleRunner(ex, filer, outputCreator)
+	return runners.NewSingleRunner(ex, filer, outputCreator)
 }

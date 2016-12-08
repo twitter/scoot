@@ -14,7 +14,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
-	localrunner "github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -59,14 +59,14 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
 		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
-			return localrunner.NewOutputCreator(tmpDir)
+			return runners.NewLocalOutputCreator(tmpDir)
 		},
 
 		func(
 			ex execer.Execer,
 			outputCreator runner.OutputCreator,
 			filer snapshot.Filer) runner.Runner {
-			return localrunner.NewSimpleRunner(ex, filer, outputCreator)
+			return runners.NewSingleRunner(ex, filer, outputCreator)
 		},
 
 		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {

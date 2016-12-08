@@ -30,9 +30,9 @@ func (_m *MockWorker) EXPECT() *_MockWorkerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
+func (_m *MockWorker) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
 	ret := _m.ctrl.Call(_m, "RunAndWait", task)
-	ret0, _ := ret[0].(runner.ProcessStatus)
+	ret0, _ := ret[0].(runner.RunStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

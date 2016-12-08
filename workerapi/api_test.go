@@ -19,7 +19,7 @@ var nonemptystr = "abcdef"
 var cmdFromThrift = func(x interface{}) interface{} { return ThriftRunCommandToDomain(x.(*worker.RunCommand)) }
 var cmdToThrift = func(x interface{}) interface{} { return DomainRunCommandToThrift(x.(*runner.Command)) }
 var rsFromThrift = func(x interface{}) interface{} { return ThriftRunStatusToDomain(x.(*worker.RunStatus)) }
-var rsToThrift = func(x interface{}) interface{} { return DomainRunStatusToThrift(x.(runner.ProcessStatus)) }
+var rsToThrift = func(x interface{}) interface{} { return DomainRunStatusToThrift(x.(runner.RunStatus)) }
 var wsFromThrift = func(x interface{}) interface{} { return ThriftWorkerStatusToDomain(x.(*worker.WorkerStatus)) }
 var wsToThrift = func(x interface{}) interface{} { return DomainWorkerStatusToThrift(x.(WorkerStatus)) }
 
@@ -45,7 +45,7 @@ var tests = []struct {
 		2, cmdFromThrift, cmdToThrift,
 		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero},
 		&runner.Command{Argv: someCmd, EnvVars: someEnv,
-			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotId: nonemptystr},
+			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotID: nonemptystr},
 	},
 
 	//RunStatus
@@ -53,70 +53,70 @@ var tests = []struct {
 		3, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_UNKNOWN, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.UNKNOWN,
+		runner.RunStatus{RunID: "", State: runner.UNKNOWN,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		4, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_PENDING, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.PENDING,
+		runner.RunStatus{RunID: "", State: runner.PENDING,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		5, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_RUNNING, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.RUNNING,
+		runner.RunStatus{RunID: "", State: runner.RUNNING,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		6, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_COMPLETE, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.COMPLETE,
+		runner.RunStatus{RunID: "", State: runner.COMPLETE,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		7, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_FAILED, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.FAILED,
+		runner.RunStatus{RunID: "", State: runner.FAILED,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		8, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_ABORTED, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.ABORTED,
+		runner.RunStatus{RunID: "", State: runner.ABORTED,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		9, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_TIMEDOUT, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.TIMEDOUT,
+		runner.RunStatus{RunID: "", State: runner.TIMEDOUT,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		10, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_BADREQUEST, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
-		runner.ProcessStatus{RunId: "", State: runner.BADREQUEST,
+		runner.RunStatus{RunID: "", State: runner.BADREQUEST,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
 		11, rsFromThrift, rsToThrift,
 		&worker.RunStatus{Status: worker.Status_BADREQUEST, RunId: "id",
 			OutUri: &emptystr, ErrUri: &emptystr, Error: &emptystr, ExitCode: &nonzero},
-		runner.ProcessStatus{RunId: "id", State: runner.BADREQUEST,
+		runner.RunStatus{RunID: "id", State: runner.BADREQUEST,
 			StdoutRef: emptystr, StderrRef: emptystr, ExitCode: int(nonzero), Error: emptystr},
 	},
 	{
 		12, rsFromThrift, rsToThrift,
 		&worker.RunStatus{Status: worker.Status_BADREQUEST, RunId: "id",
 			OutUri: &nonemptystr, ErrUri: &nonemptystr, Error: &nonemptystr, ExitCode: &nonzero},
-		runner.ProcessStatus{RunId: "id", State: runner.BADREQUEST,
+		runner.RunStatus{RunID: "id", State: runner.BADREQUEST,
 			StdoutRef: nonemptystr, StderrRef: nonemptystr, ExitCode: int(nonzero), Error: nonemptystr},
 	},
 
@@ -124,7 +124,7 @@ var tests = []struct {
 	{
 		13, wsFromThrift, nil,
 		&worker.WorkerStatus{Runs: nil},
-		WorkerStatus{Runs: []runner.ProcessStatus{}},
+		WorkerStatus{Runs: []runner.RunStatus{}},
 	},
 	{
 		14, wsFromThrift, wsToThrift,
@@ -132,8 +132,8 @@ var tests = []struct {
 			&worker.RunStatus{Status: worker.Status_PENDING, RunId: "id",
 				OutUri: &nonemptystr, ErrUri: &nonemptystr, Error: &nonemptystr, ExitCode: &nonzero},
 		}},
-		WorkerStatus{Runs: []runner.ProcessStatus{
-			runner.ProcessStatus{RunId: "id", State: runner.PENDING,
+		WorkerStatus{Runs: []runner.RunStatus{
+			runner.RunStatus{RunID: "id", State: runner.PENDING,
 				StdoutRef: nonemptystr, StderrRef: nonemptystr, ExitCode: int(nonzero), Error: nonemptystr},
 		}},
 	},
