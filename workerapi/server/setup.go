@@ -50,8 +50,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
 
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:2001", s)
+		func(uri WorkerUri, s stats.StatsReceiver, tmpDir *temp.TempDir) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:2001", string(uri), s, tmpDir)
 		},
 
 		func() execer.Execer {
@@ -60,8 +60,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		func(tmpDir *temp.TempDir, ts *endpoints.TwitterServer) (runner.OutputCreator, error) {
-			return localrunner.NewOutputCreator(tmpDir, ts.ResourceHandler)
+		func(ts *endpoints.TwitterServer) (runner.OutputCreator, error) {
+			return localrunner.NewOutputCreator(ts.TmpDir, ts.ResourceHandler)
 		},
 
 		func(
@@ -75,8 +75,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return "http://localhost:2001"
 		},
 
-		func(stat stats.StatsReceiver, r runner.Runner, uri WorkerUri) worker.Worker {
-			return NewHandler(stat, r, string(uri))
+		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
+			return NewHandler(stat, r)
 		},
 
 		func(

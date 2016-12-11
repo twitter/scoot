@@ -27,7 +27,6 @@ const DeadLetterExitCode = -200
 func runTaskAndLog(
 	saga *saga.Saga,
 	worker worker.Worker,
-	statusUrl string,
 	taskId string,
 	task sched.TaskDefinition,
 	markCompleteOnFailure bool,
@@ -36,6 +35,7 @@ func runTaskAndLog(
 	// Start Task and then log StartTask message a status payload containing stdout/stderr URIs.
 	// Note: this ordering will result in an orphaned worker if logging fails.
 	//       also, URIs will likely change upon task completion, i.e. from local file to snapshot URI.
+	// TODO: !!this no longer works if we ever start allowing compensating actions on failure!!
 	processStatus := runner.ProcessStatus{}
 
 	// Handle errors the same way for Start()/Wait().
@@ -61,22 +61,14 @@ func runTaskAndLog(
 		return nil
 	}
 
-	// Start task on the worker
+	// Start task on the worker and log initial status before blocking on task completion.
+	// Clients can watch progress via the Stdout/Stderr URIs but won't see any other updates until completion.
+	// Note: Stdout/Stderr URIs should be present here given a SimpleRunner-backed worker (or any new conforming runner impls).
 	// If err, check markCompletedOnFailure. If true, log and continue. If false, return err immediately.
 	var startErr error
 	processStatus, startErr = worker.Start(task)
 	if workerErrStatus(startErr) != nil {
 		return startErr
-	}
-
-	// Log the preliminary ProcessStatus.
-	if statusUrl != "" {
-		if processStatus.StdoutRef == "" {
-			processStatus.StdoutRef = statusUrl + "/stdout?run=" + string(processStatus.RunId)
-		}
-		if processStatus.StderrRef == "" {
-			processStatus.StderrRef = statusUrl + "/stderr?run=" + string(processStatus.RunId)
-		}
 	}
 	statusAsBytes, err := workerapi.SerializeProcessStatus(processStatus)
 	if err != nil {

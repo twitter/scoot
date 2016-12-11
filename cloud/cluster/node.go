@@ -11,14 +11,10 @@ type NodeId string
 type Node interface {
 	// A unique node identifier, like 'host:thriftPort'
 	Id() NodeId
-
-	// Status info or location to get status, like 'http://host:port', depending on concrete node type.
-	Status() string
 }
 
 type idNode struct {
-	id     NodeId
-	status string
+	id NodeId
 }
 
 func (n *idNode) String() string {
@@ -26,11 +22,7 @@ func (n *idNode) String() string {
 }
 
 func NewIdNode(id string) Node {
-	return &idNode{id: NodeId(id), status: ""}
-}
-
-func NewIdStatusNode(id, status string) Node {
-	return &idNode{id: NodeId(id), status: status}
+	return &idNode{id: NodeId(id)}
 }
 
 func NewIdNodes(num int) []Node {
@@ -44,10 +36,6 @@ func NewIdNodes(num int) []Node {
 // Implements interface Node.Id()
 func (n *idNode) Id() NodeId {
 	return n.id
-}
-
-func (n *idNode) Status() string {
-	return n.status
 }
 
 type NodeSorter []Node

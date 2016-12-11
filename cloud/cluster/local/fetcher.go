@@ -42,12 +42,8 @@ func parseData(data []byte) ([]cluster.Node, error) {
 	lines := string(data)
 	for _, line := range strings.Split(lines, "\n") {
 		thrift, err := parseFlag("thrift_addr", line)
-		http, err2 := parseFlag("http_addr", line)
 		if err == nil {
-			if err2 == nil {
-				http = "http://" + http
-			}
-			nodes = append(nodes, cluster.NewIdStatusNode(thrift, http))
+			nodes = append(nodes, cluster.NewIdNode(thrift))
 		}
 	}
 	return nodes, nil

@@ -29,5 +29,6 @@ type Output interface {
 
 	// Add this Output to a list, probably an endpoints.ResourceHandler.
 	// Multiple names may be registered under a single namespace.
-	Register(namespace, name string)
+	// Returns the uri resulting from this registration.
+	Register(namespace, name string) (uri string)
 }

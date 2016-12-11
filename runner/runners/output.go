@@ -33,4 +33,4 @@ func (o *nullOutput) Close() error {
 	return nil
 }
 
-func (o *nullOutput) Register(namespace, name string) {}
+func (o *nullOutput) Register(namespace, name string) string { return "" }

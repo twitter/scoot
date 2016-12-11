@@ -33,8 +33,8 @@ func main() {
 	bag, schema := server.Defaults()
 	bag.PutMany(
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*httpAddr, s)
+		func(uri server.WorkerUri, s stats.StatsReceiver, tmpDir *temp.TempDir) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer(*httpAddr, string(uri), s, tmpDir)
 		},
 		func(tmpDir *temp.TempDir) snapshot.Filer {
 			return snapshots.MakeTempCheckouterFiler(tmpDir)

@@ -14,14 +14,17 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/os/temp"
 )
 
-func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
+// Returns an http handler at 'addr' which can retrieved with 'uri' if specified. Also serves static files from tmpDir if specified.
+func NewTwitterServer(addr, uri string, stats stats.StatsReceiver, tmpDir *temp.TempDir) *TwitterServer {
 	hostname, _ := os.Hostname()
 	return &TwitterServer{
 		Addr:            addr,
 		Stats:           stats,
-		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string), hostname: hostname},
+		TmpDir:          tmpDir,
+		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string), hostname: hostname, uri: uri},
 	}
 }
 
@@ -30,6 +33,7 @@ func NewTwitterServer(addr string, stats stats.StatsReceiver) *TwitterServer {
 type TwitterServer struct {
 	Addr            string
 	Stats           stats.StatsReceiver
+	TmpDir          *temp.TempDir
 	ResourceHandler *ResourceHandler
 }
 
@@ -37,12 +41,15 @@ func (s *TwitterServer) Serve() error {
 	http.HandleFunc("/", helpHandler)
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/admin/metrics.json", s.statsHandler)
+	if s.TmpDir != nil {
+		http.Handle("/output/", http.StripPrefix("/output/", http.FileServer(http.Dir(s.TmpDir.Dir))))
+	}
 	log.Println("Serving http & stats on", s.Addr)
 	return http.ListenAndServe(s.Addr, nil)
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	msg := "Common paths: '/health', '/admin/metrics.json', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'"
+	msg := "Common paths: '/health', '/admin/metrics.json', '/output', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'"
 	http.Error(w, msg, http.StatusNotImplemented)
 }
 
@@ -76,13 +83,16 @@ const StdoutName = "stdout"
 const StderrName = "stderr"
 
 type ResourceHandler struct {
-	//defines: map[Namespace]map[ResourceName]ResourcePath
+	// Defines: map[Namespace]map[ResourceName]ResourcePath
 	resources map[string]map[string]string
 	hostname  string
+	uri       string
 	mutex     sync.Mutex
 }
 
-func (h *ResourceHandler) AddResource(namespace, name, path string) {
+// Adds a new http handler for namespace,name,path and returns the associated uri.
+// Returns empty string if the base ResourceHandler.uri was not provided.
+func (h *ResourceHandler) AddResource(namespace, name, path string) (uri string) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -90,9 +100,12 @@ func (h *ResourceHandler) AddResource(namespace, name, path string) {
 		h.resources[namespace] = make(map[string]string)
 	}
 	h.resources[namespace][name] = path
-	http.Handle(fmt.Sprintf("/%s/%s", namespace, name), h)
+	httpAbsPath := fmt.Sprintf("/%s/%s", namespace, name)
+	http.Handle(httpAbsPath, h)
+	return fmt.Sprintf("%s%s", h.uri, httpAbsPath)
 }
 
+// Serves a minimal page that does ajax log tailing of the specified resource.
 func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()

@@ -42,38 +42,13 @@ type statefulScheduler struct {
 	stat stats.StatsReceiver
 }
 
-type workerSubscription struct {
-	sub     cluster.Subscription
-	wf      worker.WorkerFactory
-	updates chan []cluster.NodeUpdate
-}
-
-func (ws *workerSubscription) Close() error {
-	return ws.sub.Closer.Close()
-}
-
-func (ws *workerSubscription) loop() {
-	for update := range ws.sub.Updates {
-		//TODO:
-		// request statusUri via workerFactory(node), but only for NodeAdded event.
-		// populate new set of NodeUpdates where statusUri is specified.
-		ws.updates <- update
-	}
-}
-
-func makeWorkerSubscription(sub cluster.Subscription, wf worker.WorkerFactory) cluster.Subscription {
-	ws := &workerSubscription{sub: sub, wf: wf, updates: make(chan []cluster.NodeUpdate)}
-	go ws.loop()
-	return cluster.Subscription{Updates: ws.updates, Closer: ws}
-}
-
 func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver) Scheduler {
-	sub := makeWorkerSubscription(cl.Subscribe(), wf)
+	sub := cl.Subscribe()
 	return NewStatefulScheduler(
 		sub.InitialMembers,
 		sub.Updates,
@@ -272,7 +247,6 @@ func (s *statefulScheduler) scheduleTasks() {
 		worker := s.workerFactory(ta.node)
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
-		status := ta.node.Status()
 
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
 
@@ -286,7 +260,6 @@ func (s *statefulScheduler) scheduleTasks() {
 				return runTaskAndLog(
 					saga,
 					worker,
-					status,
 					taskId,
 					taskDef,
 					preventRetries,

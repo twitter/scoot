@@ -14,10 +14,6 @@ import (
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
-// For now, we piggyback on handler.Run() to allow the caller to specify special directives.
-// GetStatusDirective: return the workerserver's http URI (to be queried for status) as ProcessStatus.Error.
-var GetStatusDirective = "!!STATUS!!"
-
 // Creates a Worker Server
 func MakeServer(
 	handler worker.Worker,
@@ -36,13 +32,12 @@ type handler struct {
 	run         runner.Runner
 	timeLastRpc time.Time
 	mu          sync.Mutex
-	statusUri   string
 }
 
 //
-func NewHandler(stat stats.StatsReceiver, run runner.Runner, statusUri string) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, statusUri: statusUri}
+	h := &handler{stat: scopedStat, run: run}
 	go h.stats()
 	return h
 }
@@ -108,13 +103,6 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 
 // Implements worker.thrift Worker.Run interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
-	if h.statusUri != "" && len(cmd.Argv) == 1 && cmd.Argv[0] == GetStatusDirective {
-		status := worker.NewRunStatus()
-		status.Status = worker.Status_BADREQUEST
-		status.Error = &h.statusUri
-		return status, nil
-	}
-
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
 	log.Printf("Worker Running:\n%s", cmd)

@@ -3,7 +3,6 @@ package local
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -14,6 +13,7 @@ import (
 )
 
 type localOutputCreator struct {
+	tmp      *temp.TempDir
 	hostname string
 	handler  *endpoints.ResourceHandler
 }
@@ -24,11 +24,11 @@ func NewOutputCreator(tmp *temp.TempDir, handler *endpoints.ResourceHandler) (ru
 	if err != nil {
 		return nil, err
 	}
-	return &localOutputCreator{hostname: hostname, handler: handler}, nil
+	return &localOutputCreator{tmp: tmp, hostname: hostname, handler: handler}, nil
 }
 
 func (s *localOutputCreator) Create(id string) (runner.Output, error) {
-	f, err := ioutil.TempFile("", id)
+	f, err := s.tmp.TempFile(id)
 	if err != nil {
 		return nil, err
 	}
@@ -37,18 +37,20 @@ func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 		return nil, err
 	}
 	// We don't need a / between hostname and path because absolute paths start with /
-	return &localOutput{f: f, hostname: s.hostname, absPath: absPath, handler: s.handler}, nil
+	uri := fmt.Sprintf("file://%s%s", s.hostname, absPath)
+	return &localOutput{f: f, hostname: s.hostname, absPath: absPath, uri: uri, handler: s.handler}, nil
 }
 
 type localOutput struct {
 	f        *os.File
 	hostname string
 	absPath  string
+	uri      string
 	handler  *endpoints.ResourceHandler
 }
 
 func (o *localOutput) URI() string {
-	return fmt.Sprintf("file://%s%s", o.hostname, o.absPath)
+	return o.uri
 }
 
 func (o *localOutput) AsFile() string {
@@ -63,10 +65,11 @@ func (o *localOutput) Close() error {
 	return o.f.Close()
 }
 
-func (o *localOutput) Register(namespace, name string) {
+func (o *localOutput) Register(namespace, name string) (uri string) {
 	if o.handler != nil {
-		o.handler.AddResource(namespace, name, o.AsFile())
+		o.uri = o.handler.AddResource(namespace, name, o.AsFile())
 	}
+	return o.uri
 }
 
 // Return an underlying Writer. Why? Because some methods type assert to
