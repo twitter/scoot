@@ -42,14 +42,14 @@ func (s *TwitterServer) Serve() error {
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/admin/metrics.json", s.statsHandler)
 	if s.TmpDir != nil {
-		http.Handle("/output/", http.StripPrefix("/output/", http.FileServer(http.Dir(s.TmpDir.Dir))))
+		http.Handle("/fs/", http.StripPrefix("/fs/", http.FileServer(http.Dir(s.TmpDir.Dir))))
 	}
 	log.Println("Serving http & stats on", s.Addr)
 	return http.ListenAndServe(s.Addr, nil)
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	msg := "Common paths: '/health', '/admin/metrics.json', '/output', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'"
+	msg := "Common paths: '/health', '/admin/metrics.json', '/fs', '/{NAMESPACE}/stdout', '/{NAMESPACE}/stderr'"
 	http.Error(w, msg, http.StatusNotImplemented)
 }
 
