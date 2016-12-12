@@ -19,12 +19,11 @@ import (
 
 // Returns an http handler at 'addr' which can retrieved with 'uri' if specified. Also serves static files from tmpDir if specified.
 func NewTwitterServer(addr, uri string, stats stats.StatsReceiver, tmpDir *temp.TempDir) *TwitterServer {
-	hostname, _ := os.Hostname()
 	return &TwitterServer{
 		Addr:            addr,
 		Stats:           stats,
 		TmpDir:          tmpDir,
-		ResourceHandler: &ResourceHandler{resources: make(map[string]map[string]string), hostname: hostname, uri: uri},
+		ResourceHandler: NewResourceHandler(uri, 2500*time.Millisecond),
 	}
 }
 
@@ -82,27 +81,37 @@ func MakeStatsReceiver(scope StatScope) stats.StatsReceiver {
 const StdoutName = "stdout"
 const StderrName = "stderr"
 
-type ResourceHandler struct {
-	// Defines: map[Namespace]map[ResourceName]ResourcePath
-	resources map[string]map[string]string
-	hostname  string
-	uri       string
-	mutex     sync.Mutex
+func NewResourceHandler(uri string, ajaxInterval time.Duration) *ResourceHandler {
+	hostname, _ := os.Hostname()
+	return &ResourceHandler{resources: make(map[string]map[string]string), hostname: hostname, uri: uri, ajaxInterval: ajaxInterval}
 }
 
-// Adds a new http handler for namespace,name,path and returns the associated uri.
+type ResourceHandler struct {
+	// Defines: map[Namespace]map[ResourceName]ResourcePath
+	resources    map[string]map[string]string
+	hostname     string
+	uri          string
+	ajaxInterval time.Duration
+	mutex        sync.Mutex
+}
+
+// Adds new http handlers for namespace,name,absPath and returns a unique associated uri.
+// Registers two uris: '/resource/NAMESPACE/NAME' and '/resourcePID/NAMESPACE/NAME'
 // Returns empty string if the base ResourceHandler.uri was not provided.
-func (h *ResourceHandler) AddResource(namespace, name, path string) (uri string) {
+func (h *ResourceHandler) AddResource(namespace, name, absPath string) (uri string) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
 	if _, ok := h.resources[namespace]; !ok {
 		h.resources[namespace] = make(map[string]string)
 	}
-	h.resources[namespace][name] = path
-	httpAbsPath := fmt.Sprintf("/%s/%s", namespace, name)
-	http.Handle(httpAbsPath, h)
-	return fmt.Sprintf("%s%s", h.uri, httpAbsPath)
+	h.resources[namespace][name] = absPath
+	httpPath := fmt.Sprintf("/resource/%s/%s", namespace, name)
+	httpUniqPath := fmt.Sprintf("/resource_pid%d/%s/%s", os.Getpid(), namespace, name)
+	http.Handle(httpPath, h)
+	http.Handle(httpUniqPath, h)
+	fileUri := fmt.Sprintf("file://%s%s", h.hostname, absPath)
+	return fmt.Sprintf("%s%s?file=%s", h.uri, httpUniqPath, fileUri)
 }
 
 // Serves a minimal page that does ajax log tailing of the specified resource.
@@ -112,7 +121,6 @@ func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	clientHtml :=
 		`<html>
-<title>%s</title>
 <script type="text/javascript">
   var prevLength = 0
   checkAtBottom = function() {
@@ -138,16 +146,17 @@ func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         prevLength = xhr.responseText.length
       }
     }
-    xhr.open("GET", location.href+"?content=true"); //TODO: request range
+    //TODO: request range to get delta.
+    xhr.open("GET", location.href + (location.search=="" ? "?" : "&") + "content=true");
     xhr.send();
   };
-  setInterval(sendRequest, 2500)
+  setInterval(sendRequest, %d)
 </script>
 </html>
 `
 	paths := strings.Split(r.URL.Path, "/")
-	namespace := paths[1]
-	name := paths[2]
+	namespace := paths[2]
+	name := paths[3]
 	resourcePath := h.resources[namespace][name]
 	if resource, err := os.Open(resourcePath); err != nil {
 		http.Error(w, "", http.StatusGone)
@@ -158,7 +167,7 @@ func (h *ResourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("content") == "true" {
 			http.ServeContent(w, r, "", info.ModTime(), resource)
 		} else {
-			fmt.Fprintf(w, clientHtml, h.hostname+resourcePath)
+			fmt.Fprintf(w, clientHtml, h.ajaxInterval/time.Millisecond)
 		}
 	}
 }
