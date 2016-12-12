@@ -175,7 +175,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
 	}
 
-	// // advance scheduler until job gets marked completed
+	// advance scheduler until job gets marked completed
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
