@@ -104,6 +104,11 @@ func (s *daemonServer) Poll(ctx context.Context, req *protocol.PollRequest) (*pr
 	return reply, nil
 }
 
+func (s *daemonServer) StopDaemon(ctx context.Context, req *protocol.EmptyStruct) (*protocol.EmptyStruct, error) {
+	s.grpcServer.Stop()
+	return &protocol.EmptyStruct{}, nil
+}
+
 //
 // TODO: alternate impls to test/benchmark suitability of different protocols/rpcs (ex: Cap'N Proto)
 //
