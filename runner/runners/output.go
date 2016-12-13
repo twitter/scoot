@@ -32,5 +32,3 @@ func (o *nullOutput) Write(p []byte) (int, error) {
 func (o *nullOutput) Close() error {
 	return nil
 }
-
-func (o *nullOutput) Register(namespace, name string) string { return "" }

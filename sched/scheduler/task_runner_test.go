@@ -25,8 +25,11 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus))
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatusBytes))
 	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
@@ -46,8 +49,11 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus)).Return(errors.New("test error"))
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatusBytes)).Return(errors.New("test error"))
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
@@ -65,8 +71,11 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatus))
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatusBytes))
 	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher).Return(errors.New("test error"))
 

@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -181,6 +182,19 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	}
 }
 
+// An example attempt to force an exit more quickly on test failure.
+// testing.T.Errorf and testing.T.Fatalf must be called from the test goroutine, see docs.
+// The scheduler's asyncRunner goroutine will hit the gomock Fatalf call and exit,
+// meanwhile the test goroutine is hung waiting for an impossible condition.
+type TestTerminator struct{}
+
+func (t *TestTerminator) Errorf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args))
+}
+func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args))
+}
+
 // Ensure a single job with one task runs to completion, updates
 // state correctly, and makes the expected calls to the SagaLog
 func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
@@ -198,7 +212,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	deps.clUpdates = cl.ch
 
 	// sagalog mock to ensure all messages are logged appropriately
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
@@ -211,8 +225,11 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
-	startStatus, _ := workerapi.SerializeProcessStatus(runner.PreparingStatus("0"))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, startStatus))
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, startStatusBytes))
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
