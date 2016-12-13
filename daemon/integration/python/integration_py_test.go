@@ -1,4 +1,4 @@
-package integration_py
+package integration_py_test
 
 import (
 	"flag"
@@ -82,7 +82,7 @@ func getRunner(filer snapshot.Filer) runner.Runner {
 		panic(err)
 	}
 
-	outputCreator, err := local.NewOutputCreator(tempDir, nil)
+	outputCreator, err := local.NewOutputCreator(tempDir)
 	if err != nil {
 		panic(err)
 	}

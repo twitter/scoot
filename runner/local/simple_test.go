@@ -174,7 +174,7 @@ func newRunner() (runner.Runner, *execers.SimExecer) {
 		panic(err)
 	}
 
-	outputCreator, err := NewOutputCreator(tempDir, nil)
+	outputCreator, err := NewOutputCreator(tempDir)
 	if err != nil {
 		panic(err)
 	}

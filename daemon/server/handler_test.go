@@ -21,7 +21,7 @@ func TestDaemonExample(t *testing.T) {
 	// Initialize types required to construct a daemon server handler.
 	filerTmp, _ := temp.NewTempDir(os.TempDir(), "TestDaemonExample_filer")
 	localTmp, _ := temp.NewTempDir(os.TempDir(), "TestDaemonExample_localpath")
-	out, _ := localrunner.NewOutputCreator(localTmp, nil)
+	out, _ := localrunner.NewOutputCreator(localTmp)
 	filer := snapshots.MakeTempFiler(filerTmp)
 	ex := execer.NewExecer()
 	run := localrunner.NewSimpleRunner(ex, filer, out)

@@ -26,9 +26,4 @@ type Output interface {
 
 	// Copies (if necessary) the URI target to local file and returns that absolute file path.
 	AsFile() string
-
-	// Add this Output to a list, probably an endpoints.ResourceHandler.
-	// Multiple names may be registered under a single namespace.
-	// Returns the uri resulting from this registration.
-	Register(namespace, name string) (uri string)
 }

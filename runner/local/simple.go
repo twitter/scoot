@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
@@ -79,8 +78,8 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 	// Assign a new run and set its status to Preparing.
 	r.running = &runInstance{id: runId, doneCh: make(chan struct{})}
 	status := runner.PreparingStatus(runId)
-	status.StdoutRef = stdout.Register(string(runId), endpoints.StdoutName)
-	status.StderrRef = stderr.Register(string(runId), endpoints.StderrName)
+	status.StdoutRef = stdout.URI()
+	status.StderrRef = stderr.URI()
 	r.runs[runId] = status
 
 	// Run in a new goroutine
