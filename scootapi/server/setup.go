@@ -67,7 +67,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:9091", s)
+			return endpoints.NewTwitterServer("localhost:9091", s, nil)
 		},
 
 		func(t thrift.TServer, h *endpoints.TwitterServer) servers {

@@ -41,29 +41,38 @@ type PollingWorker struct {
 	timeout        time.Duration
 }
 
+func (r *PollingWorker) Start(task sched.TaskDefinition) (runner.ProcessStatus, error) {
+	return r.runner.Run(&task.Command)
+}
+
+func (r *PollingWorker) Status(runId runner.RunId) (runner.ProcessStatus, error) {
+	return r.runner.Status(runId)
+}
+
+func (r *PollingWorker) Wait(runId runner.RunId) (status runner.ProcessStatus, err error) {
+	// Periodically check in with the worker to get a task update
+	timeSpent := 0 * time.Second
+	for !r.enforceTimeout || (r.enforceTimeout && timeSpent < r.timeout) {
+		time.Sleep(r.pollingPeriod)
+		timeSpent += r.pollingPeriod
+
+		status, err = r.runner.Status(runId)
+		if err != nil || status.State.IsDone() {
+			return
+		}
+	}
+
+	// The Task took to long to run. Tell the runner to abort before returning
+	status.State = runner.TIMEDOUT
+	_, err = r.runner.Abort(runId)
+	return
+}
+
 func (r *PollingWorker) RunAndWait(task sched.TaskDefinition) (runner.ProcessStatus, error) {
 	// schedule the task
 	status, err := r.runner.Run(&task.Command)
 	if err != nil {
 		return status, err
 	}
-
-	timeSpent := 0 * time.Second
-	id := status.RunId
-
-	// Periodically check in with the worker to get a task update
-	for !r.enforceTimeout || (r.enforceTimeout && timeSpent < r.timeout) {
-		time.Sleep(r.pollingPeriod)
-		timeSpent += r.pollingPeriod
-
-		status, err = r.runner.Status(id)
-		if err != nil || status.State.IsDone() {
-			return status, err
-		}
-	}
-
-	// The Task took to long to run. Tell the runner to abort before returning
-	status.State = runner.TIMEDOUT
-	_, err = r.runner.Abort(status.RunId)
-	return status, err
+	return r.Wait(status.RunId)
 }

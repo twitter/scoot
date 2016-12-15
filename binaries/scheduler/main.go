@@ -31,7 +31,7 @@ func main() {
 	bag.PutMany(
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*httpAddr, s)
+			return endpoints.NewTwitterServer(*httpAddr, s, nil)
 		},
 	)
 

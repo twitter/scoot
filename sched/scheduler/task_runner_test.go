@@ -18,15 +18,21 @@ import (
 )
 
 func Test_runTaskAndLog_Successful(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 
 	task := sched.GenTask()
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatusBytes))
+	endTaskType := saga.EndTask
+	endMessageMatcher := TaskMessageMatcher{Type: &endTaskType, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
@@ -41,7 +47,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	task := sched.GenTask()
 
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
@@ -59,12 +65,18 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	task := sched.GenTask()
 
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
+	startStatus := runner.PreparingStatus("0")
+	startStatus.StdoutRef = "file:///dev/null"
+	startStatus.StderrRef = "file:///dev/null"
+	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", startStatusBytes))
+	endTaskType := saga.EndTask
+	endMessageMatcher := TaskMessageMatcher{Type: &endTaskType, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher).Return(errors.New("test error"))
 
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
@@ -80,7 +92,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	task := sched.GenTask()
 
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
@@ -101,26 +113,24 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 
 func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	task := sched.GenTask()
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 
 	// setup mock worker that returns an error.
 	workerMock := worker.NewMockWorker(mockCtrl)
 	testErr := errors.New("Test Error, Failed Running Task On Worker")
 	retStatus := runner.RunningStatus("run1", "", "")
-	workerMock.EXPECT().RunAndWait(task).Return(retStatus, testErr)
+	workerMock.EXPECT().Start(task).Return(retStatus, testErr)
 
 	// set up a mock saga log that verifies task is started and completed with a failed task
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-
-	// create expectedProcessStatus that should be looged
 	retStatus.Error = testErr.Error()
 	retStatus.ExitCode = DeadLetterExitCode
 	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(retStatus)
-	sagaLogMock.EXPECT().LogMessage(
-		saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", expectedProcessStatus))
+	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
 
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
@@ -134,6 +144,7 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 }
 
 type TaskMessageMatcher struct {
+	Type   *saga.SagaMessageType
 	JobId  string
 	TaskId string
 	Data   gomock.Matcher
@@ -143,6 +154,10 @@ func (c TaskMessageMatcher) Matches(x interface{}) bool {
 	sagaMessage, ok := x.(saga.SagaMessage)
 
 	if !ok {
+		return false
+	}
+
+	if c.Type != nil && *c.Type != sagaMessage.MsgType {
 		return false
 	}
 

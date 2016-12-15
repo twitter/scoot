@@ -62,11 +62,28 @@ func (r *simpleRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
 		return runner.ProcessStatus{}, fmt.Errorf(runner.RunnerBusyMsg)
 	}
 
+	// Redirect command output to the stdout/stderr Output vars. Outputs shall be closed in run().
+	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
+	if err != nil {
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)))
+		return runner.ProcessStatus{}, fmt.Errorf(runner.LoggingErrMsg)
+	}
+	stderr, err := r.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
+	if err != nil {
+		stdout.Close()
+		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)))
+		return runner.ProcessStatus{}, fmt.Errorf(runner.LoggingErrMsg)
+	}
+
+	// Assign a new run and set its status to Preparing.
 	r.running = &runInstance{id: runId, doneCh: make(chan struct{})}
-	r.runs[runId] = runner.PreparingStatus(runId)
+	status := runner.PreparingStatus(runId)
+	status.StdoutRef = stdout.URI()
+	status.StderrRef = stderr.URI()
+	r.runs[runId] = status
 
 	// Run in a new goroutine
-	go r.run(cmd, runId, r.running.doneCh)
+	go r.run(cmd, runId, stdout, stderr, r.running.doneCh)
 	if cmd.Timeout > 0 { // Timeout if applicable
 		time.AfterFunc(cmd.Timeout, func() { r.updateStatus(runner.TimeoutStatus(runId)) })
 	}
@@ -152,9 +169,11 @@ func (r *simpleRunner) updateStatus(newStatus runner.ProcessStatus) (runner.Proc
 	return newStatus, nil
 }
 
-// run cmd in the background, writing results to r as id, unless doneCh is closed
-func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan struct{}) {
+// run cmd in the background, writing results to r as id, unless doneCh is closed. Closes stdout/stderr when finished.
+func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, stdout, stderr runner.Output, doneCh chan struct{}) {
 	log.Printf("local.simpleRunner.run running: ID: %v, cmd: %+v", runId, cmd)
+	defer stdout.Close()
+	defer stderr.Close()
 
 	checkout, err, checkoutDone := (snapshot.Checkout)(nil), (error)(nil), make(chan struct{})
 	go func() {
@@ -181,19 +200,6 @@ func (r *simpleRunner) run(cmd *runner.Command, runId runner.RunId, doneCh chan 
 	defer checkout.Release()
 
 	log.Printf("local.simpleRunner.run checkout: %v", checkout.Path())
-
-	stdout, err := r.outputCreator.Create(fmt.Sprintf("%s-stdout", runId))
-	if err != nil {
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stdout: %v", err)))
-		return
-	}
-	defer stdout.Close()
-	stderr, err := r.outputCreator.Create(fmt.Sprintf("%s-stderr", runId))
-	if err != nil {
-		r.updateStatus(runner.ErrorStatus(runId, fmt.Errorf("could not create stderr: %v", err)))
-		return
-	}
-	defer stderr.Close()
 
 	p, err := r.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,

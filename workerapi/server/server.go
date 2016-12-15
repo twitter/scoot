@@ -34,7 +34,7 @@ type handler struct {
 	mu          sync.Mutex
 }
 
-// Creates a new Handler which combines a Runner to do work and a StatsReceiver
+//
 func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run}

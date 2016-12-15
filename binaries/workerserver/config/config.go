@@ -84,7 +84,7 @@ func configConfigGo() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1480600098, 0)}
+	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1481640206, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -104,7 +104,7 @@ func configLocalLocal() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.local", size: 2, mode: os.FileMode(420), modTime: time.Unix(1476913802, 0)}
+	info := bindataFileInfo{name: "config/local.local", size: 2, mode: os.FileMode(420), modTime: time.Unix(1477631337, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
