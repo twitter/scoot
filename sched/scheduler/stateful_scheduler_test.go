@@ -75,7 +75,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 
 	//mock sagalog
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), nil)
@@ -98,7 +98,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 
 	//mock sagalog
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any()).Return(errors.New("test error"))
@@ -143,7 +143,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	}
 	taskId := taskIds[0]
 
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 
 	deps := getDefaultSchedDeps()
@@ -189,10 +189,10 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 type TestTerminator struct{}
 
 func (t *TestTerminator) Errorf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args))
+	panic(fmt.Sprintf(format, args...))
 }
 func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args))
+	panic(fmt.Sprintf(format, args...))
 }
 
 // Ensure a single job with one task runs to completion, updates
@@ -229,6 +229,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	startStatus.StdoutRef = "file:///dev/null"
 	startStatus.StderrRef = "file:///dev/null"
 	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, startStatusBytes))
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)

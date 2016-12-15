@@ -32,13 +32,16 @@ func runTaskAndLog(
 	markCompleteOnFailure bool,
 	stat stats.StatsReceiver) error {
 
-	// Start Task and then log StartTask message a status payload containing stdout/stderr URIs.
-	// Note: this ordering will result in an orphaned worker if logging fails.
-	//       also, URIs will likely change upon task completion, i.e. from local file to snapshot URI.
-	// TODO: !!this no longer works if we ever start allowing compensating actions on failure!!
-	processStatus := runner.ProcessStatus{}
+	// Log the StartTask message with an empty payload. This will be overwritten with more data when we have it.
+	err := saga.StartTask(taskId, nil)
+	if err != nil {
+		return err
+	}
 
 	// Handle errors the same way for Start()/Wait().
+	// Overwrites selected processStatus fields and leaves other values intact.
+	// If err, check markCompletedOnFailure. If true, log and continue. If false, return err immediately.
+	processStatus := runner.ProcessStatus{}
 	workerErrStatus := func(err error) error {
 		if err != nil {
 			stat.Counter("failedTaskRunCounter").Inc(1)
@@ -61,15 +64,16 @@ func runTaskAndLog(
 		return nil
 	}
 
-	// Start task on the worker and log initial status before blocking on task completion.
-	// Clients can watch progress via the Stdout/Stderr URIs but won't see any other updates until completion.
+	// Start task on the worker, then re-log Start Task with data this time, then block on task completion.
+	// Clients can watch progress via the ProcessStatus Stdout/Stderr URIs but won't see any other updates until completion.
 	// Note: Stdout/Stderr URIs should be present here given a SimpleRunner-backed worker (or any new conforming runner impls).
-	// If err, check markCompletedOnFailure. If true, log and continue. If false, return err immediately.
+	//       URIs will likely change upon task completion, i.e. from local file to snapshot URI.
 	var startErr error
 	processStatus, startErr = worker.Start(task)
 	if workerErrStatus(startErr) != nil {
 		return startErr
 	}
+
 	statusAsBytes, err := workerapi.SerializeProcessStatus(processStatus)
 	if err != nil {
 		stat.Counter("failedTaskSerializeCounter").Inc(1)
