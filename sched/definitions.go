@@ -22,7 +22,7 @@ func (j *Job) Serialize() ([]byte, error) {
 }
 
 func DeserializeJob(input []byte) (*Job, error) {
-	var thriftJob *schedthrift.Job
+	thriftJob := schedthrift.NewJob()
 	err := thrifthelpers.BinaryDeserialize(thriftJob, input)
 
 	if err != nil {

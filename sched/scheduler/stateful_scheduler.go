@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -76,7 +75,7 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
-	recoverSagas bool,
+	recoverJobs bool,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
@@ -91,7 +90,7 @@ func NewStatefulScheduler(
 		stat:              stat,
 	}
 
-	if recoverSagas {
+	if recoverJobs {
 		sched.startUp()
 	}
 
@@ -105,53 +104,10 @@ func NewStatefulScheduler(
 	return sched
 }
 
-//
 // Starts the scheduler, must be called before any other
 // methods on the scheduler can be called
 func (s *statefulScheduler) startUp() {
-
-	activeSagas, err := s.sagaCoord.Startup()
-	if err != nil {
-		// TODO: retry until we succeed,  This has to eventually succeed
-		// for us to make progress.  Add metrics for failure rate,
-		// this would be something we would alert on.
-	}
-
-	// TODO: Spin off separate go routines for each active saga.  This way we can
-	// do recovery in parallel.
-	for _, sagaId := range activeSagas {
-		activeSaga, err := s.sagaCoord.RecoverSagaState(sagaId, saga.ForwardRecovery)
-		if err != nil {
-			// TODO: must keep retrying this as well should eventually succeed
-			panic(fmt.Sprintf("couldn't recover saga %v, error: %v", sagaId, err))
-		}
-
-		// If Saga doesn't exist anymore skip
-		if activeSaga == nil {
-			continue
-		}
-
-		// If Saga is Completed, discard
-		if activeSaga.GetState().IsSagaCompleted() {
-			continue
-		}
-
-		job, err := sched.DeserializeJob(activeSaga.GetState().Job())
-		if err != nil {
-			// TODO: Increment counter? A breaking change was made
-			// if this happens or data was corrupted.
-			// TODO: Abort the saga, either add all start/end comp task messages or allow
-			// Aborted Sagas with Forward Recovery without comp tasks?
-			log.Printf("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
-			continue
-		}
-
-		// If in progress - reschedule
-		s.addJobCh <- jobAddedMsg{
-			job:  job,
-			saga: activeSaga,
-		}
-	}
+	recoverJobs(s.sagaCoord, s.addJobCh)
 }
 
 type jobAddedMsg struct {
