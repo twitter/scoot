@@ -116,7 +116,8 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 }
 
 // calculates the amount of time to wait before retrying
-// based on the number of attempts tried, returns the duration to wait
+// based on the number of attempts tried or the maximum delay specified
+// returns the duration to wait
 func calculateExponentialBackoff(attempt int, maxDelay time.Duration) time.Duration {
 	var c = float64(attempt)
 	delaySeconds := (math.Pow(2, c) - float64(1)) / float64(2)

@@ -52,6 +52,6 @@ func Test_NewJobState_PreviousProgress_CompletedTasks(t *testing.T) {
 
 	tasks := jobState.getUnScheduledTasks()
 	if len(tasks) != 0 {
-		t.Errorf("Expected all Tasks to be unschedled")
+		t.Errorf("Expected all Tasks to be completed")
 	}
 }
