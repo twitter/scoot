@@ -13,6 +13,8 @@ type Job struct {
 	Def JobDefinition
 }
 
+// Serialize Job to binary slice, and error is
+// returned if the object cannot be Serialized
 func (j *Job) Serialize() ([]byte, error) {
 	thriftJob, err := makeThriftJobFromDomainJob(j)
 	if err != nil {
@@ -21,6 +23,8 @@ func (j *Job) Serialize() ([]byte, error) {
 	return thrifthelpers.BinarySerialize(thriftJob)
 }
 
+// Desrialize a binary slice to a Job,
+// an error is returned if it cannot be deserialized.
 func DeserializeJob(input []byte) (*Job, error) {
 	thriftJob := schedthrift.NewJob()
 	err := thrifthelpers.BinaryDeserialize(thriftJob, input)

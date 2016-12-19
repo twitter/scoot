@@ -57,7 +57,7 @@ func NewStatefulSchedulerFromCluster(
 		config,
 		stat,
 		false,
-		true, // TODO: make this a configurable parameter
+		false, // TODO: make this a configurable parameter
 	)
 }
 
@@ -90,6 +90,8 @@ func NewStatefulScheduler(
 		stat:              stat,
 	}
 
+	// TODO: we need to allow the scheduler to accept new jobs
+	// while recovering old ones.
 	if recoverJobs {
 		sched.startUp()
 	}
