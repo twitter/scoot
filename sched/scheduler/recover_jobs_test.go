@@ -149,6 +149,29 @@ func Test_RecoverJob_NilActiveSaga(t *testing.T) {
 	}
 }
 
+// verifies that a non deserializable job stored in the saga
+// log is skipped over.  This would only happen if we introduced
+// a breaking change or there was data corruption
+// func Test_RecoverJob_NonDeSerializableJob(t *testing.T) {
+// 	mockCtrl := gomock.NewController(t)
+// 	defer mockCtrl.Finish()
+
+// 	sc, slog := makeMockSagaCoord(mockCtrl)
+// 	slog.EXPECT().GetActiveSagas().Return([]string{"saga1"}, nil)
+// 	slog.EXPECT().GetMessages("saga1").Return([]saga.SagaMessage{
+// 		saga.MakeStartSagaMessage("saga1", []byte{0, 1, 2, 3, 4}),
+// 	}, nil)
+
+// 	addJobCh := make(chan jobAddedMsg, 5)
+// 	recoverJobs(sc, addJobCh)
+
+// 	select {
+// 	case msg := <-addJobCh:
+// 		t.Errorf("Expected no job to be added when job cannot be deserialized, Actual: %+v", msg)
+// 	default:
+// 	}
+// }
+
 func Test_RecoverSaga_ActiveSaga(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
