@@ -44,61 +44,75 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 
 		go func(sagaId string) {
 			defer wg.Done()
-
-			recoverSagaStateAttempts := 0
-			activeSaga, err := sc.RecoverSagaState(sagaId, saga.ForwardRecovery)
-			for err != nil {
-				// TODO: add metrics for failure rate, this would be something we should alert on
-
-				// check if recoverable error
-				if saga.FatalErr(err) {
-					// TODO: add metrics for fatal failure rate, this would be something we should alert on, this is a bad bug
-					// if we can't recover the saga from the long, means something is very wrong.
-					log.Printf("ERROR: Fatal Error occurred recovering saga %v, with error: %v, skipping recovery for this saga", sagaId, err)
-					err = nil
-					activeSaga = nil
-				} else {
-					// Recovering SagaState must eventually succeed if it doesn't continue to retry with
-					// exponential backoff.
-					recoverSagaStateAttempts++
-					log.Printf("ERROR: occurred recovering Saga %v, from SagaLog %v", sagaId, err)
-
-					delay := calculateExponentialBackoff(recoverSagaStateAttempts, time.Duration(1)*time.Minute)
-					time.Sleep(delay)
-					activeSaga, err = sc.RecoverSagaState(sagaId, saga.ForwardRecovery)
+			activeSaga := recoverSaga(sc, sagaId)
+			if activeSaga != nil {
+				job, err := sched.DeserializeJob(activeSaga.GetState().Job())
+				if err != nil {
+					// TODO: Increment counter? A breaking change was made
+					// if this happens or data was corrupted.
+					log.Printf("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
+					return
 				}
-			}
 
-			// If Saga doesn't exist anymore skip it
-			if activeSaga == nil {
-				return
-			}
-
-			// If Saga is Completed, discard
-			if activeSaga.GetState().IsSagaCompleted() {
-				return
-			}
-
-			job, err := sched.DeserializeJob(activeSaga.GetState().Job())
-			if err != nil {
-				// TODO: Increment counter? A breaking change was made
-				// if this happens or data was corrupted.
-				// TODO: Abort the saga, either add all start/end comp task messages or allow
-				// Aborted Sagas with Forward Recovery without comp tasks?
-				log.Printf("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
-				return
-			}
-
-			// If in progress - reschedule
-			addJobCh <- jobAddedMsg{
-				job:  job,
-				saga: activeSaga,
+				// reschedule saga
+				addJobCh <- jobAddedMsg{
+					job:  job,
+					saga: activeSaga,
+				}
 			}
 
 		}(sagaId)
 	}
 
 	wg.Wait()
+}
+
+// Attempts to recover the specified saga from the provided SagaCoordinator
+// If the specified Saga exists and is still Active (no End Saga Message Logged) then
+// then a Saga will be returned.  If it does not nil will be returned.
+// If a Fatal Error occurrs while recovering the saga nil will be returned.
+// If a Retryable Error occurs, like SagaLog temporarily unavailable recovery will
+// be retried until it succeeds
+func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
+	recoverSagaStateAttempts := 0
+	activeSaga, err := sc.RecoverSagaState(sagaId, saga.ForwardRecovery)
+	for err != nil {
+		// TODO: add metrics for failure rate, this would be something we should alert on
+
+		// check if recoverable error
+		if saga.FatalErr(err) {
+			// TODO: add metrics for fatal failure rate, this would be something we should alert on, this is a bad bug
+			// if we can't recover the saga from the long, means something is very wrong.
+			log.Printf("ERROR: Fatal Error occurred recovering saga %v, with error: %v, skipping recovery for this saga", sagaId, err)
+			err = nil
+			activeSaga = nil
+		} else {
+			// Recovering SagaState must eventually succeed if it doesn't continue to retry with
+			// exponential backoff.
+			recoverSagaStateAttempts++
+			log.Printf("ERROR: occurred recovering Saga %v, from SagaLog %v", sagaId, err)
+
+			delay := calculateExponentialBackoff(recoverSagaStateAttempts, time.Duration(1)*time.Minute)
+			time.Sleep(delay)
+			activeSaga, err = sc.RecoverSagaState(sagaId, saga.ForwardRecovery)
+		}
+	}
+
+	// If Saga doesn't exist anymore skip it
+	// This could happen because a Saga got added to active index, but failed to
+	// log successfully.  In this case Starting the Saga will have failed.
+	if activeSaga == nil {
+		return nil
+	}
+
+	// If Saga is Completed, discard
+	// This could happen because Active Index did not get updated successfully,
+	// even if the saga has been completed.
+	if activeSaga.GetState().IsSagaCompleted() {
+		return nil
+	}
+
+	return activeSaga
 }
 
 // calculates the amount of time to wait before retrying
