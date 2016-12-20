@@ -8,6 +8,8 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
+// chaos.go: impl that introduces errors (for testing)
+
 // Creates a new Chaos Runner
 func NewChaosRunner(delegate runner.Service) *ChaosRunner {
 	return &ChaosRunner{del: delegate}

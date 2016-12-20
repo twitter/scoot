@@ -9,6 +9,7 @@ func NewNullOutputCreator() *NullOutputCreator {
 	return &NullOutputCreator{}
 }
 
+// NullOutputCreator pretends to create an Output but doesn't.
 type NullOutputCreator struct{}
 
 // Create creates a null output for id

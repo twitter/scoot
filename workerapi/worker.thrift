@@ -34,6 +34,7 @@ struct RunCommand {
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.
 service Worker {
   WorkerStatus QueryWorker()         # Overall worker node status.
+  // TODO(dbentley): add a method to Query a status. Cf. runner/status_rw.go
   RunStatus Run(1: RunCommand cmd)   # Run a command and return job Status.
   RunStatus Abort(1: string runId)   # Returns ABORTED if aborted, FAILED if already ended, and UNKNOWN otherwise.
   void Erase(1: string runId)        # Remove run from the history of runs (trims WorkerStatus.ended). Optional.

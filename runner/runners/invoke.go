@@ -10,6 +10,8 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+// invoke.go: Invoker runs a Scoot command.
+
 // NewInvoker creates an Invoker that will use the supplied helpers
 func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) *Invoker {
 	return &Invoker{exec: exec, filer: filer, output: output}

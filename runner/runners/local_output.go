@@ -15,6 +15,8 @@ import (
 	osexecer "github.com/scootdev/scoot/runner/execer/os"
 )
 
+// local_output.go: output that's stored locally
+
 type HttpOutputCreator interface {
 	http.Handler
 	runner.OutputCreator
