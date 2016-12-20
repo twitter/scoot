@@ -12,8 +12,7 @@ import (
 
 func GenJob(id string, numTasks int) Job {
 	rand := testhelpers.NewRand()
-	jobDef := GenRandomJobDef(numTasks, rng)
-	//jobDef := GenJobDef(numTasks)
+	jobDef := GenRandomJobDef(numTasks, rand)
 
 	job := Job{
 		Id:  id,
@@ -35,19 +34,8 @@ func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 }
 
 func GenJobDef(numTasks int) JobDefinition {
-	jobDef := JobDefinition{
-		JobType: "testJob",
-		Tasks:   make(map[string]TaskDefinition),
-	}
-
-	// Generate tasks
-	for i := 0; i < numTasks; i++ {
-		task := GenTask()
-		taskId := fmt.Sprintf("Task%v", i)
-		jobDef.Tasks[taskId] = task
-	}
-
-	return jobDef
+	rand := testhelpers.NewRand()
+	return GenRandomJobDef(numTasks, rand)
 }
 
 func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
@@ -67,11 +55,8 @@ func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
 }
 
 func GenTask() TaskDefinition {
-	return TaskDefinition{
-		Command: runner.Command{
-			Argv: []string{"complete 0"},
-		},
-	}
+	rand := testhelpers.NewRand()
+	return GenRandomTask(rand)
 }
 
 func GenRandomTask(rng *rand.Rand) TaskDefinition {
