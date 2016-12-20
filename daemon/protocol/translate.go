@@ -4,7 +4,7 @@ import "github.com/scootdev/scoot/runner"
 
 // TODO(dbentley): we should go generate with command protoc daemon.proto --go_out=plugins=grpc:.
 
-func FromRunnerStatus(status runner.ProcessStatus) *PollReply_Status {
+func FromRunnerStatus(status runner.RunStatus) *PollReply_Status {
 	state := PollReply_Status_UNKNOWN
 	switch status.State {
 	case runner.UNKNOWN:
@@ -21,15 +21,15 @@ func FromRunnerStatus(status runner.ProcessStatus) *PollReply_Status {
 		state = PollReply_Status_COMPLETED
 	}
 	return &PollReply_Status{
-		string(status.RunId),
+		string(status.RunID),
 		state,
-		string(status.SnapshotId),
+		status.SnapshotID,
 		int32(status.ExitCode),
 		status.Error,
 	}
 }
 
-func ToRunnerStatus(status *PollReply_Status) runner.ProcessStatus {
+func ToRunnerStatus(status *PollReply_Status) runner.RunStatus {
 	state := runner.UNKNOWN
 	switch status.State {
 	case PollReply_Status_UNKNOWN:
@@ -45,10 +45,10 @@ func ToRunnerStatus(status *PollReply_Status) runner.ProcessStatus {
 	case PollReply_Status_COMPLETED:
 		state = runner.COMPLETE
 	}
-	return runner.ProcessStatus{
-		RunId:      runner.RunId(status.RunId),
+	return runner.RunStatus{
+		RunID:      runner.RunID(status.RunId),
 		State:      state,
-		SnapshotId: runner.SnapshotId(status.SnapshotId),
+		SnapshotID: status.SnapshotId,
 		ExitCode:   int(status.ExitCode),
 		Error:      status.Error,
 	}

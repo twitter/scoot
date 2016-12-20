@@ -26,7 +26,7 @@ func (rc *runCmd) run(cmd *cobra.Command, args []string) error {
 	cmdToRun := &runner.Command{
 		Argv:       args,
 		Timeout:    rc.timeout,
-		SnapshotId: rc.snapshotID,
+		SnapshotID: rc.snapshotID,
 	}
 	log.Printf("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
 
@@ -50,7 +50,7 @@ func (ac *abortCmd) registerFlags(cmd *cobra.Command) {
 func (ac *abortCmd) run(cmd *cobra.Command, args []string) error {
 	log.Println("Calling abort rpc to cloud worker", args)
 
-	status, err := ac.client.Abort(runner.RunId(ac.runId))
+	status, err := ac.client.Abort(runner.RunID(ac.runId))
 	log.Printf("%v\nError: %v\n", status, err)
 	return nil
 }

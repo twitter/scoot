@@ -3,8 +3,6 @@
 package sched
 
 import (
-	"github.com/leanovate/gopter"
-	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"testing"
 )
@@ -41,6 +39,16 @@ func GopterGenJob() gopter.Gen {
 		job := GenRandomJob(jobId, numTasks, genParams.Rng)
 
 		genResult := gopter.NewGenResult(&job, gopter.NoShrinker)
+		return genResult
+	}
+}
+
+func GopterGenJobDef() gopter.Gen {
+	return func(genParams *gopter.GenParameters) *gopter.GenResult {
+		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
+		numTasks := genParams.Rng.Intn(10)
+		job := GenRandomJob(jobId, numTasks, genParams.Rng)
+		genResult := gopter.NewGenResult(job.Def, gopter.NoShrinker)
 		return genResult
 	}
 }

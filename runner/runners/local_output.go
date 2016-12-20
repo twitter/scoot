@@ -1,4 +1,4 @@
-package local
+package runners
 
 import (
 	"fmt"
@@ -15,6 +15,8 @@ import (
 	osexecer "github.com/scootdev/scoot/runner/execer/os"
 )
 
+// local_output.go: output that's stored locally
+
 type HttpOutputCreator interface {
 	http.Handler
 	runner.OutputCreator
@@ -30,7 +32,6 @@ type localOutputCreator struct {
 	mutex    sync.Mutex
 }
 
-// Create a new OutputCreator
 // Takes a tempdir to place new files and optionally a httpUri to use instead of 'file://HOSTNAME/'
 func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator, error) {
 	hostname, err := os.Hostname()
@@ -50,10 +51,6 @@ func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator,
 		httpUri: httpUri, httpPath: httpPath,
 		pathMap: make(map[string]string),
 	}, nil
-}
-
-func NewOutputCreator(tmp *temp.TempDir) (HttpOutputCreator, error) {
-	return NewHttpOutputCreator(tmp, "")
 }
 
 // Create a new Output that writes to local fs.
@@ -152,18 +149,22 @@ type localOutput struct {
 	uri     string
 }
 
+// URI returns a URI to this Output
 func (o *localOutput) URI() string {
 	return o.uri
 }
 
+// AsFile returns an absolute path to a file with this content
 func (o *localOutput) AsFile() string {
 	return o.absPath
 }
 
+// Write implements io.Writer
 func (o *localOutput) Write(p []byte) (n int, err error) {
 	return o.f.Write(p)
 }
 
+// Close implements io.Closer
 func (o *localOutput) Close() error {
 	return o.f.Close()
 }

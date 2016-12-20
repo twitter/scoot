@@ -5,7 +5,6 @@ import (
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/snapshot/snapshots"
@@ -14,15 +13,15 @@ import (
 // Makes a worker suitable for using as an in-memory worker.
 func MakeInmemoryWorker(node cluster.Node) worker.Worker {
 	ex := execers.NewDoneExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
 	chaos.SetDelay(time.Duration(500) * time.Millisecond)
-	return NewPollingWorker(chaos, time.Duration(250)*time.Millisecond)
+	return NewServiceWorker(chaos, 0, time.Second)
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
 func MakeSimWorker() worker.Worker {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	return NewPollingWorker(r, time.Duration(10)*time.Microsecond)
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	return NewServiceWorker(r, 0, time.Second)
 }

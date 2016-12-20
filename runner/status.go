@@ -5,13 +5,12 @@ import (
 	"fmt"
 )
 
-type RunId string
-type SnapshotId string
-type ProcessState int
+type RunID string
+type RunState int
 
 const (
 	// An unambiguous 0-value.
-	UNKNOWN ProcessState = iota
+	UNKNOWN RunState = iota
 	// Waiting to run.
 	PENDING
 	// Preparing to run (e.g., checking out the Snapshot)
@@ -20,7 +19,7 @@ const (
 	RUNNING
 
 	// States below are end states
-	// a Process in an end state will not change its state
+	// a Run in an end state will not change its state
 
 	// Succeeded or failed yielding an exit code. Only state with an exit code.
 	COMPLETE
@@ -34,11 +33,11 @@ const (
 	BADREQUEST
 )
 
-func (p ProcessState) IsDone() bool {
+func (p RunState) IsDone() bool {
 	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
 }
 
-func (p ProcessState) String() string {
+func (p RunState) String() string {
 	switch p {
 	case UNKNOWN:
 		return "UNKNOWN"
@@ -59,31 +58,31 @@ func (p ProcessState) String() string {
 	case BADREQUEST:
 		return "BADREQUEST"
 	default:
-		panic(fmt.Sprintf("Unexpected ProcessState %v", int(p)))
+		panic(fmt.Sprintf("Unexpected RunState %v", int(p)))
 	}
 }
 
 // Returned by the coordinator when a run request is made.
-type ProcessStatus struct {
-	RunId RunId
+type RunStatus struct {
+	RunID RunID
 
-	State ProcessState
+	State RunState
 	// References to stdout and stderr, not their text
 	// Runner impls shall provide valid refs for all States (but optionally may not for UNKNOWN/BADREQUEST).
 	StdoutRef string
 	StderrRef string
 
 	// Only valid if State == COMPLETE
-	SnapshotId SnapshotId
+	SnapshotID string
 	ExitCode   int
 
 	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
 }
 
-func (p ProcessStatus) String() string {
+func (p RunStatus) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "--- Process Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunId, p.SnapshotId, p.State)
+	fmt.Fprintf(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
 
 	if p.State == COMPLETE {
 		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
@@ -97,58 +96,58 @@ func (p ProcessStatus) String() string {
 	return b.String()
 }
 
-// Helper functions to create ProcessStatus
+// Helper functions to create RunStatus
 
-func AbortStatus(runId RunId) (r ProcessStatus) {
-	r.RunId = runId
+func AbortStatus(runID RunID) (r RunStatus) {
+	r.RunID = runID
 	r.State = ABORTED
 	return r
 }
 
-func TimeoutStatus(runId RunId) (r ProcessStatus) {
-	r.RunId = runId
+func TimeoutStatus(runID RunID) (r RunStatus) {
+	r.RunID = runID
 	r.State = TIMEDOUT
 	return r
 }
 
-func ErrorStatus(runId RunId, err error) (r ProcessStatus) {
-	r.RunId = runId
+func ErrorStatus(runID RunID, err error) (r RunStatus) {
+	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
 	return r
 }
 
-func BadRequestStatus(runId RunId, err error) (r ProcessStatus) {
-	r.RunId = runId
+func BadRequestStatus(runID RunID, err error) (r RunStatus) {
+	r.RunID = runID
 	r.State = BADREQUEST
 	r.Error = err.Error()
 	return r
 }
 
-func PendingStatus(runId RunId) (r ProcessStatus) {
-	r.RunId = runId
+func PendingStatus(runID RunID) (r RunStatus) {
+	r.RunID = runID
 	r.State = PENDING
 	return r
 }
 
-func RunningStatus(runId RunId, stdoutRef, stderrRef string) (r ProcessStatus) {
-	r.RunId = runId
+func RunningStatus(runID RunID, stdoutRef, stderrRef string) (r RunStatus) {
+	r.RunID = runID
 	r.State = RUNNING
 	r.StdoutRef = stdoutRef
 	r.StderrRef = stderrRef
 	return r
 }
 
-func CompleteStatus(runId RunId, snapshotId SnapshotId, exitCode int) (r ProcessStatus) {
-	r.RunId = runId
+func CompleteStatus(runID RunID, snapshotID string, exitCode int) (r RunStatus) {
+	r.RunID = runID
 	r.State = COMPLETE
-	r.SnapshotId = snapshotId
+	r.SnapshotID = snapshotID
 	r.ExitCode = exitCode
 	return r
 }
 
-func PreparingStatus(runId RunId) (r ProcessStatus) {
-	r.RunId = runId
+func PreparingStatus(runID RunID) (r RunStatus) {
+	r.RunID = runID
 	r.State = PREPARING
 	return r
 }

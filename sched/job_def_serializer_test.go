@@ -2,12 +2,11 @@ package sched
 
 import (
 	"fmt"
-	"github.com/leanovate/gopter"
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
-	"github.com/scootdev/scoot/tests/testhelpers"
 	"reflect"
 	"testing"
+
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 )
 
 func Test_FixedJob(t *testing.T) {
@@ -48,7 +47,7 @@ func makeFixedSampleJob() *Job {
 	jobDef.Tasks = make(map[string]TaskDefinition)
 	jobDef.JobType = "jobTypeVal"
 	taskDefinition := TaskDefinition{}
-	taskDefinition.SnapshotId = "snapshotIdVal"
+	taskDefinition.SnapshotID = "snapshotIDVal"
 	taskDefinition.Timeout = 3
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
@@ -69,7 +68,7 @@ func Print(job *Job) {
 	for taskName, taskDef := range job.Def.Tasks {
 		fmt.Printf(fmt.Sprintf("taskName: %s\n", taskName))
 		fmt.Printf(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
-		fmt.Printf(fmt.Sprintf("\tsnapshotId: %s\n", taskDef.SnapshotId))
+		fmt.Printf(fmt.Sprintf("\tsnapshotID: %s\n", taskDef.SnapshotID))
 		for envVarName, envVarVal := range taskDef.EnvVars {
 			fmt.Printf(fmt.Sprintf("\tenvVar:%s = %s\n", envVarName, envVarVal))
 		}
@@ -127,14 +126,4 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 	}
 
 	return true
-}
-
-func GopterGenJobDef() gopter.Gen {
-	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-		numTasks := genParams.Rng.Intn(10)
-		job := GenRandomJob(jobId, numTasks, genParams.Rng)
-		genResult := gopter.NewGenResult(job.Def, gopter.NoShrinker)
-		return genResult
-	}
 }

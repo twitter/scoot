@@ -96,10 +96,10 @@ func genSagaState(genParams *gopter.GenParameters) *SagaState {
 	return state
 }
 
-func genTaskCompletedData(state *SagaState, taskId string, genParams *gopter.GenParameters) error {
+func genTaskCompletedData(state *SagaState, taskID string, genParams *gopter.GenParameters) error {
 
 	runStatus := scoot.RunStatus{}
-	runStatus.RunId = taskId
+	runStatus.RunId = taskID
 	var statusVal scoot.RunStatusState
 	// status must be complete or higher
 	statusVal = scoot.RunStatusState(int64(math.Trunc(math.Abs(float64(genParams.NextInt64()%5)))) + 3)
@@ -132,7 +132,7 @@ func genTaskCompletedData(state *SagaState, taskId string, genParams *gopter.Gen
 		return err
 	}
 
-	state.addTaskData(taskId, EndTask, messageAsBytes)
+	state.addTaskData(taskID, EndTask, messageAsBytes)
 
 	return nil
 }

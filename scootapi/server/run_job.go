@@ -51,7 +51,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		}
 		task.Command.Argv = t.Command.Argv
 		if t.SnapshotId != nil {
-			task.SnapshotId = *t.SnapshotId
+			task.SnapshotID = *t.SnapshotId
 		}
 		result.Tasks[taskId] = task
 	}

@@ -75,8 +75,13 @@ func GenRandomTask(rng *rand.Rand) TaskDefinition {
 	}
 
 	timeout := time.Duration(rng.Int63n(1000))
+	cmd := runner.Command{
+		SnapshotID: snapshotId,
+		Argv:       args,
+		EnvVars:    envVarsMap,
+		Timeout:    timeout,
+	}
 
-	cmd := runner.Command{SnapshotId: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
 	return TaskDefinition{cmd}
 }
 

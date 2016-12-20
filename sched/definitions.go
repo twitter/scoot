@@ -87,12 +87,13 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	for taskName, task := range thriftJobDef.GetTasks() {
 		cmd := task.GetCommand()
 
-		command := runner.NewCommand(
-			cmd.GetArgv(),
-			cmd.GetEnvVars(),
-			time.Duration(cmd.GetTimeout()),
-			cmd.GetSnapshotId())
-		domainTasks[taskName] = TaskDefinition{*command}
+		command := runner.Command{
+			Argv:       cmd.GetArgv(),
+			EnvVars:    cmd.GetEnvVars(),
+			Timeout:    time.Duration(cmd.GetTimeout()),
+			SnapshotID: cmd.GetSnapshotId(),
+		}
+		domainTasks[taskName] = TaskDefinition{command}
 	}
 
 	domainJobDef := JobDefinition{
@@ -115,12 +116,11 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
 	for taskName, domainTask := range domainJob.Def.Tasks {
 		to := int64(domainTask.Timeout)
-		fmt.Println(fmt.Sprintf("%v:%+v", taskName, &domainTask.SnapshotId))
 		cmd := schedthrift.Command{
 			Argv:       domainTask.Argv,
 			EnvVars:    domainTask.EnvVars,
 			Timeout:    &to,
-			SnapshotId: domainTask.SnapshotId,
+			SnapshotId: domainTask.SnapshotID,
 		}
 		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
 		thriftTasks[taskName] = &thriftTask
