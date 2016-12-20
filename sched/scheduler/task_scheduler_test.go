@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"math"
@@ -9,7 +10,10 @@ import (
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
-	jobState := newJobState(job, nil)
+	jobAsBytes, _ := job.Serialize()
+
+	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
+	jobState := newJobState(&job, saga)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
@@ -36,7 +40,10 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 // Test verifies that tasks are scheduled on all available nodes.
 func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
-	jobState := newJobState(job, nil)
+	jobAsBytes, _ := job.Serialize()
+
+	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
+	jobState := newJobState(&job, saga)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")

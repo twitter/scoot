@@ -56,13 +56,17 @@ func NewStatefulSchedulerFromCluster(
 		wf,
 		config,
 		stat,
-		false)
+		false,
+		false, // TODO: make this a configurable parameter
+	)
 }
 
 // Create a New StatefulScheduler that implements the Scheduler interface
 // specifying debugMode true, starts the scheduler up but does not start
 // the update loop.  Instead the loop must be advanced manulaly by calling
 // step(), intended for debugging and test cases
+// If recoverJobsOnStartup is true Active Sagas in the saga log will be recovered
+// and rescheduled, otherwise no recovery will be done on startup
 func NewStatefulScheduler(
 	initialCluster []cluster.Node,
 	clusterUpdates chan []cluster.NodeUpdate,
@@ -71,6 +75,7 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
+	recoverJobsOnStartup bool,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
@@ -85,7 +90,11 @@ func NewStatefulScheduler(
 		stat:              stat,
 	}
 
-	sched.startUp()
+	// TODO: we need to allow the scheduler to accept new jobs
+	// while recovering old ones.
+	if recoverJobsOnStartup {
+		sched.startUp()
+	}
 
 	if !debugMode {
 		// start the scheduler loop
@@ -97,16 +106,14 @@ func NewStatefulScheduler(
 	return sched
 }
 
-//
 // Starts the scheduler, must be called before any other
 // methods on the scheduler can be called
 func (s *statefulScheduler) startUp() {
-	// TODO: Recover form SagaLog Any In Process Tasks
-	// Return only once all those have been scheduled
+	recoverJobs(s.sagaCoord, s.addJobCh)
 }
 
 type jobAddedMsg struct {
-	job  sched.Job
+	job  *sched.Job
 	saga *saga.Saga
 }
 
@@ -114,15 +121,18 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
 	s.stat.Counter("schedJobRequestsCounter").Inc(1)
 
-	job := sched.Job{
+	job := &sched.Job{
 		Id:  generateJobId(),
 		Def: jobDef,
 	}
 
+	asBytes, err := job.Serialize()
+	if err != nil {
+		return "", err
+	}
+
 	// Log StartSaga Message
-	// TODO: need to serialize job into binary and pass in here
-	// so we can recover the job in case of failure
-	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, nil)
+	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, asBytes)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +194,6 @@ func (s *statefulScheduler) step() {
 // Checks if any new jobs have been scheduled since the last loop and adds
 // them to the scheduler state
 func (s *statefulScheduler) addJobs() {
-	// Add New Jobs to State
 	select {
 	case newJobMsg := <-s.addJobCh:
 		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)

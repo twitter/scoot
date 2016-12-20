@@ -7,7 +7,7 @@ import (
 
 // Contains all the information for a job in progress
 type jobState struct {
-	Job        sched.Job
+	Job        *sched.Job
 	Saga       *saga.Saga            // saga associated with this job
 	Tasks      map[string]*taskState //taskId to taskState
 	EndingSaga bool                  //denotes whether an EndSagaMsg is in progress or not
@@ -22,7 +22,10 @@ type taskState struct {
 	NumTimesTried int
 }
 
-func newJobState(job sched.Job, saga *saga.Saga) *jobState {
+// Creates a New Job State based on the specified Job and Saga
+// The jobState will reflect any previous progress made on this
+// job and logged to the Sagalog
+func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 	j := &jobState{
 		Job:        job,
 		Saga:       saga,
@@ -37,6 +40,16 @@ func newJobState(job sched.Job, saga *saga.Saga) *jobState {
 			Def:           taskDef,
 			Status:        sched.NotStarted,
 			NumTimesTried: 0,
+		}
+	}
+
+	// Assumes Forward Recovery only, tasks are either
+	// done or not done.  Scheduler currently doesn't support
+	// scheduling compensating tasks.  In Progress tasks
+	// are considered not done and will be rescheduled.
+	for _, taskId := range saga.GetState().GetTaskIds() {
+		if saga.GetState().IsTaskCompleted(taskId) {
+			j.Tasks[taskId].Status = sched.Completed
 		}
 	}
 
