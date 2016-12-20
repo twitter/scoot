@@ -13,7 +13,7 @@
 
 
 struct Command {
-  1: optional list<string> argv,
+  1: required list<string> argv,
   2: optional map<string, string> envVars,
   3: optional i64 timeout,
   4: required string snapshotId,
