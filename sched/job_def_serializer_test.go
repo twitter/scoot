@@ -46,7 +46,7 @@ func makeFixedSampleJob() *Job {
 	jobDef.Tasks = make(map[string]TaskDefinition)
 	jobDef.JobType = "jobTypeVal"
 	taskDefinition := TaskDefinition{}
-	taskDefinition.SnapshotId = "snapshotIdVal"
+	taskDefinition.SnapshotID = "snapshotIDVal"
 	taskDefinition.Timeout = 3
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
@@ -67,7 +67,7 @@ func Print(job *Job) {
 	for taskName, taskDef := range job.Def.Tasks {
 		fmt.Printf(fmt.Sprintf("taskName: %s\n", taskName))
 		fmt.Printf(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
-		fmt.Printf(fmt.Sprintf("\tsnapshotId: %s\n", taskDef.SnapshotId))
+		fmt.Printf(fmt.Sprintf("\tsnapshotID: %s\n", taskDef.SnapshotID))
 		for envVarName, envVarVal := range taskDef.EnvVars {
 			fmt.Printf(fmt.Sprintf("\tenvVar:%s = %s\n", envVarName, envVarVal))
 		}
@@ -156,7 +156,7 @@ func genJobFromParams(genParams *gopter.GenParameters) *Job {
 
 		timeout := time.Duration(genParams.NextInt64() % 1000)
 
-		cmd := runner.Command{SnapshotId: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
+		cmd := runner.Command{SnapshotID: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
 		taskDef := TaskDefinition{cmd}
 		taskDefMap[taskName] = taskDef
 

@@ -20,7 +20,7 @@ type WriterDelegater interface {
 	// a more specific type and are more clever (e.g., if it's an *os.File, hook it up
 	// directly to a new process's stdout/stderr.)
 	// We care about this cleverness, so Output both is-a and has-a Writer
-	// Cf. runner/local/output.go
+	// Cf. runner/runners/local_output.go
 	WriterDelegate() io.Writer
 }
 

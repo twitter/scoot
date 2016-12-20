@@ -7,6 +7,7 @@ import (
 
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -20,7 +21,10 @@ type Client interface {
 
 	// Worker API Interactions
 	QueryWorker() (workerapi.WorkerStatus, error)
-	runner.Runner
+	runner.Controller
+	runner.StatusQueryNower
+	runner.LegacyStatusReader
+	runner.StatusEraser
 }
 
 type simpleClient struct {
@@ -66,29 +70,29 @@ func (c *simpleClient) Close() error {
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (c *simpleClient) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 
 	status, err := workerClient.Run(workerapi.DomainRunCommandToThrift(cmd))
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) Abort(runId runner.RunId) (runner.ProcessStatus, error) {
+func (c *simpleClient) Abort(runID runner.RunID) (runner.RunStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 
-	status, err := workerClient.Abort(string(runId))
+	status, err := workerClient.Abort(string(runID))
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
@@ -108,21 +112,21 @@ func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) Status(id runner.RunId) (runner.ProcessStatus, error) {
+func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	for _, p := range st.Runs {
-		if p.RunId == id {
+		if p.RunID == id {
 			return p, nil
 		}
 	}
-	return runner.ProcessStatus{}, fmt.Errorf("no such process %v", id)
+	return runner.RunStatus{}, fmt.Errorf("no such process %v", id)
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) StatusAll() ([]runner.ProcessStatus, error) {
+func (c *simpleClient) StatusAll() ([]runner.RunStatus, error) {
 	st, err := c.QueryWorker()
 	if err != nil {
 		return nil, err
@@ -130,7 +134,15 @@ func (c *simpleClient) StatusAll() ([]runner.ProcessStatus, error) {
 	return st.Runs, nil
 }
 
+func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+	stats, err := c.StatusAll()
+	if err != nil {
+		return nil, err
+	}
+	return runners.StatusesRO(stats).QueryNow(q)
+}
+
 //TODO: implement erase
-func (c *simpleClient) Erase(run runner.RunId) error {
+func (c *simpleClient) Erase(run runner.RunID) error {
 	panic(fmt.Errorf("workerapi/client:Erase not yet implemented"))
 }

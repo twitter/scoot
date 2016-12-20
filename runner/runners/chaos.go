@@ -8,15 +8,17 @@ import (
 	"github.com/scootdev/scoot/runner"
 )
 
+// chaos.go: impl that introduces errors (for testing)
+
 // Creates a new Chaos Runner
-func NewChaosRunner(delegate runner.Runner) *ChaosRunner {
+func NewChaosRunner(delegate runner.Service) *ChaosRunner {
 	return &ChaosRunner{del: delegate}
 }
 
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,
 // but delaying a random time between 0 and MaxDelay, or returning an error
 type ChaosRunner struct {
-	del      runner.Runner
+	del      runner.Service
 	mu       sync.Mutex
 	maxDelay time.Duration
 	err      error
@@ -49,23 +51,39 @@ func (r *ChaosRunner) delay() error {
 }
 
 // Implement Runner
-func (r *ChaosRunner) Run(cmd *runner.Command) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return r.del.Run(cmd)
 }
 
-func (r *ChaosRunner) Status(run runner.RunId) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return nil, err
+	}
+	return r.del.Query(q, w)
+}
+
+func (r *ChaosRunner) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+	err := r.delay()
+	if err != nil {
+		return nil, err
+	}
+	return r.del.QueryNow(q)
+}
+
+func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, error) {
+	err := r.delay()
+	if err != nil {
+		return runner.RunStatus{}, err
 	}
 	return r.del.Status(run)
 }
 
-func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
+func (r *ChaosRunner) StatusAll() ([]runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
 		return nil, err
@@ -73,15 +91,15 @@ func (r *ChaosRunner) StatusAll() ([]runner.ProcessStatus, error) {
 	return r.del.StatusAll()
 }
 
-func (r *ChaosRunner) Abort(run runner.RunId) (runner.ProcessStatus, error) {
+func (r *ChaosRunner) Abort(run runner.RunID) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.ProcessStatus{}, err
+		return runner.RunStatus{}, err
 	}
 	return r.del.Abort(run)
 }
 
-func (r *ChaosRunner) Erase(run runner.RunId) error {
+func (r *ChaosRunner) Erase(run runner.RunID) error {
 	err := r.delay()
 	if err != nil {
 		return err

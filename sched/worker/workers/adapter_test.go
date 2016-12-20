@@ -7,7 +7,6 @@ import (
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/local"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/snapshot/snapshots"
@@ -15,8 +14,8 @@ import (
 
 func TestPollingWorker_Simple(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	w := NewServiceWorker(r, time.Second, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 42 {
 		t.Fatalf("got status %v, error %v; expected {0 COMPLETE file:///dev/null file:///dev/null 42 } <nil>", st, err)
@@ -26,9 +25,9 @@ func TestPollingWorker_Simple(t *testing.T) {
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-	w := NewPollingWorker(r, time.Duration(10)*time.Microsecond)
-	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	w := NewServiceWorker(r, time.Second, time.Duration(10)*time.Microsecond)
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
 		stCh <- st
@@ -54,9 +53,9 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
-	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
+	w := NewServiceWorker(chaos, 0, time.Duration(10)*time.Microsecond)
 
 	chaos.SetError(fmt.Errorf("could not run"))
 	// Now make the runner error
@@ -69,10 +68,11 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 
 func TestPollingWorker_ErrorPolling(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 	chaos := runners.NewChaosRunner(r)
-	w := NewPollingWorker(chaos, time.Duration(10)*time.Microsecond)
-	stCh, errCh := make(chan runner.ProcessStatus, 1), make(chan error, 1)
+	poller := runners.NewPollingService(chaos, chaos, chaos, 2*time.Microsecond)
+	w := NewServiceWorker(poller, time.Second, time.Duration(10)*time.Microsecond)
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	go func() {
 		st, err := w.RunAndWait(task("pause", "complete 43"))
 		stCh <- st
@@ -103,44 +103,24 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 
 func TestPollingWorker_Timeout(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
 
-	w := NewPollingWorkerWithTimeout(
-		r,
-		time.Duration(10)*time.Microsecond,
-		true,
-		time.Duration(10)*time.Microsecond)
+	w := NewServiceWorker(r, time.Duration(20)*time.Microsecond, time.Duration(2)*time.Microsecond)
 
-	status, err := w.RunAndWait(task("sleep 500", "complete 43"))
+	task := sched.TaskDefinition{
+		Command: runner.Command{
+			Argv:    []string{"sleep 500", "complete 43"},
+			Timeout: 50 * time.Microsecond,
+		},
+	}
+
+	status, err := w.RunAndWait(task)
 	if err != nil {
 		t.Errorf("Received Unexpected Error: %v", err)
 	}
 
 	if status.State != runner.TIMEDOUT {
 		t.Errorf("Expected status state to be TIMEDOUT. Status: %+v", status)
-	}
-}
-
-func TestPollingWorker_TimeoutDisabled(t *testing.T) {
-	ex := execers.NewSimExecer()
-	r := local.NewSimpleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
-
-	w := NewPollingWorkerWithTimeout(
-		r,
-		time.Duration(10)*time.Microsecond,
-		false,
-		time.Duration(10)*time.Microsecond)
-
-	status, err := w.RunAndWait(task("sleep 50", "complete 43"))
-	if err != nil {
-		t.Errorf("Received Unexpected Error: %v", err)
-	}
-
-	if err != nil {
-		t.Errorf("Received Unexpected Error: %v", err)
-	}
-	if status.State != runner.COMPLETE {
-		t.Errorf("Expected task to complete running.  Status: %+v", status)
 	}
 }
 

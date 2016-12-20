@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -14,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
-	"github.com/scootdev/scoot/workerapi"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -76,7 +74,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 
 	//mock sagalog
-	mockCtrl := gomock.NewController(&TestTerminator{})
+	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
@@ -99,7 +97,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 
 	//mock sagalog
-	mockCtrl := gomock.NewController(&TestTerminator{})
+	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any()).Return(errors.New("test error"))
@@ -144,7 +142,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	}
 	taskId := taskIds[0]
 
-	mockCtrl := gomock.NewController(&TestTerminator{})
+	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	deps := getDefaultSchedDeps()
@@ -156,10 +154,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 
 		retStatus := runner.RunningStatus("run1", "", "")
 		testErr := errors.New("Test Error, Failed Running Task On Worker")
-		// Each attempted call to runTaskAndLog gets a new workerMock.
-		// Start() gets called once per workerMock and Wait() gets called once only in the last workerMock.
-		workerMock.EXPECT().Start(gomock.Any()).Return(retStatus, testErr).Times(1)
-		workerMock.EXPECT().Wait(gomock.Any()).Return(retStatus, testErr).MaxTimes(1)
+
+		workerMock.EXPECT().RunAndWait(gomock.Any()).Return(retStatus, testErr).MinTimes(1)
 
 		return workerMock
 	}
@@ -183,19 +179,6 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	}
 }
 
-// An example attempt to force an exit more quickly on test failure.
-// testing.T.Errorf and testing.T.Fatalf must be called from the test goroutine, see docs.
-// The scheduler's asyncRunner goroutine will hit the gomock Fatalf call and exit,
-// meanwhile the test goroutine is hung waiting for an impossible condition.
-type TestTerminator struct{}
-
-func (t *TestTerminator) Errorf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args...))
-}
-func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args...))
-}
-
 // Ensure a single job with one task runs to completion, updates
 // state correctly, and makes the expected calls to the SagaLog
 func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
@@ -213,7 +196,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	deps.clUpdates = cl.ch
 
 	// sagalog mock to ensure all messages are logged appropriately
-	mockCtrl := gomock.NewController(&TestTerminator{})
+	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
@@ -226,12 +209,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
-	startStatus := runner.PreparingStatus("0")
-	startStatus.StdoutRef = "file:///dev/null"
-	startStatus.StderrRef = "file:///dev/null"
-	startStatusBytes, _ := workerapi.SerializeProcessStatus(startStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, startStatusBytes))
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))

@@ -11,7 +11,7 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	execer "github.com/scootdev/scoot/runner/execer/os"
-	localrunner "github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
@@ -21,10 +21,10 @@ func TestDaemonExample(t *testing.T) {
 	// Initialize types required to construct a daemon server handler.
 	filerTmp, _ := temp.NewTempDir(os.TempDir(), "TestDaemonExample_filer")
 	localTmp, _ := temp.NewTempDir(os.TempDir(), "TestDaemonExample_localpath")
-	out, _ := localrunner.NewOutputCreator(localTmp)
+	out, _ := runners.NewHttpOutputCreator(localTmp, "")
 	filer := snapshots.MakeTempFiler(filerTmp)
 	ex := execer.NewExecer()
-	run := localrunner.NewSimpleRunner(ex, filer, out)
+	run := runners.NewSingleRunner(ex, filer, out)
 	handler := NewHandler(run, filer, 50*time.Millisecond)
 
 	// Populate the paths we want to ingest.
@@ -48,22 +48,22 @@ func TestDaemonExample(t *testing.T) {
 	}
 
 	// Run scripts serially in their respective snapshots. Block until each run finishes.
-	var okStatus, failStatus runner.ProcessStatus
-	okStatus, err = handler.Run(runner.NewCommand([]string{"./ok.sh"}, map[string]string{}, 500*time.Millisecond, okId))
+	var okStatus, failStatus runner.RunStatus
+	okStatus, err = handler.Run(&runner.Command{Argv: []string{"./ok.sh"}, Timeout: 500 * time.Millisecond, SnapshotID: okId})
 	if err != nil {
 		t.Fatal("failure running 'ok' snapshot.", err)
 	}
-	okStatuses := handler.Poll([]runner.RunId{okStatus.RunId}, 500*time.Millisecond, false)
+	okStatuses := handler.Poll([]runner.RunID{okStatus.RunID}, 500*time.Millisecond, false)
 	if len(okStatuses) != 1 {
 		t.Fatal("failure polling 'ok' run.", len(okStatuses))
 	}
 
 	//...
-	failStatus, err = handler.Run(runner.NewCommand([]string{"./fail.sh"}, map[string]string{}, 500*time.Millisecond, failId))
+	failStatus, err = handler.Run(&runner.Command{Argv: []string{"./fail.sh"}, Timeout: 500 * time.Millisecond, SnapshotID: failId})
 	if err != nil {
 		t.Fatal("failure running 'fail' snapshot.", err)
 	}
-	failStatuses := handler.Poll([]runner.RunId{failStatus.RunId}, 500*time.Millisecond, false)
+	failStatuses := handler.Poll([]runner.RunID{failStatus.RunID}, 500*time.Millisecond, false)
 	if len(failStatuses) != 1 {
 		t.Fatal("failure polling 'fail' run.", len(failStatuses))
 	}
@@ -79,11 +79,11 @@ func TestDaemonExample(t *testing.T) {
 	// Checkout result snapshots for both runs.
 	okDir := filepath.Join(localTmp.Dir, "okco")
 	failDir := filepath.Join(localTmp.Dir, "failco")
-	err = handler.CheckoutSnapshot(okStatuses[0].SnapshotId, okDir)
+	err = handler.CheckoutSnapshot(okStatuses[0].SnapshotID, okDir)
 	if err != nil {
 		t.Fatal("failure checking out 'ok' result snapshot.", err)
 	}
-	err = handler.CheckoutSnapshot(failStatuses[0].SnapshotId, failDir)
+	err = handler.CheckoutSnapshot(failStatuses[0].SnapshotID, failDir)
 	if err != nil {
 		t.Fatal("failure checking out 'fail' result snapshot.", err)
 	}
