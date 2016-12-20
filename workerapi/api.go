@@ -108,7 +108,7 @@ func DomainRunStatusToThrift(domain runner.ProcessStatus) *worker.RunStatus {
 		thrift.Status = worker.Status_UNKNOWN
 	case runner.PENDING:
 		thrift.Status = worker.Status_PENDING
-	case runner.RUNNING:
+	case runner.PREPARING, runner.RUNNING:
 		thrift.Status = worker.Status_RUNNING
 	case runner.COMPLETE:
 		thrift.Status = worker.Status_COMPLETE

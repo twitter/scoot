@@ -2,11 +2,12 @@ package client
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
-	"log"
-	"time"
 )
 
 const (
@@ -80,16 +81,14 @@ func PrintJobStatus(jobStatus *scoot.JobStatus) {
 		fmt.Printf("\tTask %s {\n", taskId)
 		fmt.Printf("\t\tStatus: %s\n", taskStatus.String())
 		runStatus := jobStatus.TaskData[taskId]
+		fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+		fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
 
 		// TODO(dbentley): it appears that runStatus is nil; figure that out
 		if taskStatus == scoot.Status_COMPLETED && runStatus != nil {
 			if runStatus.ExitCode != nil {
 				exitCode := *runStatus.ExitCode
 				fmt.Printf("\t\tExitCode: %d\n", exitCode)
-				if exitCode != 0 {
-					fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
-					fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
-				}
 			}
 			if runStatus.Error != nil {
 				fmt.Printf("\t\tError: %v\n", *runStatus.Error)

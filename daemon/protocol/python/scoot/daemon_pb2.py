@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='daemon.proto',
   package='protocol',
   syntax='proto3',
-  serialized_pb=_b('\n\x0c\x64\x61\x65mon.proto\x12\x08protocol\"\x1b\n\x0b\x45\x63hoRequest\x12\x0c\n\x04ping\x18\x01 \x01(\t\"\x19\n\tEchoReply\x12\x0c\n\x04pong\x18\x01 \x01(\t\"%\n\x15\x43reateSnapshotRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"9\n\x13\x43reateSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\x12\x13\n\x0bsnapshot_id\x18\x02 \x01(\t\";\n\x17\x43heckoutSnapshotRequest\x12\x13\n\x0bsnapshot_id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ir\x18\x02 \x01(\t\"&\n\x15\x43heckoutSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\"\xda\x01\n\nRunRequest\x12)\n\x03\x63md\x18\x01 \x01(\x0b\x32\x1c.protocol.RunRequest.Command\x1a\xa0\x01\n\x07\x43ommand\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x32\n\x03\x65nv\x18\x02 \x03(\x0b\x32%.protocol.RunRequest.Command.EnvEntry\x12\x12\n\ntimeout_ns\x18\x03 \x01(\x03\x12\x13\n\x0bsnapshot_id\x18\x04 \x01(\t\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\")\n\x08RunReply\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"?\n\x0bPollRequest\x12\x0f\n\x07run_ids\x18\x01 \x03(\t\x12\x12\n\ntimeout_ns\x18\x02 \x01(\x03\x12\x0b\n\x03\x61ll\x18\x03 \x01(\x08\"\x94\x02\n\tPollReply\x12*\n\x06status\x18\x01 \x03(\x0b\x32\x1a.protocol.PollReply.Status\x1a\xda\x01\n\x06Status\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12/\n\x05state\x18\x02 \x01(\x0e\x32 .protocol.PollReply.Status.State\x12\x13\n\x0bsnapshot_id\x18\x03 \x01(\t\x12\x11\n\texit_code\x18\x04 \x01(\x05\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"X\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07PENDING\x10\x01\x12\r\n\tPREPARING\x10\x02\x12\x0b\n\x07RUNNING\x10\x03\x12\r\n\tCOMPLETED\x10\x04\x12\n\n\x06\x46\x41ILED\x10\x05\x32\xda\x02\n\x0bScootDaemon\x12\x34\n\x04\x45\x63ho\x12\x15.protocol.EchoRequest\x1a\x13.protocol.EchoReply\"\x00\x12R\n\x0e\x43reateSnapshot\x12\x1f.protocol.CreateSnapshotRequest\x1a\x1d.protocol.CreateSnapshotReply\"\x00\x12X\n\x10\x43heckoutSnapshot\x12!.protocol.CheckoutSnapshotRequest\x1a\x1f.protocol.CheckoutSnapshotReply\"\x00\x12\x31\n\x03Run\x12\x14.protocol.RunRequest\x1a\x12.protocol.RunReply\"\x00\x12\x34\n\x04Poll\x12\x15.protocol.PollRequest\x1a\x13.protocol.PollReply\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0c\x64\x61\x65mon.proto\x12\x08protocol\"\x1b\n\x0b\x45\x63hoRequest\x12\x0c\n\x04ping\x18\x01 \x01(\t\"\x19\n\tEchoReply\x12\x0c\n\x04pong\x18\x01 \x01(\t\"%\n\x15\x43reateSnapshotRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\"9\n\x13\x43reateSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\x12\x13\n\x0bsnapshot_id\x18\x02 \x01(\t\";\n\x17\x43heckoutSnapshotRequest\x12\x13\n\x0bsnapshot_id\x18\x01 \x01(\t\x12\x0b\n\x03\x64ir\x18\x02 \x01(\t\"&\n\x15\x43heckoutSnapshotReply\x12\r\n\x05\x65rror\x18\x01 \x01(\t\"\xda\x01\n\nRunRequest\x12)\n\x03\x63md\x18\x01 \x01(\x0b\x32\x1c.protocol.RunRequest.Command\x1a\xa0\x01\n\x07\x43ommand\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x32\n\x03\x65nv\x18\x02 \x03(\x0b\x32%.protocol.RunRequest.Command.EnvEntry\x12\x12\n\ntimeout_ns\x18\x03 \x01(\x03\x12\x13\n\x0bsnapshot_id\x18\x04 \x01(\t\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\")\n\x08RunReply\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12\r\n\x05\x65rror\x18\x02 \x01(\t\"?\n\x0bPollRequest\x12\x0f\n\x07run_ids\x18\x01 \x03(\t\x12\x12\n\ntimeout_ns\x18\x02 \x01(\x03\x12\x0b\n\x03\x61ll\x18\x03 \x01(\x08\"\x94\x02\n\tPollReply\x12*\n\x06status\x18\x01 \x03(\x0b\x32\x1a.protocol.PollReply.Status\x1a\xda\x01\n\x06Status\x12\x0e\n\x06run_id\x18\x01 \x01(\t\x12/\n\x05state\x18\x02 \x01(\x0e\x32 .protocol.PollReply.Status.State\x12\x13\n\x0bsnapshot_id\x18\x03 \x01(\t\x12\x11\n\texit_code\x18\x04 \x01(\x05\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"X\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07PENDING\x10\x01\x12\r\n\tPREPARING\x10\x02\x12\x0b\n\x07RUNNING\x10\x03\x12\r\n\tCOMPLETED\x10\x04\x12\n\n\x06\x46\x41ILED\x10\x05\"\r\n\x0b\x45mptyStruct2\x98\x03\n\x0bScootDaemon\x12\x34\n\x04\x45\x63ho\x12\x15.protocol.EchoRequest\x1a\x13.protocol.EchoReply\"\x00\x12R\n\x0e\x43reateSnapshot\x12\x1f.protocol.CreateSnapshotRequest\x1a\x1d.protocol.CreateSnapshotReply\"\x00\x12X\n\x10\x43heckoutSnapshot\x12!.protocol.CheckoutSnapshotRequest\x1a\x1f.protocol.CheckoutSnapshotReply\"\x00\x12\x31\n\x03Run\x12\x14.protocol.RunRequest\x1a\x12.protocol.RunReply\"\x00\x12\x34\n\x04Poll\x12\x15.protocol.PollRequest\x1a\x13.protocol.PollReply\"\x00\x12<\n\nStopDaemon\x12\x15.protocol.EmptyStruct\x1a\x15.protocol.EmptyStruct\"\x00\x62\x06proto3')
 )
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -555,6 +555,30 @@ _POLLREPLY = _descriptor.Descriptor(
   serialized_end=887,
 )
 
+
+_EMPTYSTRUCT = _descriptor.Descriptor(
+  name='EmptyStruct',
+  full_name='protocol.EmptyStruct',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=889,
+  serialized_end=902,
+)
+
 _RUNREQUEST_COMMAND_ENVENTRY.containing_type = _RUNREQUEST_COMMAND
 _RUNREQUEST_COMMAND.fields_by_name['env'].message_type = _RUNREQUEST_COMMAND_ENVENTRY
 _RUNREQUEST_COMMAND.containing_type = _RUNREQUEST
@@ -573,6 +597,7 @@ DESCRIPTOR.message_types_by_name['RunRequest'] = _RUNREQUEST
 DESCRIPTOR.message_types_by_name['RunReply'] = _RUNREPLY
 DESCRIPTOR.message_types_by_name['PollRequest'] = _POLLREQUEST
 DESCRIPTOR.message_types_by_name['PollReply'] = _POLLREPLY
+DESCRIPTOR.message_types_by_name['EmptyStruct'] = _EMPTYSTRUCT
 
 EchoRequest = _reflection.GeneratedProtocolMessageType('EchoRequest', (_message.Message,), dict(
   DESCRIPTOR = _ECHOREQUEST,
@@ -668,6 +693,13 @@ PollReply = _reflection.GeneratedProtocolMessageType('PollReply', (_message.Mess
 _sym_db.RegisterMessage(PollReply)
 _sym_db.RegisterMessage(PollReply.Status)
 
+EmptyStruct = _reflection.GeneratedProtocolMessageType('EmptyStruct', (_message.Message,), dict(
+  DESCRIPTOR = _EMPTYSTRUCT,
+  __module__ = 'daemon_pb2'
+  # @@protoc_insertion_point(class_scope:protocol.EmptyStruct)
+  ))
+_sym_db.RegisterMessage(EmptyStruct)
+
 
 _RUNREQUEST_COMMAND_ENVENTRY.has_options = True
 _RUNREQUEST_COMMAND_ENVENTRY._options = _descriptor._ParseOptions(descriptor_pb2.MessageOptions(), _b('8\001'))
@@ -711,6 +743,11 @@ class ScootDaemonStub(object):
         request_serializer=PollRequest.SerializeToString,
         response_deserializer=PollReply.FromString,
         )
+    self.StopDaemon = channel.unary_unary(
+        '/protocol.ScootDaemon/StopDaemon',
+        request_serializer=EmptyStruct.SerializeToString,
+        response_deserializer=EmptyStruct.FromString,
+        )
 
 
 class ScootDaemonServicer(object):
@@ -736,6 +773,11 @@ class ScootDaemonServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def Poll(self, request, context):
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def StopDaemon(self, request, context):
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
@@ -768,6 +810,11 @@ def add_ScootDaemonServicer_to_server(servicer, server):
           request_deserializer=PollRequest.FromString,
           response_serializer=PollReply.SerializeToString,
       ),
+      'StopDaemon': grpc.unary_unary_rpc_method_handler(
+          servicer.StopDaemon,
+          request_deserializer=EmptyStruct.FromString,
+          response_serializer=EmptyStruct.SerializeToString,
+      ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
       'protocol.ScootDaemon', rpc_method_handlers)
@@ -775,6 +822,11 @@ def add_ScootDaemonServicer_to_server(servicer, server):
 
 
 class BetaScootDaemonServicer(object):
+  """The Beta API is deprecated for 0.15.0 and later.
+
+  It is recommended to use the GA API (classes and functions in this
+  file not marked beta) for all further purposes. This class was generated
+  only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0."""
   def Echo(self, request, context):
     context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
   def CreateSnapshot(self, request, context):
@@ -785,9 +837,16 @@ class BetaScootDaemonServicer(object):
     context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
   def Poll(self, request, context):
     context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
+  def StopDaemon(self, request, context):
+    context.code(beta_interfaces.StatusCode.UNIMPLEMENTED)
 
 
 class BetaScootDaemonStub(object):
+  """The Beta API is deprecated for 0.15.0 and later.
+
+  It is recommended to use the GA API (classes and functions in this
+  file not marked beta) for all further purposes. This class was generated
+  only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0."""
   def Echo(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
     raise NotImplementedError()
   Echo.future = None
@@ -803,15 +862,24 @@ class BetaScootDaemonStub(object):
   def Poll(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
     raise NotImplementedError()
   Poll.future = None
+  def StopDaemon(self, request, timeout, metadata=None, with_call=False, protocol_options=None):
+    raise NotImplementedError()
+  StopDaemon.future = None
 
 
 def beta_create_ScootDaemon_server(servicer, pool=None, pool_size=None, default_timeout=None, maximum_timeout=None):
+  """The Beta API is deprecated for 0.15.0 and later.
+
+  It is recommended to use the GA API (classes and functions in this
+  file not marked beta) for all further purposes. This function was
+  generated only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0"""
   request_deserializers = {
     ('protocol.ScootDaemon', 'CheckoutSnapshot'): CheckoutSnapshotRequest.FromString,
     ('protocol.ScootDaemon', 'CreateSnapshot'): CreateSnapshotRequest.FromString,
     ('protocol.ScootDaemon', 'Echo'): EchoRequest.FromString,
     ('protocol.ScootDaemon', 'Poll'): PollRequest.FromString,
     ('protocol.ScootDaemon', 'Run'): RunRequest.FromString,
+    ('protocol.ScootDaemon', 'StopDaemon'): EmptyStruct.FromString,
   }
   response_serializers = {
     ('protocol.ScootDaemon', 'CheckoutSnapshot'): CheckoutSnapshotReply.SerializeToString,
@@ -819,6 +887,7 @@ def beta_create_ScootDaemon_server(servicer, pool=None, pool_size=None, default_
     ('protocol.ScootDaemon', 'Echo'): EchoReply.SerializeToString,
     ('protocol.ScootDaemon', 'Poll'): PollReply.SerializeToString,
     ('protocol.ScootDaemon', 'Run'): RunReply.SerializeToString,
+    ('protocol.ScootDaemon', 'StopDaemon'): EmptyStruct.SerializeToString,
   }
   method_implementations = {
     ('protocol.ScootDaemon', 'CheckoutSnapshot'): face_utilities.unary_unary_inline(servicer.CheckoutSnapshot),
@@ -826,18 +895,25 @@ def beta_create_ScootDaemon_server(servicer, pool=None, pool_size=None, default_
     ('protocol.ScootDaemon', 'Echo'): face_utilities.unary_unary_inline(servicer.Echo),
     ('protocol.ScootDaemon', 'Poll'): face_utilities.unary_unary_inline(servicer.Poll),
     ('protocol.ScootDaemon', 'Run'): face_utilities.unary_unary_inline(servicer.Run),
+    ('protocol.ScootDaemon', 'StopDaemon'): face_utilities.unary_unary_inline(servicer.StopDaemon),
   }
   server_options = beta_implementations.server_options(request_deserializers=request_deserializers, response_serializers=response_serializers, thread_pool=pool, thread_pool_size=pool_size, default_timeout=default_timeout, maximum_timeout=maximum_timeout)
   return beta_implementations.server(method_implementations, options=server_options)
 
 
 def beta_create_ScootDaemon_stub(channel, host=None, metadata_transformer=None, pool=None, pool_size=None):
+  """The Beta API is deprecated for 0.15.0 and later.
+
+  It is recommended to use the GA API (classes and functions in this
+  file not marked beta) for all further purposes. This function was
+  generated only to ease transition from grpcio<0.15.0 to grpcio>=0.15.0"""
   request_serializers = {
     ('protocol.ScootDaemon', 'CheckoutSnapshot'): CheckoutSnapshotRequest.SerializeToString,
     ('protocol.ScootDaemon', 'CreateSnapshot'): CreateSnapshotRequest.SerializeToString,
     ('protocol.ScootDaemon', 'Echo'): EchoRequest.SerializeToString,
     ('protocol.ScootDaemon', 'Poll'): PollRequest.SerializeToString,
     ('protocol.ScootDaemon', 'Run'): RunRequest.SerializeToString,
+    ('protocol.ScootDaemon', 'StopDaemon'): EmptyStruct.SerializeToString,
   }
   response_deserializers = {
     ('protocol.ScootDaemon', 'CheckoutSnapshot'): CheckoutSnapshotReply.FromString,
@@ -845,6 +921,7 @@ def beta_create_ScootDaemon_stub(channel, host=None, metadata_transformer=None, 
     ('protocol.ScootDaemon', 'Echo'): EchoReply.FromString,
     ('protocol.ScootDaemon', 'Poll'): PollReply.FromString,
     ('protocol.ScootDaemon', 'Run'): RunReply.FromString,
+    ('protocol.ScootDaemon', 'StopDaemon'): EmptyStruct.FromString,
   }
   cardinalities = {
     'CheckoutSnapshot': cardinality.Cardinality.UNARY_UNARY,
@@ -852,6 +929,7 @@ def beta_create_ScootDaemon_stub(channel, host=None, metadata_transformer=None, 
     'Echo': cardinality.Cardinality.UNARY_UNARY,
     'Poll': cardinality.Cardinality.UNARY_UNARY,
     'Run': cardinality.Cardinality.UNARY_UNARY,
+    'StopDaemon': cardinality.Cardinality.UNARY_UNARY,
   }
   stub_options = beta_implementations.stub_options(host=host, metadata_transformer=metadata_transformer, request_serializers=request_serializers, response_deserializers=response_deserializers, thread_pool=pool, thread_pool_size=pool_size)
   return beta_implementations.dynamic_stub(channel, 'protocol.ScootDaemon', cardinalities, options=stub_options)

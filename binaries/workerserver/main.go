@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/workerserver/config"
@@ -33,11 +34,14 @@ func main() {
 	bag, schema := server.Defaults()
 	bag.PutMany(
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*httpAddr, s)
+		func(s stats.StatsReceiver, handlers map[string]http.Handler) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer(*httpAddr, s, handlers)
 		},
 		func(tmpDir *temp.TempDir) snapshot.Filer {
 			return snapshots.MakeTempCheckouterFiler(tmpDir)
+		},
+		func() server.WorkerUri {
+			return server.WorkerUri("http://" + *httpAddr)
 		},
 	)
 
