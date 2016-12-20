@@ -15,8 +15,16 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 
 	properties.Property("Serialize JobDef", prop.ForAll(
 		func(job *Job) bool {
-			ValidateSerialization(job, false, t)
-			ValidateSerialization(job, true, t)
+			serializeBinary := ValidateSerialization(job, false)
+			if !serializeBinary {
+				return false
+			}
+
+			serializeJson := ValidateSerialization(job, true)
+			if !serializeJson {
+				return false
+			}
+
 			return true
 		},
 
@@ -24,5 +32,4 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	))
 
 	properties.TestingRun(t)
-
 }

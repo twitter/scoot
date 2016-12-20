@@ -2,13 +2,42 @@
 package sched
 
 import (
+	"fmt"
+	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
+	"time"
 )
 
 // Job is the job Scoot can schedule
 type Job struct {
 	Id  string
 	Def JobDefinition
+}
+
+// Serialize Job to binary slice, and error is
+// returned if the object cannot be Serialized
+func (j *Job) Serialize() ([]byte, error) {
+	thriftJob, err := makeThriftJobFromDomainJob(j)
+	if err != nil {
+		return nil, err
+	}
+	return thrifthelpers.BinarySerialize(thriftJob)
+}
+
+// Desrialize a binary slice to a Job,
+// an error is returned if it cannot be deserialized.
+func DeserializeJob(input []byte) (*Job, error) {
+	thriftJob := schedthrift.NewJob()
+	fmt.Println("input: ", input)
+	err := thrifthelpers.BinaryDeserialize(thriftJob, input)
+	fmt.Println("error: ", err)
+	if err != nil {
+		return nil, err
+	}
+
+	job := makeDomainJobFromThriftJob(thriftJob)
+	return job, nil
 }
 
 // JobDefinition is the definition the client sent us
@@ -44,3 +73,69 @@ const (
 	// have been applied.
 	RolledBack
 )
+
+// transforms a thrift Job into a scheduler Job
+func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
+
+	if thriftJob == nil {
+		return nil
+	}
+
+	thriftJobDef := thriftJob.GetJobDefinition()
+
+	domainTasks := make(map[string]TaskDefinition)
+	for taskName, task := range thriftJobDef.GetTasks() {
+		cmd := task.GetCommand()
+
+		command := runner.NewCommand(
+			cmd.GetArgv(),
+			cmd.GetEnvVars(),
+			time.Duration(cmd.GetTimeout()),
+			cmd.GetSnapshotId())
+		domainTasks[taskName] = TaskDefinition{*command}
+	}
+
+	domainJobDef := JobDefinition{
+		JobType: thriftJobDef.GetJobType(),
+		Tasks:   domainTasks,
+	}
+
+	return &Job{
+		Id:  thriftJob.GetID(),
+		Def: domainJobDef,
+	}
+}
+
+// converts a scheduler Job into a Thrift Job
+func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
+	if domainJob == nil {
+		return nil, nil
+	}
+
+	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
+	for taskName, domainTask := range domainJob.Def.Tasks {
+		to := int64(domainTask.Timeout)
+		fmt.Println(fmt.Sprintf("%v:%+v", taskName, &domainTask.SnapshotId))
+		cmd := schedthrift.Command{
+			Argv:       domainTask.Argv,
+			EnvVars:    domainTask.EnvVars,
+			Timeout:    &to,
+			SnapshotId: domainTask.SnapshotId,
+		}
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
+		thriftTasks[taskName] = &thriftTask
+	}
+
+	thriftJobDefinition := schedthrift.JobDefinition{
+		JobType: &(*domainJob).Def.JobType,
+		Tasks:   thriftTasks,
+	}
+
+	thriftJob := schedthrift.Job{
+		ID:            domainJob.Id,
+		JobDefinition: &thriftJobDefinition,
+	}
+
+	return &thriftJob, nil
+
+}

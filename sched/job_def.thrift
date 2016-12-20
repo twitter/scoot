@@ -9,26 +9,26 @@
 #
 
 # To Generate files run from this (github.com/scootdev/scoot/sched) directory
-#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift JobDef.thrift
+#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift
 
 
 struct Command {
-  1: list<string> argv,
-  2: map<string, string> envVars,
-  3: i64 timeout,
-  4: string snapshotId,
+  1: optional list<string> argv,
+  2: optional map<string, string> envVars,
+  3: optional i64 timeout,
+  4: required string snapshotId,
 }
 
 struct TaskDefinition {
-  1: Command command,
+  1: required Command command,
 }
 
 struct JobDefinition {
-  1: string jobType,
-  2: map<string, TaskDefinition> tasks,
+  1: optional string jobType,
+  2: optional map<string, TaskDefinition> tasks,
 }
 
 struct Job {
-  1: string id
-  2: JobDefinition jobDefinition
+  1: required string id
+  2: required JobDefinition jobDefinition
 }
