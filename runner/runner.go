@@ -12,6 +12,7 @@ import (
 
 const NoRunnersMsg = "No runners available."
 const RunnerBusyMsg = "Runner is busy"
+const LoggingErrMsg = "Error initializing logging."
 
 // A command, execution environment, and timeout.
 type Command struct {

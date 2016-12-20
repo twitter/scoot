@@ -2,6 +2,8 @@ package server
 
 import (
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -23,6 +25,8 @@ type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
 }
+
+type WorkerUri string
 
 func makeServers(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 	return servers{thrift, http}
@@ -48,8 +52,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
 
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:2001", s)
+		func(outputCreator runners.HttpOutputCreator) map[string]http.Handler {
+			return map[string]http.Handler{outputCreator.HttpPath(): outputCreator}
+		},
+
+		func(s stats.StatsReceiver, handlers map[string]http.Handler) *endpoints.TwitterServer {
+			return endpoints.NewTwitterServer("localhost:2001", s, handlers)
 		},
 
 		func() execer.Execer {
@@ -58,8 +66,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		func(tmpDir *temp.TempDir) (runner.OutputCreator, error) {
-			return runners.NewLocalOutputCreator(tmpDir)
+		func(tmpDir *temp.TempDir, uri WorkerUri) (runners.HttpOutputCreator, error) {
+			outDir, err := tmpDir.FixedDir("output")
+			if err != nil {
+				return nil, err
+			}
+			return runners.NewHttpOutputCreator(outDir, strings.TrimSuffix(string(uri), "/")+"/output")
 		},
 
 		func(

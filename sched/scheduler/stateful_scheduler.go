@@ -244,7 +244,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		taskId := ta.task.TaskId
 		taskDef := ta.task.Def
 		saga := s.inProgressJobs[jobId].Saga
-		wf := s.workerFactory(ta.node)
+		worker := s.workerFactory(ta.node)
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
@@ -259,7 +259,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				log.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				return runTaskAndLog(
 					saga,
-					wf,
+					worker,
 					taskId,
 					taskDef,
 					preventRetries,

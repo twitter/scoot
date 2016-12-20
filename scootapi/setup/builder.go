@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 )
 
 // Builder is able to create Scoot binaries
@@ -44,6 +45,7 @@ func (b *GoBuilder) install() {
 		b.err = fmt.Errorf("GOPATH unset; cannot build")
 		return
 	}
+	goPath = strings.Split(goPath, ":")[0]
 
 	repoDir := path.Join(goPath, "src", repoName)
 

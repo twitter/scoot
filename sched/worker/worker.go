@@ -16,8 +16,8 @@ type WorkerFactory func(node cluster.Node) Worker
 
 // Worker gives the Scheduler a generic way to complete work.
 type Worker interface {
-	// TODO(dbentley): include more info on positive results
-	RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error)
+	Start(task sched.TaskDefinition) (runner.ProcessStatus, error)
+	Wait(runId runner.RunId) (runner.ProcessStatus, error)
 }
 
 // We suspect we will only have 1 implementation of this interface for a long time: workers.ServiceWorkerAdapter

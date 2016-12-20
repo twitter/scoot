@@ -24,8 +24,7 @@ type ServiceWorkerAdapter struct {
 	overhead time.Duration
 }
 
-// RunAndWait satisfies the worker.Worker interface
-func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.RunStatus, error) {
+func (a *ServiceWorkerAdapter) Start(task sched.TaskDefinition) (runner.RunStatus, error) {
 	cmd := task.Command
 	if cmd.Timeout == 0 {
 		cmd.Timeout = a.timeout
@@ -34,9 +33,9 @@ func (a *ServiceWorkerAdapter) RunAndWait(task sched.TaskDefinition) (runner.Run
 	if err != nil || st.State.IsDone() {
 		return st, err
 	}
+}
 
-	id := st.RunID
-
+func (a *ServiceWorkerAdapter) Wait(runID runner.RunID) (runner.RunStatus, error) {
 	q := runner.Query{Runs: []runner.RunID{id}, States: runner.DONE_MASK}
 	w := runner.Wait{Timeout: cmd.Timeout + a.overhead}
 	stats, err := a.del.Query(q, w)

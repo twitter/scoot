@@ -9,6 +9,7 @@ type NodeId string
 
 // This defines what can represent a Scoot node in a cluster
 type Node interface {
+	// A unique node identifier, like 'host:thriftPort'
 	Id() NodeId
 }
 
@@ -21,7 +22,7 @@ func (n *idNode) String() string {
 }
 
 func NewIdNode(id string) Node {
-	return &idNode{NodeId(id)}
+	return &idNode{id: NodeId(id)}
 }
 
 func NewIdNodes(num int) []Node {

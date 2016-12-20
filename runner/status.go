@@ -68,6 +68,7 @@ type RunStatus struct {
 
 	State RunState
 	// References to stdout and stderr, not their text
+	// Runner impls shall provide valid refs for all States (but optionally may not for UNKNOWN/BADREQUEST).
 	StdoutRef string
 	StderrRef string
 

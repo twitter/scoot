@@ -28,10 +28,9 @@ func (r *Repository) Run(args ...string) (string, error) {
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
 	// Print stderr, which exists only in go 1.6 and later.
-	// TODO(dbentley): reenable once we're on go 1.7
-	// if err != nil {
-	// 	log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
-	// }
+	if err != nil {
+		log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
+	}
 	return string(data), err
 }
 
