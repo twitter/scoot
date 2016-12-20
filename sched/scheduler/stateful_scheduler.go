@@ -65,7 +65,7 @@ func NewStatefulSchedulerFromCluster(
 // specifying debugMode true, starts the scheduler up but does not start
 // the update loop.  Instead the loop must be advanced manulaly by calling
 // step(), intended for debugging and test cases
-// If recoverSagas is true Active Sagas in the saga log will be recovered
+// If recoverJobsOnStartup is true Active Sagas in the saga log will be recovered
 // and rescheduled, otherwise no recovery will be done on startup
 func NewStatefulScheduler(
 	initialCluster []cluster.Node,
@@ -75,7 +75,7 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	debugMode bool,
-	recoverJobs bool,
+	recoverJobsOnStartup bool,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
@@ -92,7 +92,7 @@ func NewStatefulScheduler(
 
 	// TODO: we need to allow the scheduler to accept new jobs
 	// while recovering old ones.
-	if recoverJobs {
+	if recoverJobsOnStartup {
 		sched.startUp()
 	}
 
