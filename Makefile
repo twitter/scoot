@@ -73,4 +73,4 @@ clean: clean-mockgen
 
 fullbuild: dependencies generate test
 
-travis: fullbuild swarmtest
+travis: dependencies test swarmtest
