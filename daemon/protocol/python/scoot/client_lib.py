@@ -125,7 +125,8 @@ def start():
     #the echo failed, try starting the daemon 
     gopath = re.split(":", os.environ['GOPATH'])[0]
     daemon = gopath + '/bin/daemon'
-    subprocess.Popen([daemon,"-execer_type", "os"])
+    devnull = open(os.devnull, 'w')
+    subprocess.Popen([daemon,"-execer_type", "os"], stdout=devnull, stderr=devnull)
     start = time.time()
       
     # give the daemon up to 3 seconds to start
@@ -311,4 +312,3 @@ def stop_daemon():
     _client = None
   except Exception:
       pass  # the call stops the daemon, but the grpc connection returns an error: swallow the error
-    
