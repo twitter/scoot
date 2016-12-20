@@ -10,7 +10,7 @@ func Test_DeserializeJob_BadData(t *testing.T) {
 	job, err := DeserializeJob([]byte{0, 1, 2, 3})
 
 	if err == nil {
-		t.Errorf("Expected job deserialization to fail with an error")
+		t.Error("Expected job deserialization to fail with an error")
 	}
 
 	if job != nil {
@@ -26,12 +26,12 @@ func Test_DeserializeJob_MinThrift(t *testing.T) {
 	// ensure our idea of min job matches the thrift spec
 	binaryJob, err := thrifthelpers.BinarySerialize(thriftJob)
 	if err != nil {
-		t.Errorf("unexpected error serializing minJob", err)
+		t.Errorf("unexpected error serializing minJob %+v", err)
 	}
 
 	// ensure we can covert this to a scheduler job
 	_, err = DeserializeJob(binaryJob)
 	if err != nil {
-		t.Errorf("unexpected error converting to Scheduler Job", err)
+		t.Errorf("unexpected error converting to Scheduler Job %+v", err)
 	}
 }
