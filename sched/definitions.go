@@ -2,11 +2,11 @@
 package sched
 
 import (
-	"fmt"
+	"time"
+
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
-	"time"
 )
 
 // Job is the job Scoot can schedule
@@ -29,9 +29,8 @@ func (j *Job) Serialize() ([]byte, error) {
 // an error is returned if it cannot be deserialized.
 func DeserializeJob(input []byte) (*Job, error) {
 	thriftJob := schedthrift.NewJob()
-	fmt.Println("input: ", input)
 	err := thrifthelpers.BinaryDeserialize(thriftJob, input)
-	fmt.Println("error: ", err)
+
 	if err != nil {
 		return nil, err
 	}

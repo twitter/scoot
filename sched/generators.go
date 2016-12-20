@@ -10,6 +10,7 @@ import (
 	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
+// Generates a Random Job with the specified Id and number of Tasks
 func GenJob(id string, numTasks int) Job {
 	rand := testhelpers.NewRand()
 	jobDef := GenRandomJobDef(numTasks, rand)
@@ -22,6 +23,8 @@ func GenJob(id string, numTasks int) Job {
 	return job
 }
 
+// Generates a Random Job, using the supplied Rand
+// with the specified Id and number of Tasks
 func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 	jobDef := GenRandomJobDef(numTasks, rng)
 
@@ -33,11 +36,14 @@ func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 	return job
 }
 
+// Generates a Random JobDefintion with the specified number of tasks
 func GenJobDef(numTasks int) JobDefinition {
 	rand := testhelpers.NewRand()
 	return GenRandomJobDef(numTasks, rand)
 }
 
+// Generates a Random Job Definition, using the supplied Rand
+// with the specified number of Tasks
 func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
 	jobDef := JobDefinition{
 		JobType: fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
@@ -54,11 +60,13 @@ func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
 	return jobDef
 }
 
+// Generates a Random TaskDefinition
 func GenTask() TaskDefinition {
 	rand := testhelpers.NewRand()
 	return GenRandomTask(rand)
 }
 
+// Generates a Random TaskDefinition, using the supplied Rand
 func GenRandomTask(rng *rand.Rand) TaskDefinition {
 	snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(rng))
 	numArgs := rng.Intn(5)
@@ -91,5 +99,28 @@ func GenJobId() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
 		result := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
 		return gopter.NewGenResult(string(result), gopter.NoShrinker)
+	}
+}
+
+// Wrapper function Generates a Job of Property Based Tests
+func GopterGenJob() gopter.Gen {
+	return func(genParams *gopter.GenParameters) *gopter.GenResult {
+		numTasks := genParams.Rng.Intn(10)
+		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
+		job := GenRandomJob(jobId, numTasks, genParams.Rng)
+
+		genResult := gopter.NewGenResult(&job, gopter.NoShrinker)
+		return genResult
+	}
+}
+
+// Wrappper function that Generates a JobDefinition for Property Based Tests
+func GopterGenJobDef() gopter.Gen {
+	return func(genParams *gopter.GenParameters) *gopter.GenResult {
+		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
+		numTasks := genParams.Rng.Intn(10)
+		job := GenRandomJob(jobId, numTasks, genParams.Rng)
+		genResult := gopter.NewGenResult(job.Def, gopter.NoShrinker)
+		return genResult
 	}
 }

@@ -3,7 +3,8 @@
 package sched
 
 import (
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/leanovate/gopter"
+	"github.com/leanovate/gopter/prop"
 	"testing"
 )
 
@@ -30,25 +31,4 @@ func Test_RandomSerializerDeserializer(t *testing.T) {
 	))
 
 	properties.TestingRun(t)
-}
-
-func GopterGenJob() gopter.Gen {
-	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		numTasks := genParams.Rng.Intn(10)
-		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-		job := GenRandomJob(jobId, numTasks, genParams.Rng)
-
-		genResult := gopter.NewGenResult(&job, gopter.NoShrinker)
-		return genResult
-	}
-}
-
-func GopterGenJobDef() gopter.Gen {
-	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-		numTasks := genParams.Rng.Intn(10)
-		job := GenRandomJob(jobId, numTasks, genParams.Rng)
-		genResult := gopter.NewGenResult(job.Def, gopter.NoShrinker)
-		return genResult
-	}
 }

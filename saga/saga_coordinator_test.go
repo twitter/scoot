@@ -130,6 +130,27 @@ func TestRecoverSagaState(t *testing.T) {
 	}
 }
 
+func TestRecoverSagaState_NoMessages(t *testing.T) {
+	sagaId := "saga1"
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, nil)
+
+	sc := MakeSagaCoordinator(sagaLogMock)
+	saga, err := sc.RecoverSagaState(sagaId, ForwardRecovery)
+
+	if err != nil {
+		t.Error("unexpected error returned", err)
+	}
+
+	if saga != nil {
+		t.Errorf("expected returned saga to be nil not %+v", saga)
+	}
+}
+
 func TestRecoverSagaState_ReturnsError(t *testing.T) {
 	sagaId := "saga1"
 

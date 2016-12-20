@@ -48,7 +48,8 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.wf,
 		deps.config,
 		stats.NilStatsReceiver(),
-		true)
+		true,
+		false)
 }
 
 func makeDefaultStatefulScheduler() *statefulScheduler {
@@ -76,7 +77,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
-	sagaLogMock.EXPECT().StartSaga(gomock.Any(), nil)
+	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
 
 	deps := getDefaultSchedDeps()
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
