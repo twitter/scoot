@@ -2,6 +2,8 @@
 package sched
 
 import (
+	"time"
+
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
@@ -70,3 +72,69 @@ const (
 	// have been applied.
 	RolledBack
 )
+
+// transforms a thrift Job into a scheduler Job
+func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
+
+	if thriftJob == nil {
+		return nil
+	}
+
+	thriftJobDef := thriftJob.GetJobDefinition()
+
+	domainTasks := make(map[string]TaskDefinition)
+	for taskName, task := range thriftJobDef.GetTasks() {
+		cmd := task.GetCommand()
+
+		command := runner.Command{
+			Argv:       cmd.GetArgv(),
+			EnvVars:    cmd.GetEnvVars(),
+			Timeout:    time.Duration(cmd.GetTimeout()),
+			SnapshotID: cmd.GetSnapshotId(),
+		}
+		domainTasks[taskName] = TaskDefinition{command}
+	}
+
+	domainJobDef := JobDefinition{
+		JobType: thriftJobDef.GetJobType(),
+		Tasks:   domainTasks,
+	}
+
+	return &Job{
+		Id:  thriftJob.GetID(),
+		Def: domainJobDef,
+	}
+}
+
+// converts a scheduler Job into a Thrift Job
+func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
+	if domainJob == nil {
+		return nil, nil
+	}
+
+	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
+	for taskName, domainTask := range domainJob.Def.Tasks {
+		to := int64(domainTask.Timeout)
+		cmd := schedthrift.Command{
+			Argv:       domainTask.Argv,
+			EnvVars:    domainTask.EnvVars,
+			Timeout:    &to,
+			SnapshotId: domainTask.SnapshotID,
+		}
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
+		thriftTasks[taskName] = &thriftTask
+	}
+
+	thriftJobDefinition := schedthrift.JobDefinition{
+		JobType: &(*domainJob).Def.JobType,
+		Tasks:   thriftTasks,
+	}
+
+	thriftJob := schedthrift.Job{
+		ID:            domainJob.Id,
+		JobDefinition: &thriftJobDefinition,
+	}
+
+	return &thriftJob, nil
+
+}

@@ -1,39 +1,36 @@
-// +build property_test
-
 package sched
 
 import (
-	"fmt"
-	"github.com/leanovate/gopter"
-	"github.com/leanovate/gopter/prop"
-	"reflect"
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 	"testing"
 )
 
-func Test_JobSerializeDeserialize(t *testing.T) {
-	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 1000
-	properties := gopter.NewProperties(parameters)
+func Test_DeserializeJob_BadData(t *testing.T) {
+	job, err := DeserializeJob([]byte{0, 1, 2, 3})
 
-	properties.Property("Serialize and Deserialize Job", prop.ForAll(
-		func(job *Job) bool {
+	if err == nil {
+		t.Error("Expected job deserialization to fail with an error")
+	}
 
-			binaryJob, err := job.Serialize()
-			if err != nil {
-				fmt.Println("Unxepected Error Occurred when Serializing Job %v", err)
-				return false
-			}
+	if job != nil {
+		t.Errorf("Expected Returned job to be nil when deserialization fails not %+v", job)
+	}
+}
 
-			deserializedJob, err := DeserializeJob(binaryJob)
-			if err != nil {
-				fmt.Println("Unexpected Error Occurred when Deserializing Job %v", err)
-				return false
-			}
+func Test_DeserializeJob_MinThrift(t *testing.T) {
+	thriftJob := schedthrift.NewJob()
+	thriftJob.ID = "123"
+	thriftJob.JobDefinition = schedthrift.NewJobDefinition()
 
-			return reflect.DeepEqual(job, deserializedJob)
-		},
-		GopterGenJob(),
-	))
+	// ensure our idea of min job matches the thrift spec
+	binaryJob, err := thrifthelpers.BinarySerialize(thriftJob)
+	if err != nil {
+		t.Errorf("unexpected error serializing minJob %+v", err)
+	}
 
-	properties.TestingRun(t)
+	// ensure we can covert this to a scheduler job
+	if _, err := DeserializeJob(binaryJob); err != nil {
+		t.Errorf("unexpected error converting to Scheduler Job %+v", err)
+	}
 }
