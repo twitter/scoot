@@ -12,7 +12,7 @@ func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) 
 
 func NewPollingService(c runner.Controller, e runner.StatusEraser, nower runner.StatusQueryNower, period time.Duration) runner.Service {
 	q := NewPollingStatusQuerier(nower, period)
-	return &ServiceFacade{c, q, e}
+	return &Service{c, q, e}
 }
 
 type PollingStatusQuerier struct {

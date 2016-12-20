@@ -76,7 +76,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func(
 			ex execer.Execer,
-			outputCreator runner.OutputCreator,
+			outputCreator runners.HttpOutputCreator,
 			filer snapshot.Filer) runner.Service {
 			return runners.NewSingleRunner(ex, filer, outputCreator)
 		},

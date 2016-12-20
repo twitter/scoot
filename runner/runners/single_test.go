@@ -102,7 +102,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 		panic(err)
 	}
 
-	outputCreator, err := NewLocalOutputCreator(tempDir)
+	outputCreator, err := NewHttpOutputCreator(tempDir, "")
 	if err != nil {
 		panic(err)
 	}

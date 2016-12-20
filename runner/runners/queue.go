@@ -18,10 +18,10 @@ type cmdAndID struct {
 
 // NewQueueRunner creates a new Service that uses a Queue
 func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, capacity int) runner.Service {
-	statuses := NewStatuses()
+	statusManager := NewStatusManager()
 	inv := NewInvoker(exec, filer, output)
-	controller := &QueueController{statuses: statuses, inv: inv, capacity: capacity}
-	return ServiceFacade{controller, statuses, statuses}
+	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
+	return &Service{controller, statusManager, statusManager}
 }
 
 func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) runner.Service {
@@ -30,9 +30,9 @@ func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.Out
 
 // QueueController maintains a queue of commands to run (up to capacity).
 type QueueController struct {
-	inv      *Invoker
-	statuses *Statuses
-	capacity int
+	inv           *Invoker
+	statusManager *StatusManager
+	capacity      int
 
 	mu           sync.Mutex
 	queue        []cmdAndID
@@ -45,7 +45,7 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	st, err := c.statuses.NewRun()
+	st, err := c.statusManager.NewRun()
 	if err != nil {
 		return st, err
 	}
@@ -73,14 +73,14 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 		for i, cmdAndID := range c.queue {
 			if run == cmdAndID.id {
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
-				c.statuses.Update(runner.AbortStatus(run))
+				c.statusManager.Update(runner.AbortStatus(run))
 			}
 		}
 	}
 
-	// Unlock so watch() abort can call c.statuses.Update()
+	// Unlock so watch() abort can call c.statusManager.Update()
 	c.mu.Unlock()
-	return runner.FinalStatus(c.statuses, run)
+	return runner.FinalStatus(c.statusManager, run)
 }
 
 // start starts a command, returning the current status
@@ -104,6 +104,6 @@ func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 				c.start(cmdAndID.cmd, cmdAndID.id)
 			}
 		}
-		c.statuses.Update(st)
+		c.statusManager.Update(st)
 	}
 }

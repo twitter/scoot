@@ -36,7 +36,7 @@ func main() {
 	}
 	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
-	outputCreator, err := runners.NewLocalOutputCreator(tempDir)
+	outputCreator, err := runners.NewHttpOutputCreator(tempDir, "")
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}

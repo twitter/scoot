@@ -29,7 +29,7 @@ When a Controller wants to start a Run of a Command, it will use an Invoker.
 
 For now we have one implementation, QueueController
 
-## Statuses interfaces (runner/statuses.go) ##
+## Status interfaces (runner/statuses.go) ##
 There are several interfaces having to do with reading/writing RunStatus'es.
 
 StatusWriter for writing Statuses.
@@ -38,12 +38,12 @@ There are more reader interfaces:
 * StatusReader includes all the ones below
 * LegacyStatusReader offers legacy APIs
 * StatusQuerier offers Query, which allows waiting for some period of time
-* StatusQuerierNow offers QueryNow which is the same as Query, but does not allow waiting
+* StatusQueryNower offers QueryNow which is the same as Query, but does not allow waiting
 
 StatusEraser is necessary because it's part of the Service interface for legacy reasons, but it doesn't make sense to be part of LegacyStatusReader (because it writes).
 
-## Statuses implementations (runner/runners/statuses.go) ##
-Statuses holds RunStatus'es and implements the various Statuses interfaces.
+## StatusManager implementations (runner/runners/statuses.go) ##
+StatusManager holds RunStatus'es and implements the various Status interfaces.
 
 ## Service (runner/runner.go) ##
 Service includes the ability to control commands (Controller) and watch the status (StatusReader).
