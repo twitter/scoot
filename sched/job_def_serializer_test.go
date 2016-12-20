@@ -129,19 +129,12 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 	return true
 }
 
-func GopterGenJob() gopter.Gen {
+func GopterGenJobDef() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		jobDef := genJobFromParams(genParams)
-		genResult := gopter.NewGenResult(jobDef, gopter.NoShrinker)
+		jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
+		numTasks := genParams.Rng.Intn(10)
+		job := GenRandomJob(jobId, numTasks, genParams.Rng)
+		genResult := gopter.NewGenResult(job.Def, gopter.NoShrinker)
 		return genResult
 	}
-}
-
-func genJobFromParams(genParams *gopter.GenParameters) *Job {
-
-	jobId := testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-	numTasks := genParams.Rng.Intn(10)
-	job := GenRandomJob(jobId, numTasks, genParams.Rng)
-
-	return &job
 }
