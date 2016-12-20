@@ -16,7 +16,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
-	localrunner "github.com/scootdev/scoot/runner/local"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -52,7 +52,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
 
-		func(outputCreator localrunner.HttpOutputCreator) map[string]http.Handler {
+		func(outputCreator runners.HttpOutputCreator) map[string]http.Handler {
 			return map[string]http.Handler{outputCreator.HttpPath(): outputCreator}
 		},
 
@@ -66,26 +66,22 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },
 
-		func(tmpDir *temp.TempDir, uri WorkerUri) (localrunner.HttpOutputCreator, error) {
+		func(tmpDir *temp.TempDir, uri WorkerUri) (runners.HttpOutputCreator, error) {
 			outDir, err := tmpDir.FixedDir("output")
 			if err != nil {
 				return nil, err
 			}
-			return localrunner.NewHttpOutputCreator(outDir, strings.TrimSuffix(string(uri), "/")+"/output")
+			return runners.NewHttpOutputCreator(outDir, strings.TrimSuffix(string(uri), "/")+"/output")
 		},
 
 		func(
 			ex execer.Execer,
-			outputCreator localrunner.HttpOutputCreator,
-			filer snapshot.Filer) runner.Runner {
-			return localrunner.NewSimpleRunner(ex, filer, outputCreator)
+			outputCreator runners.HttpOutputCreator,
+			filer snapshot.Filer) runner.Service {
+			return runners.NewSingleRunner(ex, filer, outputCreator)
 		},
 
-		func() WorkerUri {
-			return "http://localhost:2001"
-		},
-
-		func(stat stats.StatsReceiver, r runner.Runner) worker.Worker {
+		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
 			return NewHandler(stat, r)
 		},
 

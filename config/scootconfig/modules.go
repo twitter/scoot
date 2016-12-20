@@ -15,6 +15,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched/scheduler"
@@ -99,25 +100,26 @@ type WorkersThriftConfig struct {
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond
 const defaultTaskTimeout = time.Duration(30) * time.Minute
+const defaultOverhead = time.Duration(5) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,
 	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
 
-	pp := defaultPollingPeriod
-	tt := defaultTaskTimeout
+	pollingPeriod := defaultPollingPeriod
+	taskTimeout := defaultTaskTimeout
 	var err error
 
 	// apply defaults
 	if c.PollingPeriod != "" {
-		pp, err = time.ParseDuration(c.PollingPeriod)
+		pollingPeriod, err = time.ParseDuration(c.PollingPeriod)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if c.TaskTimeout != "" {
-		tt, err = time.ParseDuration(c.TaskTimeout)
+		taskTimeout, err = time.ParseDuration(c.TaskTimeout)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +128,8 @@ func (c *WorkersThriftConfig) Create(
 	wf := func(node cluster.Node) worker.Worker {
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
-		return workers.NewPollingWorkerWithTimeout(cl, pp, c.EnforceTaskTimeout, tt)
+		q := runners.NewPollingService(cl, cl, cl, pollingPeriod)
+		return workers.NewServiceWorker(q, taskTimeout, defaultOverhead)
 	}
 
 	return wf, nil

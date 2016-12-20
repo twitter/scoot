@@ -64,8 +64,8 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	domainTasks := make(map[string]TaskDefinition)
 	for taskName, task := range thriftJobDef.Tasks {
 		cmd := task.Command
-		command := runner.NewCommand(cmd.Argv, cmd.EnvVars, time.Duration(cmd.Timeout), cmd.SnapshotId)
-		domainTasks[taskName] = TaskDefinition{*command}
+		command := runner.Command{Argv: cmd.Argv, EnvVars: cmd.EnvVars, Timeout: time.Duration(cmd.Timeout), SnapshotID: cmd.SnapshotId}
+		domainTasks[taskName] = TaskDefinition{command}
 	}
 
 	domainJobDef := JobDefinition{JobType: thriftJobDef.JobType, Tasks: domainTasks}
@@ -80,7 +80,7 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 
 	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
 	for taskName, domainTask := range domainJob.Def.Tasks {
-		cmd := schedthrift.Command{Argv: domainTask.Argv, EnvVars: domainTask.EnvVars, Timeout: int64(domainTask.Timeout), SnapshotId: domainTask.SnapshotId}
+		cmd := schedthrift.Command{Argv: domainTask.Argv, EnvVars: domainTask.EnvVars, Timeout: int64(domainTask.Timeout), SnapshotId: domainTask.SnapshotID}
 		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
 		thriftTasks[taskName] = &thriftTask
 	}

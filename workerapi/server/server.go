@@ -29,13 +29,13 @@ func MakeServer(
 
 type handler struct {
 	stat        stats.StatsReceiver
-	run         runner.Runner
+	run         runner.Service
 	timeLastRpc time.Time
 	mu          sync.Mutex
 }
 
-//
-func NewHandler(stat stats.StatsReceiver, run runner.Runner) worker.Worker {
+// Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
+func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run}
 	go h.stats()
@@ -119,7 +119,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
-	process, err := h.run.Abort(runner.RunId(runId))
+	process, err := h.run.Abort(runner.RunID(runId))
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +130,6 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()
-	h.run.Erase(runner.RunId(runId))
+	h.run.Erase(runner.RunID(runId))
 	return nil
 }
