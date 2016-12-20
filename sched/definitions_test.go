@@ -30,8 +30,7 @@ func Test_DeserializeJob_MinThrift(t *testing.T) {
 	}
 
 	// ensure we can covert this to a scheduler job
-	_, err = DeserializeJob(binaryJob)
-	if err != nil {
+	if _, err := DeserializeJob(binaryJob); err != nil {
 		t.Errorf("unexpected error converting to Scheduler Job %+v", err)
 	}
 }

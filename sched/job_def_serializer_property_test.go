@@ -11,18 +11,17 @@ import (
 
 func Test_RandomSerializerDeserializer(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 1000
+	parameters.MinSuccessfulTests = 100
 	properties := gopter.NewProperties(parameters)
 
 	properties.Property("Serialize JobDef", prop.ForAll(
 		func(job *Job) bool {
-			serializeBinary := ValidateSerialization(job, false)
-			if !serializeBinary {
+
+			if serializeBinary := ValidateSerialization(job, false); !serializeBinary {
 				return false
 			}
 
-			serializeJson := ValidateSerialization(job, true)
-			if !serializeJson {
+			if serializeJson := ValidateSerialization(job, true); !serializeJson {
 				return false
 			}
 
