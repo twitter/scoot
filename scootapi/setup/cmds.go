@@ -56,7 +56,7 @@ func NewSignalHandlingCmds(tmp *temp.TempDir) *Cmds {
 }
 
 // Kill kills all running commands
-// NB: note, we can't guarantee this is called before exiting.
+// NB: we can't guarantee this is called before exiting.
 // If we really want to be correct, we have to start another process that will do
 // the babysitting.
 func (c *Cmds) Kill() {
@@ -70,15 +70,6 @@ func (c *Cmds) Kill() {
 	}
 	c.killed = true
 
-	sigchan := make(chan os.Signal, 1)
-	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
-	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		for sig := range sigchan {
-			log.Printf("signal %s received; ignoring as we are already killing all", sig)
-		}
-	}()
-
 	log.Printf("Killing %d cmds", len(c.watching))
 
 	// Wait for all to be done.
@@ -88,17 +79,16 @@ func (c *Cmds) Kill() {
 		close(allDoneCh)
 	}()
 
-	// Sending a signal to -PGID sends it to all processes in the proces sgroup.
-	pgid := -1 * syscall.Getpgrp()
-
 	if len(c.watching) == 0 {
 		return
 	}
 
-	// Send SIGINT, then send SIGKILL 5 seconds later if any are still running
-	log.Printf("SIGINT: process group %d", pgid)
-	if err := syscall.Kill(pgid, syscall.SIGINT); err != nil {
-		panic(err)
+	// First, send SIGINT to each
+	for _, c := range c.watching {
+		if p := c.Process; p != nil {
+			log.Printf("SIGINT: %d %v", p.Pid, c.Path)
+			syscall.Kill(-1*p.Pid, syscall.SIGINT)
+		}
 	}
 
 	// Unlock so that remove can do its job (and signal alldoneCh)
@@ -107,7 +97,7 @@ func (c *Cmds) Kill() {
 	case <-allDoneCh:
 		log.Printf("All completed")
 	case <-time.After(5 * time.Second):
-		log.Printf("Still waiting")
+		log.Printf("Still waiting; killing all")
 	}
 	c.mu.Lock()
 
@@ -115,9 +105,14 @@ func (c *Cmds) Kill() {
 		return
 	}
 
-	log.Printf("SIGKILL: process group%d", pgid)
-	if err := syscall.Kill(pgid, syscall.SIGKILL); err != nil {
-		panic(err)
+	time.Sleep(10 * time.Second)
+
+	// First, send SIGINT to each
+	for _, c := range c.watching {
+		if p := c.Process; p != nil {
+			log.Printf("SIGKILL: %d %v", p.Pid, c.Path)
+			syscall.Kill(-1*p.Pid, syscall.SIGKILL)
+		}
 	}
 }
 
@@ -125,7 +120,9 @@ func (c *Cmds) Kill() {
 func (c *Cmds) Command(path string, arg ...string) *exec.Cmd {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	// TODO(dbentley): consider migrating to use Execer and OSExecer
 	cmd := exec.Command(path, arg...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	// TODO(dbentley): redirect output to files in c.tmp so we don't deluge stdout/stderr
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	c.wg.Add(1)
@@ -173,10 +170,10 @@ func (c *Cmds) Run(path string, arg ...string) error {
 func (c *Cmds) remove(cmd *exec.Cmd) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.wg.Done()
 	for i, other := range c.watching {
 		if other == cmd {
 			c.watching = append(c.watching[0:i], c.watching[i+1:]...)
 		}
 	}
+	c.wg.Done()
 }
