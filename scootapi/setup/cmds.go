@@ -105,9 +105,7 @@ func (c *Cmds) Kill() {
 		return
 	}
 
-	time.Sleep(10 * time.Second)
-
-	// First, send SIGINT to each
+	// They've been warned; now send SIGKILL
 	for _, c := range c.watching {
 		if p := c.Process; p != nil {
 			log.Printf("SIGKILL: %d %v", p.Pid, c.Path)
