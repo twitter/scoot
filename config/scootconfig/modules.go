@@ -42,8 +42,10 @@ func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
 
 // Parameters for configuring a statefulScheduler
 type StatefulSchedulerConfig struct {
-	Type              string
-	MaxRetriesPerTask int
+	Type                 string
+	MaxRetriesPerTask    int
+	DebugMode            bool
+	RecoverJobsOnStartup bool
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {

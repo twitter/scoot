@@ -13,8 +13,18 @@ import (
 	"github.com/scootdev/scoot/sched/worker"
 )
 
+// Scheduler Config variables read at initialization
+// MaxRetriesPerTask - the number of times to retry a failing task before
+// 										 marking it as completed.
+// DebugMode - if true, starts the scheduler up but does not start
+// 						 the update loop.  Instead the loop must be advanced manulaly
+//             by calling step()
+// RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
+//             from the sagalog, and restarts them.
 type SchedulerConfig struct {
-	MaxRetriesPerTask int
+	MaxRetriesPerTask    int
+	DebugMode            bool
+	RecoverJobsOnStartup bool
 }
 
 // Scheduler that keeps track of the state of running tasks & the cluster
@@ -42,12 +52,19 @@ type statefulScheduler struct {
 	stat stats.StatsReceiver
 }
 
+// Create a New StatefulScheduler that implements the Scheduler interface
+// cluster.Cluster - cluster of worker nodes
+// saga.SagaCoordinator - the Saga Coordinator to log to and recover from
+// worker.WorkerFactory - Function which converts a node to a worker
+// SchedulerConfig - additional configuration settings for the scheduler
+// StatsReceiver - stats receiver to log statistics to
 func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	wf worker.WorkerFactory,
 	config SchedulerConfig,
-	stat stats.StatsReceiver) Scheduler {
+	stat stats.StatsReceiver,
+) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
 		sub.InitialMembers,
@@ -56,8 +73,6 @@ func NewStatefulSchedulerFromCluster(
 		wf,
 		config,
 		stat,
-		false,
-		false, // TODO: make this a configurable parameter
 	)
 }
 
@@ -74,8 +89,6 @@ func NewStatefulScheduler(
 	wf worker.WorkerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
-	debugMode bool,
-	recoverJobsOnStartup bool,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
@@ -92,11 +105,11 @@ func NewStatefulScheduler(
 
 	// TODO: we need to allow the scheduler to accept new jobs
 	// while recovering old ones.
-	if recoverJobsOnStartup {
+	if config.RecoverJobsOnStartup {
 		sched.startUp()
 	}
 
-	if !debugMode {
+	if !config.DebugMode {
 		// start the scheduler loop
 		go func() {
 			sched.loop()

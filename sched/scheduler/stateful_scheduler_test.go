@@ -35,7 +35,11 @@ func getDefaultSchedDeps() *schedulerDeps {
 		wf: func(cluster.Node) worker.Worker {
 			return workers.MakeSimWorker()
 		},
-		config: SchedulerConfig{},
+		config: SchedulerConfig{
+			MaxRetriesPerTask:    0,
+			DebugMode:            true,
+			RecoverJobsOnStartup: false,
+		},
 	}
 }
 
@@ -48,8 +52,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.wf,
 		deps.config,
 		stats.NilStatsReceiver(),
-		true,
-		false)
+	)
 }
 
 func makeDefaultStatefulScheduler() *statefulScheduler {
