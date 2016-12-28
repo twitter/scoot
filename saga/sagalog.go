@@ -2,6 +2,10 @@ package saga
 
 //go:generate mockgen -source=sagalog.go -package=saga -destination=sagalog_mock.go
 
+import (
+	"fmt"
+)
+
 /*
  *  SagaLog Interface, Implemented
  */
@@ -32,6 +36,23 @@ type SagaLog interface {
 	 * Returns an error if it fails.
 	 */
 	GetActiveSagas() ([]string, error)
+}
+
+// CorruptedSagaLogError this is a critical error specifies
+// that the data stored in the sagalog for a specified saga
+// is corrupted and unrecoverable.
+type CorruptedSagaLogError struct {
+	s string
+}
+
+func (e CorruptedSagaLogError) Error() string {
+	return e.s
+}
+
+func NewCorruptedSagaLogError(sagaId string, msg string) error {
+	return CorruptedSagaLogError{
+		s: fmt.Sprintf("SagaLog for %v has been corrupted, Error: %v", sagaId, msg),
+	}
 }
 
 // InvalidRequestError should be returned by the SagaLog
