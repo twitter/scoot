@@ -76,7 +76,7 @@ func (log *fileSagaLog) getSagaLogFileName(sagaId string) string {
 }
 
 // Returns the name of the file to store task data in
-// SagaId for the saga
+// SagaId for the saga.  Not deterministic.
 // TaskId corresponding to taskdata
 // SagaMessageType type of SagaMessage
 func (log *fileSagaLog) createTaskDataFileName(
@@ -93,6 +93,8 @@ func (log *fileSagaLog) createTaskDataFileName(
 	)
 }
 
+// Returns the name of the file to store Job Data in based on the
+// SagaId.  Not deterministic.
 func (log *fileSagaLog) createJobDataFileName(sagaId string) string {
 	//format sagaDir/StartSagaData_timestamp
 	return fmt.Sprintf(
@@ -101,11 +103,6 @@ func (log *fileSagaLog) createJobDataFileName(sagaId string) string {
 		time.Now().Format(time.StampNano),
 	)
 }
-
-//TODO: all the writers, write partial messages.  Ideally
-// we'd like the write to succeed or not, if something goes wrong
-// then we may have part of a message written.
-// Create message to write, and only do oen write
 
 // Log a Start Saga Message message to the log.
 // Returns an error if it fails.
