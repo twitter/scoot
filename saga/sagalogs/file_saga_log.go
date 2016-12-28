@@ -111,13 +111,9 @@ func (log *fileSagaLog) createJobDataFileName(sagaId string) string {
 // Returns an error if it fails.
 func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 
-	var logFile *os.File
-	var err error
-	dirName := log.getSagaDirectory(sagaId)
-	fileName := log.getSagaLogFileName(sagaId)
-
 	// Create directory for this saga if it doesn't exist
-	if _, err = os.Stat(dirName); err != nil {
+	dirName := log.getSagaDirectory(sagaId)
+	if _, err := os.Stat(dirName); err != nil {
 		if os.IsNotExist(err) {
 			err = os.Mkdir(dirName, os.ModePerm)
 			if err != nil {
@@ -128,10 +124,23 @@ func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 		}
 	}
 
+	// Write Data File
+	dataFileName := log.createJobDataFileName(sagaId)
+	err := ioutil.WriteFile(dataFileName, job, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	// Write Message to Log File
+	var logFile *os.File
+	defer logFile.Close()
+	logFileName := log.getSagaLogFileName(sagaId)
+
+	// Append StartSaga message to the log
 	// Get File Handle for Saga Create it if it doesn't exist
-	if _, err = os.Stat(fileName); err != nil {
+	if _, err = os.Stat(logFileName); err != nil {
 		if os.IsNotExist(err) {
-			logFile, err = os.Create(fileName)
+			logFile, err = os.Create(logFileName)
 			if err != nil {
 				return err
 			}
@@ -139,16 +148,11 @@ func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 			return err
 		}
 	} else {
-		fmt.Println("Opening Already Existing File")
-		logFile, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
+		logFile, err = os.OpenFile(logFileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
 		if err != nil {
 			return err
 		}
 	}
-	defer logFile.Close()
-
-	dataFileName := log.createJobDataFileName(sagaId)
-	ioutil.WriteFile(dataFileName, job, os.ModePerm)
 
 	// write log message
 	msg := []byte(fmt.Sprintf("%v\n%v\n",
@@ -167,17 +171,15 @@ func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 // Update the State of the Saga by Logging a message.
 // Returns an error if it fails.
 func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
-	var logFile *os.File
-	var err error
 	fileName := log.getSagaLogFileName(message.SagaId)
 
 	// Get file handle for Saga if it doesn't exist return error,
-	// Saga wasn't started
-	logFile, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
+	// Saga wasn't started.  OpenFile so we can append to it
+	logFile, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
+	defer logFile.Close()
 	if err != nil {
 		return err
 	}
-	defer logFile.Close()
 
 	// Write MessageType
 	msg := []byte(fmt.Sprintf("%v\n", message.MsgType.String()))
@@ -188,27 +190,19 @@ func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
 		message.MsgType == saga.StartCompTask ||
 		message.MsgType == saga.EndCompTask {
 
+		// write task data to file
 		dataFileName := log.createTaskDataFileName(
 			message.SagaId, message.TaskId, message.MsgType)
+		err = ioutil.WriteFile(dataFileName, message.Data, os.ModePerm)
+		if err != nil {
+			return err
+		}
 
 		// update log message
 		msg = append(msg, []byte(
 			fmt.Sprintf("%v\n%v\n",
 				message.TaskId,
 				dataFileName))...)
-
-		// creaet & write to data file
-		dataFile, err := os.Create(dataFileName)
-		if err != nil {
-			return err
-		}
-		defer dataFile.Close()
-
-		_, err = dataFile.Write(message.Data)
-		if err != nil {
-			return err
-		}
-		dataFile.Sync()
 	}
 
 	_, err = logFile.Write(msg)
