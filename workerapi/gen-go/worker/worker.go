@@ -15,13 +15,16 @@ var _ = fmt.Printf
 var _ = bytes.Equal
 
 type Worker interface {
-	QueryWorker() (r *WorkerStatus, err error)
+	// Parameters:
+	//  - Q
+	QueryNow(q *RunsQuery) (r []*RunStatus, err error)
 	// Parameters:
 	//  - Cmd
 	Run(cmd *RunCommand) (r *RunStatus, err error)
 	// Parameters:
 	//  - RunId
 	Abort(runId string) (r *RunStatus, err error)
+	QueryWorker() (r *WorkerStatus, err error)
 	// Parameters:
 	//  - RunId
 	Erase(runId string) (err error)
@@ -53,24 +56,28 @@ func NewWorkerClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot 
 	}
 }
 
-func (p *WorkerClient) QueryWorker() (r *WorkerStatus, err error) {
-	if err = p.sendQueryWorker(); err != nil {
+// Parameters:
+//  - Q
+func (p *WorkerClient) QueryNow(q *RunsQuery) (r []*RunStatus, err error) {
+	if err = p.sendQueryNow(q); err != nil {
 		return
 	}
-	return p.recvQueryWorker()
+	return p.recvQueryNow()
 }
 
-func (p *WorkerClient) sendQueryWorker() (err error) {
+func (p *WorkerClient) sendQueryNow(q *RunsQuery) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("QueryWorker", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("QueryNow", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := WorkerQueryWorkerArgs{}
+	args := WorkerQueryNowArgs{
+		Q: q,
+	}
 	if err = args.Write(oprot); err != nil {
 		return
 	}
@@ -80,7 +87,7 @@ func (p *WorkerClient) sendQueryWorker() (err error) {
 	return oprot.Flush()
 }
 
-func (p *WorkerClient) recvQueryWorker() (value *WorkerStatus, err error) {
+func (p *WorkerClient) recvQueryNow() (value []*RunStatus, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -90,32 +97,32 @@ func (p *WorkerClient) recvQueryWorker() (value *WorkerStatus, err error) {
 	if err != nil {
 		return
 	}
-	if method != "QueryWorker" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "QueryWorker failed: wrong method name")
+	if method != "QueryNow" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "QueryNow failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "QueryWorker failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "QueryNow failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error4 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error5 error
-		error5, err = error4.Read(iprot)
+		error5 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error6 error
+		error6, err = error5.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error5
+		err = error6
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "QueryWorker failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "QueryNow failed: invalid message type")
 		return
 	}
-	result := WorkerQueryWorkerResult{}
+	result := WorkerQueryNowResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -176,16 +183,16 @@ func (p *WorkerClient) recvRun() (value *RunStatus, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error6 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error7 error
-		error7, err = error6.Read(iprot)
+		error7 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error8 error
+		error8, err = error7.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error7
+		err = error8
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -253,16 +260,16 @@ func (p *WorkerClient) recvAbort() (value *RunStatus, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error8 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error9 error
-		error9, err = error8.Read(iprot)
+		error9 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error10 error
+		error10, err = error9.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error9
+		err = error10
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -270,6 +277,79 @@ func (p *WorkerClient) recvAbort() (value *RunStatus, err error) {
 		return
 	}
 	result := WorkerAbortResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+func (p *WorkerClient) QueryWorker() (r *WorkerStatus, err error) {
+	if err = p.sendQueryWorker(); err != nil {
+		return
+	}
+	return p.recvQueryWorker()
+}
+
+func (p *WorkerClient) sendQueryWorker() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("QueryWorker", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := WorkerQueryWorkerArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *WorkerClient) recvQueryWorker() (value *WorkerStatus, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "QueryWorker" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "QueryWorker failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "QueryWorker failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error11 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error12 error
+		error12, err = error11.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error12
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "QueryWorker failed: invalid message type")
+		return
+	}
+	result := WorkerQueryWorkerResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -330,16 +410,16 @@ func (p *WorkerClient) recvErase() (err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error10 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error11 error
-		error11, err = error10.Read(iprot)
+		error13 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error14 error
+		error14, err = error13.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error11
+		err = error14
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -376,12 +456,13 @@ func (p *WorkerProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewWorkerProcessor(handler Worker) *WorkerProcessor {
 
-	self12 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self12.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
-	self12.processorMap["Run"] = &workerProcessorRun{handler: handler}
-	self12.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
-	self12.processorMap["Erase"] = &workerProcessorErase{handler: handler}
-	return self12
+	self15 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self15.processorMap["QueryNow"] = &workerProcessorQueryNow{handler: handler}
+	self15.processorMap["Run"] = &workerProcessorRun{handler: handler}
+	self15.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
+	self15.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
+	self15.processorMap["Erase"] = &workerProcessorErase{handler: handler}
+	return self15
 }
 
 func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -394,25 +475,25 @@ func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, 
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x13 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x16 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x13.Write(oprot)
+	x16.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x13
+	return false, x16
 
 }
 
-type workerProcessorQueryWorker struct {
+type workerProcessorQueryNow struct {
 	handler Worker
 }
 
-func (p *workerProcessorQueryWorker) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := WorkerQueryWorkerArgs{}
+func (p *workerProcessorQueryNow) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := WorkerQueryNowArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("QueryWorker", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("QueryNow", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -420,12 +501,12 @@ func (p *workerProcessorQueryWorker) Process(seqId int32, iprot, oprot thrift.TP
 	}
 
 	iprot.ReadMessageEnd()
-	result := WorkerQueryWorkerResult{}
-	var retval *WorkerStatus
+	result := WorkerQueryNowResult{}
+	var retval []*RunStatus
 	var err2 error
-	if retval, err2 = p.handler.QueryWorker(); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing QueryWorker: "+err2.Error())
-		oprot.WriteMessageBegin("QueryWorker", thrift.EXCEPTION, seqId)
+	if retval, err2 = p.handler.QueryNow(args.Q); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing QueryNow: "+err2.Error())
+		oprot.WriteMessageBegin("QueryNow", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -433,7 +514,7 @@ func (p *workerProcessorQueryWorker) Process(seqId int32, iprot, oprot thrift.TP
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("QueryWorker", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("QueryNow", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -547,6 +628,54 @@ func (p *workerProcessorAbort) Process(seqId int32, iprot, oprot thrift.TProtoco
 	return true, err
 }
 
+type workerProcessorQueryWorker struct {
+	handler Worker
+}
+
+func (p *workerProcessorQueryWorker) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := WorkerQueryWorkerArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("QueryWorker", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := WorkerQueryWorkerResult{}
+	var retval *WorkerStatus
+	var err2 error
+	if retval, err2 = p.handler.QueryWorker(); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing QueryWorker: "+err2.Error())
+		oprot.WriteMessageBegin("QueryWorker", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("QueryWorker", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 type workerProcessorErase struct {
 	handler Worker
 }
@@ -594,14 +723,29 @@ func (p *workerProcessorErase) Process(seqId int32, iprot, oprot thrift.TProtoco
 
 // HELPER FUNCTIONS AND STRUCTURES
 
-type WorkerQueryWorkerArgs struct {
+// Attributes:
+//  - Q
+type WorkerQueryNowArgs struct {
+	Q *RunsQuery `thrift:"q,1" json:"q"`
 }
 
-func NewWorkerQueryWorkerArgs() *WorkerQueryWorkerArgs {
-	return &WorkerQueryWorkerArgs{}
+func NewWorkerQueryNowArgs() *WorkerQueryNowArgs {
+	return &WorkerQueryNowArgs{}
 }
 
-func (p *WorkerQueryWorkerArgs) Read(iprot thrift.TProtocol) error {
+var WorkerQueryNowArgs_Q_DEFAULT *RunsQuery
+
+func (p *WorkerQueryNowArgs) GetQ() *RunsQuery {
+	if !p.IsSetQ() {
+		return WorkerQueryNowArgs_Q_DEFAULT
+	}
+	return p.Q
+}
+func (p *WorkerQueryNowArgs) IsSetQ() bool {
+	return p.Q != nil
+}
+
+func (p *WorkerQueryNowArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -614,8 +758,15 @@ func (p *WorkerQueryWorkerArgs) Read(iprot thrift.TProtocol) error {
 		if fieldTypeId == thrift.STOP {
 			break
 		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
 		}
 		if err := iprot.ReadFieldEnd(); err != nil {
 			return err
@@ -627,9 +778,20 @@ func (p *WorkerQueryWorkerArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *WorkerQueryWorkerArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("QueryWorker_args"); err != nil {
+func (p *WorkerQueryNowArgs) readField1(iprot thrift.TProtocol) error {
+	p.Q = &RunsQuery{}
+	if err := p.Q.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Q), err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryNowArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("QueryNow_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
@@ -640,36 +802,46 @@ func (p *WorkerQueryWorkerArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *WorkerQueryWorkerArgs) String() string {
+func (p *WorkerQueryNowArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("q", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:q: ", p), err)
+	}
+	if err := p.Q.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Q), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:q: ", p), err)
+	}
+	return err
+}
+
+func (p *WorkerQueryNowArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("WorkerQueryWorkerArgs(%+v)", *p)
+	return fmt.Sprintf("WorkerQueryNowArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Success
-type WorkerQueryWorkerResult struct {
-	Success *WorkerStatus `thrift:"success,0" json:"success,omitempty"`
+type WorkerQueryNowResult struct {
+	Success []*RunStatus `thrift:"success,0" json:"success,omitempty"`
 }
 
-func NewWorkerQueryWorkerResult() *WorkerQueryWorkerResult {
-	return &WorkerQueryWorkerResult{}
+func NewWorkerQueryNowResult() *WorkerQueryNowResult {
+	return &WorkerQueryNowResult{}
 }
 
-var WorkerQueryWorkerResult_Success_DEFAULT *WorkerStatus
+var WorkerQueryNowResult_Success_DEFAULT []*RunStatus
 
-func (p *WorkerQueryWorkerResult) GetSuccess() *WorkerStatus {
-	if !p.IsSetSuccess() {
-		return WorkerQueryWorkerResult_Success_DEFAULT
-	}
+func (p *WorkerQueryNowResult) GetSuccess() []*RunStatus {
 	return p.Success
 }
-func (p *WorkerQueryWorkerResult) IsSetSuccess() bool {
+func (p *WorkerQueryNowResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *WorkerQueryWorkerResult) Read(iprot thrift.TProtocol) error {
+func (p *WorkerQueryNowResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -702,16 +874,28 @@ func (p *WorkerQueryWorkerResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *WorkerQueryWorkerResult) readField0(iprot thrift.TProtocol) error {
-	p.Success = &WorkerStatus{}
-	if err := p.Success.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+func (p *WorkerQueryNowResult) readField0(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*RunStatus, 0, size)
+	p.Success = tSlice
+	for i := 0; i < size; i++ {
+		_elem17 := &RunStatus{}
+		if err := _elem17.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem17), err)
+		}
+		p.Success = append(p.Success, _elem17)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
 	}
 	return nil
 }
 
-func (p *WorkerQueryWorkerResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("QueryWorker_result"); err != nil {
+func (p *WorkerQueryNowResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("QueryNow_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField0(oprot); err != nil {
@@ -726,13 +910,21 @@ func (p *WorkerQueryWorkerResult) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *WorkerQueryWorkerResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *WorkerQueryNowResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
-		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+		if err := oprot.WriteFieldBegin("success", thrift.LIST, 0); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
 		}
-		if err := p.Success.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Success)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.Success {
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
@@ -741,11 +933,11 @@ func (p *WorkerQueryWorkerResult) writeField0(oprot thrift.TProtocol) (err error
 	return err
 }
 
-func (p *WorkerQueryWorkerResult) String() string {
+func (p *WorkerQueryNowResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("WorkerQueryWorkerResult(%+v)", *p)
+	return fmt.Sprintf("WorkerQueryNowResult(%+v)", *p)
 }
 
 // Attributes:
@@ -1138,6 +1330,160 @@ func (p *WorkerAbortResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("WorkerAbortResult(%+v)", *p)
+}
+
+type WorkerQueryWorkerArgs struct {
+}
+
+func NewWorkerQueryWorkerArgs() *WorkerQueryWorkerArgs {
+	return &WorkerQueryWorkerArgs{}
+}
+
+func (p *WorkerQueryWorkerArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryWorkerArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("QueryWorker_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryWorkerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkerQueryWorkerArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type WorkerQueryWorkerResult struct {
+	Success *WorkerStatus `thrift:"success,0" json:"success,omitempty"`
+}
+
+func NewWorkerQueryWorkerResult() *WorkerQueryWorkerResult {
+	return &WorkerQueryWorkerResult{}
+}
+
+var WorkerQueryWorkerResult_Success_DEFAULT *WorkerStatus
+
+func (p *WorkerQueryWorkerResult) GetSuccess() *WorkerStatus {
+	if !p.IsSetSuccess() {
+		return WorkerQueryWorkerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkerQueryWorkerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkerQueryWorkerResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryWorkerResult) readField0(iprot thrift.TProtocol) error {
+	p.Success = &WorkerStatus{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryWorkerResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("QueryWorker_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *WorkerQueryWorkerResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *WorkerQueryWorkerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkerQueryWorkerResult(%+v)", *p)
 }
 
 // Attributes:

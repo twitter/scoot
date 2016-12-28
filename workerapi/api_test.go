@@ -15,13 +15,25 @@ var zero = int32(0)
 var nonzero = int32(12345)
 var emptystr = ""
 var nonemptystr = "abcdef"
+var fortyEight = int64(48)
+var trueVar = true
 
 var cmdFromThrift = func(x interface{}) interface{} { return ThriftRunCommandToDomain(x.(*worker.RunCommand)) }
 var cmdToThrift = func(x interface{}) interface{} { return DomainRunCommandToThrift(x.(*runner.Command)) }
 var rsFromThrift = func(x interface{}) interface{} { return ThriftRunStatusToDomain(x.(*worker.RunStatus)) }
 var rsToThrift = func(x interface{}) interface{} { return DomainRunStatusToThrift(x.(runner.RunStatus)) }
+var rssFromThrift = func(x interface{}) interface{} {
+	st, err := ThriftRunStatusesToDomain(x.([]*worker.RunStatus))
+	if err != nil {
+		panic(err)
+	}
+	return st
+}
+var rssToThrift = func(x interface{}) interface{} { return DomainRunStatusesToThrift(x.([]runner.RunStatus)) }
 var wsFromThrift = func(x interface{}) interface{} { return ThriftWorkerStatusToDomain(x.(*worker.WorkerStatus)) }
 var wsToThrift = func(x interface{}) interface{} { return DomainWorkerStatusToThrift(x.(WorkerStatus)) }
+var rqFromThrift = func(x interface{}) interface{} { return ThriftRunQueryToDomain(*(x.(*worker.RunsQuery))) }
+var rqToThrift = func(x interface{}) interface{} { return DomainRunQueryToThrift(x.(runner.Query)) }
 
 var tests = []struct {
 	id             int
@@ -136,6 +148,47 @@ var tests = []struct {
 			runner.RunStatus{RunID: "id", State: runner.PENDING,
 				StdoutRef: nonemptystr, StderrRef: nonemptystr, ExitCode: int(nonzero), Error: nonemptystr},
 		}},
+	},
+
+	// RunStatuses
+	{
+		15, rssFromThrift, nil,
+		[]*worker.RunStatus{
+			&worker.RunStatus{Status: worker.Status_COMPLETE, RunId: "a",
+				OutUri: nil, ErrUri: nil, Error: nil, ExitCode: &zero},
+			&worker.RunStatus{Status: worker.Status_COMPLETE, RunId: "b",
+				OutUri: nil, ErrUri: nil, Error: nil, ExitCode: &zero},
+		},
+		[]runner.RunStatus{
+			runner.RunStatus{RunID: "a", State: runner.COMPLETE,
+				StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
+			runner.RunStatus{RunID: "b", State: runner.COMPLETE,
+				StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
+		},
+	},
+
+	// RunQuery
+	{
+		16, rqFromThrift, rqToThrift,
+		&worker.RunsQuery{
+			RunIds:    []string{"1", "2"},
+			StateMask: &fortyEight,
+		},
+		runner.Query{
+			Runs:   []runner.RunID{runner.RunID("1"), runner.RunID("2")},
+			States: runner.StateMask(48),
+		},
+	},
+	{
+		17, rqFromThrift, rqToThrift,
+		&worker.RunsQuery{
+			AllRuns:   &trueVar,
+			StateMask: &fortyEight,
+		},
+		runner.Query{
+			AllRuns: true,
+			States:  runner.StateMask(48),
+		},
 	},
 }
 

@@ -3,6 +3,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -95,9 +96,8 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, process := range st {
-		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(process))
-	}
+
+	ws.Runs = domain.DomainRunStatusesToThrift(st)
 	return ws, nil
 }
 
@@ -113,6 +113,22 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		return nil, err
 	}
 	return domain.DomainRunStatusToThrift(process), nil
+}
+
+// Implements worker.thrift Worker.QueryNow interface
+func (h *handler) QueryNow(q *worker.RunsQuery) ([]*worker.RunStatus, error) {
+	if q == nil {
+		return nil, fmt.Errorf("QueryNow: query must be non-nil")
+	}
+
+	domainQ := domain.ThriftRunQueryToDomain(*q)
+
+	sts, err := h.run.QueryNow(domainQ)
+	if err != nil {
+		return nil, err
+	}
+
+	return domain.DomainRunStatusesToThrift(sts), nil
 }
 
 // Implements worker.thrift Worker.Abort interface

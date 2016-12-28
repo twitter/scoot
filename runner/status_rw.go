@@ -13,19 +13,19 @@ type StateMask uint64
 // Useful StateMask constants
 const (
 	UNKNOWN_MASK    StateMask = StateMask(1 << uint(UNKNOWN))
-	PENDING_MASK              = 1 << uint(PENDING)
-	PREPARING_MASK            = 1 << uint(PREPARING)
-	RUNNING_MASK              = 1 << uint(RUNNING)
-	COMPLETE_MASK             = 1 << uint(COMPLETE)
-	FAILED_MASK               = 1 << uint(FAILED)
-	ABORTED_MASK              = 1 << uint(ABORTED)
-	TIMEDOUT_MASK             = 1 << uint(TIMEDOUT)
-	BADREQUEST_MASK           = 1 << uint(BADREQUEST)
-	DONE_MASK                 = (1<<uint(COMPLETE) |
+	PENDING_MASK    StateMask = 1 << uint(PENDING)
+	PREPARING_MASK  StateMask = 1 << uint(PREPARING)
+	RUNNING_MASK    StateMask = 1 << uint(RUNNING)
+	COMPLETE_MASK   StateMask = 1 << uint(COMPLETE)
+	FAILED_MASK     StateMask = 1 << uint(FAILED)
+	ABORTED_MASK    StateMask = 1 << uint(ABORTED)
+	TIMEDOUT_MASK   StateMask = 1 << uint(TIMEDOUT)
+	BADREQUEST_MASK StateMask = 1 << uint(BADREQUEST)
+	DONE_MASK       StateMask = (1<<uint(COMPLETE) |
 		1<<uint(FAILED) |
 		1<<uint(ABORTED) |
 		1<<uint(TIMEDOUT))
-	ALL_MASK = math.MaxUint64
+	ALL_MASK StateMask = math.MaxUint64
 )
 
 // Helper Function to create StateMask that matches exactly state

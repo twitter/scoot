@@ -19,6 +19,12 @@ struct RunStatus {
   6: optional i32 exitCode
 }
 
+struct RunsQuery {
+  1: optional list<string> runIds
+  2: optional bool allRuns
+  3: optional i64 stateMask
+}
+
 // TODO: add useful load information when it comes time to have multiple runs.
 struct WorkerStatus {
   1: required list<RunStatus> runs  # All runs excepting what's been Erase()'d
@@ -33,9 +39,12 @@ struct RunCommand {
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.
 service Worker {
-  WorkerStatus QueryWorker()         # Overall worker node status.
-  // TODO(dbentley): add a method to Query a status. Cf. runner/status_rw.go
+  list<RunStatus> QueryNow(1: RunsQuery q) # Query for current run statuses
+  // TODO(dbentley): we could also add a Query method with a wait
   RunStatus Run(1: RunCommand cmd)   # Run a command and return job Status.
   RunStatus Abort(1: string runId)   # Returns ABORTED if aborted, FAILED if already ended, and UNKNOWN otherwise.
+
+  // TODO(dbentley): remove WorkerStatus and Erase
+  WorkerStatus QueryWorker()         # Overall worker node status.
   void Erase(1: string runId)        # Remove run from the history of runs (trims WorkerStatus.ended). Optional.
 }
