@@ -131,6 +131,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	return thrift
 }
 
+// Translate RunStatus'es from Thrift to Domain
 func ThriftRunStatusesToDomain(thrift []*worker.RunStatus) ([]runner.RunStatus, error) {
 	domain := make([]runner.RunStatus, len(thrift))
 	for i, thriftSt := range thrift {
@@ -142,6 +143,7 @@ func ThriftRunStatusesToDomain(thrift []*worker.RunStatus) ([]runner.RunStatus, 
 	return domain, nil
 }
 
+// Translate RunStatus'es from Domain to Thrift
 func DomainRunStatusesToThrift(domain []runner.RunStatus) []*worker.RunStatus {
 	thrift := make([]*worker.RunStatus, len(domain))
 	for i, domainSt := range domain {
@@ -150,6 +152,7 @@ func DomainRunStatusesToThrift(domain []runner.RunStatus) []*worker.RunStatus {
 	return thrift
 }
 
+// Translate RunQuery from Thrift to Domain
 func ThriftRunQueryToDomain(thrift worker.RunsQuery) runner.Query {
 	domain := runner.Query{}
 	for _, id := range thrift.RunIds {
@@ -166,6 +169,7 @@ func ThriftRunQueryToDomain(thrift worker.RunsQuery) runner.Query {
 
 }
 
+// Translate RunQuery from Domain to Thrift
 func DomainRunQueryToThrift(domain runner.Query) *worker.RunsQuery {
 	thrift := &worker.RunsQuery{}
 	for _, id := range domain.Runs {

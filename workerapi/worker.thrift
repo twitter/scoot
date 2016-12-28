@@ -19,6 +19,7 @@ struct RunStatus {
   6: optional i32 exitCode
 }
 
+// Thrift definition of a Worker Query. Cf. runner/status_rw.go
 struct RunsQuery {
   1: optional list<string> runIds
   2: optional bool allRuns
