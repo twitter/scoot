@@ -246,6 +246,11 @@ func FatalErr(err error) bool {
 	case InternalLogError:
 		return false
 
+	// SagaLog is in a bad state, this indicates a fatal bug and no more progress
+	// can be made on this saga.
+	case CorruptedSagaLogError:
+		return true
+
 	// unknown error, default to retryable.
 	default:
 		return true
