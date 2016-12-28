@@ -1,7 +1,10 @@
 package snapshot
 
+// ID identifies a value in DB
 type ID string
 
+// DB is the Scoot Database. It holds Values identified by an ID.
+// A Value may be a Snapshot or a Revision.
 type DB interface {
 	// Ingest
 
