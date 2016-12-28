@@ -5,27 +5,28 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/scootdev/scoot/saga"
 )
 
 // Writes Saga Log to file system.  Not durable beyond machine failure
-// Sagas are stored in a directory.  Each file contains the log of
-// one saga.
+// Sagas are stored in a directory.  Each saga has a corresponding directory
+// each saga directory contains a log file, and associated data files.
 
 // StartSaga Message
 // StartSaga \n
-// job data \n
+// job data filename \n
 
 // StartTask Message
 // StartTask \n
 // taskId \n
-// taskData \n
+// taskData filename \n
 
 // EndTask Message
 // EndTask \n
 // taskId \n
-// taskData \n
+// taskData filename \n
 
 // AbortSaga Message
 // AbortSaga \n
@@ -33,12 +34,12 @@ import (
 // StartCompTask Message
 // StartCompTask \n
 // taskId \n
-// taskData \n
+// taskData filename \n
 
 // EndCompTask Message
 // EndComptTask \n
 // taskId \n
-// taskData \n
+// taskData filename \n
 
 // EndSaga Message
 // EndSaga
@@ -52,7 +53,7 @@ func MakeFileSagaLog(dirName string) (*fileSagaLog, error) {
 
 	if _, err := os.Stat(dirName); err != nil {
 		if os.IsNotExist(err) {
-			os.Mkdir(dirName, 0777)
+			os.Mkdir(dirName, os.ModePerm)
 		} else {
 			return nil, err
 		}
@@ -63,8 +64,42 @@ func MakeFileSagaLog(dirName string) (*fileSagaLog, error) {
 	}, nil
 }
 
-func (log *fileSagaLog) getFileName(sagaId string) string {
+// all files for a saga log are stored in a directory named
+// by the specified sagaId.
+func (log *fileSagaLog) getSagaDirectory(sagaId string) string {
 	return fmt.Sprintf("%v/%v", log.dirName, sagaId)
+}
+
+// Returns the name of the sagalog for the specified file.
+func (log *fileSagaLog) getSagaLogFileName(sagaId string) string {
+	return fmt.Sprintf("%v/%v", log.getSagaDirectory(sagaId), "log")
+}
+
+// Returns the name of the file to store task data in
+// SagaId for the saga
+// TaskId corresponding to taskdata
+// SagaMessageType type of SagaMessage
+func (log *fileSagaLog) createTaskDataFileName(
+	sagaId string,
+	taskId string,
+	msgType saga.SagaMessageType) string {
+
+	//format sagaDir/MsgType_taskId_data_timestamp
+	return fmt.Sprintf("%v/%v_%v_data_%v",
+		log.getSagaDirectory(sagaId),
+		msgType.String(),
+		taskId,
+		time.Now().Format(time.StampMilli),
+	)
+}
+
+func (log *fileSagaLog) createJobDataFileName(sagaId string) string {
+	//format sagaDir/StartSagaData_timestamp
+	return fmt.Sprintf(
+		"%v/StartSagaData_%v",
+		log.getSagaDirectory(sagaId),
+		time.Now().Format(time.StampNano),
+	)
 }
 
 //TODO: all the writers, write partial messages.  Ideally
@@ -76,14 +111,27 @@ func (log *fileSagaLog) getFileName(sagaId string) string {
 // Returns an error if it fails.
 func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 
-	var file *os.File
+	var logFile *os.File
 	var err error
-	fileName := log.getFileName(sagaId)
+	dirName := log.getSagaDirectory(sagaId)
+	fileName := log.getSagaLogFileName(sagaId)
+
+	// Create directory for this saga if it doesn't exist
+	if _, err = os.Stat(dirName); err != nil {
+		if os.IsNotExist(err) {
+			err = os.Mkdir(dirName, os.ModePerm)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
 
 	// Get File Handle for Saga Create it if it doesn't exist
 	if _, err = os.Stat(fileName); err != nil {
 		if os.IsNotExist(err) {
-			file, err = os.Create(fileName)
+			logFile, err = os.Create(fileName)
 			if err != nil {
 				return err
 			}
@@ -92,45 +140,44 @@ func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 		}
 	} else {
 		fmt.Println("Opening Already Existing File")
-		file, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, 0777)
+		logFile, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
 		if err != nil {
 			return err
 		}
 	}
-	defer file.Close()
+	defer logFile.Close()
 
-	msg := append([]byte(fmt.Sprintf("%v\n", saga.StartSaga.String())), job...)
-	msg = append(msg, []byte("\n")...)
+	dataFileName := log.createJobDataFileName(sagaId)
+	ioutil.WriteFile(dataFileName, job, os.ModePerm)
 
-	_, err = file.Write(msg)
+	// write log message
+	msg := []byte(fmt.Sprintf("%v\n%v\n",
+		saga.StartSaga.String(),
+		dataFileName))
+
+	_, err = logFile.Write(msg)
 	if err != nil {
 		return err
 	}
 
-	file.Sync()
+	logFile.Sync()
 	return nil
 }
 
-//
 // Update the State of the Saga by Logging a message.
 // Returns an error if it fails.
-//
 func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
-	var file *os.File
+	var logFile *os.File
 	var err error
-	fileName := log.getFileName(message.SagaId)
+	fileName := log.getSagaLogFileName(message.SagaId)
 
 	// Get file handle for Saga if it doesn't exist return error,
 	// Saga wasn't started
-	if _, err = os.Stat(fileName); err != nil {
+	logFile, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModePerm)
+	if err != nil {
 		return err
-	} else {
-		file, err = os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, 0777)
-		if err != nil {
-			return err
-		}
 	}
-	defer file.Close()
+	defer logFile.Close()
 
 	// Write MessageType
 	msg := []byte(fmt.Sprintf("%v\n", message.MsgType.String()))
@@ -141,35 +188,50 @@ func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
 		message.MsgType == saga.StartCompTask ||
 		message.MsgType == saga.EndCompTask {
 
-		msg = append(msg, []byte(fmt.Sprintf("%v\n", message.TaskId))...)
-		msg = append(msg, message.Data...)
-		msg = append(msg, []byte("\n")...)
+		dataFileName := log.createTaskDataFileName(
+			message.SagaId, message.TaskId, message.MsgType)
+
+		// update log message
+		msg = append(msg, []byte(
+			fmt.Sprintf("%v\n%v\n",
+				message.TaskId,
+				dataFileName))...)
+
+		// creaet & write to data file
+		dataFile, err := os.Create(dataFileName)
+		if err != nil {
+			return err
+		}
+		defer dataFile.Close()
+
+		_, err = dataFile.Write(message.Data)
+		if err != nil {
+			return err
+		}
+		dataFile.Sync()
 	}
 
-	_, err = file.Write(msg)
+	_, err = logFile.Write(msg)
 	if err != nil {
 		return err
 	}
 
-	file.Sync()
+	logFile.Sync()
 	return nil
 }
 
-//
 // Returns all of the messages logged so far for the
 // specified saga.
-//
 func (log *fileSagaLog) GetMessages(sagaId string) ([]saga.SagaMessage, error) {
-	fileName := log.getFileName(sagaId)
-	fmt.Printf("FileName: %v", fileName)
-	file, err := os.Open(fmt.Sprintf(fileName))
+	fileName := log.getSagaLogFileName(sagaId)
+	logFile, err := os.Open(fmt.Sprintf(fileName))
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer logFile.Close()
 
 	msgs := make([]saga.SagaMessage, 0)
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(logFile)
 	nextToken := scanner.Scan()
 
 	for nextToken == true {
@@ -201,7 +263,17 @@ func parseMessage(sagaId string, scanner *bufio.Scanner) (saga.SagaMessage, erro
 					createUnexpectedScanEndMsg(scanner)),
 			)
 		}
-		return saga.MakeStartSagaMessage(sagaId, scanner.Bytes()), nil
+		dataFileName := scanner.Text()
+		data, err := ioutil.ReadFile(dataFileName)
+		if err != nil {
+			return saga.SagaMessage{},
+				saga.NewCorruptedSagaLogError(
+					sagaId,
+					fmt.Sprintf("Error Reading DataFile %v, Error: %v", dataFileName, err),
+				)
+		}
+
+		return saga.MakeStartSagaMessage(sagaId, data), nil
 
 		// Parse End Saga Message
 	case saga.EndSaga.String():
@@ -256,9 +328,10 @@ func parseMessage(sagaId string, scanner *bufio.Scanner) (saga.SagaMessage, erro
 // EndCompTasks.  Message is of structure
 // line1: MessageType
 // line2: TaskId
-// line3: TaskData
+// line3: TaskData FileName
 // Returns a tuple of TaskId, TaskData, Error
 func parseTask(sagaId string, scanner *bufio.Scanner) (string, []byte, error) {
+	// read taskId and datafileName
 	if ok := scanner.Scan(); !ok {
 		return "", nil,
 			saga.NewCorruptedSagaLogError(
@@ -276,7 +349,16 @@ func parseTask(sagaId string, scanner *bufio.Scanner) (string, []byte, error) {
 					createUnexpectedScanEndMsg(scanner)),
 			)
 	}
-	data := scanner.Bytes()
+	dataFileName := scanner.Text()
+
+	data, err := ioutil.ReadFile(dataFileName)
+	if err != nil {
+		return "", nil,
+			saga.NewCorruptedSagaLogError(
+				sagaId,
+				fmt.Sprintf("Error Reading DataFile %v, Error: %v", dataFileName, err),
+			)
+	}
 
 	return taskId, data, nil
 }
