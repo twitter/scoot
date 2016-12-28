@@ -251,7 +251,6 @@ func (log *fileSagaLog) GetMessages(sagaId string) ([]saga.SagaMessage, error) {
 // Returns and error otherwise
 func parseMessage(sagaId string, scanner *bufio.Scanner) (saga.SagaMessage, error) {
 
-	fmt.Println("Parse Message of Type:", scanner.Text())
 	switch scanner.Text() {
 
 	// Parse Start Saga Message
