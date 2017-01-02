@@ -49,13 +49,17 @@ func (s SagaCoordinator) Startup() ([]string, error) {
 // Utilizes the specified recoveryType to determine if Saga needs to be
 // Aborted or can proceed safely.
 //
-// Returns the current SagaState
+// Returns the current SagaState.  If no Saga exists for the requested id, nil is returned
 //
 func (sc SagaCoordinator) RecoverSagaState(sagaId string, recoveryType SagaRecoveryType) (*Saga, error) {
 	state, err := recoverState(sagaId, sc)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if state == nil {
+		return nil, nil
 	}
 
 	// now that we've recovered the saga initialize its update path

@@ -2,22 +2,23 @@ package sched
 
 import (
 	"fmt"
-	"github.com/leanovate/gopter"
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
-	"github.com/scootdev/scoot/tests/testhelpers"
 	"reflect"
 	"testing"
-	"time"
+
+	"github.com/scootdev/scoot/common/thrifthelpers"
+	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 )
 
 func Test_FixedJob(t *testing.T) {
 	// use this test to test a specific jobDefinition struct
 	schedJob := makeFixedSampleJob()
 
-	ValidateSerialization(schedJob, false, t)
-	ValidateSerialization(schedJob, true, t)
+	if !ValidateSerialization(schedJob, false) {
+		t.Errorf("Could not validate binary serialization")
+	}
+	if !ValidateSerialization(schedJob, true) {
+		t.Errorf("Could not validate json serialization")
+	}
 }
 
 func Test_SerializeNilJob(t *testing.T) {
@@ -78,7 +79,7 @@ func Print(job *Job) {
 	fmt.Printf("\n")
 }
 
-func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
+func ValidateSerialization(domainJob *Job, useJson bool) bool {
 
 	var asByteArray []byte
 	var err error
@@ -89,7 +90,8 @@ func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
 		asByteArray, err = thrifthelpers.BinarySerialize(thriftJob)
 	}
 	if err != nil {
-		t.Errorf("error: couldn't serialize the fixed job def. %s\n", err.Error())
+		fmt.Printf("error: couldn't serialize the fixed job def. %s\n", err.Error())
+		return false
 
 	} else {
 		// deserialize the byte array
@@ -104,7 +106,8 @@ func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
 			fmt.Printf("serialize/deserialize test couldn't deserialize object:\n")
 			Print(domainJob)
 			fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-			t.Errorf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
+			fmt.Printf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
+			return false
 
 			// compare the orig and generated task definitions
 		} else {
@@ -116,55 +119,11 @@ func ValidateSerialization(domainJob *Job, useJson bool, t *testing.T) {
 				fmt.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
 				fmt.Printf("deserialized to:\n")
 				Print(newDomainJob)
-				t.Errorf("fail: task definitions are not equal:\n")
+				fmt.Printf("fail: task definitions are not equal:\n")
+				return false
 			}
 		}
 	}
-}
 
-func GopterGenJob() gopter.Gen {
-	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		jobDef := genJobFromParams(genParams)
-		//Print(jobDef)
-		genResult := gopter.NewGenResult(jobDef, gopter.NoShrinker)
-		return genResult
-	}
-}
-
-func genJobFromParams(genParams *gopter.GenParameters) *Job {
-
-	//number of tasks to have in this saga
-	numTasks := int(genParams.NextUint64() % 10)
-	var taskDefMap = make(map[string]TaskDefinition)
-
-	for i := 0; i < numTasks; i++ {
-		snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-		taskName := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-
-		numArgs := int(genParams.NextUint64() % 5)
-		var j int
-		var args []string = []string{}
-		for j = 0; j < numArgs; j++ {
-			args = append(args, fmt.Sprintf("arg%d:%s", j, testhelpers.GenRandomAlphaNumericString(genParams.Rng)))
-		}
-
-		var envVarsMap map[string]string = make(map[string]string)
-		numEnvVars := int(genParams.NextUint64() % 5)
-		for j = 0; j < numEnvVars; j++ {
-			envVarsMap[fmt.Sprintf("env%d", j)] = testhelpers.GenRandomAlphaNumericString(genParams.Rng)
-		}
-
-		timeout := time.Duration(genParams.NextInt64() % 1000)
-
-		cmd := runner.Command{SnapshotID: snapshotId, Argv: args, EnvVars: envVarsMap, Timeout: timeout}
-		taskDef := TaskDefinition{cmd}
-		taskDefMap[taskName] = taskDef
-
-	}
-	jobType := fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(genParams.Rng))
-	jobDef := JobDefinition{JobType: jobType, Tasks: taskDefMap}
-
-	job := Job{Id: testhelpers.GenRandomAlphaNumericString(genParams.Rng), Def: jobDef}
-
-	return &job
+	return true
 }
