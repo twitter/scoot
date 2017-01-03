@@ -72,7 +72,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			return err
 		}
 
-		jobDef.Tasks = map[string]*scoot.TaskDefinition{}
+		jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
 		for taskName, jsonTask := range jsonJob.Tasks {
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
@@ -81,6 +81,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			jobDef.Tasks[taskName] = taskDef
 		}
 	}
+	log.Printf("Running jobDef: %v\n", jobDef)
 	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
