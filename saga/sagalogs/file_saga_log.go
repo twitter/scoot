@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"time"
 
 	"github.com/scootdev/scoot/saga"
@@ -51,12 +52,8 @@ type fileSagaLog struct {
 // If the directory does not exist it will create it.
 func MakeFileSagaLog(dirName string) (*fileSagaLog, error) {
 
-	if _, err := os.Stat(dirName); err != nil {
-		if os.IsNotExist(err) {
-			os.Mkdir(dirName, os.ModePerm)
-		} else {
-			return nil, err
-		}
+	if err := os.MkdirAll(dirName, os.ModePerm); err != nil {
+		return nil, err
 	}
 
 	return &fileSagaLog{
@@ -67,12 +64,12 @@ func MakeFileSagaLog(dirName string) (*fileSagaLog, error) {
 // all files for a saga log are stored in a directory named
 // by the specified sagaId.
 func (log *fileSagaLog) getSagaDirectory(sagaId string) string {
-	return fmt.Sprintf("%v/%v", log.dirName, sagaId)
+	return path.Join(log.dirName, sagaId)
 }
 
 // Returns the name of the sagalog for the specified file.
 func (log *fileSagaLog) getSagaLogFileName(sagaId string) string {
-	return fmt.Sprintf("%v/%v", log.getSagaDirectory(sagaId), "log")
+	return path.Join(log.getSagaDirectory(sagaId), "log")
 }
 
 // Returns the name of the file to store task data in
@@ -85,23 +82,22 @@ func (log *fileSagaLog) createTaskDataFileName(
 	msgType saga.SagaMessageType) string {
 
 	//format sagaDir/MsgType_taskId_data_timestamp
-	return fmt.Sprintf("%v/%v_%v_data_%v",
-		log.getSagaDirectory(sagaId),
+	fileName := fmt.Sprintf("%v_%v_data_%v",
 		msgType.String(),
 		taskId,
 		time.Now().Format(time.StampMilli),
 	)
+
+	return path.Join(log.getSagaDirectory(sagaId), fileName)
 }
 
 // Returns the name of the file to store Job Data in based on the
 // SagaId.  Not deterministic.
 func (log *fileSagaLog) createJobDataFileName(sagaId string) string {
 	//format sagaDir/StartSagaData_timestamp
-	return fmt.Sprintf(
-		"%v/StartSagaData_%v",
-		log.getSagaDirectory(sagaId),
-		time.Now().Format(time.StampNano),
-	)
+	fileName := fmt.Sprintf(
+		"StartSagaData_%v", time.Now().Format(time.StampNano))
+	return path.Join(log.getSagaDirectory(sagaId), fileName)
 }
 
 // Log a Start Saga Message message to the log.
@@ -378,7 +374,7 @@ func (log *fileSagaLog) GetActiveSagas() ([]string, error) {
 		return nil, err
 	}
 
-	sagaIds := make([]string, len(files), len(files))
+	sagaIds := make([]string, len(files))
 	for i, file := range files {
 		sagaIds[i] = file.Name()
 	}

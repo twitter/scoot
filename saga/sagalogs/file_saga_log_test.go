@@ -2,8 +2,8 @@ package sagalogs
 
 import (
 	"bytes"
-	"fmt"
 	"os"
+	"path"
 	"reflect"
 	"testing"
 
@@ -11,11 +11,7 @@ import (
 )
 
 func getDirName() string {
-	path, err := os.Getwd()
-	if err != nil {
-		panic(fmt.Sprintf("Could not get path.  Error: %v", err))
-	}
-	return fmt.Sprintf("%v/%v", path, "sagas")
+	return path.Join(os.TempDir(), "sagas")
 }
 
 // Removes the sagas directory and all files created during
@@ -42,6 +38,8 @@ func isSagaInActiveList(sagaId string, slog saga.SagaLog) bool {
 }
 
 func TestStartSaga(t *testing.T) {
+	defer testCleanup(t)
+
 	dirName := getDirName()
 	sagaId := "saga1"
 
@@ -76,11 +74,11 @@ func TestStartSaga(t *testing.T) {
 	if !isSagaInActiveList(sagaId, slog) {
 		t.Errorf("Expected Saga to be in active list")
 	}
-
-	testCleanup(t)
 }
 
 func TestStartSaga_SagaFileAlreadyExists(t *testing.T) {
+	defer testCleanup(t)
+
 	dirName := getDirName()
 	sagaId := "start_saga_called_twice"
 	data1 := []byte{0, 1, 2, 3, 4, 5}
@@ -105,11 +103,11 @@ func TestStartSaga_SagaFileAlreadyExists(t *testing.T) {
 	if !isSagaInActiveList(sagaId, slog) {
 		t.Errorf("Expected Saga to be in Active List")
 	}
-
-	testCleanup(t)
 }
 
 func TestFullSaga(t *testing.T) {
+	defer testCleanup(t)
+
 	dirName := getDirName()
 	sagaId := "fullsaga"
 
@@ -157,6 +155,4 @@ func TestFullSaga(t *testing.T) {
 				loggedMsgs[j], rtnMsg)
 		}
 	}
-
-	testCleanup(t)
 }

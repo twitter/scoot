@@ -42,16 +42,18 @@ type SagaLog interface {
 // that the data stored in the sagalog for a specified saga
 // is corrupted and unrecoverable.
 type CorruptedSagaLogError struct {
-	s string
+	msg string
+	id  string
 }
 
 func (e CorruptedSagaLogError) Error() string {
-	return e.s
+	return fmt.Sprintf("SagaLog for %v has been corrupted, Error: %v", e.id, e.msg)
 }
 
 func NewCorruptedSagaLogError(sagaId string, msg string) error {
 	return CorruptedSagaLogError{
-		s: fmt.Sprintf("SagaLog for %v has been corrupted, Error: %v", sagaId, msg),
+		msg: msg,
+		id:  sagaId,
 	}
 }
 
