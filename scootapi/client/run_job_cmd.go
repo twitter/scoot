@@ -81,7 +81,6 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			jobDef.Tasks[taskName] = taskDef
 		}
 	}
-	log.Printf("Running jobDef: %v\n", jobDef)
 	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
