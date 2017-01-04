@@ -36,6 +36,11 @@ type DB struct {
 // IngestDir ingests a directory directly.
 // The created value is a Snapshot.
 func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
+	// We ingest a dir using git commands:
+	// First, create a new index file.
+	// Second, add all the files in the work tree.
+	// Third, write the tree.
+	// This doesn't create a commit, or otherwise mess with repo state.
 	indexDir, err := db.tmp.TempDir("git-index")
 	if err != nil {
 		return "", err
@@ -46,6 +51,8 @@ func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
 
 	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + dir}
 
+	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
+	// (e.g., HEAD) and we should just use the lower-level plumbing command?
 	cmd := db.dataRepo.Command("add", ".")
 	cmd.Env = append(cmd.Env, extraEnv...)
 	_, err = db.dataRepo.RunCmd(cmd)
@@ -102,6 +109,7 @@ func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
 // Checkout puts the value identified by id in the local filesystem, returning
 // the path where it lives or an error.
 func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+	// Checkout creates a new dir with a new index and checks out exactly that tree.
 	v, err := parseID(id)
 	if err != nil {
 		return "", err
