@@ -57,9 +57,6 @@ func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 
 	for i := 0; i < numJobs; i++ {
 		id, err := r.generateAndStartJob()
-		if err != nil {
-			return err
-		}
 		// retry starting job until it succeeds
 		for err != nil {
 			log.Printf("Error Starting Job: Retrying %v", err)

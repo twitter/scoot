@@ -49,8 +49,9 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 }
 
 func (c *simpleCLIClient) Dial() error {
-	// Always recreate a connection.  This way if something went wrong with
-	// the previous connection we don't have a clean one.
+	// Always create a new connection, so that we have a clean one
+	// If we reuse connections and something goes wrong (pipe breaks etc...)
+	// there is no way to recreate it.
 	return c.createScootClient()
 }
 
