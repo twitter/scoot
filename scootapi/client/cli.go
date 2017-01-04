@@ -49,32 +49,28 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 }
 
 func (c *simpleCLIClient) Dial() error {
-	// Always create a new connection, so that we have a clean one
-	// If we reuse connections and something goes wrong (pipe breaks etc...)
-	// there is no way to recreate it.
-	return c.createScootClient()
+	_, err := c.dial()
+	return err
 }
 
-// creates a new ScootClient, and sets the property to it
-// returns an error if one occured, nil if creating a new client
-// and assiging it to c.scootClient was successful
-func (c *simpleCLIClient) createScootClient() error {
-	if c.addr == "" {
-		c.addr = scootapi.GetScootapiAddr()
+func (c *simpleCLIClient) dial() (*scoot.CloudScootClient, error) {
+	if c.scootClient == nil {
 		if c.addr == "" {
-			return fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
+			c.addr = scootapi.GetScootapiAddr()
+			if c.addr == "" {
+				return nil, fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
+			}
+			log.Printf("scootapi cli: using addr %v (from %v)", c.addr, scootapi.GetScootapiAddrPath())
 		}
-		log.Printf("scootapi cli: using addr %v (from %v)", c.addr, scootapi.GetScootapiAddrPath())
+
+		transport, protocolFactory, err := c.dialer.Dial(c.addr)
+		if err != nil {
+			return nil, fmt.Errorf("Error dialing to set up client connection: %v", err)
+		}
+
+		c.scootClient = scoot.NewCloudScootClientFactory(transport, protocolFactory)
 	}
-
-	transport, protocolFactory, err := c.dialer.Dial(c.addr)
-	if err != nil {
-		return fmt.Errorf("Error dialing to set up client connection: %v", err)
-	}
-
-	c.scootClient = scoot.NewCloudScootClientFactory(transport, protocolFactory)
-
-	return nil
+	return c.scootClient, nil
 }
 
 // Needs cobra parameters for use from rootCmd
