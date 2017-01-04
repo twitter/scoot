@@ -13,6 +13,7 @@ Key objects (not exhaustive, see code or godoc for more):
   * _File_ - interface representing a file open for reading
   * _FileCursor_ - interface for reading specific segments of files
 * __Higher-level abstractions for filesystem data__ - implementations in snapshot/snaphots/
+  * _DB_ - interface to deal with Snapshots. Should replace the types below.
   * _Filer_ - interface for treating snapshots as files, includes Checkouter and Ingester
   * _Checkout_ - Specific instance or "checkout" of a snapshot
   * _Checkouter_ - Wrapping interface for managing snapshots on the local filesystem
