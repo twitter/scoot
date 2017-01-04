@@ -10,7 +10,9 @@
   },
   "SchedulerConfig": {
     "Type": "stateful",
-    "MaxRetriesPerTask" : 2
+    "MaxRetriesPerTask" : 2,
+    "DebugMode" : false,
+    "RecoverJobsOnStartup" : false
   },
   "SagaLog": {
     "Type": "memory"

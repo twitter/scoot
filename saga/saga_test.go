@@ -342,3 +342,10 @@ func TestFatalError_InternalLogError(t *testing.T) {
 		t.Error("Exepected InternalLogError to not be a FatalE Error")
 	}
 }
+
+func TestFatalError_CorruptedSagaLogError(t *testing.T) {
+	err := NewCorruptedSagaLogError("123", "corrupted sagalog")
+	if !FatalErr(err) {
+		t.Error("Expected CorruptedSagaLog to be a Fatal Error")
+	}
+}
