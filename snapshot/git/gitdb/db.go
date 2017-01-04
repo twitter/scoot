@@ -79,7 +79,7 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 
 // UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
 // Errors if id does not identify a SnapshotWithHistory.
-func (db *DB) SnapshotForRevision(id snapshot.ID) (snapshot.ID, error) {
+func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
 
