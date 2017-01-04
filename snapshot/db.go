@@ -34,7 +34,7 @@ type DB interface {
 
 	// Download makes sure the value id is downloaded, returning an ID that can be used
 	// on this computer or an error
-	Download(id SnapID) (SnapID, error)
+	Download(id ID) (ID, error)
 
 	// Export
 
