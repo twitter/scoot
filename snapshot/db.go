@@ -18,11 +18,11 @@ type DB interface {
 	// IngestGitCommit ingests the commit identified by commitish from ingestRepo
 	// commitish may be any string that identifies a commit
 	// The created value is a SnapshotWithHistory.
-	IngestGitCommit(ingestRepo *repo.Repository, commitish string) (SnapID, error)
+	IngestGitCommit(ingestRepo *repo.Repository, commitish string) (ID, error)
 
 	// Operations
 
-	// UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot.
+	// UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
 	// Errors if id does not identify a SnapshotWithHistory.
 	SnapshotForRevision(id ID) (ID, error)
 
