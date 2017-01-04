@@ -23,11 +23,11 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 		Short: "run a job",
 	}
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
-	r.Flags().StringVar(&c.jobFilePath, "job_file_path", "", "regular (non-thrift) JSON file to read jobs from")
+	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from")
 	return r
 }
 
-// Types to handle JobDefinitions from regular (non-thrift) JSON files
+// Types to handle JobDefinitions from JSON files
 type JobDef struct {
 	Tasks map[string]TaskDef
 }
@@ -47,7 +47,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
-		return errors.New("You must provide either args or a file path")
+		return errors.New("You must provide either args or a job definition")
 	case len(args) > 0:
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
