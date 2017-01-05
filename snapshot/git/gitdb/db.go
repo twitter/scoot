@@ -2,8 +2,6 @@ package gitdb
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -21,68 +19,127 @@ const (
 
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir) *DB {
-	return &DB{
-		dataRepo: dataRepo,
-		tmp:      tmp,
+	result := &DB{
+		reqCh:     make(chan req),
+		dataRepo:  dataRepo,
+		tmp:       tmp,
+		checkouts: make(map[string]bool),
 	}
+	go result.loop()
+	return result
 }
 
 // DB stores its data in a Git Repo
 type DB struct {
-	dataRepo *repo.Repository
-	tmp      *temp.TempDir
+	// DB uses a goroutine to serve requests, with requests of type req
+	reqCh chan req
+
+	// All data below here should be accessed only by the loop() goroutine
+	dataRepo  *repo.Repository
+	tmp       *temp.TempDir
+	checkouts map[string]bool
+}
+
+// req is a request interface
+type req interface {
+	req()
+}
+
+// Close stops the DB
+func (db *DB) Close() {
+	close(db.reqCh)
+}
+
+// loop loops serving requests serially
+func (db *DB) loop() {
+	for db.reqCh != nil {
+		req, ok := <-db.reqCh
+		if !ok {
+			db.reqCh = nil
+			continue
+		}
+		switch req := req.(type) {
+		case ingestReq:
+			id, err := db.ingestDir(req.dir)
+			req.resultCh <- idAndError{id: id, err: err}
+		case checkoutReq:
+			path, err := db.checkout(req.id)
+			req.resultCh <- stringAndError{str: path, err: err}
+		case releaseCheckoutReq:
+			req.resultCh <- db.releaseCheckout(req.path)
+		default:
+			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
+		}
+	}
+}
+
+type ingestReq struct {
+	dir      string
+	resultCh chan idAndError
+}
+
+func (r ingestReq) req() {}
+
+type idAndError struct {
+	id  snapshot.ID
+	err error
 }
 
 // IngestDir ingests a directory directly.
 func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
-	// We ingest a dir using git commands:
-	// First, create a new index file.
-	// Second, add all the files in the work tree.
-	// Third, write the tree.
-	// This doesn't create a commit, or otherwise mess with repo state.
-	indexDir, err := db.tmp.TempDir("git-index")
-	if err != nil {
-		return "", err
-	}
-
-	indexFilename := filepath.Join(indexDir.Dir, "index")
-	defer os.RemoveAll(indexDir.Dir)
-
-	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + dir}
-
-	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
-	// (e.g., HEAD) and we should just use the lower-level plumbing command?
-	cmd := db.dataRepo.Command("add", ".")
-	cmd.Env = append(cmd.Env, extraEnv...)
-	_, err = db.dataRepo.RunCmd(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	cmd = db.dataRepo.Command("write-tree")
-	cmd.Env = append(cmd.Env, extraEnv...)
-	sha, err := db.dataRepo.RunCmdSha(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	v := &localValue{sha: sha, kind: kindSnapshot}
-	return v.ID(), nil
+	resultCh := make(chan idAndError)
+	db.reqCh <- ingestReq{dir: dir, resultCh: resultCh}
+	result := <-resultCh
+	return result.id, result.err
 }
+
+type checkoutReq struct {
+	id       snapshot.ID
+	resultCh chan stringAndError
+}
+
+func (r checkoutReq) req() {}
+
+type stringAndError struct {
+	str string
+	err error
+}
+
+// Checkout puts the value identified by id in the local filesystem, returning
+// the path where it lives or an error.
+func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+	resultCh := make(chan stringAndError)
+	db.reqCh <- checkoutReq{id: id, resultCh: resultCh}
+	result := <-resultCh
+	return result.str, result.err
+}
+
+type releaseCheckoutReq struct {
+	path     string
+	resultCh chan error
+}
+
+func (r releaseCheckoutReq) req() {}
+
+// ReleaseCheckout releases a path from a previous Checkout. This allows Scoot to reuse
+// the path. Scoot will not touch path after Checkout until ReleaseCheckout.
+func (db *DB) ReleaseCheckout(path string) error {
+	resultCh := make(chan error)
+	db.reqCh <- releaseCheckoutReq{path: path, resultCh: resultCh}
+	return <-resultCh
+}
+
+// Below here are unimplemented
 
 // IngestGitCommit ingests the commit identified by commitish from ingestRepo
 func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
 
-// Operations
-
 // UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
 func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
-
-// Distribute
 
 // Upload makes sure the value id is uploaded, returning an ID that can be used
 // anywhere or an error
@@ -94,52 +151,4 @@ func (db *DB) Upload(id snapshot.ID) (snapshot.ID, error) {
 // on this computer or an error
 func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
-}
-
-// Checkout puts the value identified by id in the local filesystem, returning
-// the path where it lives or an error.
-func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
-	// Checkout creates a new dir with a new index and checks out exactly that tree.
-	v, err := parseID(id)
-	if err != nil {
-		return "", err
-	}
-
-	indexDir, err := db.tmp.TempDir("git-index")
-	if err != nil {
-		return "", err
-	}
-
-	indexFilename := filepath.Join(indexDir.Dir, "index")
-	defer os.RemoveAll(indexDir.Dir)
-
-	coDir, err := db.tmp.TempDir("checkout")
-	if err != nil {
-		return "", err
-	}
-
-	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir.Dir}
-
-	cmd := db.dataRepo.Command("read-tree", v.sha)
-	cmd.Env = append(cmd.Env, extraEnv...)
-	_, err = db.dataRepo.RunCmd(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	cmd = db.dataRepo.Command("checkout-index", "-a")
-	cmd.Env = append(cmd.Env, extraEnv...)
-	_, err = db.dataRepo.RunCmd(cmd)
-	if err != nil {
-		return "", err
-	}
-
-	return coDir.Dir, nil
-}
-
-// ReleaseCheckout releases a path from a previous Checkout. This allows Scoot to reuse
-// the path. Scoot will not touch path after Checkout until ReleaseCheckout.
-func (db *DB) ReleaseCheckout(path string) error {
-	// TODO(dbentley): track checkouts, and clean if we can now
-	return nil
 }
