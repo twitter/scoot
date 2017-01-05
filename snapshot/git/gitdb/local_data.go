@@ -19,23 +19,8 @@ type localValue struct {
 	kind valueKind
 }
 
-const (
-	snapshotIDText            = "snap"
-	snapshotWithHistoryIDText = "swh"
-)
-
-var kindToIDText = map[valueKind]string{
-	kindSnapshot:            snapshotIDText,
-	kindSnapshotWithHistory: snapshotWithHistoryIDText,
-}
-
-var kindIDTextToKind = map[string]valueKind{
-	snapshotIDText:            kindSnapshot,
-	snapshotWithHistoryIDText: kindSnapshotWithHistory,
-}
-
 func (v *localValue) ID() snapshot.ID {
-	return snapshot.ID(fmt.Sprintf(localIDFmt, localIDText, kindToIDText[v.kind], v.sha))
+	return snapshot.ID(fmt.Sprintf(localIDFmt, localIDText, v.kind, v.sha))
 }
 
 // parseID parses ID into a localValue
@@ -47,14 +32,13 @@ func parseID(id snapshot.ID) (*localValue, error) {
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("did not scan 3 items from %s", id)
 	}
-	scheme, kindText, sha := parts[0], parts[1], parts[2]
+	scheme, kind, sha := parts[0], valueKind(parts[1]), parts[2]
 	if scheme != localIDText {
 		return nil, fmt.Errorf("invalid scheme: %s", scheme)
 	}
 
-	kind, ok := kindIDTextToKind[kindText]
-	if !ok {
-		return nil, fmt.Errorf("invalid kind: %s", kindText)
+	if !kinds[kind] {
+		return nil, fmt.Errorf("invalid kind: %s", kind)
 	}
 
 	if err := validSha(sha); err != nil {
@@ -153,7 +137,9 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 func (db *DB) checkout(id snapshot.ID) (path string, err error) {
 
 	defer func() {
-		if path != db.dataRepo.Dir() {
+		// If we're our repo dir, we need to keep the work tree locked.
+		// Otherwise, we can unlock it.
+		if path != "" && path != db.dataRepo.Dir() {
 			db.workTreeLock.Unlock()
 		}
 	}()
@@ -167,17 +153,17 @@ func (db *DB) checkout(id snapshot.ID) (path string, err error) {
 	switch v.kind {
 	case kindSnapshot:
 		// For snapshots, we make a "bare checkout".
-		return db.checkoutSnapshot(v)
+		return db.checkoutSnapshot(v.sha)
 	case kindSnapshotWithHistory:
 		// For snapshotWithHistory's, we use dataRepo's work tree.
-		return db.checkoutSnapshotWithHistory(v)
+		return db.checkoutSnapshotWithHistory(v.sha)
 	default:
 		return "", fmt.Errorf("cannot checkout value kind %v", v.kind)
 	}
 }
 
 // checkoutSnapshot creates a new dir with a new index and checks out exactly that tree.
-func (db *DB) checkoutSnapshot(v *localValue) (path string, err error) {
+func (db *DB) checkoutSnapshot(sha string) (path string, err error) {
 	// we don't need the work tree
 	indexDir, err := db.tmp.TempDir("git-index")
 	if err != nil {
@@ -194,7 +180,7 @@ func (db *DB) checkoutSnapshot(v *localValue) (path string, err error) {
 
 	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir.Dir}
 
-	cmd := db.dataRepo.Command("read-tree", v.sha)
+	cmd := db.dataRepo.Command("read-tree", sha)
 	cmd.Env = append(cmd.Env, extraEnv...)
 	_, err = db.dataRepo.RunCmd(cmd)
 	if err != nil {
@@ -216,12 +202,12 @@ func (db *DB) checkoutSnapshot(v *localValue) (path string, err error) {
 // checkoutSnapshotWithHistory checks out a commit into our work tree.
 // We could use multiple work trees, except our git doens't yet have work-tree support.
 // TODO(dbentley): migrate to work-trees.
-func (db *DB) checkoutSnapshotWithHistory(v *localValue) (path string, err error) {
+func (db *DB) checkoutSnapshotWithHistory(sha string) (path string, err error) {
 	cmds := [][]string{
 		// -d removes directories. -x ignores gitignore and removes everything.
 		// -f is force. -f the second time removes directories even if they're git repos themselves
 		{"clean", "-f", "-f", "-d", "-x"},
-		{"checkout", v.sha},
+		{"checkout", sha},
 	}
 
 	for _, argv := range cmds {

@@ -11,12 +11,17 @@ import (
 
 // valueKind describes the kind of a Value: is it a Snapshot or a SnapshotWithHistory?
 // kind instead of type because type is a keyword
-type valueKind int
+type valueKind string
 
 const (
-	kindSnapshot valueKind = iota
-	kindSnapshotWithHistory
+	kindSnapshot            valueKind = "snap"
+	kindSnapshotWithHistory valueKind = "swh"
 )
+
+var kinds = map[valueKind]bool{
+	kindSnapshot:            true,
+	kindSnapshotWithHistory: true,
+}
 
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir) *DB {
@@ -29,6 +34,8 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir) *DB {
 	go result.loop()
 	return result
 }
+
+// TODO(dbentley): we may want more setup for our repo (e.g., disabling auto-gc)
 
 // DB stores its data in a Git Repo
 type DB struct {
