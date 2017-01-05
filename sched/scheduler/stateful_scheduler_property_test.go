@@ -18,11 +18,11 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 	taskMap := make(map[string]cluster.NodeId)
 
 	/*jobId, _ :=*/ s.ScheduleJob(jobDef)
-
 	s.step()
 
 	for len(s.inProgressJobs) > 0 {
 		s.step()
+
 		for nodeId, state := range s.clusterState.nodes {
 			if state.runningTask != noTask {
 				taskMap[state.runningTask] = nodeId
