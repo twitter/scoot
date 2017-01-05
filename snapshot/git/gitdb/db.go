@@ -124,7 +124,6 @@ func (r releaseCheckoutReq) req() {}
 // ReleaseCheckout releases a path from a previous Checkout. This allows Scoot to reuse
 // the path. Scoot will not touch path after Checkout until ReleaseCheckout.
 func (db *DB) ReleaseCheckout(path string) error {
-	// TODO(dbentley): track checkouts, and clean if we can now
 	resultCh := make(chan error)
 	db.reqCh <- releaseCheckoutReq{path: path, resultCh: resultCh}
 	return <-resultCh
