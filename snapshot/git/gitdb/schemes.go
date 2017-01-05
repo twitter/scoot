@@ -1,7 +1,7 @@
 package gitdb
 
 type value interface {
-	value()
+	ID() snapshot.ID
 }
 
 // parseID parses ID into a localValue
@@ -17,22 +17,11 @@ func parseID(id snapshot.ID) (value, error) {
 	scheme := parts[0]
 
 	switch scheme {
+	case localIDText:
+		return parseLocalID(id)
+	case streamIDText:
+		return parseStreamID(id)
 	default:
 		return "", fmt.Errorf("unrecognized snapshot scheme %s in ID %s", scheme, id)
 	}
-
-	scheme, kind, sha := parts[0], valueKind(parts[1]), parts[2]
-	if scheme != localIDText {
-		return nil, fmt.Errorf("invalid scheme: %s", scheme)
-	}
-
-	if !kinds[kind] {
-		return nil, fmt.Errorf("invalid kind: %s", kind)
-	}
-
-	if err := validSha(sha); err != nil {
-		return nil, err
-	}
-
-	return &localValue{kind: kind, sha: sha}, nil
 }

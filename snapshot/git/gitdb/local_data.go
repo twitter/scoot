@@ -19,6 +19,27 @@ type localValue struct {
 	kind valueKind
 }
 
+func parseLocalID(id snapshot.ID) (*localValue, error) {
+	parts := strings.Split(string(id), "-")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("cannot parse snapshot ID: expected 2 hyphens in local id %s", id)
+	}
+	scheme, kind, sha := parts[0], valueKind(parts[1]), parts[2]
+	if scheme != localIDText {
+		return nil, fmt.Errorf("scheme not local: %s", scheme)
+	}
+
+	if !kinds[kind] {
+		return nil, fmt.Errorf("invalid kind: %s", kind)
+	}
+
+	if err := validSha(sha); err != nil {
+		return nil, err
+	}
+
+	return &localValue{kind: kind, sha: sha}, nil
+}
+
 func (v *localValue) ID() snapshot.ID {
 	return snapshot.ID(fmt.Sprintf(localIDFmt, localIDText, v.kind, v.sha))
 }
