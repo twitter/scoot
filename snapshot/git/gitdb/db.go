@@ -2,6 +2,7 @@ package gitdb
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -34,10 +35,13 @@ type DB struct {
 	// DB uses a goroutine to serve requests, with requests of type req
 	reqCh chan req
 
+	// must hold workTreeLock before sending a checkoutReq to reqCh
+	workTreeLock sync.Mutex
+
 	// All data below here should be accessed only by the loop() goroutine
 	dataRepo  *repo.Repository
 	tmp       *temp.TempDir
-	checkouts map[string]bool
+	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
 }
 
 // req is a request interface
@@ -61,6 +65,9 @@ func (db *DB) loop() {
 		switch req := req.(type) {
 		case ingestReq:
 			id, err := db.ingestDir(req.dir)
+			req.resultCh <- idAndError{id: id, err: err}
+		case ingestGitCommitReq:
+			id, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
 			req.resultCh <- idAndError{id: id, err: err}
 		case checkoutReq:
 			path, err := db.checkout(req.id)
@@ -93,6 +100,22 @@ func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
 	return result.id, result.err
 }
 
+type ingestGitCommitReq struct {
+	ingestRepo *repo.Repository
+	commitish  string
+	resultCh   chan idAndError
+}
+
+func (r ingestGitCommitReq) req() {}
+
+// IngestGitCommit ingests the commit identified by commitish from ingestRepo
+func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
+	resultCh := make(chan idAndError)
+	db.reqCh <- ingestGitCommitReq{ingestRepo: ingestRepo, commitish: commitish, resultCh: resultCh}
+	result := <-resultCh
+	return result.id, result.err
+}
+
 type checkoutReq struct {
 	id       snapshot.ID
 	resultCh chan stringAndError
@@ -108,6 +131,7 @@ type stringAndError struct {
 // Checkout puts the value identified by id in the local filesystem, returning
 // the path where it lives or an error.
 func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
 	db.reqCh <- checkoutReq{id: id, resultCh: resultCh}
 	result := <-resultCh
@@ -130,11 +154,6 @@ func (db *DB) ReleaseCheckout(path string) error {
 }
 
 // Below here are unimplemented
-
-// IngestGitCommit ingests the commit identified by commitish from ingestRepo
-func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
-	return "", fmt.Errorf("not yet implemented")
-}
 
 // UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
 func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {

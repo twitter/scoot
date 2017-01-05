@@ -2,8 +2,11 @@ package gitdb
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -12,13 +15,9 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-func TestIngestDir(t *testing.T) {
-	fixture, err := setup()
-	defer fixture.close()
-	if err != nil {
-		t.Fatal(err)
-	}
+var fixture *dbFixture
 
+func TestIngestDir(t *testing.T) {
 	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
 	if err != nil {
 		t.Fatal(err)
@@ -50,6 +49,58 @@ func TestIngestDir(t *testing.T) {
 	}
 
 	if err := fixture.db.ReleaseCheckout(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIngestCommit(t *testing.T) {
+	id1, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit1ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id2, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit2ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	co, err := fixture.db.Checkout(id1)
+	if err != nil {
+		t.Fatalf("error checking out %v, %v", id1, err)
+	}
+
+	// test contents
+	data, err := ioutil.ReadFile(filepath.Join(co, "file.txt"))
+	if err != nil || string(data) != "first" {
+		t.Fatalf("error reading file.txt: %q %v (expected \"first\" <nil>)", data, err)
+	}
+
+	// Write temporary data into checkouts to make sure it's cleaned
+	if err = ioutil.WriteFile(filepath.Join(co, "scratch.txt"), []byte("1"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fixture.db.ReleaseCheckout(co); err != nil {
+		t.Fatal(err)
+	}
+
+	co, err = fixture.db.Checkout(id2)
+	if err != nil {
+		t.Fatalf("error checking out %v, %v", id2, err)
+	}
+
+	// text contents
+	data, err = ioutil.ReadFile(filepath.Join(co, "file.txt"))
+	if err != nil || string(data) != "second" {
+		t.Fatalf("error reading file.txt: %q %v (expected \"second\" <nil>)", data, err)
+	}
+
+	data, err = ioutil.ReadFile(filepath.Join(co, "scratch.txt"))
+	if err == nil {
+		t.Fatalf("scratch.txt existed in %v with contents %q; should not exist", co, data)
+	}
+
+	if err := fixture.db.ReleaseCheckout(co); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -168,4 +219,17 @@ func setup() (*dbFixture, error) {
 		commit1ID: commit1ID,
 		commit2ID: commit2ID,
 	}, nil
+}
+
+// Pull setup into one place so we only create repos once.
+func TestMain(m *testing.M) {
+	flag.Parse()
+	var err error
+	fixture, err = setup()
+	if err != nil {
+		log.Fatal(err)
+	}
+	result := m.Run()
+	fixture.close()
+	os.Exit(result)
 }
