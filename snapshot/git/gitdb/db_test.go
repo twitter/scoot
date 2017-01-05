@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 func TestIngestDir(t *testing.T) {
 	fixture, err := setup()
+	defer fixture.close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,10 +56,14 @@ func TestIngestDir(t *testing.T) {
 
 type dbFixture struct {
 	tmp       *temp.TempDir
-	db        snapshot.DB
+	db        *DB
 	external  *repo.Repository
 	commit1ID string
 	commit2ID string
+}
+
+func (f *dbFixture) close() {
+	f.db.Close()
 }
 
 func setup() (*dbFixture, error) {

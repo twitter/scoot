@@ -2,6 +2,8 @@ package gitdb
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/scootdev/scoot/snapshot"
@@ -68,4 +70,93 @@ func validSha(sha string) error {
 	}
 	// TODO(dbentley): check that it's hexadecimal?
 	return nil
+}
+
+func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
+	// We ingest a dir using git commands:
+	// First, create a new index file.
+	// Second, add all the files in the work tree.
+	// Third, write the tree.
+	// This doesn't create a commit, or otherwise mess with repo state.
+	indexDir, err := db.tmp.TempDir("git-index")
+	if err != nil {
+		return "", err
+	}
+
+	indexFilename := filepath.Join(indexDir.Dir, "index")
+	defer os.RemoveAll(indexDir.Dir)
+
+	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + dir}
+
+	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
+	// (e.g., HEAD) and we should just use the lower-level plumbing command?
+	cmd := db.dataRepo.Command("add", ".")
+	cmd.Env = append(cmd.Env, extraEnv...)
+	_, err = db.dataRepo.RunCmd(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	cmd = db.dataRepo.Command("write-tree")
+	cmd.Env = append(cmd.Env, extraEnv...)
+	sha, err := db.dataRepo.RunCmdSha(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	v := &localValue{sha: sha, kind: kindSnapshot}
+	return v.ID(), nil
+}
+
+func (db *DB) checkout(id snapshot.ID) (path string, err error) {
+	// Checkout creates a new dir with a new index and checks out exactly that tree.
+	v, err := parseID(id)
+	if err != nil {
+		return "", err
+	}
+
+	indexDir, err := db.tmp.TempDir("git-index")
+	if err != nil {
+		return "", err
+	}
+
+	indexFilename := filepath.Join(indexDir.Dir, "index")
+	defer os.RemoveAll(indexDir.Dir)
+
+	coDir, err := db.tmp.TempDir("checkout")
+	if err != nil {
+		return "", err
+	}
+
+	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir.Dir}
+
+	cmd := db.dataRepo.Command("read-tree", v.sha)
+	cmd.Env = append(cmd.Env, extraEnv...)
+	_, err = db.dataRepo.RunCmd(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	cmd = db.dataRepo.Command("checkout-index", "-a")
+	cmd.Env = append(cmd.Env, extraEnv...)
+	_, err = db.dataRepo.RunCmd(cmd)
+	if err != nil {
+		return "", err
+	}
+
+	db.checkouts[coDir.Dir] = true
+
+	return coDir.Dir, nil
+}
+
+func (db *DB) releaseCheckout(path string) error {
+	if exists := db.checkouts[path]; !exists {
+		return nil
+	}
+	err := os.RemoveAll(path)
+	if err == nil {
+		return nil
+	}
+	delete(db.checkouts, path)
+	return err
 }
