@@ -37,6 +37,7 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 
 	// The in memory workers aren't doing anything interesting except sleeping distribution
 	// should be even with in 180 - 220 nodes otherwise something is wrong.
+	// (1000 tasks/5 workers = average of 200 tasks/node)
 	// TODO(dbentley): lowered to 150 b/c I see an error in Travis where:
 	// TaskCountMap: map[node2:198 node1:209 node4:199 node3:166 node5:205]
 	// This is odd, because they only add up to 977 instead of 100, so 23 are being lost altogether.
