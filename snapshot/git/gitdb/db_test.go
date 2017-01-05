@@ -105,26 +105,27 @@ func TestIngestCommit(t *testing.T) {
 	}
 }
 
+func TestStream(t *testing.T) {
+	// streamID := "stream-source_master-" + f.upstreamCommit1ID
+
+}
+
 type dbFixture struct {
-	tmp       *temp.TempDir
-	db        *DB
-	external  *repo.Repository
-	commit1ID string
-	commit2ID string
+	tmp               *temp.TempDir
+	db                *DB
+	external          *repo.Repository
+	commit1ID         string
+	commit2ID         string
+	upstream          *repo.Repository
+	upstreamCommit1ID string
 }
 
 func (f *dbFixture) close() {
 	f.db.Close()
 }
 
-func setup() (*dbFixture, error) {
-	// git init
-	tmp, err := temp.NewTempDir("", "db_test")
-	if err != nil {
-		return nil, err
-	}
-
-	dir, err := tmp.TempDir("external-repo-")
+func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
+	dir, err := tmp.TempDir(name)
 	if err != nil {
 		return nil, err
 	}
@@ -149,68 +150,77 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
+	return r, nil
+}
+
+func commitText(r *repo.Repository, text string) (string, error) {
 	// Create a commit with file.txt = "first"
-	filename := filepath.Join(dir.Dir, "file.txt")
-	if err = ioutil.WriteFile(filename, []byte("first"), 0777); err != nil {
-		return nil, err
+	filename := filepath.Join(r.Dir(), "file.txt")
+	if err := ioutil.WriteFile(filename, []byte(text), 0777); err != nil {
+		return "", err
 	}
 
-	if _, err = r.Run("add", "file.txt"); err != nil {
-		return nil, err
-	}
-	// Run it with just this thing
-	if _, err = r.Run("commit", "-am", "first post"); err != nil {
-		return nil, err
-	}
-	var commit1ID string
-	if id, err := r.RunSha("rev-parse", "HEAD"); err != nil {
-		return nil, err
-	} else {
-		commit1ID = id
+	if _, err := r.Run("add", "file.txt"); err != nil {
+		return "", err
 	}
 
-	// Create a commit with file.txt = "second"
-	if err = ioutil.WriteFile(filename, []byte("second"), 0777); err != nil {
-		return nil, err
+	if _, err := r.Run("commit", "-am", "created by commitText"); err != nil {
+		return "", err
 	}
-	if _, err = r.Run("commit", "-am", "second post"); err != nil {
-		return nil, err
-	}
-	var commit2ID string
-	if id, err := r.RunSha("rev-parse", "HEAD"); err != nil {
-		return nil, err
-	} else {
-		commit2ID = id
-	}
+	return r.RunSha("rev-parse", "HEAD")
+}
 
-	external := r
-
-	dir, err = tmp.TempDir("external-repo-")
+func setup() (*dbFixture, error) {
+	// git init
+	tmp, err := temp.NewTempDir("", "db_test")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd = exec.Command("git", "init")
-	cmd.Dir = dir.Dir
-	err = cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("error init'ing: %v", err)
-	}
-
-	// create the repo
-	r, err = repo.NewRepository(dir.Dir)
+	external, err := createRepo(tmp, "external-repo")
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = r.Run("config", "user.name", "Scoot Test"); err != nil {
-		return nil, err
-	}
-	if _, err = r.Run("config", "user.email", "scoottest@scootdev.github.io"); err != nil {
+	commit1ID, err := commitText(external, "first")
+	if err != nil {
 		return nil, err
 	}
 
-	db := MakeDB(r, tmp)
+	commit2ID, err := commitText(external, "second")
+	if err != nil {
+		return nil, err
+	}
+
+	dataRepo, err := createRepo(tmp, "data-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	upstreamRepo, err := createRepo(tmp, "upstream-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := commitText(upstreamRepo, "upstream_zeroeth"); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("remote", "add", "upstream", upstreamRepo.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("fetch", "upstream"); err != nil {
+		return nil, err
+	}
+
+	stream := &StreamConfig{
+		Name:    "source_master",
+		Remote:  "upstream",
+		RefSpec: "refs/remotes/upstream/master",
+	}
+
+	db := MakeDB(dataRepo, tmp, stream)
 
 	return &dbFixture{
 		tmp:       tmp,

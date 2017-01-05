@@ -24,12 +24,13 @@ var kinds = map[valueKind]bool{
 }
 
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
-func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir) *DB {
+func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) *DB {
 	result := &DB{
 		reqCh:     make(chan req),
 		dataRepo:  dataRepo,
 		tmp:       tmp,
 		checkouts: make(map[string]bool),
+		stream:    stream,
 	}
 	go result.loop()
 	return result
@@ -49,6 +50,7 @@ type DB struct {
 	dataRepo  *repo.Repository
 	tmp       *temp.TempDir
 	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
+	stream    *StreamConfig
 }
 
 // req is a request interface
@@ -81,6 +83,9 @@ func (db *DB) loop() {
 			req.resultCh <- stringAndError{str: path, err: err}
 		case releaseCheckoutReq:
 			req.resultCh <- db.releaseCheckout(req.path)
+		case downloadReq:
+			id, err := db.download(req.id)
+			req.resultCh <- idAndError{id: id, err: err}
 		default:
 			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
 		}
@@ -160,6 +165,22 @@ func (db *DB) ReleaseCheckout(path string) error {
 	return <-resultCh
 }
 
+type downloadReq struct {
+	id       snapshot.ID
+	resultCh chan idAndError
+}
+
+func (r downloadReq) req() {}
+
+// Download makes sure the value id is downloaded, returning an ID that can be used
+// on this computer or an error
+func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
+	resultCh := make(chan idAndError)
+	db.reqCh <- downloadReq{id: id, resultCh: resultCh}
+	result := <-resultCh
+	return result.id, result.err
+}
+
 // Below here are unimplemented
 
 // UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
@@ -170,11 +191,5 @@ func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {
 // Upload makes sure the value id is uploaded, returning an ID that can be used
 // anywhere or an error
 func (db *DB) Upload(id snapshot.ID) (snapshot.ID, error) {
-	return "", fmt.Errorf("not yet implemented")
-}
-
-// Download makes sure the value id is downloaded, returning an ID that can be used
-// on this computer or an error
-func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }

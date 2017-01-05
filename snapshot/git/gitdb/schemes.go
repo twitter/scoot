@@ -1,5 +1,12 @@
 package gitdb
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/scootdev/scoot/snapshot"
+)
+
 type value interface {
 	ID() snapshot.ID
 }
@@ -22,6 +29,6 @@ func parseID(id snapshot.ID) (value, error) {
 	case streamIDText:
 		return parseStreamID(id)
 	default:
-		return "", fmt.Errorf("unrecognized snapshot scheme %s in ID %s", scheme, id)
+		return nil, fmt.Errorf("unrecognized snapshot scheme %s in ID %s", scheme, id)
 	}
 }
