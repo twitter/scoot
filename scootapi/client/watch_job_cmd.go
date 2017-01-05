@@ -35,11 +35,6 @@ func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string
 		return errors.New("a job id must be provided")
 	}
 
-	err := cl.Dial()
-	if err != nil {
-		return err
-	}
-
 	jobId := args[0]
 
 	for {
@@ -57,7 +52,7 @@ func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string
 
 }
 
-func GetAndPrintStatus(jobId string, thriftClient *scoot.CloudScootClient) (*scoot.Status, error) {
+func GetAndPrintStatus(jobId string, thriftClient scoot.CloudScoot) (*scoot.Status, error) {
 
 	status, err := thriftClient.GetStatus(jobId)
 	if err != nil {
