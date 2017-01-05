@@ -34,7 +34,6 @@ type DB struct {
 }
 
 // IngestDir ingests a directory directly.
-// The created value is a Snapshot.
 func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
 	// We ingest a dir using git commands:
 	// First, create a new index file.
@@ -62,11 +61,7 @@ func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
 
 	cmd = db.dataRepo.Command("write-tree")
 	cmd.Env = append(cmd.Env, extraEnv...)
-	sha, err := db.dataRepo.RunCmd(cmd)
-	if err != nil {
-		return "", err
-	}
-	sha, err = repo.ValidateSha(sha)
+	sha, err := db.dataRepo.RunCmdSha(cmd)
 	if err != nil {
 		return "", err
 	}
@@ -76,8 +71,6 @@ func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
 }
 
 // IngestGitCommit ingests the commit identified by commitish from ingestRepo
-// commitish may be any string that identifies a commit
-// The created value is a SnapshotWithHistory.
 func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
@@ -85,7 +78,6 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 // Operations
 
 // UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
-// Errors if id does not identify a SnapshotWithHistory.
 func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
@@ -103,8 +95,6 @@ func (db *DB) Upload(id snapshot.ID) (snapshot.ID, error) {
 func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
 	return "", fmt.Errorf("not yet implemented")
 }
-
-// Export
 
 // Checkout puts the value identified by id in the local filesystem, returning
 // the path where it lives or an error.

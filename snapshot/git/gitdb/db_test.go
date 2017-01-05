@@ -41,7 +41,7 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := ioutil.ReadFile(filename)
+	actual, err := ioutil.ReadFile(filepath.Join(path, "foo.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}

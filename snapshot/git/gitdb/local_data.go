@@ -40,14 +40,14 @@ func parseID(id snapshot.ID) (*localValue, error) {
 	if id == "" {
 		return nil, fmt.Errorf("empty snapshot ID")
 	}
-	if !strings.HasPrefix(string(id), localIDText+"-") {
-		return nil, fmt.Errorf("unrecognized snapshot ID scheme in %s", id)
-	}
 	parts := strings.Split(string(id), "-")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("did not scan 3 items from %s", id)
 	}
-	kindText, sha := parts[1], parts[2] // skip parts[0] because we know it's local
+	scheme, kindText, sha := parts[0], parts[1], parts[2]
+	if scheme != localIDText {
+		return nil, fmt.Errorf("invalid scheme: %s", scheme)
+	}
 
 	kind, ok := kindIDTextToKind[kindText]
 	if !ok {
