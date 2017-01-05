@@ -19,7 +19,10 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 
 	/*jobId, _ :=*/ s.ScheduleJob(jobDef)
 
-	for s.step(); len(s.inProgressJobs) > 0; s.step() {
+	s.step()
+
+	for len(s.inProgressJobs) > 0 {
+		s.step()
 		for nodeId, state := range s.clusterState.nodes {
 			if state.runningTask != noTask {
 				taskMap[state.runningTask] = nodeId
@@ -38,7 +41,8 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 		// TODO(dbentley): I see an error in Travis where:
 		// TaskCountMap: map[node2:198 node1:209 node4:199 node3:166 node5:205]
 		// This is odd, because they only add up to 977 instead of 100, so 23 are being lost altogether.
-		if taskCount < 180 || taskCount > 220 || true {
+		// It looks like it might be because one iteration of step()
+		if taskCount < 150 || taskCount > 220 {
 			t.Fatalf(`Tasks were not evenly distributed across nodes.  Expected each node
 				to have 180 (150 b/c of flakiness! TODO(dbentley)) to 220 tasks executed on it. %v had an unequal number of tasks %v scheduled
 				on it.  TaskCountMap: %+v`, nodeId, taskCount, taskCountMap)
