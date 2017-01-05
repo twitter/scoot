@@ -22,9 +22,19 @@ func (r *Repository) Dir() string {
 
 // Run a git command in r
 func (r *Repository) Run(args ...string) (string, error) {
-	log.Println("repo.Repository.Run", args)
+	return r.RunCmd(r.Command(args...))
+}
+
+// Command creates an exec.Cmd to use to run in this Git Repo
+func (r *Repository) Command(args ...string) *exec.Cmd {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = r.dir
+	return cmd
+}
+
+// RunCmd runs cmd (that must have been created by Command), returning its output and error
+func (r *Repository) RunCmd(cmd *exec.Cmd) (string, error) {
+	log.Println("repo.Repository.Run", cmd.Args[1:])
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
 	// Print stderr, which exists only in go 1.6 and later.
@@ -43,6 +53,16 @@ func (r *Repository) RunSha(args ...string) (string, error) {
 	return validateSha(out)
 }
 
+// RunCmdSha runs cmd (that must have been created by Command) expecting a sha
+func (r *Repository) RunCmdSha(cmd *exec.Cmd) (string, error) {
+	out, err := r.RunCmd(cmd)
+	if err != nil {
+		return out, err
+	}
+	return validateSha(out)
+}
+
+// validateSha trims and validates sha as a git sha, returning the valid sha xor an error
 func validateSha(sha string) (string, error) {
 	if len(sha) == 40 || len(sha) == 41 && sha[40] == '\n' {
 		return sha[0:40], nil
