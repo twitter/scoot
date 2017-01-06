@@ -62,7 +62,6 @@ func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 		}
 		jobs = append(jobs, id)
 	}
-
 	return testhelpers.WaitForJobsToCompleteAndLogStatus(
 		jobs, r.cl.scootClient, timeout)
 }

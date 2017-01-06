@@ -42,8 +42,6 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 		}
 	}
 
-	fmt.Printf("Address: %v \n", c.addr)
-
 	c.scootClient = scootapi.NewCloudScootClient(
 		scootapi.CloudScootClientConfig{
 			Addr:   c.addr,
