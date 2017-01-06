@@ -39,11 +39,6 @@ type TaskDef struct {
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Println("Running on scoot", args)
 
-	err := cl.Dial()
-	if err != nil {
-		return err
-	}
-
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":

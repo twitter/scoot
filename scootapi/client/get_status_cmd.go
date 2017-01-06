@@ -25,11 +25,6 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		return errors.New("a job id must be provided")
 	}
 
-	err := cl.Dial()
-	if err != nil {
-		return err
-	}
-
 	jobId := args[0]
 
 	status, err := cl.scootClient.GetStatus(jobId)
