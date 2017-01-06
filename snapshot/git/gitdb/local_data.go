@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
@@ -19,20 +18,11 @@ type localValue struct {
 	kind valueKind
 }
 
-func parseLocalID(id snapshot.ID) (*localValue, error) {
-	parts := strings.Split(string(id), "-")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("cannot parse snapshot ID: expected 2 hyphens in local id %s", id)
+func parseLocalID(id snapshot.ID, kind valueKind, parts []string) (*localValue, error) {
+	if len(parts) != 1 {
+		return nil, fmt.Errorf("cannot parse snapshot ID: expected 3 parts in local id %s", id)
 	}
-	scheme, kind, sha := parts[0], valueKind(parts[1]), parts[2]
-	if scheme != localIDText {
-		return nil, fmt.Errorf("scheme not local: %s", scheme)
-	}
-
-	if !kinds[kind] {
-		return nil, fmt.Errorf("invalid kind: %s", kind)
-	}
-
+	sha := parts[0]
 	if err := validSha(sha); err != nil {
 		return nil, err
 	}
@@ -40,17 +30,19 @@ func parseLocalID(id snapshot.ID) (*localValue, error) {
 	return &localValue{kind: kind, sha: sha}, nil
 }
 
-func (v *localValue) ID() snapshot.ID {
+func (v *localValue) id() snapshot.ID {
 	return snapshot.ID(fmt.Sprintf(localIDFmt, localIDText, v.kind, v.sha))
 }
+func (v *localValue) kindF() valueKind { return v.kind }
+func (v *localValue) shaF() string     { return v.sha }
 
-// validSha checks if sha is valid
-func validSha(sha string) error {
-	if len(sha) != 40 {
-		return fmt.Errorf("sha not 40 characters: %s", sha)
-	}
-	// TODO(dbentley): check that it's hexadecimal?
-	return nil
+func (v *localValue) download(db *DB) (snapshot.ID, error) {
+	// A local value is already present Locally
+	return v.id(), nil
+}
+
+func (v *localValue) upload(db *DB) (snapshot.ID, error) {
+	return "", fmt.Errorf("upload of local scheme value not yet implemented")
 }
 
 func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
@@ -86,7 +78,7 @@ func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
 	}
 
 	v := &localValue{sha: sha, kind: kindSnapshot}
-	return v.ID(), nil
+	return v.id(), nil
 }
 
 const tempRef = "refs/heads/scoot/__temp_for_writing"
@@ -126,5 +118,5 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	}
 
 	l := &localValue{sha: sha, kind: kindSnapshotWithHistory}
-	return l.ID(), nil
+	return l.id(), nil
 }

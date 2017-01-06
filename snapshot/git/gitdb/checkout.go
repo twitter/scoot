@@ -24,26 +24,15 @@ func (db *DB) checkout(id snapshot.ID) (path string, err error) {
 		return "", err
 	}
 
-	switch v := v.(type) {
-
-	case *localValue:
-		// We use different strategies depending on the kind of value.
-		switch v.kind {
-		case kindSnapshot:
-			// For snapshots, we make a "bare checkout".
-			return db.checkoutSnapshot(v.sha)
-		case kindSnapshotWithHistory:
-			// For snapshotWithHistory's, we use dataRepo's work tree.
-			return db.checkoutSnapshotWithHistory(v.sha)
-		default:
-			return "", fmt.Errorf("cannot checkout value kind %v", v.kind)
-		}
-	case *streamValue:
-		// TODO(dbentley): check that it's present before checking out
-		return db.checkoutSnapshotWithHistory(v.sha)
-
+	switch v.kindF() {
+	case kindSnapshot:
+		// For snapshots, we make a "bare checkout".
+		return db.checkoutSnapshot(v.shaF())
+	case kindSnapshotWithHistory:
+		// For snapshotWithHistory's, we use dataRepo's work tree.
+		return db.checkoutSnapshotWithHistory(v.shaF())
 	default:
-		return "", fmt.Errorf("Unknown value type: %T %v", v, v)
+		return "", fmt.Errorf("cannot checkout value kind %v", v.kindF())
 	}
 }
 

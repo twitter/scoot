@@ -100,6 +100,8 @@ func TestIngestCommit(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
+	// Create a commit in upstream, then download it. Test by checking out and comparing contents.
+
 	upstreamCommit1ID, err := commitText(fixture.upstream, "upstream_first")
 	if err != nil {
 		t.Fatal(err)
@@ -136,6 +138,7 @@ func (f *dbFixture) close() {
 	f.db.Close()
 }
 
+// Create a new repo in tmp with directory name starting with name
 func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
 	dir, err := tmp.TempDir(name)
 	if err != nil {
@@ -165,6 +168,7 @@ func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
 	return r, nil
 }
 
+// Make a commit in repo r with "file.txt" having contents text
 func commitText(r *repo.Repository, text string) (string, error) {
 	// Create a commit with file.txt = "first"
 	filename := filepath.Join(r.Dir(), "file.txt")
@@ -182,6 +186,7 @@ func commitText(r *repo.Repository, text string) (string, error) {
 	return r.RunSha("rev-parse", "HEAD")
 }
 
+// asserts file `base` in `dir` has contents `expected` or errors
 func assertFileContents(dir string, base string, expected string) error {
 	actualBytes, err := ioutil.ReadFile(filepath.Join(dir, base))
 	if err != nil {
