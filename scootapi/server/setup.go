@@ -86,6 +86,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	schema := jsonconfig.Schema(map[string]jsonconfig.Implementations{
 		"SagaLog": {
 			"memory": &scootconfig.InMemorySagaLogConfig{},
+			"file":   &scootconfig.FileSagaLogConfig{},
 			"":       &scootconfig.InMemorySagaLogConfig{},
 		},
 		"Cluster": {

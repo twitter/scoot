@@ -12,9 +12,10 @@
     "Type": "stateful",
     "MaxRetriesPerTask" : 2,
     "DebugMode" : false,
-    "RecoverJobsOnStartup" : false
+    "RecoverJobsOnStartup" : true
   },
   "SagaLog": {
-    "Type": "memory"
+    "Type": "file",
+    "Directory": "sagalog"
   }
 }
