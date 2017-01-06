@@ -117,17 +117,10 @@ func NewStatefulScheduler(
 	// to accept new jobs while recovering old ones.
 	if config.RecoverJobsOnStartup {
 		go func() {
-			sched.startUp()
+			recoverJobs(sched.sagaCoord, sched.addJobCh)
 		}()
 	}
-
 	return sched
-}
-
-// Starts the scheduler, must be called before any other
-// methods on the scheduler can be called
-func (s *statefulScheduler) startUp() {
-	recoverJobs(s.sagaCoord, s.addJobCh)
 }
 
 type jobAddedMsg struct {

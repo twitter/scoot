@@ -1,9 +1,10 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/scootdev/scoot/common/thrifthelpers"
+
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -22,8 +23,17 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 		Short: "run a job",
 	}
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
-	r.Flags().StringVar(&c.jobFilePath, "job_file_path", "", "file to read targets from")
+	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from")
 	return r
+}
+
+// Types to handle JobDefinitions from JSON files
+type JobDef struct {
+	Tasks map[string]TaskDef
+}
+type TaskDef struct {
+	Args       []string
+	SnapshotID string
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
@@ -32,7 +42,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
-		return errors.New("You must provide either args or a file path")
+		return errors.New("You must provide either args or a job definition")
 	case len(args) > 0:
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
@@ -51,7 +61,20 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		if err != nil {
 			return err
 		}
-		thrifthelpers.JsonDeserialize(jobDef, asBytes)
+		var jsonJob JobDef
+		err = json.Unmarshal(asBytes, &jsonJob)
+		if err != nil {
+			return err
+		}
+
+		jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
+		for taskName, jsonTask := range jsonJob.Tasks {
+			taskDef := scoot.NewTaskDefinition()
+			taskDef.Command = scoot.NewCommand()
+			taskDef.Command.Argv = jsonTask.Args
+			taskDef.SnapshotId = &jsonTask.SnapshotID
+			jobDef.Tasks[taskName] = taskDef
+		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
