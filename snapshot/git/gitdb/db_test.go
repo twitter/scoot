@@ -1,7 +1,6 @@
 package gitdb
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -40,12 +40,8 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := ioutil.ReadFile(filepath.Join(path, "foo.txt"))
-	if err != nil {
+	if err := assertFileContents(path, "foo.txt", string(contents)); err != nil {
 		t.Fatal(err)
-	}
-	if !bytes.Equal(contents, actual) {
-		t.Fatalf("bad contents: %q %q", contents, actual)
 	}
 
 	if err := fixture.db.ReleaseCheckout(path); err != nil {
@@ -70,9 +66,8 @@ func TestIngestCommit(t *testing.T) {
 	}
 
 	// test contents
-	data, err := ioutil.ReadFile(filepath.Join(co, "file.txt"))
-	if err != nil || string(data) != "first" {
-		t.Fatalf("error reading file.txt: %q %v (expected \"first\" <nil>)", data, err)
+	if err := assertFileContents(co, "file.txt", "first"); err != nil {
+		t.Fatal(err)
 	}
 
 	// Write temporary data into checkouts to make sure it's cleaned
@@ -90,14 +85,13 @@ func TestIngestCommit(t *testing.T) {
 	}
 
 	// text contents
-	data, err = ioutil.ReadFile(filepath.Join(co, "file.txt"))
-	if err != nil || string(data) != "second" {
-		t.Fatalf("error reading file.txt: %q %v (expected \"second\" <nil>)", data, err)
+	if err := assertFileContents(co, "file.txt", "second"); err != nil {
+		t.Fatal(err)
 	}
 
-	data, err = ioutil.ReadFile(filepath.Join(co, "scratch.txt"))
+	_, err = os.Open(filepath.Join(co, "scratch.txt"))
 	if err == nil {
-		t.Fatalf("scratch.txt existed in %v with contents %q; should not exist", co, data)
+		t.Fatalf("scratch.txt existed in %v; should not exist", co)
 	}
 
 	if err := fixture.db.ReleaseCheckout(co); err != nil {
@@ -106,18 +100,36 @@ func TestIngestCommit(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	// streamID := "stream-source_master-" + f.upstreamCommit1ID
+	upstreamCommit1ID, err := commitText(fixture.upstream, "upstream_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamID := snapshot.ID("stream-swh-sm-" + upstreamCommit1ID)
+
+	id, err := fixture.db.Download(streamID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	co, err := fixture.db.Checkout(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := assertFileContents(co, "file.txt", "upstream_first"); err != nil {
+		t.Fatal(err)
+	}
 
 }
 
 type dbFixture struct {
-	tmp               *temp.TempDir
-	db                *DB
-	external          *repo.Repository
-	commit1ID         string
-	commit2ID         string
-	upstream          *repo.Repository
-	upstreamCommit1ID string
+	tmp       *temp.TempDir
+	db        *DB
+	external  *repo.Repository
+	commit1ID string
+	commit2ID string
+	upstream  *repo.Repository
 }
 
 func (f *dbFixture) close() {
@@ -170,6 +182,18 @@ func commitText(r *repo.Repository, text string) (string, error) {
 	return r.RunSha("rev-parse", "HEAD")
 }
 
+func assertFileContents(dir string, base string, expected string) error {
+	actualBytes, err := ioutil.ReadFile(filepath.Join(dir, base))
+	if err != nil {
+		return err
+	}
+	actual := string(actualBytes)
+	if expected != actual {
+		return fmt.Errorf("bad contents: %q %q", expected, actual)
+	}
+	return nil
+}
+
 func setup() (*dbFixture, error) {
 	// git init
 	tmp, err := temp.NewTempDir("", "db_test")
@@ -197,16 +221,16 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
-	upstreamRepo, err := createRepo(tmp, "upstream-repo")
+	upstream, err := createRepo(tmp, "upstream-repo")
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := commitText(upstreamRepo, "upstream_zeroeth"); err != nil {
+	if _, err := commitText(upstream, "upstream_zeroeth"); err != nil {
 		return nil, err
 	}
 
-	if _, err := dataRepo.Run("remote", "add", "upstream", upstreamRepo.Dir()); err != nil {
+	if _, err := dataRepo.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +239,7 @@ func setup() (*dbFixture, error) {
 	}
 
 	stream := &StreamConfig{
-		Name:    "source_master",
+		Name:    "sm",
 		Remote:  "upstream",
 		RefSpec: "refs/remotes/upstream/master",
 	}
@@ -228,6 +252,7 @@ func setup() (*dbFixture, error) {
 		external:  external,
 		commit1ID: commit1ID,
 		commit2ID: commit2ID,
+		upstream:  upstream,
 	}, nil
 }
 

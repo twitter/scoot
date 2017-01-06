@@ -15,23 +15,27 @@ type StreamConfig struct {
 }
 
 const streamIDText = "stream"
-const streamIDFmt = "%s-%s-%s"
+const streamIDFmt = "%s-%s-%s-%s"
 
 func parseStreamID(id snapshot.ID) (*streamValue, error) {
 	parts := strings.Split(string(id), "-")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 2 hyphens in local id %s", id)
 	}
-	scheme, streamName, sha := parts[0], parts[1], parts[2]
+	scheme, kind, streamName, sha := parts[0], valueKind(parts[1]), parts[2], parts[3]
 	if scheme != streamIDText {
 		return nil, fmt.Errorf("scheme not stream: %s", id)
+	}
+
+	if !kinds[kind] {
+		return nil, fmt.Errorf("invalid kind: %s", kind)
 	}
 
 	if err := validSha(sha); err != nil {
 		return nil, err
 	}
 
-	return &streamValue{streamName: streamName, sha: sha}, nil
+	return &streamValue{streamName: streamName, kind: kind, sha: sha}, nil
 }
 
 func (db *DB) downloadStreamValue(v *streamValue) (snapshot.ID, error) {
@@ -42,15 +46,18 @@ func (db *DB) downloadStreamValue(v *streamValue) (snapshot.ID, error) {
 		return "", fmt.Errorf("cannot download snapshot %s: does not match stream %s", v.ID(), db.stream.Name)
 	}
 
-	_, err := db.dataRepo.Run("fetch", db.stream.Remote)
+	if _, err := db.dataRepo.Run("fetch", db.stream.Remote); err != nil {
+		return "", err
+	}
 	return v.ID(), nil
 }
 
 type streamValue struct {
-	streamName string
 	sha        string
+	kind       valueKind
+	streamName string
 }
 
 func (v *streamValue) ID() snapshot.ID {
-	return snapshot.ID(fmt.Sprintf(streamIDFmt, streamIDText, v.streamName, v.sha))
+	return snapshot.ID(fmt.Sprintf(streamIDFmt, streamIDText, v.kind, v.streamName, v.sha))
 }
