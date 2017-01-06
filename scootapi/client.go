@@ -41,10 +41,13 @@ func createClient(addr string, dialer dialer.Dialer) (*scoot.CloudScootClient, e
 	return scoot.NewCloudScootClientFactory(transport, protocolFactory), nil
 }
 
-// helper method to reset the connection
-func (c *CloudScootClient) resetConnection() {
-	c.client.Transport.Close()
+// helper method to close the connection and reset the
+// struct field to nil so it will get recreated next
+func (c *CloudScootClient) closeConnection() error {
+	err := c.client.Transport.Close()
 	c.client = nil
+
+	return err
 }
 
 // RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
@@ -63,7 +66,9 @@ func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, 
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
 	if err != nil {
-		c.resetConnection()
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
 	}
 
 	return jobId, err
@@ -85,7 +90,9 @@ func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err erro
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
 	if err != nil {
-		c.resetConnection()
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
 	}
 
 	return jobStatus, err
@@ -94,7 +101,7 @@ func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err erro
 // Close any open Transport associated with this ScootClient
 func (c *CloudScootClient) Close() error {
 	if c.client != nil {
-		return c.client.Transport.Close()
+		return c.closeConnection()
 	}
 
 	return nil
