@@ -34,3 +34,4 @@ coverage.txt
 # So the \# escapes # as comment syntax
 \#*#
 .\#*
+sagalog/*
