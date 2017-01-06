@@ -65,6 +65,9 @@ swarmtest:
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run go run ./binaries/scootapi/main.go run_smoke_test 10 1m
 
+recoverytest:
+	go run ./binaries/recoverytest/main.go
+
 clean-mockgen:
 	rm */*_mock.go
 
@@ -73,4 +76,4 @@ clean: clean-mockgen
 
 fullbuild: dependencies generate test
 
-travis: dependencies test swarmtest
+travis: dependencies test recoverytest
