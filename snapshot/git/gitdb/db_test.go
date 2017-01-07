@@ -50,12 +50,22 @@ func TestIngestDir(t *testing.T) {
 }
 
 func TestIngestCommit(t *testing.T) {
-	id1, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit1ID)
+	commit1ID, err := commitText(fixture.external, "first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id2, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit2ID)
+	commit2ID, err := commitText(fixture.external, "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id1, err := fixture.db.IngestGitCommit(fixture.external, commit1ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id2, err := fixture.db.IngestGitCommit(fixture.external, commit2ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,12 +136,10 @@ func TestStream(t *testing.T) {
 }
 
 type dbFixture struct {
-	tmp       *temp.TempDir
-	db        *DB
-	external  *repo.Repository
-	commit1ID string
-	commit2ID string
-	upstream  *repo.Repository
+	tmp      *temp.TempDir
+	db       *DB
+	external *repo.Repository
+	upstream *repo.Repository
 }
 
 func (f *dbFixture) close() {
@@ -211,16 +219,6 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
-	commit1ID, err := commitText(external, "first")
-	if err != nil {
-		return nil, err
-	}
-
-	commit2ID, err := commitText(external, "second")
-	if err != nil {
-		return nil, err
-	}
-
 	dataRepo, err := createRepo(tmp, "data-repo")
 	if err != nil {
 		return nil, err
@@ -252,12 +250,10 @@ func setup() (*dbFixture, error) {
 	db := MakeDB(dataRepo, tmp, stream)
 
 	return &dbFixture{
-		tmp:       tmp,
-		db:        db,
-		external:  external,
-		commit1ID: commit1ID,
-		commit2ID: commit2ID,
-		upstream:  upstream,
+		tmp:      tmp,
+		db:       db,
+		external: external,
+		upstream: upstream,
 	}, nil
 }
 
