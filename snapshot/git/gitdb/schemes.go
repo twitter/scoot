@@ -10,13 +10,12 @@ import (
 // GitDB uses several different Schemes to identify, upload and download Values.
 // schemeValue abstracts these concerns.
 type schemeValue interface {
-	id() snapshot.ID
+	ID() snapshot.ID
 
-	// F suffix because name conflict between Function and member.
-	kindF() valueKind
-	shaF() string
-	upload(db *DB) (snapshot.ID, error)
-	download(db *DB) (snapshot.ID, error)
+	Kind() valueKind
+	SHA() string
+	Upload(db *DB) (snapshot.ID, error)
+	Download(db *DB) (snapshot.ID, error)
 }
 
 // parseID parses ID into a schemeValue
@@ -61,5 +60,5 @@ func (db *DB) download(id snapshot.ID) (snapshot.ID, error) {
 		return "", err
 	}
 
-	return v.download(db)
+	return v.Download(db)
 }

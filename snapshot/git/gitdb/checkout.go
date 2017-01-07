@@ -24,15 +24,15 @@ func (db *DB) checkout(id snapshot.ID) (path string, err error) {
 		return "", err
 	}
 
-	switch v.kindF() {
+	switch v.Kind() {
 	case kindSnapshot:
 		// For snapshots, we make a "bare checkout".
-		return db.checkoutSnapshot(v.shaF())
+		return db.checkoutSnapshot(v.SHA())
 	case kindSnapshotWithHistory:
 		// For snapshotWithHistory's, we use dataRepo's work tree.
-		return db.checkoutSnapshotWithHistory(v.shaF())
+		return db.checkoutSnapshotWithHistory(v.SHA())
 	default:
-		return "", fmt.Errorf("cannot checkout value kind %v", v.kindF())
+		return "", fmt.Errorf("cannot checkout value kind %v; id %v", v.Kind(), v.ID())
 	}
 }
 
