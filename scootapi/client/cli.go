@@ -2,11 +2,9 @@ package client
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +15,9 @@ type CLIClient interface {
 
 // Implements CLIClient - basic
 type simpleCLIClient struct {
-	rootCmd *cobra.Command
-
+	rootCmd     *cobra.Command
 	addr        string
-	dialer      dialer.Dialer
-	scootClient *scoot.CloudScootClient
+	scootClient *scootapi.CloudScootClient
 }
 
 func (c *simpleCLIClient) Exec() error {
@@ -30,8 +26,6 @@ func (c *simpleCLIClient) Exec() error {
 
 func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
-	c.dialer = d
-	// c.addr is populated by flag
 
 	c.rootCmd = &cobra.Command{
 		Use:                "scootapi",
@@ -39,6 +33,20 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 		Run:                func(*cobra.Command, []string) {},
 		PersistentPostRunE: c.Close,
 	}
+
+	// c.addr is populated by flag
+	if c.addr == "" {
+		c.addr = scootapi.GetScootapiAddr()
+		if c.addr == "" {
+			return c, fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
+		}
+	}
+
+	c.scootClient = scootapi.NewCloudScootClient(
+		scootapi.CloudScootClientConfig{
+			Addr:   c.addr,
+			Dialer: d,
+		})
 
 	c.addCmd(&runJobCmd{})
 	c.addCmd(&getStatusCmd{})
@@ -48,35 +56,10 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	return c, nil
 }
 
-func (c *simpleCLIClient) Dial() error {
-	_, err := c.dial()
-	return err
-}
-
-func (c *simpleCLIClient) dial() (*scoot.CloudScootClient, error) {
-	if c.scootClient == nil {
-		if c.addr == "" {
-			c.addr = scootapi.GetScootapiAddr()
-			if c.addr == "" {
-				return nil, fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
-			}
-			log.Printf("scootapi cli: using addr %v (from %v)", c.addr, scootapi.GetScootapiAddrPath())
-		}
-
-		transport, protocolFactory, err := c.dialer.Dial(c.addr)
-		if err != nil {
-			return nil, fmt.Errorf("Error dialing to set up client connection: %v", err)
-		}
-
-		c.scootClient = scoot.NewCloudScootClientFactory(transport, protocolFactory)
-	}
-	return c.scootClient, nil
-}
-
 // Needs cobra parameters for use from rootCmd
 func (c *simpleCLIClient) Close(cmd *cobra.Command, args []string) error {
 	if c.scootClient != nil {
-		return c.scootClient.Transport.Close()
+		return c.scootClient.Close()
 	}
 	return nil
 }

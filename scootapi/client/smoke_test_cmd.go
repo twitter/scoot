@@ -57,8 +57,10 @@ func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 
 	for i := 0; i < numJobs; i++ {
 		id, err := r.generateAndStartJob()
-		if err != nil {
-			return err
+		// retry starting job until it succeeds
+		for err != nil {
+			log.Printf("Error Starting Job: Retrying %v", err)
+			id, err = r.generateAndStartJob()
 		}
 		jobs[id] = nil
 	}
@@ -67,15 +69,16 @@ func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
 }
 
 func (r *smokeTestRunner) generateAndStartJob() (string, error) {
-	err := r.cl.Dial()
-	if err != nil {
-		return "", err
-	}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	job := testhelpers.GenJobDefinition(rng)
 	jobId, err := r.cl.scootClient.RunJob(job)
-	return jobId.ID, err
+
+	if err == nil {
+		return jobId.ID, nil
+	} else {
+		return "", err
+	}
 }
 
 func (r *smokeTestRunner) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
@@ -88,9 +91,13 @@ func (r *smokeTestRunner) waitForJobs(jobs map[string]*scoot.JobStatus, timeout 
 		done := true
 		for k, _ := range jobs {
 			d, err := r.updateJobStatus(k, jobs)
+
+			// if there is an error just continue
 			if err != nil {
-				return err
+				log.Printf("Error: Updating Job Status ID: %v will retry later, Error: %v", k, err)
+				d = false
 			}
+
 			done = done && d
 		}
 		if done {
@@ -124,16 +131,11 @@ func printJobs(jobs map[string]*scoot.JobStatus) {
 }
 
 func (r *smokeTestRunner) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
-	err := r.cl.Dial()
-	if err != nil {
-		return true, err
-	}
-
 	status := jobs[jobId]
 	if done(status) {
 		return true, nil
 	}
-	status, err = r.cl.scootClient.GetStatus(jobId)
+	status, err := r.cl.scootClient.GetStatus(jobId)
 	if err != nil {
 		return true, err
 	}
