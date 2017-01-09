@@ -74,7 +74,7 @@ func (db *DB) checkoutSnapshot(sha string) (path string, err error) {
 }
 
 // checkoutSnapshotWithHistory checks out a commit into our work tree.
-// We could use multiple work trees, except our git doens't yet have work-tree support.
+// We could use multiple work trees, except our internal git doesn't yet have work-tree support.
 // TODO(dbentley): migrate to work-trees.
 func (db *DB) checkoutSnapshotWithHistory(sha string) (path string, err error) {
 	cmds := [][]string{

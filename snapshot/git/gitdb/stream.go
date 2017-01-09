@@ -23,7 +23,7 @@ type StreamConfig struct {
 const streamIDText = "stream"
 const streamIDFmt = "%s-%s-%s-%s"
 
-// parse id as a sream ID, with kind and remaining parts (after scheme and kind were parsed)
+// parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
 func parseStreamID(id snapshot.ID, kind valueKind, parts []string) (*streamValue, error) {
 	streamName, sha := parts[0], parts[1]
 
@@ -68,5 +68,8 @@ func (v *streamValue) Download(db *DB) (snapshot.ID, error) {
 	if _, err := db.dataRepo.Run("fetch", db.stream.Remote); err != nil {
 		return "", err
 	}
+
+	// TODO(dbentley): check that v.sha is present after fetching (and err if not)
+
 	return v.ID(), nil
 }
