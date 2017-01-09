@@ -1,7 +1,6 @@
 package gitdb
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -40,12 +40,8 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := ioutil.ReadFile(filepath.Join(path, "foo.txt"))
-	if err != nil {
+	if err := assertFileContents(path, "foo.txt", string(contents)); err != nil {
 		t.Fatal(err)
-	}
-	if !bytes.Equal(contents, actual) {
-		t.Fatalf("bad contents: %q %q", contents, actual)
 	}
 
 	if err := fixture.db.ReleaseCheckout(path); err != nil {
@@ -54,12 +50,22 @@ func TestIngestDir(t *testing.T) {
 }
 
 func TestIngestCommit(t *testing.T) {
-	id1, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit1ID)
+	commit1ID, err := commitText(fixture.external, "first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id2, err := fixture.db.IngestGitCommit(fixture.external, fixture.commit2ID)
+	commit2ID, err := commitText(fixture.external, "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id1, err := fixture.db.IngestGitCommit(fixture.external, commit1ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id2, err := fixture.db.IngestGitCommit(fixture.external, commit2ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,9 +76,8 @@ func TestIngestCommit(t *testing.T) {
 	}
 
 	// test contents
-	data, err := ioutil.ReadFile(filepath.Join(co, "file.txt"))
-	if err != nil || string(data) != "first" {
-		t.Fatalf("error reading file.txt: %q %v (expected \"first\" <nil>)", data, err)
+	if err := assertFileContents(co, "file.txt", "first"); err != nil {
+		t.Fatal(err)
 	}
 
 	// Write temporary data into checkouts to make sure it's cleaned
@@ -90,14 +95,13 @@ func TestIngestCommit(t *testing.T) {
 	}
 
 	// text contents
-	data, err = ioutil.ReadFile(filepath.Join(co, "file.txt"))
-	if err != nil || string(data) != "second" {
-		t.Fatalf("error reading file.txt: %q %v (expected \"second\" <nil>)", data, err)
+	if err := assertFileContents(co, "file.txt", "second"); err != nil {
+		t.Fatal(err)
 	}
 
-	data, err = ioutil.ReadFile(filepath.Join(co, "scratch.txt"))
+	_, err = os.Open(filepath.Join(co, "scratch.txt"))
 	if err == nil {
-		t.Fatalf("scratch.txt existed in %v with contents %q; should not exist", co, data)
+		t.Fatalf("scratch.txt existed in %v; should not exist", co)
 	}
 
 	if err := fixture.db.ReleaseCheckout(co); err != nil {
@@ -105,26 +109,46 @@ func TestIngestCommit(t *testing.T) {
 	}
 }
 
+func TestStream(t *testing.T) {
+	// Create a commit in upstream, then download it. Test by checking out and comparing contents.
+
+	upstreamCommit1ID, err := commitText(fixture.upstream, "upstream_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamID := snapshot.ID("stream-swh-sm-" + upstreamCommit1ID)
+
+	id, err := fixture.db.Download(streamID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	co, err := fixture.db.Checkout(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := assertFileContents(co, "file.txt", "upstream_first"); err != nil {
+		t.Fatal(err)
+	}
+
+}
+
 type dbFixture struct {
-	tmp       *temp.TempDir
-	db        *DB
-	external  *repo.Repository
-	commit1ID string
-	commit2ID string
+	tmp      *temp.TempDir
+	db       *DB
+	external *repo.Repository
+	upstream *repo.Repository
 }
 
 func (f *dbFixture) close() {
 	f.db.Close()
 }
 
-func setup() (*dbFixture, error) {
-	// git init
-	tmp, err := temp.NewTempDir("", "db_test")
-	if err != nil {
-		return nil, err
-	}
-
-	dir, err := tmp.TempDir("external-repo-")
+// Create a new repo in tmp with directory name starting with name
+func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
+	dir, err := tmp.TempDir(name)
 	if err != nil {
 		return nil, err
 	}
@@ -149,75 +173,87 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
+	return r, nil
+}
+
+// Make a commit in repo r with "file.txt" having contents text
+func commitText(r *repo.Repository, text string) (string, error) {
 	// Create a commit with file.txt = "first"
-	filename := filepath.Join(dir.Dir, "file.txt")
-	if err = ioutil.WriteFile(filename, []byte("first"), 0777); err != nil {
-		return nil, err
+	filename := filepath.Join(r.Dir(), "file.txt")
+	if err := ioutil.WriteFile(filename, []byte(text), 0777); err != nil {
+		return "", err
 	}
 
-	if _, err = r.Run("add", "file.txt"); err != nil {
-		return nil, err
-	}
-	// Run it with just this thing
-	if _, err = r.Run("commit", "-am", "first post"); err != nil {
-		return nil, err
-	}
-	var commit1ID string
-	if id, err := r.RunSha("rev-parse", "HEAD"); err != nil {
-		return nil, err
-	} else {
-		commit1ID = id
+	if _, err := r.Run("add", "file.txt"); err != nil {
+		return "", err
 	}
 
-	// Create a commit with file.txt = "second"
-	if err = ioutil.WriteFile(filename, []byte("second"), 0777); err != nil {
-		return nil, err
+	if _, err := r.Run("commit", "-am", "created by commitText"); err != nil {
+		return "", err
 	}
-	if _, err = r.Run("commit", "-am", "second post"); err != nil {
-		return nil, err
-	}
-	var commit2ID string
-	if id, err := r.RunSha("rev-parse", "HEAD"); err != nil {
-		return nil, err
-	} else {
-		commit2ID = id
-	}
+	return r.RunSha("rev-parse", "HEAD")
+}
 
-	external := r
+// asserts file `base` in `dir` has contents `expected` or errors
+func assertFileContents(dir string, base string, expected string) error {
+	actualBytes, err := ioutil.ReadFile(filepath.Join(dir, base))
+	if err != nil {
+		return err
+	}
+	actual := string(actualBytes)
+	if expected != actual {
+		return fmt.Errorf("bad contents: %q %q", expected, actual)
+	}
+	return nil
+}
 
-	dir, err = tmp.TempDir("external-repo-")
+func setup() (*dbFixture, error) {
+	// git init
+	tmp, err := temp.NewTempDir("", "db_test")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd = exec.Command("git", "init")
-	cmd.Dir = dir.Dir
-	err = cmd.Run()
-	if err != nil {
-		return nil, fmt.Errorf("error init'ing: %v", err)
-	}
-
-	// create the repo
-	r, err = repo.NewRepository(dir.Dir)
+	external, err := createRepo(tmp, "external-repo")
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = r.Run("config", "user.name", "Scoot Test"); err != nil {
-		return nil, err
-	}
-	if _, err = r.Run("config", "user.email", "scoottest@scootdev.github.io"); err != nil {
+	dataRepo, err := createRepo(tmp, "data-repo")
+	if err != nil {
 		return nil, err
 	}
 
-	db := MakeDB(r, tmp)
+	upstream, err := createRepo(tmp, "upstream-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := commitText(upstream, "upstream_zeroeth"); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("fetch", "upstream"); err != nil {
+		return nil, err
+	}
+
+	stream := &StreamConfig{
+		Name:    "sm",
+		Remote:  "upstream",
+		RefSpec: "refs/remotes/upstream/master",
+	}
+
+	db := MakeDB(dataRepo, tmp, stream)
 
 	return &dbFixture{
-		tmp:       tmp,
-		db:        db,
-		external:  external,
-		commit1ID: commit1ID,
-		commit2ID: commit2ID,
+		tmp:      tmp,
+		db:       db,
+		external: external,
+		upstream: upstream,
 	}, nil
 }
 
