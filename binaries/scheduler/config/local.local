@@ -16,6 +16,6 @@
   },
   "SagaLog": {
     "Type": "file",
-    "Directory": "sagalog"
+    "Directory": ".scootdata/filesagalog"
   }
 }

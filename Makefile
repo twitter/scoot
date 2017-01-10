@@ -71,9 +71,14 @@ recoverytest:
 clean-mockgen:
 	rm */*_mock.go
 
-clean: clean-mockgen
+clean-data:
+	rm -rf ./.scootdata/*
+
+clean-go:
 	go clean ./...
 
+clean: clean-data clean-mockgen clean-go
+	
 fullbuild: dependencies generate test
 
-travis: dependencies test recoverytest
+travis: dependencies test recoverytest clean-data
