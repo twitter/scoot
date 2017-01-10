@@ -3,12 +3,9 @@ package client
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"sort"
 	"strconv"
 	"time"
 
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
 )
@@ -53,96 +50,18 @@ type smokeTestRunner struct {
 }
 
 func (r *smokeTestRunner) run(numJobs int, timeout time.Duration) error {
-	jobs := make(map[string]*scoot.JobStatus)
+	jobs := make([]string, 0, numJobs)
 
 	for i := 0; i < numJobs; i++ {
-		id, err := r.generateAndStartJob()
+		id, err := testhelpers.GenerateAndStartJob(r.cl.scootClient)
 		// retry starting job until it succeeds
+
 		for err != nil {
 			log.Printf("Error Starting Job: Retrying %v", err)
-			id, err = r.generateAndStartJob()
+			id, err = testhelpers.GenerateAndStartJob(r.cl.scootClient)
 		}
-		jobs[id] = nil
+		jobs = append(jobs, id)
 	}
-
-	return r.waitForJobs(jobs, timeout)
-}
-
-func (r *smokeTestRunner) generateAndStartJob() (string, error) {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	job := testhelpers.GenJobDefinition(rng)
-	jobId, err := r.cl.scootClient.RunJob(job)
-
-	if err == nil {
-		return jobId.ID, nil
-	} else {
-		return "", err
-	}
-}
-
-func (r *smokeTestRunner) waitForJobs(jobs map[string]*scoot.JobStatus, timeout time.Duration) error {
-	end := time.Now().Add(timeout)
-	for {
-		printJobs(jobs)
-		if time.Now().After(end) {
-			return fmt.Errorf("Took longer than %v", timeout)
-		}
-		done := true
-		for k, _ := range jobs {
-			d, err := r.updateJobStatus(k, jobs)
-
-			// if there is an error just continue
-			if err != nil {
-				log.Printf("Error: Updating Job Status ID: %v will retry later, Error: %v", k, err)
-				d = false
-			}
-
-			done = done && d
-		}
-		if done {
-			log.Println("Done")
-			return nil
-		}
-		time.Sleep(time.Second)
-	}
-}
-
-func printJobs(jobs map[string]*scoot.JobStatus) {
-	byStatus := make(map[scoot.Status][]string)
-	for k, v := range jobs {
-		st := scoot.Status_NOT_STARTED
-		if v != nil {
-			st = v.Status
-		}
-		byStatus[st] = append(byStatus[st], k)
-	}
-
-	for _, v := range byStatus {
-		sort.Sort(sort.StringSlice(v))
-	}
-
-	log.Println()
-	log.Println("Job Status")
-
-	log.Println("Waiting", byStatus[scoot.Status_NOT_STARTED])
-	log.Println("Running", byStatus[scoot.Status_IN_PROGRESS])
-	log.Println("Done", byStatus[scoot.Status_COMPLETED])
-}
-
-func (r *smokeTestRunner) updateJobStatus(jobId string, jobs map[string]*scoot.JobStatus) (bool, error) {
-	status := jobs[jobId]
-	if done(status) {
-		return true, nil
-	}
-	status, err := r.cl.scootClient.GetStatus(jobId)
-	if err != nil {
-		return true, err
-	}
-	jobs[jobId] = status
-	return done(status), nil
-}
-
-func done(s *scoot.JobStatus) bool {
-	return s != nil && (s.Status == scoot.Status_COMPLETED || s.Status == scoot.Status_ROLLED_BACK)
+	return testhelpers.WaitForJobsToCompleteAndLogStatus(
+		jobs, r.cl.scootClient, timeout)
 }
