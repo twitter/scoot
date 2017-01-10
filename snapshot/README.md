@@ -23,3 +23,4 @@ Key objects (not exhaustive, see code or godoc for more):
     * _RepoPool_ - for handling concurrent access to Git repos
     * _RepoIniter_ - interface for controlling (possibly expensive) Git repo initialization
     * _Checkouter_ - a Git-specific snapshot checkouter implementation
+  * _package gitdb_ - implementation of DB interface that stores local values in a git ODB
