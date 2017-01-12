@@ -22,7 +22,7 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 		Short: "Smoke Test",
 	}
 	r.Flags().IntVar(&c.numJobs, "num_jobs", 100, "number of jobs to run")
-	r.Flags().IntVar(&c.numTasks, "num_tasks", -1, "number of tasks per job")
+	r.Flags().IntVar(&c.numTasks, "num_tasks", -1, "number of tasks per job, or random if -1")
 	r.Flags().DurationVar(&c.timeout, "timeout", 180*time.Second, "how long to wait for the smoke test")
 	return r
 }
@@ -64,6 +64,7 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 				jobs = append(jobs, id)
 				break
 			}
+			// retry starting job until it succeeds.
 			log.Printf("Error Starting Job: Retrying %v", err)
 		}
 	}
