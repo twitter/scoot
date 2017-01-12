@@ -72,7 +72,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 func (s *Saga) GetState() *SagaState {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.state
+	return copySagaState(s.state)
 }
 
 //
