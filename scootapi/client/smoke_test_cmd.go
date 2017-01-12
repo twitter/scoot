@@ -29,23 +29,6 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 
 func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
-
-	// TODO(dbentley): migrate away from positional args to flags
-	if (len(args)) > 0 {
-		numJobs, err := strconv.Atoi(args[0])
-		if err != nil {
-			return err
-		}
-		c.numJobs = numJobs
-	}
-
-	if (len(args)) > 1 {
-		timeout, err := time.ParseDuration(args[1])
-		if err != nil {
-			return err
-		}
-		c.timeout = timeout
-	}
 	runner := &smokeTestRunner{cl: cl}
 	return runner.run(c.numJobs, c.numTasks, c.timeout)
 }
