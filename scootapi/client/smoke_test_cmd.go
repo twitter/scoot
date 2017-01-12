@@ -3,7 +3,6 @@ package client
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/scootdev/scoot/tests/testhelpers"
