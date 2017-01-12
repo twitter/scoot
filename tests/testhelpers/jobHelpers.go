@@ -66,9 +66,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		for jobId, oldStatus := range jobs {
 
 			if !IsJobCompleted(oldStatus) {
-				log.Println("getting status")
 				currStatus, err := client.GetStatus(jobId)
-				log.Println("got status")
 
 				// if there is an error just continue
 				if err != nil {
