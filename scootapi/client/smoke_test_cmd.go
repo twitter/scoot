@@ -65,6 +65,7 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 				break
 			}
 			// retry starting job until it succeeds.
+			// this is useful for testing where we are restarting the scheduler
 			log.Printf("Error Starting Job: Retrying %v", err)
 		}
 	}
