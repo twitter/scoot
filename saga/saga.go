@@ -17,7 +17,7 @@ type Saga struct {
 	log      SagaLog
 	state    *SagaState
 	updateCh chan sagaUpdate
-	mutex    sync.RWMutex
+	mutex    sync.RWMutex // mutex controls access to Saga.state
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
@@ -175,11 +175,12 @@ func (s *Saga) updateSagaState(msg SagaMessage) error {
 // updated in a thread safe manner
 func (s *Saga) updateSagaStateLoop() {
 	for update := range s.updateCh {
-		s.itr(update)
+		s.updateSaga(update)
 	}
 }
 
-func (s *Saga) itr(update sagaUpdate) {
+// updateSaga updates the saga s by applying update atomically and sending any error to the requester
+func (s *Saga) updateSaga(update sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	var err error
