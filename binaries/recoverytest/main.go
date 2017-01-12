@@ -30,7 +30,7 @@ func main() {
 	log.Printf("Add Jobs to Scoot Cloud Exec")
 	jobIds := make([]string, 0, numJobs)
 	for i := 0; i < numJobs; i++ {
-		id, err := testhelpers.GenerateAndStartJob(scootClient)
+		id, err := testhelpers.GenerateAndStartJob(scootClient, -1)
 		if err != nil {
 			log.Fatalf("Could not schedule Jobs Error: %v", err)
 		} else {
