@@ -182,17 +182,9 @@ func (s *Saga) updateSagaStateLoop() {
 func (s *Saga) itr(update sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	currState := s.state
-	newState, err := logMessage(currState, update.msg, s.log)
-
-	if err == nil {
-		s.state = newState
-
-		update.resultCh <- nil
-
-	} else {
-		update.resultCh <- err
-	}
+	var err error
+	s.state, err = logMessage(s.state, update.msg, s.log)
+	update.resultCh <- err
 }
 
 type sagaUpdate struct {
@@ -201,23 +193,27 @@ type sagaUpdate struct {
 }
 
 //
-// logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
+// checks the message is a valid transition and logs the specified message durably to the SagaLog
+// if msg is an invalid transition, it will neither log nor update internal state
 //
 func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
 
+	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
+	// we'll need to revert to the old state.
+	oldState := copySagaState(state)
 	//verify that the applied message results in a valid state
-	newState, err := updateSagaState(state, msg)
+	err := updateSagaState(state, msg)
 	if err != nil {
-		return nil, err
+		return oldState, err
 	}
 
 	//try durably storing the message
 	err = log.LogMessage(msg)
 	if err != nil {
-		return nil, err
+		return oldState, err
 	}
 
-	return newState, nil
+	return state, nil
 }
 
 // Checks the error returned by updating saga state.
