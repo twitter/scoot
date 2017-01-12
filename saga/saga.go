@@ -196,6 +196,8 @@ type sagaUpdate struct {
 //
 // checks the message is a valid transition and logs the specified message durably to the SagaLog
 // if msg is an invalid transition, it will neither log nor update internal state
+// always returns the new SagaState that should be used, either the mutated one or a copy of the
+// original.
 //
 func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
 

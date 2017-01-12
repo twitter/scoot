@@ -247,9 +247,10 @@ func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data
 
 /*
  * Applies the supplied message to the supplied sagaState.
- * Mutates state only if msg is a valid transition.
+ * Mutates state directly.
  *
- * Returns an Error if applying the message would result in an invalid Saga State
+ * Returns an Error if applying the message would result in an invalid Saga State.
+ * Client must not use state after updateSagaState returns a non-nil error.
  */
 func updateSagaState(state *SagaState, msg SagaMessage) error {
 	if msg.SagaId != state.sagaId {
