@@ -76,8 +76,12 @@ func PrintJobStatus(jobStatus *scoot.JobStatus) {
 		fmt.Printf("\tTask %s {\n", taskId)
 		fmt.Printf("\t\tStatus: %s\n", taskStatus.String())
 		runStatus := jobStatus.TaskData[taskId]
-		fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
-		fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+		if runStatus.OutUri != nil {
+			fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+		}
+		if runStatus.ErrUri != nil {
+			fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+		}
 
 		// TODO(dbentley): it appears that runStatus is nil; figure that out
 		if taskStatus == scoot.Status_COMPLETED && runStatus != nil {

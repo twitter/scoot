@@ -30,9 +30,9 @@ func CreateScootClient(addr string) *scootapi.CloudScootClient {
 
 // Generates a random Job and sends it to the specified client to run
 // returns the JobId if successfully scheduled, otherwise "", error
-func GenerateAndStartJob(client scoot.CloudScoot) (string, error) {
+func GenerateAndStartJob(client scoot.CloudScoot, numTasks int) (string, error) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	jobDef := GenJobDefinition(rng)
+	jobDef := GenJobDefinition(rng, numTasks)
 
 	rsp, err := client.RunJob(jobDef)
 	if err == nil {
@@ -58,7 +58,6 @@ func WaitForJobsToCompleteAndLogStatus(
 
 	end := time.Now().Add(timeout)
 	for {
-		PrintJobs(jobs)
 		if time.Now().After(end) {
 			return fmt.Errorf("Took longer than %v", timeout)
 		}
@@ -67,7 +66,9 @@ func WaitForJobsToCompleteAndLogStatus(
 		for jobId, oldStatus := range jobs {
 
 			if !IsJobCompleted(oldStatus) {
+				log.Println("getting status")
 				currStatus, err := client.GetStatus(jobId)
+				log.Println("got status")
 
 				// if there is an error just continue
 				if err != nil {
@@ -79,6 +80,7 @@ func WaitForJobsToCompleteAndLogStatus(
 				}
 			}
 		}
+		PrintJobs(jobs)
 		if done {
 			log.Println("Done")
 			return nil
@@ -86,6 +88,15 @@ func WaitForJobsToCompleteAndLogStatus(
 		time.Sleep(time.Second)
 	}
 }
+
+// Show job progress in the format <jobId> (<done>/<total>), e.g. ffb16fef-13fd-486c-6070-8df9c7b80dce (9997/10000)
+type jobProgress struct {
+	id       string
+	numDone  int
+	numTasks int
+}
+
+func (p jobProgress) String() string { return fmt.Sprintf("%s (%d/%d)", p.id, p.numDone, p.numTasks) }
 
 // Prints the current status of the specified Jobs to the Log
 func PrintJobs(jobs map[string]*scoot.JobStatus) {
@@ -102,11 +113,25 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 		sort.Sort(sort.StringSlice(v))
 	}
 
+	inProgress := byStatus[scoot.Status_IN_PROGRESS]
+	progs := make([]JobProgress, len(inProgress))
+	for i, jobID := range inProgress {
+		jobStatus := jobs[jobID]
+		tasks := jobStatus.TaskStatus
+		numDone := 0
+		for _, st := range tasks {
+			if st == scoot.Status_COMPLETED {
+				numDone++
+			}
+		}
+		progs[i] = JobProgress{id: jobID, numTasks: len(tasks), numDone: numDone}
+	}
+
 	log.Println()
 	log.Println("Job Status")
 
 	log.Println("Waiting", byStatus[scoot.Status_NOT_STARTED])
-	log.Println("Running", byStatus[scoot.Status_IN_PROGRESS])
+	log.Println("Running", progs)
 	log.Println("Done", byStatus[scoot.Status_COMPLETED])
 }
 
