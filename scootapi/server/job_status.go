@@ -48,6 +48,7 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.Status = scoot.Status_NOT_STARTED
 	js.TaskStatus = make(map[string]scoot.Status)
 	js.TaskData = make(map[string]*scoot.RunStatus)
+	// TODO(dbentley): include a status for all ids
 
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {
