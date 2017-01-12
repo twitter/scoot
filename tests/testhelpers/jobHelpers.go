@@ -114,7 +114,7 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 	}
 
 	inProgress := byStatus[scoot.Status_IN_PROGRESS]
-	progs := make([]JobProgress, len(inProgress))
+	progs := make([]jobProgress, len(inProgress))
 	for i, jobID := range inProgress {
 		jobStatus := jobs[jobID]
 		tasks := jobStatus.TaskStatus
@@ -124,7 +124,7 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 				numDone++
 			}
 		}
-		progs[i] = JobProgress{id: jobID, numTasks: len(tasks), numDone: numDone}
+		progs[i] = jobProgress{id: jobID, numTasks: len(tasks), numDone: numDone}
 	}
 
 	log.Println()
