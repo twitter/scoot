@@ -246,15 +246,12 @@ func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data
 }
 
 /*
- * Applies the supplied message to the supplied sagaState.  Does not mutate supplied Saga State
- * Instead returns a new SagaState which has the update applied to it
+ * Applies the supplied message to the supplied sagaState.
+ * Mutates state iff applying msg to state is valid.
  *
  * Returns an Error if applying the message would result in an invalid Saga State
  */
-func updateSagaState(state *SagaState, msg SagaMessage) (*SagaState, error) {
-	//first copy current state, and then apply update so we don't mutate the passed in SagaState
-	// state := copySagaState(s)
-
+func updateSagaState(state *SagaState, msg SagaMessage) error {
 	if msg.SagaId != state.sagaId {
 		return nil, NewInvalidSagaMessageError(fmt.Sprintf("sagaId %s & SagaMessage sagaId %s do not match", state.sagaId, msg.SagaId))
 	}
