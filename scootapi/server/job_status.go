@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
+	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -48,7 +49,11 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.Status = scoot.Status_NOT_STARTED
 	js.TaskStatus = make(map[string]scoot.Status)
 	js.TaskData = make(map[string]*scoot.RunStatus)
-	// TODO(dbentley): include a status for all ids
+	if job, err := sched.DeserializeJob(sagaState.Job()); err == nil {
+		for id, _ := range job.Def.Tasks {
+			js.TaskStatus[id] = scoot.Status_NOT_STARTED
+		}
+	}
 
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {

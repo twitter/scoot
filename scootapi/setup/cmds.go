@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -131,12 +132,18 @@ func (c *Cmds) Command(path string, arg ...string) *exec.Cmd {
 // StartCmd starts a Cmd that was created by Command and expects it to run forever
 // If cmd stops, c will call c.Kill() (to allow prompt debugging)
 func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.killed {
+		return fmt.Errorf("killed; cannot start new cmds")
+	}
 	log.Println("Starting", cmd.Args)
 	err := cmd.Start()
 	if err == nil {
 		go func() {
+			pid := cmd.Process.Pid
 			cmd.Wait()
-			log.Printf("Cmd %v finished", cmd.Path)
+			log.Printf("Cmd %v (%v) finished", pid, cmd.Path)
 			c.remove(cmd)
 			c.Kill()
 		}()
