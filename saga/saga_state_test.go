@@ -55,26 +55,3 @@ func TestSagaState_Copy(t *testing.T) {
 		t.Error(fmt.Sprintf("Copy Should Preserve SagaId"))
 	}
 }
-
-func TestSagaState_SagaStateNotMutatedDuringUpdate(t *testing.T) {
-	s1, _ := makeSagaState("sagaId", nil)
-	s2, _ := updateSagaState(s1, MakeStartTaskMessage("sagaId", "task1", []byte{1, 2, 3}))
-
-	if s1.IsTaskStarted("task1") {
-		t.Error(fmt.Sprintf("StartTaskMessage Should Not Mutate SagaState"))
-	}
-
-	if s1.GetStartTaskData("task1") != nil {
-		t.Error(fmt.Sprintf("StartTaskMessage Should Not Mutate SagaState"))
-	}
-
-	updateSagaState(s2, MakeEndTaskMessage("sagaId", "task1", []byte{4, 5, 6}))
-
-	if s2.IsTaskCompleted("task1") {
-		t.Error(fmt.Sprintf("EndTaskMessage Should Not Mutate SagaState"))
-	}
-
-	if s2.GetEndTaskData("task1") != nil {
-		t.Error(fmt.Sprintf("EndTaskMessage Should Not Mutate SagaState"))
-	}
-}
