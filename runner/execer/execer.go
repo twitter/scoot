@@ -2,6 +2,8 @@ package execer
 
 import (
 	"io"
+
+	"github.com/scootdev/scoot/runner"
 )
 
 // Execer lets you run one Unix command. It differs from Runner in that it does not
@@ -43,6 +45,9 @@ type Process interface {
 
 	// Terminates process and does best effort to get ExitCode.
 	Abort() ProcessStatus
+
+	// Measure the current amount of resident memory used by this process.
+	MemUsage() (runner.Memory, error)
 }
 
 type ProcessStatus struct {

@@ -1,6 +1,7 @@
 package execers
 
 import (
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 )
 
@@ -27,4 +28,8 @@ func (e *doneExecer) Wait() execer.ProcessStatus {
 
 func (e *doneExecer) Abort() execer.ProcessStatus {
 	return completeStatus
+}
+
+func (e *doneExecer) MemUsage() (runner.Memory, error) {
+	return 0, nil
 }

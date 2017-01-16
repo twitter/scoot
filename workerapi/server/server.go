@@ -32,12 +32,16 @@ type handler struct {
 	run         runner.Service
 	timeLastRpc time.Time
 	mu          sync.Mutex
+	runMemCap   runner.Memory
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
 func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
+	return NewBoundedHandler(stat, run, 0)
+}
+func NewBoundedHandler(stat stats.StatsReceiver, run runner.Service, runMemoryCap runner.Memory) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run}
+	h := &handler{stat: scopedStat, run: run, runMemCap: runMemoryCap}
 	go h.stats()
 	return h
 }
@@ -108,7 +112,9 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	log.Printf("Worker Running:\n%s", cmd)
 
 	h.updateTimeLastRpc()
-	process, err := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
+	c := domain.ThriftRunCommandToDomain(cmd)
+	c.MemoryCap = h.runMemCap
+	process, err := h.run.Run(c)
 	if err != nil {
 		return nil, err
 	}

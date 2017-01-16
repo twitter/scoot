@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 )
 
@@ -116,6 +117,10 @@ func (p *simProcess) Abort() execer.ProcessStatus {
 	st := execer.ProcessStatus{State: execer.FAILED}
 	p.setStatus(st)
 	return st
+}
+
+func (p *simProcess) MemUsage() (runner.Memory, error) {
+	return 0, nil
 }
 
 func (p *simProcess) setStatus(status execer.ProcessStatus) {

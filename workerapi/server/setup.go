@@ -81,8 +81,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return runners.NewSingleRunner(ex, filer, outputCreator)
 		},
 
-		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
-			return NewHandler(stat, r)
+		func() runner.Memory {
+			return 0
+		},
+
+		func(stat stats.StatsReceiver, r runner.Service, m runner.Memory) worker.Worker {
+			return NewBoundedHandler(stat, r, m)
 		},
 
 		func(

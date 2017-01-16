@@ -5,10 +5,12 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
+	os_execer "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
@@ -92,6 +94,28 @@ func TestAbort(t *testing.T) {
 	st, err = r.Abort(runner.RunID("not-a-run-id"))
 	if err == nil {
 		t.Fatal(err)
+	}
+}
+
+func TestMemCap(t *testing.T) {
+	// Command to increase memory by 1MB every .01s until we hit 50MB after .5s.
+	// Test that limiting the memory to 25MB causes the command to abort.
+	str := "python -c \"import time\nx=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.01)\""
+	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(25 * 1024 * 1024)}
+	tmp, _ := temp.TempDirDefault()
+	r := NewSingleRunner(os_execer.NewExecer(), snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
+	if _, err := r.Run(cmd); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	query := runner.Query{
+		AllRuns: true,
+		States:  runner.MaskForState(runner.FAILED),
+	}
+	if runs, err := r.Query(query, runner.Wait{Timeout: 500 * time.Millisecond}); err != nil {
+		t.Fatalf(err.Error())
+	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
+		t.Fatalf("Expected result with FAILURE and matching err string, got: %v", runs)
 	}
 }
 
