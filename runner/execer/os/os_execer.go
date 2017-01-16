@@ -7,7 +7,9 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -52,15 +54,56 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	if err != nil {
 		return nil, err
 	}
-	return &osProcess{cmd}, nil
+
+	proc := &osProcess{cmd: cmd, memCap: command.MemoryCap}
+	if command.MemoryCap > 0 {
+		go proc.monitorMem()
+	}
+	return proc, nil
 }
 
 type osProcess struct {
-	cmd *exec.Cmd
+	cmd    *exec.Cmd
+	memCap runner.Memory
+	result *execer.ProcessStatus
+	mutex  sync.Mutex
+}
+
+// Periodically check to make sure memory constraints are respected.
+//TODO: may want to make this configurable.
+func (p *osProcess) monitorMem() {
+	memTicker := time.NewTicker(100 * time.Millisecond)
+	defer memTicker.Stop()
+	for {
+		select {
+		case <-memTicker.C:
+			if p.cmd.ProcessState != nil && p.cmd.ProcessState.Exited() {
+				return
+			}
+			usage, _ := p.MemUsage()
+			if usage >= p.memCap {
+				p.mutex.Lock()
+				defer p.mutex.Unlock()
+				p.result = &execer.ProcessStatus{
+					State: execer.FAILED,
+					Error: fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d", usage, p.memCap),
+				}
+				return
+			}
+		}
+	}
 }
 
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	err := p.cmd.Wait()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.result != nil {
+		return *p.result
+	} else {
+		p.result = &result
+	}
 	if err == nil {
 		result.State = execer.COMPLETE
 		result.ExitCode = 0
@@ -85,6 +128,14 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 }
 
 func (p *osProcess) Abort() (result execer.ProcessStatus) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.result != nil {
+		return *p.result
+	} else {
+		p.result = &result
+	}
+
 	result.State = execer.FAILED
 	result.ExitCode = -1
 	result.Error = "Aborted."

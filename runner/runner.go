@@ -14,7 +14,7 @@ const NoRunnersMsg = "No runners available."
 const RunnerBusyMsg = "Runner is busy"
 const LoggingErrMsg = "Error initializing logging."
 
-// Memory in bytes. See Command.MemoryCap and exec.Process.MemUsage().
+// Memory in bytes. See also exec.Command.MemoryCap and exec.Process.MemUsage().
 type Memory uint64
 
 // A command, execution environment, and timeout.

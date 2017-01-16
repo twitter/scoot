@@ -110,9 +110,9 @@ func TestMemCap(t *testing.T) {
 
 	query := runner.Query{
 		AllRuns: true,
-		States:  runner.ALL_MASK,
+		States:  runner.MaskForState(runner.FAILED),
 	}
-	if runs, err := r.Query(query, runner.Wait{Timeout: 600 * time.Millisecond}); err != nil {
+	if runs, err := r.Query(query, runner.Wait{Timeout: 1 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
 		t.Fatalf("Expected result with FAILURE and matching err string, got: %v", runs)

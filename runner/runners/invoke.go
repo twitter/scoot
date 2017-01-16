@@ -96,10 +96,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	defer stderr.Close()
 
 	p, err := inv.exec.Exec(execer.Command{
-		Argv:   cmd.Argv,
-		Dir:    checkout.Path(),
-		Stdout: stdout,
-		Stderr: stderr,
+		Argv:      cmd.Argv,
+		Dir:       checkout.Path(),
+		Stdout:    stdout,
+		Stderr:    stderr,
+		MemoryCap: cmd.MemoryCap,
 	})
 	if err != nil {
 		return runner.ErrorStatus(id, fmt.Errorf("could not exec: %v", err))
@@ -119,32 +120,14 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var st execer.ProcessStatus
 
 	// Wait for process to complete (or cancel if we're told to)
-	// Periodically check to make sure memory constraints are respected.
-	//TODO: may want to make this configurable.
-	memTicker := &time.Ticker{}
-	if cmd.MemoryCap != 0 {
-		memTicker = time.NewTicker(100 * time.Millisecond)
-		defer memTicker.Stop()
-	}
-Loop:
-	for {
-		select {
-		case <-memTicker.C:
-			usage, _ := p.MemUsage()
-			if usage >= cmd.MemoryCap {
-				p.Abort()
-				err := fmt.Errorf("Cmd exceeded MemoryCap: %d > %d", usage, cmd.MemoryCap)
-				return runner.ErrorStatus(id, err)
-			}
-		case <-abortCh:
-			p.Abort()
-			return runner.AbortStatus(id)
-		case <-timeoutCh:
-			p.Abort()
-			return runner.TimeoutStatus(id)
-		case st = <-processCh:
-			break Loop
-		}
+	select {
+	case <-abortCh:
+		p.Abort()
+		return runner.AbortStatus(id)
+	case <-timeoutCh:
+		p.Abort()
+		return runner.TimeoutStatus(id)
+	case st = <-processCh:
 	}
 
 	log.Printf("runner/runners/invoke.go: run done. id %v status %+v cmd: %+v checkout: %v", id, st, cmd, checkout.Path())

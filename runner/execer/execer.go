@@ -17,6 +17,9 @@ type Command struct {
 	Stdout io.Writer
 	Stderr io.Writer
 	// TODO(dbentley): environment variables?
+
+	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
+	MemoryCap runner.Memory
 }
 
 type ProcessState int
