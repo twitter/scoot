@@ -77,19 +77,21 @@ func (p *osProcess) monitorMem() {
 	for {
 		select {
 		case <-memTicker.C:
-			if p.cmd.ProcessState != nil && p.cmd.ProcessState.Exited() {
+			p.mutex.Lock()
+			if p.result != nil {
+				p.mutex.Unlock()
 				return
 			}
 			usage, _ := p.MemUsage()
 			if usage >= p.memCap {
-				p.mutex.Lock()
-				defer p.mutex.Unlock()
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d", usage, p.memCap),
 				}
+				p.mutex.Unlock()
 				return
 			}
+			p.mutex.Unlock()
 		}
 	}
 }
