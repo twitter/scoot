@@ -2,7 +2,6 @@ package os_test
 
 import (
 	"bytes"
-	"os"
 	"testing"
 	"time"
 
@@ -63,31 +62,29 @@ func TestOutput(t *testing.T) {
 }
 
 func TestMemUsage(t *testing.T) {
-	// Command to increase memory by 5MB every .1s until we hit 125MB after 2s.
+	// Command to increase memory by 10MB every .1s until we hit 50MB after .5s.
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
-	str := "python -c \"import time\nx=[]\nfor i in range(25):\n x.append(' ' * 5*1024*1024)\n time.sleep(.1); print len(x)\""
+	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
 	cmd := execer.Command{Argv: []string{"bash", "-c", str}}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	process, err := os_execer.NewExecer().Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	// Check for growing memory usage at [1, 2]s. Then check that the usage is a reasonable minimum value (50MB).
+	// Check for growing memory usage at [.2, .4]s. Then check that the usage is a reasonable minimum value (25MB).
 	prevUsage := 0
 	for i := 0; i < 2; i++ {
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 		if newUsage, err := process.MemUsage(); err != nil {
 			t.Fatalf(err.Error())
 		} else if int(newUsage) <= prevUsage {
-			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*1000)
+			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*200)
 		} else {
 			prevUsage = int(newUsage)
 		}
 	}
-	if prevUsage < 50*1024*1024 {
-		t.Fatalf("Expected usage to be at least 50MB, was: %dB", prevUsage)
+	if prevUsage < 25*1024*1024 {
+		t.Fatalf("Expected usage to be at least 25MB, was: %dB", prevUsage)
 	}
 
 	process.Abort()

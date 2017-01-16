@@ -98,10 +98,10 @@ func TestAbort(t *testing.T) {
 }
 
 func TestMemCap(t *testing.T) {
-	// Command to increase memory by 5MB every .1s until we hit 125MB after 2s.
-	// Test that limiting the memory to 50MB causes the command to abort.
-	str := "python -c \"import time\nx=[]\nfor i in range(25):\n x.append(' ' * 5*1024*1024)\n time.sleep(.1)\""
-	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(50 * 1024 * 1024)}
+	// Command to increase memory by 10MB every .1s until we hit 50MB after .5s.
+	// Test that limiting the memory to 25MB causes the command to abort.
+	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
+	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(25 * 1024 * 1024)}
 	tmp, _ := temp.TempDirDefault()
 	r := NewSingleRunner(os_execer.NewExecer(), snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
 	if _, err := r.Run(cmd); err != nil {
@@ -112,7 +112,7 @@ func TestMemCap(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-	if runs, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil { //travis may be slow, wait a super long time?
+	if runs, err := r.Query(query, runner.Wait{Timeout: 2 * time.Second}); err != nil { //travis may be slow, wait a super long time?
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
 		t.Fatalf("Expected result with FAILURE and matching err string, got: %v", runs)

@@ -163,17 +163,13 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 }
 
 func (p *osProcess) MemUsage() (runner.Memory, error) {
-	if pgid, err := syscall.Getpgid(p.cmd.Process.Pid); err != nil {
-		return 0, err
-	} else {
-		return memUsage(pgid)
-	}
+	return memUsage(p.cmd.Process.Pid) // assume that pid became the pgid, skip syscall.Getpgid().
 }
 
 func memUsage(pgid int) (runner.Memory, error) {
 	// Pass children of pgid from 'pgrep', and pgid itself, into 'ps' to get rss memory usages in KB, then sum them.
 	// Note: there may be better ways to do this if we choose to handle osx/linux separately.
-	str := "echo $(ps -orss= -p$(echo -n '%d,'; pgrep -P %d | tr '\n' ',') | tr '\n' '+') 0 | bc"
+	str := "echo $(ps -orss= -p$(echo -n '%d,'; pgrep -g %d | tr '\n' ',') | tr '\n' '+') 0 | bc"
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid, pgid))
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
