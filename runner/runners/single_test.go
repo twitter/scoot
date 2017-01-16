@@ -98,10 +98,10 @@ func TestAbort(t *testing.T) {
 }
 
 func TestMemCap(t *testing.T) {
-	// Command to increase memory by 1MB every .01s until we hit 25MB after .25s.
-	// Test that limiting the memory to 15MB causes the command to abort.
-	str := "python -c \"import time\nx=[]\nfor i in range(25):\n x.append(' ' * 1024*1024)\n time.sleep(.01)\""
-	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(15 * 1024 * 1024)}
+	// Command to increase memory by 5MB every .05s until we hit 50MB after .5s.
+	// Test that limiting the memory to 25MB causes the command to abort.
+	str := "python -c \"import time\nx=[]\nfor i in range(10):\n x.append(' ' * 5*1024*1024)\n time.sleep(.05)\""
+	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(25 * 1024 * 1024)}
 	tmp, _ := temp.TempDirDefault()
 	r := NewSingleRunner(os_execer.NewExecer(), snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
 	if _, err := r.Run(cmd); err != nil {
