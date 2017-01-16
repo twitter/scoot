@@ -74,10 +74,10 @@ func TestMemUsage(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// Check for growing memory usage at [.05, .1, .15]s. Then check that the usage is a reasonable minimum value (15MB).
+	// Check for growing memory usage at [.1, .2]s. Then check that the usage is a reasonable minimum value (15MB).
 	prevUsage := 0
-	for i := 0; i < 3; i++ {
-		time.Sleep(50 * time.Millisecond)
+	for i := 0; i < 2; i++ {
+		time.Sleep(100 * time.Millisecond)
 		if newUsage, err := process.MemUsage(); err != nil {
 			t.Fatalf(err.Error())
 		} else if int(newUsage) <= prevUsage {
