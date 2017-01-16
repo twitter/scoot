@@ -27,6 +27,7 @@ func (c *simpleCLIClient) Exec() error {
 
 func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c := &simpleCLIClient{}
+	c.dial = d
 
 	c.rootCmd = &cobra.Command{
 		Use:                "scootapi",
