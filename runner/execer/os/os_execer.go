@@ -82,7 +82,7 @@ func (p *osProcess) monitorMem() {
 				p.mutex.Unlock()
 				return
 			}
-			usage, _ := p.MemUsage()
+			usage, _ := memUsage(p.cmd.Process.Pid) // don't lock. See p.MemUsage().
 			if usage >= p.memCap {
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
@@ -163,13 +163,15 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 }
 
 func (p *osProcess) MemUsage() (runner.Memory, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 	return memUsage(p.cmd.Process.Pid) // assume that pid became the pgid, skip syscall.Getpgid().
 }
 
 func memUsage(pgid int) (runner.Memory, error) {
 	// Pass children of pgid from 'pgrep', and pgid itself, into 'ps' to get rss memory usages in KB, then sum them.
 	// Note: there may be better ways to do this if we choose to handle osx/linux separately.
-	str := "echo $(ps -orss= -p$(echo -n '%d,'; pgrep -g %d | tr '\n' ',') | tr '\n' '+') 0 | bc"
+	str := "echo $(ps -orss= -p$(echo -n $(pgrep -g %d | tr '\n' ',')%d) | tr '\n' '+') 0 | bc"
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid, pgid))
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
