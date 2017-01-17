@@ -36,7 +36,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			return err != nil && newState == nil
 		},
-		GenSagaState(),
+		GenSagaState(true),
 		gen.SliceOf(gen.UInt8()),
 	))
 
@@ -79,7 +79,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			return validUpdate || errorReturned
 		},
-		GenSagaState(),
+		GenSagaState(true),
 	))
 
 	// Abort messages are valid unless a Saga has been Completed
@@ -101,7 +101,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			return validUpdate || errorReturned
 		},
-		GenSagaState(),
+		GenSagaState(true),
 	))
 
 	// StartTask messages are valid unless a Saga has been Completed or Aborted
@@ -287,7 +287,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 			return true
 		},
-		GenSagaState(),
+		GenSagaState(true),
 	))
 
 	properties.TestingRun(t)

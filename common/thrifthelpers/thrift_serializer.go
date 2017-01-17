@@ -39,6 +39,8 @@ func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err err
 		return nil
 	}
 	d := thrift.NewTDeserializer()
+	// NB(dbentley): this seems to have pathological behavior on some strings. E.g.,
+	// a random 34 bytes took 45 seconds to decode.
 	err = d.Read(targetStruct, sourceBytes)
 	return err
 }
