@@ -142,6 +142,7 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 	if err == nil {
 		go func() {
 			pid := cmd.Process.Pid
+			log.Printf("Cmd %v started as %v", cmd.Args, pid)
 			cmd.Wait()
 			log.Printf("Cmd %v (%v) finished", pid, cmd.Path)
 			c.remove(cmd)

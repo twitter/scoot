@@ -292,7 +292,11 @@ func (s *statefulScheduler) scheduleTasks() {
 
 					jobState.taskCompleted(taskId)
 				} else {
-					log.Println("Error running task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					retry := "(will be retried)"
+					if preventRetries {
+						retry = "(will not be retried)"
+					}
+					log.Println("Error running task ", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 
