@@ -13,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 
@@ -45,8 +45,8 @@ func main() {
 		func() server.WorkerUri {
 			return server.WorkerUri("http://" + *httpAddr)
 		},
-		func() runner.Memory {
-			return runner.Memory(*memCapFlag)
+		func() execer.Memory {
+			return execer.Memory(*memCapFlag)
 		},
 	)
 

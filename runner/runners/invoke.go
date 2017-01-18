@@ -96,11 +96,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	defer stderr.Close()
 
 	p, err := inv.exec.Exec(execer.Command{
-		Argv:      cmd.Argv,
-		Dir:       checkout.Path(),
-		Stdout:    stdout,
-		Stderr:    stderr,
-		MemoryCap: cmd.MemoryCap,
+		Argv:   cmd.Argv,
+		Dir:    checkout.Path(),
+		Stdout: stdout,
+		Stderr: stderr,
 	})
 	if err != nil {
 		return runner.ErrorStatus(id, fmt.Errorf("could not exec: %v", err))

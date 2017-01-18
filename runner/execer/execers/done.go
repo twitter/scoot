@@ -1,9 +1,6 @@
 package execers
 
-import (
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
-)
+import "github.com/scootdev/scoot/runner/execer"
 
 // Creates a new doneExecer.
 func NewDoneExecer() execer.Execer {
@@ -30,6 +27,6 @@ func (e *doneExecer) Abort() execer.ProcessStatus {
 	return completeStatus
 }
 
-func (e *doneExecer) MemUsage() (runner.Memory, error) {
+func (e *doneExecer) MemUsage() (execer.Memory, error) {
 	return 0, nil
 }

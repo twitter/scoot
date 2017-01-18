@@ -9,6 +9,7 @@ import (
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	os_execer "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/snapshot/snapshots"
@@ -101,9 +102,10 @@ func TestMemCap(t *testing.T) {
 	// Command to increase memory by 10MB every .1s until we hit 50MB after .5s.
 	// Test that limiting the memory to 25MB causes the command to abort.
 	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
-	cmd := &runner.Command{Argv: []string{"bash", "-c", str}, MemoryCap: runner.Memory(25 * 1024 * 1024)}
+	cmd := &runner.Command{Argv: []string{"bash", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
-	r := NewSingleRunner(os_execer.NewExecer(), snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
+	e := os_execer.NewBoundedExecer(execer.Memory(25 * 1024 * 1024))
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}

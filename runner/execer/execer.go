@@ -1,14 +1,13 @@
 package execer
 
-import (
-	"io"
-
-	"github.com/scootdev/scoot/runner"
-)
+import "io"
 
 // Execer lets you run one Unix command. It differs from Runner in that it does not
 // know about Snapshots or Scoot. It's just a way to run a Unix process (or fake it).
 // It's at the level of os/exec, not exec-as-a-service.
+
+// Memory in bytes.
+type Memory uint64
 
 type Command struct {
 	Argv []string
@@ -17,9 +16,6 @@ type Command struct {
 	Stdout io.Writer
 	Stderr io.Writer
 	// TODO(dbentley): environment variables?
-
-	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
-	MemoryCap runner.Memory
 }
 
 type ProcessState int
@@ -50,7 +46,7 @@ type Process interface {
 	Abort() ProcessStatus
 
 	// Measure the current amount of resident memory used by this process.
-	MemUsage() (runner.Memory, error)
+	MemUsage() (Memory, error)
 }
 
 type ProcessStatus struct {

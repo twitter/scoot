@@ -14,9 +14,6 @@ const NoRunnersMsg = "No runners available."
 const RunnerBusyMsg = "Runner is busy"
 const LoggingErrMsg = "Error initializing logging."
 
-// Memory in bytes. See also exec.Command.MemoryCap and exec.Process.MemUsage().
-type Memory uint64
-
 // A command, execution environment, and timeout.
 type Command struct {
 	// Command line to run
@@ -32,9 +29,6 @@ type Command struct {
 
 	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.
 	SnapshotID string
-
-	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
-	MemoryCap Memory
 
 	// TODO(jschiller): get consensus on design and either implement or delete.
 	// Runner can optionally use this to specify content if creating a new snapshot.
