@@ -87,7 +87,10 @@ func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 		go func(port int) {
 			defer wg.Done()
 			// sidecars must be running on the same machine and also be twitter servers
-			rsp, err := http.Get(fmt.Sprintf("http://localhost:%v/admin/metrics.json", port))
+			client := http.Client{
+				Timeout: 1 * time.Second,
+			}
+			rsp, err := client.Get(fmt.Sprintf("http://localhost:%v/admin/metrics.json", port))
 			if err == nil {
 				defer rsp.Body.Close()
 				body, err := ioutil.ReadAll(rsp.Body)
@@ -108,6 +111,7 @@ func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 	close(sidecarStatsCh)
 	for statsRsp := range sidecarStatsCh {
+		// just reuse same map, since new keys get added
 		json.Unmarshal(statsRsp, &allStats)
 	}
 
