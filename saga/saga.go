@@ -17,7 +17,7 @@ type Saga struct {
 	log      SagaLog
 	state    *SagaState
 	updateCh chan sagaUpdate
-	mutex    sync.RWMutex
+	mutex    sync.RWMutex // mutex controls access to Saga.state
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
@@ -72,7 +72,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 func (s *Saga) GetState() *SagaState {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	return s.state
+	return copySagaState(s.state)
 }
 
 //
@@ -175,24 +175,17 @@ func (s *Saga) updateSagaState(msg SagaMessage) error {
 // updated in a thread safe manner
 func (s *Saga) updateSagaStateLoop() {
 	for update := range s.updateCh {
-		s.itr(update)
+		s.updateSaga(update)
 	}
 }
 
-func (s *Saga) itr(update sagaUpdate) {
+// updateSaga updates the saga s by applying update atomically and sending any error to the requester
+func (s *Saga) updateSaga(update sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	currState := s.state
-	newState, err := logMessage(currState, update.msg, s.log)
-
-	if err == nil {
-		s.state = newState
-
-		update.resultCh <- nil
-
-	} else {
-		update.resultCh <- err
-	}
+	var err error
+	s.state, err = logMessage(s.state, update.msg, s.log)
+	update.resultCh <- err
 }
 
 type sagaUpdate struct {
@@ -201,23 +194,29 @@ type sagaUpdate struct {
 }
 
 //
-// logs the specified message durably to the SagaLog & updates internal state if its a valid state transition
+// checks the message is a valid transition and logs the specified message durably to the SagaLog
+// if msg is an invalid transition, it will neither log nor update internal state
+// always returns the new SagaState that should be used, either the mutated one or a copy of the
+// original.
 //
 func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
 
+	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
+	// we'll need to revert to the old state.
+	oldState := copySagaState(state)
 	//verify that the applied message results in a valid state
-	newState, err := updateSagaState(state, msg)
+	err := updateSagaState(state, msg)
 	if err != nil {
-		return nil, err
+		return oldState, err
 	}
 
 	//try durably storing the message
 	err = log.LogMessage(msg)
 	if err != nil {
-		return nil, err
+		return oldState, err
 	}
 
-	return newState, nil
+	return state, nil
 }
 
 // Checks the error returned by updating saga state.

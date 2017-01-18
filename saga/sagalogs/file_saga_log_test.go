@@ -156,3 +156,18 @@ func TestFullSaga(t *testing.T) {
 		}
 	}
 }
+
+func TestGetMessages_SagaDoesNotExist(t *testing.T) {
+	defer testCleanup(t)
+	dirName := getDirName()
+	slog, _ := MakeFileSagaLog(dirName)
+	msgs, err := slog.GetMessages("does_not_exist")
+
+	if err != nil {
+		t.Errorf("Unexpected Error Getting Messages %v", err)
+	}
+
+	if msgs != nil {
+		t.Errorf("Expeceted no messages to be returned %+v", msgs)
+	}
+}

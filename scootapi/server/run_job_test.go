@@ -87,7 +87,7 @@ func Test_RunJob_NoCommand(t *testing.T) {
 }
 
 func Test_RunJob_ValidJob(t *testing.T) {
-	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand())
+	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1)
 
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("testJobId", nil)
@@ -104,7 +104,7 @@ func Test_RunJob_ValidJob(t *testing.T) {
 }
 
 func Test_RunJob_SchedulerError(t *testing.T) {
-	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand())
+	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1)
 
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("", errors.New("test error"))

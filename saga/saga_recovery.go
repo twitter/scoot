@@ -54,7 +54,7 @@ func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
 			continue
 		}
 
-		state, err = updateSagaState(state, msg)
+		err = updateSagaState(state, msg)
 		if err != nil {
 			return nil, err
 		}

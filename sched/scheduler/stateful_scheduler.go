@@ -103,11 +103,8 @@ func NewStatefulScheduler(
 		stat:              stat,
 	}
 
-	// TODO: we need to allow the scheduler to accept new jobs
-	// while recovering old ones.
-	if config.RecoverJobsOnStartup {
-		sched.startUp()
-	}
+	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
+		config.DebugMode, config.RecoverJobsOnStartup)
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -116,13 +113,14 @@ func NewStatefulScheduler(
 		}()
 	}
 
+	// Recover Jobs in a separate go routine to allow the scheduler
+	// to accept new jobs while recovering old ones.
+	if config.RecoverJobsOnStartup {
+		go func() {
+			recoverJobs(sched.sagaCoord, sched.addJobCh)
+		}()
+	}
 	return sched
-}
-
-// Starts the scheduler, must be called before any other
-// methods on the scheduler can be called
-func (s *statefulScheduler) startUp() {
-	recoverJobs(s.sagaCoord, s.addJobCh)
 }
 
 type jobAddedMsg struct {

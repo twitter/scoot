@@ -17,10 +17,22 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	parameters.MinSuccessfulTests = 1000
 	properties := gopter.NewProperties(parameters)
 
+	// property tests were written to expect that updateSaga returned two args,
+	// the first a new SagaState iff the transition is valid
+	// maintain this API to make the tests easier to write
+	updateSagaStateCompat := func(state *SagaState, msg SagaMessage) (*SagaState, error) {
+		newState := copySagaState(state)
+		err := updateSagaState(newState, msg)
+		if err != nil {
+			newState = nil
+		}
+		return newState, err
+	}
+
 	properties.Property("StartSaga message is never valid on an already started saga", prop.ForAll(
 		func(state *SagaState, data []byte) bool {
 			msg := MakeStartSagaMessage(state.SagaId(), data)
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			return err != nil && newState == nil
 		},
@@ -35,7 +47,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 		func(state *SagaState) bool {
 
 			msg := MakeEndSagaMessage(state.SagaId())
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			validTransition := true
 			for _, id := range state.GetTaskIds() {
@@ -76,7 +88,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			validTransition := !state.IsSagaCompleted()
 
 			msg := MakeAbortSagaMessage(state.SagaId())
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			// validate the correct error is returned
 			_, sErrorOk := err.(InvalidSagaStateError)
@@ -103,7 +115,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 			validTransition := !state.IsSagaCompleted() && !state.IsSagaAborted() && !state.IsTaskCompleted(taskId)
 
 			msg := MakeStartTaskMessage(state.SagaId(), taskId, data)
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			// validate the correct error is returned
 			_, sErrorOk := err.(InvalidSagaStateError)
@@ -133,7 +145,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				state.IsTaskStarted(taskId)
 
 			msg := MakeEndTaskMessage(state.SagaId(), taskId, data)
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			// validate the correct error is returned
 			_, sErrorOk := err.(InvalidSagaStateError)
@@ -161,7 +173,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				state.IsTaskStarted(taskId) && !state.IsCompTaskCompleted(taskId)
 
 			msg := MakeStartCompTaskMessage(state.SagaId(), taskId, data)
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			// validate the correct error is returned
 			_, sErrorOk := err.(InvalidSagaStateError)
@@ -189,7 +201,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				state.IsTaskStarted(taskId) && state.IsCompTaskStarted(taskId)
 
 			msg := MakeEndCompTaskMessage(state.SagaId(), taskId, data)
-			newState, err := updateSagaState(state, msg)
+			newState, err := updateSagaStateCompat(state, msg)
 
 			// validate the correct error is returned
 			_, sErrorOk := err.(InvalidSagaStateError)
