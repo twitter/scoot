@@ -29,6 +29,9 @@ type streamBackend struct {
 
 // parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
 func (b *streamBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*streamSnap, error) {
+	if len(parts) != 2 {
+		return "", fmt.Errorf("cannot parse snapshot ID: expected 4 parts in stream id: %s", id)
+	}
 	streamName, sha := parts[0], parts[1]
 
 	if err := validSha(sha); err != nil {
