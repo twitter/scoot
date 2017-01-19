@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 )
 
 // checkout creates a checkout of id.
-func (db *DB) checkout(id snapshot.ID) (path string, err error) {
+func (db *DB) checkout(id snap.ID) (path string, err error) {
 	defer func() {
 		// If we're returning our repo dir, we need to keep the work tree locked.
 		// Otherwise, we can unlock it.

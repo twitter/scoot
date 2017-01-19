@@ -5,20 +5,20 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// snapKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
+// snapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
 // kind instead of type because type is a keyword
-type snapKind string
+type snapshotKind string
 
 const (
-	kindFSSnapshot        snapKind = "fs"
-	kindGitCommitSnapshot snapKind = "gc"
+	kindFSSnapshot        snapshotKind = "fs"
+	kindGitCommitSnapshot snapshotKind = "gc"
 )
 
-var kinds = map[snapKind]bool{
+var kinds = map[snapshotKind]bool{
 	kindFSSnapshot:        true,
 	kindGitCommitSnapshot: true,
 }
@@ -107,12 +107,12 @@ type ingestReq struct {
 func (r ingestReq) req() {}
 
 type idAndError struct {
-	id  snapshot.ID
+	id  snap.ID
 	err error
 }
 
 // IngestDir ingests a directory directly.
-func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
+func (db *DB) IngestDir(dir string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestReq{dir: dir, resultCh: resultCh}
 	result := <-resultCh
@@ -128,7 +128,7 @@ type ingestGitCommitReq struct {
 func (r ingestGitCommitReq) req() {}
 
 // IngestGitCommit ingests the commit identified by commitish from ingestRepo
-func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
+func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestGitCommitReq{ingestRepo: ingestRepo, commitish: commitish, resultCh: resultCh}
 	result := <-resultCh
@@ -136,7 +136,7 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 type checkoutReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan stringAndError
 }
 
@@ -149,7 +149,7 @@ type stringAndError struct {
 
 // Checkout puts the snapshot identified by id in the local filesystem, returning
 // the path where it lives or an error.
-func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+func (db *DB) Checkout(id snap.ID) (path string, err error) {
 	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
 	db.reqCh <- checkoutReq{id: id, resultCh: resultCh}
@@ -173,7 +173,7 @@ func (db *DB) ReleaseCheckout(path string) error {
 }
 
 type downloadReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan idAndError
 }
 

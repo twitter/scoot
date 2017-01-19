@@ -3,7 +3,7 @@ package gitdb
 import (
 	"fmt"
 
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 )
 
 const localIDText = "local"
@@ -16,11 +16,11 @@ type localBackend struct {
 // localSnap holds a reference to a value that is in the local DB
 type localSnap struct {
 	sha  string
-	kind snapKind
+	kind snapshotKind
 }
 
 // parse id as a local ID, with kind and remaining parts (after scheme and kind were parsed)
-func (b *localBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*localSnap, error) {
+func (b *localBackend) parseID(id snap.ID, kind snapshotKind, parts []string) (*localSnap, error) {
 	if len(parts) != 1 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 3 parts in local id %s", id)
 	}
@@ -32,11 +32,11 @@ func (b *localBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*
 	return &localSnap{kind: kind, sha: sha}, nil
 }
 
-func (s *localSnap) ID() snapshot.ID {
-	return snapshot.ID(fmt.Sprintf(localIDFmt, localIDText, s.kind, s.sha))
+func (s *localSnap) ID() snap.ID {
+	return snap.ID(fmt.Sprintf(localIDFmt, localIDText, s.kind, s.sha))
 }
-func (s *localSnap) Kind() snapKind { return s.kind }
-func (s *localSnap) SHA() string    { return s.sha }
+func (s *localSnap) Kind() snapshotKind { return s.kind }
+func (s *localSnap) SHA() string        { return s.sha }
 
 func (s *localSnap) Download(db *DB) error {
 	// a localSnap is either present already or we have no way to download it

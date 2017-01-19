@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -117,7 +117,7 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	streamID := snapshot.ID("stream-gc-sm-" + upstreamCommit1ID)
+	streamID := snap.ID("stream-gc-sm-" + upstreamCommit1ID)
 
 	co, err := fixture.db.Checkout(streamID)
 	if err != nil {

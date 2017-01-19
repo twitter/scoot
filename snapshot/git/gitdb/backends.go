@@ -4,33 +4,33 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 )
 
-// backend allows getting a snap for an ID, which can then be used to download the ID
+// backend allows getting a snapshot for an ID, which can then be used to download the ID
 type backend interface {
-	parseID(id string, kind string, parts []string) (snap, error)
+	parseID(id string, kind string, parts []string) (snapshot, error)
 }
 
 // upload allow uploading the ID. Note: The ID to upload will often be in another backend.
 // E.g., for the git tags uploader, it will often pass a local snapshot
 type uploader interface {
-	upload(id snapshot.ID) (snapshot.ID, error)
+	upload(id snap.ID) (snap.ID, error)
 	backend
 }
 
 // GitDB uses several different Backends to store Snapshots.
-// snap is the common interface for a Snapshot (identified by an ID)
-type snap interface {
-	ID() snapshot.ID
+// snapshot is the common interface for a Snapshot (identified by an ID)
+type snapshot interface {
+	ID() snap.ID
 
-	Kind() snapKind
+	Kind() snapshotKind
 	SHA() string
 	Download(db *DB) error
 }
 
-// parseID parses ID into a snap
-func (db *DB) parseID(id snapshot.ID) (snap, error) {
+// parseID parses ID into a snapshot
+func (db *DB) parseID(id snap.ID) (snapshot, error) {
 	if id == "" {
 		return nil, fmt.Errorf("empty snapshot ID")
 	}
@@ -39,7 +39,7 @@ func (db *DB) parseID(id snapshot.ID) (snap, error) {
 		return nil, fmt.Errorf("could not determine backend and kind in ID %s", id)
 	}
 
-	backendType, kind := parts[0], snapKind(parts[1])
+	backendType, kind := parts[0], snapshotKind(parts[1])
 
 	if !kinds[kind] {
 		return nil, fmt.Errorf("invalid kind: %s", kind)

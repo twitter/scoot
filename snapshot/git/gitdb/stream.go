@@ -3,7 +3,7 @@ package gitdb
 import (
 	"fmt"
 
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 )
 
 // A Stream is a sequence of SnapshotWithHistory's that updates via a
@@ -28,7 +28,7 @@ type streamBackend struct {
 }
 
 // parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
-func (b *streamBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*streamSnap, error) {
+func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, parts []string) (*streamSnap, error) {
 	streamName, sha := parts[0], parts[1]
 
 	if err := validSha(sha); err != nil {
@@ -41,15 +41,15 @@ func (b *streamBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (
 // streamSnap represents a Snapshot that lives in a Stream
 type streamSnap struct {
 	sha        string
-	kind       snapKind
+	kind       snapshotKind
 	streamName string
 }
 
-func (s *streamSnap) ID() snapshot.ID {
-	return snapshot.ID(fmt.Sprintf(streamIDFmt, streamIDText, s.kind, s.streamName, s.sha))
+func (s *streamSnap) ID() snap.ID {
+	return snap.ID(fmt.Sprintf(streamIDFmt, streamIDText, s.kind, s.streamName, s.sha))
 }
-func (s *streamSnap) Kind() snapKind { return s.kind }
-func (s *streamSnap) SHA() string    { return s.sha }
+func (s *streamSnap) Kind() snapshotKind { return s.kind }
+func (s *streamSnap) SHA() string        { return s.sha }
 
 func (s *streamSnap) Download(db *DB) error {
 	if err := db.shaPresent(s.SHA()); err == nil {
