@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -47,7 +48,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Uploading %s", req.URL.Path)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
-	// TODO(dbentley): check it's a legal bundle name
+	if ok, err := s.checkBundleName(bundleName); !ok {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	bundleData := req.Body
 
 	exists, err := s.store.Exists(bundleName)
@@ -68,7 +72,11 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
-	// TODO(dbentley): check it's a legal bundle name
+	log.Printf("Downloading %s", bundleName)
+	if ok, err := s.checkBundleName(bundleName); !ok {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	r, err := s.store.OpenForRead(bundleName)
 	if err != nil {
@@ -84,5 +92,14 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	if err := r.Close(); err != nil {
 		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
 		return
+	}
+}
+
+// TODO(dbentley): comprehensive check if it's a legal bundle name, for now just '%s-%s-%s'
+func (s *Server) checkBundleName(name string) (bool, error) {
+	if ok, _ := regexp.MatchString("^[^-/]+-[^-/]+-[^-/]+.*", name); ok {
+		return true, nil
+	} else {
+		return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)
 	}
 }

@@ -1,25 +1,27 @@
 package bundlestore
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
-func MakeHTTPStore(rootURI string) *HTTPStore {
+func MakeHTTPStore(rootURI string) Store {
 	client := &http.Client{Timeout: 30 * time.Second}
-	return &HTTPStore{rootURI, client}
+	return &httpStore{rootURI, client}
 }
 
-type HTTPStore struct {
+type httpStore struct {
 	rootURI string
 	client  *http.Client
 }
 
-func (s *HTTPStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 	uri := s.rootURI + name
 	log.Printf("Fetching %s", uri)
 	resp, err := s.client.Get(uri)
@@ -36,12 +38,13 @@ func (s *HTTPStore) OpenForRead(name string) (io.ReadCloser, error) {
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
+	} else if resp.StatusCode == http.StatusBadRequest {
+		return nil, os.ErrInvalid
 	}
-
 	return nil, fmt.Errorf("could not open: %+v", resp)
 }
 
-func (s *HTTPStore) Exists(name string) (bool, error) {
+func (s *httpStore) Exists(name string) (bool, error) {
 	r, err := s.OpenForRead(name)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -53,7 +56,10 @@ func (s *HTTPStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *HTTPStore) Write(name string, data io.Reader) error {
+func (s *httpStore) Write(name string, data io.Reader) error {
+	if strings.Contains(name, "/") {
+		return errors.New("'/' not allowed in name when writing bundles.")
+	}
 	uri := s.rootURI + name
 	log.Printf("Posting %s", uri)
 	_, err := s.client.Post(uri, "text/plain", data)

@@ -52,25 +52,25 @@ func TestServer(t *testing.T) {
 	client := &http.Client{Timeout: 1 * time.Second}
 
 	// Try to write data.
-	if resp, err := client.Post(rootUri+"baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
+	if resp, err := client.Post(rootUri+"baz-baz-baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
 	}
 	time.Sleep(50 * time.Millisecond)
-	if !reflect.DeepEqual(store.files["baz"], []byte("baz_data")) {
+	if !reflect.DeepEqual(store.files["baz-baz-baz"], []byte("baz_data")) {
 		t.Fatalf("Failed to post data.")
 	}
 
 	// Try to write data again.
-	if resp, err := client.Post(rootUri+"baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
+	if resp, err := client.Post(rootUri+"baz-baz-baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
 	}
 
 	// Try to read data.
-	if resp, err := client.Get(rootUri + "baz"); err != nil {
+	if resp, err := client.Get(rootUri + "baz-baz-baz"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		defer resp.Body.Close()
@@ -82,7 +82,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// Try to read non-existent data, expect NotFound.
-	if resp, err := client.Get(rootUri + "foo"); err != nil {
+	if resp, err := client.Get(rootUri + "foo-foo-foo"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
@@ -97,20 +97,19 @@ func TestServer(t *testing.T) {
 
 	// Try to write data.
 	httpStore := MakeHTTPStore(rootUri)
-	if err := httpStore.Write("bar", bytes.NewBuffer([]byte("bar_data"))); err != nil {
+	if err := httpStore.Write("bar-bar-bar", bytes.NewBuffer([]byte("bar_data"))); err != nil {
 		t.Fatalf(err.Error())
 	}
-	time.Sleep(50 * time.Millisecond)
 
 	// Check if the write succeeded.
-	if ok, err := httpStore.Exists("bar"); err != nil {
+	if ok, err := httpStore.Exists("bar-bar-bar"); err != nil {
 		t.Fatalf(err.Error())
 	} else if !ok {
 		t.Fatalf("Expected data to exist.")
 	}
 
 	// Try to read data.
-	if reader, err := httpStore.OpenForRead("bar"); err != nil {
+	if reader, err := httpStore.OpenForRead("bar-bar-bar"); err != nil {
 		t.Fatalf(err.Error())
 	} else if data, err := ioutil.ReadAll(reader); err != nil {
 		t.Fatalf(err.Error())
@@ -119,10 +118,14 @@ func TestServer(t *testing.T) {
 	}
 
 	// Check for non-existent data.
-	if ok, err := httpStore.Exists("foo"); err != nil {
+	if ok, err := httpStore.Exists("foo-foo-foo"); err != nil {
 		t.Fatalf(err.Error())
 	} else if ok {
 		t.Fatalf("Expected data to not exist.")
 	}
 
+	// Check for invalid name error
+	if _, err := httpStore.Exists("foo"); err == nil {
+		t.Fatalf("Expected invalid input err.")
+	}
 }
