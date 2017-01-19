@@ -41,6 +41,9 @@ func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err err
 	d := thrift.NewTDeserializer()
 	// NB(dbentley): this seems to have pathological behavior on some strings. E.g.,
 	// a random 34 bytes took 45 seconds to decode.
+	// This was triggered in job_status_property_test, which tries to deserialize and
+	// ~1/20th of random byte slices would take dozens of seconds (or more) to deserialize.
+	// Seems to happen consistently on bad inputs, but I didn't dig in to figure out why.
 	err = d.Read(targetStruct, sourceBytes)
 	return err
 }
