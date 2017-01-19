@@ -7,10 +7,13 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+// backend allows getting a snap for an ID, which can then be used to download the ID
 type backend interface {
 	parseID(id string, kind string, parts []string) (snap, error)
 }
 
+// upload allow uploading the ID. Note: The ID to upload will often be in another backend.
+// E.g., for the git tags uploader, it will often pass a local snapshot
 type uploader interface {
 	upload(id snapshot.ID) (snapshot.ID, error)
 	backend

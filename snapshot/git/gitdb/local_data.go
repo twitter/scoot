@@ -17,7 +17,6 @@ type localBackend struct {
 type localSnap struct {
 	sha  string
 	kind snapKind
-	back *localBackend
 }
 
 // parse id as a local ID, with kind and remaining parts (after scheme and kind were parsed)
@@ -30,7 +29,7 @@ func (b *localBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*
 		return nil, err
 	}
 
-	return &localSnap{kind: kind, sha: sha, back: b}, nil
+	return &localSnap{kind: kind, sha: sha}, nil
 }
 
 func (s *localSnap) ID() snapshot.ID {

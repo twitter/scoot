@@ -53,7 +53,8 @@ type DB struct {
 	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local     *localBackend
 	stream    *streamBackend
-	remote    uploader // TODO(dbentley): implement uploader
+	remote    uploader // This is one of our backends that we use to upload automatically
+	// TODO(dbentley): implement uploader
 }
 
 // req is a request interface
