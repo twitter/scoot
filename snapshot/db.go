@@ -4,43 +4,28 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// ID identifies a Value in DB. (Cf. doc.go for explanation of Value) Opaque to the client.
+// ID identifies a Snapshot in DB. (Cf. doc.go for explanation of Snapshot) Opaque to the client.
 type ID string
 
-// DB is the Scoot Database, allowing creation, distribution, and export of Values.
-type DB interface {
+// Creator allows creating new Snapshots.
+type Creator interface {
 	// Ingest
 
 	// IngestDir ingests a directory directly.
-	// The created Value is a Snapshot.
+	// The created Snapshot is an FSSnapshot.
 	IngestDir(dir string) (ID, error)
 
 	// IngestGitCommit ingests the commit identified by commitish from ingestRepo
 	// commitish may be any string that identifies a commit
-	// The created Value is a SnapshotWithHistory.
+	// The created Snapshot is a GitCommitSnapshot.
 	IngestGitCommit(ingestRepo *repo.Repository, commitish string) (ID, error)
+}
 
-	// Operations
-
-	// UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
-	// Errors if id does not identify a SnapshotWithHistory.
-	UnwrapSnapshotHistory(id ID) (ID, error)
-
-	// Distribute
-
-	// Upload makes sure the Value id is uploaded, returning an ID that can be used
-	// anywhere or an error
-	Upload(id ID) (ID, error)
-
-	// Download makes sure the Value id is downloaded, returning an ID that can be used
-	// on this computer or an error
-	Download(id ID) (ID, error)
-
-	// Export
-
-	// Checkout puts the Value identified by id in the local filesystem, returning
+// Reader allows reading data from existing Snapshots
+type Reader interface {
+	// Checkout puts the Snapshot identified by id in the local filesystem, returning
 	// the path where it lives or an error.
-	// TODO(dbentley): should this download if necessary?
+	// TODO(dbentley): should we have separate methods based on the kind of Snapshot?
 	Checkout(id ID) (path string, err error)
 
 	// ReleaseCheckout releases a path from a previous Checkout. This allows Scoot to reuse
@@ -48,4 +33,19 @@ type DB interface {
 	ReleaseCheckout(path string) error
 
 	// TODO(dbentley): consider adding utilities to clean up previous Checkouts. E.g., ListCheckouts or ReleaseAll
+}
+
+// Remoter allows moving data between two SnapshotDBs (Local and Remote).
+type Remoter interface {
+	// Upload uploads the Snapshot identified by ID to Remote, returning a new ID that will work in both SnapshotDBs.
+	Upload(ID) (ID, error)
+
+	// Download downloads the Snapshot identified by ID so it exists in Local.
+	Download(ID) error
+}
+
+// DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots.
+type DB interface {
+	Creator
+	Reader
 }

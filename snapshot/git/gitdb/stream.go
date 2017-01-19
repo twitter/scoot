@@ -23,53 +23,54 @@ type StreamConfig struct {
 const streamIDText = "stream"
 const streamIDFmt = "%s-%s-%s-%s"
 
+type streamBackend struct {
+	cfg *StreamConfig
+}
+
 // parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
-func parseStreamID(id snapshot.ID, kind valueKind, parts []string) (*streamValue, error) {
+func (b *streamBackend) parseID(id snapshot.ID, kind snapKind, parts []string) (*streamSnap, error) {
 	streamName, sha := parts[0], parts[1]
 
 	if err := validSha(sha); err != nil {
 		return nil, err
 	}
 
-	return &streamValue{streamName: streamName, kind: kind, sha: sha}, nil
+	return &streamSnap{streamName: streamName, kind: kind, sha: sha}, nil
 }
 
-type streamValue struct {
+// streamSnap represents a Snapshot that lives in a Stream
+type streamSnap struct {
 	sha        string
-	kind       valueKind
+	kind       snapKind
 	streamName string
 }
 
-func (v *streamValue) ID() snapshot.ID {
-	return snapshot.ID(fmt.Sprintf(streamIDFmt, streamIDText, v.kind, v.streamName, v.sha))
+func (s *streamSnap) ID() snapshot.ID {
+	return snapshot.ID(fmt.Sprintf(streamIDFmt, streamIDText, s.kind, s.streamName, s.sha))
 }
-func (v *streamValue) Kind() valueKind { return v.kind }
-func (v *streamValue) SHA() string     { return v.sha }
+func (s *streamSnap) Kind() snapKind { return s.kind }
+func (s *streamSnap) SHA() string    { return s.sha }
 
-func (v *streamValue) Upload(db *DB) (snapshot.ID, error) {
-	// A stream value is already present Globally
-	return v.ID(), nil
-}
-
-func (v *streamValue) Download(db *DB) (snapshot.ID, error) {
-	// TODO(dbentley): check if present before downloading
+func (s *streamSnap) Download(db *DB) error {
+	if err := db.shaPresent(s.SHA()); err == nil {
+		// Already present!
+		return nil
+	}
 
 	// TODO(dbentley): what if we've already fetched recently? We should figure out some way to
-	// prevent
+	// prevent that
 
 	if db.stream == nil {
-		return "", fmt.Errorf("cannot download snapshot %s: no streams configured", v.ID())
+		return fmt.Errorf("cannot download snapshot %s: no streams configured", s.ID())
 	}
-	if v.streamName != db.stream.Name {
-		return "", fmt.Errorf("cannot download snapshot %s: does not match stream %s", v.ID(), db.stream.Name)
+	if s.streamName != db.stream.cfg.Name {
+		return fmt.Errorf("cannot download snapshot %s: does not match stream %s", s.ID(), db.stream.cfg.Name)
 	}
 
 	// TODO(dbentley): keep stats about fetching (when we do it, last time we did it, etc.)
-	if _, err := db.dataRepo.Run("fetch", db.stream.Remote); err != nil {
-		return "", err
+	if _, err := db.dataRepo.Run("fetch", db.stream.cfg.Remote); err != nil {
+		return err
 	}
 
-	// TODO(dbentley): check that v.sha is present after fetching (and err if not)
-
-	return v.ID(), nil
+	return db.shaPresent(s.SHA())
 }
