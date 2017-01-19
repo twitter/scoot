@@ -35,15 +35,6 @@ type Reader interface {
 	// TODO(dbentley): consider adding utilities to clean up previous Checkouts. E.g., ListCheckouts or ReleaseAll
 }
 
-// Remoter allows moving data between two SnapshotDBs (Local and Remote).
-type Remoter interface {
-	// Upload uploads the Snapshot identified by ID to Remote, returning a new ID that will work in both SnapshotDBs.
-	Upload(ID) (ID, error)
-
-	// Download downloads the Snapshot identified by ID so it exists in Local.
-	Download(ID) error
-}
-
 // DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots.
 type DB interface {
 	Creator
