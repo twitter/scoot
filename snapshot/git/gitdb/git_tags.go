@@ -31,14 +31,14 @@ func (b *tagsBackend) parseID(id snap.ID, kind snapshotKind, parts []string) (sn
 		return nil, err
 	}
 
-	return &tagsSnap{kind: kind, sha: sha, remoteName: remoteName}, nil
+	return &tagsSnapshot{kind: kind, sha: sha, remoteName: remoteName}, nil
 }
 
 func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 	switch s := s.(type) {
-	case *tagsSnap:
+	case *tagsSnapshot:
 		return s, nil
-	case *streamSnap:
+	case *streamSnapshot:
 		return s, nil
 	case *localSnapshot:
 		tag := makeTag(b.cfg.Prefix, s.SHA())
@@ -49,31 +49,35 @@ func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 		if _, err := db.dataRepo.Run("push", b.cfg.Remote, tag); err != nil {
 			return nil, err
 		}
-		return &tagsSnap{s.SHA(), s.Kind(), b.cfg.Remote}, nil
+		return &tagsSnapshot{s.SHA(), s.Kind(), b.cfg.Remote}, nil
 	default:
 		return nil, fmt.Errorf("cannot upload %v: unknown type %T", s, s)
 	}
 
 }
 
-type tagsSnap struct {
+type tagsSnapshot struct {
 	sha        string
 	kind       snapshotKind
 	remoteName string
 }
 
-func (s *tagsSnap) ID() snap.ID {
+func (s *tagsSnapshot) ID() snap.ID {
 	return snap.ID(strings.Join([]string{tagsIDText, string(s.kind), s.remoteName, s.sha}, "-"))
 }
-func (s *tagsSnap) Kind() snapshotKind { return s.kind }
-func (s *tagsSnap) SHA() string        { return s.sha }
+func (s *tagsSnapshot) Kind() snapshotKind { return s.kind }
+func (s *tagsSnapshot) SHA() string        { return s.sha }
 
-func (s *tagsSnap) Download(db *DB) error {
+func (s *tagsSnapshot) Download(db *DB) error {
 	if err := db.shaPresent(s.SHA()); err == nil {
 		return nil
 	}
 
 	// TODO(dbentley): keep stats about tag fetching (when we do it, last time we did it, etc.)
+
+	if s.remoteName != db.tags.cfg.Remote {
+		return fmt.Errorf("cannot download %v: remote %s is not registered (expected %v)", s.ID(), s.remoteName, db.tags.cfg.Remote)
+	}
 
 	if _, err := db.dataRepo.Run("fetch", db.tags.cfg.Remote, makeTag(db.tags.cfg.Prefix, s.SHA())); err != nil {
 		return err
