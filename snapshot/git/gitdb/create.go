@@ -5,11 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
+func (db *DB) ingestDir(dir string) (snapshot, error) {
 	// We ingest a dir using git commands:
 	// First, create a new index file.
 	// Second, add all the files in the work tree.
@@ -17,7 +16,7 @@ func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
 	// This doesn't create a commit, or otherwise mess with repo state.
 	indexDir, err := db.tmp.TempDir("git-index")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	indexFilename := filepath.Join(indexDir.Dir, "index")
@@ -31,26 +30,25 @@ func (db *DB) ingestDir(dir string) (snapshot.ID, error) {
 	cmd.Env = append(cmd.Env, extraEnv...)
 	_, err = db.dataRepo.RunCmd(cmd)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	cmd = db.dataRepo.Command("write-tree")
 	cmd.Env = append(cmd.Env, extraEnv...)
 	sha, err := db.dataRepo.RunCmdSha(cmd)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	v := &localSnap{sha: sha, kind: kindFSSnapshot}
-	return v.ID(), nil
+	return &localSnap{sha: sha, kind: kindFSSnapshot}, nil
 }
 
 const tempRef = "refs/heads/scoot/__temp_for_writing"
 
-func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
+func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot, error) {
 	sha, err := ingestRepo.RunSha("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", commitish))
 	if err != nil {
-		return "", fmt.Errorf("not a valid commit: %s, %v", commitish, err)
+		return nil, fmt.Errorf("not a valid commit: %s, %v", commitish, err)
 	}
 
 	// Strategy: move a commit from ingest to data
@@ -62,32 +60,30 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	// TODO(dbentley): we could check if sha exists in our repo before ingesting
 
 	if err := db.shaPresent(sha); err == nil {
-		v := &localSnap{sha: sha, kind: kindGitCommitSnapshot}
-		return v.ID(), nil
+		return &localSnap{sha: sha, kind: kindGitCommitSnapshot}, nil
 	}
 
 	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if _, err := ingestRepo.Run("update-ref", tempRef, sha); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if _, err := ingestRepo.Run("push", "-f", db.dataRepo.Dir(), tempRef); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if _, err := ingestRepo.Run("update-ref", "-d", tempRef); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	l := &localSnap{sha: sha, kind: kindGitCommitSnapshot}
-	return l.ID(), nil
+	return &localSnap{sha: sha, kind: kindGitCommitSnapshot}, nil
 }
 
 func (db *DB) shaPresent(sha string) error {

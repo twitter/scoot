@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -30,12 +30,12 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id, err := fixture.db.IngestDir(ingestDir.Dir)
+	id, err := fixture.simpleDB.IngestDir(ingestDir.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	path, err := fixture.db.Checkout(id)
+	path, err := fixture.simpleDB.Checkout(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := fixture.db.ReleaseCheckout(path); err != nil {
+	if err := fixture.simpleDB.ReleaseCheckout(path); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -60,20 +60,21 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id1, err := fixture.db.IngestGitCommit(fixture.external, commit1ID)
+	id1, err := fixture.simpleDB.IngestGitCommit(fixture.external, commit1ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id2, err := fixture.db.IngestGitCommit(fixture.external, commit2ID)
+	id2, err := fixture.simpleDB.IngestGitCommit(fixture.external, commit2ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	co, err := fixture.db.Checkout(id1)
+	co, err := fixture.simpleDB.Checkout(id1)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id1, err)
 	}
+	defer fixture.simpleDB.ReleaseCheckout(co)
 
 	// test contents
 	if err := assertFileContents(co, "file.txt", "first"); err != nil {
@@ -85,11 +86,11 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := fixture.db.ReleaseCheckout(co); err != nil {
+	if err := fixture.simpleDB.ReleaseCheckout(co); err != nil {
 		t.Fatal(err)
 	}
 
-	co, err = fixture.db.Checkout(id2)
+	co, err = fixture.simpleDB.Checkout(id2)
 	if err != nil {
 		t.Fatalf("error checking out %v, %v", id2, err)
 	}
@@ -104,9 +105,6 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatalf("scratch.txt existed in %v; should not exist", co)
 	}
 
-	if err := fixture.db.ReleaseCheckout(co); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestStream(t *testing.T) {
@@ -117,12 +115,14 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	streamID := snapshot.ID("stream-gc-sm-" + upstreamCommit1ID)
+	streamID := snap.ID("stream-gc-sm-" + upstreamCommit1ID)
 
-	co, err := fixture.db.Checkout(streamID)
+	co, err := fixture.simpleDB.Checkout(streamID)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer fixture.simpleDB.ReleaseCheckout(co)
 
 	if err := assertFileContents(co, "file.txt", "upstream_first"); err != nil {
 		t.Fatal(err)
@@ -130,15 +130,48 @@ func TestStream(t *testing.T) {
 
 }
 
+func TestTags(t *testing.T) {
+	// Create a commit in external, then ingest into authorDB, then check it out in our regular db
+
+	externalCommitID, err := commitText(fixture.tags, "tags_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := fixture.authorDB.IngestGitCommit(fixture.tags, externalCommitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	co, err := fixture.consumerDB.Checkout(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer fixture.consumerDB.ReleaseCheckout(co)
+
+	if err := assertFileContents(co, "file.txt", "tags_first"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 type dbFixture struct {
-	tmp      *temp.TempDir
-	db       *DB
-	external *repo.Repository
-	upstream *repo.Repository
+	tmp *temp.TempDir
+	// simpleDB is the simplest DB; no auto-upload
+	simpleDB *DB
+	// authorDB is the DB where we'll author changes
+	authorDB *DB
+	// consumerDB is the DB where we'll consume changes (e.g., in the worker)
+	consumerDB *DB
+	external   *repo.Repository
+	upstream   *repo.Repository
+	tags       *repo.Repository
 }
 
 func (f *dbFixture) close() {
-	f.db.Close()
+	f.simpleDB.Close()
+	f.authorDB.Close()
+	f.consumerDB.Close()
 }
 
 // Create a new repo in tmp with directory name starting with name
@@ -228,7 +261,16 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
+	tags, err := createRepo(tmp, "tags-repo")
+	if err != nil {
+		return nil, err
+	}
+
 	if _, err := dataRepo.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("remote", "add", "tags", tags.Dir()); err != nil {
 		return nil, err
 	}
 
@@ -236,19 +278,62 @@ func setup() (*dbFixture, error) {
 		return nil, err
 	}
 
-	stream := &StreamConfig{
+	streamCfg := &StreamConfig{
 		Name:    "sm",
 		Remote:  "upstream",
 		RefSpec: "refs/remotes/upstream/master",
 	}
 
-	db := MakeDB(dataRepo, tmp, stream)
+	tagsCfg := &TagsConfig{
+		Name:   "sss",
+		Remote: "tags",
+		Prefix: "scoot_reserved",
+	}
+
+	simpleDB := MakeDB(dataRepo, tmp, streamCfg, tagsCfg, AutoUploadNone)
+
+	authorDataRepo, err := createRepo(tmp, "author-data-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := authorDataRepo.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := authorDataRepo.Run("remote", "add", "tags", tags.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := authorDataRepo.Run("fetch", "upstream"); err != nil {
+		return nil, err
+	}
+
+	authorDB := MakeDB(authorDataRepo, tmp, streamCfg, tagsCfg, AutoUploadTags)
+
+	consumerDataRepo, err := createRepo(tmp, "consumer-data-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := consumerDataRepo.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := consumerDataRepo.Run("remote", "add", "tags", tags.Dir()); err != nil {
+		return nil, err
+	}
+
+	consumerDB := MakeDB(consumerDataRepo, tmp, streamCfg, tagsCfg, AutoUploadNone)
 
 	return &dbFixture{
-		tmp:      tmp,
-		db:       db,
-		external: external,
-		upstream: upstream,
+		tmp:        tmp,
+		simpleDB:   simpleDB,
+		authorDB:   authorDB,
+		consumerDB: consumerDB,
+		external:   external,
+		upstream:   upstream,
+		tags:       tags,
 	}, nil
 }
 

@@ -5,26 +5,34 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// snapKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
+// snapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
 // kind instead of type because type is a keyword
-type snapKind string
+type snapshotKind string
 
 const (
-	kindFSSnapshot        snapKind = "fs"
-	kindGitCommitSnapshot snapKind = "gc"
+	kindFSSnapshot        snapshotKind = "fs"
+	kindGitCommitSnapshot snapshotKind = "gc"
 )
 
-var kinds = map[snapKind]bool{
+var kinds = map[snapshotKind]bool{
 	kindFSSnapshot:        true,
 	kindGitCommitSnapshot: true,
 }
 
+type AutoUploadDest int
+
+const (
+	AutoUploadNone AutoUploadDest = iota
+	AutoUploadTags
+)
+
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
-func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) *DB {
+func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
+	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
 	result := &DB{
 		reqCh:     make(chan req),
 		dataRepo:  dataRepo,
@@ -32,7 +40,17 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) 
 		checkouts: make(map[string]bool),
 		local:     &localBackend{},
 		stream:    &streamBackend{cfg: stream},
+		tags:      &tagsBackend{cfg: tags},
 	}
+
+	switch autoUploadDest {
+	case AutoUploadNone:
+	case AutoUploadTags:
+		result.remote = result.tags
+	default:
+		panic(fmt.Errorf("unknown GitDB AutoUpload destination: %v", autoUploadDest))
+	}
+
 	go result.loop()
 	return result
 }
@@ -53,7 +71,9 @@ type DB struct {
 	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local     *localBackend
 	stream    *streamBackend
-	remote    uploader // TODO(dbentley): implement uploader
+	tags      *tagsBackend
+	remote    uploader // This is one of our backends that we use to upload automatically
+	// TODO(dbentley): implement uploader
 }
 
 // req is a request interface
@@ -76,17 +96,26 @@ func (db *DB) loop() {
 		}
 		switch req := req.(type) {
 		case ingestReq:
-			id, err := db.ingestDir(req.dir)
+			s, err := db.ingestDir(req.dir)
 			if err == nil && db.remote != nil {
-				id, err = db.remote.upload(id)
+				s, err = db.remote.upload(s, db)
 			}
-			req.resultCh <- idAndError{id: id, err: err}
+			if err != nil {
+				req.resultCh <- idAndError{err: err}
+			} else {
+				req.resultCh <- idAndError{id: s.ID()}
+			}
 		case ingestGitCommitReq:
-			id, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
+			s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
 			if err == nil && db.remote != nil {
-				id, err = db.remote.upload(id)
+				s, err = db.remote.upload(s, db)
 			}
-			req.resultCh <- idAndError{id: id, err: err}
+
+			if err != nil {
+				req.resultCh <- idAndError{err: err}
+			} else {
+				req.resultCh <- idAndError{id: s.ID()}
+			}
 		case checkoutReq:
 			path, err := db.checkout(req.id)
 			req.resultCh <- stringAndError{str: path, err: err}
@@ -106,12 +135,12 @@ type ingestReq struct {
 func (r ingestReq) req() {}
 
 type idAndError struct {
-	id  snapshot.ID
+	id  snap.ID
 	err error
 }
 
 // IngestDir ingests a directory directly.
-func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
+func (db *DB) IngestDir(dir string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestReq{dir: dir, resultCh: resultCh}
 	result := <-resultCh
@@ -127,7 +156,7 @@ type ingestGitCommitReq struct {
 func (r ingestGitCommitReq) req() {}
 
 // IngestGitCommit ingests the commit identified by commitish from ingestRepo
-func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
+func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestGitCommitReq{ingestRepo: ingestRepo, commitish: commitish, resultCh: resultCh}
 	result := <-resultCh
@@ -135,7 +164,7 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 type checkoutReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan stringAndError
 }
 
@@ -148,7 +177,7 @@ type stringAndError struct {
 
 // Checkout puts the snapshot identified by id in the local filesystem, returning
 // the path where it lives or an error.
-func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+func (db *DB) Checkout(id snap.ID) (path string, err error) {
 	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
 	db.reqCh <- checkoutReq{id: id, resultCh: resultCh}
@@ -172,7 +201,7 @@ func (db *DB) ReleaseCheckout(path string) error {
 }
 
 type downloadReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan idAndError
 }
 

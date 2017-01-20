@@ -14,7 +14,7 @@ GitDB is an implementation of ScootDB (snapshot.DB) that stores local values in 
 GitDB uses different Backends to identify, upload and download Snapshots.
 
 ## Snapshot ID format
-GitDB uses Value IDs that encode the backend, kind and per-backend data, separated by '-':
+GitDB uses Snapshot IDs that encode the backend, kind and per-backend data, separated by '-':
 * _<backend>-<kind>(-<additional information>)+_
 
 E.g.:
