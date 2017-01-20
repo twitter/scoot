@@ -211,7 +211,13 @@ func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
 // specified saga.
 func (log *fileSagaLog) GetMessages(sagaId string) ([]saga.SagaMessage, error) {
 	fileName := log.getSagaLogFileName(sagaId)
-	logFile, err := os.Open(fmt.Sprintf(fileName))
+
+	// check if this saga actually exists
+	if _, err := os.Stat(fileName); err != nil {
+		return nil, nil
+	}
+
+	logFile, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}

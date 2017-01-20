@@ -14,6 +14,7 @@ import (
 // ActiveSagas are recovered in parallel and are added to the addJobCh to be rescheduled
 // This method returns once all activeSagas have been successfully recovered.
 func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
+	log.Printf("INFO: Recovering Sagas")
 
 	recoveryActiveSagaAttempts := 0
 	activeSagas, err := sc.Startup()
@@ -33,6 +34,8 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 	if activeSagas == nil {
 		return
 	}
+
+	log.Printf("DEBUG: Recovering Active Sagas %+v", activeSagas)
 
 	var wg sync.WaitGroup
 	wg.Add(len(activeSagas))
@@ -54,6 +57,7 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 					return
 				}
 
+				log.Printf("INFO: Rescheduling Saga %v", sagaId)
 				// reschedule saga
 				addJobCh <- jobAddedMsg{
 					job:  job,
@@ -102,6 +106,7 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 	// This could happen because a Saga got added to active index, but failed to
 	// log successfully.  In this case Starting the Saga will have failed.
 	if activeSaga == nil {
+		log.Printf("DEBUG: Saga doesn't exist %v", sagaId)
 		return nil
 	}
 
@@ -109,6 +114,7 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 	// This could happen because Active Index did not get updated successfully,
 	// even if the saga has been completed.
 	if activeSaga.GetState().IsSagaCompleted() {
+		log.Printf("DEBUG: Saga Already Completed %v", sagaId)
 		return nil
 	}
 

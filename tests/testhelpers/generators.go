@@ -17,13 +17,15 @@ func NewRand() *rand.Rand {
 // Test Helpers that are useful for Generating random Scoot Api Structs
 // To help with testing the Scoot API and Scheduler
 
-// Generates a scoot.JobDefinition
-func GenJobDefinition(rng *rand.Rand) *scoot.JobDefinition {
-
+// Generates a scoot.JobDefinition with numTasks tasks (or random if numTasks == -1)
+func GenJobDefinition(rng *rand.Rand, numTasks int) *scoot.JobDefinition {
 	def := scoot.NewJobDefinition()
 	def.Tasks = make(map[string]*scoot.TaskDefinition)
 
-	numTasks := rng.Intn(10) + 1
+	if numTasks == -1 {
+		numTasks = rng.Intn(10) + 1
+	}
+
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
 		taskDef := GenTask(rng)
