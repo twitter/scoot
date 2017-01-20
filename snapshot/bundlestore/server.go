@@ -95,9 +95,11 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// TODO(dbentley): comprehensive check if it's a legal bundle name, for now just '%s-%s-%s'
+// TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.
 func (s *Server) checkBundleName(name string) (bool, error) {
-	if ok, _ := regexp.MatchString("^[^-/]+-[^-/]+-[^-/]+.*", name); ok {
+	// Matches 3 dash delimited strings and an optional path postfix.
+	// Looks for the first two, then a third which may have additional dashes, and then a path.
+	if ok, _ := regexp.MatchString("^([^-/]+-){2,}[^/]+(/.*){0,1}", name); ok {
 		return true, nil
 	} else {
 		return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)

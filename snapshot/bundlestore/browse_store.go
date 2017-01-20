@@ -12,10 +12,11 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 )
 
-// Wraps another store and, when reading and when bundle name contains a slash, returns interpreted data.
-// The slash is considered the start of a root path to extract from the original bundle data.
-// Bundle must have nil basis for extraction to work.
-// Caches bundles on disk to use as input to git commands.
+// Wraps another store and, when reading a bundle name that contains a forward slash, returns interpreted data:
+//  see README.md for more detail.
+// Caches bundles on disk instead of memory as they may be used as input to shelled git commands.
+//
+// TODO: git extraction logic should eventually move to gitdb as that's a more natural fit.
 func MakeCachingBrowseStore(s Store, tmp *temp.TempDir) Store {
 	return &cachingBrowseStore{underlying: s, tmp: tmp}
 }
@@ -30,6 +31,7 @@ func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 	bundleName := paths[0]
 	contentPath := paths[1]
 	bundlePath := filepath.Join(s.tmp.Dir, bundleName)
+	// Ensure that the bundle is available on disk.
 	if _, err := os.Stat(bundlePath); err != nil {
 		if reader, err := s.underlying.OpenForRead(bundleName); err != nil {
 			return nil, err
@@ -39,9 +41,11 @@ func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 			return nil, err
 		}
 	}
+	// There is no appended path, return the original bundle.
 	if len(paths) == 1 {
 		return os.Open(bundlePath)
 	}
+	// There is an appended path, try to extract it from the bundle.
 	return s.extract(bundlePath, contentPath)
 }
 
@@ -65,6 +69,7 @@ func (s *cachingBrowseStore) extract(bundlePath, contentPath string) (io.ReadClo
 		return nil, err
 	}
 	defer os.RemoveAll(tmp.Dir)
+	// Create an empty repo, unpack the bundle and remember the HEAD sha, then show the desired file@HEAD.
 	str := "git init -q; SHA=$(git bundle unbundle %s | cut -d' ' -f1); git show $SHA:%s > content"
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, bundlePath, contentPath))
 	cmd.Dir = tmp.Dir

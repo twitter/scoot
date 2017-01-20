@@ -1,116 +1,26 @@
 package bundlestore
 
 import (
-	"bytes"
-	"errors"
 	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/scootdev/scoot/os/temp"
 )
 
+// Read-only operations on store, limited for now to a couple essential functions.
 type StoreRead interface {
+	// Check if the bundle exists. Not guaranteed to be any cheaper than actually reading the bundle.
 	Exists(name string) (bool, error)
+
+	// Open the bundle for streaming read. It is the caller's responsibility to call Close().
 	OpenForRead(name string) (io.ReadCloser, error)
 }
 
+// Write operations on store, limited to a one-shot writing operation since bundles are immutable.
 type StoreWrite interface {
+	// Does a streaming write of the given bundle. There is no concept of partial writes (partial=failed).
 	Write(name string, data io.Reader) error
 }
 
+// Combines read and write operations on store. This is what most of the code will use.
 type Store interface {
 	StoreRead
 	StoreWrite
-}
-
-func MakeFileStore(dir *temp.TempDir) (Store, error) {
-	bundleDir, err := dir.FixedDir("bundles")
-	if err != nil {
-		return nil, err
-	}
-
-	return &fileStore{bundleDir.Dir}, nil
-}
-
-type fileStore struct {
-	bundleDir string
-}
-
-func (s *fileStore) OpenForRead(name string) (io.ReadCloser, error) {
-	bundlePath := filepath.Join(s.bundleDir, name)
-	return os.Open(bundlePath)
-}
-
-func (s *fileStore) Exists(name string) (bool, error) {
-	if strings.Contains(name, "/") {
-		return false, errors.New("'/' not allowed in name unless reading bundle contents.")
-	}
-	_, err := os.Stat(filepath.Join(s.bundleDir, name))
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func (s *fileStore) Write(name string, data io.Reader) error {
-	if strings.Contains(name, "/") {
-		return errors.New("'/' not allowed in name unless reading bundle contents.")
-	}
-	bundlePath := filepath.Join(s.bundleDir, name)
-	log.Printf("Writing %s to %s", name, bundlePath)
-	f, err := os.Create(bundlePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, data); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Cache implementation
-//TODO: implement and relocate.
-type cache struct{}
-
-func (c *cache) Read(name string) (bool, []byte) {
-	return false, nil
-}
-
-func (c *cache) Write(name string, data []byte) {}
-
-// Wraps another store and does simplistic caching of reads and exists calls.
-func MakeCachingStore(s Store) Store {
-	return &cachingStore{underlying: s}
-}
-
-type cachingStore struct {
-	underlying Store
-	cache      *cache
-}
-
-func (s *cachingStore) OpenForRead(name string) (io.ReadCloser, error) {
-	if ok, data := s.cache.Read(name); ok {
-		return ioutil.NopCloser(bytes.NewReader(data)), nil
-	}
-	return s.underlying.OpenForRead(name)
-}
-
-func (s *cachingStore) Exists(name string) (bool, error) {
-	if ok, _ := s.cache.Read(name); ok {
-		return true, nil
-	}
-	return s.underlying.Exists(name)
-}
-
-func (s *cachingStore) Write(name string, data io.Reader) error {
-	return s.underlying.Write(name, data)
 }
