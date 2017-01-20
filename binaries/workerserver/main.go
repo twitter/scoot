@@ -22,6 +22,7 @@ import (
 var thriftAddr = flag.String("thrift_addr", "localhost:9090", "port to serve thrift on")
 var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 var configFlag = flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
+var repo = flag.String("repo", "", "Absolute path to a git repo to run against (don't use with important repos yet!).")
 
 func main() {
 	flag.Parse()
@@ -38,7 +39,12 @@ func main() {
 			return endpoints.NewTwitterServer(*httpAddr, s, handlers)
 		},
 		func(tmpDir *temp.TempDir) snapshot.Filer {
-			return snapshots.MakeTempCheckouterFiler(tmpDir)
+			if *repo == "" {
+				return snapshots.MakeTempCheckouterFiler(tmpDir)
+			} else {
+				//TODO: use snapshot.NewDBAdapter() instead, and initialize with repo.
+				return snapshots.MakeTempCheckouterFiler(tmpDir)
+			}
 		},
 		func() server.WorkerUri {
 			return server.WorkerUri("http://" + *httpAddr)

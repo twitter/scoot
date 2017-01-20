@@ -1,5 +1,10 @@
 package snapshot
 
+import (
+	"os/exec"
+	"strings"
+)
+
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
 // This is useful for tools that want one file at a time, or for ScootFS to offer the data.
 // Many tools want a higher-level construct: a Filer.
@@ -42,4 +47,70 @@ type Ingester interface {
 	// Takes a mapping of source paths to be copied into corresponding destination directories.
 	// Source paths are absolute, and destination directories are relative to Checkout root.
 	IngestMap(srcToDest map[string]string) (id string, err error)
+}
+
+//TODO: this is temporary until we finalize snapshot.DB and gitDB.
+func NewDBAdapter(db DB) Filer {
+	return &dbAdapter{db: db}
+}
+
+type dbAdapter struct {
+	db DB
+}
+
+func (dba *dbAdapter) Checkout(id string) (Checkout, error) {
+	if strings.Contains(id, "-") {
+		if ident, err := dba.db.Download(ID(id)); err != nil {
+			return nil, err
+		} else {
+			id = string(ident)
+		}
+	}
+	if dir, err := dba.db.Checkout(ID(id)); err != nil {
+		return nil, err
+	} else {
+		return &dbCheckout{db: dba.db, dir: dir, id: id}, nil
+	}
+}
+
+func (dba *dbAdapter) CheckoutAt(id string, dir string) (Checkout, error) {
+	if co, err := dba.Checkout(id); err != nil {
+		return nil, err
+	} else if err := exec.Command("cp", "-r", co.Path()+"/.", dir).Run(); err != nil {
+		return nil, err
+	} else {
+		return &dbCheckout{db: dba.db, dir: dir, id: id}, nil
+	}
+}
+
+func (dba *dbAdapter) Ingest(path string) (id string, err error) {
+	if ident, err := dba.db.IngestDir(path); err != nil {
+		return "", err
+	} else if newIdent, err := dba.db.Upload(ident); err != nil {
+		return "", err
+	} else {
+		return string(newIdent), nil
+	}
+}
+
+func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (id string, err error) {
+	panic("not implemented")
+}
+
+type dbCheckout struct {
+	db  DB
+	dir string
+	id  string
+}
+
+func (dbc *dbCheckout) Path() string {
+	return dbc.dir
+}
+
+func (dbc *dbCheckout) ID() string {
+	return dbc.id
+}
+
+func (dbc *dbCheckout) Release() error {
+	return nil
 }
