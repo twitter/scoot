@@ -12,12 +12,15 @@ type Creator interface {
 	// Ingest
 
 	// IngestDir ingests a directory directly.
-	// The created Snapshot is an FSSnapshot.
+	// Creates an FSSnapshot whose contents are the same as the directory in the
+	// local filesystem at the path identified by dir.
+	// TODO(dbentley): define behavior on non-{file,directory} filetypes encountered
+	// in dir, e.g. block devices or symlinks
 	IngestDir(dir string) (ID, error)
 
 	// IngestGitCommit ingests the commit identified by commitish from ingestRepo
 	// commitish may be any string that identifies a commit
-	// The created Snapshot is a GitCommitSnapshot.
+	// Creates a GitCommitSnapshot that mirrors the ingested commit.
 	IngestGitCommit(ingestRepo *repo.Repository, commitish string) (ID, error)
 }
 

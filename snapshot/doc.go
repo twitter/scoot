@@ -1,6 +1,5 @@
 /*
-package snapshot offers access to Scoot data.
-Scoot data is largely snapshots (hence the package name).
+package snapshot offers access to Snapshot.
 
 The main entry point is the interface DB. DB holds Snapshots which can be an FSSnapshot or a GitCommitSnapshot.
 
