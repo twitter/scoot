@@ -40,7 +40,7 @@ func (db *DB) ingestDir(dir string) (snapshot, error) {
 		return nil, err
 	}
 
-	return &localSnap{sha: sha, kind: kindFSSnapshot}, nil
+	return &localSnapshot{sha: sha, kind: kindFSSnapshot}, nil
 }
 
 const tempRef = "refs/heads/scoot/__temp_for_writing"
@@ -60,7 +60,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	// TODO(dbentley): we could check if sha exists in our repo before ingesting
 
 	if err := db.shaPresent(sha); err == nil {
-		return &localSnap{sha: sha, kind: kindGitCommitSnapshot}, nil
+		return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
 	}
 
 	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
@@ -83,7 +83,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 		return nil, err
 	}
 
-	return &localSnap{sha: sha, kind: kindGitCommitSnapshot}, nil
+	return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
 }
 
 func (db *DB) shaPresent(sha string) error {

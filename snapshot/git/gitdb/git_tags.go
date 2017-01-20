@@ -40,13 +40,13 @@ func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 		return s, nil
 	case *streamSnap:
 		return s, nil
-	case *localSnap:
-		if _, err := db.dataRepo.Run("tag", fmt.Sprintf("%s/%s", b.cfg.Prefix, s.SHA()), s.SHA()); err != nil {
+	case *localSnapshot:
+		tag := makeTag(b.cfg.Prefix, s.SHA())
+		if _, err := db.dataRepo.Run("tag", tag, s.SHA()); err != nil {
 			return nil, err
 		}
 
-		refSpec := fmt.Sprintf("%s/%s", b.cfg.Prefix, s.SHA())
-		if _, err := db.dataRepo.Run("push", b.cfg.Remote, refSpec); err != nil {
+		if _, err := db.dataRepo.Run("push", b.cfg.Remote, tag); err != nil {
 			return nil, err
 		}
 		return &tagsSnap{s.SHA(), s.Kind(), b.cfg.Remote}, nil
@@ -75,10 +75,13 @@ func (s *tagsSnap) Download(db *DB) error {
 
 	// TODO(dbentley): keep stats about tag fetching (when we do it, last time we did it, etc.)
 
-	refSpec := fmt.Sprintf("%s/%s", db.tags.cfg.Prefix, s.SHA())
-	if _, err := db.dataRepo.Run("fetch", db.tags.cfg.Remote, refSpec); err != nil {
+	if _, err := db.dataRepo.Run("fetch", db.tags.cfg.Remote, makeTag(db.tags.cfg.Prefix, s.SHA())); err != nil {
 		return err
 	}
 
 	return db.shaPresent(s.SHA())
+}
+
+func makeTag(prefix string, sha string) string {
+	return fmt.Sprintf("%s/%s", prefix, sha)
 }
