@@ -86,6 +86,7 @@ func (s *tagsSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.SHA())
 }
 
+// we store tags as <prefix>/<sha>, e.g. reserved_scoot/1cdbb0e2c889a2e301589cc349615c2c1545f641
 func makeTag(prefix string, sha string) string {
 	return fmt.Sprintf("%s/%s", prefix, sha)
 }
