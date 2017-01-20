@@ -129,7 +129,7 @@ def test_many():
   start = time.time()
   allDone = False
   elapsedTime = 0
-  while not allDone and elapsedTime < 4.0:
+  while not allDone and elapsedTime < 10.0: #FIXME: seeing spurious failures in travis-ci, making this extra long for now.
       ids = runs.keys()
       statuses = proto.poll(run_ids=ids, timeout_ns=int(3000 * 1e6), return_all=False)
       if len(statuses) == len(ids):
@@ -137,7 +137,7 @@ def test_many():
       elapsedTime = time.time() - start
       
   if len(ids) != len(statuses):
-    raise Exception("runs did not finish.")
+    raise Exception("runs did not finish: %i/%i" % (len(statuses), len(ids)))
   assertCompleteStatuses(statuses, runs)
         
 
