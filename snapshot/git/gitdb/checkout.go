@@ -5,12 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 )
 
 // checkout creates a checkout of id.
-func (db *DB) checkout(id snapshot.ID) (path string, err error) {
-
+func (db *DB) checkout(id snap.ID) (path string, err error) {
 	defer func() {
 		// If we're returning our repo dir, we need to keep the work tree locked.
 		// Otherwise, we can unlock it.
@@ -19,25 +18,29 @@ func (db *DB) checkout(id snapshot.ID) (path string, err error) {
 		}
 	}()
 
-	v, err := parseID(id)
+	v, err := db.parseID(id)
 	if err != nil {
 		return "", err
 	}
 
+	if err := v.Download(db); err != nil {
+		return "", err
+	}
+
 	switch v.Kind() {
-	case kindSnapshot:
-		// For snapshots, we make a "bare checkout".
-		return db.checkoutSnapshot(v.SHA())
-	case kindSnapshotWithHistory:
-		// For snapshotWithHistory's, we use dataRepo's work tree.
-		return db.checkoutSnapshotWithHistory(v.SHA())
+	case kindFSSnapshot:
+		// For FSSnapshots, we make a "bare checkout".
+		return db.checkoutFSSnapshot(v.SHA())
+	case kindGitCommitSnapshot:
+		// For GitCommitSnapshot's, we use dataRepo's work tree.
+		return db.checkoutGitCommitSnapshot(v.SHA())
 	default:
 		return "", fmt.Errorf("cannot checkout value kind %v; id %v", v.Kind(), v.ID())
 	}
 }
 
-// checkoutSnapshot creates a new dir with a new index and checks out exactly that tree.
-func (db *DB) checkoutSnapshot(sha string) (path string, err error) {
+// checkoutFSSnapshot creates a new dir with a new index and checks out exactly that tree.
+func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 	// we don't need the work tree
 	indexDir, err := db.tmp.TempDir("git-index")
 	if err != nil {
@@ -73,10 +76,10 @@ func (db *DB) checkoutSnapshot(sha string) (path string, err error) {
 	return coDir.Dir, nil
 }
 
-// checkoutSnapshotWithHistory checks out a commit into our work tree.
+// checkoutGitCommitSnapshot checks out a commit into our work tree.
 // We could use multiple work trees, except our internal git doesn't yet have work-tree support.
 // TODO(dbentley): migrate to work-trees.
-func (db *DB) checkoutSnapshotWithHistory(sha string) (path string, err error) {
+func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 	cmds := [][]string{
 		// -d removes directories. -x ignores gitignore and removes everything.
 		// -f is force. -f the second time removes directories even if they're git repos themselves

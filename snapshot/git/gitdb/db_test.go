@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -110,21 +110,16 @@ func TestIngestCommit(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	// Create a commit in upstream, then download it. Test by checking out and comparing contents.
+	// Create a commit in upstream, then check it out in our DB and compare contents.
 
 	upstreamCommit1ID, err := commitText(fixture.upstream, "upstream_first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	streamID := snapshot.ID("stream-swh-sm-" + upstreamCommit1ID)
+	streamID := snap.ID("stream-gc-sm-" + upstreamCommit1ID)
 
-	id, err := fixture.db.Download(streamID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	co, err := fixture.db.Checkout(id)
+	co, err := fixture.db.Checkout(streamID)
 	if err != nil {
 		t.Fatal(err)
 	}

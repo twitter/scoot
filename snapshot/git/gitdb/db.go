@@ -5,22 +5,22 @@ import (
 	"sync"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// valueKind describes the kind of a Value: is it a Snapshot or a SnapshotWithHistory?
+// snapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
 // kind instead of type because type is a keyword
-type valueKind string
+type snapshotKind string
 
 const (
-	kindSnapshot            valueKind = "snap"
-	kindSnapshotWithHistory valueKind = "swh"
+	kindFSSnapshot        snapshotKind = "fs"
+	kindGitCommitSnapshot snapshotKind = "gc"
 )
 
-var kinds = map[valueKind]bool{
-	kindSnapshot:            true,
-	kindSnapshotWithHistory: true,
+var kinds = map[snapshotKind]bool{
+	kindFSSnapshot:        true,
+	kindGitCommitSnapshot: true,
 }
 
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
@@ -30,7 +30,8 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) 
 		dataRepo:  dataRepo,
 		tmp:       tmp,
 		checkouts: make(map[string]bool),
-		stream:    stream,
+		local:     &localBackend{},
+		stream:    &streamBackend{cfg: stream},
 	}
 	go result.loop()
 	return result
@@ -50,7 +51,10 @@ type DB struct {
 	dataRepo  *repo.Repository
 	tmp       *temp.TempDir
 	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
-	stream    *StreamConfig
+	local     *localBackend
+	stream    *streamBackend
+	remote    uploader // This is one of our backends that we use to upload automatically
+	// TODO(dbentley): implement uploader
 }
 
 // req is a request interface
@@ -74,18 +78,21 @@ func (db *DB) loop() {
 		switch req := req.(type) {
 		case ingestReq:
 			id, err := db.ingestDir(req.dir)
+			if err == nil && db.remote != nil {
+				id, err = db.remote.upload(id)
+			}
 			req.resultCh <- idAndError{id: id, err: err}
 		case ingestGitCommitReq:
 			id, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
+			if err == nil && db.remote != nil {
+				id, err = db.remote.upload(id)
+			}
 			req.resultCh <- idAndError{id: id, err: err}
 		case checkoutReq:
 			path, err := db.checkout(req.id)
 			req.resultCh <- stringAndError{str: path, err: err}
 		case releaseCheckoutReq:
 			req.resultCh <- db.releaseCheckout(req.path)
-		case downloadReq:
-			id, err := db.download(req.id)
-			req.resultCh <- idAndError{id: id, err: err}
 		default:
 			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
 		}
@@ -100,12 +107,12 @@ type ingestReq struct {
 func (r ingestReq) req() {}
 
 type idAndError struct {
-	id  snapshot.ID
+	id  snap.ID
 	err error
 }
 
 // IngestDir ingests a directory directly.
-func (db *DB) IngestDir(dir string) (snapshot.ID, error) {
+func (db *DB) IngestDir(dir string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestReq{dir: dir, resultCh: resultCh}
 	result := <-resultCh
@@ -121,7 +128,7 @@ type ingestGitCommitReq struct {
 func (r ingestGitCommitReq) req() {}
 
 // IngestGitCommit ingests the commit identified by commitish from ingestRepo
-func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot.ID, error) {
+func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (snap.ID, error) {
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestGitCommitReq{ingestRepo: ingestRepo, commitish: commitish, resultCh: resultCh}
 	result := <-resultCh
@@ -129,7 +136,7 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 type checkoutReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan stringAndError
 }
 
@@ -140,9 +147,9 @@ type stringAndError struct {
 	err error
 }
 
-// Checkout puts the value identified by id in the local filesystem, returning
+// Checkout puts the snapshot identified by id in the local filesystem, returning
 // the path where it lives or an error.
-func (db *DB) Checkout(id snapshot.ID) (path string, err error) {
+func (db *DB) Checkout(id snap.ID) (path string, err error) {
 	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
 	db.reqCh <- checkoutReq{id: id, resultCh: resultCh}
@@ -166,30 +173,8 @@ func (db *DB) ReleaseCheckout(path string) error {
 }
 
 type downloadReq struct {
-	id       snapshot.ID
+	id       snap.ID
 	resultCh chan idAndError
 }
 
 func (r downloadReq) req() {}
-
-// Download makes sure the value id is downloaded, returning an ID that can be used
-// on this computer or an error
-func (db *DB) Download(id snapshot.ID) (snapshot.ID, error) {
-	resultCh := make(chan idAndError)
-	db.reqCh <- downloadReq{id: id, resultCh: resultCh}
-	result := <-resultCh
-	return result.id, result.err
-}
-
-// Below here are unimplemented
-
-// UnwrapSnapshotHistory unwraps a SnapshotWithHistory and returns a Snapshot ID.
-func (db *DB) UnwrapSnapshotHistory(id snapshot.ID) (snapshot.ID, error) {
-	return "", fmt.Errorf("not yet implemented")
-}
-
-// Upload makes sure the value id is uploaded, returning an ID that can be used
-// anywhere or an error
-func (db *DB) Upload(id snapshot.ID) (snapshot.ID, error) {
-	return "", fmt.Errorf("not yet implemented")
-}
