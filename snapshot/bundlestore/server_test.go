@@ -48,6 +48,7 @@ func TestServer(t *testing.T) {
 	listener.Close()
 	addr := listener.Addr().String()
 	go MakeServer(store, Addr(addr)).Serve()
+	time.Sleep(50 * time.Millisecond) // wait a reasonable amount of time for the server to come up.
 
 	rootUri := "http://" + addr + "/bundle/"
 	client := &http.Client{Timeout: 1 * time.Second}
