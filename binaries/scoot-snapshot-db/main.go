@@ -35,7 +35,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	dataRepo, err := repo.NewRepository(wd)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo", wd, err)
+			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo: %v", wd, err)
 	}
 
 	return gitdb.MakeDB(dataRepo, tempDir, nil), nil
