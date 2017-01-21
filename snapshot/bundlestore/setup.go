@@ -72,8 +72,10 @@ func RunServer(
 	go func() {
 		errCh <- servers.bs.Serve()
 	}()
-	go func() {
-		errCh <- servers.obs.Serve()
-	}()
+	if servers.obs != nil {
+		go func() {
+			errCh <- servers.obs.Serve()
+		}()
+	}
 	log.Fatal("Error serving: ", <-errCh)
 }
