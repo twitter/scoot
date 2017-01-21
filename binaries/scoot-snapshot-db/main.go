@@ -1,10 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
-
-	"github.com/spf13/cobra"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -23,8 +22,6 @@ func main() {
 
 type injector struct{}
 
-func (i *injector) RegisterFlags(rootCmd *cobra.Command) {}
-
 func (i *injector) Inject() (snapshot.DB, error) {
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
@@ -37,7 +34,8 @@ func (i *injector) Inject() (snapshot.DB, error) {
 
 	dataRepo, err := repo.NewRepository(wd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo", wd, err)
 	}
 
 	return gitdb.MakeDB(dataRepo, tempDir, nil), nil
