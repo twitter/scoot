@@ -27,31 +27,33 @@ type streamBackend struct {
 	cfg *StreamConfig
 }
 
-// parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
-func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, parts []string) (*streamSnap, error) {
-	streamName, sha := parts[0], parts[1]
+func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*streamSnapshot, error) {
+	if len(extraParts) != 2 {
+		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 extraParts in stream id: %s", id)
+	}
+	streamName, sha := extraParts[0], extraParts[1]
 
 	if err := validSha(sha); err != nil {
 		return nil, err
 	}
 
-	return &streamSnap{streamName: streamName, kind: kind, sha: sha}, nil
+	return &streamSnapshot{streamName: streamName, kind: kind, sha: sha}, nil
 }
 
-// streamSnap represents a Snapshot that lives in a Stream
-type streamSnap struct {
+// streamSnapshot represents a Snapshot that lives in a Stream
+type streamSnapshot struct {
 	sha        string
 	kind       snapshotKind
 	streamName string
 }
 
-func (s *streamSnap) ID() snap.ID {
+func (s *streamSnapshot) ID() snap.ID {
 	return snap.ID(fmt.Sprintf(streamIDFmt, streamIDText, s.kind, s.streamName, s.sha))
 }
-func (s *streamSnap) Kind() snapshotKind { return s.kind }
-func (s *streamSnap) SHA() string        { return s.sha }
+func (s *streamSnapshot) Kind() snapshotKind { return s.kind }
+func (s *streamSnapshot) SHA() string        { return s.sha }
 
-func (s *streamSnap) Download(db *DB) error {
+func (s *streamSnapshot) Download(db *DB) error {
 	if err := db.shaPresent(s.SHA()); err == nil {
 		// Already present!
 		return nil

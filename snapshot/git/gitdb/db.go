@@ -23,8 +23,16 @@ var kinds = map[snapshotKind]bool{
 	kindGitCommitSnapshot: true,
 }
 
+type AutoUploadDest int
+
+const (
+	AutoUploadNone AutoUploadDest = iota
+	AutoUploadTags
+)
+
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
-func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) *DB {
+func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
+	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
 	result := &DB{
 		reqCh:     make(chan req),
 		dataRepo:  dataRepo,
@@ -32,7 +40,17 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig) 
 		checkouts: make(map[string]bool),
 		local:     &localBackend{},
 		stream:    &streamBackend{cfg: stream},
+		tags:      &tagsBackend{cfg: tags},
 	}
+
+	switch autoUploadDest {
+	case AutoUploadNone:
+	case AutoUploadTags:
+		result.remote = result.tags
+	default:
+		panic(fmt.Errorf("unknown GitDB AutoUpload destination: %v", autoUploadDest))
+	}
+
 	go result.loop()
 	return result
 }
@@ -53,6 +71,7 @@ type DB struct {
 	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local     *localBackend
 	stream    *streamBackend
+	tags      *tagsBackend
 	remote    uploader // This is one of our backends that we use to upload automatically
 	// TODO(dbentley): implement uploader
 }
@@ -77,17 +96,26 @@ func (db *DB) loop() {
 		}
 		switch req := req.(type) {
 		case ingestReq:
-			id, err := db.ingestDir(req.dir)
+			s, err := db.ingestDir(req.dir)
 			if err == nil && db.remote != nil {
-				id, err = db.remote.upload(id)
+				s, err = db.remote.upload(s, db)
 			}
-			req.resultCh <- idAndError{id: id, err: err}
+			if err != nil {
+				req.resultCh <- idAndError{err: err}
+			} else {
+				req.resultCh <- idAndError{id: s.ID()}
+			}
 		case ingestGitCommitReq:
-			id, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
+			s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
 			if err == nil && db.remote != nil {
-				id, err = db.remote.upload(id)
+				s, err = db.remote.upload(s, db)
 			}
-			req.resultCh <- idAndError{id: id, err: err}
+
+			if err != nil {
+				req.resultCh <- idAndError{err: err}
+			} else {
+				req.resultCh <- idAndError{id: s.ID()}
+			}
 		case checkoutReq:
 			path, err := db.checkout(req.id)
 			req.resultCh <- stringAndError{str: path, err: err}

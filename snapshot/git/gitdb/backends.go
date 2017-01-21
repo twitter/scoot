@@ -9,13 +9,13 @@ import (
 
 // backend allows getting a snapshot for an ID, which can then be used to download the ID
 type backend interface {
-	parseID(id string, kind string, parts []string) (snapshot, error)
+	parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error)
 }
 
 // upload allow uploading the ID. Note: The ID to upload will often be in another backend.
 // E.g., for the git tags uploader, it will often pass a local snapshot
 type uploader interface {
-	upload(id snap.ID) (snap.ID, error)
+	upload(s snapshot, db *DB) (snapshot, error)
 	backend
 }
 
@@ -50,6 +50,8 @@ func (db *DB) parseID(id snap.ID) (snapshot, error) {
 		return db.local.parseID(id, kind, parts[2:])
 	case streamIDText:
 		return db.stream.parseID(id, kind, parts[2:])
+	case tagsIDText:
+		return db.tags.parseID(id, kind, parts[2:])
 	default:
 		return nil, fmt.Errorf("unrecognized snapshot backend %s in ID %s", backendType, id)
 	}
