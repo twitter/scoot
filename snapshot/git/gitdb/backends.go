@@ -9,7 +9,7 @@ import (
 
 // backend allows getting a snapshot for an ID, which can then be used to download the ID
 type backend interface {
-	parseID(id snap.ID, kind snapshotKind, parts []string) (snapshot, error)
+	parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error)
 }
 
 // upload allow uploading the ID. Note: The ID to upload will often be in another backend.

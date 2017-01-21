@@ -172,6 +172,7 @@ func (f *dbFixture) close() {
 	f.simpleDB.Close()
 	f.authorDB.Close()
 	f.consumerDB.Close()
+	os.RemoveAll(f.tmp.Dir)
 }
 
 // Create a new repo in tmp with directory name starting with name
@@ -235,12 +236,18 @@ func assertFileContents(dir string, base string, expected string) error {
 	return nil
 }
 
-func setup() (*dbFixture, error) {
+func setup() (f *dbFixture, err error) {
 	// git init
 	tmp, err := temp.NewTempDir("", "db_test")
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		if err != nil {
+			os.RemoveAll(tmp.Dir)
+		}
+	}()
 
 	external, err := createRepo(tmp, "external-repo")
 	if err != nil {
@@ -342,10 +349,10 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	var err error
 	fixture, err = setup()
+	defer fixture.close()
 	if err != nil {
 		log.Fatal(err)
 	}
 	result := m.Run()
-	fixture.close()
 	os.Exit(result)
 }

@@ -27,12 +27,11 @@ type streamBackend struct {
 	cfg *StreamConfig
 }
 
-// parse id as a stream ID, with kind and remaining parts (after scheme and kind were parsed)
-func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, parts []string) (*streamSnapshot, error) {
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 parts in stream id: %s", id)
+func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*streamSnapshot, error) {
+	if len(extraParts) != 2 {
+		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 extraParts in stream id: %s", id)
 	}
-	streamName, sha := parts[0], parts[1]
+	streamName, sha := extraParts[0], extraParts[1]
 
 	if err := validSha(sha); err != nil {
 		return nil, err
