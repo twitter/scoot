@@ -140,19 +140,7 @@ func TestInit(t *testing.T) {
 
 	// our initer will fetch from the bundle "mirror"
 
-	// our test plan is:
 	// create empty repos for rw, ro, and data
-	// add ro as a remote to data
-	// create a commit "first" in rw
-	// create a bundle with rw's master; set it as mirror
-	//
-	// create a commit "second" in rw
-	// db.Checkout(first) will work only if initer is working
-	//   (because data's only upstream is ro, which doesn't have first at all)
-	// db.Checkout(second) should fail
-	// pull from rw to ro
-	// db.Checkout(second) should succeed
-
 	rw, err := createRepo(fixture.tmp, "rw-repo")
 	if err != nil {
 	}
@@ -162,15 +150,18 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// add ro as a remote to data
 	if _, err := ro.Run("remote", "add", "origin", rw.Dir()); err != nil {
 		t.Fatal(err)
 	}
 
+	// create a commit "first" in rw
 	firstCommitID, err := commitText(rw, "stream_init_first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// create a bundle with rw's master; set it as mirror
 	f, err := fixture.tmp.TempFile("bundle")
 	if err != nil {
 		t.Fatal(err)
@@ -183,13 +174,14 @@ func TestInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// create a commit "second" in rw
 	secondCommitID, err := commitText(rw, "stream_init_second")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	streamCfg := &StreamConfig{
-		Name:    "ro",
+		Name:    "sro", // short for Source ReadOnly
 		Remote:  "ro",
 		RefSpec: "refs/remotes/ro/master",
 	}
@@ -197,19 +189,28 @@ func TestInit(t *testing.T) {
 	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, AutoUploadNone)
 	defer db.Close()
 
-	firstID := db.IDForStreamCommitSHA("ro", firstCommitID)
-	secondID := db.IDForStreamCommitSHA("ro", secondCommitID)
+	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
+	secondID := db.IDForStreamCommitSHA("sro", secondCommitID)
 
+	// db.Checkout(first) will work only if initer is working
+	//   (because data's only upstream is ro, which doesn't have first at all)
 	co, err := db.Checkout(firstID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	db.ReleaseCheckout(co)
 
+	// db.Checkout(second) should fail
+	if _, err = db.Checkout(secondID); err == nil {
+		t.Fatal("shouldn't be able to see second")
+	}
+
+	// pull from rw to ro
 	if _, err := ro.Run("pull", "origin", "master"); err != nil {
 		t.Fatal(err)
 	}
 
+	// db.Checkout(second) should succeed
 	co, err = db.Checkout(secondID)
 	if err != nil {
 		t.Fatal(err)
@@ -225,6 +226,7 @@ func TestInitFails(t *testing.T) {
 	}
 
 	db := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, AutoUploadNone)
+	defer db.Close()
 
 	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
 	if err != nil {
