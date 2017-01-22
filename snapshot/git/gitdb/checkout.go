@@ -10,6 +10,10 @@ import (
 
 // checkout creates a checkout of id.
 func (db *DB) checkout(id snap.ID) (path string, err error) {
+	if err := db.init(); err != nil {
+		return "", err
+	}
+
 	defer func() {
 		// If we're returning our repo dir, we need to keep the work tree locked.
 		// Otherwise, we can unlock it.

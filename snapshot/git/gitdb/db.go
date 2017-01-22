@@ -73,7 +73,8 @@ type DB struct {
 	stream    *streamBackend
 	tags      *tagsBackend
 	remote    uploader // This is one of our backends that we use to upload automatically
-	// TODO(dbentley): implement uploader
+	inited    bool
+	err       error
 }
 
 // req is a request interface
@@ -86,8 +87,20 @@ func (db *DB) Close() {
 	close(db.reqCh)
 }
 
+func (db *DB) init() error {
+	if !db.inited {
+		db.inited = true
+		if db.stream.cfg != nil && db.stream.cfg.Initer != nil {
+			db.err = db.stream.cfg.Initer.Init(db.dataRepo)
+		}
+	}
+	return db.err
+}
+
 // loop loops serving requests serially
 func (db *DB) loop() {
+	db.init()
+
 	for db.reqCh != nil {
 		req, ok := <-db.reqCh
 		if !ok {
@@ -206,3 +219,8 @@ type downloadReq struct {
 }
 
 func (r downloadReq) req() {}
+
+func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
+	s := &streamSnapshot{sha: sha, kind: kindGitCommitSnapshot, streamName: streamName}
+	return s.ID()
+}

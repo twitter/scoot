@@ -115,7 +115,7 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	streamID := snap.ID("stream-gc-sm-" + upstreamCommit1ID)
+	streamID := fixture.simpleDB.IDForStreamCommitSHA("sm", upstreamCommit1ID)
 
 	co, err := fixture.simpleDB.Checkout(streamID)
 	if err != nil {
@@ -128,6 +128,112 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestStreamInit(t *testing.T) {
+	// This test doesn't use our fixture DBs because it has such specific git setup
+	// Our git repos are:
+	// rw: the main, upstream read-write repo
+	// mirror: where to init from (actually not a repo; just a bundle)
+	// ro: a read-only version of rw
+	// data: the data repo for our db
+
+	// our initer will fetch from the bundle "mirror"
+
+	// our test plan is:
+	// create empty repos for rw, ro, and data
+	// add ro as a remote to data
+	// create a commit "first" in rw
+	// create a bundle with rw's master; set it as mirror
+	//
+	// create a commit "second" in rw
+	// db.Checkout(first) will work only if initer is working
+	//   (because data's only upstream is ro, which doesn't have first at all)
+	// db.Checkout(second) should fail
+	// pull from rw to ro
+	// db.Checkout(second) should succeed
+
+	rw, err := createRepo(fixture.tmp, "rw-repo")
+	if err != nil {
+	}
+
+	ro, err := createRepo(fixture.tmp, "ro-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ro.Run("remote", "add", "origin", rw.Dir()); err != nil {
+		t.Fatal(err)
+	}
+
+	dataRepo, err := createRepo(fixture.tmp, "data-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := dataRepo.Run("remote", "add", "ro", ro.Dir()); err != nil {
+		t.Fatal(err)
+	}
+
+	firstCommitID, err := commitText(rw, "stream_init_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := fixture.tmp.TempFile("bundle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mirror := f.Name()
+	f.Close()
+
+	_, err = rw.Run("bundle", "create", mirror, "master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secondCommitID, err := commitText(rw, "stream_init_second")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamCfg := &StreamConfig{
+		Name:    "ro",
+		Remote:  "ro",
+		RefSpec: "refs/remotes/ro/master",
+		Initer:  &bundleIniter{filename: mirror},
+	}
+
+	db := MakeDB(dataRepo, fixture.tmp, streamCfg, nil, AutoUploadNone)
+	defer db.Close()
+
+	firstID := db.IDForStreamCommitSHA("ro", firstCommitID)
+	secondID := db.IDForStreamCommitSHA("ro", secondCommitID)
+
+	co, err := db.Checkout(firstID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.ReleaseCheckout(co)
+
+	if _, err := ro.Run("pull", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	co, err = db.Checkout(secondID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.ReleaseCheckout(co)
+}
+
+type bundleIniter struct {
+	filename string
+}
+
+func (i *bundleIniter) Init(r *repo.Repository) error {
+	_, err := r.Run("pull", i.filename, "master")
+	return err
 }
 
 func TestTags(t *testing.T) {
@@ -234,6 +340,16 @@ func assertFileContents(dir string, base string, expected string) error {
 		return fmt.Errorf("bad contents: %q %q", expected, actual)
 	}
 	return nil
+}
+
+// asserts file `base` in snapshot `id` (from `db`) has contents `expected` or errors
+func assertSnapshotContents(db snap.DB, id snap.ID, base string, expected string) error {
+	co, err := db.Checkout(id)
+	if err != nil {
+		return err
+	}
+	defer db.ReleaseCheckout(co)
+	return assertFileContents(co, base, expected)
 }
 
 func setup() (f *dbFixture, err error) {

@@ -9,6 +9,10 @@ import (
 )
 
 func (db *DB) ingestDir(dir string) (snapshot, error) {
+	if err := db.init(); err != nil {
+		return nil, err
+	}
+
 	// We ingest a dir using git commands:
 	// First, create a new index file.
 	// Second, add all the files in the work tree.
@@ -46,6 +50,10 @@ func (db *DB) ingestDir(dir string) (snapshot, error) {
 const tempRef = "refs/heads/scoot/__temp_for_writing"
 
 func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot, error) {
+	if err := db.init(); err != nil {
+		return nil, err
+	}
+
 	sha, err := ingestRepo.RunSha("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", commitish))
 	if err != nil {
 		return nil, fmt.Errorf("not a valid commit: %s, %v", commitish, err)

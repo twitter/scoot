@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 // A Stream is a sequence of SnapshotWithHistory's that updates via a
@@ -18,6 +19,12 @@ type StreamConfig struct {
 
 	// Name of ref to follow in data repo (e.g. refs/remotes/upstream/master)
 	RefSpec string
+
+	Initer StreamIniter
+}
+
+type StreamIniter interface {
+	Init(repo *repo.Repository) error
 }
 
 const streamIDText = "stream"
