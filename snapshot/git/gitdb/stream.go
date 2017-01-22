@@ -65,14 +65,20 @@ func (s *streamSnapshot) Download(db *DB) error {
 	if db.stream == nil {
 		return fmt.Errorf("cannot download snapshot %s: no streams configured", s.ID())
 	}
-	if s.streamName != db.stream.cfg.Name {
-		return fmt.Errorf("cannot download snapshot %s: does not match stream %s", s.ID(), db.stream.cfg.Name)
-	}
 
-	// TODO(dbentley): keep stats about fetching (when we do it, last time we did it, etc.)
-	if _, err := db.dataRepo.Run("fetch", db.stream.cfg.Remote); err != nil {
+	if err := db.stream.updateStream(s.streamName, db); err != nil {
 		return err
 	}
 
 	return db.shaPresent(s.SHA())
+}
+
+func (b *streamBackend) updateStream(name string, db *DB) error {
+	if name != db.stream.cfg.Name {
+		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
+	}
+
+	// TODO(dbentley): keep stats about fetching (when we do it, last time we did it, etc.)
+	_, err := db.dataRepo.Run("fetch", db.stream.cfg.Remote)
+	return err
 }

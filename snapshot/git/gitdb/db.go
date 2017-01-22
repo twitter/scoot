@@ -28,11 +28,12 @@ type AutoUploadDest int
 const (
 	AutoUploadNone AutoUploadDest = iota
 	AutoUploadTags
+	AutoUploadBundlestore
 )
 
 // MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
 	result := &DB{
 		reqCh:     make(chan req),
 		dataRepo:  dataRepo,
@@ -41,12 +42,15 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
 		local:     &localBackend{},
 		stream:    &streamBackend{cfg: stream},
 		tags:      &tagsBackend{cfg: tags},
+		bundles:   &bundlestoreBackend{cfg: bundles},
 	}
 
 	switch autoUploadDest {
 	case AutoUploadNone:
 	case AutoUploadTags:
 		result.remote = result.tags
+	case AutoUploadBundlestore:
+		result.remote = result.bundles
 	default:
 		panic(fmt.Errorf("unknown GitDB AutoUpload destination: %v", autoUploadDest))
 	}
@@ -72,6 +76,7 @@ type DB struct {
 	local     *localBackend
 	stream    *streamBackend
 	tags      *tagsBackend
+	bundles   *bundlestoreBackend
 	remote    uploader // This is one of our backends that we use to upload automatically
 	// TODO(dbentley): implement uploader
 }
