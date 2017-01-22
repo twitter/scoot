@@ -73,6 +73,7 @@ func (s *streamSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.SHA())
 }
 
+// updateStream updates the named stream
 func (b *streamBackend) updateStream(name string, db *DB) error {
 	if name != db.stream.cfg.Name {
 		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
