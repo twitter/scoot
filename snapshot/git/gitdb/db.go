@@ -46,7 +46,7 @@ func MakeDB(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
 	switch autoUploadDest {
 	case AutoUploadNone:
 	case AutoUploadTags:
-		result.remote = result.tags
+		result.autoUpload = result.tags
 	default:
 		panic(fmt.Errorf("unknown GitDB AutoUpload destination: %v", autoUploadDest))
 	}
@@ -66,15 +66,15 @@ type DB struct {
 	workTreeLock sync.Mutex
 
 	// All data below here should be accessed only by the loop() goroutine
-	dataRepo  *repo.Repository
-	tmp       *temp.TempDir
-	checkouts map[string]bool // checkouts stores bare checkouts, but not the git worktree
-	local     *localBackend
-	stream    *streamBackend
-	tags      *tagsBackend
-	remote    uploader // This is one of our backends that we use to upload automatically
-	inited    bool
-	err       error
+	dataRepo   *repo.Repository
+	tmp        *temp.TempDir
+	checkouts  map[string]bool // checkouts stores bare checkouts, but not the git worktree
+	local      *localBackend
+	stream     *streamBackend
+	tags       *tagsBackend
+	autoUpload uploader // This is one of our backends that we use to upload automatically
+	inited     bool
+	err        error
 }
 
 // req is a request interface
@@ -108,8 +108,8 @@ func (db *DB) loop() {
 		switch req := req.(type) {
 		case ingestReq:
 			s, err := db.ingestDir(req.dir)
-			if err == nil && db.remote != nil {
-				s, err = db.remote.upload(s, db)
+			if err == nil && db.autoUpload != nil {
+				s, err = db.autoUpload.upload(s, db)
 			}
 			if err != nil {
 				req.resultCh <- idAndError{err: err}
@@ -118,8 +118,8 @@ func (db *DB) loop() {
 			}
 		case ingestGitCommitReq:
 			s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
-			if err == nil && db.remote != nil {
-				s, err = db.remote.upload(s, db)
+			if err == nil && db.autoUpload != nil {
+				s, err = db.autoUpload.upload(s, db)
 			}
 
 			if err != nil {
