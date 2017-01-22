@@ -87,19 +87,17 @@ func (db *DB) Close() {
 	close(db.reqCh)
 }
 
+// initialize the db. must be called from loop()
 func (db *DB) init() error {
-	if !db.inited {
-		db.inited = true
-		if db.stream.cfg != nil && db.stream.cfg.Initer != nil {
-			db.err = db.stream.cfg.Initer.Init(db.dataRepo)
-		}
+	if db.stream.cfg != nil && db.stream.cfg.Initer != nil {
+		return db.stream.cfg.Initer.Init(db.dataRepo)
 	}
-	return db.err
+	return nil
 }
 
 // loop loops serving requests serially
 func (db *DB) loop() {
-	db.init()
+	db.err = db.init()
 
 	for db.reqCh != nil {
 		req, ok := <-db.reqCh

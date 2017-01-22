@@ -10,8 +10,8 @@ import (
 
 // checkout creates a checkout of id.
 func (db *DB) checkout(id snap.ID) (path string, err error) {
-	if err := db.init(); err != nil {
-		return "", err
+	if db.err != nil {
+		return "", db.err
 	}
 
 	defer func() {
