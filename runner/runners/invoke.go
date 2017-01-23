@@ -75,7 +75,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}()
 		return runner.AbortStatus(id)
 	case checkoutAndErr := <-checkoutCh:
-		checkout, err = checkoutAndErr.checkout, checkoutAndErr.err
+		if checkout, err = checkoutAndErr.checkout, checkoutAndErr.err; err != nil {
+			return runner.ErrorStatus(id, err)
+		}
 	}
 
 	defer checkout.Release()
