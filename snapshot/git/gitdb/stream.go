@@ -75,11 +75,11 @@ func (s *streamSnapshot) Download(db *DB) error {
 
 // updateStream updates the named stream
 func (b *streamBackend) updateStream(name string, db *DB) error {
-	if name != db.stream.cfg.Name {
+	if name != b.cfg.Name {
 		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
 	}
 
 	// TODO(dbentley): keep stats about fetching (when we do it, last time we did it, etc.)
-	_, err := db.dataRepo.Run("fetch", db.stream.cfg.Remote)
+	_, err := db.dataRepo.Run("fetch", b.cfg.Remote)
 	return err
 }

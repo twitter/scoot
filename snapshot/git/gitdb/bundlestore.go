@@ -44,6 +44,8 @@ func (b *bundlestoreBackend) upload(s snapshot, db *DB) (snapshot, error) {
 	case *tagsSnapshot:
 		return s, nil
 	case *streamSnapshot:
+		// TODO(dbentley): we should upload to bundlestore if this commit is so recent
+		// it might not be on every worker already.
 		return s, nil
 	case *bundlestoreSnapshot:
 		return s, nil
@@ -54,10 +56,13 @@ func (b *bundlestoreBackend) upload(s snapshot, db *DB) (snapshot, error) {
 	}
 }
 
-// git bundle create takes a rev list; it requires that it include a postiive ref
+// git bundle create takes a rev list; it requires that it include a ref
 // so we can't just do:
 // git bundle create 545c88d71d40a49ebdfb1d268c724110793330d2..3060a3a519888957e13df75ffd09ea50f97dd03b
 // instead, we have to write a temporary ref
+// (nb: the subtracted revisions can be a commit, not a ref, so you can do:
+// git bundle create 545c88d71d40a49ebdfb1d268c724110793330d2..master
+// )
 const bundlestoreTempRef = "reserved_scoot/bundlestore/__temp_for_writing"
 
 func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn snapshot, err error) {
@@ -65,7 +70,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	commitSha := s.sha
 
 	// the revList to create the bundle
-	// unless we can find a better merge base, we'll just include the commit
+	// unless we can find a merge base, we'll just include the commit
 	revList := bundlestoreTempRef
 
 	// the name of the stream that this bundle requires
@@ -73,6 +78,10 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 	switch s.kind {
 	case kindGitCommitSnapshot:
+		// For a git commit, we want a bundle that has just the diff compared to the stream
+		// so find the merge base with our stream
+
+		// The generated bundle will require either no prereqs or a commit that is in the stream
 		if db.stream.cfg != nil && db.stream.cfg.RefSpec != "" {
 			streamHead, err := db.dataRepo.Run("rev-parse", db.stream.cfg.RefSpec)
 			if err != nil {
@@ -89,6 +98,13 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 		}
 	case kindFSSnapshot:
+		// For an FSSnapshot (which is stored as a git tree), create a git commit
+		// with no parent.
+		// (Eventually we could get smarter, e.g., if it's storing the output of running
+		// cmd foo, we could try to find another run of foo and use that as a parent
+		// to reduce the delta)
+
+		// The generated bundle will require no prereqs.
 		commitSha, err = db.dataRepo.RunSha("commit-tree", commitSha, "-m",
 			"commit to distribute GitDB FSSnapshot via bundlestore")
 	default:
@@ -165,6 +181,14 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	}
 
 	// we are missing prereqs, so let's try updating the stream that's the basis of the bundle
+	// this likely happened because:
+	// we're in a worker that started at time T1, when master pointed at commit C1
+	// at time T2, a commit C2 was created in our stream
+	// at time T3, a user ingested a git commit C3 whose ancestor is C2
+	// GitDB in their scoot-snapshot-db picked a merge-base of C2, because T3-T2 was sufficiently
+	// large (say, a half hour) that it's reasonable to assume its easy to get.
+	// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
+	// update our stream.
 	if err := db.stream.updateStream(s.streamName, db); err != nil {
 		return err
 	}
