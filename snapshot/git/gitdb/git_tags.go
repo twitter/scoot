@@ -46,6 +46,8 @@ func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 		return s, nil
 	case *streamSnapshot:
 		return s, nil
+	case *bundlestoreSnapshot:
+		return s, nil
 	case *localSnapshot:
 		// create the tag and then push it
 		tag := makeTag(b.cfg.Prefix, s.SHA())
@@ -60,7 +62,6 @@ func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 	default:
 		return nil, fmt.Errorf("cannot upload %v: unknown type %T", s, s)
 	}
-
 }
 
 // tagsSnapshot represents a Snapshot that lives in a Tag

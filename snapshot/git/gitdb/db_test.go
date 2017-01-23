@@ -12,6 +12,7 @@ import (
 
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -23,10 +24,8 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	contents := []byte("bar")
-	filename := filepath.Join(ingestDir.Dir, "foo.txt")
-
-	if err = ioutil.WriteFile(filename, contents, 0777); err != nil {
+	contents := "bar"
+	if err := writeFileText(ingestDir.Dir, "foo.txt", contents); err != nil {
 		t.Fatal(err)
 	}
 
@@ -40,7 +39,7 @@ func TestIngestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := assertFileContents(path, "foo.txt", string(contents)); err != nil {
+	if err := assertFileContents(path, "foo.txt", contents); err != nil {
 		t.Fatal(err)
 	}
 
@@ -82,7 +81,7 @@ func TestIngestCommit(t *testing.T) {
 	}
 
 	// Write temporary data into checkouts to make sure it's cleaned
-	if err = ioutil.WriteFile(filepath.Join(co, "scratch.txt"), []byte("1"), 0777); err != nil {
+	if err := writeFileText(co, "scratch.txt", "1"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -133,12 +132,12 @@ func TestStream(t *testing.T) {
 func TestTags(t *testing.T) {
 	// Create a commit in external, then ingest into authorDB, then check it out in our regular db
 
-	externalCommitID, err := commitText(fixture.tags, "tags_first")
+	externalCommitID, err := commitText(fixture.external, "tags_first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := fixture.authorDB.IngestGitCommit(fixture.tags, externalCommitID)
+	id, err := fixture.authorDB.IngestGitCommit(fixture.external, externalCommitID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,6 +150,89 @@ func TestTags(t *testing.T) {
 	defer fixture.consumerDB.ReleaseCheckout(co)
 
 	if err := assertFileContents(co, "file.txt", "tags_first"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBundlestore(t *testing.T) {
+	authorDataRepo, err := createRepo(fixture.tmp, "author-data-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := authorDataRepo.Run("remote", "add", "upstream", fixture.upstream.Dir()); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := authorDataRepo.Run("fetch", "upstream"); err != nil {
+		t.Fatal(err)
+	}
+
+	streamCfg := &StreamConfig{
+		Name:    "sm",
+		Remote:  "upstream",
+		RefSpec: "refs/remotes/upstream/master",
+	}
+
+	tmp, err := fixture.tmp.TempDir("bundles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := bundlestore.MakeFileStore(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bundleCfg := &BundlestoreConfig{
+		Store: store,
+	}
+
+	authorDB := MakeDB(authorDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
+
+	consumerDataRepo, err := createRepo(fixture.tmp, "consumer-data-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := consumerDataRepo.Run("remote", "add", "upstream", fixture.upstream.Dir()); err != nil {
+		t.Fatal(err)
+	}
+
+	consumerDB := MakeDB(consumerDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
+
+	externalCommitID, err := commitText(fixture.external, "bundlestore_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := authorDB.IngestGitCommit(fixture.external, externalCommitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO(dbentley): test the bundle has only the changed objects
+	if err := assertSnapshotContents(consumerDB, id, "file.txt", "bundlestore_first"); err != nil {
+		t.Fatal(err)
+	}
+
+	tmp, err = fixture.tmp.TempDir("output")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := writeFileText(tmp.Dir, "stdout.txt", "stdout"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFileText(tmp.Dir, "stderr.txt", "stderr"); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err = consumerDB.IngestDir(tmp.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := assertSnapshotContents(authorDB, id, "stdout.txt", "stdout"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -207,9 +289,7 @@ func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
 
 // Make a commit in repo r with "file.txt" having contents text
 func commitText(r *repo.Repository, text string) (string, error) {
-	// Create a commit with file.txt = "first"
-	filename := filepath.Join(r.Dir(), "file.txt")
-	if err := ioutil.WriteFile(filename, []byte(text), 0777); err != nil {
+	if err := writeFileText(r.Dir(), "file.txt", text); err != nil {
 		return "", err
 	}
 
@@ -223,6 +303,11 @@ func commitText(r *repo.Repository, text string) (string, error) {
 	return r.RunSha("rev-parse", "HEAD")
 }
 
+func writeFileText(dir string, base string, text string) error {
+	filename := filepath.Join(dir, base)
+	return ioutil.WriteFile(filename, []byte(text), 0777)
+}
+
 // asserts file `base` in `dir` has contents `expected` or errors
 func assertFileContents(dir string, base string, expected string) error {
 	actualBytes, err := ioutil.ReadFile(filepath.Join(dir, base))
@@ -234,6 +319,16 @@ func assertFileContents(dir string, base string, expected string) error {
 		return fmt.Errorf("bad contents: %q %q", expected, actual)
 	}
 	return nil
+}
+
+// asserts file `base` in snapshot `id` (from `db`) has contents `expected` or errors
+func assertSnapshotContents(db snap.DB, id snap.ID, base string, expected string) error {
+	co, err := db.Checkout(id)
+	if err != nil {
+		return err
+	}
+	defer db.ReleaseCheckout(co)
+	return assertFileContents(co, base, expected)
 }
 
 func setup() (f *dbFixture, err error) {
@@ -297,7 +392,7 @@ func setup() (f *dbFixture, err error) {
 		Prefix: "scoot_reserved",
 	}
 
-	simpleDB := MakeDB(dataRepo, tmp, streamCfg, tagsCfg, AutoUploadNone)
+	simpleDB := MakeDB(dataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
 
 	authorDataRepo, err := createRepo(tmp, "author-data-repo")
 	if err != nil {
@@ -316,7 +411,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	authorDB := MakeDB(authorDataRepo, tmp, streamCfg, tagsCfg, AutoUploadTags)
+	authorDB := MakeDB(authorDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadTags)
 
 	consumerDataRepo, err := createRepo(tmp, "consumer-data-repo")
 	if err != nil {
@@ -331,7 +426,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	consumerDB := MakeDB(consumerDataRepo, tmp, streamCfg, tagsCfg, AutoUploadNone)
+	consumerDB := MakeDB(consumerDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
 
 	return &dbFixture{
 		tmp:        tmp,

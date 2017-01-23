@@ -52,6 +52,8 @@ func (db *DB) parseID(id snap.ID) (snapshot, error) {
 		return db.stream.parseID(id, kind, parts[2:])
 	case tagsIDText:
 		return db.tags.parseID(id, kind, parts[2:])
+	case bundlestoreIDText:
+		return db.bundles.parseID(id, kind, parts[2:])
 	default:
 		return nil, fmt.Errorf("unrecognized snapshot backend %s in ID %s", backendType, id)
 	}
