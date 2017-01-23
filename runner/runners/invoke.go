@@ -143,8 +143,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		defer os.RemoveAll(tmp.Dir)
 		outPath := stdout.AsFile()
 		errPath := stderr.AsFile()
-		os.Rename(outPath, filepath.Join(tmp.Dir, filepath.Base(outPath)))
-		os.Rename(errPath, filepath.Join(tmp.Dir, filepath.Base(errPath)))
+		os.Rename(outPath, filepath.Join(tmp.Dir, "STDOUT"))
+		os.Rename(errPath, filepath.Join(tmp.Dir, "STDERR"))
 		snapshotID, err := inv.filer.Ingest(tmp.Dir)
 		if err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))
