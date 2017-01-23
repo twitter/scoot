@@ -40,12 +40,8 @@ func main() {
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(*obsAddr, s, nil)
 		},
-		func(tmp *temp.TempDir) bundlestore.Store {
-			if store, err := bundlestore.MakeFileStore(tmp); err != nil {
-				panic("Could not make filestore: " + err.Error())
-			} else {
-				return store
-			}
+		func(tmp *temp.TempDir) (bundlestore.Store, error) {
+			return bundlestore.MakeFileStoreInTemp(tmp)
 		},
 		func() *scootapi.CloudScootClient {
 			transportFactory := thrift.NewTTransportFactory()

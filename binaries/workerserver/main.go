@@ -64,7 +64,7 @@ func main() {
 				*store = tmpDir.Dir
 			}
 			if !strings.HasPrefix(*store, "http://") {
-				if s, err = bundlestore.MakeFileStore(&temp.TempDir{Dir: *store}); err != nil {
+				if s, err = bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: *store}); err != nil {
 					return nil, err
 				}
 			} else {

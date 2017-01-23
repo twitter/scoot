@@ -41,25 +41,32 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 type DBInjector interface {
 	// TODO(dbentley): we probably want a way to register flags
-	Inject(storeDir *temp.TempDir) (snapshot.DB, error)
+	RegisterFlags(cmd *cobra.Command)
+	Inject() (snapshot.DB, error)
 }
 
 func MakeDBCLI(injector DBInjector) *cobra.Command {
-	rootCmd := &cobra.Command{
+	rootCobraCmd := &cobra.Command{
 		Use:   "scoot-snapshot-db",
 		Short: "scoot snapshot db CLI",
 	}
+
+	injector.RegisterFlags(rootCobraCmd)
+
 	add := func(subCmd dbCommand, parentCobraCmd *cobra.Command) {
 		cmd := subCmd.register()
 		cmd.RunE = func(innerCmd *cobra.Command, args []string) error {
-			return subCmd.run(injector, innerCmd, args)
+			db, err := injector.Inject()
+			if err != nil {
+				return err
+			}
+			return subCmd.run(db, innerCmd, args)
 		}
 		parentCobraCmd.AddCommand(cmd)
 	}
@@ -68,21 +75,20 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 		Use:   "create",
 		Short: "create a snapshot",
 	}
-	rootCmd.AddCommand(createCobraCmd)
+	rootCobraCmd.AddCommand(createCobraCmd)
 
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 
-	return rootCmd
+	return rootCobraCmd
 }
 
 type dbCommand interface {
 	register() *cobra.Command
-	run(injector DBInjector, cmd *cobra.Command, args []string) error
+	run(db snapshot.DB, cmd *cobra.Command, args []string) error
 }
 
 type ingestGitCommitCommand struct {
 	commit string
-	store  string
 }
 
 func (c *ingestGitCommitCommand) register() *cobra.Command {
@@ -91,20 +97,10 @@ func (c *ingestGitCommitCommand) register() *cobra.Command {
 		Short: "ingests a git commit into cwd and optionally uploads to a file-backed bundlestore.",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
-	cmd.Flags().StringVar(&c.store, "bundlestore", "", "optional: absolute path for file-backed bundlestore.")
 	return cmd
 }
 
-func (c *ingestGitCommitCommand) run(injector DBInjector, _ *cobra.Command, _ []string) error {
-	var storeDir *temp.TempDir
-	if c.store != "" {
-		storeDir = &temp.TempDir{Dir: c.store}
-	}
-	db, err := injector.Inject(storeDir)
-	if err != nil {
-		return fmt.Errorf("scoot-snapshot-db could not create db: %v", err)
-	}
-
+func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("cannot get working directory: wd")

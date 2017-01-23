@@ -103,7 +103,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(tmpDir *temp.TempDir) (bundlestore.Store, error) {
-			return bundlestore.MakeFileStore(tmpDir)
+			return bundlestore.MakeFileStoreInTemp(tmpDir)
 		},
 	)
 

@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
@@ -21,10 +23,17 @@ func main() {
 	}
 }
 
-type injector struct{}
+type injector struct {
+	// dir that holds our bundles
+	storeDir string
+}
+
+func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
+	rootCmd.PersistentFlags().StringVar(&i.storeDir, "bundlestore_path", "", "path to where we store bundles")
+}
 
 // If 'storeDir' is nil don't use bundlestore backend, else use a file-backed bundlestore at that location.
-func (i *injector) Inject(storeDir *temp.TempDir) (snapshot.DB, error) {
+func (i *injector) Inject() (snapshot.DB, error) {
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		return nil, err
@@ -40,16 +49,19 @@ func (i *injector) Inject(storeDir *temp.TempDir) (snapshot.DB, error) {
 			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo: %v", wd, err)
 	}
 
-	var bundleConfig *gitdb.BundlestoreConfig
-	upload := gitdb.AutoUploadNone
-	if storeDir != nil {
-		if s, err := bundlestore.MakeFileStore(storeDir); err != nil {
+	if i.storeDir == "" {
+		storeTmp, err := tempDir.TempDir("bundlestore")
+		if err != nil {
 			return nil, err
-		} else {
-			bundleConfig = &gitdb.BundlestoreConfig{s}
-			upload = gitdb.AutoUploadBundlestore
 		}
+		i.storeDir = storeTmp.Dir
 	}
 
-	return gitdb.MakeDBFromRepo(dataRepo, tempDir, nil, nil, bundleConfig, upload), nil
+	store, err := bundlestore.MakeFileStore(i.storeDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return gitdb.MakeDBFromRepo(dataRepo, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
+		gitdb.AutoUploadBundlestore), nil
 }
