@@ -41,13 +41,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 type DBInjector interface {
 	// TODO(dbentley): we probably want a way to register flags
-	Inject() (snapshot.DB, error)
+	Inject(storeDir *temp.TempDir) (snapshot.DB, error)
 }
 
 func MakeDBCLI(injector DBInjector) *cobra.Command {
@@ -58,11 +59,7 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 	add := func(subCmd dbCommand, parentCobraCmd *cobra.Command) {
 		cmd := subCmd.register()
 		cmd.RunE = func(innerCmd *cobra.Command, args []string) error {
-			db, err := injector.Inject()
-			if err != nil {
-				return fmt.Errorf("scoot-snapshot-db could not create db: %v", err)
-			}
-			return subCmd.run(db, innerCmd, args)
+			return subCmd.run(injector, innerCmd, args)
 		}
 		parentCobraCmd.AddCommand(cmd)
 	}
@@ -80,23 +77,34 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 
 type dbCommand interface {
 	register() *cobra.Command
-	run(db snapshot.DB, cmd *cobra.Command, args []string) error
+	run(injector DBInjector, cmd *cobra.Command, args []string) error
 }
 
 type ingestGitCommitCommand struct {
 	commit string
+	store  string
 }
 
 func (c *ingestGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest_git_commit",
-		Short: "ingest a git commit",
+		Short: "ingests a git commit into cwd and optionally uploads to a file-backed bundlestore.",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
+	cmd.Flags().StringVar(&c.store, "bundlestore", "", "optional: absolute path for file-backed bundlestore.")
 	return cmd
 }
 
-func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+func (c *ingestGitCommitCommand) run(injector DBInjector, _ *cobra.Command, _ []string) error {
+	var storeDir *temp.TempDir
+	if c.store != "" {
+		storeDir = &temp.TempDir{Dir: c.store}
+	}
+	db, err := injector.Inject(storeDir)
+	if err != nil {
+		return fmt.Errorf("scoot-snapshot-db could not create db: %v", err)
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("cannot get working directory: wd")

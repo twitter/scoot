@@ -1,9 +1,6 @@
 package snapshot
 
-import (
-	"os/exec"
-	"strings"
-)
+import "os/exec"
 
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
 // This is useful for tools that want one file at a time, or for ScootFS to offer the data.
@@ -59,13 +56,6 @@ type dbAdapter struct {
 }
 
 func (dba *dbAdapter) Checkout(id string) (Checkout, error) {
-	if strings.Contains(id, "-") {
-		if ident, err := dba.db.Download(ID(id)); err != nil {
-			return nil, err
-		} else {
-			id = string(ident)
-		}
-	}
 	if dir, err := dba.db.Checkout(ID(id)); err != nil {
 		return nil, err
 	} else {
@@ -86,10 +76,8 @@ func (dba *dbAdapter) CheckoutAt(id string, dir string) (Checkout, error) {
 func (dba *dbAdapter) Ingest(path string) (id string, err error) {
 	if ident, err := dba.db.IngestDir(path); err != nil {
 		return "", err
-	} else if newIdent, err := dba.db.Upload(ident); err != nil {
-		return "", err
 	} else {
-		return string(newIdent), nil
+		return string(ident), nil
 	}
 }
 

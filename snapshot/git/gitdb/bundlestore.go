@@ -1,6 +1,7 @@
 package gitdb
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +27,10 @@ const bundlestoreIDText = "bs"
 // "bs-gc-<bundle>-<stream>-<sha>"
 
 func (b *bundlestoreBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
+	if b.cfg == nil {
+		return nil, errors.New("Stream backend not initialized.")
+	}
+
 	if len(extraParts) != 3 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 5 parts in bundlestore id: %s", id)
 	}

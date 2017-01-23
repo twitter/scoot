@@ -1,6 +1,7 @@
 package gitdb
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,10 @@ type tagsBackend struct {
 const tagsIDText = "tags"
 
 func (b *tagsBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
+	if b.cfg == nil {
+		return nil, errors.New("Stream backend not initialized.")
+	}
+
 	if len(extraParts) != 2 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 parts in tags id: %s", id)
 	}

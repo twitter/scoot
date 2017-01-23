@@ -1,6 +1,7 @@
 package gitdb
 
 import (
+	"errors"
 	"fmt"
 
 	snap "github.com/scootdev/scoot/snapshot"
@@ -32,6 +33,10 @@ type streamBackend struct {
 }
 
 func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*streamSnapshot, error) {
+	if b.cfg == nil {
+		return nil, errors.New("Stream backend not initialized.")
+	}
+
 	if len(extraParts) != 2 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 extraParts in stream id: %s", id)
 	}

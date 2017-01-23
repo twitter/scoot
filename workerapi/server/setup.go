@@ -18,6 +18,7 @@ import (
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -99,6 +100,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func(thrift thrift.TServer, http *endpoints.TwitterServer) servers {
 			return makeServers(thrift, http)
+		},
+
+		func(tmpDir *temp.TempDir) (bundlestore.Store, error) {
+			return bundlestore.MakeFileStore(tmpDir)
 		},
 	)
 

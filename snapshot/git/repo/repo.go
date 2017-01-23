@@ -6,6 +6,7 @@ package repo
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -75,15 +76,26 @@ func validateSha(sha string) (string, error) {
 func NewRepository(dir string) (*Repository, error) {
 	// TODO(dbentley): make sure we handle the case that path is in a git repo,
 	// but is not the root of a git repo
-	repo := &Repository{dir}
+	r := &Repository{dir}
 	// TODO(dbentley): we'd prefer to use features present in git 2.5+, but are stuck on 2.4 for now
 	// E.g., --resolve-git-dir or --git-path
-	topLevel, err := repo.Run("rev-parse", "--show-toplevel")
+	topLevel, err := r.Run("rev-parse", "--show-toplevel")
 	if err != nil {
 		return nil, err
 	}
 	topLevel = strings.Replace(topLevel, "\n", "", -1)
 	log.Println("git.NewRepository:", dir, topLevel)
-	repo.dir = topLevel
-	return repo, nil
+	r.dir = topLevel
+	return r, nil
+}
+
+// Try to initialized a new git repo in the given directory.
+func InitRepo(dir string) (*Repository, error) {
+	os.MkdirAll(dir, 0755)
+	cmd := exec.Command("git", "init")
+	cmd.Dir = dir
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return NewRepository(dir)
 }
