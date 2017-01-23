@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -8,13 +9,17 @@ import (
 	"log"
 )
 
-type getStatusCmd struct{}
+type getStatusCmd struct {
+	printAsJson bool
+}
 
 func (c *getStatusCmd) registerFlags() *cobra.Command {
-	return &cobra.Command{
+	r := &cobra.Command{
 		Use:   "get_job_status",
 		Short: "GetJobStatus",
 	}
+	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out status as JSON")
+	return r
 }
 
 func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
@@ -38,7 +43,15 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		}
 	}
 
-	fmt.Println("Job Status: ", status)
+	if c.printAsJson {
+		asJson, err := json.Marshal(status)
+		if err != nil {
+			return fmt.Errorf("Error converting status to JSON: %v", err.Error())
+		}
+		fmt.Printf("%s\n", asJson)
+	} else {
+		fmt.Println("Job Status:", status)
+	}
 
 	return nil
 }
