@@ -6,8 +6,12 @@ import (
 	snap "github.com/scootdev/scoot/snapshot"
 )
 
-// A Stream is a sequence of SnapshotWithHistory's that updates via a
-// Git ref that can be fetched from a Git remote
+// A Stream is a sequence of GitCommitSnapshots that updates.
+// Right now, the backend is a git refspec that can be fetched from a Git remote.
+// In a v2, we'd rather not talk to a git server at all (because fetch can be confusingly slow).
+// in that case, a stream would need to be a mutable and consistent pointer to a GitCommitSnapshot.
+// Instead of using an immutable key-value store for (large) bundles, we'd back streams with
+// a small, mutable key-value store that points to the large, immutable key-value store for Snapshots.
 type StreamConfig struct {
 	// Name (used in IDs (so it should be short)
 	// e.g. sm for a Stream following Source (repo)'s Master (branch)
