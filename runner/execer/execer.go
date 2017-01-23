@@ -44,9 +44,6 @@ type Process interface {
 
 	// Terminates process and does best effort to get ExitCode.
 	Abort() ProcessStatus
-
-	// Measure the current amount of resident memory used by this process.
-	MemUsage() (Memory, error)
 }
 
 type ProcessStatus struct {

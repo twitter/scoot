@@ -26,7 +26,3 @@ func (e *doneExecer) Wait() execer.ProcessStatus {
 func (e *doneExecer) Abort() execer.ProcessStatus {
 	return completeStatus
 }
-
-func (e *doneExecer) MemUsage() (execer.Memory, error) {
-	return 0, nil
-}

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -104,7 +105,7 @@ func TestMemCap(t *testing.T) {
 	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
 	cmd := &runner.Command{Argv: []string{"bash", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
-	e := os_execer.NewBoundedExecer(execer.Memory(25 * 1024 * 1024))
+	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
 	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())

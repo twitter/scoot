@@ -118,10 +118,6 @@ func (p *simProcess) Abort() execer.ProcessStatus {
 	return st
 }
 
-func (p *simProcess) MemUsage() (execer.Memory, error) {
-	return 0, nil
-}
-
 func (p *simProcess) setStatus(status execer.ProcessStatus) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

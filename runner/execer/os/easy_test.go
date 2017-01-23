@@ -1,4 +1,4 @@
-package os_test
+package os
 
 import (
 	"bytes"
@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/runner/execer"
-	os_execer "github.com/scootdev/scoot/runner/execer/os"
 )
 
 func TestAll(t *testing.T) {
-	exer := os_execer.NewExecer()
+	exer := NewExecer()
 
 	// TODO(dbentley): factor out an assertRun method
 	cmd := execer.Command{Argv: []string{"true"}}
@@ -36,7 +35,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	exer := os_execer.NewExecer()
+	exer := NewExecer()
 
 	var stdout, stderr bytes.Buffer
 
@@ -66,7 +65,7 @@ func TestMemUsage(t *testing.T) {
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
 	cmd := execer.Command{Argv: []string{"bash", "-c", str}}
-	process, err := os_execer.NewExecer().Exec(cmd)
+	process, err := NewExecer().Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -75,7 +74,7 @@ func TestMemUsage(t *testing.T) {
 	prevUsage := 0
 	for i := 0; i < 2; i++ {
 		time.Sleep(200 * time.Millisecond)
-		if newUsage, err := process.MemUsage(); err != nil {
+		if newUsage, err := memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
 			t.Fatalf(err.Error())
 		} else if int(newUsage) <= prevUsage {
 			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*200)

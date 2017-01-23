@@ -60,8 +60,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.NewTwitterServer("localhost:2001", s, handlers)
 		},
 
-		func(m execer.Memory) execer.Execer {
-			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m))
+		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
+			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
 		},
 
 		func() (*temp.TempDir, error) { return temp.TempDirDefault() },

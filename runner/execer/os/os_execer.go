@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
 )
 
@@ -20,13 +21,14 @@ func NewExecer() execer.Execer {
 
 // For now memory can be capped on a per-execer basis rather than a per-command basis.
 // This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
-func NewBoundedExecer(memCap execer.Memory) execer.Execer {
-	return &osExecer{memCap: memCap}
+func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) execer.Execer {
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
 }
 
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
 	memCap execer.Memory
+	stat   stats.StatsReceiver
 }
 
 type WriterDelegater interface {
@@ -65,7 +67,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 
 	proc := &osProcess{cmd: cmd}
 	if e.memCap > 0 {
-		go proc.monitorMem(e.memCap)
+		go proc.monitorMem(e.memCap, e.stat)
 	}
 	return proc, nil
 }
@@ -78,7 +80,7 @@ type osProcess struct {
 
 // Periodically check to make sure memory constraints are respected.
 //TODO: may want to make this configurable.
-func (p *osProcess) monitorMem(memCap execer.Memory) {
+func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 	memTicker := time.NewTicker(100 * time.Millisecond)
 	defer memTicker.Stop()
 	for {
@@ -89,7 +91,8 @@ func (p *osProcess) monitorMem(memCap execer.Memory) {
 				p.mutex.Unlock()
 				return
 			}
-			usage, _ := memUsage(p.cmd.Process.Pid) // don't lock. See p.MemUsage().
+			usage, _ := memUsage(p.cmd.Process.Pid)
+			stat.Gauge("memory").Update(int64(usage))
 			if usage >= memCap {
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
@@ -167,12 +170,6 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		}
 	}
 	return result
-}
-
-func (p *osProcess) MemUsage() (execer.Memory, error) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	return memUsage(p.cmd.Process.Pid) // assume that pid became the pgid, skip syscall.Getpgid().
 }
 
 func memUsage(pgid int) (execer.Memory, error) {
