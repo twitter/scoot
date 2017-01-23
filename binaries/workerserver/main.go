@@ -13,6 +13,7 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 
@@ -23,6 +24,7 @@ var thriftAddr = flag.String("thrift_addr", "localhost:9090", "port to serve thr
 var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
 var configFlag = flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 var repo = flag.String("repo", "", "Absolute path to a git repo to run against (don't use with important repos yet!).")
+var memCapFlag = flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 
 func main() {
 	flag.Parse()
@@ -48,6 +50,9 @@ func main() {
 		},
 		func() server.WorkerUri {
 			return server.WorkerUri("http://" + *httpAddr)
+		},
+		func() execer.Memory {
+			return execer.Memory(*memCapFlag)
 		},
 	)
 

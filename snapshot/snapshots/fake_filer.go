@@ -14,7 +14,10 @@ import (
 
 // Make an invalid Filer
 func MakeInvalidFiler() snapshot.Filer {
-	return MakeFilerFacade(MakeNoopCheckouter(), MakeNoopIngester())
+	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester())
+}
+func MakeNoopFiler(path string) snapshot.Filer {
+	return MakeFilerFacade(MakeNoopCheckouter(path), MakeNoopIngester())
 }
 
 // FilerFacade creates a Filer from a Checkouter and Ingester
