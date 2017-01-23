@@ -28,22 +28,23 @@ type AutoUploadDest int
 const (
 	AutoUploadNone AutoUploadDest = iota
 	AutoUploadTags
+	AutoUploadBundlestore
 )
 
-// MakeDB makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
+// MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDBFromRepo(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(dataRepo, nil, tmp, stream, tags, autoUploadDest)
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	return makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
 func MakeDBNewRepo(initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(nil, initer, tmp, stream, tags, autoUploadDest)
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	return makeDB(nil, initer, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, autoUploadDest AutoUploadDest) *DB {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
@@ -56,12 +57,15 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 		local:      &localBackend{},
 		stream:     &streamBackend{cfg: stream},
 		tags:       &tagsBackend{cfg: tags},
+		bundles:    &bundlestoreBackend{cfg: bundles},
 	}
 
 	switch autoUploadDest {
 	case AutoUploadNone:
 	case AutoUploadTags:
 		result.autoUpload = result.tags
+	case AutoUploadBundlestore:
+		result.autoUpload = result.bundles
 	default:
 		panic(fmt.Errorf("unknown GitDB AutoUpload destination: %v", autoUploadDest))
 	}
@@ -95,6 +99,7 @@ type DB struct {
 	local      *localBackend
 	stream     *streamBackend
 	tags       *tagsBackend
+	bundles    *bundlestoreBackend
 	autoUpload uploader // This is one of our backends that we use to upload automatically
 }
 
