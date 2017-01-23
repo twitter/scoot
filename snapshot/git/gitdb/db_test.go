@@ -219,7 +219,7 @@ func TestInit(t *testing.T) {
 
 func TestInitFails(t *testing.T) {
 	streamCfg := &StreamConfig{
-		Name:    "ro",
+		Name:    "sro",
 		Remote:  "ro",
 		RefSpec: "refs/remotes/ro/master",
 	}
