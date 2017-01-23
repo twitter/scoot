@@ -114,7 +114,7 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	streamID := snap.ID("stream-gc-sm-" + upstreamCommit1ID)
+	streamID := fixture.simpleDB.IDForStreamCommitSHA("sm", upstreamCommit1ID)
 
 	co, err := fixture.simpleDB.Checkout(streamID)
 	if err != nil {
@@ -127,6 +127,143 @@ func TestStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestInit(t *testing.T) {
+	// This test doesn't use our fixture DBs because it has such specific git setup
+	// Our git repos are:
+	// rw: the main, upstream read-write repo
+	// mirror: where to init from (actually not a repo; just a bundle)
+	// ro: a read-only version of rw
+	// data: the data repo for our db
+
+	// our initer will fetch from the bundle "mirror"
+
+	// create empty repos for rw, ro, and data
+	rw, err := createRepo(fixture.tmp, "rw-repo")
+	if err != nil {
+	}
+
+	ro, err := createRepo(fixture.tmp, "ro-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// add ro as a remote to data
+	if _, err := ro.Run("remote", "add", "origin", rw.Dir()); err != nil {
+		t.Fatal(err)
+	}
+
+	// create a commit "first" in rw
+	firstCommitID, err := commitText(rw, "stream_init_first")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a bundle with rw's master; set it as mirror
+	f, err := fixture.tmp.TempFile("bundle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mirror := f.Name()
+	f.Close()
+
+	_, err = rw.Run("bundle", "create", mirror, "master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a commit "second" in rw
+	secondCommitID, err := commitText(rw, "stream_init_second")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamCfg := &StreamConfig{
+		Name:    "sro", // short for Source ReadOnly
+		Remote:  "ro",
+		RefSpec: "refs/remotes/ro/master",
+	}
+
+	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	defer db.Close()
+
+	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
+	secondID := db.IDForStreamCommitSHA("sro", secondCommitID)
+
+	// db.Checkout(first) will work only if initer is working
+	//   (because data's only upstream is ro, which doesn't have first at all)
+	co, err := db.Checkout(firstID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.ReleaseCheckout(co)
+
+	// db.Checkout(second) should fail
+	if _, err = db.Checkout(secondID); err == nil {
+		t.Fatal("shouldn't be able to see second")
+	}
+
+	// pull from rw to ro
+	if _, err := ro.Run("pull", "origin", "master"); err != nil {
+		t.Fatal(err)
+	}
+
+	// db.Checkout(second) should succeed
+	co, err = db.Checkout(secondID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.ReleaseCheckout(co)
+}
+
+func TestInitFails(t *testing.T) {
+	streamCfg := &StreamConfig{
+		Name:    "sro",
+		Remote:  "ro",
+		RefSpec: "refs/remotes/ro/master",
+	}
+
+	db := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	defer db.Close()
+
+	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contents := []byte("bar")
+	filename := filepath.Join(ingestDir.Dir, "foo.txt")
+
+	if err = ioutil.WriteFile(filename, contents, 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.IngestDir(ingestDir.Dir); err == nil {
+		t.Fatal("no error")
+	}
+}
+
+type bundleIniter struct {
+	mirror string
+	ro     *repo.Repository
+}
+
+func (i *bundleIniter) Init() (*repo.Repository, error) {
+	dataRepo, err := createRepo(fixture.tmp, "data-repo")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("remote", "add", "ro", i.ro.Dir()); err != nil {
+		return nil, err
+	}
+
+	if _, err := dataRepo.Run("pull", i.mirror, "master"); err != nil {
+		return nil, err
+	}
+
+	return dataRepo, nil
 }
 
 func TestTags(t *testing.T) {
@@ -187,7 +324,7 @@ func TestBundlestore(t *testing.T) {
 		Store: store,
 	}
 
-	authorDB := MakeDB(authorDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
+	authorDB := MakeDBFromRepo(authorDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
 
 	consumerDataRepo, err := createRepo(fixture.tmp, "consumer-data-repo")
 	if err != nil {
@@ -198,7 +335,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	consumerDB := MakeDB(consumerDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
+	consumerDB := MakeDBFromRepo(consumerDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
 
 	externalCommitID, err := commitText(fixture.external, "bundlestore_first")
 	if err != nil {
@@ -392,7 +529,7 @@ func setup() (f *dbFixture, err error) {
 		Prefix: "scoot_reserved",
 	}
 
-	simpleDB := MakeDB(dataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
+	simpleDB := MakeDBFromRepo(dataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
 
 	authorDataRepo, err := createRepo(tmp, "author-data-repo")
 	if err != nil {
@@ -411,7 +548,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	authorDB := MakeDB(authorDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadTags)
+	authorDB := MakeDBFromRepo(authorDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadTags)
 
 	consumerDataRepo, err := createRepo(tmp, "consumer-data-repo")
 	if err != nil {
@@ -426,7 +563,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	consumerDB := MakeDB(consumerDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
+	consumerDB := MakeDBFromRepo(consumerDataRepo, tmp, streamCfg, tagsCfg, nil, AutoUploadNone)
 
 	return &dbFixture{
 		tmp:        tmp,
@@ -449,5 +586,8 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 	result := m.Run()
+	// we need to call fixture.close() here because the defer we've registered
+	// won't be hit after the os.Exit below
+	fixture.close()
 	os.Exit(result)
 }

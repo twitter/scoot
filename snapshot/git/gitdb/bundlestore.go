@@ -141,7 +141,12 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	return &bundlestoreSnapshot{sha: s.SHA(), kind: s.Kind(), bundleKey: s.sha, streamName: streamName}, nil
+	// For now, our bundle key is always the sha of the object we are uploading.
+	// We might eventually want to upload multiple objects in one bundle. E.g.,
+	// for code review you might want to have both before and after snapshots. In that case,
+	// we could upload once and return two IDs that have the same bundleKey but different
+	// sha's.
+	return &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}, nil
 }
 
 type bundlestoreSnapshot struct {

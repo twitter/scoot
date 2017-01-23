@@ -13,7 +13,7 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 	defer func() {
 		// If we're returning our repo dir, we need to keep the work tree locked.
 		// Otherwise, we can unlock it.
-		if path != "" && path != db.dataRepo.Dir() {
+		if path != db.dataRepo.Dir() {
 			db.workTreeLock.Unlock()
 		}
 	}()

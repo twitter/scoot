@@ -55,7 +55,7 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 		Use:   "scoot-snapshot-db",
 		Short: "scoot snapshot db CLI",
 	}
-	add := func(subCmd dbCommand, parentCmd *cobra.Command) {
+	add := func(subCmd dbCommand, parentCobraCmd *cobra.Command) {
 		cmd := subCmd.register()
 		cmd.RunE = func(innerCmd *cobra.Command, args []string) error {
 			db, err := injector.Inject()
@@ -64,16 +64,16 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 			}
 			return subCmd.run(db, innerCmd, args)
 		}
-		parentCmd.AddCommand(cmd)
+		parentCobraCmd.AddCommand(cmd)
 	}
 
-	createCmd := &cobra.Command{
+	createCobraCmd := &cobra.Command{
 		Use:   "create",
 		Short: "create a snapshot",
 	}
-	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(createCobraCmd)
 
-	add(&ingestGitCommitCommand{}, createCmd)
+	add(&ingestGitCommitCommand{}, createCobraCmd)
 
 	return rootCmd
 }
