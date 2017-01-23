@@ -36,12 +36,17 @@ func main() {
 	}
 	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
+	tmp, err := temp.NewTempDir("", "daemon")
+	if err != nil {
+		log.Fatal("Cannot create tmp dir: ", err)
+	}
+
 	outputCreator, err := runners.NewHttpOutputCreator(tempDir, "")
 	if err != nil {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
-	r := runners.NewQueueRunner(ex, filer, outputCreator, *qLen)
+	r := runners.NewQueueRunner(ex, filer, outputCreator, tmp, *qLen)
 	h := server.NewHandler(r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {

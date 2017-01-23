@@ -315,7 +315,7 @@ func TestBundlestore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := bundlestore.MakeFileStore(tmp)
+	store, err := bundlestore.MakeFileStore(tmp.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}

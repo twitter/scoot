@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/saga/sagalogs"
@@ -27,13 +28,14 @@ type schedulerDeps struct {
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
+	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	return &schedulerDeps{
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		wf: func(cluster.Node) worker.Worker {
-			return workers.MakeSimWorker()
+			return workers.MakeSimWorker(tmp)
 		},
 		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,

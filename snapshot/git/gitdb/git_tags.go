@@ -29,7 +29,7 @@ const tagsIDText = "tags"
 
 func (b *tagsBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
 	if b.cfg == nil {
-		return nil, errors.New("Stream backend not initialized.")
+		return nil, errors.New("Tags backend not initialized.")
 	}
 
 	if len(extraParts) != 2 {

@@ -28,7 +28,7 @@ const bundlestoreIDText = "bs"
 
 func (b *bundlestoreBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
 	if b.cfg == nil {
-		return nil, errors.New("Stream backend not initialized.")
+		return nil, errors.New("Bundlestore backend not initialized.")
 	}
 
 	if len(extraParts) != 3 {

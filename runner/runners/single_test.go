@@ -106,7 +106,7 @@ func TestMemCap(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"bash", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
 	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
-	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator())
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator(), tmp)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -124,15 +124,15 @@ func TestMemCap(t *testing.T) {
 
 func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
-	tempDir, err := temp.TempDirDefault()
+	tmpDir, err := temp.TempDirDefault()
 	if err != nil {
 		panic(err)
 	}
 
-	outputCreator, err := NewHttpOutputCreator(tempDir, "")
+	outputCreator, err := NewHttpOutputCreator(tmpDir, "")
 	if err != nil {
 		panic(err)
 	}
-	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator)
+	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, tmpDir)
 	return r, sim
 }

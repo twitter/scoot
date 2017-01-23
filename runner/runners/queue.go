@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
@@ -17,15 +18,17 @@ type cmdAndID struct {
 }
 
 // NewQueueRunner creates a new Service that uses a Queue
-func NewQueueRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, capacity int) runner.Service {
+func NewQueueRunner(
+	exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir, capacity int,
+) runner.Service {
 	statusManager := NewStatusManager()
-	inv := NewInvoker(exec, filer, output)
+	inv := NewInvoker(exec, filer, output, tmp)
 	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
 	return &Service{controller, statusManager, statusManager}
 }
 
-func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) runner.Service {
-	return NewQueueRunner(exec, filer, output, 0)
+func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) runner.Service {
+	return NewQueueRunner(exec, filer, output, tmp, 0)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

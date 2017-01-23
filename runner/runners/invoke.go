@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -16,8 +17,8 @@ import (
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) *Invoker {
-	return &Invoker{exec: exec, filer: filer, output: output}
+func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) *Invoker {
+	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp}
 }
 
 // TODO(dbentley): test this separately from the end-to-end runner tests
@@ -29,6 +30,7 @@ type Invoker struct {
 	exec   execer.Execer
 	filer  snapshot.Filer
 	output runner.OutputCreator
+	tmp    *temp.TempDir
 }
 
 // Run runs cmd
@@ -136,15 +138,19 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	switch st.State {
 	case execer.COMPLETE:
-		tmp, err := temp.NewTempDir("", "invoke")
+		tmp, err := inv.tmp.TempDir("invoke")
 		if err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion: %v", err))
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion dir: %v", err))
 		}
 		defer os.RemoveAll(tmp.Dir)
 		outPath := stdout.AsFile()
 		errPath := stderr.AsFile()
-		os.Link(outPath, filepath.Join(tmp.Dir, "STDOUT"))
-		os.Link(errPath, filepath.Join(tmp.Dir, "STDERR"))
+		if err := exec.Command("cp", outPath, filepath.Join(tmp.Dir, "STDOUT")).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDOUT: %v", err))
+		}
+		if err := exec.Command("cp", errPath, filepath.Join(tmp.Dir, "STDERR")).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDERR: %v", err))
+		}
 		snapshotID, err := inv.filer.Ingest(tmp.Dir)
 		if err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))

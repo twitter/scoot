@@ -89,7 +89,7 @@ func NewRepository(dir string) (*Repository, error) {
 	return r, nil
 }
 
-// Try to initialized a new git repo in the given directory.
+// Try to initialize a new git repo in the given directory.
 func InitRepo(dir string) (*Repository, error) {
 	os.MkdirAll(dir, 0755)
 	cmd := exec.Command("git", "init")

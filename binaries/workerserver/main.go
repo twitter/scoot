@@ -71,7 +71,7 @@ func main() {
 				s = bundlestore.MakeHTTPStore(*store)
 			}
 			// Make the db and convert it into a filer.
-			db := gitdb.MakeDBFromRepo(r, tmpDir, nil, nil, &gitdb.BundlestoreConfig{s}, gitdb.AutoUploadBundlestore)
+			db := gitdb.MakeDBFromRepo(r, tmpDir, nil, nil, &gitdb.BundlestoreConfig{Store: s}, gitdb.AutoUploadBundlestore)
 			return snapshot.NewDBAdapter(db), nil
 		},
 
