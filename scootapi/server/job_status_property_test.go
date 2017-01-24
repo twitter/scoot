@@ -137,7 +137,8 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 			return true
 
 		},
-		s.GenSagaState(),
+		// Don't include a random job def.
+		s.GenSagaState(false),
 	))
 
 	properties.TestingRun(t)

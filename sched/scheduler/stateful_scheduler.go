@@ -286,11 +286,17 @@ func (s *statefulScheduler) scheduleTasks() {
 					s.stat)
 			},
 			func(err error) {
-				log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 				// update the jobState
 				if err == nil {
+					log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+
 					jobState.taskCompleted(taskId)
 				} else {
+					retry := "(will be retried)"
+					if preventRetries {
+						retry = "(will not be retried)"
+					}
+					log.Println("Error running task ", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 

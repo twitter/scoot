@@ -27,10 +27,13 @@ func genId(genParams *gopter.GenParameters) string {
 	return string(result)
 }
 
-// Randomly generates a valid SagaState
-func genSagaState(genParams *gopter.GenParameters) *SagaState {
+// Randomly generates a valid SagaState, with a random job def if includeJob
+func genSagaState(genParams *gopter.GenParameters, includeJob bool) *SagaState {
 	sagaId := genId(genParams)
 	data, _ := gen.SliceOf(gen.UInt8()).Sample()
+	if !includeJob {
+		data = []uint8{}
+	}
 	job := data.([]byte)
 
 	state, err := makeSagaState(sagaId, job)
@@ -146,10 +149,10 @@ func GenId() gopter.Gen {
 	}
 }
 
-// Generator for a Valid Saga State
-func GenSagaState() gopter.Gen {
+// Generator for a Valid Saga State, with a job def if includeJob
+func GenSagaState(includeJob bool) gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		state := genSagaState(genParams)
+		state := genSagaState(genParams, includeJob)
 		genResult := gopter.NewGenResult(state, gopter.NoShrinker)
 		return genResult
 	}
@@ -168,7 +171,7 @@ func (p StateTaskPair) String() string {
 // SagaState is always valid.  TaskId may or may not be part of the saga
 func GenSagaStateAndTaskId() gopter.Gen {
 	return func(genParams *gopter.GenParameters) *gopter.GenResult {
-		state := genSagaState(genParams)
+		state := genSagaState(genParams, true)
 
 		id := genId(genParams)
 		if genParams.NextBool() {
