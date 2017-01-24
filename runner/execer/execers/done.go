@@ -1,8 +1,6 @@
 package execers
 
-import (
-	"github.com/scootdev/scoot/runner/execer"
-)
+import "github.com/scootdev/scoot/runner/execer"
 
 // Creates a new doneExecer.
 func NewDoneExecer() execer.Execer {

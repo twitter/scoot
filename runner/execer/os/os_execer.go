@@ -2,10 +2,16 @@ package os
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
+	"strconv"
+	"strings"
+	"sync"
 	"syscall"
+	"time"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
 )
 
@@ -13,7 +19,17 @@ func NewExecer() execer.Execer {
 	return &osExecer{}
 }
 
-type osExecer struct{}
+// For now memory can be capped on a per-execer basis rather than a per-command basis.
+// This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
+func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) execer.Execer {
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
+}
+
+type osExecer struct {
+	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
+	memCap execer.Memory
+	stat   stats.StatsReceiver
+}
 
 type WriterDelegater interface {
 	// Return an underlying Writer. Why? Because some methods type assert to
@@ -48,15 +64,58 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	if err != nil {
 		return nil, err
 	}
-	return &osProcess{cmd}, nil
+
+	proc := &osProcess{cmd: cmd}
+	if e.memCap > 0 {
+		go proc.monitorMem(e.memCap, e.stat)
+	}
+	return proc, nil
 }
 
 type osProcess struct {
-	cmd *exec.Cmd
+	cmd    *exec.Cmd
+	result *execer.ProcessStatus
+	mutex  sync.Mutex
+}
+
+// Periodically check to make sure memory constraints are respected.
+//TODO: may want to make this configurable.
+func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
+	memTicker := time.NewTicker(100 * time.Millisecond)
+	defer memTicker.Stop()
+	for {
+		select {
+		case <-memTicker.C:
+			p.mutex.Lock()
+			if p.result != nil {
+				p.mutex.Unlock()
+				return
+			}
+			usage, _ := memUsage(p.cmd.Process.Pid)
+			stat.Gauge("memory").Update(int64(usage))
+			if usage >= memCap {
+				p.result = &execer.ProcessStatus{
+					State: execer.FAILED,
+					Error: fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d", usage, memCap),
+				}
+				p.mutex.Unlock()
+				return
+			}
+			p.mutex.Unlock()
+		}
+	}
 }
 
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	err := p.cmd.Wait()
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.result != nil {
+		return *p.result
+	} else {
+		p.result = &result
+	}
 	if err == nil {
 		result.State = execer.COMPLETE
 		result.ExitCode = 0
@@ -81,6 +140,14 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 }
 
 func (p *osProcess) Abort() (result execer.ProcessStatus) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.result != nil {
+		return *p.result
+	} else {
+		p.result = &result
+	}
+
 	result.State = execer.FAILED
 	result.ExitCode = -1
 	result.Error = "Aborted."
@@ -103,4 +170,17 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		}
 	}
 	return result
+}
+
+func memUsage(pgid int) (execer.Memory, error) {
+	// Pass children of pgid from 'pgrep', and pgid itself, into 'ps' to get rss memory usages in KB, then sum them.
+	// Note: there may be better ways to do this if we choose to handle osx/linux separately.
+	str := "echo $(ps -orss= -p$(echo -n $(pgrep -g %d | tr '\n' ',')%d) | tr '\n' '+') 0 | bc"
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid, pgid))
+	if usageKB, err := cmd.Output(); err != nil {
+		return 0, err
+	} else {
+		u, err := strconv.Atoi(strings.Trim(string(usageKB), "\n"))
+		return execer.Memory(u * 1024), err
+	}
 }

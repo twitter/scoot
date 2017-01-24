@@ -108,7 +108,8 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	log.Printf("Worker Running:\n%s", cmd)
 
 	h.updateTimeLastRpc()
-	process, err := h.run.Run(domain.ThriftRunCommandToDomain(cmd))
+	c := domain.ThriftRunCommandToDomain(cmd)
+	process, err := h.run.Run(c)
 	if err != nil {
 		return nil, err
 	}

@@ -6,8 +6,12 @@ import (
 )
 
 // Create a Checkouter that essentially does nothing, based on a static path
-func MakeNoopCheckouter() snapshot.Checkouter {
+func MakeInvalidCheckouter() snapshot.Checkouter {
 	return &noopCheckouter{path: "/path/is/invalid"}
+}
+
+func MakeNoopCheckouter(path string) snapshot.Checkouter {
+	return &noopCheckouter{path: path}
 }
 
 type noopCheckouter struct {
