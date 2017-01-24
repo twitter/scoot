@@ -39,6 +39,8 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		case *scoot.InvalidRequest:
 			return fmt.Errorf("Invalid Request: %v", err.GetMessage())
 		case *scoot.ScootServerError:
+			return fmt.Errorf("Scoot server errors: %v", err.Error())
+		default:
 			return fmt.Errorf("Error getting status: %v", err.Error())
 		}
 	}
