@@ -2,9 +2,11 @@ package workers
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/runners"
@@ -12,9 +14,16 @@ import (
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
+var tmp *temp.TempDir
+
+func TestMain(m *testing.M) {
+	tmp, _ = temp.NewTempDir("", "worker_adapter_test")
+	os.Exit(m.Run())
+}
+
 func TestPollingWorker_Simple(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 	w := NewServiceWorker(r, time.Second, time.Duration(10)*time.Microsecond)
 	st, err := w.RunAndWait(task("complete 42"))
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 42 {
@@ -25,7 +34,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 	w := NewServiceWorker(r, time.Second, time.Duration(10)*time.Microsecond)
 	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	go func() {
@@ -53,7 +62,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 	chaos := runners.NewChaosRunner(r)
 	w := NewServiceWorker(chaos, 0, time.Duration(10)*time.Microsecond)
 
@@ -68,7 +77,7 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 
 func TestPollingWorker_ErrorPolling(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 	chaos := runners.NewChaosRunner(r)
 	poller := runners.NewPollingService(chaos, chaos, chaos, 2*time.Microsecond)
 	w := NewServiceWorker(poller, time.Second, time.Duration(10)*time.Microsecond)
@@ -103,7 +112,7 @@ func TestPollingWorker_ErrorPolling(t *testing.T) {
 
 func TestPollingWorker_Timeout(t *testing.T) {
 	ex := execers.NewSimExecer()
-	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator())
+	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 
 	w := NewServiceWorker(r, time.Duration(20)*time.Microsecond, time.Duration(2)*time.Microsecond)
 

@@ -151,16 +151,16 @@ func TestStatus(t *testing.T) {
 
 func setup(capacity int, t *testing.T) *env {
 	sim := execers.NewSimExecer()
-	tempDir, err := temp.TempDirDefault()
+	tmpDir, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
 	}
 
-	outputCreator, err := NewHttpOutputCreator(tempDir, "")
+	outputCreator, err := NewHttpOutputCreator(tmpDir, "")
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
-	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, capacity)
+	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, tmpDir, capacity)
 
 	return &env{sim: sim, r: r}
 }

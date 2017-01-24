@@ -3,8 +3,12 @@ package runners
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
@@ -13,8 +17,8 @@ import (
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator) *Invoker {
-	return &Invoker{exec: exec, filer: filer, output: output}
+func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) *Invoker {
+	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp}
 }
 
 // TODO(dbentley): test this separately from the end-to-end runner tests
@@ -26,6 +30,7 @@ type Invoker struct {
 	exec   execer.Execer
 	filer  snapshot.Filer
 	output runner.OutputCreator
+	tmp    *temp.TempDir
 }
 
 // Run runs cmd
@@ -133,17 +138,20 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	switch st.State {
 	case execer.COMPLETE:
-		srcToDest := map[string]string{
-			stdout.AsFile(): "STDOUT",
-			stderr.AsFile(): "STDERR",
+		tmp, err := inv.tmp.TempDir("invoke")
+		if err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion dir: %v", err))
 		}
-		// TODO(jschiller): get consensus on design and either implement or delete.
-		// if cmd.SnapshotPlan != nil {
-		// 	for src, dest := range cmd.SnapshotPlan {
-		// 		srcToDest[checkout.Path()+"/"+src] = dest // manually concat to preserve src *exactly* as provided.
-		// 	}
-		// }
-		snapshotID, err := inv.filer.IngestMap(srcToDest)
+		defer os.RemoveAll(tmp.Dir)
+		outPath := stdout.AsFile()
+		errPath := stderr.AsFile()
+		if err := exec.Command("cp", outPath, filepath.Join(tmp.Dir, "STDOUT")).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDOUT: %v", err))
+		}
+		if err := exec.Command("cp", errPath, filepath.Join(tmp.Dir, "STDERR")).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDERR: %v", err))
+		}
+		snapshotID, err := inv.filer.Ingest(tmp.Dir)
 		if err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))
 		}

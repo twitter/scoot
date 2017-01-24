@@ -24,7 +24,7 @@ func TestDaemonExample(t *testing.T) {
 	out, _ := runners.NewHttpOutputCreator(localTmp, "")
 	filer := snapshots.MakeTempFiler(filerTmp)
 	ex := execer.NewExecer()
-	run := runners.NewSingleRunner(ex, filer, out)
+	run := runners.NewSingleRunner(ex, filer, out, filerTmp)
 	handler := NewHandler(run, filer, 50*time.Millisecond)
 
 	// Populate the paths we want to ingest.

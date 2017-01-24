@@ -7,6 +7,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
@@ -69,7 +70,13 @@ type WorkersLocalConfig struct {
 }
 
 func (c *WorkersLocalConfig) Install(bag *ice.MagicBag) {
-	bag.Put(func() worker.WorkerFactory {
-		return workers.MakeInmemoryWorker
+	bag.Put(func(tmp *temp.TempDir) worker.WorkerFactory {
+		return InmemoryWorkerFactory(tmp)
 	})
+}
+
+func InmemoryWorkerFactory(tmp *temp.TempDir) worker.WorkerFactory {
+	return func(node cluster.Node) worker.Worker {
+		return workers.MakeInmemoryWorker(node, tmp)
+	}
 }

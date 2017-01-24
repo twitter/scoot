@@ -9,9 +9,7 @@ import (
 const localIDText = "local"
 const localIDFmt = "%s-%s-%s"
 
-type localBackend struct {
-	db *DB
-}
+type localBackend struct{}
 
 // localSnapshot holds a reference to a value that is in the local DB
 type localSnapshot struct {

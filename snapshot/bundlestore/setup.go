@@ -32,7 +32,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return MakeServer(s, a)
 		},
 		func(tmpDir *temp.TempDir) (Store, error) {
-			return MakeFileStore(tmpDir)
+			return MakeFileStoreInTemp(tmpDir)
 		},
 		func() Addr { return Addr("localhost:3000") },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
@@ -72,8 +72,10 @@ func RunServer(
 	go func() {
 		errCh <- servers.bs.Serve()
 	}()
-	go func() {
-		errCh <- servers.obs.Serve()
-	}()
+	if servers.obs != nil {
+		go func() {
+			errCh <- servers.obs.Serve()
+		}()
+	}
 	log.Fatal("Error serving: ", <-errCh)
 }

@@ -5,14 +5,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
+	tmp, _ := temp.NewTempDir("", "runner_polling_test")
 	ex := execers.NewSimExecer()
-	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), NewNullOutputCreator())
+	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), NewNullOutputCreator(), tmp)
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos

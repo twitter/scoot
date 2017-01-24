@@ -11,13 +11,17 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 )
 
-func MakeFileStore(dir *temp.TempDir) (Store, error) {
-	bundleDir, err := dir.FixedDir("bundles")
+func MakeFileStoreInTemp(tmp *temp.TempDir) (Store, error) {
+	bundleDir, err := tmp.TempDir("bundles")
 	if err != nil {
 		return nil, err
 	}
+	return MakeFileStore(bundleDir.Dir)
 
-	return &fileStore{bundleDir.Dir}, nil
+}
+
+func MakeFileStore(dir string) (Store, error) {
+	return &fileStore{dir}, nil
 }
 
 type fileStore struct {

@@ -47,20 +47,24 @@ import (
 
 type DBInjector interface {
 	// TODO(dbentley): we probably want a way to register flags
+	RegisterFlags(cmd *cobra.Command)
 	Inject() (snapshot.DB, error)
 }
 
 func MakeDBCLI(injector DBInjector) *cobra.Command {
-	rootCmd := &cobra.Command{
+	rootCobraCmd := &cobra.Command{
 		Use:   "scoot-snapshot-db",
 		Short: "scoot snapshot db CLI",
 	}
+
+	injector.RegisterFlags(rootCobraCmd)
+
 	add := func(subCmd dbCommand, parentCobraCmd *cobra.Command) {
 		cmd := subCmd.register()
 		cmd.RunE = func(innerCmd *cobra.Command, args []string) error {
 			db, err := injector.Inject()
 			if err != nil {
-				return fmt.Errorf("scoot-snapshot-db could not create db: %v", err)
+				return err
 			}
 			return subCmd.run(db, innerCmd, args)
 		}
@@ -71,11 +75,11 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 		Use:   "create",
 		Short: "create a snapshot",
 	}
-	rootCmd.AddCommand(createCobraCmd)
+	rootCobraCmd.AddCommand(createCobraCmd)
 
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 
-	return rootCmd
+	return rootCobraCmd
 }
 
 type dbCommand interface {
@@ -90,7 +94,7 @@ type ingestGitCommitCommand struct {
 func (c *ingestGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest_git_commit",
-		Short: "ingest a git commit",
+		Short: "ingests a git commit into cwd and optionally uploads to a file-backed bundlestore.",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
 	return cmd
