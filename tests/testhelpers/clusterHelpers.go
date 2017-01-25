@@ -23,7 +23,7 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 
 	go func() {
 		strategies := map[string]setup.SchedulerStrategy{
-			"local.local": setup.NewLocalLocal("", builder, clusterCmds),
+			"local.local": setup.NewLocalLocal(&setup.WorkerConfig{}, builder, clusterCmds),
 		}
 		setup.Main(clusterCmds, strategies, "local.local", []string{})
 	}()

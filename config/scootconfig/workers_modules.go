@@ -11,6 +11,7 @@ import (
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
@@ -70,13 +71,13 @@ type WorkersLocalConfig struct {
 }
 
 func (c *WorkersLocalConfig) Install(bag *ice.MagicBag) {
-	bag.Put(func(tmp *temp.TempDir) worker.WorkerFactory {
-		return InmemoryWorkerFactory(tmp)
+	bag.Put(func(tmp *temp.TempDir, filer snapshot.Filer) worker.WorkerFactory {
+		return InmemoryWorkerFactory(tmp, filer)
 	})
 }
 
-func InmemoryWorkerFactory(tmp *temp.TempDir) worker.WorkerFactory {
+func InmemoryWorkerFactory(tmp *temp.TempDir, filer snapshot.Filer) worker.WorkerFactory {
 	return func(node cluster.Node) worker.Worker {
-		return workers.MakeInmemoryWorker(node, tmp)
+		return workers.MakeInmemoryWorker(node, tmp, filer)
 	}
 }

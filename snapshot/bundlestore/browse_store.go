@@ -17,8 +17,12 @@ import (
 // Caches bundles on disk instead of memory as they may be used as input to shelled git commands.
 //
 // TODO: git extraction logic should eventually move to gitdb as that's a more natural fit.
-func MakeCachingBrowseStore(s Store, tmp *temp.TempDir) Store {
-	return &cachingBrowseStore{underlying: s, tmp: tmp}
+func MakeCachingBrowseStore(s Store, tmp *temp.TempDir) (Store, error) {
+	if t, err := tmp.TempDir("browseStore"); err != nil {
+		return nil, err
+	} else {
+		return &cachingBrowseStore{underlying: s, tmp: t}, nil
+	}
 }
 
 type cachingBrowseStore struct {

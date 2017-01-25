@@ -11,7 +11,9 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/git/gitfiler"
 )
 
 // invoke.go: Invoker runs a Scoot command.
@@ -65,8 +67,16 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var checkout snapshot.Checkout
 	var err error
 	go func() {
-		checkout, err = inv.filer.Checkout(cmd.SnapshotID)
-		checkoutCh <- checkoutAndError{checkout, err}
+		if cmd.SnapshotID == "" {
+			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
+				log.Printf("RunID=%s has no snapshotID! Using a nop-checkout initialized with cwd.\n", id)
+			}
+			checkout := gitfiler.MakeUnmanagedCheckout("", "./")
+			checkoutCh <- checkoutAndError{checkout, nil}
+		} else {
+			checkout, err = inv.filer.Checkout(cmd.SnapshotID)
+			checkoutCh <- checkoutAndError{checkout, err}
+		}
 	}()
 
 	select {
@@ -145,17 +155,23 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		defer os.RemoveAll(tmp.Dir)
 		outPath := stdout.AsFile()
 		errPath := stderr.AsFile()
-		if err := exec.Command("cp", outPath, filepath.Join(tmp.Dir, "STDOUT")).Run(); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDOUT: %v", err))
+		stdoutName := "STDOUT"
+		stderrName := "STDERR"
+		if err := exec.Command("cp", outPath, filepath.Join(tmp.Dir, stdoutName)).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err))
 		}
-		if err := exec.Command("cp", errPath, filepath.Join(tmp.Dir, "STDERR")).Run(); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for STDERR: %v", err))
+		if err := exec.Command("cp", errPath, filepath.Join(tmp.Dir, stderrName)).Run(); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err))
 		}
 		snapshotID, err := inv.filer.Ingest(tmp.Dir)
 		if err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))
 		}
-		return runner.CompleteStatus(id, snapshotID, st.ExitCode)
+		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
+		status := runner.CompleteStatus(id, snapshotID, st.ExitCode)
+		//status.StdoutRef = snapshotID + "/" + stdoutName
+		//status.StderrRef = snapshotID + "/" + stderrName
+		return status
 	case execer.FAILED:
 		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error))
 	default:

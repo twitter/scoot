@@ -28,7 +28,7 @@ func makeServers(
 	return servers{thrift, http}
 }
 
-// Creates an MagicBag and a JsconSchema for this server and returns them
+// Creates an MagicBag and a JsonSchema for this server and returns them
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(

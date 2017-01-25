@@ -1,16 +1,24 @@
 package testhelpers
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/scoot/scootapi/setup"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
 )
 
 // Creates a CloudScootClient that talks to the specified address
@@ -28,11 +36,26 @@ func CreateScootClient(addr string) *scootapi.CloudScootClient {
 	return scootClient
 }
 
+// Default cmd has an empty snapshot and uses sim execer on the workers.
+func DefaultSnapshotCmd() *SnapshotCmd {
+	return &SnapshotCmd{
+		"",
+		[]string{execers.UseSimExecerArg, "sleep 500", "complete 0"},
+		func(s *scoot.JobStatus) error {
+			if s.Status != scoot.Status_COMPLETED {
+				return errors.New("Expected COMPLETED, got: " + s.String())
+			} else {
+				return nil
+			}
+		},
+	}
+}
+
 // Generates a random Job and sends it to the specified client to run
 // returns the JobId if successfully scheduled, otherwise "", error
-func GenerateAndStartJob(client scoot.CloudScoot, numTasks int) (string, error) {
+func GenerateAndStartJob(client scoot.CloudScoot, numTasks int, cmd *SnapshotCmd) (string, error) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	jobDef := GenJobDefinition(rng, numTasks)
+	jobDef := GenJobDefinition(rng, numTasks, cmd)
 
 	rsp, err := client.RunJob(jobDef)
 	if err == nil {
@@ -49,7 +72,7 @@ func WaitForJobsToCompleteAndLogStatus(
 	jobIds []string,
 	client scoot.CloudScoot,
 	timeout time.Duration,
-) error {
+) (map[string]*scoot.JobStatus, error) {
 
 	jobs := make(map[string]*scoot.JobStatus)
 	for _, id := range jobIds {
@@ -59,7 +82,7 @@ func WaitForJobsToCompleteAndLogStatus(
 	end := time.Now().Add(timeout)
 	for {
 		if time.Now().After(end) {
-			return fmt.Errorf("Took longer than %v", timeout)
+			return nil, fmt.Errorf("Took longer than %v", timeout)
 		}
 		done := true
 
@@ -81,7 +104,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		PrintJobs(jobs)
 		if done {
 			log.Println("Done")
-			return nil
+			return jobs, nil
 		}
 		time.Sleep(time.Second)
 	}
@@ -133,7 +156,67 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 	log.Println("Done", byStatus[scoot.Status_COMPLETED])
 }
 
-// Returns true if a job is completed, false otherwise
+// Returns true if a job is completed or failed, false otherwise
 func IsJobCompleted(s *scoot.JobStatus) bool {
 	return s != nil && (s.Status == scoot.Status_COMPLETED || s.Status == scoot.Status_ROLLED_BACK)
+}
+
+// Used to match snapshot runs with expected results.
+type SnapshotCmd struct {
+	SnapshotID string
+	Argv       []string
+	Verify     func(*scoot.JobStatus) error
+}
+
+// Create cmds, for now just simple cat'ing of files in a file (non-commit) snapshot, and associated verification,
+func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*SnapshotCmd, error) {
+	db, err := setup.NewGitDB(tmp, "", storeHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	cmds := []*SnapshotCmd{}
+	for i := 0; i < numCmds; i++ {
+		dir, err := tmp.TempDir("dir")
+		if err != nil {
+			return nil, err
+		}
+
+		fileName := "file"
+		file := filepath.Join(dir.Dir, fileName)
+		content := strconv.Itoa(i)
+		if err := ioutil.WriteFile(file, []byte(content), 0666); err != nil {
+			return nil, err
+		}
+
+		id, err := db.IngestDir(dir.Dir)
+		if err != nil {
+			return nil, err
+		}
+
+		verifyFn := func(js *scoot.JobStatus) error {
+			var store bundlestore.Store
+			if store, err = bundlestore.MakeFileStoreInTemp(tmp); err != nil {
+				return err
+			} else if store, err = bundlestore.MakeCachingBrowseStore(store, tmp); err != nil {
+				return err
+			}
+
+			// All tasks should have the same exact result.
+			for _, status := range js.TaskData {
+				if reader, err := store.OpenForRead(*status.OutUri); err != nil {
+					return nil
+				} else if data, err := ioutil.ReadAll(reader); err != nil {
+					return err
+				} else if string(data) != content {
+					return fmt.Errorf("content mismatch, expected:%s, got:%s", content, string(data))
+				}
+			}
+
+			return nil
+		}
+		cmds = append(cmds, &SnapshotCmd{string(id), []string{"cat", fileName}, verifyFn})
+	}
+
+	return cmds, nil
 }
