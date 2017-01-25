@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -126,7 +127,10 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	bundleName := makeBundleName(s.sha)
+	bundleSnap := &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}
+
+	//bundleName := makeBundleName(s.sha)
+	bundleName := string(bundleSnap.ID()) //TODO: why have a separate snapshotId and bundleName? It's confusing to track...
 
 	// we can't use tmpDir.TempFile() because we need the file to not exist
 	bundleFilename := path.Join(d.Dir, bundleName)
@@ -151,7 +155,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	// for code review you might want to have both before and after snapshots. In that case,
 	// we could upload once and return two IDs that have the same bundleKey but different
 	// sha's.
-	return &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}, nil
+	return bundleSnap, nil
 }
 
 type bundlestoreSnapshot struct {
@@ -172,6 +176,7 @@ func (s *bundlestoreSnapshot) Kind() snapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
 func (s *bundlestoreSnapshot) Download(db *DB) error {
+	log.Print("Return if we already have this sha, else continue by downloading from bundlestore. ", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
 		return nil
 	}
@@ -180,11 +185,14 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// TODO(dbentley): keep stats about how long it takes to unbundle
 	filename, err := s.downloadBundle(db)
 	if err != nil {
+		log.Print("Unable to download bundle: ", err)
 		return err
 	}
 
 	// unbundle optimistically
 	// this will succeed if we have all of the prerequisite objects
+
+	log.Print("Return if unbundling gets us our sha, else continue. ", s.SHA())
 	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err == nil {
 		return db.shaPresent(s.sha)
 	}
@@ -193,6 +201,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// see if it's because we're missing prereqs
 	exitError := err.(*exec.ExitError)
 	if exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
+		log.Print("Can't find sha and prereqs aren't the problem, return err. ", s.SHA())
 		return err
 	}
 
@@ -209,6 +218,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		return err
 	}
 
+	log.Print("Final attempt to unbundle after updating stream. ", s.SHA())
 	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err != nil {
 		// if we still can't unbundle, then the bundle might be corrupt or the
 		// prereqs might not be in the stream, or maybe the git server is serving us
@@ -224,7 +234,8 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 	if err != nil {
 		return "", err
 	}
-	bundleName := makeBundleName(s.bundleKey)
+	//bundleName := makeBundleName(s.bundleKey)
+	bundleName := string(s.ID()) //TODO: why have a separate snapshotId and bundleName? It's confusing to track...
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {

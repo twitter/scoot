@@ -33,7 +33,6 @@ type cachingBrowseStore struct {
 func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 	paths := strings.SplitN(name, "/", 2)
 	bundleName := paths[0]
-	contentPath := paths[1]
 	bundlePath := filepath.Join(s.tmp.Dir, bundleName)
 	// Ensure that the bundle is available on disk.
 	if _, err := os.Stat(bundlePath); err != nil {
@@ -50,6 +49,7 @@ func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 		return os.Open(bundlePath)
 	}
 	// There is an appended path, try to extract it from the bundle.
+	contentPath := paths[1]
 	return s.extract(bundlePath, contentPath)
 }
 

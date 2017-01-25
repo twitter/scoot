@@ -168,9 +168,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err))
 		}
 		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
+		//Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 		status := runner.CompleteStatus(id, snapshotID, st.ExitCode)
-		//status.StdoutRef = snapshotID + "/" + stdoutName
-		//status.StderrRef = snapshotID + "/" + stderrName
+		if cmd.SnapshotID != "" {
+			status.StdoutRef = snapshotID + "/" + stdoutName
+			status.StderrRef = snapshotID + "/" + stderrName
+		}
 		return status
 	case execer.FAILED:
 		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error))

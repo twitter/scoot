@@ -196,7 +196,7 @@ func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*Snapsh
 
 		verifyFn := func(js *scoot.JobStatus) error {
 			var store bundlestore.Store
-			if store, err = bundlestore.MakeFileStoreInTemp(tmp); err != nil {
+			if store, err = bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: storeHandle}); err != nil {
 				return err
 			} else if store, err = bundlestore.MakeCachingBrowseStore(store, tmp); err != nil {
 				return err
@@ -204,8 +204,11 @@ func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*Snapsh
 
 			// All tasks should have the same exact result.
 			for _, status := range js.TaskData {
+				if status.Status != scoot.RunStatusState_COMPLETE {
+					return fmt.Errorf("RunID=%s failed: %s - %s - %d", status.RunId, status.Status, *status.Error, *status.ExitCode)
+				}
 				if reader, err := store.OpenForRead(*status.OutUri); err != nil {
-					return nil
+					return err
 				} else if data, err := ioutil.ReadAll(reader); err != nil {
 					return err
 				} else if string(data) != content {

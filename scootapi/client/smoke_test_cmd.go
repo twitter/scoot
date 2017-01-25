@@ -33,7 +33,10 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
 	runner := &smokeTestRunner{cl: cl}
-	return runner.run(c.numJobs, c.numTasks, c.timeout, c.storeHandle)
+	if err := runner.run(c.numJobs, c.numTasks, c.timeout, c.storeHandle); err != nil {
+		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.
+	}
+	return nil
 }
 
 type smokeTestRunner struct {
@@ -82,9 +85,9 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, 
 	} else {
 		for jobID, status := range statuses {
 			if err = jobsToCmds[jobID].Verify(status); err != nil {
-				break
+				return err
 			}
 		}
 	}
-	return err
+	return nil
 }
