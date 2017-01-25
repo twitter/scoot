@@ -7,7 +7,6 @@ import (
 
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -134,12 +133,19 @@ func (c *simpleClient) StatusAll() ([]runner.RunStatus, error) {
 	return st.Runs, nil
 }
 
+// Implements Scoot Worker API
 func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
-	stats, err := c.StatusAll()
+	thriftQ := workerapi.DomainRunQueryToThrift(q)
+	workerClient, err := c.dial()
 	if err != nil {
 		return nil, err
 	}
-	return runners.StatusesRO(stats).QueryNow(q)
+	sts, err := workerClient.QueryNow(thriftQ)
+	if err != nil {
+		return nil, err
+	}
+
+	return workerapi.ThriftRunStatusesToDomain(sts)
 }
 
 //TODO: implement erase

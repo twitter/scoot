@@ -1,6 +1,7 @@
 package workerapi
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/scootdev/scoot/common/thrifthelpers"
@@ -127,6 +128,59 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.Error = &domain.Error
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
+	return thrift
+}
+
+// Translate RunStatus'es from Thrift to Domain
+func ThriftRunStatusesToDomain(thrift []*worker.RunStatus) ([]runner.RunStatus, error) {
+	domain := make([]runner.RunStatus, len(thrift))
+	for i, thriftSt := range thrift {
+		if thriftSt == nil {
+			return nil, fmt.Errorf("ThriftRunStatusesToDomain: run status cannot be nil")
+		}
+		domain[i] = ThriftRunStatusToDomain(thriftSt)
+	}
+	return domain, nil
+}
+
+// Translate RunStatus'es from Domain to Thrift
+func DomainRunStatusesToThrift(domain []runner.RunStatus) []*worker.RunStatus {
+	thrift := make([]*worker.RunStatus, len(domain))
+	for i, domainSt := range domain {
+		thrift[i] = DomainRunStatusToThrift(domainSt)
+	}
+	return thrift
+}
+
+// Translate RunQuery from Thrift to Domain
+func ThriftRunQueryToDomain(thrift worker.RunsQuery) runner.Query {
+	domain := runner.Query{}
+	for _, id := range thrift.RunIds {
+		domain.Runs = append(domain.Runs, runner.RunID(id))
+	}
+	if thrift.AllRuns != nil && *thrift.AllRuns {
+		domain.AllRuns = true
+	}
+	domain.States = runner.ALL_MASK
+	if thrift.StateMask != nil {
+		domain.States = runner.StateMask(uint64(*thrift.StateMask))
+	}
+	return domain
+
+}
+
+// Translate RunQuery from Domain to Thrift
+func DomainRunQueryToThrift(domain runner.Query) *worker.RunsQuery {
+	thrift := &worker.RunsQuery{}
+	for _, id := range domain.Runs {
+		thrift.RunIds = append(thrift.RunIds, string(id))
+	}
+	if domain.AllRuns {
+		thrift.AllRuns = new(bool)
+		*thrift.AllRuns = true
+	}
+	thrift.StateMask = new(int64)
+	*thrift.StateMask = int64(domain.States)
 	return thrift
 }
 

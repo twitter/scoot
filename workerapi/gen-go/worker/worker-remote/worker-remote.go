@@ -20,9 +20,10 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "Usage of ", os.Args[0], " [-h host:port] [-u url] [-f[ramed]] function [arg1 [arg2...]]:")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
-	fmt.Fprintln(os.Stderr, "  WorkerStatus QueryWorker()")
+	fmt.Fprintln(os.Stderr, "   QueryNow(RunsQuery q)")
 	fmt.Fprintln(os.Stderr, "  RunStatus Run(RunCommand cmd)")
 	fmt.Fprintln(os.Stderr, "  RunStatus Abort(string runId)")
+	fmt.Fprintln(os.Stderr, "  WorkerStatus QueryWorker()")
 	fmt.Fprintln(os.Stderr, "  void Erase(string runId)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
@@ -118,12 +119,29 @@ func main() {
 	}
 
 	switch cmd {
-	case "QueryWorker":
-		if flag.NArg()-1 != 0 {
-			fmt.Fprintln(os.Stderr, "QueryWorker requires 0 args")
+	case "QueryNow":
+		if flag.NArg()-1 != 1 {
+			fmt.Fprintln(os.Stderr, "QueryNow requires 1 args")
 			flag.Usage()
 		}
-		fmt.Print(client.QueryWorker())
+		arg18 := flag.Arg(1)
+		mbTrans19 := thrift.NewTMemoryBufferLen(len(arg18))
+		defer mbTrans19.Close()
+		_, err20 := mbTrans19.WriteString(arg18)
+		if err20 != nil {
+			Usage()
+			return
+		}
+		factory21 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt22 := factory21.GetProtocol(mbTrans19)
+		argvalue0 := worker.NewRunsQuery()
+		err23 := argvalue0.Read(jsProt22)
+		if err23 != nil {
+			Usage()
+			return
+		}
+		value0 := argvalue0
+		fmt.Print(client.QueryNow(value0))
 		fmt.Print("\n")
 		break
 	case "Run":
@@ -131,19 +149,19 @@ func main() {
 			fmt.Fprintln(os.Stderr, "Run requires 1 args")
 			flag.Usage()
 		}
-		arg14 := flag.Arg(1)
-		mbTrans15 := thrift.NewTMemoryBufferLen(len(arg14))
-		defer mbTrans15.Close()
-		_, err16 := mbTrans15.WriteString(arg14)
-		if err16 != nil {
+		arg24 := flag.Arg(1)
+		mbTrans25 := thrift.NewTMemoryBufferLen(len(arg24))
+		defer mbTrans25.Close()
+		_, err26 := mbTrans25.WriteString(arg24)
+		if err26 != nil {
 			Usage()
 			return
 		}
-		factory17 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt18 := factory17.GetProtocol(mbTrans15)
+		factory27 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt28 := factory27.GetProtocol(mbTrans25)
 		argvalue0 := worker.NewRunCommand()
-		err19 := argvalue0.Read(jsProt18)
-		if err19 != nil {
+		err29 := argvalue0.Read(jsProt28)
+		if err29 != nil {
 			Usage()
 			return
 		}
@@ -159,6 +177,14 @@ func main() {
 		argvalue0 := flag.Arg(1)
 		value0 := argvalue0
 		fmt.Print(client.Abort(value0))
+		fmt.Print("\n")
+		break
+	case "QueryWorker":
+		if flag.NArg()-1 != 0 {
+			fmt.Fprintln(os.Stderr, "QueryWorker requires 0 args")
+			flag.Usage()
+		}
+		fmt.Print(client.QueryWorker())
 		fmt.Print("\n")
 		break
 	case "Erase":

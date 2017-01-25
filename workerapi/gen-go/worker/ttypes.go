@@ -411,6 +411,218 @@ func (p *RunStatus) String() string {
 }
 
 // Attributes:
+//  - RunIds
+//  - AllRuns
+//  - StateMask
+type RunsQuery struct {
+	RunIds    []string `thrift:"runIds,1" json:"runIds,omitempty"`
+	AllRuns   *bool    `thrift:"allRuns,2" json:"allRuns,omitempty"`
+	StateMask *int64   `thrift:"stateMask,3" json:"stateMask,omitempty"`
+}
+
+func NewRunsQuery() *RunsQuery {
+	return &RunsQuery{}
+}
+
+var RunsQuery_RunIds_DEFAULT []string
+
+func (p *RunsQuery) GetRunIds() []string {
+	return p.RunIds
+}
+
+var RunsQuery_AllRuns_DEFAULT bool
+
+func (p *RunsQuery) GetAllRuns() bool {
+	if !p.IsSetAllRuns() {
+		return RunsQuery_AllRuns_DEFAULT
+	}
+	return *p.AllRuns
+}
+
+var RunsQuery_StateMask_DEFAULT int64
+
+func (p *RunsQuery) GetStateMask() int64 {
+	if !p.IsSetStateMask() {
+		return RunsQuery_StateMask_DEFAULT
+	}
+	return *p.StateMask
+}
+func (p *RunsQuery) IsSetRunIds() bool {
+	return p.RunIds != nil
+}
+
+func (p *RunsQuery) IsSetAllRuns() bool {
+	return p.AllRuns != nil
+}
+
+func (p *RunsQuery) IsSetStateMask() bool {
+	return p.StateMask != nil
+}
+
+func (p *RunsQuery) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		case 3:
+			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RunsQuery) readField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]string, 0, size)
+	p.RunIds = tSlice
+	for i := 0; i < size; i++ {
+		var _elem0 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_elem0 = v
+		}
+		p.RunIds = append(p.RunIds, _elem0)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *RunsQuery) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.AllRuns = &v
+	}
+	return nil
+}
+
+func (p *RunsQuery) readField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.StateMask = &v
+	}
+	return nil
+}
+
+func (p *RunsQuery) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("RunsQuery"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RunsQuery) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunIds() {
+		if err := oprot.WriteFieldBegin("runIds", thrift.LIST, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:runIds: ", p), err)
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.RunIds)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range p.RunIds {
+			if err := oprot.WriteString(string(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:runIds: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunsQuery) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAllRuns() {
+		if err := oprot.WriteFieldBegin("allRuns", thrift.BOOL, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:allRuns: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.AllRuns)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.allRuns (2) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:allRuns: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunsQuery) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStateMask() {
+		if err := oprot.WriteFieldBegin("stateMask", thrift.I64, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:stateMask: ", p), err)
+		}
+		if err := oprot.WriteI64(int64(*p.StateMask)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.stateMask (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:stateMask: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunsQuery) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RunsQuery(%+v)", *p)
+}
+
+// Attributes:
 //  - Runs
 type WorkerStatus struct {
 	Runs []*RunStatus `thrift:"runs,1,required" json:"runs"`
@@ -470,11 +682,11 @@ func (p *WorkerStatus) readField1(iprot thrift.TProtocol) error {
 	tSlice := make([]*RunStatus, 0, size)
 	p.Runs = tSlice
 	for i := 0; i < size; i++ {
-		_elem0 := &RunStatus{}
-		if err := _elem0.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem0), err)
+		_elem1 := &RunStatus{}
+		if err := _elem1.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem1), err)
 		}
-		p.Runs = append(p.Runs, _elem0)
+		p.Runs = append(p.Runs, _elem1)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -640,13 +852,13 @@ func (p *RunCommand) readField1(iprot thrift.TProtocol) error {
 	tSlice := make([]string, 0, size)
 	p.Argv = tSlice
 	for i := 0; i < size; i++ {
-		var _elem1 string
+		var _elem2 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_elem1 = v
+			_elem2 = v
 		}
-		p.Argv = append(p.Argv, _elem1)
+		p.Argv = append(p.Argv, _elem2)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -662,19 +874,19 @@ func (p *RunCommand) readField2(iprot thrift.TProtocol) error {
 	tMap := make(map[string]string, size)
 	p.Env = tMap
 	for i := 0; i < size; i++ {
-		var _key2 string
+		var _key3 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key2 = v
+			_key3 = v
 		}
-		var _val3 string
+		var _val4 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_val3 = v
+			_val4 = v
 		}
-		p.Env[_key2] = _val3
+		p.Env[_key3] = _val4
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
