@@ -83,20 +83,26 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	thriftJobDef := thriftJob.GetJobDefinition()
 
 	domainTasks := make(map[string]TaskDefinition)
-	for taskName, task := range thriftJobDef.GetTasks() {
-		cmd := task.GetCommand()
+	if thriftJobDef != nil {
+		for taskName, task := range thriftJobDef.GetTasks() {
+			cmd := task.GetCommand()
 
-		command := runner.Command{
-			Argv:       cmd.GetArgv(),
-			EnvVars:    cmd.GetEnvVars(),
-			Timeout:    time.Duration(cmd.GetTimeout()),
-			SnapshotID: cmd.GetSnapshotId(),
+			command := runner.Command{
+				Argv:       cmd.GetArgv(),
+				EnvVars:    cmd.GetEnvVars(),
+				Timeout:    time.Duration(cmd.GetTimeout()),
+				SnapshotID: cmd.GetSnapshotId(),
+			}
+			domainTasks[taskName] = TaskDefinition{command}
 		}
-		domainTasks[taskName] = TaskDefinition{command}
 	}
 
+	jobType := ""
+	if thriftJobDef != nil {
+		jobType = thriftJobDef.GetJobType()
+	}
 	domainJobDef := JobDefinition{
-		JobType: thriftJobDef.GetJobType(),
+		JobType: jobType,
 		Tasks:   domainTasks,
 	}
 
