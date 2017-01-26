@@ -13,7 +13,7 @@ func main() {
 
 	// RecoverTest Parameters
 	numJobs := 20
-	timeout := 20 * time.Second
+	timeout := 40 * time.Second
 
 	var wg sync.WaitGroup
 	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)

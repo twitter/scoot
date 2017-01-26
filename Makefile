@@ -83,4 +83,4 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies test recoverytest clean-data
+travis: dependencies recoverytest test clean-data
