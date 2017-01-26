@@ -57,7 +57,6 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	// set the ref in the ingest.
 	// push from ingest to data.
 	// delete in both repos.
-	// TODO(dbentley): we could check if sha exists in our repo before ingesting
 
 	if err := db.shaPresent(sha); err == nil {
 		return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil

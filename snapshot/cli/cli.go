@@ -79,6 +79,14 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 
+	exportCobraCmd := &cobra.Command{
+		Use:   "export",
+		Short: "export a snapshot",
+	}
+	rootCobraCmd.AddCommand(exportCobraCmd)
+
+	add(&exportGitCommitCommand{}, exportCobraCmd)
+
 	return rootCobraCmd
 }
 
@@ -117,5 +125,38 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	fmt.Println(id)
+	return nil
+}
+
+type exportGitCommitCommand struct {
+	id string
+}
+
+func (c *exportGitCommitCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "export_git_commit",
+		Short: "exports a GitCommitSnapshot identified by id into the repo in cwd",
+	}
+	cmd.Flags().StringVar(&c.id, "id", "", "id to export")
+	return cmd
+}
+
+func (c *exportGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("cannot get working directory: wd")
+	}
+
+	exportRepo, err := repo.NewRepository(wd)
+	if err != nil {
+		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
+	}
+
+	commit, err := db.ExportGitCommit(snapshot.ID(c.id), exportRepo)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(commit)
 	return nil
 }

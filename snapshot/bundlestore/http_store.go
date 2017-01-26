@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 	log.Printf("Fetching %s", uri)
 	resp, err := s.client.Get(uri)
 	if err != nil {
-		log.Printf("Fetched %s %v", uri, err)
+		log.Printf("Fetched w/error: %s %v", uri, err)
 		return nil, err
 	}
 	log.Printf("Fetched %s %v", uri, resp.StatusCode)
@@ -62,7 +63,21 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 	}
 	uri := s.rootURI + name
 	log.Printf("Posting %s", uri)
-	_, err := s.client.Post(uri, "text/plain", data)
-	log.Printf("Posted %s, err: %v", uri, err)
-	return err
+	resp, err := s.client.Post(uri, "text/plain", data)
+	log.Printf("Posted %s", uri)
+	if err != nil {
+		log.Printf("Error posting %s, err: %v", uri, err)
+		return err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	msg, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("could not write %v", string(msg))
 }

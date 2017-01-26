@@ -36,6 +36,10 @@ type Reader interface {
 	ReleaseCheckout(path string) error
 
 	// TODO(dbentley): consider adding utilities to clean up previous Checkouts. E.g., ListCheckouts or ReleaseAll
+
+	// ExportGitCommit puts the GitCommitSnapshot identified by id into exportRepo,
+	// returning the sha of the exported commit.
+	ExportGitCommit(id ID, exportRepo *repo.Repository) (commit string, err error)
 }
 
 // DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots.

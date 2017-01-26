@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 // checkout creates a checkout of id.
@@ -111,4 +112,53 @@ func (db *DB) releaseCheckout(path string) error {
 	}
 	delete(db.checkouts, path)
 	return err
+}
+
+func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string, error) {
+	v, err := db.parseID(id)
+	if err != nil {
+		return "", err
+	}
+
+	if err := v.Download(db); err != nil {
+		return "", err
+	}
+
+	if v.Kind() != kindGitCommitSnapshot {
+		return "", fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind())
+	}
+
+	// Strategy: move a commit from data to export
+	// first, check if it's in export (if so; skip)
+	// delete the ref in the export.
+	// set the ref in the data.
+	// push from data to export.
+	// delete in both repos.
+
+	sha := v.SHA()
+	if _, err := externalRepo.Run("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", sha)); err == nil {
+		return sha, nil
+	}
+
+	if _, err := externalRepo.Run("update-ref", "-d", tempRef); err != nil {
+		return "", err
+	}
+
+	if _, err := db.dataRepo.Run("update-ref", tempRef); err != nil {
+		return "", err
+	}
+
+	if _, err := db.dataRepo.Run("push", "-f", externalRepo.Dir(), tempRef); err != nil {
+		return "", err
+	}
+
+	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
+		return "", err
+	}
+
+	if _, err := externalRepo.Run("update-ref", "-d", tempRef); err != nil {
+		return "", err
+	}
+
+	return sha, nil
 }

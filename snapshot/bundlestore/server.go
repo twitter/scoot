@@ -99,9 +99,10 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 func (s *Server) checkBundleName(name string) (bool, error) {
 	// Matches 3 dash delimited strings and an optional path postfix.
 	// Looks for the first two, then a third which may have additional dashes, and then a path.
-	if ok, _ := regexp.MatchString("^([^-/]+-){2,}[^/]+(/.*){0,1}", name); ok {
+	bundleRE := "^bs-[a-z0-9]{40}.bundle$"
+	if ok, _ := regexp.MatchString(bundleRE, name); ok {
 		return true, nil
 	} else {
-		return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)
+		return false, fmt.Errorf("Error with bundleName, expected %q, got: %s", bundleRE, name)
 	}
 }
