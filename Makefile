@@ -66,6 +66,7 @@ swarmtest:
 	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run \
       go run ./binaries/scootapi/main.go run_smoke_test --num_jobs 10 --timeout 1m
 
+#TODO: this may supercede swarmtest. need to clean up all targets based on overall use and scope.
 recoverytest:
 	go run ./binaries/recoverytest/main.go
 

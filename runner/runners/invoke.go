@@ -68,6 +68,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var err error
 	go func() {
 		if cmd.SnapshotID == "" {
+			//TODO: we don't want this logic to live here, these decisisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
 				log.Printf("RunID=%s has no snapshotID! Using a nop-checkout initialized with cwd.\n", id)
 			}

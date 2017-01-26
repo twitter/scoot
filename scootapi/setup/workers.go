@@ -104,6 +104,8 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 // Constructs a gitdb backed by repo-dir and using the store (filepath or url) for upload/download.
 // If repoDir is not specified, the gitdb is backed by a tmp dir.
 // If storeAddr is not specified, the gitdb will upload/download to a tmp dir.
+//TODO: callers (workerserver/main.go etc.) currently accept store filepath or addr. Calls need to be made consistent with behavior.
+//      there is also the question of http vs https. Currently we take HOST:PORT and tack on an http prefix and bundle endpoint.
 func NewGitDB(tmpDir *temp.TempDir, repoDir, storeAddr string) (snapshot.DB, error) {
 	// Make the repo, initializing from scratch if a git dir isn't provided.
 	var r *repo.Repository
