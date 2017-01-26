@@ -37,6 +37,7 @@ package cli
 // dbCommand.run() does the work of calling a function on the SnapshotDB
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -111,7 +112,8 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
 	}
 
-	id, err := db.IngestGitCommit(ingestRepo, c.commit)
+	log.Println("Huh", ingestRepo, c.commit)
+	id, err := db.IngestDir(c.commit)
 	if err != nil {
 		return err
 	}

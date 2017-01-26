@@ -10,6 +10,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/scootdev/scoot/ice"
 )
 
 // Create a new TempDir in directory dir with prefix string.
@@ -74,4 +76,14 @@ func TempDirHere() (*TempDir, error) {
 	}
 
 	return NewTempDir(cwd, "scoot-tmp-")
+}
+
+func Module() ice.Module {
+	return module{}
+}
+
+type module struct{}
+
+func (m module) Install(b *ice.MagicBag) {
+	b.Put(TempDirDefault)
 }

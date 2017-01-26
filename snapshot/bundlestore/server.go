@@ -5,30 +5,15 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 )
 
 type Server struct {
 	store Store
-	addr  string
 }
 
-type Addr string
-
-func MakeServer(s Store, a Addr) *Server {
-	return &Server{s, string(a)}
-}
-
-func (s *Server) Serve() error {
-	mux := http.NewServeMux()
-	mux.Handle("/bundle/", s)
-	server := &http.Server{
-		Addr:    s.addr,
-		Handler: mux,
-	}
-	log.Println("Serving Bundles on", s.addr)
-	return server.ListenAndServe()
+func MakeServer(s Store) *Server {
+	return &Server{s}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -99,9 +84,10 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 func (s *Server) checkBundleName(name string) (bool, error) {
 	// Matches 3 dash delimited strings and an optional path postfix.
 	// Looks for the first two, then a third which may have additional dashes, and then a path.
-	if ok, _ := regexp.MatchString("^([^-/]+-){2,}[^/]+(/.*){0,1}", name); ok {
-		return true, nil
-	} else {
-		return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)
-	}
+	// if ok, _ := regexp.MatchString("^([^-/]+-){2,}[^/]+(/.*){0,1}", name); ok {
+	// 	return true, nil
+	// } else {
+	// 	return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)
+	// }
+	return true, nil
 }

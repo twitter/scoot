@@ -57,7 +57,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 		i.storeDir = storeTmp.Dir
 	}
 
-	store, err := bundlestore.MakeFileStore(i.storeDir)
+	store, err := bundlestore.MakeHTTPStore("http://localhost:11101/bundle/"), nil
 	if err != nil {
 		return nil, err
 	}
