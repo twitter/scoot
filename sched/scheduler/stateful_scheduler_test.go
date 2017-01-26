@@ -14,6 +14,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -35,7 +36,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		clUpdates: cl.ch,
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		wf: func(cluster.Node) worker.Worker {
-			return workers.MakeSimWorker(tmp)
+			return workers.MakeSimWorker(tmp, snapshots.MakeInvalidFiler())
 		},
 		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,

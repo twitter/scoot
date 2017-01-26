@@ -17,8 +17,12 @@ import (
 // Caches bundles on disk instead of memory as they may be used as input to shelled git commands.
 //
 // TODO: git extraction logic should eventually move to gitdb as that's a more natural fit.
-func MakeCachingBrowseStore(s Store, tmp *temp.TempDir) Store {
-	return &cachingBrowseStore{underlying: s, tmp: tmp}
+func MakeCachingBrowseStore(s Store, tmp *temp.TempDir) (Store, error) {
+	if t, err := tmp.TempDir("browseStore"); err != nil {
+		return nil, err
+	} else {
+		return &cachingBrowseStore{underlying: s, tmp: t}, nil
+	}
 }
 
 type cachingBrowseStore struct {
@@ -29,15 +33,14 @@ type cachingBrowseStore struct {
 func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 	paths := strings.SplitN(name, "/", 2)
 	bundleName := paths[0]
-	contentPath := paths[1]
 	bundlePath := filepath.Join(s.tmp.Dir, bundleName)
 	// Ensure that the bundle is available on disk.
 	if _, err := os.Stat(bundlePath); err != nil {
 		if reader, err := s.underlying.OpenForRead(bundleName); err != nil {
 			return nil, err
-		} else if file, err := os.Create(bundlePath); err != nil {
+		} else if writer, err := os.Create(bundlePath); err != nil {
 			return nil, err
-		} else if _, err := io.Copy(file, reader); err != nil {
+		} else if _, err := io.Copy(writer, reader); err != nil {
 			return nil, err
 		}
 	}
@@ -46,6 +49,7 @@ func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 		return os.Open(bundlePath)
 	}
 	// There is an appended path, try to extract it from the bundle.
+	contentPath := paths[1]
 	return s.extract(bundlePath, contentPath)
 }
 

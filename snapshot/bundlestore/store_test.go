@@ -28,7 +28,7 @@ func TestBrowseStore(t *testing.T) {
 	}
 
 	// Request bundle content from the browse store.
-	store := MakeCachingBrowseStore(fileStore, tmp)
+	store, _ := MakeCachingBrowseStore(fileStore, tmp)
 	if reader, err := store.OpenForRead(filepath.Join(bundleName, "bar")); err != nil {
 		t.Fatalf(err.Error())
 	} else if data, err := ioutil.ReadAll(reader); err != nil {

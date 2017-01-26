@@ -2,6 +2,7 @@ package client
 
 import (
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,7 @@ func NewSimpleCLIClient(di dialer.Dialer) (CLIClient, error) {
 }
 
 func (c *simpleCLIClient) addCmd(cmd command, cobraCmd *cobra.Command) {
-	cobraCmd.Flags().StringVar(&c.client.addr, "addr", defaultWorkerAddr, "worker server address")
+	cobraCmd.Flags().StringVar(&c.client.addr, "addr", scootapi.DefaultWorker_Thrift, "worker server address")
 	cmd.registerFlags(cobraCmd)
 	cobraCmd.RunE = cmd.run
 	c.rootCmd.AddCommand(cobraCmd)

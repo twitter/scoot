@@ -9,6 +9,7 @@ import (
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 )
 
 type servers struct {
@@ -34,9 +35,9 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(tmpDir *temp.TempDir) (Store, error) {
 			return MakeFileStoreInTemp(tmpDir)
 		},
-		func() Addr { return Addr("localhost:3000") },
+		func() Addr { return Addr(scootapi.DefaultApiBundlestore_HTTP) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:3001", s, nil)
+			return endpoints.NewTwitterServer(scootapi.DefaultApiStats_HTTP, s, nil)
 		},
 		makeServers,
 	)
