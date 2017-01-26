@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -19,12 +18,12 @@ type WorkersStrategy interface {
 	StartupWorkers() (string, error)
 }
 
-// In addition to count, we'll optionally want repoDir and storeHandle to initialize workers' gitdb.
+// In addition to count, we'll optionally want repoDir and storeAddr to initialize workers' gitdb.
 // Whatever is unset will be given a default value.
 type WorkerConfig struct {
-	Count       int
-	RepoDir     string
-	StoreHandle string
+	Count     int
+	RepoDir   string
+	StoreAddr string
 }
 
 const DefaultWorkerCount int = 5
@@ -90,7 +89,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		thriftPort := strconv.Itoa(s.nextPort)
 		s.nextPort++
 		if err := s.cmds.Start(bin, "-thrift_addr", "localhost:"+thriftPort, "-http_addr", "localhost:"+httpPort,
-			"-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreHandle,
+			"-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreAddr,
 		); err != nil {
 			return "", err
 		}
@@ -104,8 +103,8 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 
 // Constructs a gitdb backed by repo-dir and using the store (filepath or url) for upload/download.
 // If repoDir is not specified, the gitdb is backed by a tmp dir.
-// If storeHandle is not specified, the gitdb will upload/download to a tmp dir.
-func NewGitDB(tmpDir *temp.TempDir, repoDir, storeHandle string) (snapshot.DB, error) {
+// If storeAddr is not specified, the gitdb will upload/download to a tmp dir.
+func NewGitDB(tmpDir *temp.TempDir, repoDir, storeAddr string) (snapshot.DB, error) {
 	// Make the repo, initializing from scratch if a git dir isn't provided.
 	var r *repo.Repository
 	var err error
@@ -119,21 +118,16 @@ func NewGitDB(tmpDir *temp.TempDir, repoDir, storeHandle string) (snapshot.DB, e
 		r, err = repo.NewRepository(repoDir)
 	}
 
-	// Make the store, backed by tmp dir if store location isn't provided.
+	// Make the store, backed by tmp dir if store addr isn't provided.
 	var s bundlestore.Store
-	if storeHandle == "" {
+	if storeAddr == "" {
 		if storeDir, err := tmpDir.TempDir("worker_store"); err != nil {
 			return nil, err
-		} else {
-			storeHandle = storeDir.Dir
-		}
-	}
-	if !strings.HasPrefix(storeHandle, "http://") {
-		if s, err = bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: storeHandle}); err != nil {
+		} else if s, err = bundlestore.MakeFileStoreInTemp(storeDir); err != nil {
 			return nil, err
 		}
 	} else {
-		s = bundlestore.MakeHTTPStore(storeHandle)
+		s = bundlestore.MakeHTTPStore(bundlestore.AddrToUri(storeAddr))
 	}
 	if s, err = bundlestore.MakeCachingBrowseStore(s, tmpDir); err != nil {
 		return nil, err

@@ -38,9 +38,9 @@ func (s *cachingBrowseStore) OpenForRead(name string) (io.ReadCloser, error) {
 	if _, err := os.Stat(bundlePath); err != nil {
 		if reader, err := s.underlying.OpenForRead(bundleName); err != nil {
 			return nil, err
-		} else if file, err := os.Create(bundlePath); err != nil {
+		} else if writer, err := os.Create(bundlePath); err != nil {
 			return nil, err
-		} else if _, err := io.Copy(file, reader); err != nil {
+		} else if _, err := io.Copy(writer, reader); err != nil {
 			return nil, err
 		}
 	}

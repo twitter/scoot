@@ -2,12 +2,15 @@ package setup
 
 import (
 	"log"
+	"strings"
+
+	"github.com/scootdev/scoot/scootapi"
 )
 
 // SchedulerStrategy will startup a Scheduler (or setup a connection to one)
 type SchedulerStrategy interface {
 
-	// Startup starts up a Scheduler, returing the address of the server or an error
+	// Startup starts up a Scheduler, returning the address of the server or an error
 	Startup() (string, error)
 }
 
@@ -42,15 +45,15 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 		return "", err
 	}
 
-	if err := s.cmds.Start(bin, "-config", config, "-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreHandle); err != nil {
+	if err := s.cmds.Start(bin, "-config", config, "-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreAddr); err != nil {
 		return "", err
 	}
 
-	if err := WaitForPort("9090"); err != nil {
+	if err := WaitForPort(strings.Split(scootapi.DefaultSched_Thrift, ":")[1]); err != nil {
 		return "", err
 	}
 
-	return "localhost:9090", nil
+	return scootapi.DefaultSched_Thrift, nil
 }
 
 // Create a SchedulerStrategy with a local scheduler and in-memory workers

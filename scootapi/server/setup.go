@@ -14,6 +14,7 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/sched/worker"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
@@ -32,7 +33,7 @@ func makeServers(
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:9090") },
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(scootapi.DefaultSched_Thrift) },
 
 		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
 
@@ -67,7 +68,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:9091", s, nil)
+			return endpoints.NewTwitterServer(scootapi.DefaultSched_HTTP, s, nil)
 		},
 
 		func(t thrift.TServer, h *endpoints.TwitterServer) servers {

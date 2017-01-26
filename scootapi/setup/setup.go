@@ -9,13 +9,21 @@ import (
 	"github.com/scootdev/scoot/scootapi"
 )
 
+type Strategies struct {
+	Sched         map[string]SchedulerStrategy
+	SchedStrategy string
+	Api           map[string]ApiStrategy
+	ApiStrategy   string
+}
+
 // Main is the entry point for Cloud Scoot setup.
 // cmds is running commands
-// strategies maps strings to SchedulerStrategy
-// strategyName is the name of the strategy to use
+// strategies.sched maps strings to SchedulerStrategy
+// strategies.schedStrategy is the name of the strategy to use
+// same applies to bundlestore strategy.
 // args is the remaining arguments. These can be used to run a command
-func Main(cmds *Cmds, strategies map[string]SchedulerStrategy, strategyName string, args []string) error {
-	if err := startup(strategies, strategyName); err != nil {
+func Main(cmds *Cmds, strategies *Strategies, args []string) error {
+	if err := startup(strategies); err != nil {
 		return err
 	}
 
@@ -25,23 +33,41 @@ func Main(cmds *Cmds, strategies map[string]SchedulerStrategy, strategyName stri
 	return run(cmds, args)
 }
 
-func startup(strategies map[string]SchedulerStrategy, strategyName string) error {
-	var keys []string
-	for k, _ := range strategies {
-		keys = append(keys, k)
+func startup(strategies *Strategies) error {
+	// Startup scheduler, and indirectly workers as well.
+	var schedKeys []string
+	for k, _ := range strategies.Sched {
+		schedKeys = append(schedKeys, k)
 	}
 
-	strategy, ok := strategies[strategyName]
+	sched, ok := strategies.Sched[strategies.SchedStrategy]
 	if !ok {
-		return fmt.Errorf("--strategy=%q is not a valid strategy; valid choices are %v", strategyName, keys)
+		return fmt.Errorf("--strategy=%q is not a valid sched strategy; valid choices are %v", strategies.SchedStrategy, schedKeys)
 	}
 
-	addr, err := strategy.Startup()
+	schedAddr, err := sched.Startup()
 	if err != nil {
 		return err
 	}
 
-	scootapi.SetScootapiAddr(addr)
+	// Startup apiserver, which only incorporates bundlestore for now.
+	var apiKeys []string
+	for k, _ := range strategies.Api {
+		apiKeys = append(apiKeys, k)
+	}
+
+	api, ok := strategies.Api[strategies.ApiStrategy]
+	if !ok {
+		return fmt.Errorf("--strategy=%q is not a valid api strategy; valid choices are %v", strategies.ApiStrategy, apiKeys)
+	}
+
+	apiAddr, err := api.Startup()
+	if err != nil {
+		return err
+	}
+
+	// Save the scheduler and apiserver addresses.
+	scootapi.SetScootapiAddr(schedAddr, apiAddr)
 	return nil
 }
 

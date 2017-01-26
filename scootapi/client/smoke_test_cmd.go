@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
 )
 
 type smokeTestCmd struct {
-	numJobs     int
-	numTasks    int
-	timeout     time.Duration
-	storeHandle string
+	numJobs   int
+	numTasks  int
+	timeout   time.Duration
+	storeAddr string
 }
 
 func (c *smokeTestCmd) registerFlags() *cobra.Command {
@@ -25,15 +26,16 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 	r.Flags().IntVar(&c.numJobs, "num_jobs", 100, "number of jobs to run")
 	r.Flags().IntVar(&c.numTasks, "num_tasks", -1, "number of tasks per job, or random if -1")
 	r.Flags().DurationVar(&c.timeout, "timeout", 180*time.Second, "how long to wait for the smoke test")
-	r.Flags().StringVar(&c.storeHandle, "bundlestore", "", "Abs file path or http URL where repo uploads/downloads bundles.")
+	r.Flags().StringVar(&c.storeAddr, "bundlestore", "", "address in the form of host:port")
 
 	return r
 }
 
 func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	fmt.Println("Starting Smoke Test")
+	fmt.Println("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
 	runner := &smokeTestRunner{cl: cl}
-	if err := runner.run(c.numJobs, c.numTasks, c.timeout, c.storeHandle); err != nil {
+	if err := runner.run(c.numJobs, c.numTasks, c.timeout, c.storeAddr); err != nil {
 		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.
 	}
 	return nil
@@ -43,7 +45,7 @@ type smokeTestRunner struct {
 	cl *simpleCLIClient
 }
 
-func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, storeHandle string) error {
+func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, storeAddr string) error {
 	tmp, err := temp.NewTempDir("", "smoke_test")
 	if err != nil {
 		return err
@@ -51,13 +53,16 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, 
 
 	// If store is not specified, test with sim execer. Else generate snapshots and associated commands for use with os execer.
 	var cmds []*testhelpers.SnapshotCmd
-	if storeHandle != "" {
-		if cmds, err = testhelpers.GenerateCmds(tmp, storeHandle, numJobs); err != nil {
-			return err
-		}
-	} else {
+	if storeAddr == "" {
+		_, storeAddr = scootapi.GetScootapiAddr()
+	}
+	if storeAddr == "" {
 		cmds = []*testhelpers.SnapshotCmd{
 			testhelpers.DefaultSnapshotCmd(),
+		}
+	} else {
+		if cmds, err = testhelpers.GenerateCmds(tmp, storeAddr, numJobs); err != nil {
+			return err
 		}
 	}
 

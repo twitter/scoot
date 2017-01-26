@@ -169,8 +169,8 @@ type SnapshotCmd struct {
 }
 
 // Create cmds, for now just simple cat'ing of files in a file (non-commit) snapshot, and associated verification,
-func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*SnapshotCmd, error) {
-	db, err := setup.NewGitDB(tmp, "", storeHandle)
+func GenerateCmds(tmp *temp.TempDir, storeAddr string, numCmds int) ([]*SnapshotCmd, error) {
+	db, err := setup.NewGitDB(tmp, "", storeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -195,10 +195,8 @@ func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*Snapsh
 		}
 
 		verifyFn := func(js *scoot.JobStatus) error {
-			var store bundlestore.Store
-			if store, err = bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: storeHandle}); err != nil {
-				return err
-			} else if store, err = bundlestore.MakeCachingBrowseStore(store, tmp); err != nil {
+			store := bundlestore.MakeHTTPStore(bundlestore.AddrToUri(storeAddr))
+			if store, err = bundlestore.MakeCachingBrowseStore(store, tmp); err != nil {
 				return err
 			}
 
@@ -212,7 +210,7 @@ func GenerateCmds(tmp *temp.TempDir, storeHandle string, numCmds int) ([]*Snapsh
 				} else if data, err := ioutil.ReadAll(reader); err != nil {
 					return err
 				} else if string(data) != content {
-					return fmt.Errorf("content mismatch, expected:%s, got:%s", content, string(data))
+					return fmt.Errorf("content mismatch, expected:%s, got(%d):%s", content, len(data), string(data))
 				}
 			}
 

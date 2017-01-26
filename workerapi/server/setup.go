@@ -17,6 +17,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/runner/runners"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -39,7 +40,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
 
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket("localhost:2000") },
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(scootapi.DefaultWorker_Thrift) },
 
 		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
 
@@ -58,7 +59,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver, handlers map[string]http.Handler) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer("localhost:2001", s, handlers)
+			return endpoints.NewTwitterServer(scootapi.DefaultWorker_HTTP, s, handlers)
 		},
 
 		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {

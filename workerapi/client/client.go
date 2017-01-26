@@ -8,11 +8,10 @@ import (
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
-
-const defaultWorkerAddr = "localhost:9090"
 
 type Client interface {
 	// Connection funtions
@@ -49,7 +48,7 @@ func (c *simpleClient) Dial() error {
 func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 	if c.workerClient == nil {
 		if c.addr == "" {
-			c.addr = defaultWorkerAddr
+			c.addr = scootapi.DefaultWorker_Thrift
 		}
 
 		transport, protocolFactory, err := c.dialer.Dial(c.addr)

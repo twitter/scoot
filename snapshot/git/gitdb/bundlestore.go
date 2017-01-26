@@ -129,8 +129,9 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 	bundleSnap := &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}
 
-	//bundleName := makeBundleName(s.sha)
-	bundleName := string(bundleSnap.ID()) //TODO: why have a separate snapshotId and bundleName? It's confusing to track...
+	//bundleName := makeBundleName(bundleSnap.bundleKey)
+	//TODO: making name==ID for now because apiserver doesn't have a db yet to translate name<-->ID.
+	bundleName := string(bundleSnap.ID())
 
 	// we can't use tmpDir.TempFile() because we need the file to not exist
 	bundleFilename := path.Join(d.Dir, bundleName)
@@ -235,7 +236,8 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 		return "", err
 	}
 	//bundleName := makeBundleName(s.bundleKey)
-	bundleName := string(s.ID()) //TODO: why have a separate snapshotId and bundleName? It's confusing to track...
+	//TODO: making name==ID for now because apiserver doesn't have a db yet to translate name<-->ID.
+	bundleName := string(s.ID())
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
@@ -255,5 +257,5 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 }
 
 func makeBundleName(key string) string {
-	return fmt.Sprintf("bs-%s.bundle", key)
+	return fmt.Sprintf("bs-%s-multi.bundle", key)
 }

@@ -14,14 +14,15 @@ import (
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/setup"
 	"github.com/scootdev/scoot/snapshot"
 
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
-var thriftAddr = flag.String("thrift_addr", "localhost:9090", "port to serve thrift on")
-var httpAddr = flag.String("http_addr", "localhost:9091", "port to serve http on")
+var thriftAddr = flag.String("thrift_addr", scootapi.DefaultWorker_Thrift, "addr to serve thrift on")
+var httpAddr = flag.String("http_addr", scootapi.DefaultWorker_HTTP, "addr to serve http on")
 var configFlag = flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 var memCapFlag = flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 var repoDir = flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")

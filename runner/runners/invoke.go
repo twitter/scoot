@@ -2,9 +2,9 @@ package runners
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -109,6 +109,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.ErrorStatus(id, fmt.Errorf("could not create stderr: %v", err))
 	}
 	defer stderr.Close()
+	log.Printf("RunID=%s, stdout=%s, stderr=%s\n", id, stdout.AsFile(), stderr.AsFile())
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
@@ -157,10 +158,18 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		errPath := stderr.AsFile()
 		stdoutName := "STDOUT"
 		stderrName := "STDERR"
-		if err := exec.Command("cp", outPath, filepath.Join(tmp.Dir, stdoutName)).Run(); err != nil {
+		if writer, err := os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err))
+		} else if reader, err := os.Open(outPath); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err))
+		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err))
 		}
-		if err := exec.Command("cp", errPath, filepath.Join(tmp.Dir, stderrName)).Run(); err != nil {
+		if writer, err := os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err))
+		} else if reader, err := os.Open(errPath); err != nil {
+			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err))
+		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err))
 		}
 		snapshotID, err := inv.filer.Ingest(tmp.Dir)

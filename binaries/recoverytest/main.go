@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
@@ -15,7 +16,7 @@ func main() {
 	timeout := 20 * time.Second
 
 	var wg sync.WaitGroup
-	scootClient := testhelpers.CreateScootClient("localhost:9090")
+	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)
 
 	// Initialize Local Cluster
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()

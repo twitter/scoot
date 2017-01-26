@@ -13,6 +13,8 @@ type Builder interface {
 	Scheduler() (string, error)
 	// Worker returns the path to the Worker binary (or an error if it can't be built)
 	Worker() (string, error)
+	// ApiServer returns the path to the Worker binary (or an error if it can't be built)
+	ApiServer() (string, error)
 }
 
 const repoName = "github.com/scootdev/scoot"
@@ -21,10 +23,11 @@ const repoName = "github.com/scootdev/scoot"
 type GoBuilder struct {
 	cmds *Cmds
 
-	installed bool
-	err       error
-	schedBin  string
-	workerBin string
+	installed    bool
+	err          error
+	schedBin     string
+	workerBin    string
+	apiserverBin string
 }
 
 // NewGoBuilder creates a GoBuilder
@@ -67,6 +70,7 @@ func (b *GoBuilder) install() {
 	binDir := path.Join(goPath, "bin")
 	b.schedBin = path.Join(binDir, "scheduler")
 	b.workerBin = path.Join(binDir, "workerserver")
+	b.apiserverBin = path.Join(binDir, "apiserver")
 }
 
 func (b *GoBuilder) Scheduler() (string, error) {
@@ -77,4 +81,9 @@ func (b *GoBuilder) Scheduler() (string, error) {
 func (b *GoBuilder) Worker() (string, error) {
 	b.install()
 	return b.workerBin, b.err
+}
+
+func (b *GoBuilder) ApiServer() (string, error) {
+	b.install()
+	return b.apiserverBin, b.err
 }
