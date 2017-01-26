@@ -98,7 +98,17 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.ExitCode != nil {
 		domain.ExitCode = int(*thrift.ExitCode)
 	}
+	if thrift.SnapshotId != nil {
+		domain.SnapshotID = *thrift.SnapshotId
+	}
 	return domain
+}
+
+func copyString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
@@ -122,11 +132,12 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	case runner.BADREQUEST:
 		thrift.Status = worker.Status_BADREQUEST
 	}
-	thrift.OutUri = &domain.StdoutRef
-	thrift.ErrUri = &domain.StderrRef
-	thrift.Error = &domain.Error
+	thrift.OutUri = copyString(domain.StdoutRef)
+	thrift.ErrUri = copyString(domain.StderrRef)
+	thrift.Error = copyString(domain.Error)
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
+	thrift.SnapshotId = copyString(domain.SnapshotID)
 	return thrift
 }
 

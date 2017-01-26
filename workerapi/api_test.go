@@ -15,6 +15,7 @@ var zero = int32(0)
 var nonzero = int32(12345)
 var emptystr = ""
 var nonemptystr = "abcdef"
+var deadbeefID = "snap-id-deadbeef"
 
 var cmdFromThrift = func(x interface{}) interface{} { return ThriftRunCommandToDomain(x.(*worker.RunCommand)) }
 var cmdToThrift = func(x interface{}) interface{} { return DomainRunCommandToThrift(x.(*runner.Command)) }
@@ -79,38 +80,38 @@ var tests = []struct {
 	},
 	{
 		7, rsFromThrift, nil,
+		&worker.RunStatus{Status: worker.Status_COMPLETE, RunId: "",
+			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil, SnapshotId: &deadbeefID},
+		runner.RunStatus{RunID: "", State: runner.COMPLETE,
+			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: "", SnapshotID: deadbeefID},
+	},
+	{
+		8, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_FAILED, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
 		runner.RunStatus{RunID: "", State: runner.FAILED,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
-		8, rsFromThrift, nil,
+		9, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_ABORTED, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
 		runner.RunStatus{RunID: "", State: runner.ABORTED,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
-		9, rsFromThrift, nil,
+		10, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_TIMEDOUT, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
 		runner.RunStatus{RunID: "", State: runner.TIMEDOUT,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},
 	{
-		10, rsFromThrift, nil,
+		11, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_BADREQUEST, RunId: "",
 			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
 		runner.RunStatus{RunID: "", State: runner.BADREQUEST,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
-	},
-	{
-		11, rsFromThrift, rsToThrift,
-		&worker.RunStatus{Status: worker.Status_BADREQUEST, RunId: "id",
-			OutUri: &emptystr, ErrUri: &emptystr, Error: &emptystr, ExitCode: &nonzero},
-		runner.RunStatus{RunID: "id", State: runner.BADREQUEST,
-			StdoutRef: emptystr, StderrRef: emptystr, ExitCode: int(nonzero), Error: emptystr},
 	},
 	{
 		12, rsFromThrift, rsToThrift,

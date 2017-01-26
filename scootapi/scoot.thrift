@@ -6,7 +6,7 @@ exception CanNotScheduleNow {
   1: optional i64 retryAfterMs
 }
 
-# Generic Scoot Server Error equivalent to 500 
+# Generic Scoot Server Error equivalent to 500
 exception ScootServerError {
   1: optional i64 retryAfterMs
 }
@@ -35,6 +35,7 @@ struct RunStatus {
   4: optional string errUri
   5: optional string error
   6: optional i32 exitCode
+  7: optional string snapshotId
 }
 
 
@@ -93,4 +94,3 @@ service CloudScoot {
     2: ScootServerError err,
   )
 }
-
