@@ -63,8 +63,10 @@ testlocal: generate test
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
-	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run go run ./binaries/scootapi/main.go run_smoke_test --num_jobs 10 --timeout 1m
+	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run \
+      go run ./binaries/scootapi/main.go run_smoke_test --num_jobs 10 --timeout 1m
 
+#TODO: this may supercede swarmtest. need to clean up all targets based on overall use and scope.
 recoverytest:
 	go run ./binaries/recoverytest/main.go
 
@@ -81,4 +83,4 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies test recoverytest clean-data
+travis: dependencies recoverytest test clean-data

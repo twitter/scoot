@@ -111,6 +111,10 @@ func (c *Checkout) Release() error {
 }
 
 // User-owned checkout.
+func MakeUnmanagedCheckout(id, dir string) snapshot.Checkout {
+	return &UnmanagedCheckout{id: id, dir: dir}
+}
+
 type UnmanagedCheckout struct {
 	id  string
 	dir string

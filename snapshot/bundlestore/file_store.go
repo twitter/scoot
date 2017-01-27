@@ -11,8 +11,9 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 )
 
+// Create a fixed dir in tmp.
 func MakeFileStoreInTemp(tmp *temp.TempDir) (Store, error) {
-	bundleDir, err := tmp.TempDir("bundles")
+	bundleDir, err := tmp.FixedDir("bundles")
 	if err != nil {
 		return nil, err
 	}

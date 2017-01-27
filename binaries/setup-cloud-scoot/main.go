@@ -5,13 +5,16 @@ import (
 	"log"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/setup"
 )
 
 // Sets up a local swarm that serves scootapi, then waits or runs
 func main() {
-	strategy := flag.String("strategy", "", "strategy to setup")
-	workersFlag := flag.String("workers", "", "strategy-specific flag to configure workers")
+	schedStrategy := flag.String("strategy", "local.memory", "scheduler/worker strategy to setup")
+	apiStrategy := flag.String("api_strategy", "local", "api strategy to setup server w/bundlestore.")
+	repoDir := flag.String("repo_dir", "", "backing repo to use as a basis for handling bundles")
+	workersFlag := flag.Int("workers", setup.DefaultWorkerCount, "number of workers to use")
 	flag.Parse()
 
 	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
@@ -23,13 +26,21 @@ func main() {
 	defer cmds.Kill()
 
 	builder := setup.NewGoBuilder(cmds)
+	storeAddr := scootapi.DefaultApiBundlestore_HTTP
 
-	strategies := map[string]setup.SchedulerStrategy{
-		"local.memory": setup.NewLocalMemory(*workersFlag, builder, cmds),
-		"local.local":  setup.NewLocalLocal(*workersFlag, builder, cmds),
+	workersCfg := &setup.WorkerConfig{Count: *workersFlag, RepoDir: *repoDir, StoreAddr: storeAddr}
+	sched := map[string]setup.SchedulerStrategy{
+		"local.memory": setup.NewLocalMemory(workersCfg, builder, cmds),
+		"local.local":  setup.NewLocalLocal(workersCfg, builder, cmds),
 	}
 
-	if err := setup.Main(cmds, strategies, *strategy, flag.Args()); err != nil {
+	apiCfg := &setup.ApiConfig{StoreAddr: storeAddr}
+	api := map[string]setup.ApiStrategy{
+		"local": setup.NewLocal(apiCfg, builder, cmds),
+	}
+
+	strategies := &setup.Strategies{Sched: sched, SchedStrategy: *schedStrategy, Api: api, ApiStrategy: *apiStrategy}
+	if err := setup.Main(cmds, strategies, flag.Args()); err != nil {
 		cmds.Kill()
 		log.Fatal(err)
 	}

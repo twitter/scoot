@@ -2,28 +2,33 @@ package setup
 
 import (
 	"log"
+	"strings"
+
+	"github.com/scootdev/scoot/scootapi"
 )
 
 // SchedulerStrategy will startup a Scheduler (or setup a connection to one)
 type SchedulerStrategy interface {
 
-	// Startup starts up a Scheduler, returing the address of the server or an error
+	// Startup starts up a Scheduler, returning the address of the server or an error
 	Startup() (string, error)
 }
 
 // LocalSchedStrategy starts up a local scheduler
 type LocalSchedStrategy struct {
-	workers WorkersStrategy
-	builder Builder
-	cmds    *Cmds
+	workersCfg *WorkerConfig
+	workers    WorkersStrategy
+	builder    Builder
+	cmds       *Cmds
 }
 
 // Create a new Local Scheduler that will talk to workers, using builder and cmds to start
-func NewLocalSchedStrategy(workers WorkersStrategy, builder Builder, cmds *Cmds) *LocalSchedStrategy {
+func NewLocalSchedStrategy(workersCfg *WorkerConfig, workers WorkersStrategy, builder Builder, cmds *Cmds) *LocalSchedStrategy {
 	return &LocalSchedStrategy{
-		workers: workers,
-		builder: builder,
-		cmds:    cmds,
+		workersCfg: workersCfg,
+		workers:    workers,
+		builder:    builder,
+		cmds:       cmds,
 	}
 }
 
@@ -40,23 +45,23 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 		return "", err
 	}
 
-	if err := s.cmds.Start(bin, "-config", config); err != nil {
+	if err := s.cmds.Start(bin, "-config", config, "-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreAddr); err != nil {
 		return "", err
 	}
 
-	if err := WaitForPort("9090"); err != nil {
+	if err := WaitForPort(strings.Split(scootapi.DefaultSched_Thrift, ":")[1]); err != nil {
 		return "", err
 	}
 
-	return "localhost:9090", nil
+	return scootapi.DefaultSched_Thrift, nil
 }
 
 // Create a SchedulerStrategy with a local scheduler and in-memory workers
-func NewLocalMemory(workersFlag string, builder Builder, cmds *Cmds) *LocalSchedStrategy {
-	return NewLocalSchedStrategy(NewInMemoryWorkers(workersFlag), builder, cmds)
+func NewLocalMemory(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalSchedStrategy {
+	return NewLocalSchedStrategy(workersCfg, NewInMemoryWorkers(workersCfg), builder, cmds)
 }
 
 // Create a SchedulerStrategy with a local scheduler and local workers
-func NewLocalLocal(workersFlag string, builder Builder, cmds *Cmds) *LocalSchedStrategy {
-	return NewLocalSchedStrategy(NewLocalWorkers(workersFlag, builder, cmds), builder, cmds)
+func NewLocalLocal(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalSchedStrategy {
+	return NewLocalSchedStrategy(workersCfg, NewLocalWorkers(workersCfg, builder, cmds), builder, cmds)
 }
