@@ -118,6 +118,9 @@ func NewGitDB(tmpDir *temp.TempDir, repoDir, storeAddr string) (snapshot.DB, err
 		}
 	} else {
 		r, err = repo.NewRepository(repoDir)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Make the store, backed by tmp dir if store addr isn't provided.
@@ -130,9 +133,6 @@ func NewGitDB(tmpDir *temp.TempDir, repoDir, storeAddr string) (snapshot.DB, err
 		}
 	} else {
 		s = bundlestore.MakeHTTPStore(bundlestore.AddrToUri(storeAddr))
-	}
-	if s, err = bundlestore.MakeCachingBrowseStore(s, tmpDir); err != nil {
-		return nil, err
 	}
 
 	// Make the db and convert it into a filer.

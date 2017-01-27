@@ -34,7 +34,7 @@ func main() {
 	bag.InstallModule(temp.Module())
 	bag.InstallModule(gitdb.Module())
 	bag.InstallModule(bundlestore.Module())
-	bag.InstallModule(snapshots.ViewModule())
+	bag.InstallModule(snapshots.Module())
 	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "apiserver" },

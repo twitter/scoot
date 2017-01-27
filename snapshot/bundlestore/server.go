@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -58,7 +59,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	log.Printf("Downloading %s", bundleName)
-	if ok, err := s.checkBundleName(bundleName); !ok {
+	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

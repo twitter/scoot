@@ -45,34 +45,39 @@ func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
 	store := &FakeStore{files: map[string][]byte{}}
 	listener, _ := net.Listen("tcp", "localhost:0")
-	listener.Close()
+	defer listener.Close()
 	addr := listener.Addr().String()
-	go MakeServer(store, Addr(addr)).Serve()
-	time.Sleep(50 * time.Millisecond) // wait a reasonable amount of time for the server to come up.
+
+	mux := http.NewServeMux()
+	mux.Handle("/bundle/", MakeServer(store))
+	go func() {
+		http.Serve(listener, mux)
+	}()
 
 	rootUri := "http://" + addr + "/bundle/"
 	client := &http.Client{Timeout: 1 * time.Second}
 
 	// Try to write data.
-	if resp, err := client.Post(rootUri+"baz-baz-baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
+	bundle1ID := "bs-0000000000000000000000000000000000000001.bundle"
+	if resp, err := client.Post(rootUri+bundle1ID, "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
 	}
-	time.Sleep(50 * time.Millisecond)
-	if !reflect.DeepEqual(store.files["baz-baz-baz"], []byte("baz_data")) {
+
+	if !reflect.DeepEqual(store.files[bundle1ID], []byte("baz_data")) {
 		t.Fatalf("Failed to post data.")
 	}
 
 	// Try to write data again.
-	if resp, err := client.Post(rootUri+"baz-baz-baz", "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
+	if resp, err := client.Post(rootUri+bundle1ID, "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
 	}
 
 	// Try to read data.
-	if resp, err := client.Get(rootUri + "baz-baz-baz"); err != nil {
+	if resp, err := client.Get(rootUri + bundle1ID); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		defer resp.Body.Close()
@@ -84,7 +89,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// Try to read non-existent data, expect NotFound.
-	if resp, err := client.Get(rootUri + "foo-foo-foo"); err != nil {
+	if resp, err := client.Get(rootUri + "bs-0000000000000000000000000000000000000000.bundle"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		resp.Body.Close()
@@ -99,19 +104,20 @@ func TestServer(t *testing.T) {
 
 	// Try to write data.
 	httpStore := MakeHTTPStore(rootUri)
-	if err := httpStore.Write("bar-bar-bar", bytes.NewBuffer([]byte("bar_data"))); err != nil {
+	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
+	if err := httpStore.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data"))); err != nil {
 		t.Fatalf(err.Error())
 	}
 
 	// Check if the write succeeded.
-	if ok, err := httpStore.Exists("bar-bar-bar"); err != nil {
+	if ok, err := httpStore.Exists(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if !ok {
 		t.Fatalf("Expected data to exist.")
 	}
 
 	// Try to read data.
-	if reader, err := httpStore.OpenForRead("bar-bar-bar"); err != nil {
+	if reader, err := httpStore.OpenForRead(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if data, err := ioutil.ReadAll(reader); err != nil {
 		t.Fatalf(err.Error())
@@ -120,7 +126,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// Check for non-existent data.
-	if ok, err := httpStore.Exists("foo-foo-foo"); err != nil {
+	if ok, err := httpStore.Exists("bs-0000000000000000000000000000000000000000.bundle"); err != nil {
 		t.Fatalf(err.Error())
 	} else if ok {
 		t.Fatalf("Expected data to not exist.")

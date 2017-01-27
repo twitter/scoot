@@ -2,7 +2,6 @@ package snapshots
 
 import (
 	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/snapshot"
 )
 
 // Module returns a module to allow serving Snapshots
