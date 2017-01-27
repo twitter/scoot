@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
@@ -18,7 +17,7 @@ func NewRand() *rand.Rand {
 // To help with testing the Scoot API and Scheduler
 
 // Generates a scoot.JobDefinition with numTasks tasks (or random if numTasks == -1)
-func GenJobDefinition(rng *rand.Rand, numTasks int) *scoot.JobDefinition {
+func GenJobDefinition(rng *rand.Rand, numTasks int, cmd *SnapshotCmd) *scoot.JobDefinition {
 	def := scoot.NewJobDefinition()
 	def.Tasks = make(map[string]*scoot.TaskDefinition)
 
@@ -28,7 +27,7 @@ func GenJobDefinition(rng *rand.Rand, numTasks int) *scoot.JobDefinition {
 
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
-		taskDef := GenTask(rng)
+		taskDef := GenTask(rng, cmd)
 
 		def.Tasks[taskId] = taskDef
 	}
@@ -38,13 +37,14 @@ func GenJobDefinition(rng *rand.Rand, numTasks int) *scoot.JobDefinition {
 
 // Generates a scoot.TaskDefinition
 // TODO: actually make more realistic
-func GenTask(rng *rand.Rand) *scoot.TaskDefinition {
+func GenTask(rng *rand.Rand, sc *SnapshotCmd) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 500", "complete 0"}
+	cmd.Argv = sc.Argv
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd
+	taskDef.SnapshotId = &sc.SnapshotID
 
 	return taskDef
 }

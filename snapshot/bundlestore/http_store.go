@@ -13,6 +13,9 @@ import (
 )
 
 func MakeHTTPStore(rootURI string) Store {
+	if !strings.HasSuffix(rootURI, "/") {
+		rootURI = rootURI + "/"
+	}
 	client := &http.Client{Timeout: 30 * time.Second}
 	return &httpStore{rootURI, client}
 }
@@ -64,20 +67,17 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 	uri := s.rootURI + name
 	log.Printf("Posting %s", uri)
 	resp, err := s.client.Post(uri, "text/plain", data)
-	log.Printf("Posted %s", uri)
-	if err != nil {
-		log.Printf("Error posting %s, err: %v", uri, err)
-		return err
+	if err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			data, _ := ioutil.ReadAll(resp.Body)
+			return errors.New(resp.Status + ": " + string(data))
+		}
 	}
+	log.Printf("Posted %s, err: %v", uri, err)
+	return err
+}
 
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	msg, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return fmt.Errorf("could not write %v", string(msg))
+func AddrToUri(addr string) string {
+	return "http://" + addr + "/bundle/"
 }

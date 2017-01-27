@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -172,6 +173,7 @@ func (s *bundlestoreSnapshot) Kind() snapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
 func (s *bundlestoreSnapshot) Download(db *DB) error {
+	log.Print("Return if we already have this sha, else continue by downloading from bundlestore. ", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
 		return nil
 	}
@@ -180,11 +182,14 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// TODO(dbentley): keep stats about how long it takes to unbundle
 	filename, err := s.downloadBundle(db)
 	if err != nil {
+		log.Print("Unable to download bundle: ", err)
 		return err
 	}
 
 	// unbundle optimistically
 	// this will succeed if we have all of the prerequisite objects
+
+	log.Print("Return if unbundling gets us our sha, else continue. ", s.SHA())
 	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err == nil {
 		return db.shaPresent(s.sha)
 	}
@@ -193,6 +198,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// see if it's because we're missing prereqs
 	exitError := err.(*exec.ExitError)
 	if exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
+		log.Print("Can't find sha and prereqs aren't the problem, return err. ", s.SHA())
 		return err
 	}
 
@@ -209,6 +215,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		return err
 	}
 
+	log.Print("Final attempt to unbundle after updating stream. ", s.SHA())
 	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err != nil {
 		// if we still can't unbundle, then the bundle might be corrupt or the
 		// prereqs might not be in the stream, or maybe the git server is serving us

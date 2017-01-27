@@ -9,12 +9,13 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 )
 
 func main() {
-	bsAddr := flag.String("bs_addr", "localhost:11101", "http addr to serve bundlestore on")
-	obsAddr := flag.String("obs_addr", "localhost:11102", "http addr to serve observability stats on")
+	bundlestoreAddr := flag.String("bundlestore_addr", scootapi.DefaultApiBundlestore_HTTP, "http addr to serve bundlestore on")
+	statsAddr := flag.String("stats_addr", scootapi.DefaultApiStats_HTTP, "http addr to serve observability stats on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	flag.Parse()
 
@@ -30,9 +31,9 @@ func main() {
 	// Start a new goroutine for bundlestore server as well as the observability server.
 	bag, schema := bundlestore.Defaults()
 	bag.PutMany(
-		func() bundlestore.Addr { return bundlestore.Addr(*bsAddr) },
+		func() bundlestore.Addr { return bundlestore.Addr(*bundlestoreAddr) },
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*obsAddr, s, nil)
+			return endpoints.NewTwitterServer(*statsAddr, s, nil)
 		},
 		func(tmp *temp.TempDir) (bundlestore.Store, error) {
 			return bundlestore.MakeFileStoreInTemp(tmp)
