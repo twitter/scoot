@@ -17,6 +17,7 @@ struct RunStatus {
   4: optional string errUri
   5: optional string error
   6: optional i32 exitCode
+  7: optional string snapshotId
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.

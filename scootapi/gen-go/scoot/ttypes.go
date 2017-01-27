@@ -512,13 +512,15 @@ func (p *ScootServerError) Error() string {
 //  - ErrUri
 //  - Error
 //  - ExitCode
+//  - SnapshotId
 type RunStatus struct {
-	Status   RunStatusState `thrift:"status,1,required" json:"status"`
-	RunId    string         `thrift:"runId,2,required" json:"runId"`
-	OutUri   *string        `thrift:"outUri,3" json:"outUri,omitempty"`
-	ErrUri   *string        `thrift:"errUri,4" json:"errUri,omitempty"`
-	Error    *string        `thrift:"error,5" json:"error,omitempty"`
-	ExitCode *int32         `thrift:"exitCode,6" json:"exitCode,omitempty"`
+	Status     RunStatusState `thrift:"status,1,required" json:"status"`
+	RunId      string         `thrift:"runId,2,required" json:"runId"`
+	OutUri     *string        `thrift:"outUri,3" json:"outUri,omitempty"`
+	ErrUri     *string        `thrift:"errUri,4" json:"errUri,omitempty"`
+	Error      *string        `thrift:"error,5" json:"error,omitempty"`
+	ExitCode   *int32         `thrift:"exitCode,6" json:"exitCode,omitempty"`
+	SnapshotId *string        `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
 }
 
 func NewRunStatus() *RunStatus {
@@ -568,6 +570,15 @@ func (p *RunStatus) GetExitCode() int32 {
 	}
 	return *p.ExitCode
 }
+
+var RunStatus_SnapshotId_DEFAULT string
+
+func (p *RunStatus) GetSnapshotId() string {
+	if !p.IsSetSnapshotId() {
+		return RunStatus_SnapshotId_DEFAULT
+	}
+	return *p.SnapshotId
+}
 func (p *RunStatus) IsSetOutUri() bool {
 	return p.OutUri != nil
 }
@@ -582,6 +593,10 @@ func (p *RunStatus) IsSetError() bool {
 
 func (p *RunStatus) IsSetExitCode() bool {
 	return p.ExitCode != nil
+}
+
+func (p *RunStatus) IsSetSnapshotId() bool {
+	return p.SnapshotId != nil
 }
 
 func (p *RunStatus) Read(iprot thrift.TProtocol) error {
@@ -625,6 +640,10 @@ func (p *RunStatus) Read(iprot thrift.TProtocol) error {
 			}
 		case 6:
 			if err := p.readField6(iprot); err != nil {
+				return err
+			}
+		case 7:
+			if err := p.readField7(iprot); err != nil {
 				return err
 			}
 		default:
@@ -703,6 +722,15 @@ func (p *RunStatus) readField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *RunStatus) readField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 7: ", err)
+	} else {
+		p.SnapshotId = &v
+	}
+	return nil
+}
+
 func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -723,6 +751,9 @@ func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField6(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField7(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -815,6 +846,21 @@ func (p *RunStatus) writeField6(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:exitCode: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunStatus) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnapshotId() {
+		if err := oprot.WriteFieldBegin("snapshotId", thrift.STRING, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:snapshotId: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.SnapshotId)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.snapshotId (7) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:snapshotId: ", p), err)
 		}
 	}
 	return err
