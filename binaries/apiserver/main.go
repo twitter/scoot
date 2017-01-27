@@ -34,6 +34,7 @@ func main() {
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(temp.Module())
+	bag.InstallModule(gitdb.Module())
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(snapshots.ViewModule())
 	bag.InstallModule(endpoints.Module())
@@ -45,20 +46,6 @@ func main() {
 				"/bundle/": bs,
 				"/view/":   vs,
 			}
-		},
-		func(tmp *temp.TempDir, store bundlestore.Store) (snapshot.DB, error) {
-			repoTmp, err := tmp.TempDir("gitdb-repo-")
-			if err != nil {
-				return nil, err
-			}
-
-			r, err := repo.InitRepo(repoTmp.Dir)
-			if err != nil {
-				return nil, err
-			}
-
-			return gitdb.MakeDBFromRepo(r, tmp, nil, nil,
-				&gitdb.BundlestoreConfig{Store: store}, gitdb.AutoUploadNone), nil
 		},
 	)
 	endpoints.RunServer(bag, schema, configText)
