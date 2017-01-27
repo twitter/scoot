@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/cli"
@@ -23,16 +24,10 @@ func main() {
 	}
 }
 
-type injector struct {
-	// dir that holds our bundles
-	storeDir string
-}
+type injector struct{}
 
-func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
-	rootCmd.PersistentFlags().StringVar(&i.storeDir, "bundlestore_path", "", "path to where we store bundles")
-}
+func (i *injector) RegisterFlags(rootCmd *cobra.Command) {}
 
-// If 'storeDir' is nil don't use bundlestore backend, else use a file-backed bundlestore at that location.
 func (i *injector) Inject() (snapshot.DB, error) {
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
@@ -49,15 +44,8 @@ func (i *injector) Inject() (snapshot.DB, error) {
 			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo: %v", wd, err)
 	}
 
-	if i.storeDir == "" {
-		storeTmp, err := tempDir.TempDir("bundlestore")
-		if err != nil {
-			return nil, err
-		}
-		i.storeDir = storeTmp.Dir
-	}
-
-	store, err := bundlestore.MakeFileStore(i.storeDir)
+	_, api := scootapi.GetScootapiAddr()
+	store, err := bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(api)), nil
 	if err != nil {
 		return nil, err
 	}

@@ -127,11 +127,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	bundleSnap := &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}
-
-	//bundleName := makeBundleName(bundleSnap.bundleKey)
-	//TODO: making name==ID for now because apiserver doesn't have a db yet to translate name<-->ID.
-	bundleName := string(bundleSnap.ID())
+	bundleName := makeBundleName(s.sha)
 
 	// we can't use tmpDir.TempFile() because we need the file to not exist
 	bundleFilename := path.Join(d.Dir, bundleName)
@@ -156,7 +152,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	// for code review you might want to have both before and after snapshots. In that case,
 	// we could upload once and return two IDs that have the same bundleKey but different
 	// sha's.
-	return bundleSnap, nil
+	return &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}, nil
 }
 
 type bundlestoreSnapshot struct {
@@ -235,9 +231,7 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 	if err != nil {
 		return "", err
 	}
-	//bundleName := makeBundleName(s.bundleKey)
-	//TODO: making name==ID for now because apiserver doesn't have a db yet to translate name<-->ID.
-	bundleName := string(s.ID())
+	bundleName := makeBundleName(s.bundleKey)
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
@@ -257,5 +251,5 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 }
 
 func makeBundleName(key string) string {
-	return fmt.Sprintf("bs-%s-multi.bundle", key)
+	return fmt.Sprintf("bs-%s.bundle", key)
 }

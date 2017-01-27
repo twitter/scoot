@@ -157,6 +157,9 @@ func (db *DB) loop(initer RepoIniter) {
 			} else {
 				req.resultCh <- idAndError{id: s.ID()}
 			}
+		case readFileAllReq:
+			data, err := db.readFileAll(req.id, req.path)
+			req.resultCh <- stringAndError{str: data, err: err}
 		case checkoutReq:
 			path, err := db.checkout(req.id)
 			req.resultCh <- stringAndError{str: path, err: err}
@@ -210,17 +213,36 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	return result.id, result.err
 }
 
+type readFileAllReq struct {
+	id       snap.ID
+	path     string
+	resultCh chan stringAndError
+}
+
+func (r readFileAllReq) req() {}
+
+type stringAndError struct {
+	str string
+	err error
+}
+
+// ReadFileAll reads the contents of the file path in FSSnapshot ID, or errors
+func (db *DB) ReadFileAll(id snap.ID, path string) ([]byte, error) {
+	if <-db.initDoneCh; db.err != nil {
+		return nil, db.err
+	}
+	resultCh := make(chan stringAndError)
+	db.reqCh <- readFileAllReq{id: id, path: path, resultCh: resultCh}
+	result := <-resultCh
+	return []byte(result.str), result.err
+}
+
 type checkoutReq struct {
 	id       snap.ID
 	resultCh chan stringAndError
 }
 
 func (r checkoutReq) req() {}
-
-type stringAndError struct {
-	str string
-	err error
-}
 
 // Checkout puts the snapshot identified by id in the local filesystem, returning
 // the path where it lives or an error.

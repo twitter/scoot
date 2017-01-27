@@ -26,6 +26,9 @@ type Creator interface {
 
 // Reader allows reading data from existing Snapshots
 type Reader interface {
+	// ReadFileAll reads the contents of the file path in FSSnapshot ID, or errors
+	ReadFileAll(id ID, path string) ([]byte, error)
+
 	// Checkout puts the Snapshot identified by id in the local filesystem, returning
 	// the path where it lives or an error.
 	// TODO(dbentley): should we have separate methods based on the kind of Snapshot?
