@@ -4,18 +4,19 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
+	"github.com/scootdev/scoot/snapshot/git/gitdb"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 func main() {
-	bundlestoreAddr := flag.String("bundlestore_addr", scootapi.DefaultApiBundlestore_HTTP, "http addr to serve bundlestore on")
-	statsAddr := flag.String("stats_addr", scootapi.DefaultApiStats_HTTP, "http addr to serve observability stats on")
+	httpAddr := flag.String("http_addr", "localhost:11101", "http addr to serve on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	flag.Parse()
 
@@ -28,17 +29,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Start a new goroutine for bundlestore server as well as the observability server.
-	bag, schema := bundlestore.Defaults()
+	bag := ice.NewMagicBag()
+	schema := jsonconfig.EmptySchema()
+	bag.InstallModule(temp.Module())
+	bag.InstallModule(gitdb.Module())
+	bag.InstallModule(bundlestore.Module())
+	bag.InstallModule(snapshots.Module())
+	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
-		func() bundlestore.Addr { return bundlestore.Addr(*bundlestoreAddr) },
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*statsAddr, s, nil)
-		},
-		func(tmp *temp.TempDir) (bundlestore.Store, error) {
-			return bundlestore.MakeFileStoreInTemp(tmp)
+		func() endpoints.StatScope { return "apiserver" },
+		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
+		func(bs *bundlestore.Server, vs *snapshots.ViewServer) map[string]http.Handler {
+			return map[string]http.Handler{
+				"/bundle/": bs,
+				// Because we don't have any stream configured,
+				// for now our view server will only work for snapshots
+				// in a bundle with no basis
+				"/view/": vs,
+			}
 		},
 	)
-
-	bundlestore.RunServer(bag, schema, configText)
+	endpoints.RunServer(bag, schema, configText)
 }

@@ -78,6 +78,15 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 	rootCobraCmd.AddCommand(createCobraCmd)
 
 	add(&ingestGitCommitCommand{}, createCobraCmd)
+	add(&ingestDirCommand{}, createCobraCmd)
+
+	readCobraCmd := &cobra.Command{
+		Use:   "read",
+		Short: "read data from a snapshot",
+	}
+	rootCobraCmd.AddCommand(readCobraCmd)
+
+	add(&catCommand{}, readCobraCmd)
 
 	exportCobraCmd := &cobra.Command{
 		Use:   "export",
@@ -102,7 +111,7 @@ type ingestGitCommitCommand struct {
 func (c *ingestGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest_git_commit",
-		Short: "ingests a git commit into cwd and optionally uploads to a file-backed bundlestore.",
+		Short: "ingests a git commit into the repo in cwd",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
 	return cmd
@@ -158,5 +167,52 @@ func (c *exportGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	fmt.Println(commit)
+}
+
+type ingestDirCommand struct {
+	dir string
+}
+
+func (c *ingestDirCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ingest_dir",
+		Short: "ingests a directory into the repo in cwd",
+	}
+	cmd.Flags().StringVar(&c.dir, "dir", "", "dir to ingest")
+	return cmd
+}
+
+func (c *ingestDirCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+	id, err := db.IngestDir(c.dir)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(id)
+	return nil
+}
+
+type catCommand struct {
+	id string
+}
+
+func (c *catCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "cat",
+		Short: "concatenate files from an FSSnapshot to stdout",
+	}
+	cmd.Flags().StringVar(&c.id, "id", "", "Snapshot ID to read from")
+	return cmd
+}
+
+func (c *catCommand) run(db snapshot.DB, _ *cobra.Command, filenames []string) error {
+	id := snapshot.ID(c.id)
+	for _, filename := range filenames {
+		data, err := db.ReadFileAll(id, filename)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s", data)
+	}
 	return nil
 }

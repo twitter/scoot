@@ -13,6 +13,11 @@ import (
 // Schema holds the different Implementations's the client wants to configure
 type Schema map[string]Implementations
 
+// EmptySchema returns an empty Schema, needed if you don't allow configuration
+func EmptySchema() Schema {
+	return map[string]Implementations{}
+}
+
 // Implementations maps the the names of implementations to the Implementation
 // As a special case, "" maps to a default implementation that will not be unmarshal'ed,
 // and so the Implementation will be used as-is.

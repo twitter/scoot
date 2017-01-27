@@ -41,7 +41,7 @@ func main() {
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 
 		func(s stats.StatsReceiver, handlers map[string]http.Handler) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(*httpAddr, s, handlers)
+			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, handlers)
 		},
 
 		func(tmpDir *temp.TempDir) (snapshot.Filer, error) {

@@ -9,6 +9,23 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
+func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
+	v, err := db.parseID(id)
+	if err != nil {
+		return "", err
+	}
+
+	if err := v.Download(db); err != nil {
+		return "", err
+	}
+
+	if v.Kind() != kindFSSnapshot {
+		return "", fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind())
+	}
+
+	return db.dataRepo.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
+}
+
 // checkout creates a checkout of id.
 func (db *DB) checkout(id snap.ID) (path string, err error) {
 	defer func() {

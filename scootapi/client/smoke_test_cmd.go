@@ -2,11 +2,14 @@ package client
 
 import (
 	"fmt"
-	"log"
+	"io/ioutil"
+	"os/exec"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
 )
@@ -32,67 +35,110 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 }
 
 func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+	tmp, err := temp.TempDirDefault()
+	if err != nil {
+		return err
+	}
 	fmt.Println("Starting Smoke Test")
 	fmt.Println("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
-	runner := &smokeTestRunner{cl: cl}
-	if err := runner.run(c.numJobs, c.numTasks, c.timeout, c.storeAddr); err != nil {
+	runner := &smokeTestRunner{cl: cl, tmp: tmp}
+	if err := runner.run(c.numJobs, c.numTasks, c.timeout); err != nil {
 		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.
 	}
 	return nil
 }
 
 type smokeTestRunner struct {
-	cl *simpleCLIClient
+	cl  *simpleCLIClient
+	tmp *temp.TempDir
 }
 
-func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, storeAddr string) error {
-	tmp, err := temp.NewTempDir("", "smoke_test")
+func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) error {
+	id1, id2, err := r.generateSnapshots()
+	if err != nil {
+		return err
+	}
+	// Generate the jobs and start executing.
+	jobs := make([]string, numJobs)
+
+	// (first job will test data)
+	jobs[0] = testhelpers.StartJob(r.cl.scootClient, &scoot.JobDefinition{
+		Tasks: map[string]*scoot.TaskDefinition{
+			"id1": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id1,
+			},
+			"id2": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id2,
+			},
+		}})
+
+	for i := 1; i < numJobs; i++ {
+		jobs[i] = testhelpers.StartJob(r.cl.scootClient, testhelpers.GenerateJob(numTasks, id1))
+	}
+
+	// Wait for results and then verify that the results are as expected.
+	if err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout); err != nil {
+		return err
+	}
+
+	st, err := r.cl.scootClient.GetStatus(jobs[0])
 	if err != nil {
 		return err
 	}
 
-	// If store is not specified, test with sim execer. Else generate snapshots and associated commands for use with os execer.
-	var cmds []*testhelpers.SnapshotCmd
-	if storeAddr == "" {
-		_, storeAddr = scootapi.GetScootapiAddr()
-	}
-	if storeAddr == "" {
-		cmds = []*testhelpers.SnapshotCmd{
-			testhelpers.DefaultSnapshotCmd(),
-		}
-	} else {
-		if cmds, err = testhelpers.GenerateCmds(tmp, storeAddr, numJobs); err != nil {
-			return err
-		}
+	out1ID := *st.TaskData["id1"].SnapshotId
+	out2ID := *st.TaskData["id2"].SnapshotId
+
+	return r.checkSnapshots(out1ID, out2ID)
+}
+
+func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error) {
+	dir, err := r.tmp.TempDir("testdata")
+	if err != nil {
+		return "", "", err
 	}
 
-	// Generate the jobs and start executing.
-	jobs := make([]string, 0, numJobs)
-	jobsToCmds := make(map[string]*testhelpers.SnapshotCmd)
-	for i := 0; i < numJobs; i++ {
-		for {
-			cmd := cmds[i%len(cmds)]
-			id, err := testhelpers.GenerateAndStartJob(r.cl.scootClient, numTasks, cmd)
-			if err == nil {
-				jobs = append(jobs, id)
-				jobsToCmds[id] = cmd
-				break
-			}
-			// retry starting job until it succeeds.
-			// this is useful for testing where we are restarting the scheduler
-			log.Printf("Error Starting Job: Retrying %v", err)
-		}
+	if err := ioutil.WriteFile(path.Join(dir.Dir, "file.txt"), []byte("first"), 0666); err != nil {
+		return "", "", err
 	}
+	output, err := exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir.Dir).Output()
+	if err != nil {
+		return "", "", err
+	}
+	id1 = strings.TrimSuffix(string(output), "\n")
 
-	// Wait for results and then verify that the results are as expected.
-	if statuses, err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout); err != nil {
+	if err := ioutil.WriteFile(path.Join(dir.Dir, "file.txt"), []byte("second"), 0666); err != nil {
+		return "", "", err
+	}
+	output, err = exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir.Dir).Output()
+	if err != nil {
+		return "", "", err
+	}
+	id2 = strings.TrimSuffix(string(output), "\n")
+
+	return id1, id2, nil
+}
+
+func (r *smokeTestRunner) checkSnapshots(id1 string, id2 string) error {
+	output, err := exec.Command("scoot-snapshot-db", "read", "cat", "--id", id1, "STDOUT").Output()
+	if err != nil {
 		return err
-	} else {
-		for jobID, status := range statuses {
-			if err = jobsToCmds[jobID].Verify(status); err != nil {
-				return err
-			}
-		}
 	}
+	text := string(output)
+	if text != "first" {
+		return fmt.Errorf("expected first out snapshot %v to contain \"first\" but got %q", id1, text)
+	}
+
+	output, err = exec.Command("scoot-snapshot-db", "read", "cat", "--id", id2, "STDOUT").Output()
+	if err != nil {
+		return err
+	}
+	text = string(output)
+	if text != "second" {
+		return fmt.Errorf("expected second out snapshot %v to contain \"second\" but got %q", id2, text)
+	}
+
 	return nil
 }
