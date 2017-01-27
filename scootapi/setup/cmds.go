@@ -157,7 +157,9 @@ func (c *Cmds) RunCmd(cmd *exec.Cmd) error {
 	log.Println("Running", cmd.Args)
 	// remove cmd once it's done
 	defer c.remove(cmd)
-	return cmd.Run()
+	err := cmd.Run()
+	log.Println("Run Done: ", err)
+	return err
 }
 
 // Start is a convenience method that calls Command and then StartCmd

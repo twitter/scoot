@@ -50,7 +50,7 @@ func Test_RunJob_WithNoTasks(t *testing.T) {
 // Jobs with Invalid Task Ids should return an InvalidJobRequest error
 func Test_RunJob_InvalidTaskId(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
-	task := testhelpers.GenTask(testhelpers.NewRand())
+	task := testhelpers.GenTask(testhelpers.NewRand(), testhelpers.DefaultSnapshotCmd())
 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
 		"": task,
 	}
@@ -69,7 +69,7 @@ func Test_RunJob_InvalidTaskId(t *testing.T) {
 // Jobs with Tasks with no commands should return InvalidJobRequest error
 func Test_RunJob_NoCommand(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
-	task := testhelpers.GenTask(testhelpers.NewRand())
+	task := testhelpers.GenTask(testhelpers.NewRand(), testhelpers.DefaultSnapshotCmd())
 	task.Command.Argv = []string{}
 	jobDef.Tasks = map[string]*scoot.TaskDefinition{
 		"1": task,
@@ -87,7 +87,7 @@ func Test_RunJob_NoCommand(t *testing.T) {
 }
 
 func Test_RunJob_ValidJob(t *testing.T) {
-	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1)
+	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1, testhelpers.DefaultSnapshotCmd())
 
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("testJobId", nil)
@@ -104,7 +104,7 @@ func Test_RunJob_ValidJob(t *testing.T) {
 }
 
 func Test_RunJob_SchedulerError(t *testing.T) {
-	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1)
+	jobDef := testhelpers.GenJobDefinition(testhelpers.NewRand(), -1, testhelpers.DefaultSnapshotCmd())
 
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("", errors.New("test error"))
