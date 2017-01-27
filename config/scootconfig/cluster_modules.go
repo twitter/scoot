@@ -38,7 +38,7 @@ func (c *ClusterLocalConfig) Install(bag *ice.MagicBag) {
 }
 
 func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
-	f := local.MakeFetcher()
+	f := local.MakeFetcher("workerserver", "thrift_addr")
 	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Second).C)
 	return cluster.NewCluster(nil, updates), nil
 }

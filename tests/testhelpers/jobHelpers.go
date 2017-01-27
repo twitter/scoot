@@ -218,6 +218,7 @@ func GenerateCmds(tmp *temp.TempDir, storeAddr string, numCmds int) ([]*Snapshot
 		}
 		cmds = append(cmds, &SnapshotCmd{string(id), []string{"cat", fileName}, verifyFn})
 	}
+	//cmds[1] = cmds[0] //FIXME: delete!
 
 	return cmds, nil
 }

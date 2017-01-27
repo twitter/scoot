@@ -46,6 +46,13 @@
 	path = vendor/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid
 	branch = 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
+
+# Added by hand b/c deps.sh currently bombs with an ssl error when git cloning gopkg.in/yaml.v2
+[submodule "vendor/github.com/golang/groupcache"]
+	path = vendor/github.com/golang/groupcache
+	url = https://github.com/golang/groupcache
+	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
+
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
 # Note: this division should be curated whenever the dependencies change.
