@@ -167,7 +167,7 @@ func moveCommit(from *repo.Repository, to *repo.Repository, sha string) error {
 		return err
 	}
 
-	if _, err := from.Run("update-ref", tempRef); err != nil {
+	if _, err := from.Run("update-ref", tempRef, sha); err != nil {
 		return err
 	}
 

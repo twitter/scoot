@@ -55,7 +55,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 		return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
 	}
 
-	if err := moveCommit(externalRepo, db.dataRepo, sha); err != nil {
+	if err := moveCommit(ingestRepo, db.dataRepo, sha); err != nil {
 		return nil, err
 	}
 
