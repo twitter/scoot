@@ -3,9 +3,9 @@ package client
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -88,24 +88,10 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 		return err
 	}
 
-	out1ID := st.TaskData["id1"].SnapshotId
-	out2ID := st.TaskData["id2"].SnapshotId
+	out1ID := *st.TaskData["id1"].SnapshotId
+	out2ID := *st.TaskData["id2"].SnapshotId
 
-	log.Println("!!!!!!!!!!!!!!!!!!!!!", out1ID, out2ID)
-
-	return nil
-}
-
-func (r *smokeTestRunner) startJob(job *scoot.JobDefinition) string {
-	for {
-		j, err := r.cl.scootClient.RunJob(job)
-		if err == nil {
-			return j.ID
-		}
-		// retry starting job until it succeeds.
-		// this is useful for testing where we are restarting the scheduler
-		log.Printf("Error Starting Job: Retrying %v", err)
-	}
+	return r.checkSnapshots(out1ID, out2ID)
 }
 
 func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error) {
@@ -119,10 +105,9 @@ func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error
 	}
 	output, err := exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir.Dir).Output()
 	if err != nil {
-		log.Printf("Argh %v %T %+v %s", err, err, err, err.(*exec.ExitError).Stderr)
 		return "", "", err
 	}
-	id1 = string(output)
+	id1 = strings.TrimSuffix(string(output), "\n")
 
 	if err := ioutil.WriteFile(path.Join(dir.Dir, "file.txt"), []byte("second"), 0666); err != nil {
 		return "", "", err
@@ -131,7 +116,29 @@ func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error
 	if err != nil {
 		return "", "", err
 	}
-	id2 = string(output)
+	id2 = strings.TrimSuffix(string(output), "\n")
 
 	return id1, id2, nil
+}
+
+func (r *smokeTestRunner) checkSnapshots(id1 string, id2 string) error {
+	output, err := exec.Command("scoot-snapshot-db", "read", "cat", "--id", id1, "STDOUT").Output()
+	if err != nil {
+		return err
+	}
+	text := string(output)
+	if text != "first" {
+		return fmt.Errorf("expected first out snapshot %v to contain \"first\" but got %q", id1, text)
+	}
+
+	output, err = exec.Command("scoot-snapshot-db", "read", "cat", "--id", id2, "STDOUT").Output()
+	if err != nil {
+		return err
+	}
+	text = string(output)
+	if text != "second" {
+		return fmt.Errorf("expected second out snapshot %v to contain \"second\" but got %q", id2, text)
+	}
+
+	return nil
 }

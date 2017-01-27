@@ -231,9 +231,7 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 	if err != nil {
 		return "", err
 	}
-	//bundleName := makeBundleName(s.bundleKey)
-	//TODO: making name==ID for now because apiserver doesn't have a db yet to translate name<-->ID.
-	bundleName := string(s.ID())
+	bundleName := makeBundleName(s.bundleKey)
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
