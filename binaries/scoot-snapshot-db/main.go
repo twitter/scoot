@@ -45,7 +45,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	}
 
 	_, api := scootapi.GetScootapiAddr()
-	store, err := bundlestore.MakeHTTPStore(fmt.Sprintf("http://%s/bundle/", api)), nil
+	store, err := bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(api)), nil
 	if err != nil {
 		return nil, err
 	}

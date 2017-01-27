@@ -27,3 +27,7 @@ func GetScootapiAddr() (sched string, api string) {
 func SetScootapiAddr(sched string, api string) {
 	ioutil.WriteFile(GetScootapiAddrPath(), []byte(sched+"\n"+api), 0777)
 }
+
+func APIAddrToBundlestoreURI(addr string) string {
+	return "http://" + addr + "/bundle/"
+}

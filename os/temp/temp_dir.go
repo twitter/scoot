@@ -78,12 +78,14 @@ func TempDirHere() (*TempDir, error) {
 	return NewTempDir(cwd, "scoot-tmp-")
 }
 
+// Module returns a Module that will use a TempDir in $TMPDIR
 func Module() ice.Module {
 	return module{}
 }
 
 type module struct{}
 
+// Install installs functions to use a TempDir in $TMPDIR
 func (m module) Install(b *ice.MagicBag) {
 	b.Put(TempDirDefault)
 }

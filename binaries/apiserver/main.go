@@ -42,7 +42,10 @@ func main() {
 		func(bs *bundlestore.Server, vs *snapshots.ViewServer) map[string]http.Handler {
 			return map[string]http.Handler{
 				"/bundle/": bs,
-				"/view/":   vs,
+				// Because we don't have any stream configured,
+				// for now our view server will only work for snapshots
+				// in a bundle with no basis
+				"/view/": vs,
 			}
 		},
 	)

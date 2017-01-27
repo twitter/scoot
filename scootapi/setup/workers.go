@@ -132,7 +132,7 @@ func NewGitDB(tmpDir *temp.TempDir, repoDir, storeAddr string) (snapshot.DB, err
 			return nil, err
 		}
 	} else {
-		s = bundlestore.MakeHTTPStore(bundlestore.AddrToUri(storeAddr))
+		s = bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr))
 	}
 
 	// Make the db and convert it into a filer.

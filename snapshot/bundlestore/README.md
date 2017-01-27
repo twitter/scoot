@@ -11,7 +11,7 @@ in memory, bundles on disk, and bundles located behind an http server. Further, 
 wrap these stores in a parent store to add additional business logic to our handling.
 
 ## Bundle name conventions
-For now names look like 'bs-<sha>.bundle'
+For now names look like 'bs-<sha>.bundle'.
 
 ## Server
 Server makes a store accessible via http and doesn't do much else at this time. Future work

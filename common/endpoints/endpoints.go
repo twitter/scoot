@@ -24,6 +24,7 @@ func NewTwitterServer(addr Addr, stats stats.StatsReceiver, handlers map[string]
 	}
 }
 
+// TODO(dbentley): rename to ObservableServer(?)
 // A stats receiver that provides HTTP access for metric scraping with
 // Twitter-style endpoints.
 type TwitterServer struct {

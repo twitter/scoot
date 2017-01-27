@@ -77,7 +77,3 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 	log.Printf("Posted %s, err: %v", uri, err)
 	return err
 }
-
-func AddrToUri(addr string) string {
-	return "http://" + addr + "/bundle/"
-}
