@@ -1,12 +1,20 @@
 package gitdb
 
+import (
+	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/os/temp"
+	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
+	"github.com/scootdev/scoot/snapshot/git/repo"
+)
+
 type module struct{}
 
 func Module() ice.Module {
 	return module{}
 }
 
-func (m module) InstallModule(b *ice.MagicBag) {
+func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func(tmp *temp.TempDir) RepoIniter {
 			return &NewRepoIniter{tmp: tmp}
@@ -24,6 +32,7 @@ func (m module) InstallModule(b *ice.MagicBag) {
 			return AutoUploadBundlestore
 		},
 		MakeDBNewRepo,
+		func(db *DB) snap.DB { return db },
 	)
 }
 
@@ -32,13 +41,10 @@ type NewRepoIniter struct {
 }
 
 func (i *NewRepoIniter) Init() (*repo.Repository, error) {
-	repoTmp, err := tmp.TempDir("gitdb-repo-")
+	repoTmp, err := i.tmp.TempDir("gitdb-repo-")
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := repo.InitRepo(repoTmp.Dir)
-	if err != nil {
-		return nil, err
-	}
+	return repo.InitRepo(repoTmp.Dir)
 }

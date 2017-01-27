@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/cli"
@@ -57,8 +58,8 @@ func (i *injector) Inject() (snapshot.DB, error) {
 		i.storeDir = storeTmp.Dir
 	}
 
-	// XXX(dbentley):
-	store, err := bundlestore.MakeHTTPStore(""), nil
+	_, api := scootapi.GetScootapiAddr()
+	store, err := bundlestore.MakeHTTPStore(fmt.Sprintf("http://%s/bundle/", api)), nil
 	if err != nil {
 		return nil, err
 	}

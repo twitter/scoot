@@ -68,7 +68,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(scootapi.DefaultSched_HTTP, s, nil)
+			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultSched_HTTP), s, nil)
 		},
 
 		func(t thrift.TServer, h *endpoints.TwitterServer) servers {

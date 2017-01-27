@@ -37,7 +37,6 @@ package cli
 // dbCommand.run() does the work of calling a function on the SnapshotDB
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -173,6 +172,7 @@ func (c *catCommand) run(db snapshot.DB, _ *cobra.Command, filenames []string) e
 		if err != nil {
 			return err
 		}
-		fmt.Print(data)
+		fmt.Printf("%s", data)
 	}
+	return nil
 }
