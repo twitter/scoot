@@ -159,7 +159,7 @@ type catCommand struct {
 func (c *catCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cat",
-		Short: "catenate file from an FSSnapshot to stdout",
+		Short: "concatenate files from an FSSnapshot to stdout",
 	}
 	cmd.Flags().StringVar(&c.id, "id", "", "Snapshot ID to read from")
 	return cmd
