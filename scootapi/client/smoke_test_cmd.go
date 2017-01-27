@@ -51,27 +51,21 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, 
 		return err
 	}
 
-	// If store is not specified, test with sim execer. Else generate snapshots and associated commands for use with os execer.
-	var cmds []*testhelpers.SnapshotCmd
-	if storeAddr == "" {
-		_, storeAddr = scootapi.GetScootapiAddr()
-	}
-	if storeAddr == "" {
-		cmds = []*testhelpers.SnapshotCmd{
-			testhelpers.DefaultSnapshotCmd(),
-		}
-	} else {
-		if cmds, err = testhelpers.GenerateCmds(tmp, storeAddr, numJobs); err != nil {
-			return err
-		}
-	}
-
+	id1, id2, err := generateSnapshots()
 	// Generate the jobs and start executing.
 	jobs := make([]string, 0, numJobs)
+
 	jobsToCmds := make(map[string]*testhelpers.SnapshotCmd)
 	for i := 0; i < numJobs; i++ {
 		for {
-			cmd := cmds[i%len(cmds)]
+			id := id1
+			if i%2 == 0 {
+				id = id2
+			}
+			cmd := runner.Command{
+				Argv:       []string{"cat", "file.txt"},
+				SnapshotID: id,
+			}
 			id, err := testhelpers.GenerateAndStartJob(r.cl.scootClient, numTasks, cmd)
 			if err == nil {
 				jobs = append(jobs, id)
@@ -85,13 +79,13 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration, 
 	}
 
 	// Wait for results and then verify that the results are as expected.
-	if statuses, err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout); err != nil {
+	statuses, err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout)
+	if err != nil {
 		return err
-	} else {
-		for jobID, status := range statuses {
-			if err = jobsToCmds[jobID].Verify(status); err != nil {
-				return err
-			}
+	}
+	for jobID, status := range statuses {
+		for _, status := range js.TaskData {
+
 		}
 	}
 	return nil
