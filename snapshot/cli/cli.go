@@ -143,7 +143,7 @@ type exportGitCommitCommand struct {
 
 func (c *exportGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "export_git_commit",
+		Use:   "to_git_commit",
 		Short: "exports a GitCommitSnapshot identified by id into the repo in cwd",
 	}
 	cmd.Flags().StringVar(&c.id, "id", "", "id to export")
