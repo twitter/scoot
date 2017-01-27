@@ -13,6 +13,7 @@ import (
 // Schema holds the different Implementations's the client wants to configure
 type Schema map[string]Implementations
 
+// EmptySchema returns an empty Schema, needed if you don't allow configuration
 func EmptySchema() Schema {
 	return map[string]Implementations{}
 }

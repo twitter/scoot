@@ -226,6 +226,7 @@ type stringAndError struct {
 	err error
 }
 
+// ReadFileAll reads the contents of the file path in FSSnapshot ID, or errors
 func (db *DB) ReadFileAll(id snap.ID, path string) ([]byte, error) {
 	if <-db.initDoneCh; db.err != nil {
 		return nil, db.err

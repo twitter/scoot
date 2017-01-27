@@ -11,13 +11,7 @@ in memory, bundles on disk, and bundles located behind an http server. Further, 
 wrap these stores in a parent store to add additional business logic to our handling.
 
 ## Bundle name conventions
-For now names look like '%s-%s-%s', where the third string can include additional dashes.
-A path may be appended to this name and is recognized to start at the first occurence of '/'.
-This path is only allowed when reading a bundle, otherwise it's considered an error if included.
-
-The '/' is not allowed in bundle names except at the end where it signifies the start
-of a path to be extracted from the bundle data. For now that bundle data must have been
-created with a nil basis otherwise extraction will fail.
+For now names look like 'bs-<sha>.bundle'
 
 ## Server
 Server makes a store accessible via http and doesn't do much else at this time. Future work

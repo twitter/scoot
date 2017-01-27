@@ -7,10 +7,17 @@ import (
 	"github.com/scootdev/scoot/snapshot"
 )
 
+// ViewServer allows viewing files in a Snapshot
 type ViewServer struct {
 	db snapshot.DB
 }
 
+// NewViewServer creates a new ViewServer to serve snapshots in DB
+func NewViewServer(db snapshot.DB) *ViewServer {
+	return &ViewServer{db}
+}
+
+// Serve requests to View files in a Snapshot
 func (s *ViewServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	idAndPath := strings.TrimPrefix(req.URL.Path, "/view/")
 	parts := strings.SplitN(idAndPath, "/", 2)

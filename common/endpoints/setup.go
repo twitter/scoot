@@ -9,12 +9,15 @@ import (
 	"github.com/scootdev/scoot/ice"
 )
 
+// Module returns a module that supports serving HTTP
+// Important to also install a function that returns map[string]http.Handler
 func Module() ice.Module {
 	return module{}
 }
 
 type module struct{}
 
+// Install installs functions for serving HTTP
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func(scope StatScope) stats.StatsReceiver {
