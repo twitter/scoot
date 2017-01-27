@@ -167,6 +167,7 @@ func (c *exportGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	fmt.Println(commit)
+	return nil
 }
 
 type ingestDirCommand struct {
