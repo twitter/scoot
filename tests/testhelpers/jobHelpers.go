@@ -52,15 +52,21 @@ func DefaultSnapshotCmd() *SnapshotCmd {
 
 // Generates a random Job and sends it to the specified client to run
 // returns the JobId if successfully scheduled, otherwise "", error
-func GenerateAndStartJob(client scoot.CloudScoot, numTasks int, cmd *SnapshotCmd) (string, error) {
+func GenerateJob(numTasks int, snapshotID string) *scoot.JobDefinition {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	jobDef := GenJobDefinition(rng, numTasks, cmd)
+	jobDef := GenJobDefinition(rng, numTasks, snapshotID)
+	return jobDef
+}
 
-	rsp, err := client.RunJob(jobDef)
-	if err == nil {
-		return rsp.ID, nil
-	} else {
-		return "", err
+func StartJob(client *scootapi.CloudScootClient, job *scoot.JobDefinition) string {
+	for {
+		j, err := client.RunJob(job)
+		if err == nil {
+			return j.ID
+		}
+		// retry starting job until it succeeds.
+		// this is useful for testing where we are restarting the scheduler
+		log.Printf("Error Starting Job: Retrying %v", err)
 	}
 }
 
@@ -71,7 +77,7 @@ func WaitForJobsToCompleteAndLogStatus(
 	jobIds []string,
 	client scoot.CloudScoot,
 	timeout time.Duration,
-) (map[string]*scoot.JobStatus, error) {
+) error {
 
 	jobs := make(map[string]*scoot.JobStatus)
 	for _, id := range jobIds {
@@ -81,7 +87,7 @@ func WaitForJobsToCompleteAndLogStatus(
 	end := time.Now().Add(timeout)
 	for {
 		if time.Now().After(end) {
-			return nil, fmt.Errorf("Took longer than %v", timeout)
+			return fmt.Errorf("Took longer than %v", timeout)
 		}
 		done := true
 
@@ -103,7 +109,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		PrintJobs(jobs)
 		if done {
 			log.Println("Done")
-			return jobs, nil
+			return nil
 		}
 		time.Sleep(time.Second)
 	}
