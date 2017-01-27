@@ -1,23 +1,16 @@
 package testhelpers
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
-	"path/filepath"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/scootapi/setup"
 )
 
 // Creates a CloudScootClient that talks to the specified address
@@ -33,21 +26,6 @@ func CreateScootClient(addr string) *scootapi.CloudScootClient {
 		})
 
 	return scootClient
-}
-
-// Default cmd has an empty snapshot and uses sim execer on the workers.
-func DefaultSnapshotCmd() *SnapshotCmd {
-	return &SnapshotCmd{
-		"",
-		[]string{execers.UseSimExecerArg, "sleep 500", "complete 0"},
-		func(s *scoot.JobStatus) error {
-			if s.Status != scoot.Status_COMPLETED {
-				return errors.New("Expected COMPLETED, got: " + s.String())
-			} else {
-				return nil
-			}
-		},
-	}
 }
 
 // Generates a random Job and sends it to the specified client to run
