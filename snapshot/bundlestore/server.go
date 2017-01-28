@@ -11,24 +11,10 @@ import (
 
 type Server struct {
 	store Store
-	addr  string
 }
 
-type Addr string
-
-func MakeServer(s Store, a Addr) *Server {
-	return &Server{s, string(a)}
-}
-
-func (s *Server) Serve() error {
-	mux := http.NewServeMux()
-	mux.Handle("/bundle/", s)
-	server := &http.Server{
-		Addr:    s.addr,
-		Handler: mux,
-	}
-	log.Println("Serving Bundles on", s.addr)
-	return server.ListenAndServe()
+func MakeServer(s Store) *Server {
+	return &Server{s}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -48,7 +34,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Uploading %s", req.URL.Path)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
-	if ok, err := s.checkBundleName(bundleName); !ok {
+	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -73,7 +59,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	log.Printf("Downloading %s", bundleName)
-	if ok, err := s.checkBundleName(bundleName); !ok {
+	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -96,12 +82,10 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 }
 
 // TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.
-func (s *Server) checkBundleName(name string) (bool, error) {
-	// Matches 3 dash delimited strings and an optional path postfix.
-	// Looks for the first two, then a third which may have additional dashes, and then a path.
-	if ok, _ := regexp.MatchString("^([^-/]+-){2,}[^/]+(/.*){0,1}", name); ok {
-		return true, nil
-	} else {
-		return false, fmt.Errorf("Error with bundleName, expected '%%s-%%s-%%s', got: %s", name)
+func (s *Server) checkBundleName(name string) error {
+	bundleRE := "^bs-[a-z0-9]{40}.bundle"
+	if ok, _ := regexp.MatchString(bundleRE, name); ok {
+		return nil
 	}
+	return fmt.Errorf("Error with bundleName, expected %q, got: %s", bundleRE, name)
 }

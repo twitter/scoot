@@ -40,7 +40,7 @@ func (s *LocalApiStrategy) Startup() (string, error) {
 		return "", err
 	}
 
-	if err := s.cmds.Start(bin, "-bundlestore_addr", s.apiCfg.StoreAddr); err != nil {
+	if err := s.cmds.Start(bin, "-http_addr", s.apiCfg.StoreAddr); err != nil {
 		return "", err
 	}
 

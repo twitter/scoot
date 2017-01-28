@@ -13,15 +13,18 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 )
 
-// Returns an http handler at 'addr' which can retrieved with 'uri' if specified. Also serves static files from tmpDir if specified.
-func NewTwitterServer(addr string, stats stats.StatsReceiver, handlers map[string]http.Handler) *TwitterServer {
+type Addr string
+
+// Returns an http handler at 'addr'
+func NewTwitterServer(addr Addr, stats stats.StatsReceiver, handlers map[string]http.Handler) *TwitterServer {
 	return &TwitterServer{
-		Addr:     addr,
+		Addr:     string(addr),
 		Stats:    stats,
 		Handlers: handlers,
 	}
 }
 
+// TODO(dbentley): rename to ObservableServer(?)
 // A stats receiver that provides HTTP access for metric scraping with
 // Twitter-style endpoints.
 type TwitterServer struct {

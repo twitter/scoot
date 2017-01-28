@@ -6,18 +6,17 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
+	"github.com/scootdev/scoot/snapshot/git/gitdb"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 func main() {
-	bundlestoreAddr := flag.String("bundlestore_addr", scootapi.DefaultApiBundlestore_HTTP, "http addr to serve bundlestore on")
-	statsAddr := flag.String("stats_addr", scootapi.DefaultApiStats_HTTP, "http addr to serve observability stats on")
+	httpAddr := flag.String("http_addr", "localhost:11101", "http addr to serve on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	flag.Parse()
 
@@ -30,40 +29,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	type storeAndHandler struct {
-		store    bundlestore.Store
-		handler  http.Handler
-		endpoint string
-	}
-
-	// Start a new goroutine for bundlestore server as well as the observability server.
-	bag, schema := bundlestore.Defaults()
+	bag := ice.NewMagicBag()
+	schema := jsonconfig.EmptySchema()
+	bag.InstallModule(temp.Module())
+	bag.InstallModule(gitdb.Module())
+	bag.InstallModule(bundlestore.Module())
+	bag.InstallModule(snapshots.Module())
+	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
-		func() bundlestore.Addr { return bundlestore.Addr(*bundlestoreAddr) },
-		func(s stats.StatsReceiver, sh *storeAndHandler) *endpoints.TwitterServer {
-			handlers := map[string]http.Handler{sh.endpoint: sh.handler}
-			return endpoints.NewTwitterServer(*statsAddr, s, handlers)
-		},
-		func(tmp *temp.TempDir) (*storeAndHandler, error) {
-			//TODO: refactor cluster config and fetcher to remove worker refs and make them more generic.
-			cfg := &bundlestore.GroupcacheConfig{
-				Name:         "apiserver",
-				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
-				AddrSelf:     *bundlestoreAddr,
-				Endpoint:     "/groupcache",
-				Fetcher:      local.MakeFetcher("apiserver", "bundlestore_addr"),
+		func() endpoints.StatScope { return "apiserver" },
+		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
+		func(bs *bundlestore.Server, vs *snapshots.ViewServer) map[string]http.Handler {
+			return map[string]http.Handler{
+				"/bundle/": bs,
+				// Because we don't have any stream configured,
+				// for now our view server will only work for snapshots
+				// in a bundle with no basis
+				"/view/": vs,
 			}
-			if fileStore, err := bundlestore.MakeFileStoreInTemp(tmp); err != nil {
-				return nil, err
-			} else {
-				store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg)
-				return &storeAndHandler{store, handler, cfg.Endpoint}, err
-			}
-		},
-		func(sh *storeAndHandler) bundlestore.Store {
-			return sh.store
 		},
 	)
-
-	bundlestore.RunServer(bag, schema, configText)
+	endpoints.RunServer(bag, schema, configText)
 }

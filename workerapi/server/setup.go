@@ -59,7 +59,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver, handlers map[string]http.Handler) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(scootapi.DefaultWorker_HTTP, s, handlers)
+			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultWorker_HTTP), s, handlers)
 		},
 
 		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
