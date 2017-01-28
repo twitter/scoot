@@ -45,12 +45,12 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.H
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
 			log.Print("Not cached, fetching bundle and populating cache: ", bundleName)
-			var reader io.Reader
-			var data []byte
-			if reader, err = underlying.OpenForRead(bundleName); err != nil {
+			reader, err := underlying.OpenForRead(bundleName)
+			if err != nil {
 				return err
 			}
-			if data, err = ioutil.ReadAll(reader); err != nil {
+			data, err := ioutil.ReadAll(reader)
+			if err != nil {
 				return err
 			}
 			dest.SetBytes(data)
@@ -92,12 +92,12 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 }
 
 func (s *groupcacheStore) Write(name string, data io.Reader) error {
-	var b []byte
-	var err error
-	if b, err = ioutil.ReadAll(data); err != nil {
+	b, err := ioutil.ReadAll(data)
+	if err != nil {
 		return err
 	}
-	if err := s.underlying.Write(name, bytes.NewBuffer(b)); err != nil {
+	err = s.underlying.Write(name, bytes.NewBuffer(b))
+	if err != nil {
 		return err
 	}
 

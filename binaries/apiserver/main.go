@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
@@ -29,6 +30,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	type StoreAndHandler struct {
+		store    bundlestore.Store
+		handler  http.Handler
+		endpoint string
+	}
+
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(temp.Module())
@@ -39,14 +46,36 @@ func main() {
 	bag.PutMany(
 		func() endpoints.StatScope { return "apiserver" },
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
-		func(bs *bundlestore.Server, vs *snapshots.ViewServer) map[string]http.Handler {
+		func(bs *bundlestore.Server, vs *snapshots.ViewServer, sh *StoreAndHandler) map[string]http.Handler {
 			return map[string]http.Handler{
 				"/bundle/": bs,
 				// Because we don't have any stream configured,
 				// for now our view server will only work for snapshots
 				// in a bundle with no basis
-				"/view/": vs,
+				"/view/":    vs,
+				sh.endpoint: sh.handler,
 			}
+		},
+		func(tmp *temp.TempDir) (*StoreAndHandler, error) {
+			fileStore, err := bundlestore.MakeFileStoreInTemp(tmp)
+			if err != nil {
+				return nil, err
+			}
+			cfg := &bundlestore.GroupcacheConfig{
+				Name:         "apiserver",
+				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
+				AddrSelf:     *httpAddr,
+				Endpoint:     "/groupcache",
+				Fetcher:      local.MakeFetcher("apiserver", "http_addr"),
+			}
+			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg)
+			if err != nil {
+				return nil, err
+			}
+			return &StoreAndHandler{store, handler, cfg.Endpoint}, nil
+		},
+		func(sh *StoreAndHandler) bundlestore.Store {
+			return sh.store
 		},
 	)
 	endpoints.RunServer(bag, schema, configText)
