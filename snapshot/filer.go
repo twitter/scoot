@@ -100,5 +100,5 @@ func (dbc *dbCheckout) ID() string {
 }
 
 func (dbc *dbCheckout) Release() error {
-	return nil
+	return dbc.db.ReleaseCheckout(dbc.dir)
 }
