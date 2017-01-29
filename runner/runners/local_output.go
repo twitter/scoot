@@ -32,7 +32,7 @@ type localOutputCreator struct {
 	mutex    sync.Mutex
 }
 
-// Takes a tempdir to place new files and optionally a httpUri to use instead of 'file://HOSTNAME/'
+// Takes a tempdir to place new files and optionally an httpUri, ex: 'http://HOST:PORT/ENDPOINT/', to use instead of 'file://HOST/PATH'
 func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {

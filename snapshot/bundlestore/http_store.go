@@ -30,10 +30,10 @@ func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 	log.Printf("Fetching %s", uri)
 	resp, err := s.client.Get(uri)
 	if err != nil {
-		log.Printf("Fetched %s %v", uri, err)
+		log.Printf("Fetch failed %s %v", uri, err)
 		return nil, err
 	}
-	log.Printf("Fetched %s %v", uri, resp.StatusCode)
+	log.Printf("Fetch result %s %v", uri, resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		return resp.Body, nil

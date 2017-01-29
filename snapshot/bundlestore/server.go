@@ -32,7 +32,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Uploading %s", req.URL.Path)
+	log.Printf("Uploading %v, %v", req.Host, req.URL)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -57,8 +57,8 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
+	log.Printf("Downloading %v %v", req.Host, req.URL)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
-	log.Printf("Downloading %s", bundleName)
 	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

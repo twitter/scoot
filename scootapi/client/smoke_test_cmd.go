@@ -63,12 +63,29 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 
 	// (first job will test data)
 	jobs[0] = testhelpers.StartJob(r.cl.scootClient, &scoot.JobDefinition{
+		// Repeat tasks to better exercise Store w/groupcache.
 		Tasks: map[string]*scoot.TaskDefinition{
 			"id1": &scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id1,
 			},
 			"id2": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id2,
+			},
+			"id3": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id1,
+			},
+			"id4": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id1,
+			},
+			"id5": &scoot.TaskDefinition{
+				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
+				SnapshotId: &id2,
+			},
+			"id6": &scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id2,
 			},

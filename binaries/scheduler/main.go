@@ -15,16 +15,13 @@ import (
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/server"
-	"github.com/scootdev/scoot/scootapi/setup"
-	"github.com/scootdev/scoot/snapshot"
 )
 
 // Set Flags Needed by this Server
+//TODO: add support for in-memory workers doing real work with gitdb.
 var thriftAddr = flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
 var httpAddr = flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
 var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
-var repoDir = flag.String("repo", "", "In-memory worker: abs dir path to a git repo to run against (don't use important repos yet!).")
-var storeHandle = flag.String("bundlestore", "", "In-memory worker: abs file path or http URL where repo uploads/downloads bundles.")
 
 func main() {
 	flag.Parse()
@@ -42,15 +39,6 @@ func main() {
 
 		func() (*temp.TempDir, error) {
 			return temp.NewTempDir("", "sched")
-		},
-
-		func(tmp *temp.TempDir) (snapshot.Filer, error) {
-			// Only invoked if we're using in-memory workers.
-			if db, err := setup.NewGitDB(tmp, *repoDir, *storeHandle); err != nil {
-				return nil, err
-			} else {
-				return snapshot.NewDBAdapter(db), nil
-			}
 		},
 	)
 

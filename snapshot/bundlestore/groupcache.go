@@ -6,15 +6,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
+	"time"
 
 	"github.com/scootdev/groupcache"
 	"github.com/scootdev/scoot/cloud/cluster"
 )
 
+// Called periodically in a goroutine. Must include the current instance among the fetched nodes.
 type PeerFetcher interface {
 	Fetch() ([]cluster.Node, error)
 }
 
+// Note: Endpoint is concatenated with Name in groupcache internals, and AddrSelf is expected as HOST:PORT.
 type GroupcacheConfig struct {
 	Name         string
 	Memory_bytes int64
@@ -25,26 +29,16 @@ type GroupcacheConfig struct {
 
 // Add in-memory caching to the given store.
 func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.Handler, error) {
-	// Fetch peers and create a list of addresses including self.
-	peerNodes, err := cfg.Fetcher.Fetch()
-	if err != nil {
-		return nil, nil, err
-	}
-	peers := []string{}
-	for _, node := range peerNodes {
-		peers = append(peers, "http://"+string(node.Id()))
-	}
-	log.Print("Adding groupcacheStore peers: ", peers)
-
 	// Create and initialize peer group.
 	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
 	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
-	pool := groupcache.NewHTTPPoolOpts(cfg.AddrSelf, poolOpts)
-	pool.Set(peers...)
+	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
+	go loop(cfg.Fetcher, pool)
+
 	// Create the cache which knows how to retrieve the underlying bundle data.
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
-			log.Print("Not cached, fetching bundle and populating cache: ", bundleName)
+			log.Print("Not cached, try to fetch bundle and populate cache: ", bundleName)
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return err
@@ -58,8 +52,30 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.H
 		},
 	))
 
-	//TODO: start loop to periodically update the list of peers.
 	return &groupcacheStore{underlying: underlying, cache: cache}, pool, nil
+}
+
+// Loop will fetch peers and create a list of addresses, including self, to update groupcache.
+func loop(fetcher PeerFetcher, pool *groupcache.HTTPPool) {
+	prevPeers := []string{}
+	for {
+		peerNodes, err := fetcher.Fetch()
+		if err != nil {
+			log.Print("Unable to fetch groupcache peers: ", err)
+			continue
+		}
+		peers := []string{}
+		for _, node := range peerNodes {
+			peers = append(peers, "http://"+string(node.Id()))
+		}
+		if reflect.DeepEqual(prevPeers, peers) {
+			continue
+		}
+		log.Print("Setting groupcacheStore peers: ", peers)
+		prevPeers = peers
+		pool.Set(peers...)
+		time.Sleep(1 * time.Second)
+	}
 }
 
 type groupcacheStore struct {

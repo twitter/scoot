@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/scootapi/setup"
 )
@@ -21,15 +20,12 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 
 	clusterCmds := setup.NewSignalHandlingCmds(tmp)
 	builder := setup.NewGoBuilder(clusterCmds)
-	storeAddr := scootapi.DefaultApiBundlestore_HTTP
-	workersCfg := &setup.WorkerConfig{StoreAddr: storeAddr}
-	apiCfg := &setup.ApiConfig{StoreAddr: storeAddr}
 	go func() {
 		sched := map[string]setup.SchedulerStrategy{
-			"local.local": setup.NewLocalLocal(workersCfg, builder, clusterCmds),
+			"local.local": setup.NewLocalLocal(nil, builder, clusterCmds),
 		}
 		api := map[string]setup.ApiStrategy{
-			"local": setup.NewLocal(apiCfg, builder, clusterCmds),
+			"local": setup.NewLocal(nil, builder, clusterCmds),
 		}
 		strategies := &setup.Strategies{Sched: sched, SchedStrategy: "local.local", Api: api, ApiStrategy: "local"}
 		setup.Main(clusterCmds, strategies, []string{})

@@ -1,19 +1,26 @@
 package setup
 
 import (
+	"fmt"
 	"log"
-	"strings"
+
+	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
 )
+
+const DefaultApiServerCount int = 3
 
 // ApiStrategy will startup with a bundlestore (or setup a connection to one)
 type ApiStrategy interface {
 
-	// Startup starts up a Scheduler, returing the address of the server or an error
-	Startup() (string, error)
+	// Startup starts up an ApiServer, returing the address of the server or an error
+	Startup() ([]string, error)
 }
 
+// For now, just the number of apiserver instances to start.
+// A default value will be assigned if unitialized.
 type ApiConfig struct {
-	StoreAddr string
+	Count int
 }
 
 // LocalApiStrategy starts up a local apiserver
@@ -32,26 +39,44 @@ func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalA
 	}
 }
 
-func (s *LocalApiStrategy) Startup() (string, error) {
+func (s *LocalApiStrategy) Startup() ([]string, error) {
 	log.Println("Starting up a Local ApiServer")
+	if s.apiCfg.Count < 0 {
+		return nil, fmt.Errorf("ApiServer count must be >0 (or zero for default #), was: %d", s.apiCfg.Count)
+	} else if s.apiCfg.Count == 0 {
+		s.apiCfg.Count = DefaultApiServerCount
+	}
+
+	tmp, err := temp.TempDirDefault()
+	if err != nil {
+		return nil, err
+	}
 
 	bin, err := s.builder.ApiServer()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if err := s.cmds.Start(bin, "-http_addr", s.apiCfg.StoreAddr); err != nil {
-		return "", err
+	addrs := []string{}
+	for i := 0; i < s.apiCfg.Count; i++ {
+		port := scootapi.ApiBundlestorePorts + i
+		httpAddr := fmt.Sprintf("localhost:%d", port)
+		if err := s.cmds.Start(bin, "-http_addr", httpAddr, "-tmp", tmp.Dir); err != nil {
+			return nil, err
+		}
+		if err := WaitForPort(port); err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, httpAddr)
 	}
 
-	if err := WaitForPort(strings.Split(s.apiCfg.StoreAddr, ":")[1]); err != nil {
-		return "", err
-	}
-
-	return s.apiCfg.StoreAddr, nil
+	return addrs, nil
 }
 
 // Create an ApiServer Strategy with a local apiserver.
 func NewLocal(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalApiStrategy {
+	if apiCfg == nil {
+		apiCfg = &ApiConfig{}
+	}
 	return NewLocalApiStrategy(apiCfg, builder, cmds)
 }

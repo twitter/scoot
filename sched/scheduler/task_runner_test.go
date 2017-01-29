@@ -16,7 +16,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
-	"github.com/scootdev/scoot/snapshot/snapshots"
 	"github.com/scootdev/scoot/workerapi"
 )
 
@@ -41,7 +40,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := runTaskAndLog(s, workers.MakeSimWorker(tmp, snapshots.MakeInvalidFiler()), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(tmp), "task1", task, false, stats.NilStatsReceiver())
 
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
@@ -59,7 +58,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(tmp, snapshots.MakeInvalidFiler()), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(tmp), "task1", task, false, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -80,7 +79,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := runTaskAndLog(s, workers.MakeSimWorker(tmp, snapshots.MakeInvalidFiler()), "task1", task, false, stats.NilStatsReceiver())
+	err := runTaskAndLog(s, workers.MakeSimWorker(tmp), "task1", task, false, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
