@@ -51,12 +51,11 @@ func (i *injector) Inject() (snapshot.DB, error) {
 			"cannot create a repo in wd %v; scoot-snapshot-db must be run in a git repo: %v", wd, err)
 	}
 
-	_, api := scootapi.GetScootapiAddr()
-	store, err := bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(api)), nil
+	_, api, err := scootapi.GetScootapiAddr()
 	if err != nil {
 		return nil, err
 	}
-
+	store := bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(api))
 	return gitdb.MakeDBFromRepo(dataRepo, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
 		gitdb.AutoUploadBundlestore), nil
 }

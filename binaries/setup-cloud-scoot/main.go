@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/setup"
 )
 
@@ -15,6 +14,7 @@ func main() {
 	apiStrategy := flag.String("api_strategy", "local", "api strategy to setup server w/bundlestore.")
 	repoDir := flag.String("repo_dir", "", "backing repo to use as a basis for handling bundles")
 	workersFlag := flag.Int("workers", setup.DefaultWorkerCount, "number of workers to use")
+	apiserversFlag := flag.Int("apiservers", setup.DefaultApiServerCount, "number of apiservers to use")
 	flag.Parse()
 
 	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
@@ -26,15 +26,14 @@ func main() {
 	defer cmds.Kill()
 
 	builder := setup.NewGoBuilder(cmds)
-	storeAddr := scootapi.DefaultApiBundlestore_HTTP
 
-	workersCfg := &setup.WorkerConfig{Count: *workersFlag, RepoDir: *repoDir, StoreAddr: storeAddr}
+	workersCfg := &setup.WorkerConfig{Count: *workersFlag, RepoDir: *repoDir}
 	sched := map[string]setup.SchedulerStrategy{
 		"local.memory": setup.NewLocalMemory(workersCfg, builder, cmds),
 		"local.local":  setup.NewLocalLocal(workersCfg, builder, cmds),
 	}
 
-	apiCfg := &setup.ApiConfig{StoreAddr: storeAddr}
+	apiCfg := &setup.ApiConfig{Count: *apiserversFlag}
 	api := map[string]setup.ApiStrategy{
 		"local": setup.NewLocal(apiCfg, builder, cmds),
 	}

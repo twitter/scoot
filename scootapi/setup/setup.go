@@ -34,40 +34,37 @@ func Main(cmds *Cmds, strategies *Strategies, args []string) error {
 }
 
 func startup(strategies *Strategies) error {
-	// Startup scheduler, and indirectly workers as well.
-	var schedKeys []string
-	for k, _ := range strategies.Sched {
-		schedKeys = append(schedKeys, k)
+	// Startup apiserver, which only incorporates bundlestore for now.
+	// Important: do this first since workers run apiserver discovery only once at startup.
+	api, ok := strategies.Api[strategies.ApiStrategy]
+	if !ok {
+		var apiKeys []string
+		for k, _ := range strategies.Api {
+			apiKeys = append(apiKeys, k)
+		}
+		return fmt.Errorf("--strategy=%q is not a valid api strategy; valid choices are %v", strategies.ApiStrategy, apiKeys)
+	}
+	apiAddrs, err := api.Startup()
+	if err != nil {
+		return err
 	}
 
+	// Startup scheduler, and indirectly workers as well.
 	sched, ok := strategies.Sched[strategies.SchedStrategy]
 	if !ok {
+		var schedKeys []string
+		for k, _ := range strategies.Sched {
+			schedKeys = append(schedKeys, k)
+		}
 		return fmt.Errorf("--strategy=%q is not a valid sched strategy; valid choices are %v", strategies.SchedStrategy, schedKeys)
 	}
-
 	schedAddr, err := sched.Startup()
 	if err != nil {
 		return err
 	}
 
-	// Startup apiserver, which only incorporates bundlestore for now.
-	var apiKeys []string
-	for k, _ := range strategies.Api {
-		apiKeys = append(apiKeys, k)
-	}
-
-	api, ok := strategies.Api[strategies.ApiStrategy]
-	if !ok {
-		return fmt.Errorf("--strategy=%q is not a valid api strategy; valid choices are %v", strategies.ApiStrategy, apiKeys)
-	}
-
-	apiAddr, err := api.Startup()
-	if err != nil {
-		return err
-	}
-
-	// Save the scheduler and apiserver addresses.
-	scootapi.SetScootapiAddr(schedAddr, apiAddr)
+	// Save the scheduler and first apiserver addresses.
+	scootapi.SetScootapiAddr(schedAddr, apiAddrs[0])
 	return nil
 }
 

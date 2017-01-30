@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/scootdev/scoot/common/stats"
@@ -22,6 +23,9 @@ func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func(scope StatScope) stats.StatsReceiver {
 			return MakeStatsReceiver(scope).Precision(time.Millisecond)
+		},
+		func() map[string]http.Handler {
+			return map[string]http.Handler{}
 		},
 		NewTwitterServer,
 	)

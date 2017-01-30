@@ -2,6 +2,7 @@ package setup
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/scootdev/scoot/scootapi"
@@ -45,11 +46,19 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 		return "", err
 	}
 
-	if err := s.cmds.Start(bin, "-config", config, "-repo", s.workersCfg.RepoDir, "-bundlestore", s.workersCfg.StoreAddr); err != nil {
+	if err := s.cmds.Start(bin,
+		"--thrift_addr", scootapi.DefaultSched_Thrift,
+		"--http_addr", scootapi.DefaultSched_HTTP,
+		"-config", config); err != nil {
 		return "", err
 	}
 
-	if err := WaitForPort(strings.Split(scootapi.DefaultSched_Thrift, ":")[1]); err != nil {
+	thriftPort, _ := strconv.Atoi(strings.Split(scootapi.DefaultSched_Thrift, ":")[1])
+	httpPort, _ := strconv.Atoi(strings.Split(scootapi.DefaultSched_HTTP, ":")[1])
+	if err := WaitForPort(thriftPort); err != nil {
+		return "", err
+	}
+	if err := WaitForPort(httpPort); err != nil {
 		return "", err
 	}
 

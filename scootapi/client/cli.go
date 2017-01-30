@@ -49,8 +49,9 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 // Can only be called from cobra command run or hook
 func (c *simpleCLIClient) Init(cmd *cobra.Command, args []string) error {
 	if c.addr == "" {
-		c.addr, _ = scootapi.GetScootapiAddr()
-		if c.addr == "" {
+		var err error
+		c.addr, _, err = scootapi.GetScootapiAddr()
+		if err != nil {
 			return fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
 		}
 	}
