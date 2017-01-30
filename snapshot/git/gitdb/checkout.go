@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
@@ -128,4 +129,59 @@ func (db *DB) releaseCheckout(path string) error {
 	}
 	delete(db.checkouts, path)
 	return err
+}
+
+func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string, error) {
+	v, err := db.parseID(id)
+	if err != nil {
+		return "", err
+	}
+
+	if err := v.Download(db); err != nil {
+		return "", err
+	}
+
+	if v.Kind() != kindGitCommitSnapshot {
+		return "", fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind())
+	}
+
+	if err := moveCommit(db.dataRepo, externalRepo, v.SHA()); err != nil {
+		return "", err
+	}
+
+	return v.SHA(), nil
+}
+
+func moveCommit(from *repo.Repository, to *repo.Repository, sha string) error {
+	// Strategy: move a commit from 'from' to 'to'
+	// first, check if it's in 'to' (if so; skip)
+	// delete the ref in 'to'
+	// set the ref in 'from'.
+	// push from 'from' to 'to'.
+	// delete ref in both repos.
+	if _, err := to.Run("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", sha)); err == nil {
+		return nil
+	}
+
+	if _, err := to.Run("update-ref", "-d", tempRef); err != nil {
+		return err
+	}
+
+	if _, err := from.Run("update-ref", tempRef, sha); err != nil {
+		return err
+	}
+
+	if _, err := from.Run("push", "-f", to.Dir(), tempRef); err != nil {
+		return err
+	}
+
+	if _, err := from.Run("update-ref", "-d", tempRef); err != nil {
+		return err
+	}
+
+	if _, err := to.Run("update-ref", "-d", tempRef); err != nil {
+		return err
+	}
+
+	return nil
 }

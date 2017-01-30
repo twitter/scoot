@@ -51,35 +51,11 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 		return nil, fmt.Errorf("not a valid commit: %s, %v", commitish, err)
 	}
 
-	// Strategy: move a commit from ingest to data
-	// first, check if it's in data (if so; skip)
-	// delete the ref in the data.
-	// set the ref in the ingest.
-	// push from ingest to data.
-	// delete in both repos.
-	// TODO(dbentley): we could check if sha exists in our repo before ingesting
-
 	if err := db.shaPresent(sha); err == nil {
 		return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
 	}
 
-	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
-		return nil, err
-	}
-
-	if _, err := ingestRepo.Run("update-ref", tempRef, sha); err != nil {
-		return nil, err
-	}
-
-	if _, err := ingestRepo.Run("push", "-f", db.dataRepo.Dir(), tempRef); err != nil {
-		return nil, err
-	}
-
-	if _, err := ingestRepo.Run("update-ref", "-d", tempRef); err != nil {
-		return nil, err
-	}
-
-	if _, err := db.dataRepo.Run("update-ref", "-d", tempRef); err != nil {
+	if err := moveCommit(ingestRepo, db.dataRepo, sha); err != nil {
 		return nil, err
 	}
 

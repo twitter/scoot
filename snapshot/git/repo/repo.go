@@ -38,8 +38,7 @@ func (r *Repository) RunCmd(cmd *exec.Cmd) (string, error) {
 	log.Println("repo.Repository.Run", cmd.Args[1:])
 	data, err := cmd.Output()
 	log.Println("repo.Repository.Run complete", err)
-	// Print stderr, which exists only in go 1.6 and later.
-	if err != nil {
+	if err != nil && err.(*exec.ExitError) != nil {
 		log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
 	}
 	return string(data), err

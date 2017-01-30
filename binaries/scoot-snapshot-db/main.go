@@ -38,6 +38,13 @@ func (i *injector) Inject() (snapshot.DB, error) {
 		return nil, err
 	}
 
+	// So... this is cheating, a bit. Because it means that we have a dataRepo
+	// that we don't own. We trust that we're running in a repo that's valid,
+	// has the right remotes, etc.
+	// We need this because we can't have every invocation of scoot-snapshot-db
+	// create a new repo.
+	// Eventually, we would love to talk to the Daemon, which could have its own DB
+	// with its own repo, that it maintains.
 	dataRepo, err := repo.NewRepository(wd)
 	if err != nil {
 		return nil, fmt.Errorf(

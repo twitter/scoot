@@ -89,7 +89,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 		// The generated bundle will require either no prereqs or a commit that is in the stream
 		if db.stream.cfg != nil && db.stream.cfg.RefSpec != "" {
-			streamHead, err := db.dataRepo.Run("rev-parse", db.stream.cfg.RefSpec)
+			streamHead, err := db.dataRepo.RunSha("rev-parse", db.stream.cfg.RefSpec)
 			if err != nil {
 				return nil, err
 			}
@@ -133,7 +133,15 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	bundleFilename := path.Join(d.Dir, bundleName)
 
 	// create the bundle
-	if _, err := db.dataRepo.Run("bundle", "create", bundleFilename, revList); err != nil {
+	// -c core.packobjectedgesonlyshallow=0 is because our internal git
+	// has a bug that shows up as:
+	// $ git bundle create /tmp/mybundle.pack HEAD^..HEAD
+	// fatal: expected sha1, got garbage:
+	//  ^a7c35c3e44ca591d7dd98860ce49601dbc20a22c
+	//
+	// error: pack-objects died
+	// so we pass it, but hope to remove it once the bug is fixed
+	if _, err := db.dataRepo.Run("-c", "core.packobjectedgesonlyshallow=0", "bundle", "create", bundleFilename, revList); err != nil {
 		return nil, err
 	}
 

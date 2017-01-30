@@ -165,6 +165,9 @@ func (db *DB) loop(initer RepoIniter) {
 			req.resultCh <- stringAndError{str: path, err: err}
 		case releaseCheckoutReq:
 			req.resultCh <- db.releaseCheckout(req.path)
+		case exportGitCommitReq:
+			sha, err := db.exportGitCommit(req.id, req.exportRepo)
+			req.resultCh <- stringAndError{str: sha, err: err}
 		default:
 			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
 		}
@@ -273,6 +276,24 @@ func (db *DB) ReleaseCheckout(path string) error {
 	resultCh := make(chan error)
 	db.reqCh <- releaseCheckoutReq{path: path, resultCh: resultCh}
 	return <-resultCh
+}
+
+type exportGitCommitReq struct {
+	id         snap.ID
+	exportRepo *repo.Repository
+	resultCh   chan stringAndError
+}
+
+func (r exportGitCommitReq) req() {}
+
+func (db *DB) ExportGitCommit(id snap.ID, exportRepo *repo.Repository) (string, error) {
+	if <-db.initDoneCh; db.err != nil {
+		return "", db.err
+	}
+	resultCh := make(chan stringAndError)
+	db.reqCh <- exportGitCommitReq{id: id, exportRepo: exportRepo, resultCh: resultCh}
+	result := <-resultCh
+	return result.str, result.err
 }
 
 type downloadReq struct {
