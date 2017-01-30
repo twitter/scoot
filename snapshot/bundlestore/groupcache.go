@@ -13,6 +13,12 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 )
 
+//TODO: we should consider modifying google groupcache lib further to:
+// 1) It makes more sense given our use-case to cache bundles loaded via peer 100% of the time (currently 10%).
+// 2) Modify peer proto to support setting bundle data on the peer that owns the bundlename. (via PopulateCache()).
+//
+//TODO: Add a doneCh/Done() to stop the created goroutine.
+
 // Called periodically in a goroutine. Must include the current instance among the fetched nodes.
 type PeerFetcher interface {
 	Fetch() ([]cluster.Node, error)
