@@ -47,6 +47,7 @@ type CompositeResolver struct {
 }
 
 // NewCompositeResolves creates a new CompositeResolve that resolves by looking through delegates (in order)
+// A Resolver that returns ("", nil) is ignored, otherwise its result is retuned
 func NewCompositeResolver(dels ...Resolver) *CompositeResolver {
 	return &CompositeResolver{dels: dels}
 }
