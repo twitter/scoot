@@ -9,7 +9,7 @@ import (
 )
 
 // Where is Cloud Scoot running?
-// We store the answer (as host:port) in ~/.cloudscootaddr
+// We store the answer (as host:port\nhost:port) in ~/.cloudscootaddr
 // There are two lines: first is the sched thrift addr, second is the bundlestore http addr.
 // TODO: this will eventually store only the thrift addr and http addr
 //       for a single instance of apiserver, though several may be running.
@@ -24,6 +24,9 @@ func GetScootapiAddrPath() string {
 func GetScootapiAddr() (sched string, api string, err error) {
 	data, err := ioutil.ReadFile(GetScootapiAddrPath())
 	if err != nil {
+		if os.IsNotExist(err) {
+			return "", "", nil
+		}
 		return "", "", err
 	}
 	addrs := strings.Split(string(data), "\n")
@@ -38,6 +41,24 @@ func SetScootapiAddr(sched string, api string) {
 	ioutil.WriteFile(GetScootapiAddrPath(), []byte(sched+"\n"+api), 0777)
 }
 
+// Create a Bundlestore URI from an addr
 func APIAddrToBundlestoreURI(addr string) string {
 	return "http://" + addr + "/bundle/"
+}
+
+// BundlestoreResolver resolves a URI to Bundlestore
+type BundlestoreResolver struct{}
+
+// NewBundlestoreResolver creates a new BundlestoreResolver
+func NewBundlestoreResolver() *BundlestoreResolver {
+	return &BundlestoreResolver{}
+}
+
+// Resolve resolves a URI to Bundlestore
+func (r *BundlestoreResolver) Resolve() (string, error) {
+	_, s, err := GetScootapiAddr()
+	if s == "" || err != nil {
+		return "", err
+	}
+	return APIAddrToBundlestoreURI(s), nil
 }
