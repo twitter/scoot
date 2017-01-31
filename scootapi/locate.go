@@ -57,7 +57,7 @@ func NewBundlestoreResolver() *BundlestoreResolver {
 // Resolve resolves a URI to Bundlestore
 func (r *BundlestoreResolver) Resolve() (string, error) {
 	_, s, err := GetScootapiAddr()
-	if err != nil {
+	if s == "" || err != nil {
 		return "", err
 	}
 	return APIAddrToBundlestoreURI(s), nil
