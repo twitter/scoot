@@ -10,6 +10,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
@@ -66,7 +67,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(tmp *temp.TempDir) (*StoreAndHandler, error) {
+		func(stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			fileStore, err := bundlestore.MakeFileStoreInTemp(tmp)
 			if err != nil {
 				return nil, err
@@ -78,7 +79,7 @@ func main() {
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),
 			}
-			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg)
+			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat)
 			if err != nil {
 				return nil, err
 			}
