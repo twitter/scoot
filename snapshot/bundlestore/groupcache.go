@@ -59,18 +59,19 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.H
 	return &groupcacheStore{underlying: underlying, cache: cache}, pool, nil
 }
 
+// Convert 'host:port' node ids to the format expected by groupcache peering, http URLs.
+func toPeers(nodes []cluster.Node) []string {
+	peers := []string{}
+	for _, node := range nodes {
+		peers = append(peers, "http://"+string(node.Id()))
+	}
+	log.Print("New groupcacheStore peers: ", peers)
+	return peers
+}
+
 // Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
 // Cluster is expected to include the current node.
 func loop(c *cluster.Cluster, pool *groupcache.HTTPPool) {
-	toPeers := func(nodes []cluster.Node) []string {
-		peers := []string{}
-		for _, node := range nodes {
-			peers = append(peers, "http://"+string(node.Id()))
-		}
-		log.Print("Setting groupcacheStore peers: ", peers)
-		return peers
-	}
-
 	sub := c.Subscribe()
 	pool.Set(toPeers(c.Members())...)
 	for {
