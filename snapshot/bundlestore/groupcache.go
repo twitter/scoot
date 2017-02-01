@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"reflect"
-	"time"
 
 	"github.com/scootdev/groupcache"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -30,7 +28,7 @@ type GroupcacheConfig struct {
 	Memory_bytes int64
 	AddrSelf     string
 	Endpoint     string
-	Fetcher      PeerFetcher
+	Cluster      *cluster.Cluster
 }
 
 // Add in-memory caching to the given store.
@@ -39,7 +37,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.H
 	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
 	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
 	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
-	go loop(cfg.Fetcher, pool)
+	go loop(cfg.Cluster, pool)
 
 	// Create the cache which knows how to retrieve the underlying bundle data.
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
@@ -61,26 +59,26 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig) (Store, http.H
 	return &groupcacheStore{underlying: underlying, cache: cache}, pool, nil
 }
 
-// Loop will fetch peers and create a list of addresses, including self, to update groupcache.
-func loop(fetcher PeerFetcher, pool *groupcache.HTTPPool) {
-	prevPeers := []string{}
+// Convert 'host:port' node ids to the format expected by groupcache peering, http URLs.
+func toPeers(nodes []cluster.Node) []string {
+	peers := []string{}
+	for _, node := range nodes {
+		peers = append(peers, "http://"+string(node.Id()))
+	}
+	log.Print("New groupcacheStore peers: ", peers)
+	return peers
+}
+
+// Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
+// Cluster is expected to include the current node.
+func loop(c *cluster.Cluster, pool *groupcache.HTTPPool) {
+	sub := c.Subscribe()
+	pool.Set(toPeers(c.Members())...)
 	for {
-		peerNodes, err := fetcher.Fetch()
-		if err != nil {
-			log.Print("Unable to fetch groupcache peers: ", err)
-			continue
+		select {
+		case <-sub.Updates:
+			pool.Set(toPeers(c.Members())...)
 		}
-		peers := []string{}
-		for _, node := range peerNodes {
-			peers = append(peers, "http://"+string(node.Id()))
-		}
-		if reflect.DeepEqual(prevPeers, peers) {
-			continue
-		}
-		log.Print("Setting groupcacheStore peers: ", peers)
-		prevPeers = peers
-		pool.Set(peers...)
-		time.Sleep(1 * time.Second)
 	}
 }
 

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/config/jsonconfig"
@@ -74,7 +76,7 @@ func main() {
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
-				Fetcher:      local.MakeFetcher("apiserver", "http_addr"),
+				Cluster:      createCluster(),
 			}
 			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg)
 			if err != nil {
@@ -87,4 +89,11 @@ func main() {
 		},
 	)
 	endpoints.RunServer(bag, schema, configText)
+}
+
+func createCluster() *cluster.Cluster {
+	f := local.MakeFetcher("apiserver", "http_addr")
+	nodes, _ := f.Fetch()
+	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C)
+	return cluster.NewCluster(nodes, updates)
 }
