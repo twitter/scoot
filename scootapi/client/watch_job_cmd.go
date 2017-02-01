@@ -75,24 +75,29 @@ func PrintJobStatus(jobStatus *scoot.JobStatus) {
 	for taskId, taskStatus := range jobStatus.TaskStatus {
 		fmt.Printf("\tTask %s {\n", taskId)
 		fmt.Printf("\t\tStatus: %s\n", taskStatus.String())
-		runStatus := jobStatus.TaskData[taskId]
-		if runStatus.OutUri != nil {
-			fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
-		}
-		if runStatus.ErrUri != nil {
-			fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+		runStatus, ok := jobStatus.TaskData[taskId]
+		if ok {
+			if runStatus.OutUri != nil {
+				fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+			}
+			if runStatus.ErrUri != nil {
+				fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+			}
+			if runStatus.SnapshotId != nil {
+				fmt.Printf("\t\tSnapshot: %v\n", *runStatus.SnapshotId)
+			}
+			if taskStatus == scoot.Status_COMPLETED {
+				if runStatus.ExitCode != nil {
+					exitCode := *runStatus.ExitCode
+					fmt.Printf("\t\tExitCode: %d\n", exitCode)
+				}
+				if runStatus.Error != nil {
+					fmt.Printf("\t\tError: %v\n", *runStatus.Error)
+				}
+			}
+
 		}
 
-		// TODO(dbentley): it appears that runStatus is nil; figure that out
-		if taskStatus == scoot.Status_COMPLETED && runStatus != nil {
-			if runStatus.ExitCode != nil {
-				exitCode := *runStatus.ExitCode
-				fmt.Printf("\t\tExitCode: %d\n", exitCode)
-			}
-			if runStatus.Error != nil {
-				fmt.Printf("\t\tError: %v\n", *runStatus.Error)
-			}
-		}
 		fmt.Printf("\t}\n")
 	}
 }
