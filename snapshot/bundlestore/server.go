@@ -7,17 +7,21 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/scootdev/scoot/common/stats"
 )
 
 type Server struct {
 	store Store
+	stat  stats.StatsReceiver
 }
 
-func MakeServer(s Store) *Server {
-	return &Server{s}
+func MakeServer(s Store, stat stats.StatsReceiver) *Server {
+	return &Server{s, stat.Scope("bundlestoreServer")}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s.stat.Counter("serveCounter").Inc(1)
 	switch req.Method {
 	case "POST":
 		s.HandleUpload(w, req)
@@ -28,11 +32,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	default:
 		// TODO(dbentley): do we need to support HEAD?
 		http.Error(w, "only support POST and GET", http.StatusMethodNotAllowed)
+		return
 	}
+	s.stat.Counter("serveOkCounter").Inc(1)
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Uploading %v, %v", req.Host, req.URL)
+	defer s.stat.Latency("uploadLatency_ms").Time().Stop()
+	s.stat.Counter("uploadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -46,6 +54,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if exists {
+		s.stat.Counter("uploadExistingCounter").Inc(1)
 		fmt.Fprintf(w, "Bundle %s already exists\n", bundleName)
 	}
 
@@ -54,10 +63,13 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "Successfully wrote bundle %s\n", bundleName)
+	s.stat.Counter("uploadOkCounter").Inc(1)
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Downloading %v %v", req.Host, req.URL)
+	defer s.stat.Latency("downloadLatency_ms").Time().Stop()
+	s.stat.Counter("downloadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -69,16 +81,15 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
-
 	if _, err := io.Copy(w, r); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
 		return
 	}
-
 	if err := r.Close(); err != nil {
 		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
 		return
 	}
+	s.stat.Counter("downloadOkCounter").Inc(1)
 }
 
 // TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.
