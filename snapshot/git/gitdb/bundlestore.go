@@ -198,14 +198,13 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// this will succeed if we have all of the prerequisite objects
 
 	log.Print("Return if unbundling gets us our sha, else continue. ", s.SHA())
-	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err == nil {
+	if _, err = db.dataRepo.Run("bundle", "unbundle", filename); err == nil {
 		return db.shaPresent(s.sha)
 	}
 
 	// we couldn't unbundle
 	// see if it's because we're missing prereqs
-	exitError := err.(*exec.ExitError)
-	if exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
+	if exitError := err.(*exec.ExitError); exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
 		log.Print("Can't find sha and prereqs aren't the problem, return err. ", s.SHA())
 		return err
 	}
