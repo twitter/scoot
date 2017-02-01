@@ -348,10 +348,12 @@ type Counter interface {
 	Clear()
 	Count() int64
 	Inc(int64)
+	Update(int64)
 }
 type metricCounter struct{ metrics.Counter }
 
 func (m *metricCounter) Capture() Counter { return &metricCounter{m.Snapshot()} }
+func (m *metricCounter) Update(i int64)   { m.Inc(i - m.Count()) }
 func newMetricCounter() Counter           { return &metricCounter{metrics.NewCounter()} }
 
 // Gauge

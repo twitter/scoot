@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/scootdev/groupcache"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -37,12 +38,6 @@ type GroupcacheConfig struct {
 func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.StatsReceiver) (Store, http.Handler, error) {
 	stat = stat.Scope("bundlestoreCache")
 
-	// Create and initialize peer group.
-	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
-	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
-	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
-	go loop(cfg.Cluster, pool, stat)
-
 	// Create the cache which knows how to retrieve the underlying bundle data.
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
@@ -61,6 +56,12 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 		},
 	))
 
+	// Create and initialize peer group.
+	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
+	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
+	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
+	go loop(cfg.Cluster, pool, cache, stat)
+
 	return &groupcacheStore{underlying: underlying, cache: cache, stat: stat}, pool, nil
 }
 
@@ -78,35 +79,41 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 
 // Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
 // Cluster is expected to include the current node.
-func loop(c *cluster.Cluster, pool *groupcache.HTTPPool, stat stats.StatsReceiver) {
+// Also updates cache stats, every 1s for now to account for arbitrary stat latch time.
+func loop(c *cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
 	sub := c.Subscribe()
 	pool.Set(toPeers(c.Members(), stat)...)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
 		case <-sub.Updates:
 			pool.Set(toPeers(c.Members(), stat)...)
+		case <-ticker.C:
+			updateCacheStats(cache, stat)
 		}
 	}
 }
 
+// The groupcache lib updates its stats in the background - we need to convert those to our own stat representation.
+// Gauges are expected to fluctuate, counters are expected to only ever increase.
 func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
 	stat.Gauge("mainBytesGauge").Update(cache.CacheStats(groupcache.MainCache).Bytes)
 	stat.Gauge("mainItemsGauge").Update(cache.CacheStats(groupcache.MainCache).Items)
-	stat.Gauge("mainGetsGauge").Update(cache.CacheStats(groupcache.MainCache).Gets)
-	stat.Gauge("mainHitsGauge").Update(cache.CacheStats(groupcache.MainCache).Hits)
+	stat.Counter("mainGetsCounter").Update(cache.CacheStats(groupcache.MainCache).Gets)
+	stat.Counter("mainHitsCounter").Update(cache.CacheStats(groupcache.MainCache).Hits)
 
 	stat.Gauge("hotBytesGauge").Update(cache.CacheStats(groupcache.HotCache).Bytes)
 	stat.Gauge("hotItemsGauge").Update(cache.CacheStats(groupcache.HotCache).Items)
-	stat.Gauge("hotGetsGauge").Update(cache.CacheStats(groupcache.HotCache).Gets)
-	stat.Gauge("hotHitsGauge").Update(cache.CacheStats(groupcache.HotCache).Hits)
+	stat.Counter("hotGetsCounter").Update(cache.CacheStats(groupcache.HotCache).Gets)
+	stat.Counter("hotHitsCounter").Update(cache.CacheStats(groupcache.HotCache).Hits)
 
-	stat.Gauge("cacheGetGauge").Update(cache.Stats.Gets.Get())
-	stat.Gauge("cacheHitGauge").Update(cache.Stats.CacheHits.Get())
-	stat.Gauge("cachePeerGetsGauge").Update(cache.Stats.PeerLoads.Get())
-	stat.Gauge("cachePeerErrGauge").Update(cache.Stats.PeerErrors.Get())
-	stat.Gauge("cacheLocalLoadGauge").Update(cache.Stats.LocalLoads.Get())
-	stat.Gauge("cacheLocalLoadErrGauge").Update(cache.Stats.LocalLoadErrs.Get())
-	stat.Gauge("cacheIncomingRequestsGauge").Update(cache.Stats.ServerRequests.Get())
+	stat.Counter("cacheGetCounter").Update(cache.Stats.Gets.Get())
+	stat.Counter("cacheHitCounter").Update(cache.Stats.CacheHits.Get())
+	stat.Counter("cachePeerGetsCounter").Update(cache.Stats.PeerLoads.Get())
+	stat.Counter("cachePeerErrCounter").Update(cache.Stats.PeerErrors.Get())
+	stat.Counter("cacheLocalLoadCounter").Update(cache.Stats.LocalLoads.Get())
+	stat.Counter("cacheLocalLoadErrCounter").Update(cache.Stats.LocalLoadErrs.Get())
+	stat.Counter("cacheIncomingRequestsCounter").Update(cache.Stats.ServerRequests.Get())
 }
 
 type groupcacheStore struct {
@@ -118,7 +125,6 @@ type groupcacheStore struct {
 func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
 	log.Print("Read() checking for cached bundle: ", name)
 	defer s.stat.Latency("readLatency_ms").Time().Stop()
-	defer updateCacheStats(s.cache, s.stat)
 	s.stat.Counter("readCounter").Inc(1)
 	var data []byte
 	if err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
@@ -131,7 +137,6 @@ func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
 func (s *groupcacheStore) Exists(name string) (bool, error) {
 	log.Print("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency("existsLatency_ms").Time().Stop()
-	defer updateCacheStats(s.cache, s.stat)
 	s.stat.Counter("existsCounter").Inc(1)
 	if err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{})); err != nil {
 		return false, nil
@@ -143,7 +148,6 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 func (s *groupcacheStore) Write(name string, data io.Reader) error {
 	log.Print("Write() populating cache: ", name)
 	defer s.stat.Latency("writeLatency_ms").Time().Stop()
-	defer updateCacheStats(s.cache, s.stat)
 	s.stat.Counter("writeCounter").Inc(1)
 	b, err := ioutil.ReadAll(data)
 	if err != nil {

@@ -73,9 +73,10 @@ func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {
 
 type StatScope string
 
+// Create a finagle-style stats receiver with a reasonable latch default, minutely.
 func MakeStatsReceiver(scope StatScope) stats.StatsReceiver {
 	s, _ := stats.NewCustomStatsReceiver(
 		stats.NewFinagleStatsRegistry,
-		15*time.Second)
+		60*time.Second)
 	return s.Scope(string(scope))
 }
