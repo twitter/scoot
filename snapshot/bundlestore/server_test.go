@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/scootdev/scoot/common/stats"
 )
 
 type FakeStore struct {
@@ -49,7 +51,7 @@ func TestServer(t *testing.T) {
 	addr := listener.Addr().String()
 
 	mux := http.NewServeMux()
-	mux.Handle("/bundle/", MakeServer(store))
+	mux.Handle("/bundle/", MakeServer(store, stats.NilStatsReceiver()))
 	go func() {
 		http.Serve(listener, mux)
 	}()
