@@ -94,7 +94,7 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatalf("error checking out %v, %v", id2, err)
 	}
 
-	// text contents
+	// test contents
 	if err := assertFileContents(co, "file.txt", "second"); err != nil {
 		t.Fatal(err)
 	}
@@ -337,12 +337,26 @@ func TestBundlestore(t *testing.T) {
 
 	consumerDB := MakeDBFromRepo(consumerDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
 
+	upstreamMaster, err := fixture.upstream.RunSha("rev-parse", "master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := fixture.external.Run("fetch", "upstream"); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := authorDB.IngestGitCommit(fixture.external, upstreamMaster)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	externalCommitID, err := commitText(fixture.external, "bundlestore_first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := authorDB.IngestGitCommit(fixture.external, externalCommitID)
+	id, err = authorDB.IngestGitCommit(fixture.external, externalCommitID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,6 +516,10 @@ func setup() (f *dbFixture, err error) {
 
 	tags, err := createRepo(tmp, "tags-repo")
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := external.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
 		return nil, err
 	}
 

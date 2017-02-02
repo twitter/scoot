@@ -96,6 +96,10 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 			mergeBase, err := db.dataRepo.RunSha("merge-base", streamHead, commitSha)
 
+			if mergeBase == commitSha {
+				return &streamSnapshot{sha: commitSha, kind: kindGitCommitSnapshot, streamName: db.stream.cfg.Name}, nil
+			}
+
 			// if err != nil, it just means we don't have a merge-base
 			if err == nil {
 				revList = fmt.Sprintf("%s..%s", mergeBase, bundlestoreTempRef)
