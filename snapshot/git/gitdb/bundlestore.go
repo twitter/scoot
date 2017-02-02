@@ -97,6 +97,10 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 			mergeBase, err := db.dataRepo.RunSha("merge-base", streamHead, commitSha)
 
 			if mergeBase == commitSha {
+				// we were asked to ingest a sha that's on the stream,
+				// so we don't have to upload it, just return that snapshot
+				// if we don't do this, then our git bundle create will die
+				// because the bundle would be empty.
 				return &streamSnapshot{sha: commitSha, kind: kindGitCommitSnapshot, streamName: db.stream.cfg.Name}, nil
 			}
 
