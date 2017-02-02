@@ -331,6 +331,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// First, test that if we try and upload something that's already in master, we succeed
 	if _, err := consumerDataRepo.Run("remote", "add", "upstream", fixture.upstream.Dir()); err != nil {
 		t.Fatal(err)
 	}
@@ -351,6 +352,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Now, create a change in external with new contents and upload that
 	externalCommitID, err := commitText(fixture.external, "bundlestore_first")
 	if err != nil {
 		t.Fatal(err)
@@ -366,6 +368,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Now, create a new directory with independent contents and ingest it.
 	tmp, err = fixture.tmp.TempDir("output")
 	if err != nil {
 		t.Fatal(err)
@@ -383,7 +386,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := assertSnapshotContents(authorDB, id, "stdout.txt", "stdout"); err != nil {
+	if err := assertSnapshotContents(consumerDB, id, "stdout.txt", "stdout"); err != nil {
 		t.Fatal(err)
 	}
 }

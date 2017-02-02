@@ -98,6 +98,8 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 
 			if mergeBase == commitSha {
 				// we were asked to ingest a sha that's on the stream,
+				// e.g., the user just created a branch and just wants to test
+				// the baseline, and hasn't modified anything yet.
 				// so we don't have to upload it, just return that snapshot
 				// if we don't do this, then our git bundle create will die
 				// because the bundle would be empty.
