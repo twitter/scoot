@@ -94,7 +94,7 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatalf("error checking out %v, %v", id2, err)
 	}
 
-	// text contents
+	// test contents
 	if err := assertFileContents(co, "file.txt", "second"); err != nil {
 		t.Fatal(err)
 	}
@@ -331,18 +331,34 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// First, test that if we try and upload something that's already in master, we succeed
 	if _, err := consumerDataRepo.Run("remote", "add", "upstream", fixture.upstream.Dir()); err != nil {
 		t.Fatal(err)
 	}
 
 	consumerDB := MakeDBFromRepo(consumerDataRepo, fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore)
 
+	upstreamMaster, err := fixture.upstream.RunSha("rev-parse", "master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := fixture.external.Run("fetch", "upstream"); err != nil {
+		t.Fatal(err)
+	}
+
+	id, err := authorDB.IngestGitCommit(fixture.external, upstreamMaster)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now, create a change in external with new contents and upload that
 	externalCommitID, err := commitText(fixture.external, "bundlestore_first")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := authorDB.IngestGitCommit(fixture.external, externalCommitID)
+	id, err = authorDB.IngestGitCommit(fixture.external, externalCommitID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,6 +368,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Now, create a new directory with independent contents and ingest it.
 	tmp, err = fixture.tmp.TempDir("output")
 	if err != nil {
 		t.Fatal(err)
@@ -369,7 +386,7 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := assertSnapshotContents(authorDB, id, "stdout.txt", "stdout"); err != nil {
+	if err := assertSnapshotContents(consumerDB, id, "stdout.txt", "stdout"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -502,6 +519,10 @@ func setup() (f *dbFixture, err error) {
 
 	tags, err := createRepo(tmp, "tags-repo")
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := external.Run("remote", "add", "upstream", upstream.Dir()); err != nil {
 		return nil, err
 	}
 

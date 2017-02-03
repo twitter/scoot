@@ -22,19 +22,19 @@ func (db *DB) ingestDir(dir string) (snapshot, error) {
 	indexFilename := filepath.Join(indexDir.Dir, "index")
 	defer os.RemoveAll(indexDir.Dir)
 
-	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + dir}
+	env := append(os.Environ(), "GIT_INDEX_FILE="+indexFilename, "GIT_WORK_TREE="+dir)
 
 	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
 	// (e.g., HEAD) and we should just use the lower-level plumbing command?
 	cmd := db.dataRepo.Command("add", ".")
-	cmd.Env = append(cmd.Env, extraEnv...)
+	cmd.Env = env
 	_, err = db.dataRepo.RunCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
 
 	cmd = db.dataRepo.Command("write-tree")
-	cmd.Env = append(cmd.Env, extraEnv...)
+	cmd.Env = env
 	sha, err := db.dataRepo.RunCmdSha(cmd)
 	if err != nil {
 		return nil, err
