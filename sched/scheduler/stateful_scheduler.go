@@ -280,7 +280,6 @@ func (s *statefulScheduler) scheduleTasks() {
 		nodeId := ta.node.Id()
 
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
-		log.Println("Hullo", taskId, preventRetries)
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)

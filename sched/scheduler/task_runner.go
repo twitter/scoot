@@ -130,7 +130,9 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 }
 
 func (r *taskRunner) logTaskStatus(st runner.RunStatus, msgType saga.SagaMessageType) error {
+	log.Println("Finishing", st)
 	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+	log.Println("Hm", err, statusAsBytes)
 	if err != nil {
 		r.stat.Counter("failedTaskSerializeCounter").Inc(1)
 		return err

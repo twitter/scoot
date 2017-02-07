@@ -12,7 +12,9 @@
     "Type": "stateful",
     "MaxRetriesPerTask" : 2,
     "DebugMode" : false,
-    "RecoverJobsOnStartup" : true
+    "RecoverJobsOnStartup" : true,
+    "DefaultTaskTimeoutMs" : 1800000,
+    "RunnerOverheadMs": 600000
   },
   "SagaLog": {
     "Type": "file",
