@@ -2,18 +2,24 @@ package scheduler
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/execer"
+	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
+	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -21,7 +27,7 @@ type schedulerDeps struct {
 	initialCl []cluster.Node
 	clUpdates chan []cluster.NodeUpdate
 	sc        saga.SagaCoordinator
-	wf        worker.WorkerFactory
+	rf        func(cluster.Node) runner.Service
 	config    SchedulerConfig
 }
 
@@ -34,13 +40,14 @@ func getDefaultSchedDeps() *schedulerDeps {
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
-		wf: func(cluster.Node) worker.Worker {
-			return workers.MakeSimWorker(tmp)
+		rf: func(n cluster.Node) runner.Service {
+			return workers.MakeInmemoryWorker(n, tmp)
 		},
 		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,
 			DebugMode:            true,
 			RecoverJobsOnStartup: false,
+			DefaultTaskTimeout:   time.Second,
 		},
 	}
 }
@@ -51,7 +58,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.initialCl,
 		deps.clUpdates,
 		deps.sc,
-		deps.wf,
+		deps.rf,
 		deps.config,
 		stats.NilStatsReceiver(),
 	)
@@ -139,13 +146,15 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 }
 
 // verifies that task gets retried maxRetryTimes and then marked as completed
-func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T) {
+func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
 	for taskId, _ := range jobDef.Tasks {
 		taskIds = append(taskIds, taskId)
 	}
+
 	taskId := taskIds[0]
+	log.Println("watching", taskId)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -153,16 +162,56 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetries(t *testing.T)
 	deps := getDefaultSchedDeps()
 	deps.config.MaxRetriesPerTask = 3
 
-	// create a worker factory that always returns a worker that returns an error
-	deps.wf = func(cluster.Node) worker.Worker {
-		workerMock := worker.NewMockWorker(mockCtrl)
+	// create a runner factory that returns a runner that returns an error
+	deps.rf = func(cluster.Node) runner.Service {
+		chaos := runners.NewChaosRunner(nil)
 
-		retStatus := runner.RunningStatus("run1", "", "")
-		testErr := errors.New("Test Error, Failed Running Task On Worker")
+		chaos.SetError(fmt.Errorf("starting error"))
+		return chaos
+	}
 
-		workerMock.EXPECT().RunAndWait(gomock.Any()).Return(retStatus, testErr).MinTimes(1)
+	s := makeStatefulSchedulerDeps(deps)
+	jobId, _ := s.ScheduleJob(jobDef)
 
-		return workerMock
+	// advance scheduler until job gets scheduled & marked completed
+	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+		s.step()
+	}
+
+	// verify task was retried enough times.
+	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	}
+
+	// advance scheduler until job gets marked completed
+	for len(s.inProgressJobs) > 0 {
+		s.step()
+	}
+}
+
+// verifies that task gets retried maxRetryTimes and then marked as completed
+func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *testing.T) {
+	jobDef := sched.GenJobDef(1)
+	var taskIds []string
+	for taskId, _ := range jobDef.Tasks {
+		taskIds = append(taskIds, taskId)
+	}
+
+	taskId := taskIds[0]
+	log.Println("watching", taskId)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	deps := getDefaultSchedDeps()
+	deps.config.MaxRetriesPerTask = 3
+
+	// create a runner factory that returns a runner that always fails
+	tmp, _ := temp.TempDirDefault()
+	deps.rf = func(cluster.Node) runner.Service {
+		ex := execers.NewDoneExecer()
+		ex.State = execer.FAILED
+		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -215,6 +264,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 
 	// add additional saga data
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
+	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}).AnyTimes()
 	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))

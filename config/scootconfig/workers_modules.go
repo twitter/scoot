@@ -8,8 +8,8 @@ import (
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
 )
@@ -28,10 +28,9 @@ const defaultOverhead = time.Duration(5) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,
-	pf thrift.TProtocolFactory) (worker.WorkerFactory, error) {
+	pf thrift.TProtocolFactory) (func(cluster.Node) runner.Service, error) {
 
 	pollingPeriod := defaultPollingPeriod
-	taskTimeout := defaultTaskTimeout
 	var err error
 
 	// apply defaults
@@ -42,21 +41,13 @@ func (c *WorkersThriftConfig) Create(
 		}
 	}
 
-	if c.TaskTimeout != "" {
-		taskTimeout, err = time.ParseDuration(c.TaskTimeout)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	wf := func(node cluster.Node) worker.Worker {
+	rf := func(node cluster.Node) runner.Service {
 		di := dialer.NewSimpleDialer(tf, pf)
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
-		q := runners.NewPollingService(cl, cl, cl, pollingPeriod)
-		return workers.NewServiceWorker(q, taskTimeout, defaultOverhead)
+		return runners.NewPollingService(cl, cl, cl, pollingPeriod)
 	}
 
-	return wf, nil
+	return rf, nil
 }
 
 func (c *WorkersThriftConfig) Install(bag *ice.MagicBag) {
@@ -70,13 +61,13 @@ type WorkersLocalConfig struct {
 }
 
 func (c *WorkersLocalConfig) Install(bag *ice.MagicBag) {
-	bag.Put(func(tmp *temp.TempDir) worker.WorkerFactory {
+	bag.Put(func(tmp *temp.TempDir) func(cluster.Node) runner.Service {
 		return InmemoryWorkerFactory(tmp)
 	})
 }
 
-func InmemoryWorkerFactory(tmp *temp.TempDir) worker.WorkerFactory {
-	return func(node cluster.Node) worker.Worker {
+func InmemoryWorkerFactory(tmp *temp.TempDir) func(cluster.Node) runner.Service {
+	return func(node cluster.Node) runner.Service {
 		return workers.MakeInmemoryWorker(node, tmp)
 	}
 }

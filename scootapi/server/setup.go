@@ -13,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
@@ -46,10 +45,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			cl *cluster.Cluster,
 			sc saga.SagaCoordinator,
-			wf worker.WorkerFactory,
+			rf scheduler.RunnerFactory,
 			config scheduler.SchedulerConfig,
 			stat stats.StatsReceiver) scheduler.Scheduler {
-			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, wf, config, stat)
+			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
 		},
 
 		func(
