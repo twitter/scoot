@@ -3,7 +3,6 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -63,6 +62,29 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 }
 
 func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	task := sched.TaskDefinition{
+		runner.Command{
+			Argv: []string{"sleep 500", "complete 0"},
+		},
+	}
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", nil)
+	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
+	// Make sure that we include another start task message
+	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()})
+	endMessageMatcher := TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+
+	s, _ := sagaCoord.MakeSaga("job1", nil)
+	err := testTaskRunner(s, workers.MakeSimWorker(tmp), "task1", task, false).run()
+	if err != nil {
+		t.Errorf("Unexpected Error %v", err)
+	}
 
 }
 
