@@ -35,7 +35,7 @@ type taskRunner struct {
 func (r *taskRunner) run() error {
 	log.Println("Starting task", r.taskId, " command:", strings.Join(r.task.Argv, " "))
 	// Log StartTask Message to SagaLog
-	if err := r.logTaskStatus(saga.StartTask); err != nil {
+	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		return err
 	}
 
@@ -133,8 +133,9 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 
 func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessageType) error {
 	var statusAsBytes []byte
+	var err error
 	if st != nil {
-		statusAsBytes, err := workerapi.SerializeProcessStatus(*st)
+		statusAsBytes, err = workerapi.SerializeProcessStatus(*st)
 		if err != nil {
 			r.stat.Counter("failedTaskSerializeCounter").Inc(1)
 			return err
