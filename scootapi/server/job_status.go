@@ -1,8 +1,6 @@
 package server
 
 import (
-	"log"
-
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	s "github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
@@ -112,7 +110,6 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 // import statements in the generated code when we use thrift import statements (this issue is supposed
 // to be fixed in thrift 10.0
 func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, error) {
-	log.Println("Translating", resultsFromSaga)
 	if resultsFromSaga == nil {
 		return nil, nil
 	}
@@ -125,10 +122,6 @@ func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, 
 		return nil, err
 	}
 
-	log.Println("Ahh", workerRunStatus.SnapshotId)
-	if workerRunStatus.SnapshotId != nil {
-		log.Println("Well", *workerRunStatus.SnapshotId)
-	}
 	scootRunStatus := scoot.RunStatus{
 		RunId:      workerRunStatus.RunId,
 		Status:     status,

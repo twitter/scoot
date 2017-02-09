@@ -35,8 +35,7 @@ type taskRunner struct {
 func (r *taskRunner) run() error {
 	log.Println("Starting task", r.taskId, " command:", strings.Join(r.task.Argv, " "))
 	// Log StartTask Message to SagaLog
-	err := r.saga.StartTask(r.taskId, nil)
-	if err != nil {
+	if err := r.logTaskStatus(saga.StartTask); err != nil {
 		return err
 	}
 
@@ -67,7 +66,7 @@ func (r *taskRunner) run() error {
 		return err
 	}
 
-	err = r.logTaskStatus(st, saga.EndTask)
+	err = r.logTaskStatus(&st, saga.EndTask)
 	if err == nil {
 		r.stat.Counter("completedTaskCounter").Inc(1)
 	} else {
@@ -91,12 +90,15 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 
 	id := st.RunID
 
+	// Wait for the process to start running
 	st, err = r.queryWithTimeout(id, endTime, true)
 	if err != nil || st.State.IsDone() {
 		return st, err
 	}
 
-	r.logTaskStatus(st, saga.StartTask)
+	// It's running, but not done, so we want to log a second StartTask that includes
+	// its status, so a watcher can go investigate
+	r.logTaskStatus(&st, saga.StartTask)
 
 	return r.queryWithTimeout(id, endTime, false)
 }
@@ -129,13 +131,14 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	return st, nil
 }
 
-func (r *taskRunner) logTaskStatus(st runner.RunStatus, msgType saga.SagaMessageType) error {
-	log.Println("Finishing", st)
-	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
-	log.Println("Hm", err, statusAsBytes)
-	if err != nil {
-		r.stat.Counter("failedTaskSerializeCounter").Inc(1)
-		return err
+func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessageType) error {
+	var statusAsBytes []byte
+	if st != nil {
+		statusAsBytes, err := workerapi.SerializeProcessStatus(*st)
+		if err != nil {
+			r.stat.Counter("failedTaskSerializeCounter").Inc(1)
+			return err
+		}
 	}
 
 	switch msgType {

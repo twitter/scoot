@@ -82,6 +82,7 @@ func GenRandomTask(rng *rand.Rand) TaskDefinition {
 		envVarsMap[fmt.Sprintf("env%d", j)] = testhelpers.GenRandomAlphaNumericString(rng)
 	}
 
+	// multiply by second to get a reasonable timeout instead of <1 us (which is too short for the command to succeed)
 	timeout := time.Duration(rng.Int63n(1000)) * time.Second
 	cmd := runner.Command{
 		SnapshotID: snapshotId,
