@@ -23,7 +23,6 @@ import (
 func main() {
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
-	tmpDir := flag.String("tmp", "", "Use this existing dir as the root tmp dir for file read/write.")
 	flag.Parse()
 
 	// The same config will be used for both bundlestore and frontend (TODO: frontend).

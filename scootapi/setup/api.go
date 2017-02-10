@@ -47,11 +47,6 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		s.apiCfg.Count = DefaultApiServerCount
 	}
 
-	tmp, err := temp.TempDirDefault()
-	if err != nil {
-		return nil, err
-	}
-
 	bin, err := s.builder.ApiServer()
 	if err != nil {
 		return nil, err
@@ -61,7 +56,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	for i := 0; i < s.apiCfg.Count; i++ {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
-		if err := s.cmds.Start(bin, "-http_addr", httpAddr, "-tmp", tmp.Dir); err != nil {
+		if err := s.cmds.Start(bin, "-http_addr", httpAddr); err != nil {
 			return nil, err
 		}
 		if err := WaitForPort(port); err != nil {
