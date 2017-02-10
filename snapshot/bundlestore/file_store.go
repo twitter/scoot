@@ -17,6 +17,7 @@ func MakeFileStoreInTemp(tmp *temp.TempDir) (Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("!!!!!!!", bundleDir.Dir)
 	return MakeFileStore(bundleDir.Dir)
 
 }

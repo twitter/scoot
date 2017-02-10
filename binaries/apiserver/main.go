@@ -43,19 +43,13 @@ func main() {
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(gitdb.Module())
+	bag.InstallModule(temp.Module())
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(snapshots.Module())
 	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "apiserver" },
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
-		func() (*temp.TempDir, error) {
-			if *tmpDir != "" {
-				return &temp.TempDir{Dir: *tmpDir}, nil
-			} else {
-				return temp.TempDirDefault()
-			}
-		},
 		func(bs *bundlestore.Server, vs *snapshots.ViewServer, sh *StoreAndHandler) map[string]http.Handler {
 			return map[string]http.Handler{
 				"/bundle/": bs,
