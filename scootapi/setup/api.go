@@ -3,6 +3,7 @@ package setup
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
@@ -51,6 +52,10 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	bundlestoreStoreDir, err := tmp.FixedDir("common-bundles")
+	if err != nil {
+		return nil, err
+	}
 
 	bin, err := s.builder.ApiServer()
 	if err != nil {
@@ -61,7 +66,9 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	for i := 0; i < s.apiCfg.Count; i++ {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
-		if err := s.cmds.Start(bin, "-http_addr", httpAddr, "-tmp", tmp.Dir); err != nil {
+		cmd := s.cmds.Command(bin, "-http_addr", httpAddr)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
+		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
 		}
 		if err := WaitForPort(port); err != nil {

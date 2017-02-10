@@ -12,29 +12,28 @@ import (
 )
 
 // Create a fixed dir in tmp.
-func MakeFileStoreInTemp(tmp *temp.TempDir) (Store, error) {
+func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
 	bundleDir, err := tmp.FixedDir("bundles")
 	if err != nil {
 		return nil, err
 	}
 	return MakeFileStore(bundleDir.Dir)
-
 }
 
-func MakeFileStore(dir string) (Store, error) {
-	return &fileStore{dir}, nil
+func MakeFileStore(dir string) (*FileStore, error) {
+	return &FileStore{dir}, nil
 }
 
-type fileStore struct {
+type FileStore struct {
 	bundleDir string
 }
 
-func (s *fileStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *FileStore) OpenForRead(name string) (io.ReadCloser, error) {
 	bundlePath := filepath.Join(s.bundleDir, name)
 	return os.Open(bundlePath)
 }
 
-func (s *fileStore) Exists(name string) (bool, error) {
+func (s *FileStore) Exists(name string) (bool, error) {
 	if strings.Contains(name, "/") {
 		return false, errors.New("'/' not allowed in name unless reading bundle contents.")
 	}
@@ -48,7 +47,7 @@ func (s *fileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *fileStore) Write(name string, data io.Reader) error {
+func (s *FileStore) Write(name string, data io.Reader) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}

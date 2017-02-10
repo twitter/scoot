@@ -3,29 +3,34 @@ package scheduler
 import (
 	"log"
 	"strings"
+	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/worker"
 )
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
-// 										 marking it as completed.
+//     marking it as completed.
 // DebugMode - if true, starts the scheduler up but does not start
-// 						 the update loop.  Instead the loop must be advanced manulaly
-//             by calling step()
+//     the update loop.  Instead the loop must be advanced manually
+//     by calling step()
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //             from the sagalog, and restarts them.
 type SchedulerConfig struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
 	RecoverJobsOnStartup bool
+	DefaultTaskTimeout   time.Duration
+	RunnerOverhead       time.Duration
 }
+
+type RunnerFactory func(node cluster.Node) runner.Service
 
 // Scheduler that keeps track of the state of running tasks & the cluster
 // so that it can make smarter scheduling decisions
@@ -39,14 +44,18 @@ type SchedulerConfig struct {
 // safely read & modify the scheduler state.
 type statefulScheduler struct {
 	sagaCoord     saga.SagaCoordinator
-	workerFactory worker.WorkerFactory
+	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
 	addJobCh      chan jobAddedMsg
 
+	// Scheduler config
+	maxRetriesPerTask  int
+	defaultTaskTimeout time.Duration
+	runnerOverhead     time.Duration
+
 	// Scheduler State
-	clusterState      *clusterState
-	inProgressJobs    map[string]*jobState // map of inprogress jobId to jobState
-	maxRetriesPerTask int
+	clusterState   *clusterState
+	inProgressJobs map[string]*jobState // map of inprogress jobId to jobState
 
 	// stats
 	stat stats.StatsReceiver
@@ -55,13 +64,13 @@ type statefulScheduler struct {
 // Create a New StatefulScheduler that implements the Scheduler interface
 // cluster.Cluster - cluster of worker nodes
 // saga.SagaCoordinator - the Saga Coordinator to log to and recover from
-// worker.WorkerFactory - Function which converts a node to a worker
+// RunnerFactory - Function which converts a node to a Runner
 // SchedulerConfig - additional configuration settings for the scheduler
 // StatsReceiver - stats receiver to log statistics to
 func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
-	wf worker.WorkerFactory,
+	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 ) Scheduler {
@@ -70,7 +79,7 @@ func NewStatefulSchedulerFromCluster(
 		sub.InitialMembers,
 		sub.Updates,
 		sc,
-		wf,
+		rf,
 		config,
 		stat,
 	)
@@ -86,21 +95,24 @@ func NewStatefulScheduler(
 	initialCluster []cluster.Node,
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
-	wf worker.WorkerFactory,
+	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 ) *statefulScheduler {
 
 	sched := &statefulScheduler{
 		sagaCoord:     sc,
-		workerFactory: wf,
+		runnerFactory: rf,
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
 
-		clusterState:      newClusterState(initialCluster, clusterUpdates),
-		inProgressJobs:    make(map[string]*jobState),
-		maxRetriesPerTask: config.MaxRetriesPerTask,
-		stat:              stat,
+		maxRetriesPerTask:  config.MaxRetriesPerTask,
+		defaultTaskTimeout: config.DefaultTaskTimeout,
+		runnerOverhead:     config.RunnerOverhead,
+
+		clusterState:   newClusterState(initialCluster, clusterUpdates),
+		inProgressJobs: make(map[string]*jobState),
+		stat:           stat,
 	}
 
 	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
@@ -264,7 +276,6 @@ func (s *statefulScheduler) scheduleTasks() {
 		taskId := ta.task.TaskId
 		taskDef := ta.task.Def
 		saga := s.inProgressJobs[jobId].Saga
-		worker := s.workerFactory(ta.node)
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
@@ -274,17 +285,21 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.clusterState.taskScheduled(nodeId, taskId)
 		jobState.taskStarted(taskId)
 
+		runner := &taskRunner{
+			saga:   saga,
+			runner: s.runnerFactory(ta.node),
+			stat:   s.stat,
+
+			defaultTaskTimeout:    s.defaultTaskTimeout,
+			runnerOverhead:        s.runnerOverhead,
+			markCompleteOnFailure: preventRetries,
+
+			taskId: taskId,
+			task:   taskDef,
+		}
+
 		s.asyncRunner.RunAsync(
-			func() error {
-				log.Println("Starting task", taskId, " command:", strings.Join(taskDef.Argv, " "))
-				return runTaskAndLog(
-					saga,
-					worker,
-					taskId,
-					taskDef,
-					preventRetries,
-					s.stat)
-			},
+			runner.run,
 			func(err error) {
 				// update the jobState
 				if err == nil {

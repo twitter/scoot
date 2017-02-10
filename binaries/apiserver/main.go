@@ -23,7 +23,6 @@ import (
 func main() {
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
-	tmpDir := flag.String("tmp", "", "Use this existing dir as the root tmp dir for file read/write.")
 	flag.Parse()
 
 	// The same config will be used for both bundlestore and frontend (TODO: frontend).
@@ -44,19 +43,13 @@ func main() {
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(gitdb.Module())
+	bag.InstallModule(temp.Module())
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(snapshots.Module())
 	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "apiserver" },
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
-		func() (*temp.TempDir, error) {
-			if *tmpDir != "" {
-				return &temp.TempDir{Dir: *tmpDir}, nil
-			} else {
-				return temp.TempDirDefault()
-			}
-		},
 		func(bs *bundlestore.Server, vs *snapshots.ViewServer, sh *StoreAndHandler) map[string]http.Handler {
 			return map[string]http.Handler{
 				"/bundle/": bs,
@@ -67,11 +60,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
-			fileStore, err := bundlestore.MakeFileStoreInTemp(tmp)
-			if err != nil {
-				return nil, err
-			}
+		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB

@@ -11,9 +11,9 @@ import (
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/config/scootconfig"
 	"github.com/scootdev/scoot/ice"
+	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/sched/worker"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
@@ -46,10 +46,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			cl *cluster.Cluster,
 			sc saga.SagaCoordinator,
-			wf worker.WorkerFactory,
+			rf func(cluster.Node) runner.Service,
 			config scheduler.SchedulerConfig,
 			stat stats.StatsReceiver) scheduler.Scheduler {
-			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, wf, config, stat)
+			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
 		},
 
 		func(
@@ -105,7 +105,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 		"SchedulerConfig": {
 			"stateful": &scootconfig.StatefulSchedulerConfig{},
-			"":         &scootconfig.StatefulSchedulerConfig{Type: "stateful", MaxRetriesPerTask: 0},
+			"": &scootconfig.StatefulSchedulerConfig{
+				Type:                 "stateful",
+				MaxRetriesPerTask:    0,
+				DefaultTaskTimeoutMs: 30 * 60 * 1000, // 30m
+				RunnerOverheadMs:     10 * 60 * 1000, // 10m
+			},
 		},
 	})
 

@@ -11,3 +11,5 @@ const DefaultApiBundlestore_HTTP string = "localhost:9094"
 // Port ranges to make setup of multiple workerServer/apiServer more repeatable.
 const WorkerPorts = 10100
 const ApiBundlestorePorts = 11100
+
+const BundlestoreEnvVar = "BUNDLESTORE_STORE_DIR"
