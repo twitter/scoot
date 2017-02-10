@@ -5,15 +5,22 @@ import (
 
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
+	"github.com/scootdev/scoot/scootapi"
+
+	"log"
 )
 
 // Make a File Store based on the environment, or in temp if unset
-func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (Store, error) {
+func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*FileStore, error) {
 	// if we're running as part of a swarm test, we want to share the store with other processes
-	if d := os.Getenv("BUNDLESTORE_STORE_DIR"); d != "" {
+	if d := os.Getenv(scootapi.BundlestoreEnvVar); d != "" {
 		return MakeFileStore(d)
 	}
 	return MakeFileStoreInTemp(tmp)
+}
+
+func DefaultStore(store *FileStore) Store {
+	return store
 }
 
 // Module returns a module that supports serving Bundlestore
@@ -27,4 +34,5 @@ type module struct{}
 func (m module) Install(b *ice.MagicBag) {
 	b.Put(MakeFileStoreInEnvOrTemp)
 	b.Put(MakeServer)
+	b.Put(DefaultStore)
 }

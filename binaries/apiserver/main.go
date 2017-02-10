@@ -60,11 +60,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
-			fileStore, err := bundlestore.MakeFileStoreInTemp(tmp)
-			if err != nil {
-				return nil, err
-			}
+		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB

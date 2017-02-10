@@ -67,8 +67,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
 		cmd := s.cmds.Command(bin, "-http_addr", httpAddr)
-		env := append(os.Environ(), fmt.Sprintf("BUNDLESTORE_STORE_DIR=%s", bundlestoreStoreDir.Dir))
-		cmd.Env = env
+		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
 		}
