@@ -6,8 +6,6 @@ import (
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
-
-	"log"
 )
 
 // Make a File Store based on the environment, or in temp if unset
