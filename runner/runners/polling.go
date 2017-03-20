@@ -35,13 +35,14 @@ func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, err
 func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
 	end := time.Now().Add(wait.Timeout)
 	for {
-		if time.Now().Before(end) || wait.Timeout == 0 {
+		switch time.Now().Before(end) || wait.Timeout == 0 {
+		case true:
 			st, err := r.QueryNow(q)
 			if err != nil || len(st) > 0 {
 				return st, err
 			}
 			time.Sleep(r.period)
-		} else {
+		default:
 			return nil, nil
 		}
 	}
