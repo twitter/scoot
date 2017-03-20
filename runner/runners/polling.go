@@ -33,25 +33,18 @@ func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, err
 
 // Query returns all RunStatus'es matching q, waiting as described by w
 func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
-	if wait.Timeout == 0 {
-		for {
-			st, err := r.del.QueryNow(q)
+	end := time.Now().Add(wait.Timeout)
+	for {
+		if time.Now().Before(end) || wait.Timeout == 0 {
+			st, err := r.QueryNow(q)
 			if err != nil || len(st) > 0 {
 				return st, err
 			}
 			time.Sleep(r.period)
+		} else {
+			return nil, nil
 		}
 	}
-	end := time.Now().Add(wait.Timeout)
-	for time.Now().Before(end) {
-		st, err := r.del.QueryNow(q)
-		if err != nil || len(st) > 0 {
-			return st, err
-		}
-		time.Sleep(r.period)
-	}
-
-	return nil, nil
 }
 
 // Status returns the current status of id from q.
