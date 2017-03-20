@@ -73,7 +73,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 func TestPollingWorker_Timeout(t *testing.T) {
 	_, _, poller := setupPoller()
 	stCh, errCh := make(chan runner.RunStatus), make(chan error)
-	st, err := poller.Run(&runner.Command{Argv: []string{"sleep 1001"}, Timeout: time.Second * 1})
+	st, err := poller.Run(&runner.Command{Argv: []string{"sleep 1000"}, Timeout: time.Millisecond * 20})
 
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +90,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 	select {
 	case st := <-stCh:
 		err := <-errCh
-		t.Log("status and err:", st, err)
+		t.Log("should still be waiting:", st, err)
 	default:
 	}
 
