@@ -12,6 +12,7 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
+	"reflect"
 )
 
 // Scheduler Config variables read at initialization
@@ -117,6 +118,8 @@ func NewStatefulScheduler(
 
 	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
 		config.DebugMode, config.RecoverJobsOnStartup)
+	log.Printf("Scheduler:, sagaCoordinator:%s, runnerFactory:%s, retries:%d, defaultTaskTimeout:%d, runnerOverhead:%d, stat:%s\n",
+		reflect.TypeOf(sched.sagaCoord), reflect.TypeOf(sched.runnerFactory), sched.maxRetriesPerTask, sched.defaultTaskTimeout, sched.runnerOverhead, reflect.TypeOf(sched.stat))
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -283,6 +286,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)
+		log.Printf("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 
 		runner := &taskRunner{
@@ -294,6 +298,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			runnerOverhead:        s.runnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
+			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
 		}
@@ -303,7 +308,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			func(err error) {
 				// update the jobState
 				if err == nil {
-					log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.Println("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
 
 					jobState.taskCompleted(taskId)
 				} else {
@@ -311,12 +316,13 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Println("Error running task ", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
+					log.Println("Error running job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 
 				// update cluster state that this node is now free
 				s.clusterState.taskCompleted(nodeId, taskId)
+				log.Println("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}
 }
