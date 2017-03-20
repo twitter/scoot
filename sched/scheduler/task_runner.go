@@ -2,10 +2,10 @@ package scheduler
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -24,6 +24,7 @@ type taskRunner struct {
 	defaultTaskTimeout    time.Duration
 	runnerOverhead        time.Duration
 
+	jobId  string
 	taskId string
 	task   sched.TaskDefinition
 }
@@ -33,7 +34,7 @@ type taskRunner struct {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Println("Starting task", r.taskId, " command:", strings.Join(r.task.Argv, " "))
+	log.Trace("Starting task:'", r.taskId, "' command:'", strings.Join(r.task.Argv, "' "))
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		return err
@@ -51,19 +52,17 @@ func (r *taskRunner) run() error {
 		}
 	}
 
-	shouldLog := (err == nil)
-
-	if err != nil && r.markCompleteOnFailure {
-		st.Error = err.Error()
-		st.ExitCode = DeadLetterExitCode
-		log.Printf(
-			`Error Running Task %v: dead lettering task after max retries.
+	if err != nil {
+		if r.markCompleteOnFailure {
+			st.Error = err.Error()
+			st.ExitCode = DeadLetterExitCode
+			log.Trace(
+				`Error Running Task %v: dead lettering task after max retries.
 				TaskDef: %+v, Saga Id: %v, Error: %v`,
-			r.taskId, r.task, r.saga.GetState().SagaId(), err)
-		shouldLog = true
-	}
-	if !shouldLog {
-		return err
+				r.taskId, r.task, r.saga.GetState().SagaId(), err)
+		} else {
+			return err
+		}
 	}
 
 	err = r.logTaskStatus(&st, saga.EndTask)
@@ -84,6 +83,8 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	endTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
 
 	st, err := r.runner.Run(&cmd)
+	log.Tracef("Task Id:'%s' was assigned run Id:'%s'", taskId, string(st.RunID))
+
 	if err != nil || st.State.IsDone() {
 		return st, err
 	}

@@ -3,11 +3,11 @@ package runners
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -57,7 +57,7 @@ type checkoutAndError struct {
 // Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
 // Run will not return until the process is not running.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
-	log.Printf("runner/runners/invoke.go: run. id %v cmd %+v", id, cmd)
+	log.Tracef("run. id %v cmd %+v", id, cmd)
 	defer func() {
 		updateCh <- r
 		close(updateCh)
@@ -70,7 +70,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		if cmd.SnapshotID == "" {
 			//TODO: we don't want this logic to live here, these decisisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
-				log.Printf("RunID=%s has no snapshotID! Using a nop-checkout initialized with cwd.\n", id)
+				log.Tracef("RunID=%s has no snapshotID! Using a nop-checkout initialized with cwd.\n", id)
 			}
 			checkout := gitfiler.MakeUnmanagedCheckout("", "./")
 			checkoutCh <- checkoutAndError{checkout, nil}
@@ -98,7 +98,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	defer checkout.Release()
 
-	log.Printf("runner/runners/invoke.go: checkout done. id %v cmd: %+v checkout: %v", id, cmd, checkout.Path())
+	log.Tracef("checkout done. id %v cmd: %+v checkout: %v", id, cmd, checkout.Path())
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
@@ -110,7 +110,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.ErrorStatus(id, fmt.Errorf("could not create stderr: %v", err))
 	}
 	defer stderr.Close()
-	log.Printf("RunID=%s, stdout=%s, stderr=%s\n", id, stdout.AsFile(), stderr.AsFile())
+	log.Tracef("RunID=%s, stdout=%s, stderr=%s\n", id, stdout.AsFile(), stderr.AsFile())
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
@@ -146,7 +146,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	case st = <-processCh:
 	}
 
-	log.Printf("runner/runners/invoke.go: run done. id %v status %+v cmd: %+v checkout: %v", id, st, cmd, checkout.Path())
+	log.Tracef("run done. id %v status %+v cmd: %+v checkout: %v", id, st, cmd, checkout.Path())
 
 	switch st.State {
 	case execer.COMPLETE:

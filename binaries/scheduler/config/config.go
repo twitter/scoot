@@ -85,7 +85,7 @@ func configConfigGo() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1486507161, 0)}
+	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1490022286, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -105,7 +105,7 @@ func configLocalLocal() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.local", size: 460, mode: os.FileMode(420), modTime: time.Unix(1486507145, 0)}
+	info := bindataFileInfo{name: "config/local.local", size: 460, mode: os.FileMode(420), modTime: time.Unix(1489433454, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -125,7 +125,7 @@ func configLocalMemory() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.memory", size: 312, mode: os.FileMode(420), modTime: time.Unix(1486507155, 0)}
+	info := bindataFileInfo{name: "config/local.memory", size: 312, mode: os.FileMode(420), modTime: time.Unix(1489433454, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,8 +182,8 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"config/config.go": configConfigGo,
-	"config/local.local": configLocalLocal,
+	"config/config.go":    configConfigGo,
+	"config/local.local":  configLocalLocal,
 	"config/local.memory": configLocalMemory,
 }
 
@@ -226,10 +226,11 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
 	"config": &bintree{nil, map[string]*bintree{
-		"config.go": &bintree{configConfigGo, map[string]*bintree{}},
-		"local.local": &bintree{configLocalLocal, map[string]*bintree{}},
+		"config.go":    &bintree{configConfigGo, map[string]*bintree{}},
+		"local.local":  &bintree{configLocalLocal, map[string]*bintree{}},
 		"local.memory": &bintree{configLocalMemory, map[string]*bintree{}},
 	}},
 }}
@@ -280,4 +281,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-

@@ -1,13 +1,13 @@
 package scheduler
 
 import (
-	"log"
 	"strings"
 	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -115,7 +115,7 @@ func NewStatefulScheduler(
 		stat:           stat,
 	}
 
-	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
+	log.Trace("Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
 		config.DebugMode, config.RecoverJobsOnStartup)
 
 	if !config.DebugMode {
@@ -244,7 +244,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 				},
 				func(err error) {
 					if err == nil {
-						log.Printf("Job %v Completed \n", j.Job.Id)
+						log.Trace("Job %v Completed \n", j.Job.Id)
 						// This job is fully processed remove from
 						// InProgressJobs
 						delete(s.inProgressJobs, j.Job.Id)
@@ -294,6 +294,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			runnerOverhead:        s.runnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
+			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
 		}
@@ -303,7 +304,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			func(err error) {
 				// update the jobState
 				if err == nil {
-					log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.Trace("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
 
 					jobState.taskCompleted(taskId)
 				} else {
@@ -311,7 +312,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Println("Error running task ", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
+					log.Trace("Error:", err.Error(), " running task:", taskId, " with command:'", strings.Join(taskDef.Argv, " "), "'", retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 
