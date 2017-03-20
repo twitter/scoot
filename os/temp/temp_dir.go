@@ -14,6 +14,10 @@ import (
 	"github.com/scootdev/scoot/ice"
 )
 
+const (
+	Scoot_tmp_dir_prefix = "scoot-tmp-"
+)
+
 // Create a new TempDir in directory dir with prefix string.
 func NewTempDir(dir, prefix string) (*TempDir, error) {
 	p, err := ioutil.TempDir(dir, prefix)
@@ -56,9 +60,18 @@ func (d *TempDir) TempFile(prefix string) (*os.File, error) {
 
 // TempDirDefault creates a TempDir rooted in the default temp dir
 func TempDirDefault() (*TempDir, error) {
-	tmpDir, err := ioutil.TempDir("", "scoot-tmp-")
+	tmpDir, err := ioutil.TempDir("", Scoot_tmp_dir_prefix)
 	if err != nil {
 		return nil, fmt.Errorf("temp.TempDirDefault: couldn't ioutil.TempDir: %v", err)
+	}
+	return &TempDir{tmpDir}, err
+}
+
+// TempDirDefault creates a TempDir rooted in the default temp dir
+func MakeTempDir(prefix string) (*TempDir, error) {
+	tmpDir, err := ioutil.TempDir("", prefix)
+	if err != nil {
+		return nil, fmt.Errorf("temp.TempDir: couldn't ioutil.TempDir: %v", err)
 	}
 	return &TempDir{tmpDir}, err
 }

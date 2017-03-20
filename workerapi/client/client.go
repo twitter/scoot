@@ -4,8 +4,10 @@ package client
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/scootdev/scoot/common/dialer"
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/scootapi"
@@ -70,6 +72,7 @@ func (c *simpleClient) Close() error {
 
 // Implements Scoot Worker API
 func (c *simpleClient) Run(cmd *runner.Command) (runner.RunStatus, error) {
+	log.Tracef("Using worker:%s to run command:'%s'", c.addr, strings.Join(cmd.Argv, " "))
 	workerClient, err := c.dial()
 	if err != nil {
 		return runner.RunStatus{}, err

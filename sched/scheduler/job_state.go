@@ -84,6 +84,8 @@ func (j *jobState) taskCompleted(taskId string) {
 }
 
 // Update JobState to reflect that an error has occurred running this Task
+// Note: we are swallowing the error here (it has been printed to the log)
+// should we be doing this, or should we keep the latest error in the taskState?
 func (j *jobState) errorRunningTask(taskId string, err error) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.NotStarted

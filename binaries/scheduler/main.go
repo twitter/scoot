@@ -4,12 +4,12 @@ package main
 
 import (
 	"flag"
-	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
 
 	"github.com/scootdev/scoot/binaries/scheduler/config"
 	"github.com/scootdev/scoot/common/endpoints"
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
@@ -42,6 +42,6 @@ func main() {
 		},
 	)
 
-	log.Println("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
+	log.Trace("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
 	server.RunServer(bag, schema, configText)
 }
