@@ -70,6 +70,36 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 }
 
+func TestPollingWorker_Timeout(t *testing.T) {
+	_, _, poller := setupPoller()
+	stCh, errCh := make(chan runner.RunStatus), make(chan error)
+	st, err := poller.Run(&runner.Command{Argv: []string{"sleep 1001"}, Timeout: time.Second * 1})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		st, err := runner.FinalStatus(poller, st.RunID)
+		stCh <- st
+		errCh <- err
+	}()
+
+	// Sleep for long enough to poll a few times
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	select {
+	case st := <-stCh:
+		err := <-errCh
+		t.Log("status and err:", st, err)
+	default:
+	}
+
+	st, err = <-stCh, <-errCh
+	if err != nil || st.State != runner.TIMEDOUT {
+		t.Fatal(st, err)
+	}
+}
+
 func TestPollingWorker_ErrorRunning(t *testing.T) {
 	_, chaos, poller := setupPoller()
 	chaos.SetError(fmt.Errorf("connection error"))
