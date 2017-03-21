@@ -88,11 +88,11 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// add the node if it doesn't already exist
 			if _, ok := c.nodes[update.Node.Id()]; !ok {
 				c.nodes[update.Node.Id()] = newNodeState(update.Node)
-				log.Printf("Added node:%s, now have %d nodes\n", string(update.Node.Id()), len(c.nodes))
+				log.Printf("Added node: %+v, now have %d nodes\n", update.Node, len(c.nodes))
 			}
 		case cluster.NodeRemoved:
 			delete(c.nodes, update.Id)
-			log.Printf("Removed node:%s, now have %d nodes\n", string(update.Id), len(c.nodes))
+			log.Printf("Removed nodeId: %s, now have %d nodes\n", string(update.Id), len(c.nodes))
 		}
 	}
 
