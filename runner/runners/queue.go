@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
+	"log"
 )
 
 const QueueFullMsg = "No resources available. Please try later."
@@ -24,7 +26,11 @@ func NewQueueRunner(
 	statusManager := NewStatusManager()
 	inv := NewInvoker(exec, filer, output, tmp)
 	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
-	return &Service{controller, statusManager, statusManager}
+	runner := &Service{controller, statusManager, statusManager}
+	log.Println("************** runner definition")
+	runnerDesc := spew.Sdump(runner)
+	log.Println(runnerDesc)
+	return runner
 }
 
 func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) runner.Service {
@@ -96,6 +102,7 @@ func (c *QueueController) start(cmd *runner.Command, id runner.RunID) {
 
 func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 	for st := range updateCh {
+		log.Printf("Queue pulled result:%+v\n", st)
 		if st.State.IsDone() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -104,6 +111,7 @@ func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 			if len(c.queue) > 0 {
 				cmdAndID := c.queue[0]
 				c.queue = c.queue[1:]
+				log.Printf("Running from queue:%+v\n", cmdAndID)
 				c.start(cmdAndID.cmd, cmdAndID.id)
 			}
 		}

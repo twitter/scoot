@@ -17,6 +17,8 @@ func main() {
 	apiserversFlag := flag.Int("apiservers", setup.DefaultApiServerCount, "number of apiservers to use")
 	flag.Parse()
 
+	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+
 	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
 	if err != nil {
 		log.Fatal(err)

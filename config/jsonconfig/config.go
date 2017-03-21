@@ -55,6 +55,7 @@ func (schema Schema) Parse(text []byte) (Configuration, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse top-level config: %v", err)
 	}
+	log.Printf("config parsed to:%+v\n", parsedConfig)
 
 	result := Configuration(make(map[string]ice.Module))
 	// Parse each option (aka Implementations, which isn't a valid variable name)

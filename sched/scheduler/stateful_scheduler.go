@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -115,8 +116,9 @@ func NewStatefulScheduler(
 		stat:           stat,
 	}
 
-	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
-		config.DebugMode, config.RecoverJobsOnStartup)
+	log.Println("************** scheduler definition")
+	schedDesc := spew.Sdump(sched)
+	log.Println(schedDesc)
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -283,6 +285,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId)
+		log.Printf("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 
 		runner := &taskRunner{
@@ -294,6 +297,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			runnerOverhead:        s.runnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
+			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
 		}
@@ -303,7 +307,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			func(err error) {
 				// update the jobState
 				if err == nil {
-					log.Println("Ending task", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.Println("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
 
 					jobState.taskCompleted(taskId)
 				} else {
@@ -311,12 +315,13 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Println("Error running task ", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
+					log.Println("Error running job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 
 				// update cluster state that this node is now free
 				s.clusterState.taskCompleted(nodeId, taskId)
+				log.Println("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}
 }
