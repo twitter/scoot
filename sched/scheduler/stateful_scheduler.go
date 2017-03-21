@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -12,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
-	"reflect"
 )
 
 // Scheduler Config variables read at initialization
@@ -116,10 +116,9 @@ func NewStatefulScheduler(
 		stat:           stat,
 	}
 
-	log.Printf("INFO: Creating Scheduler, Debug Mode %v, Recover Active Sagas %v",
-		config.DebugMode, config.RecoverJobsOnStartup)
-	log.Printf("Scheduler:, sagaCoordinator:%s, runnerFactory:%s, retries:%d, defaultTaskTimeout:%d, runnerOverhead:%d, stat:%s\n",
-		reflect.TypeOf(sched.sagaCoord), reflect.TypeOf(sched.runnerFactory), sched.maxRetriesPerTask, sched.defaultTaskTimeout, sched.runnerOverhead, reflect.TypeOf(sched.stat))
+	log.Println("************** scheduler definition")
+	schedDesc := spew.Sdump(sched)
+	log.Println(schedDesc)
 
 	if !config.DebugMode {
 		// start the scheduler loop
