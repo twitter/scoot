@@ -25,6 +25,9 @@ var configFlag = flag.String("config", "local.memory", "Scheduler Config (either
 
 func main() {
 	flag.Parse()
+
+	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {
 		log.Fatal(err)
