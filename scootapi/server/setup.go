@@ -121,6 +121,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	// Parse Config
+	log.Println("scootapi/server RunServer(), config is:", string(config))
 	mod, err := schema.Parse(config)
 	if err != nil {
 		log.Fatal("Error configuring Scoot API: ", err)

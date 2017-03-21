@@ -3,6 +3,8 @@ package ice
 import (
 	"bytes"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"log"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -32,6 +34,10 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 		values: make(map[Key]Value),
 	}
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
+
+	s := spew.Sdump(dest)
+	log.Println("************* Extracted:")
+	log.Println(s)
 	return nil
 }
 

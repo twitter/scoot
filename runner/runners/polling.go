@@ -23,11 +23,7 @@ func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) 
 // (This is a convenience function over NewPollingStatusQuerier
 func NewPollingService(c runner.Controller, e runner.StatusEraser, nower runner.StatusQueryNower, period time.Duration) runner.Service {
 	q := NewPollingStatusQuerier(nower, period)
-	runner := &Service{c, q, e}
-	log.Println("************** runner definition")
-	runnerDesc := spew.Sdump(runner)
-	log.Println(runnerDesc)
-	return runner
+	return &Service{c, q, e}
 }
 
 // PollingStatusQuerier turns a StatusQueryNower into a StatusQuerier
