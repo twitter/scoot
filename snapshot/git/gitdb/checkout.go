@@ -117,6 +117,11 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 func (db *DB) releaseCheckout(path string) error {
 	if path == db.dataRepo.Dir() {
 		db.workTreeLock.Unlock()
+		// Note: our worktree will often be in detached head state after checkout, but [Twitter] git needs a valid ref to fetch.
+		//       we checkout 'master' so subsequent fetch operations, ex: those in stream.go, can succeed.
+		if _, err := db.dataRepo.Run("checkout", "master"); err != nil {
+			return err
+		}
 		return nil
 	}
 
