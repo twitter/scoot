@@ -18,6 +18,8 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)
 	if err := cmd.Execute(); err != nil {

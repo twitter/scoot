@@ -5,14 +5,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/scootdev/scoot/runner"
+	"log"
 )
 
 // chaos.go: impl that introduces errors (for testing)
 
 // Creates a new Chaos Runner
 func NewChaosRunner(delegate runner.Service) *ChaosRunner {
-	return &ChaosRunner{del: delegate}
+	runner := &ChaosRunner{del: delegate}
+	log.Println("************** runner definition")
+	runnerDesc := spew.Sdump(runner)
+	log.Println(runnerDesc)
+	return runner
 }
 
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,

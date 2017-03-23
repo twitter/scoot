@@ -27,6 +27,19 @@ const (
 	FAILED
 )
 
+func (s ProcessState) String() string {
+	if s == UNKNOWN {
+		return "UNKNOWN"
+	}
+	if s == RUNNING {
+		return "RUNNING"
+	}
+	if s == COMPLETE {
+		return "COMPLETE"
+	}
+	return "FAILED"
+}
+
 func (s ProcessState) IsDone() bool {
 	return s == COMPLETE || s == FAILED
 }

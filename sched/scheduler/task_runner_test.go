@@ -65,10 +65,9 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	task := sched.TaskDefinition{
-		runner.Command{
-			Argv: []string{"sleep 500", "complete 0"},
-		},
+	task := sched.TaskDefinition{Command: runner.Command{
+		Argv: []string{"sleep 500", "complete 0"},
+	},
 	}
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)

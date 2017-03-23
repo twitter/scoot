@@ -3,14 +3,20 @@ package runners
 import (
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/scootdev/scoot/runner"
+	"log"
 )
 
 // polling.go: turns a StatusQueryNower into a StatusQuerier by polling
 
 // NewPollingStatusQuerier creates a new StatusQuerier by polling a StatusQueryNower that polls every period
 func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) *PollingStatusQuerier {
-	return &PollingStatusQuerier{del, period}
+	runner := &PollingStatusQuerier{del, period}
+	log.Println("************** runner definition")
+	runnerDesc := spew.Sdump(runner)
+	log.Println(runnerDesc)
+	return runner
 }
 
 // NewPollingService creates a new Service from a Controller, a StatusEraser, and a StatusQueryNower.
@@ -33,18 +39,14 @@ func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, err
 
 // Query returns all RunStatus'es matching q, waiting as described by w
 func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
-	if wait.Timeout == 0 {
-		return r.del.QueryNow(q)
-	}
 	end := time.Now().Add(wait.Timeout)
-	for time.Now().Before(end) {
-		st, err := r.del.QueryNow(q)
+	for time.Now().Before(end) || wait.Timeout == 0 {
+		st, err := r.QueryNow(q)
 		if err != nil || len(st) > 0 {
 			return st, err
 		}
 		time.Sleep(r.period)
 	}
-
 	return nil, nil
 }
 

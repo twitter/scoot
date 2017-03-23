@@ -24,6 +24,7 @@ type taskRunner struct {
 	defaultTaskTimeout    time.Duration
 	runnerOverhead        time.Duration
 
+	jobId  string
 	taskId string
 	task   sched.TaskDefinition
 }
@@ -33,7 +34,7 @@ type taskRunner struct {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Println("Starting task", r.taskId, " command:", strings.Join(r.task.Argv, " "))
+	log.Println("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		return err
@@ -50,6 +51,8 @@ func (r *taskRunner) run() error {
 			err = fmt.Errorf(st.State.String())
 		}
 	}
+
+	log.Printf("End task - job:%s, task:%s, runStatus:%s\n", r.jobId, r.taskId, st.String())
 
 	shouldLog := (err == nil)
 

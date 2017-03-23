@@ -68,6 +68,7 @@ func RunServer(
 	schema jsonconfig.Schema,
 	config []byte) {
 
+	log.Println("workerapi/server RunServer(), config is:", string(config))
 	// Parse Config
 	mod, err := schema.Parse(config)
 	if err != nil {

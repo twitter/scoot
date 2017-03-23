@@ -18,6 +18,8 @@ import (
 //		--addr [<host:port> of cloud server]
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
