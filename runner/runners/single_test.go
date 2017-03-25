@@ -3,6 +3,7 @@ package runners
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -42,10 +43,11 @@ func TestOutput(t *testing.T) {
 	uriPrefix := "file://" + hostname
 	stdoutFilename := strings.TrimPrefix(st.StdoutRef, uriPrefix)
 	stdoutActual, err := ioutil.ReadFile(stdoutFilename)
+	stdoutExpected, stderrExpected = "(?s).*SCOOT_CMD_LOG\nhello world\n$", "(?s).*SCOOT_CMD_LOG\nhello err\n$"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stdoutExpected != string(stdoutActual) {
+	if ok, _ := regexp.Match(stdoutExpected, stdoutActual); !ok {
 		t.Fatalf("stdout was %q; expected %q", stdoutActual, stdoutExpected)
 	}
 
@@ -54,7 +56,7 @@ func TestOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stderrExpected != string(stderrActual) {
+	if ok, _ := regexp.Match(stderrExpected, stderrActual); !ok {
 		t.Fatalf("stderr was %q; expected %q", stderrActual, stderrExpected)
 	}
 }

@@ -3,9 +3,7 @@ package runners
 import (
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/scootdev/scoot/runner"
-	"log"
 )
 
 // polling.go: turns a StatusQueryNower into a StatusQuerier by polling
@@ -13,9 +11,6 @@ import (
 // NewPollingStatusQuerier creates a new StatusQuerier by polling a StatusQueryNower that polls every period
 func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) *PollingStatusQuerier {
 	runner := &PollingStatusQuerier{del, period}
-	log.Println("************** runner definition")
-	runnerDesc := spew.Sdump(runner)
-	log.Println(runnerDesc)
 	return runner
 }
 
