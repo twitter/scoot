@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/spf13/cobra"
 )
 
 type runJobCmd struct {
+	streamName  string
 	snapshotId  string
 	jobFilePath string
 }
@@ -22,8 +25,9 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 		Use:   "run_job",
 		Short: "run a job",
 	}
-	r.Flags().StringVar(&c.snapshotId, "snapshot_id", scoot.TaskDefinition_SnapshotId_DEFAULT, "snapshot ID to run job against")
-	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from")
+	r.Flags().StringVar(&c.snapshotId, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
+	r.Flags().StringVar(&c.snapshotId, "snapshot_id", "", "Repo checkout id: <master-sha> OR <backend>-<kind>(-<additional information>)+")
+	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from. Error if snapshot_id flag is also provided.")
 	return r
 }
 
@@ -44,6 +48,14 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 	case len(args) > 0 && c.jobFilePath != "":
 		return errors.New("You must provide either args or a job definition")
 	case len(args) > 0:
+		if c.snapshotId == "" {
+			log.Println("No snapshotID provided - cmd will be run in an empty tmpdir.")
+		} else if !strings.Contains(c.snapshotId, "-") {
+			//this is not a bundleID, assume it's a sha that's available upstream. Cf. snapshot/git/gitdb/README.md
+			streamId := fmt.Sprintf("stream-swh-%s-%s", c.streamName, c.snapshotId)
+			log.Printf("Converting sha to a stream-based snapshot_id: %s -> %s", c.snapshotId, streamId)
+			c.snapshotId = streamId
+		}
 		task := scoot.NewTaskDefinition()
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = args

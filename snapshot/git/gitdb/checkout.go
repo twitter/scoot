@@ -2,6 +2,7 @@ package gitdb
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -51,7 +52,17 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 		return db.checkoutFSSnapshot(v.SHA())
 	case kindGitCommitSnapshot:
 		// For GitCommitSnapshot's, we use dataRepo's work tree.
-		return db.checkoutGitCommitSnapshot(v.SHA())
+		if id == db.currentSnapID {
+			log.Printf("Using cached checkout for id=%s", id)
+			return db.dataRepo.Dir(), nil
+		}
+		path, err := db.checkoutGitCommitSnapshot(v.SHA())
+		if err != nil {
+			db.currentSnapID = ""
+		} else {
+			db.currentSnapID = id
+		}
+		return path, err
 	default:
 		return "", fmt.Errorf("cannot checkout value kind %v; id %v", v.Kind(), v.ID())
 	}
@@ -116,12 +127,13 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 
 func (db *DB) releaseCheckout(path string) error {
 	if path == db.dataRepo.Dir() {
-		db.workTreeLock.Unlock()
 		// Note: our worktree will often be in detached head state after checkout, but [Twitter] git needs a valid ref to fetch.
-		//       we checkout 'master' so subsequent fetch operations, ex: those in stream.go, can succeed.
-		if _, err := db.dataRepo.Run("checkout", "master"); err != nil {
+		//       we set HEAD to scoot's tmp branch name so subsequent fetch operations, ex: those in stream.go, can succeed.
+		if _, err := db.dataRepo.Run("checkout", "-B", tempBranch); err != nil {
+			db.workTreeLock.Unlock()
 			return err
 		}
+		db.workTreeLock.Unlock()
 		return nil
 	}
 

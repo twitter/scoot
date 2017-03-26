@@ -101,6 +101,9 @@ type DB struct {
 	tags       *tagsBackend
 	bundles    *bundlestoreBackend
 	autoUpload uploader // This is one of our backends that we use to upload automatically
+
+	// TODO: reusing git checkout if its snap.ID matches the request - make this configurable at runtime...
+	currentSnapID snap.ID
 }
 
 // req is a request interface
