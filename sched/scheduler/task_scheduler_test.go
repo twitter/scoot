@@ -1,11 +1,12 @@
 package scheduler
 
 import (
+	"math"
+	"testing"
+
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/tests/testhelpers"
-	"math"
-	"testing"
 )
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
@@ -18,7 +19,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
 	cs := newClusterState(testCluster.nodes, testCluster.ch)
-	assignments := getTaskAssignments(cs, jobState.getUnScheduledTasks())
+	assignments, _ := getTaskAssignments(cs, jobState.getUnScheduledTasks())
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -29,7 +30,7 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch)
-	assignments := getTaskAssignments(cs, []*taskState{})
+	assignments, _ := getTaskAssignments(cs, []*taskState{})
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -49,7 +50,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch)
 	unScheduledTasks := jobState.getUnScheduledTasks()
-	assignments := getTaskAssignments(cs, unScheduledTasks)
+	assignments, _ := getTaskAssignments(cs, unScheduledTasks)
 
 	if float64(len(assignments)) != math.Min(float64(len(unScheduledTasks)), float64(len(testCluster.nodes))) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 

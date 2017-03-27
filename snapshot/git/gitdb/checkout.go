@@ -113,7 +113,9 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 		// -d removes directories. -x ignores gitignore and removes everything.
 		// -f is force. -f the second time removes directories even if they're git repos themselves
 		{"clean", "-f", "-f", "-d", "-x"},
-		{"checkout", sha},
+		// Note: our worktree cannot be in detached head state after checkout since [Twitter] git needs a valid ref to fetch.
+		//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
+		{"checkout", "-B", tempBranch, sha},
 	}
 
 	for _, argv := range cmds {
@@ -127,12 +129,6 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 
 func (db *DB) releaseCheckout(path string) error {
 	if path == db.dataRepo.Dir() {
-		// Note: our worktree will often be in detached head state after checkout, but [Twitter] git needs a valid ref to fetch.
-		//       we set HEAD to scoot's tmp branch name so subsequent fetch operations, ex: those in stream.go, can succeed.
-		if _, err := db.dataRepo.Run("checkout", "-B", tempBranch); err != nil {
-			db.workTreeLock.Unlock()
-			return err
-		}
 		db.workTreeLock.Unlock()
 		return nil
 	}

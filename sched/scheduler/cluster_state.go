@@ -1,8 +1,9 @@
 package scheduler
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
 	"log"
+
+	"github.com/scootdev/scoot/cloud/cluster"
 )
 
 const noTask = ""
@@ -12,12 +13,23 @@ const noTask = ""
 type clusterState struct {
 	updateCh chan []cluster.NodeUpdate
 	nodes    map[cluster.NodeId]*nodeState
+	affinity map[string]*nodeSet
+}
+
+type nodeSet struct {
+	idle map[cluster.NodeId]cluster.Node
+	busy map[cluster.NodeId]cluster.Node
+}
+
+func newNodeSet() *nodeSet {
+	return &nodeSet{idle: map[cluster.NodeId]cluster.Node{}, busy: map[cluster.NodeId]cluster.Node{}}
 }
 
 // The State of A Node in the Cluster
 type nodeState struct {
 	node        cluster.Node
 	runningTask string
+	snapshotID  string
 }
 
 // Initializes a Node State for the specified Node
@@ -25,30 +37,40 @@ func newNodeState(node cluster.Node) *nodeState {
 	return &nodeState{
 		node:        node,
 		runningTask: noTask,
+		snapshotID:  "",
 	}
 }
 
 // Creates a New State Distributor with the initial nodes, and which updates
 // nodes added or removed based on the supplied channel.
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate) *clusterState {
-
 	nodes := make(map[cluster.NodeId]*nodeState)
+	affinity := map[string]*nodeSet{"": newNodeSet()}
 	for _, n := range initial {
 		nodes[n.Id()] = newNodeState(n)
+		affinity[""].idle[n.Id()] = n
 	}
 
-	cs := &clusterState{
+	return &clusterState{
 		updateCh: updateCh,
 		nodes:    nodes,
+		affinity: affinity,
 	}
-
-	return cs
 }
 
 // Update ClusterState to reflect that a task has been scheduled on a
 // particular node
-func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string) {
+func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotID string) {
 	ns := c.nodes[nodeId]
+
+	delete(c.affinity[ns.snapshotID].idle, nodeId)
+	delete(c.affinity[ns.snapshotID].busy, nodeId)
+	if _, ok := c.affinity[snapshotID]; !ok {
+		c.affinity[snapshotID] = newNodeSet()
+	}
+	c.affinity[snapshotID].idle[nodeId] = ns.node
+
+	ns.snapshotID = snapshotID
 	ns.runningTask = taskId
 }
 
@@ -88,11 +110,16 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// add the node if it doesn't already exist
 			if _, ok := c.nodes[update.Node.Id()]; !ok {
 				c.nodes[update.Node.Id()] = newNodeState(update.Node)
+				c.affinity[""].idle[update.Node.Id()] = update.Node
 				log.Printf("Added node: %+v, now have %d nodes\n", update.Node, len(c.nodes))
 			}
 		case cluster.NodeRemoved:
-			delete(c.nodes, update.Id)
-			log.Printf("Removed nodeId: %s, now have %d nodes\n", string(update.Id), len(c.nodes))
+			log.Printf("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
+			if nodeState, ok := c.nodes[update.Id]; ok {
+				delete(c.affinity[nodeState.snapshotID].idle, update.Id)
+				delete(c.affinity[nodeState.snapshotID].busy, update.Id)
+				delete(c.nodes, update.Id)
+			}
 		}
 	}
 

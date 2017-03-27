@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -115,10 +114,6 @@ func NewStatefulScheduler(
 		inProgressJobs: make(map[string]*jobState),
 		stat:           stat,
 	}
-
-	log.Println("************** scheduler definition")
-	schedDesc := spew.Sdump(sched)
-	log.Println(schedDesc)
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -270,7 +265,8 @@ func (s *statefulScheduler) scheduleTasks() {
 	}
 
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments := getTaskAssignments(s.clusterState, unscheduledTasks)
+	taskAssignments, affinity := getTaskAssignments(s.clusterState, unscheduledTasks)
+	s.clusterState.affinity = affinity
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
@@ -284,7 +280,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
 
 		// Mark Task as Started
-		s.clusterState.taskScheduled(nodeId, taskId)
+		s.clusterState.taskScheduled(nodeId, taskId, taskDef.SnapshotID)
 		log.Printf("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 

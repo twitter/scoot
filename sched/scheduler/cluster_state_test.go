@@ -1,8 +1,9 @@
 package scheduler
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
 	"testing"
+
+	"github.com/scootdev/scoot/cloud/cluster"
 )
 
 // ensures nodes can be added and removed
@@ -53,7 +54,7 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 
 	// readd node to cluster
 	cl.add("node1")
@@ -75,7 +76,7 @@ func Test_TaskStarted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
 	if ns.runningTask != "task1" {
@@ -87,7 +88,7 @@ func Test_TaskCompleted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
 	cs.taskCompleted("node1", "task1")
