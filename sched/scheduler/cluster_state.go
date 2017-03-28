@@ -8,21 +8,21 @@ import (
 
 const noTask = ""
 
-// clusterState maintains a cluster of nodes
-// and information about what task is running on each node
+// clusterState maintains a cluster of nodes and information about what task is running on each node.
+// nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
 type clusterState struct {
-	updateCh chan []cluster.NodeUpdate
-	nodes    map[cluster.NodeId]*nodeState
-	affinity map[string]*nodeGroups //key is a snapshotID.
+	updateCh   chan []cluster.NodeUpdate
+	nodes      map[cluster.NodeId]*nodeState
+	nodeGroups map[string]*nodeGroup //key is a snapshotID.
 }
 
-type nodeGroups struct {
+type nodeGroup struct {
 	idle map[cluster.NodeId]cluster.Node
 	busy map[cluster.NodeId]cluster.Node
 }
 
-func newNodeGroups() *nodeGroups {
-	return &nodeGroups{idle: map[cluster.NodeId]cluster.Node{}, busy: map[cluster.NodeId]cluster.Node{}}
+func newNodeGroup() *nodeGroup {
+	return &nodeGroup{idle: map[cluster.NodeId]cluster.Node{}, busy: map[cluster.NodeId]cluster.Node{}}
 }
 
 // The State of A Node in the Cluster
@@ -45,16 +45,16 @@ func newNodeState(node cluster.Node) *nodeState {
 // nodes added or removed based on the supplied channel.
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate) *clusterState {
 	nodes := make(map[cluster.NodeId]*nodeState)
-	affinity := map[string]*nodeGroups{"": newNodeGroups()}
+	nodeGroups := map[string]*nodeGroup{"": newNodeGroup()}
 	for _, n := range initial {
 		nodes[n.Id()] = newNodeState(n)
-		affinity[""].idle[n.Id()] = n
+		nodeGroups[""].idle[n.Id()] = n
 	}
 
 	return &clusterState{
-		updateCh: updateCh,
-		nodes:    nodes,
-		affinity: affinity,
+		updateCh:   updateCh,
+		nodes:      nodes,
+		nodeGroups: nodeGroups,
 	}
 }
 
@@ -64,11 +64,11 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotID string) {
 	ns := c.nodes[nodeId]
 
-	delete(c.affinity[ns.snapshotID].idle, nodeId)
-	if _, ok := c.affinity[snapshotID]; !ok {
-		c.affinity[snapshotID] = newNodeGroups()
+	delete(c.nodeGroups[ns.snapshotID].idle, nodeId)
+	if _, ok := c.nodeGroups[snapshotID]; !ok {
+		c.nodeGroups[snapshotID] = newNodeGroup()
 	}
-	c.affinity[snapshotID].busy[nodeId] = ns.node
+	c.nodeGroups[snapshotID].busy[nodeId] = ns.node
 
 	ns.snapshotID = snapshotID
 	ns.runningTask = taskId
@@ -81,8 +81,8 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string) {
 	ns, ok := c.nodes[nodeId]
 	if ok {
 		ns.runningTask = noTask
-		delete(c.affinity[ns.snapshotID].busy, nodeId)
-		c.affinity[ns.snapshotID].idle[nodeId] = ns.node
+		delete(c.nodeGroups[ns.snapshotID].busy, nodeId)
+		c.nodeGroups[ns.snapshotID].idle[nodeId] = ns.node
 	}
 }
 
@@ -112,14 +112,14 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// add the node if it doesn't already exist
 			if _, ok := c.nodes[update.Node.Id()]; !ok {
 				c.nodes[update.Node.Id()] = newNodeState(update.Node)
-				c.affinity[""].idle[update.Node.Id()] = update.Node
+				c.nodeGroups[""].idle[update.Node.Id()] = update.Node
 				log.Printf("Added node: %+v, now have %d nodes\n", update.Node, len(c.nodes))
 			}
 		case cluster.NodeRemoved:
 			log.Printf("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
 			if nodeState, ok := c.nodes[update.Id]; ok {
-				delete(c.affinity[nodeState.snapshotID].idle, update.Id)
-				delete(c.affinity[nodeState.snapshotID].busy, update.Id)
+				delete(c.nodeGroups[nodeState.snapshotID].idle, update.Id)
+				delete(c.nodeGroups[nodeState.snapshotID].busy, update.Id)
 				delete(c.nodes, update.Id)
 			}
 		}

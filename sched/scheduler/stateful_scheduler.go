@@ -265,8 +265,8 @@ func (s *statefulScheduler) scheduleTasks() {
 	}
 
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments, affinity := getTaskAssignments(s.clusterState, unscheduledTasks)
-	s.clusterState.affinity = affinity
+	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, unscheduledTasks)
+	s.clusterState.nodeGroups = nodeGroups
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
