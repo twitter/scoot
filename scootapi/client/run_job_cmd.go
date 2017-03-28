@@ -25,7 +25,7 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 		Use:   "run_job",
 		Short: "run a job",
 	}
-	r.Flags().StringVar(&c.snapshotId, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
+	r.Flags().StringVar(&c.streamName, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", "", "Repo checkout id: <master-sha> OR <backend>-<kind>(-<additional information>)+")
 	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from. Error if snapshot_id flag is also provided.")
 	return r

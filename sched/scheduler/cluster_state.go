@@ -13,16 +13,16 @@ const noTask = ""
 type clusterState struct {
 	updateCh chan []cluster.NodeUpdate
 	nodes    map[cluster.NodeId]*nodeState
-	affinity map[string]*nodeSet
+	affinity map[string]*nodeGroups //key is a snapshotID.
 }
 
-type nodeSet struct {
+type nodeGroups struct {
 	idle map[cluster.NodeId]cluster.Node
 	busy map[cluster.NodeId]cluster.Node
 }
 
-func newNodeSet() *nodeSet {
-	return &nodeSet{idle: map[cluster.NodeId]cluster.Node{}, busy: map[cluster.NodeId]cluster.Node{}}
+func newNodeGroups() *nodeGroups {
+	return &nodeGroups{idle: map[cluster.NodeId]cluster.Node{}, busy: map[cluster.NodeId]cluster.Node{}}
 }
 
 // The State of A Node in the Cluster
@@ -45,7 +45,7 @@ func newNodeState(node cluster.Node) *nodeState {
 // nodes added or removed based on the supplied channel.
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate) *clusterState {
 	nodes := make(map[cluster.NodeId]*nodeState)
-	affinity := map[string]*nodeSet{"": newNodeSet()}
+	affinity := map[string]*nodeGroups{"": newNodeGroups()}
 	for _, n := range initial {
 		nodes[n.Id()] = newNodeState(n)
 		affinity[""].idle[n.Id()] = n
@@ -58,17 +58,17 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 	}
 }
 
-// Update ClusterState to reflect that a task has been scheduled on a
-// particular node
+// Update ClusterState to reflect that a task has been scheduled on a particular node
+// SnapshotID should be the value from the task definition associated with the given taskID.
+// TODO: taskID is not unique (and isn't currently required to be), but a jobID arg would fix that.
 func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotID string) {
 	ns := c.nodes[nodeId]
 
 	delete(c.affinity[ns.snapshotID].idle, nodeId)
-	delete(c.affinity[ns.snapshotID].busy, nodeId)
 	if _, ok := c.affinity[snapshotID]; !ok {
-		c.affinity[snapshotID] = newNodeSet()
+		c.affinity[snapshotID] = newNodeGroups()
 	}
-	c.affinity[snapshotID].idle[nodeId] = ns.node
+	c.affinity[snapshotID].busy[nodeId] = ns.node
 
 	ns.snapshotID = snapshotID
 	ns.runningTask = taskId
@@ -81,6 +81,8 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string) {
 	ns, ok := c.nodes[nodeId]
 	if ok {
 		ns.runningTask = noTask
+		delete(c.affinity[ns.snapshotID].busy, nodeId)
+		c.affinity[ns.snapshotID].idle[nodeId] = ns.node
 	}
 }
 
