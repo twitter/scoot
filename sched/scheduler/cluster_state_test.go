@@ -1,8 +1,11 @@
 package scheduler
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
+	"reflect"
 	"testing"
+
+	"github.com/luci/go-render/render"
+	"github.com/scootdev/scoot/cloud/cluster"
 )
 
 // ensures nodes can be added and removed
@@ -21,6 +24,9 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 	if len(cs.nodes) != 1 {
 		t.Errorf("expected cluster size to be 1")
 	}
+	if len(cs.nodeGroups[""].idle) != 1 {
+		t.Errorf("expected clusterGroup[].idle size to be 1")
+	}
 
 	ns, _ := cs.getNodeState(cluster.NodeId("node1"))
 	if ns.runningTask != noTask {
@@ -32,6 +38,9 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 	cs.updateCluster()
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
+	}
+	if len(cs.nodeGroups[""].idle) != 0 {
+		t.Errorf("expected clusterGroup[].idle size to be 0")
 	}
 }
 
@@ -53,7 +62,7 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 
 	// readd node to cluster
 	cl.add("node1")
@@ -75,7 +84,7 @@ func Test_TaskStarted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
 	if ns.runningTask != "task1" {
@@ -87,7 +96,7 @@ func Test_TaskCompleted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch)
 
-	cs.taskScheduled("node1", "task1")
+	cs.taskScheduled("node1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
 	cs.taskCompleted("node1", "task1")
@@ -95,6 +104,57 @@ func Test_TaskCompleted(t *testing.T) {
 		t.Errorf("Expected Node1 to be running task1")
 	}
 
+}
+
+// verify that idle and busy maps are populated correctly.
+func Test_NodeGroups(t *testing.T) {
+	cl := makeTestCluster("node1", "node2", "node3", "node4")
+	cs := newClusterState(cl.nodes, cl.ch)
+
+	// Test the the right idle/busy maps are filled out for each snapshotId.
+	cs.taskScheduled("node1", "task1", "snapA")
+	cs.taskScheduled("node2", "task2", "snapA")
+	cs.taskScheduled("node3", "task3", "snapB")
+	expectedGroups := map[string]*nodeGroup{
+		"": &nodeGroup{
+			idle: map[cluster.NodeId]cluster.Node{
+				"node4": cs.nodes["node4"].node,
+			},
+			busy: map[cluster.NodeId]cluster.Node{},
+		},
+		"snapA": &nodeGroup{
+			idle: map[cluster.NodeId]cluster.Node{},
+			busy: map[cluster.NodeId]cluster.Node{
+				"node1": cs.nodes["node1"].node,
+				"node2": cs.nodes["node2"].node,
+			},
+		},
+		"snapB": &nodeGroup{
+			idle: map[cluster.NodeId]cluster.Node{},
+			busy: map[cluster.NodeId]cluster.Node{
+				"node3": cs.nodes["node3"].node,
+			},
+		},
+	}
+	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
+		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
+	}
+
+	// Test that finishing a jobs moves it to the idle list for its snapshotId.
+	cs.taskCompleted("node1", "task1")
+	expectedGroups["snapA"].idle["node1"] = cs.nodes["node1"].node
+	delete(expectedGroups["snapA"].busy, "node1")
+	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
+		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
+	}
+
+	// Test the rescheduling a task moves it correctly from an idle list to a busy one.
+	cs.taskScheduled("node1", "task1", "snapB")
+	expectedGroups["snapB"].busy["node1"] = cs.nodes["node1"].node
+	delete(expectedGroups["snapA"].idle, "node1")
+	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
+		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
+	}
 }
 
 type testCluster struct {

@@ -43,7 +43,8 @@ func (db *DB) ingestDir(dir string) (snapshot, error) {
 	return &localSnapshot{sha: sha, kind: kindFSSnapshot}, nil
 }
 
-const tempRef = "refs/heads/scoot/__temp_for_writing"
+const tempBranch = "scoot/__temp_for_writing"
+const tempRef = "refs/heads/" + tempBranch
 
 func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (snapshot, error) {
 	sha, err := ingestRepo.RunSha("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", commitish))

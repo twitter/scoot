@@ -47,15 +47,11 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 	return abortChFull, updateChFull
 }
 
-type checkoutAndError struct {
-	checkout snapshot.Checkout
-	err      error
-}
-
 // Run runs cmd as run id returning the final ProcessStatus
 // Run will send updates the process is running to updateCh.
 // Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
 // Run will not return until the process is not running.
+// NOTE: kind of gnarly since our filer implementation (gitdb) currently mutates the same worktree on every op.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
 	log.Printf("run. id: %v, cmd: %+v", id, cmd)
 	defer func() {
@@ -63,42 +59,48 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		close(updateCh)
 	}()
 
-	checkoutCh := make(chan checkoutAndError)
-	var checkout snapshot.Checkout
-	var err error
+	var co snapshot.Checkout
+	checkoutCh := make(chan error)
 	go func() {
 		if cmd.SnapshotID == "" {
-			//TODO: we don't want this logic to live here, these decisisions should be made at a higher level.
+			//TODO: we don't want this logic to live here, these decisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
-				log.Printf("RunID:%s has no snapshotID! Using a nop-checkout initialized with cwd.\n", id)
+				log.Printf("RunID:%s has no snapshotID! Using a nop-checkout initialized with tmpDir.\n", id)
 			}
-			checkout := gitfiler.MakeUnmanagedCheckout("", "./")
-			checkoutCh <- checkoutAndError{checkout, nil}
+			if tmp, err := inv.tmp.TempDir("invoke_nop_checkout"); err != nil {
+				checkoutCh <- err
+			} else {
+				co = gitfiler.MakeUnmanagedCheckout(string(id), tmp.Dir)
+				checkoutCh <- nil
+			}
 		} else {
-			checkout, err = inv.filer.Checkout(cmd.SnapshotID)
-			checkoutCh <- checkoutAndError{checkout, err}
+			//NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
+			log.Printf("RunID:%s checking out snapshotID:%s", id, cmd.SnapshotID)
+			var err error
+			co, err = inv.filer.Checkout(cmd.SnapshotID)
+			checkoutCh <- err
 		}
 	}()
 
 	select {
 	case <-abortCh:
 		go func() {
-			checkoutAndErr := <-checkoutCh
-			if checkoutAndErr.err != nil {
+			if err := <-checkoutCh; err != nil {
+				// If there was an error there should be no lingering gitdb locks, so return.
 				return
 			}
-			checkoutAndErr.checkout.Release()
+			// If there was no error then we need to release this checkout.
+			co.Release()
 		}()
 		return runner.AbortStatus(id)
-	case checkoutAndErr := <-checkoutCh:
-		if checkout, err = checkoutAndErr.checkout, checkoutAndErr.err; err != nil {
+	case err := <-checkoutCh:
+		if err != nil {
 			return runner.ErrorStatus(id, err)
 		}
+		// Checkout is ok, continue with run and when finished release checkout.
+		defer co.Release()
 	}
-
-	defer checkout.Release()
-
-	log.Printf("checkout done. id: %v, cmd: %+v, checkout: %v", id, cmd, checkout.Path())
+	log.Printf("checkout done. id: %v, cmd: %+v, checkout: %v", id, cmd, co.Path())
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
@@ -120,7 +122,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
-		Dir:    checkout.Path(),
+		Dir:    co.Path(),
 		Stdout: stdout,
 		Stderr: stderr,
 	})
@@ -152,7 +154,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	case st = <-processCh:
 	}
 
-	log.Printf("run done. id: %v, status: %+v, cmd: %+v, checkout: %v", id, st, cmd, checkout.Path())
+	log.Printf("run done. id: %v, status: %+v, cmd: %+v, checkout: %v", id, st, cmd, co.Path())
 
 	switch st.State {
 	case execer.COMPLETE:

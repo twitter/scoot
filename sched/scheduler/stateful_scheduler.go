@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -116,10 +115,6 @@ func NewStatefulScheduler(
 		stat:           stat,
 	}
 
-	log.Println("************** scheduler definition")
-	schedDesc := spew.Sdump(sched)
-	log.Println(schedDesc)
-
 	if !config.DebugMode {
 		// start the scheduler loop
 		go func() {
@@ -195,6 +190,7 @@ func (s *statefulScheduler) loop() {
 		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
 		s.stat.Gauge("schedInProgressTasksGauge").Update(numTasks)
 		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
+		time.Sleep(50 * time.Millisecond) // TODO: find a better way to avoid pegging the cpu.
 	}
 }
 
@@ -268,9 +264,13 @@ func (s *statefulScheduler) scheduleTasks() {
 	for _, jobState := range s.inProgressJobs {
 		unscheduledTasks = append(unscheduledTasks, jobState.getUnScheduledTasks()...)
 	}
+	if len(unscheduledTasks) == 0 {
+		return
+	}
 
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments := getTaskAssignments(s.clusterState, unscheduledTasks)
+	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, unscheduledTasks)
+	s.clusterState.nodeGroups = nodeGroups
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
@@ -284,7 +284,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
 
 		// Mark Task as Started
-		s.clusterState.taskScheduled(nodeId, taskId)
+		s.clusterState.taskScheduled(nodeId, taskId, taskDef.SnapshotID)
 		log.Printf("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 
