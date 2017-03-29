@@ -13,7 +13,7 @@ const noTask = ""
 type clusterState struct {
 	updateCh   chan []cluster.NodeUpdate
 	nodes      map[cluster.NodeId]*nodeState
-	nodeGroups map[string]*nodeGroup //key is a snapshotID.
+	nodeGroups map[string]*nodeGroup //key is a snapshotId.
 }
 
 type nodeGroup struct {
@@ -29,7 +29,7 @@ func newNodeGroup() *nodeGroup {
 type nodeState struct {
 	node        cluster.Node
 	runningTask string
-	snapshotID  string
+	snapshotId  string
 }
 
 // Initializes a Node State for the specified Node
@@ -37,7 +37,7 @@ func newNodeState(node cluster.Node) *nodeState {
 	return &nodeState{
 		node:        node,
 		runningTask: noTask,
-		snapshotID:  "",
+		snapshotId:  "",
 	}
 }
 
@@ -59,18 +59,18 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 }
 
 // Update ClusterState to reflect that a task has been scheduled on a particular node
-// SnapshotID should be the value from the task definition associated with the given taskID.
-// TODO: taskID is not unique (and isn't currently required to be), but a jobID arg would fix that.
-func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotID string) {
+// SnapshotId should be the value from the task definition associated with the given taskId.
+// TODO: taskId is not unique (and isn't currently required to be), but a jobId arg would fix that.
+func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotId string) {
 	ns := c.nodes[nodeId]
 
-	delete(c.nodeGroups[ns.snapshotID].idle, nodeId)
-	if _, ok := c.nodeGroups[snapshotID]; !ok {
-		c.nodeGroups[snapshotID] = newNodeGroup()
+	delete(c.nodeGroups[ns.snapshotId].idle, nodeId)
+	if _, ok := c.nodeGroups[snapshotId]; !ok {
+		c.nodeGroups[snapshotId] = newNodeGroup()
 	}
-	c.nodeGroups[snapshotID].busy[nodeId] = ns.node
+	c.nodeGroups[snapshotId].busy[nodeId] = ns.node
 
-	ns.snapshotID = snapshotID
+	ns.snapshotId = snapshotId
 	ns.runningTask = taskId
 }
 
@@ -81,8 +81,8 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string) {
 	ns, ok := c.nodes[nodeId]
 	if ok {
 		ns.runningTask = noTask
-		delete(c.nodeGroups[ns.snapshotID].busy, nodeId)
-		c.nodeGroups[ns.snapshotID].idle[nodeId] = ns.node
+		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
+		c.nodeGroups[ns.snapshotId].idle[nodeId] = ns.node
 	}
 }
 
@@ -118,8 +118,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		case cluster.NodeRemoved:
 			log.Printf("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
 			if nodeState, ok := c.nodes[update.Id]; ok {
-				delete(c.nodeGroups[nodeState.snapshotID].idle, update.Id)
-				delete(c.nodeGroups[nodeState.snapshotID].busy, update.Id)
+				delete(c.nodeGroups[nodeState.snapshotId].idle, update.Id)
+				delete(c.nodeGroups[nodeState.snapshotId].busy, update.Id)
 				delete(c.nodes, update.Id)
 			}
 		}

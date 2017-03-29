@@ -6,7 +6,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 )
 
-type taskAssignments struct {
+type taskAssignment struct {
 	node cluster.Node
 	task *taskState
 }
@@ -18,9 +18,9 @@ type taskAssignments struct {
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignments, map[string]*nodeGroup) {
+func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment, map[string]*nodeGroup) {
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
-	snapshotIDs := []string{}
+	snapshotIds := []string{}
 	nodeGroups := map[string]*nodeGroup{}
 	for snapId, groups := range cs.nodeGroups {
 		nodeGroups[snapId] = newNodeGroup()
@@ -30,46 +30,49 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignments
 		for nodeId, node := range groups.busy {
 			nodeGroups[snapId].busy[nodeId] = node
 		}
-		snapshotIDs = append(snapshotIDs, snapId)
+		snapshotIds = append(snapshotIds, snapId)
 	}
 
-	// Loop over all snapshotIDs looking for an idle node. Prefer, in order:
-	// - Hot node for the given snapshotID (one whose last task shared the same snapshotID).
-	// - New untouched node (or node whose last task used an empty snapshotID)
-	// - A random node from the idle pools of nodes associated with other snapshotIDs.
-	var assignments []taskAssignments
+	// Loop over all snapshotIds looking for an idle node. Prefer, in order:
+	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
+	// - New untouched node (or node whose last task used an empty snapshotId)
+	// - A random node from the idle pools of nodes associated with other snapshotIds.
+	var assignments []taskAssignment
 	remainingTasks := getAssignments(cs, tasks, &assignments, nodeGroups, []string{""})
-	remainingTasks = getAssignments(cs, remainingTasks, &assignments, nodeGroups, snapshotIDs)
+	remainingTasks = getAssignments(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
 	if len(remainingTasks) == 0 {
-		log.Printf("Scheduled all tasks, len=%d", len(tasks))
+		log.Printf("Scheduled all tasks (%d)", len(tasks))
 	} else {
-		log.Printf("Unable to schedule all tasks, len=%d/%d", len(remainingTasks), len(tasks))
+		log.Printf("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
 	}
 	return assignments, nodeGroups
 }
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
-// Returns tasks that couldn't be scheduled using the task's snapshotID or any of this in snapIDs.
+// Returns tasks that couldn't be scheduled using the task's snapshotId or any of this in snapIds.
 func getAssignments(
 	cs *clusterState,
 	tasks []*taskState,
-	assignments *[]taskAssignments,
+	assignments *[]taskAssignment,
 	nodeGroups map[string]*nodeGroup,
-	snapIDs []string,
+	snapIds []string,
 ) []*taskState {
 
 	var remaining []*taskState
+	numTotalTasks := len(*assignments) + len(tasks)
 Loop:
 	for _, task := range tasks {
-		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIDs...) {
+		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
 				for nodeId, node := range groups.idle {
-					*assignments = append(*assignments, taskAssignments{node: node, task: task})
+					*assignments = append(*assignments, taskAssignment{node: node, task: task})
 					if _, ok := nodeGroups[task.Def.SnapshotID]; !ok {
 						nodeGroups[task.Def.SnapshotID] = newNodeGroup()
 					}
 					nodeGroups[task.Def.SnapshotID].busy[nodeId] = node
 					delete(nodeGroups[snapId].idle, nodeId)
+					log.Printf("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
+						task.JobId, task.TaskId, nodeId, len(*assignments), numTotalTasks)
 					continue Loop
 				}
 			}

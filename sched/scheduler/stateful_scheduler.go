@@ -263,6 +263,9 @@ func (s *statefulScheduler) scheduleTasks() {
 	for _, jobState := range s.inProgressJobs {
 		unscheduledTasks = append(unscheduledTasks, jobState.getUnScheduledTasks()...)
 	}
+	if len(unscheduledTasks) == 0 {
+		return
+	}
 
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, unscheduledTasks)
