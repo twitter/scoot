@@ -190,6 +190,7 @@ func (s *statefulScheduler) loop() {
 		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
 		s.stat.Gauge("schedInProgressTasksGauge").Update(numTasks)
 		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
+		time.Sleep(50 * time.Millisecond) // TODO: find a better way to avoid pegging the cpu.
 	}
 }
 
