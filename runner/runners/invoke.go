@@ -107,11 +107,17 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.ErrorStatus(id, fmt.Errorf("could not create stdout: %v", err))
 	}
 	defer stdout.Close()
+
 	stderr, err := inv.output.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
 		return runner.ErrorStatus(id, fmt.Errorf("could not create stderr: %v", err))
 	}
 	defer stderr.Close()
+
+	marker := "###########################################\n###########################################\n"
+	format := "%s\n\nDate: %v\nSelf: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
+	stdout.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stdout.URI(), cmd, marker)))
+	stderr.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stderr.URI(), cmd, marker)))
 	log.Printf("RunID: %s, stdout: %s, stderr: %s\n", id, stdout.AsFile(), stderr.AsFile())
 
 	p, err := inv.exec.Exec(execer.Command{
