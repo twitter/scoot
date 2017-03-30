@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"

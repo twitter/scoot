@@ -2,7 +2,7 @@ package gitdb
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"os"
 	"path/filepath"
 

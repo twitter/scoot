@@ -2,7 +2,7 @@ package fuse
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"net"
 	"os"
 	"os/exec"

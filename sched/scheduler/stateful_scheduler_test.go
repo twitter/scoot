@@ -3,7 +3,7 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"testing"
 	"time"
 

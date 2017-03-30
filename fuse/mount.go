@@ -3,8 +3,8 @@ package fuse
 import (
 	"bufio"
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"sync"
 )
 

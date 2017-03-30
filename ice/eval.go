@@ -3,8 +3,8 @@ package ice
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/scootdev/scoot/common/log"
 	"reflect"
 	"runtime"
 	"runtime/debug"

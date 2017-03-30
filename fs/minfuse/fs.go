@@ -1,8 +1,8 @@
 package minfuse
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 	"syscall"
 	"time"

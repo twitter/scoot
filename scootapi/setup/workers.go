@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"strconv"
 
 	"github.com/scootdev/scoot/scootapi"

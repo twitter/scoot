@@ -1,8 +1,8 @@
 package snapshot
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 
 	"github.com/scootdev/scoot/fs/perf"

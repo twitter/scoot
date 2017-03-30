@@ -3,9 +3,9 @@ package bundlestore
 import (
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"os"
 	"strings"

@@ -5,8 +5,8 @@ package endpoints
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"time"
 

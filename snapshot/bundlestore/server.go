@@ -2,8 +2,8 @@ package bundlestore
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"regexp"
 	"strings"

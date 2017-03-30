@@ -2,8 +2,8 @@ package bundlestore
 
 import (
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 	"path/filepath"
 	"strings"

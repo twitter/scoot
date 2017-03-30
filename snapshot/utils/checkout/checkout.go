@@ -7,9 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 	"path"
 

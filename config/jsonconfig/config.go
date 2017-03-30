@@ -3,7 +3,7 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"path"
 	"regexp"
 

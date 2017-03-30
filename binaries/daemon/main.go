@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"time"
 
 	"github.com/scootdev/scoot/daemon/server"

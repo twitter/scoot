@@ -5,7 +5,7 @@ package repo
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strings"

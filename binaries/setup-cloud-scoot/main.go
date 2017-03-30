@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi/setup"

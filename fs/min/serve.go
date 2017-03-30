@@ -2,7 +2,7 @@ package min
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"runtime"
 	"time"
 

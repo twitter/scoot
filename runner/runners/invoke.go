@@ -2,8 +2,8 @@ package runners
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 	"path/filepath"
 	"time"

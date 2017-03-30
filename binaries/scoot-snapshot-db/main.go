@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"os"
 
 	"github.com/spf13/cobra"

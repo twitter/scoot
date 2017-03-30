@@ -3,8 +3,8 @@ package gitdb
 import (
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"github.com/scootdev/scoot/common/log"
 	"os"
 	"os/exec"
 	"path"

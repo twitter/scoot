@@ -1,7 +1,7 @@
 package setup
 
 import (
-	"github.com/scootdev/scoot/common/log"
+	log "github.com/Sirupsen/logrus"
 	"strconv"
 	"strings"
 

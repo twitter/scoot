@@ -2,9 +2,9 @@ package bundlestore
 
 import (
 	"bytes"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"time"
 
