@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -36,8 +36,8 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
 
 	s := spew.Sdump(dest)
-	log.Println("************* Extracted:")
-	log.Println(s)
+	log.Info("************* Extracted:")
+	log.Info(s)
 	return nil
 }
 

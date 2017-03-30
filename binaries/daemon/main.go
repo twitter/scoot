@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"time"
 
 	"github.com/scootdev/scoot/daemon/server"
@@ -27,33 +27,33 @@ func main() {
 	case "os":
 		ex = os_exec.NewExecer()
 	default:
-		log.Fatalf("Unknown execer type %v", *execerType)
+		log.Crit("Unknown execer type %v", *execerType)
 	}
 
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
-		log.Fatal("error creating temp dir: ", err)
+		log.Crit("error creating temp dir: ", err)
 	}
 	//defer os.RemoveAll(tempDir.Dir) //TODO: this may become necessary if we start testing with larger snapshots.
 
 	tmp, err := temp.NewTempDir("", "daemon")
 	if err != nil {
-		log.Fatal("Cannot create tmp dir: ", err)
+		log.Crit("Cannot create tmp dir: ", err)
 	}
 
 	outputCreator, err := runners.NewHttpOutputCreator(tempDir, "")
 	if err != nil {
-		log.Fatal("Cannot create OutputCreator: ", err)
+		log.Crit("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
 	r := runners.NewQueueRunner(ex, filer, outputCreator, tmp, *qLen)
 	h := server.NewHandler(r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {
-		log.Fatal("Cannot create Scoot server: ", err)
+		log.Crit("Cannot create Scoot server: ", err)
 	}
 	err = s.ListenAndServe()
 	if err != nil {
-		log.Fatal("Error serving Scoot Daemon: ", err)
+		log.Crit("Error serving Scoot Daemon: ", err)
 	}
 }

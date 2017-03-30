@@ -3,7 +3,7 @@ package minfuse
 import (
 	"errors"
 	"flag"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,7 +29,7 @@ type Options struct {
 }
 
 func SetupLog() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	// log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 }
 
 func InitFlags() (*Options, error) {
@@ -77,10 +77,11 @@ func InitFlags() (*Options, error) {
 			}
 			fallthrough
 		default:
-			log.Fatal("Unrecognized strategy", strategy)
+			log.Crit("Unrecognized strategy", strategy)
 		}
 	}
-	log.Print(opts)
+	// TODO(rcouto): define String() method on opts for logging
+	// log.Info(opts)
 	return &opts, nil
 }
 
@@ -105,11 +106,11 @@ func Runfs(opts *Options) {
 		options = append(options, fuse.AsyncRead())
 	}
 
-	log.Print("About to Mount")
+	log.Info("About to Mount")
 	fuse.Unmount(opts.Mountpoint)
 	conn, err := fuse.Mount(opts.Mountpoint, fuse.MakeAlloc(), options...)
 	if err != nil {
-		log.Fatal("Couldn't mount", err)
+		log.Crit("Couldn't mount", err)
 	}
 
 	var done chan error
@@ -117,29 +118,29 @@ func Runfs(opts *Options) {
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigchan
-		log.Printf("Canceling")
+		log.Info("Canceling")
 		if done != nil {
 			done <- errors.New("Caller canceled")
 		}
 	}()
 
 	go func() {
-		log.Println("pprof exit: ", http.ListenAndServe("localhost:6060", nil))
+		log.Info("pprof exit: ", http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	defer func() {
 		if err := fuse.Unmount(opts.Mountpoint); err != nil {
-			log.Printf("error in call to Unmount(%s): %s", opts.Mountpoint, err)
+			log.Info("error in call to Unmount(%s): %s", opts.Mountpoint, err)
 			return
 		}
-		log.Printf("called Umount on %s", opts.Mountpoint)
+		log.Info("called Umount on %s", opts.Mountpoint)
 	}()
 
 	// Serve returns immediately and we wait for the first entry from the done channel before exiting main.
 	// We only care about the first error from either the signal handler or from the first serve thread to return.
 	// Exiting main will cause the remaining read threads to exit.
-	log.Print("About to Serve")
+	log.Info("About to Serve")
 	done = min.Serve(conn, minfs, opts.ThreadUnsafe)
 	err = <-done
-	log.Printf("Returning (might take a few seconds), err=%v", err)
+	log.Info("Returning (might take a few seconds), err=%v", err)
 }

@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"math"
 	"sync"
 	"time"
@@ -14,7 +14,7 @@ import (
 // ActiveSagas are recovered in parallel and are added to the addJobCh to be rescheduled
 // This method returns once all activeSagas have been successfully recovered.
 func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
-	log.Printf("INFO: Recovering Sagas")
+	log.Info("INFO: Recovering Sagas")
 
 	recoveryActiveSagaAttempts := 0
 	activeSagas, err := sc.Startup()
@@ -23,7 +23,7 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 		// for us to make progress.
 		// TODO: Add metrics for failure rate, this would be something we should alert on.
 		recoveryActiveSagaAttempts++
-		log.Printf("ERROR: occurred getting ActiveSagas from SagaLog %v", err)
+		log.Info("ERROR: occurred getting ActiveSagas from SagaLog %v", err)
 
 		delay := calculateExponentialBackoff(recoveryActiveSagaAttempts, time.Duration(1)*time.Minute)
 		time.Sleep(delay)
@@ -35,7 +35,7 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 		return
 	}
 
-	log.Printf("DEBUG: Recovering Active Sagas %+v", activeSagas)
+	log.Info("DEBUG: Recovering Active Sagas %+v", activeSagas)
 
 	var wg sync.WaitGroup
 	wg.Add(len(activeSagas))
@@ -53,11 +53,11 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 				if err != nil {
 					// TODO: Increment counter? A breaking change was made
 					// if this happens or data was corrupted.
-					log.Printf("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
+					log.Info("Error: Could not deserialize Job for Saga %v, error: %v", sagaId, err)
 					return
 				}
 
-				log.Printf("INFO: Rescheduling Saga %v", sagaId)
+				log.Info("INFO: Rescheduling Saga %v", sagaId)
 				// reschedule saga
 				addJobCh <- jobAddedMsg{
 					job:  job,
@@ -87,14 +87,14 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 		if saga.FatalErr(err) {
 			// TODO: add metrics for fatal failure rate, this would be something we should alert on, this is a bad bug
 			// if we can't recover the saga from the long, means something is very wrong.
-			log.Printf("ERROR: Fatal Error occurred recovering saga %v, with error: %v, skipping recovery for this saga", sagaId, err)
+			log.Info("ERROR: Fatal Error occurred recovering saga %v, with error: %v, skipping recovery for this saga", sagaId, err)
 			err = nil
 			activeSaga = nil
 		} else {
 			// Recovering SagaState must eventually succeed if it doesn't continue to retry with
 			// exponential backoff.
 			recoverSagaStateAttempts++
-			log.Printf("ERROR: occurred recovering Saga %v, from SagaLog %v", sagaId, err)
+			log.Info("ERROR: occurred recovering Saga %v, from SagaLog %v", sagaId, err)
 
 			delay := calculateExponentialBackoff(recoverSagaStateAttempts, time.Duration(1)*time.Minute)
 			time.Sleep(delay)
@@ -106,7 +106,7 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 	// This could happen because a Saga got added to active index, but failed to
 	// log successfully.  In this case Starting the Saga will have failed.
 	if activeSaga == nil {
-		log.Printf("DEBUG: Saga doesn't exist %v", sagaId)
+		log.Info("DEBUG: Saga doesn't exist %v", sagaId)
 		return nil
 	}
 
@@ -114,7 +114,7 @@ func recoverSaga(sc saga.SagaCoordinator, sagaId string) *saga.Saga {
 	// This could happen because Active Index did not get updated successfully,
 	// even if the saga has been completed.
 	if activeSaga.GetState().IsSagaCompleted() {
-		log.Printf("DEBUG: Saga Already Completed %v", sagaId)
+		log.Info("DEBUG: Saga Already Completed %v", sagaId)
 		return nil
 	}
 

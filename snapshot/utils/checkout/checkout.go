@@ -7,9 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 
@@ -27,14 +27,14 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	if useSnapshot {
 		fi, err := ctx.snap.Stat(relPath)
 		if err != nil {
-			log.Print("Couldn't Stat", err, relPath)
+			log.Info("Couldn't Stat", err, relPath)
 			return
 		}
 		isDir = fi.IsDir()
 	} else {
 		fi, err := os.Stat(path.Join(ctx.srcRoot, relPath))
 		if err != nil {
-			log.Print("Couldn't stat", err, relPath)
+			log.Info("Couldn't stat", err, relPath)
 			return
 		}
 		isDir = fi.IsDir()
@@ -50,7 +50,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		if useSnapshot {
 			f, err := ctx.snap.Open(relPath)
 			if err != nil {
-				log.Print("Couldn't open", err, relPath)
+				log.Info("Couldn't open", err, relPath)
 				return
 			}
 			defer f.Close()
@@ -58,7 +58,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		} else {
 			f, err := os.Open(path.Join(ctx.srcRoot, relPath))
 			if err != nil {
-				log.Print("Couldn't open", err, relPath)
+				log.Info("Couldn't open", err, relPath)
 				return
 			}
 			defer f.Close()
@@ -66,11 +66,11 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		}
 		bs, err = ioutil.ReadAll(r)
 		if err != nil {
-			log.Print("Couldn't read", err)
+			log.Info("Couldn't read", err)
 		}
 		err = ioutil.WriteFile(dstPath, bs, 0777)
 		if err != nil {
-			log.Print("Couldn't write", err, relPath, dstPath)
+			log.Info("Couldn't write", err, relPath, dstPath)
 		}
 		return
 	}
@@ -79,7 +79,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	if useSnapshot {
 		childDirents, err := ctx.snap.Readdirents(relPath)
 		if err != nil {
-			log.Print("Couldn't ReadDir", err, relPath)
+			log.Info("Couldn't ReadDir", err, relPath)
 			return
 		}
 		children = make([]string, len(childDirents))
@@ -89,13 +89,13 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	} else {
 		f, err := os.Open(path.Join(ctx.srcRoot, relPath))
 		if err != nil {
-			log.Print("Couldn't open", err, relPath)
+			log.Info("Couldn't open", err, relPath)
 			return
 		}
 		defer f.Close()
 		children, err = f.Readdirnames(0)
 		if err != nil {
-			log.Print("Couldn't Readdirnames", err, relPath)
+			log.Info("Couldn't Readdirnames", err, relPath)
 			return
 		}
 	}
@@ -117,12 +117,12 @@ func init() {
 func main() {
 	flag.Parse()
 	if srcRoot == "" || dstRoot == "" {
-		log.Fatal("-src and -dst must both be set")
+		log.Crit("-src and -dst must both be set")
 	}
 	snaps := snapshot.NewFileBackedSnapshots(srcRoot)
 	snap, err := snaps.Get("foo")
 	if err != nil {
-		log.Fatal("Invalid ID \"foo\":", err)
+		log.Crit("Invalid ID \"foo\":", err)
 	}
 	ctx := checkoutContext{srcRoot: srcRoot, snap: snap, dstRoot: dstRoot}
 	copyFiles(&ctx, "")

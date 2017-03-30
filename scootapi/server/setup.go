@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -121,10 +121,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	// Parse Config
-	log.Println("scootapi/server RunServer(), config is:", string(config))
+	log.Info("scootapi/server RunServer(), config is:", string(config))
 	mod, err := schema.Parse(config)
 	if err != nil {
-		log.Fatal("Error configuring Scoot API: ", err)
+		log.Crit("Error configuring Scoot API: ", err)
 	}
 
 	// Initialize Objects Based on Config Settings
@@ -134,7 +134,7 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error injecting servers", err)
+		log.Crit("Error injecting servers", err)
 	}
 
 	errCh := make(chan error)
@@ -144,5 +144,5 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	go func() {
 		errCh <- servers.thrift.Serve()
 	}()
-	log.Fatal("Error serving: ", <-errCh)
+	log.Crit("Error serving: ", <-errCh)
 }

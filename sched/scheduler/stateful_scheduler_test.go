@@ -3,7 +3,7 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"testing"
 	"time"
 
@@ -154,7 +154,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	}
 
 	taskId := taskIds[0]
-	log.Println("watching", taskId)
+	log.Info("watching", taskId)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -198,7 +198,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	}
 
 	taskId := taskIds[0]
-	log.Println("watching", taskId)
+	log.Info("watching", taskId)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

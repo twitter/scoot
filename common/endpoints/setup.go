@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"time"
 
@@ -36,10 +36,10 @@ func (m module) Install(b *ice.MagicBag) {
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	// Parse Config
-	log.Println("common/endpoints RunServer(), config is:", string(config))
+	log.Info("common/endpoints RunServer(), config is:", string(config))
 	mod, err := schema.Parse(config)
 	if err != nil {
-		log.Fatal("Error configuring Scoot API: ", err)
+		log.Crit("Error configuring Scoot API: ", err)
 	}
 
 	// Initialize Objects Based on Config Settings
@@ -49,8 +49,9 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	var server *TwitterServer
 	err = bag.Extract(&server)
 	if err != nil {
-		log.Fatal("Error injecting server", err)
+		log.Crit("Error injecting server", err)
 	}
-
-	log.Fatal(server.Serve())
+	if err = server.Serve(); err != nil {
+		log.Crit(err.Error())
+	}
 }

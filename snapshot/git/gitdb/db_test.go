@@ -3,8 +3,8 @@ package gitdb
 import (
 	"flag"
 	"fmt"
+	"github.com/scootdev/scoot/common/log"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -604,7 +604,7 @@ func TestMain(m *testing.M) {
 	fixture, err = setup()
 	defer fixture.close()
 	if err != nil {
-		log.Fatal(err)
+		log.Crit(err.Error())
 	}
 	result := m.Run()
 	// we need to call fixture.close() here because the defer we've registered
