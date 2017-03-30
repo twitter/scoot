@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 )
 
 type RunID string
@@ -82,16 +83,16 @@ type RunStatus struct {
 
 func (p RunStatus) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
+	log.Infof(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
 
 	if p.State == COMPLETE {
-		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
+		log.Infof(&b, "\tExitCode:\t%d\n", p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		fmt.Fprintf(&b, "\tError:\t\t%s\n", p.Error)
+		log.Infof(&b, "\tError:\t\t%s\n", p.Error)
 	}
 
-	fmt.Fprintf(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
+	log.Infof(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
 
 	return b.String()
 }

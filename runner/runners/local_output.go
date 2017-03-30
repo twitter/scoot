@@ -134,7 +134,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("content") == "true" {
 			http.ServeContent(w, r, "", info.ModTime(), resource)
 		} else {
-			fmt.Fprintf(w, clientHtml)
+			log.Infof(w, clientHtml)
 		}
 	}
 }

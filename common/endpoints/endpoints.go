@@ -55,7 +55,7 @@ func helpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ok")
+	log.Infof(w, "ok")
 }
 
 func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {

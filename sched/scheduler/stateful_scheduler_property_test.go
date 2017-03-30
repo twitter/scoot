@@ -49,5 +49,5 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("Task to Node Distribution: %+v", taskCountMap)
+	log.Printf("Task to Node Distribution: %+v", taskCountMap)
 }

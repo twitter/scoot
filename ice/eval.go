@@ -58,12 +58,12 @@ type stack []frame
 
 func (s stack) String() string {
 	b := new(bytes.Buffer)
-	fmt.Fprintln(b)
-	fmt.Fprintln(b, "goice stacktrace:")
+	log.Infoln(b)
+	log.Infoln(b, "goice stacktrace:")
 	for _, f := range s {
-		fmt.Fprintf(b, "\t%s\n", f.key)
+		log.Infof(b, "\t%s\n", f.key)
 	}
-	fmt.Fprintln(b, "end goice stacktrace")
+	log.Infoln(b, "end goice stacktrace")
 	return b.String()
 }
 

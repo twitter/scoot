@@ -7,6 +7,7 @@ package runner
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"time"
 )
 
@@ -41,15 +42,15 @@ type Command struct {
 
 func (c Command) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+	log.Infof(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
 		c.SnapshotID,
 		c.Argv,
 		c.Timeout)
 
 	if len(c.EnvVars) > 0 {
-		fmt.Fprintf(&b, "\tEnv:\n")
+		log.Infof(&b, "\tEnv:\n")
 		for k, v := range c.EnvVars {
-			fmt.Fprintf(&b, "\t\t%s: %s\n", k, v)
+			log.Infof(&b, "\t\t%s: %s\n", k, v)
 		}
 	}
 

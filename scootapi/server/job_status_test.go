@@ -159,27 +159,27 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 	thrifthelpers.JsonDeserialize(&runResults, resultsAsByte)
 
 	if runResults.RunId != taskId {
-		fmt.Printf("Run ids didn't match. got: %s,  expected: %s\n", taskId, runResults.RunId)
+		log.Printf("Run ids didn't match. got: %s,  expected: %s\n", taskId, runResults.RunId)
 		return false
 	}
 	if runResults.Status < scoot.RunStatusState_COMPLETE {
-		fmt.Printf("Taskid: %s, Invalid run status: %v\n", taskId, runResults.Status)
+		log.Printf("Taskid: %s, Invalid run status: %v\n", taskId, runResults.Status)
 		return false
 	}
 	if int(*runResults.ExitCode) != 0 && int(*runResults.ExitCode) != -1 {
-		fmt.Printf("Taskid: %s, Invalid exit code: %d\n", taskId, runResults.ExitCode)
+		log.Printf("Taskid: %s, Invalid exit code: %d\n", taskId, runResults.ExitCode)
 		return false
 	}
 	if !strings.Contains(*runResults.Error, "error ") {
-		fmt.Printf("Taskid: %s, Invalid error string: %s\n", taskId, *runResults.Error)
+		log.Printf("Taskid: %s, Invalid error string: %s\n", taskId, *runResults.Error)
 		return false
 	}
 	if !strings.Contains(*runResults.OutUri, "out URI ") {
-		fmt.Printf("Taskid: %s, Invalid out URI: %s\n", taskId, *runResults.OutUri)
+		log.Printf("Taskid: %s, Invalid out URI: %s\n", taskId, *runResults.OutUri)
 		return false
 	}
 	if !strings.Contains(*runResults.ErrUri, "error URI ") {
-		fmt.Printf("Taskid: %s, Invalid err URI: %s\n", taskId, *runResults.ErrUri)
+		log.Printf("Taskid: %s, Invalid err URI: %s\n", taskId, *runResults.ErrUri)
 		return false
 	}
 

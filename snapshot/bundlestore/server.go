@@ -55,14 +55,14 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 	if exists {
 		s.stat.Counter("uploadExistingCounter").Inc(1)
-		fmt.Fprintf(w, "Bundle %s already exists\n", bundleName)
+		log.Infof(w, "Bundle %s already exists\n", bundleName)
 	}
 
 	if err := s.store.Write(bundleName, bundleData); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "Successfully wrote bundle %s\n", bundleName)
+	log.Infof(w, "Successfully wrote bundle %s\n", bundleName)
 	s.stat.Counter("uploadOkCounter").Inc(1)
 }
 

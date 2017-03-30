@@ -90,5 +90,5 @@ func main() {
 	ctx := countContext{root: root, snap: snap}
 	var fileCount int
 	countFiles(&ctx, &fileCount, "")
-	fmt.Printf("Counted %v files", fileCount)
+	log.Printf("Counted %v files", fileCount)
 }

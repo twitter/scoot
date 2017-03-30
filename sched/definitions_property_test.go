@@ -20,13 +20,13 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 
 			binaryJob, err := job.Serialize()
 			if err != nil {
-				fmt.Println("Unxepected Error Occurred when Serializing Job %v", err)
+				log.Println("Unxepected Error Occurred when Serializing Job %v", err)
 				return false
 			}
 
 			deserializedJob, err := DeserializeJob(binaryJob)
 			if err != nil {
-				fmt.Println("Unexpected Error Occurred when Deserializing Job %v", err)
+				log.Println("Unexpected Error Occurred when Deserializing Job %v", err)
 				return false
 			}
 

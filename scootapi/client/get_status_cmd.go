@@ -50,9 +50,9 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		if err != nil {
 			return fmt.Errorf("Error converting status to JSON: %v", err.Error())
 		}
-		fmt.Printf("%s\n", asJson)
+		log.Printf("%s\n", asJson)
 	} else {
-		fmt.Println("Job Status:", status)
+		log.Println("Job Status:", status)
 	}
 
 	return nil
