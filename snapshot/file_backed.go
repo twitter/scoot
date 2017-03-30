@@ -2,7 +2,7 @@ package snapshot
 
 import (
 	"io/ioutil"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 
 	"github.com/scootdev/scoot/fs/perf"
@@ -92,8 +92,8 @@ func (i *fileBackedFileInfo) IsExec() bool {
 func (s *fileBackedSnapshot) Readdirents(name string) ([]Dirent, error) {
 	// TODO(dbentley): handle directories too big to read in one go
 	if Trace {
-		log.Print("Snap: Readdirents entry ", name)
-		defer log.Print("Snap: Readdirents exit ", name)
+		log.Info("Snap: Readdirents entry ", name)
+		defer log.Info("Snap: Readdirents exit ", name)
 	}
 
 	// TODO(dbentley): find a way to keep the file open instead of opening it here

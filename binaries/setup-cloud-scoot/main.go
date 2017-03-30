@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi/setup"
@@ -17,7 +17,7 @@ func main() {
 	apiserversFlag := flag.Int("apiservers", setup.DefaultApiServerCount, "number of apiservers to use")
 	flag.Parse()
 
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
 	if err != nil {

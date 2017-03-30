@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"time"
 
@@ -36,7 +36,7 @@ func (m module) Install(b *ice.MagicBag) {
 // this method blocks until the server completes running or an error occurs.
 func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	// Parse Config
-	log.Println("common/endpoints RunServer(), config is:", string(config))
+	log.Infoln("common/endpoints RunServer(), config is:", string(config))
 	mod, err := schema.Parse(config)
 	if err != nil {
 		log.Fatal("Error configuring Scoot API: ", err)

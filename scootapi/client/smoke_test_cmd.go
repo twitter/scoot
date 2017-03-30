@@ -12,7 +12,7 @@ import (
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"
 	"github.com/spf13/cobra"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 )
 
 type smokeTestCmd struct {
@@ -40,8 +40,8 @@ func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 	if err != nil {
 		return err
 	}
-	log.Println("Starting Smoke Test")
-	log.Println("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
+	log.Infoln("Starting Smoke Test")
+	log.Infoln("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
 	runner := &smokeTestRunner{cl: cl, tmp: tmp}
 	if err := runner.run(c.numJobs, c.numTasks, c.timeout); err != nil {
 		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.

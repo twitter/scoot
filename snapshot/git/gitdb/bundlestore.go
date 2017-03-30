@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"os/exec"
 	"path"
@@ -191,9 +191,9 @@ func (s *bundlestoreSnapshot) Kind() snapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
 func (s *bundlestoreSnapshot) Download(db *DB) error {
-	log.Printf("Downloading sha: %s", s.SHA())
+	log.Infof("Downloading sha: %s", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
-		log.Printf("We already have sha: %s, returning from Download()", s.SHA())
+		log.Infof("We already have sha: %s, returning from Download()", s.SHA())
 		return nil
 	}
 
@@ -201,7 +201,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// TODO(dbentley): keep stats about how long it takes to unbundle
 	filename, err := s.downloadBundle(db)
 	if err != nil {
-		log.Print("Unable to download bundle: ", err)
+		log.Info("Unable to download bundle: ", err)
 		return err
 	}
 
@@ -209,14 +209,14 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// this will succeed if we have all of the prerequisite objects
 
 	if _, err = db.dataRepo.Run("bundle", "unbundle", filename); err == nil {
-		log.Printf("Unbundling got the sha: %s, returning from Download()", s.SHA())
+		log.Infof("Unbundling got the sha: %s, returning from Download()", s.SHA())
 		return db.shaPresent(s.sha)
 	}
 
 	// we couldn't unbundle
 	// see if it's because we're missing prereqs
 	if exitError := err.(*exec.ExitError); exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
-		log.Print("Can't find sha: ", s.SHA(), " and prereqs aren't the problem, returning err: ", err.Error())
+		log.Info("Can't find sha: ", s.SHA(), " and prereqs aren't the problem, returning err: ", err.Error())
 		return err
 	}
 
@@ -230,7 +230,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
 	// update our stream.
 	if err := db.stream.updateStream(s.streamName, db); err != nil {
-		log.Printf("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
+		log.Infof("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
 		return err
 	}
 
@@ -238,7 +238,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		// if we still can't unbundle, then the bundle might be corrupt or the
 		// prereqs might not be in the stream, or maybe the git server is serving us
 		// stale data.
-		log.Printf("Couldn't download sha: %s, the final unbundling attempt returned error: %s", s.SHA(), err.Error())
+		log.Infof("Couldn't download sha: %s, the final unbundling attempt returned error: %s", s.SHA(), err.Error())
 		return err
 	}
 

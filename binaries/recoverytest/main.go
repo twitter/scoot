@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"sync"
 	"time"
 
@@ -28,7 +28,7 @@ func main() {
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
 	// Add a Bunch of Jobs to Scoot CloudExec
-	log.Printf("Add Jobs to Scoot Cloud Exec")
+	log.Infof("Add Jobs to Scoot Cloud Exec")
 	jobIds := make([]string, 0, numJobs)
 	for i := 0; i < numJobs; i++ {
 		jobIds = append(jobIds, testhelpers.StartJob(scootClient, testhelpers.GenerateJob(-1, "")))
@@ -47,7 +47,7 @@ func main() {
 	// Wait for Jobs to Start Running and make some progress
 	time.Sleep(1 * time.Second)
 
-	log.Printf(
+	log.Infof(
 		`-------------------------------KILLING CLUSTER-------------------------------
                                      ________________
                             ____/ (  (    )   )  \___
@@ -75,7 +75,7 @@ func main() {
   -------------------------------------------------------------------------------`)
 	cluster1Cmds.Kill()
 
-	log.Printf("Reviving Cluster")
+	log.Infof("Reviving Cluster")
 	cluster2Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		log.Fatalf("Unexpected Error while Setting up Recovery Cluster %v", err)
@@ -84,5 +84,5 @@ func main() {
 
 	// Wait for all jobs to complete
 	wg.Wait()
-	log.Printf("All Jobs Completed Successfully")
+	log.Infof("All Jobs Completed Successfully")
 }

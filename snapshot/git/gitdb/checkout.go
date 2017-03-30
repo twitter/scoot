@@ -2,7 +2,7 @@ package gitdb
 
 import (
 	"fmt"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"path/filepath"
 
@@ -53,7 +53,7 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 	case kindGitCommitSnapshot:
 		// For GitCommitSnapshot's, we use dataRepo's work tree.
 		if id == db.currentSnapID {
-			log.Printf("Using cached checkout for id=%s", id)
+			log.Infof("Using cached checkout for id=%s", id)
 			return db.dataRepo.Dir(), nil
 		}
 		path, err := db.checkoutGitCommitSnapshot(v.SHA())

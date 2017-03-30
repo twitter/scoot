@@ -5,7 +5,7 @@ package repo
 
 import (
 	"fmt"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"os/exec"
 	"strings"
@@ -35,11 +35,11 @@ func (r *Repository) Command(args ...string) *exec.Cmd {
 
 // RunCmd runs cmd (that must have been created by Command), returning its output and error
 func (r *Repository) RunCmd(cmd *exec.Cmd) (string, error) {
-	log.Println("repo.Repository.Run", cmd.Args[1:])
+	log.Infoln("repo.Repository.Run", cmd.Args[1:])
 	data, err := cmd.Output()
-	log.Println("repo.Repository.Run complete", err)
+	log.Infoln("repo.Repository.Run complete", err)
 	if err != nil && err.(*exec.ExitError) != nil {
-		log.Println("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
+		log.Infoln("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
 	}
 	return string(data), err
 }
@@ -83,7 +83,7 @@ func NewRepository(dir string) (*Repository, error) {
 		return nil, err
 	}
 	topLevel = strings.Replace(topLevel, "\n", "", -1)
-	log.Println("git.NewRepository:", dir, topLevel)
+	log.Infoln("git.NewRepository:", dir, topLevel)
 	r.dir = topLevel
 	return r, nil
 }

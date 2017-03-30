@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"sync"
 )
 
@@ -30,9 +30,9 @@ func lineLogger(wg *sync.WaitGroup, prefix string, ignore func(line string) bool
 		if ignore(line) {
 			continue
 		}
-		log.Printf("%s: %s", prefix, line)
+		log.Infof("%s: %s", prefix, line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Printf("%s, error reading: %v", prefix, err)
+		log.Infof("%s, error reading: %v", prefix, err)
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"time"
 
@@ -41,7 +41,7 @@ func (s *TwitterServer) Serve() error {
 	for path, handler := range s.Handlers {
 		mux.Handle(path, handler)
 	}
-	log.Println("Serving http & stats on", s.Addr)
+	log.Infoln("Serving http & stats on", s.Addr)
 	server := &http.Server{
 		Addr:    s.Addr,
 		Handler: mux,

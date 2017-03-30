@@ -2,7 +2,7 @@ package gitfiler
 
 import (
 	"fmt"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os/exec"
 
 	"github.com/scootdev/scoot/common/stats"
@@ -40,13 +40,13 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 
 	// We probably ought to use a separate git dir so that processes can't mess up .git
 	cmd := exec.Command("git", "clone", "--reference", ref.Dir(), ref.Dir(), cloneDir.Dir)
-	log.Println("gitfiler.refCloner.clone: Cloning", cmd)
+	log.Infoln("gitfiler.refCloner.clone: Cloning", cmd)
 	err = cmd.Run()
 	if err != nil {
 		stat.Counter("clonerInitFailures").Inc(1)
 		return nil, fmt.Errorf("gitfiler.refCloner.clone: error cloning: %v", err)
 	}
-	log.Println("gitfiler.refCloner.clone: Cloning complete")
+	log.Infoln("gitfiler.refCloner.clone: Cloning complete")
 
 	initTime.Stop()
 	return repo.NewRepository(cloneDir.Dir)

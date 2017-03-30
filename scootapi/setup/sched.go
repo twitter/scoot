@@ -1,7 +1,7 @@
 package setup
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"strconv"
 	"strings"
 
@@ -34,7 +34,7 @@ func NewLocalSchedStrategy(workersCfg *WorkerConfig, workers WorkersStrategy, bu
 }
 
 func (s *LocalSchedStrategy) Startup() (string, error) {
-	log.Println("Starting up a Local Scheduler")
+	log.Infoln("Starting up a Local Scheduler")
 
 	config, err := s.workers.StartupWorkers()
 	if err != nil {

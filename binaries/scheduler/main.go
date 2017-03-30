@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/apache/thrift/lib/go/thrift"
 
@@ -26,7 +26,7 @@ var configFlag = flag.String("config", "local.memory", "Scheduler Config (either
 func main() {
 	flag.Parse()
 
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {
@@ -45,6 +45,6 @@ func main() {
 		},
 	)
 
-	log.Println("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
+	log.Infoln("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
 	server.RunServer(bag, schema, configText)
 }

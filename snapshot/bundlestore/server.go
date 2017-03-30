@@ -3,7 +3,7 @@ package bundlestore
 import (
 	"fmt"
 	"io"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -38,7 +38,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Uploading %v, %v", req.Host, req.URL)
+	log.Infof("Uploading %v, %v", req.Host, req.URL)
 	defer s.stat.Latency("uploadLatency_ms").Time().Stop()
 	s.stat.Counter("uploadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
@@ -67,7 +67,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Downloading %v %v", req.Host, req.URL)
+	log.Infof("Downloading %v %v", req.Host, req.URL)
 	defer s.stat.Latency("downloadLatency_ms").Time().Stop()
 	s.stat.Counter("downloadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")

@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"strings"
 	"time"
 
@@ -34,7 +34,7 @@ type taskRunner struct {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Println("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
+	log.Infoln("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		return err
@@ -52,14 +52,14 @@ func (r *taskRunner) run() error {
 		}
 	}
 
-	log.Printf("End task - job:%s, task:%s, runStatus:%s\n", r.jobId, r.taskId, st.String())
+	log.Infof("End task - job:%s, task:%s, runStatus:%s\n", r.jobId, r.taskId, st.String())
 
 	shouldLog := (err == nil)
 
 	if err != nil && r.markCompleteOnFailure {
 		st.Error = err.Error()
 		st.ExitCode = DeadLetterExitCode
-		log.Printf(
+		log.Infof(
 			`Error Running Task %v: dead lettering task after max retries.
 				TaskDef: %+v, Saga Id: %v, Error: %v`,
 			r.taskId, r.task, r.saga.GetState().SagaId(), err)

@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -38,7 +38,7 @@ var storeHandle = flag.String("bundlestore", "", "Abs file path or an http 'host
 func main() {
 	flag.Parse()
 
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {
@@ -90,19 +90,19 @@ func main() {
 			if len(nodes) > 0 {
 				r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 				storeAddr = string(nodes[r.Intn(len(nodes))].Id())
-				log.Print("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
+				log.Info("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
 			} else {
 				_, storeAddr, _ = scootapi.GetScootapiAddr()
-				log.Print("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
+				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
 				return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
-			log.Print("No stores specified or found, creating a tmp file store")
+			log.Info("No stores specified or found, creating a tmp file store")
 			return bundlestore.MakeFileStoreInTemp(tmp)
 		},
 	)
 
-	log.Println("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
+	log.Infoln("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
 	server.RunServer(bag, schema, configText)
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 )
 
 type getStatusCmd struct {
@@ -24,7 +24,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 
 func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Println("Checking Status for Scoot Job", args)
+	log.Infoln("Checking Status for Scoot Job", args)
 
 	if len(args) == 0 {
 		return errors.New("a job id must be provided")

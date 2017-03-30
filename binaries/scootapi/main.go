@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
@@ -18,7 +18,7 @@ import (
 //		--addr [<host:port> of cloud server]
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()

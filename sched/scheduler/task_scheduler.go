@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"log"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 )
@@ -41,9 +41,9 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 	remainingTasks := getAssignments(cs, tasks, &assignments, nodeGroups, []string{""})
 	remainingTasks = getAssignments(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
 	if len(remainingTasks) == 0 {
-		log.Printf("Scheduled all tasks (%d)", len(tasks))
+		log.Infof("Scheduled all tasks (%d)", len(tasks))
 	} else {
-		log.Printf("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
+		log.Infof("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
 	}
 	return assignments, nodeGroups
 }
@@ -71,7 +71,7 @@ Loop:
 					}
 					nodeGroups[task.Def.SnapshotID].busy[nodeId] = node
 					delete(nodeGroups[snapId].idle, nodeId)
-					log.Printf("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
+					log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
 						task.JobId, task.TaskId, nodeId, len(*assignments), numTotalTasks)
 					continue Loop
 				}

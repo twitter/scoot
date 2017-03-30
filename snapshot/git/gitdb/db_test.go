@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"os/exec"
 	"path/filepath"

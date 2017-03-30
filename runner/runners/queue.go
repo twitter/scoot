@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"log"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -99,7 +99,7 @@ func (c *QueueController) start(cmd *runner.Command, id runner.RunID) {
 
 func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 	for st := range updateCh {
-		log.Printf("Queue pulled result:%+v\n", st)
+		log.Infof("Queue pulled result:%+v\n", st)
 		if st.State.IsDone() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -108,7 +108,7 @@ func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 			if len(c.queue) > 0 {
 				cmdAndID := c.queue[0]
 				c.queue = c.queue[1:]
-				log.Printf("Running from queue:%+v\n", cmdAndID)
+				log.Infof("Running from queue:%+v\n", cmdAndID)
 				c.start(cmdAndID.cmd, cmdAndID.id)
 			}
 		}
