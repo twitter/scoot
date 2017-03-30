@@ -154,7 +154,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	}
 
 	taskId := taskIds[0]
-	log.Info("watching", taskId)
+	log.Debug("watching", taskId)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -198,7 +198,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	}
 
 	taskId := taskIds[0]
-	log.Info("watching", taskId)
+	log.Debug("watching", taskId)
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

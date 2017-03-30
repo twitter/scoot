@@ -27,14 +27,14 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	if useSnapshot {
 		fi, err := ctx.snap.Stat(relPath)
 		if err != nil {
-			log.Info("Couldn't Stat", err, relPath)
+			log.Debug("Couldn't Stat", err, relPath)
 			return
 		}
 		isDir = fi.IsDir()
 	} else {
 		fi, err := os.Stat(path.Join(ctx.srcRoot, relPath))
 		if err != nil {
-			log.Info("Couldn't stat", err, relPath)
+			log.Debug("Couldn't stat", err, relPath)
 			return
 		}
 		isDir = fi.IsDir()
@@ -50,7 +50,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		if useSnapshot {
 			f, err := ctx.snap.Open(relPath)
 			if err != nil {
-				log.Info("Couldn't open", err, relPath)
+				log.Debug("Couldn't open", err, relPath)
 				return
 			}
 			defer f.Close()
@@ -58,7 +58,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		} else {
 			f, err := os.Open(path.Join(ctx.srcRoot, relPath))
 			if err != nil {
-				log.Info("Couldn't open", err, relPath)
+				log.Debug("Couldn't open", err, relPath)
 				return
 			}
 			defer f.Close()
@@ -66,11 +66,11 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 		}
 		bs, err = ioutil.ReadAll(r)
 		if err != nil {
-			log.Info("Couldn't read", err)
+			log.Debug("Couldn't read", err)
 		}
 		err = ioutil.WriteFile(dstPath, bs, 0777)
 		if err != nil {
-			log.Info("Couldn't write", err, relPath, dstPath)
+			log.Debug("Couldn't write", err, relPath, dstPath)
 		}
 		return
 	}
@@ -79,7 +79,7 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	if useSnapshot {
 		childDirents, err := ctx.snap.Readdirents(relPath)
 		if err != nil {
-			log.Info("Couldn't ReadDir", err, relPath)
+			log.Debug("Couldn't ReadDir", err, relPath)
 			return
 		}
 		children = make([]string, len(childDirents))
@@ -89,13 +89,13 @@ func copyFiles(ctx *checkoutContext, relPath string) {
 	} else {
 		f, err := os.Open(path.Join(ctx.srcRoot, relPath))
 		if err != nil {
-			log.Info("Couldn't open", err, relPath)
+			log.Debug("Couldn't open", err, relPath)
 			return
 		}
 		defer f.Close()
 		children, err = f.Readdirnames(0)
 		if err != nil {
-			log.Info("Couldn't Readdirnames", err, relPath)
+			log.Debug("Couldn't Readdirnames", err, relPath)
 			return
 		}
 	}

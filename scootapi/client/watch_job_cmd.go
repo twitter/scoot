@@ -29,7 +29,7 @@ func (c *watchJobCmd) registerFlags() *cobra.Command {
 
 func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Watching job:", args)
+	log.Debug("Watching job:", args)
 
 	if args == nil || len(args) == 0 {
 		return errors.New("a job id must be provided")

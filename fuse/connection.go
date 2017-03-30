@@ -202,7 +202,7 @@ func (c *Conn) read(b []byte) (int, error) {
 	for {
 		n, err := syscall.Read(c.fd(), b)
 		if err != nil {
-			log.Info("read.err ", n, err)
+			log.Debug("read.err ", n, err)
 		}
 		if err == syscall.EINTR {
 			// OSXFUSE sends EINTR to userspace when a request interrupt
@@ -256,7 +256,7 @@ func (c *Conn) writeToKernel(msg []byte) error {
 	out.len = uint32(len(msg))
 
 	if Trace {
-		log.Info("fuse done")
+		log.Debug("fuse done")
 	}
 	nn, err := syscall.Write(c.fd(), msg)
 	if err == nil && nn != len(msg) {

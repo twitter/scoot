@@ -30,9 +30,9 @@ func lineLogger(wg *sync.WaitGroup, prefix string, ignore func(line string) bool
 		if ignore(line) {
 			continue
 		}
-		log.Info("%s: %s", prefix, line)
+		log.Debug("%s: %s", prefix, line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Info("%s, error reading: %v", prefix, err)
+		log.Debug("%s, error reading: %v", prefix, err)
 	}
 }

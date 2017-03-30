@@ -270,7 +270,7 @@ func processBuf(b []byte, scope *RequestScope, handler Servlet) (req Request, re
 			handleErr = handler.HandleRelease(req.(*ReleaseRequest), resp.(*ReleaseResponse))
 		}
 	default:
-		log.Info("Unknown request type %v", h.opcode)
+		log.Debug("Unknown request type %v", h.opcode)
 		return nil, nil, fmt.Errorf("Not implemented")
 	}
 

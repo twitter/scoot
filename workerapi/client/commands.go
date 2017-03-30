@@ -28,10 +28,10 @@ func (rc *runCmd) run(cmd *cobra.Command, args []string) error {
 		Timeout:    rc.timeout,
 		SnapshotID: rc.snapshotID,
 	}
-	log.Info("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
+	log.Debug("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
 
 	status, err := rc.client.Run(cmdToRun)
-	log.Info("%v\nError: %v\n", status, err)
+	log.Debug("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -48,10 +48,10 @@ func (ac *abortCmd) registerFlags(cmd *cobra.Command) {
 }
 
 func (ac *abortCmd) run(cmd *cobra.Command, args []string) error {
-	log.Info("Calling abort rpc to cloud worker", args)
+	log.Debug("Calling abort rpc to cloud worker", args)
 
 	status, err := ac.client.Abort(runner.RunID(ac.runId))
-	log.Info("%v\nError: %v\n", status, err)
+	log.Debug("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -63,10 +63,10 @@ type queryWorkerCmd struct {
 func (qc *queryWorkerCmd) registerFlags(cmd *cobra.Command) {}
 
 func (qc *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
-	log.Info("Calling queryworker rpc to cloud worker", args)
+	log.Debug("Calling queryworker rpc to cloud worker", args)
 
 	status, err := qc.client.QueryWorker()
-	log.Info("%v\nError: %v\n", status, err)
+	log.Debug("%v\nError: %v\n", status, err)
 	return nil
 }
 

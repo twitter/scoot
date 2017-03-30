@@ -90,19 +90,19 @@ func main() {
 			if len(nodes) > 0 {
 				r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 				storeAddr = string(nodes[r.Intn(len(nodes))].Id())
-				log.Info("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
+				log.Debug("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
 			} else {
 				_, storeAddr, _ = scootapi.GetScootapiAddr()
-				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
+				log.Debug("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
 				return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
-			log.Info("No stores specified or found, creating a tmp file store")
+			log.Debug("No stores specified or found, creating a tmp file store")
 			return bundlestore.MakeFileStoreInTemp(tmp)
 		},
 	)
 
-	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
+	log.Debug("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
 	server.RunServer(bag, schema, configText)
 }

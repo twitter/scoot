@@ -28,7 +28,7 @@ func main() {
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
 	// Add a Bunch of Jobs to Scoot CloudExec
-	log.Info("Add Jobs to Scoot Cloud Exec")
+	log.Debug("Add Jobs to Scoot Cloud Exec")
 	jobIds := make([]string, 0, numJobs)
 	for i := 0; i < numJobs; i++ {
 		jobIds = append(jobIds, testhelpers.StartJob(scootClient, testhelpers.GenerateJob(-1, "")))
@@ -47,7 +47,7 @@ func main() {
 	// Wait for Jobs to Start Running and make some progress
 	time.Sleep(1 * time.Second)
 
-	log.Info(
+	log.Debug(
 		`-------------------------------KILLING CLUSTER-------------------------------
                                      ________________
                             ____/ (  (    )   )  \___
@@ -75,7 +75,7 @@ func main() {
   -------------------------------------------------------------------------------`)
 	cluster1Cmds.Kill()
 
-	log.Info("Reviving Cluster")
+	log.Debug("Reviving Cluster")
 	cluster2Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		log.Crit("Unexpected Error while Setting up Recovery Cluster %v", err)
@@ -84,5 +84,5 @@ func main() {
 
 	// Wait for all jobs to complete
 	wg.Wait()
-	log.Info("All Jobs Completed Successfully")
+	log.Debug("All Jobs Completed Successfully")
 }

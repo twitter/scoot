@@ -34,7 +34,7 @@ func NewLocalSchedStrategy(workersCfg *WorkerConfig, workers WorkersStrategy, bu
 }
 
 func (s *LocalSchedStrategy) Startup() (string, error) {
-	log.Info("Starting up a Local Scheduler")
+	log.Debug("Starting up a Local Scheduler")
 
 	config, err := s.workers.StartupWorkers()
 	if err != nil {

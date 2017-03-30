@@ -92,8 +92,8 @@ func (i *fileBackedFileInfo) IsExec() bool {
 func (s *fileBackedSnapshot) Readdirents(name string) ([]Dirent, error) {
 	// TODO(dbentley): handle directories too big to read in one go
 	if Trace {
-		log.Info("Snap: Readdirents entry ", name)
-		defer log.Info("Snap: Readdirents exit ", name)
+		log.Debug("Snap: Readdirents entry ", name)
+		defer log.Debug("Snap: Readdirents exit ", name)
 	}
 
 	// TODO(dbentley): find a way to keep the file open instead of opening it here

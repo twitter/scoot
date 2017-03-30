@@ -49,7 +49,7 @@ func NewSignalHandlingCmds(tmp *temp.TempDir) *Cmds {
 	go func() {
 		var sig os.Signal
 		sig = <-sigchan
-		log.Info("signal %s received; shutting down", sig)
+		log.Debug("signal %s received; shutting down", sig)
 		r.Kill()
 		os.Exit(1)
 	}()
@@ -71,7 +71,7 @@ func (c *Cmds) Kill() {
 	}
 	c.killed = true
 
-	log.Info("Killing %d cmds", len(c.watching))
+	log.Debug("Killing %d cmds", len(c.watching))
 
 	// Wait for all to be done.
 	allDoneCh := make(chan struct{})
@@ -87,7 +87,7 @@ func (c *Cmds) Kill() {
 	// First, send SIGINT to each
 	for _, c := range c.watching {
 		if p := c.Process; p != nil {
-			log.Info("SIGINT: %d %v", p.Pid, c.Path)
+			log.Debug("SIGINT: %d %v", p.Pid, c.Path)
 			syscall.Kill(-1*p.Pid, syscall.SIGINT)
 		}
 	}
@@ -96,9 +96,9 @@ func (c *Cmds) Kill() {
 	c.mu.Unlock()
 	select {
 	case <-allDoneCh:
-		log.Info("All completed")
+		log.Debug("All completed")
 	case <-time.After(5 * time.Second):
-		log.Info("Still waiting; killing all")
+		log.Debug("Still waiting; killing all")
 	}
 	c.mu.Lock()
 
@@ -109,7 +109,7 @@ func (c *Cmds) Kill() {
 	// They've been warned; now send SIGKILL
 	for _, c := range c.watching {
 		if p := c.Process; p != nil {
-			log.Info("SIGKILL: %d %v", p.Pid, c.Path)
+			log.Debug("SIGKILL: %d %v", p.Pid, c.Path)
 			syscall.Kill(-1*p.Pid, syscall.SIGKILL)
 		}
 	}
@@ -137,14 +137,14 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 	if c.killed {
 		return fmt.Errorf("killed; cannot start new cmds")
 	}
-	log.Info("Starting", cmd.Args)
+	log.Debug("Starting", cmd.Args)
 	err := cmd.Start()
 	if err == nil {
 		go func() {
 			pid := cmd.Process.Pid
-			log.Info("Cmd %v started as %v", cmd.Args, pid)
+			log.Debug("Cmd %v started as %v", cmd.Args, pid)
 			cmd.Wait()
-			log.Info("Cmd %v (%v) finished", pid, cmd.Path)
+			log.Debug("Cmd %v (%v) finished", pid, cmd.Path)
 			c.remove(cmd)
 			c.Kill()
 		}()
@@ -154,11 +154,11 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 
 // RunCmd runs a Cmd that was created by Command
 func (c *Cmds) RunCmd(cmd *exec.Cmd) error {
-	log.Info("Running", cmd.Args)
+	log.Debug("Running", cmd.Args)
 	// remove cmd once it's done
 	defer c.remove(cmd)
 	err := cmd.Run()
-	log.Info("Run Done: ", err)
+	log.Debug("Run Done: ", err)
 	return err
 }
 

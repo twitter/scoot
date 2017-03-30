@@ -68,13 +68,13 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 		newStatus.StderrRef = oldStatus.StderrRef
 	}
 
-	log.Info("StatusManager is holding status:%+v", newStatus)
+	log.Debug("StatusManager is holding status:%+v", newStatus)
 	s.runs[newStatus.RunID] = newStatus
 
 	listeners := make([]queryAndCh, 0, len(s.listeners))
 	for _, listener := range s.listeners {
 		if listener.q.Matches(newStatus) {
-			log.Info("StatusManager putting status %+v on listener channel\n", newStatus)
+			log.Debug("StatusManager putting status %+v on listener channel\n", newStatus)
 			listener.ch <- newStatus
 			close(listener.ch)
 		} else {

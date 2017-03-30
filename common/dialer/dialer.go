@@ -26,7 +26,7 @@ func NewSimpleDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Di
 }
 
 func (d *simpleDialer) Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error) {
-	log.Info("Dialing", addr)
+	log.Debug("Dialing", addr)
 
 	var transport thrift.TTransport
 	transport, err := thrift.NewTSocket(addr)

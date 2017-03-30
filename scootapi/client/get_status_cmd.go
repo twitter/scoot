@@ -24,7 +24,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 
 func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Checking Status for Scoot Job", args)
+	log.Debug("Checking Status for Scoot Job", args)
 
 	if len(args) == 0 {
 		return errors.New("a job id must be provided")

@@ -32,7 +32,7 @@ func Serve(conn *fuse.Conn, rootFs fs.FS, threadUnsafe bool) (done chan error) {
 }
 
 func serve(conn *fuse.Conn, serv *servlet, done chan error) {
-	log.Info("Serving ScootFS")
+	log.Debug("Serving ScootFS")
 	var scope *fuse.RequestScope
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -41,18 +41,18 @@ func serve(conn *fuse.Conn, serv *servlet, done chan error) {
 			n := runtime.Stack(buf, false)
 			buf = buf[:n]
 			if scope != nil {
-				log.Info("Panic recovered in handler: %v %v %v", rec, string(buf), scope.Req)
+				log.Debug("Panic recovered in handler: %v %v %v", rec, string(buf), scope.Req)
 				scope.Resp.RespondError(fmt.Errorf("%v", rec), scope)
 				scope.Release()
 			} else {
-				log.Info("Panic recovered in handler: %v %v", rec, string(buf))
+				log.Debug("Panic recovered in handler: %v %v", rec, string(buf))
 			}
 			conn.Close()
 			panic(rec)
 		}
 	}()
 	defer func() {
-		log.Info("Signaling done")
+		log.Debug("Signaling done")
 		done <- nil
 	}()
 
@@ -61,7 +61,7 @@ func serve(conn *fuse.Conn, serv *servlet, done chan error) {
 	for {
 		scope, err = conn.Read(alloc, serv)
 		if err != nil {
-			log.Info("Error reading request; quitting: %v", err)
+			log.Debug("Error reading request; quitting: %v", err)
 			done <- err
 			conn.Close()
 			return
@@ -181,7 +181,7 @@ func (s *servlet) HandleReaddir(req *fuse.ReaddirRequest, resp *fuse.ReaddirResp
 		var childrenInodes []fuse.NodeID
 		childrenInodes, err = s.controller.ReserveChildren(req.NodeID(), names)
 		if err != nil {
-			log.Info(err.Error())
+			log.Debug(err.Error())
 			return err
 		}
 

@@ -44,7 +44,7 @@ func StartJob(client *scootapi.CloudScootClient, job *scoot.JobDefinition) strin
 		}
 		// retry starting job until it succeeds.
 		// this is useful for testing where we are restarting the scheduler
-		log.Info("Error Starting Job: Retrying %v", err)
+		log.Debug("Error Starting Job: Retrying %v", err)
 	}
 }
 
@@ -76,7 +76,7 @@ func WaitForJobsToCompleteAndLogStatus(
 
 				// if there is an error just continue
 				if err != nil {
-					log.Info("Error: Updating Job Status ID: %v will retry later, Error: %v", jobId, err)
+					log.Debug("Error: Updating Job Status ID: %v will retry later, Error: %v", jobId, err)
 					done = false
 				} else {
 					jobs[jobId] = currStatus
@@ -86,7 +86,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		}
 		PrintJobs(jobs)
 		if done {
-			log.Info("Done")
+			log.Debug("Done")
 			return nil
 		}
 		time.Sleep(time.Second)
@@ -131,11 +131,11 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 		progs[i] = jobProgress{id: jobID, numTasks: len(tasks), numDone: numDone}
 	}
 
-	log.Info("Job Status")
+	log.Debug("Job Status")
 
-	log.Info("Waiting", byStatus[scoot.Status_NOT_STARTED])
-	log.Info("Running", progs)
-	log.Info("Done", byStatus[scoot.Status_COMPLETED])
+	log.Debug("Waiting", byStatus[scoot.Status_NOT_STARTED])
+	log.Debug("Running", progs)
+	log.Debug("Done", byStatus[scoot.Status_COMPLETED])
 }
 
 // Returns true if a job is completed or failed, false otherwise
