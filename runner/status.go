@@ -83,16 +83,16 @@ type RunStatus struct {
 
 func (p RunStatus) String() string {
 	var b bytes.Buffer
-	log.Infof(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
+	fmt.Fprintf(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
 
 	if p.State == COMPLETE {
-		log.Infof(&b, "\tExitCode:\t%d\n", p.ExitCode)
+		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		log.Infof(&b, "\tError:\t\t%s\n", p.Error)
+		fmt.Fprintf(&b, "\tError:\t\t%s\n", p.Error)
 	}
 
-	log.Infof(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
+	fmt.Fprintf(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
 
 	return b.String()
 }
