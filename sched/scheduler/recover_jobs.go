@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"math"
 	"sync"
 	"time"

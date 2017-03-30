@@ -2,7 +2,7 @@ package gitdb
 
 import (
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"os"
 	"path/filepath"
 

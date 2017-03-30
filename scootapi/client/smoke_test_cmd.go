@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/tests/testhelpers"

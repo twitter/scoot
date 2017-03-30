@@ -1,7 +1,7 @@
 package minfuse
 
 import (
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"io"
 	"os"
 	"syscall"

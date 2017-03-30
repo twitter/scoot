@@ -3,7 +3,7 @@ package minfuse
 import (
 	"errors"
 	"flag"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"net/http"
 	"os"
 	"os/signal"

@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"strconv"
 
 	"github.com/scootdev/scoot/scootapi"

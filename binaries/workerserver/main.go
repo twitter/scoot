@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"math/rand"
 	"net/http"
 	"strings"

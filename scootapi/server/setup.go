@@ -1,7 +1,7 @@
 package server
 
 import (
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"

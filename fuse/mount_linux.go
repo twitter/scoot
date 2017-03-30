@@ -2,7 +2,7 @@ package fuse
 
 import (
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"net"
 	"os"
 	"os/exec"

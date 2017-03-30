@@ -18,7 +18,7 @@ package stats
 
 import (
 	"encoding/json"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"strings"
 	"time"
 

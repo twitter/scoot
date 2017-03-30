@@ -2,7 +2,7 @@ package bundlestore
 
 import (
 	"errors"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"io"
 	"os"
 	"path/filepath"

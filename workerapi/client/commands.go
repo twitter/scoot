@@ -1,7 +1,7 @@
 package client
 
 import (
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"time"
 
 	"github.com/scootdev/scoot/runner"

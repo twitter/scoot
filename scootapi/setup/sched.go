@@ -1,7 +1,7 @@
 package setup
 
 import (
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"strconv"
 	"strings"
 

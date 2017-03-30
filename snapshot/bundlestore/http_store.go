@@ -3,7 +3,7 @@ package bundlestore
 import (
 	"errors"
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"io"
 	"io/ioutil"
 	"net/http"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi/setup"

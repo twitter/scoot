@@ -3,7 +3,7 @@ package gitdb
 import (
 	"flag"
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"io/ioutil"
 	"os"
 	"os/exec"

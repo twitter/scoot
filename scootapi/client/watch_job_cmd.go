@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	log "github.com/inconshreveable/log15"
+	log "github.com/scootdev/scoot/common/logger"
 	"time"
 
 	"github.com/pkg/errors"
