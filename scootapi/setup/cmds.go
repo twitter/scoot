@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	"log"
+	log "github.com/inconshreveable/log15"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -49,7 +49,7 @@ func NewSignalHandlingCmds(tmp *temp.TempDir) *Cmds {
 	go func() {
 		var sig os.Signal
 		sig = <-sigchan
-		log.Printf("signal %s received; shutting down", sig)
+		log.Info("signal %s received; shutting down", sig)
 		r.Kill()
 		os.Exit(1)
 	}()
@@ -71,7 +71,7 @@ func (c *Cmds) Kill() {
 	}
 	c.killed = true
 
-	log.Printf("Killing %d cmds", len(c.watching))
+	log.Info("Killing %d cmds", len(c.watching))
 
 	// Wait for all to be done.
 	allDoneCh := make(chan struct{})
@@ -87,7 +87,7 @@ func (c *Cmds) Kill() {
 	// First, send SIGINT to each
 	for _, c := range c.watching {
 		if p := c.Process; p != nil {
-			log.Printf("SIGINT: %d %v", p.Pid, c.Path)
+			log.Info("SIGINT: %d %v", p.Pid, c.Path)
 			syscall.Kill(-1*p.Pid, syscall.SIGINT)
 		}
 	}
@@ -96,9 +96,9 @@ func (c *Cmds) Kill() {
 	c.mu.Unlock()
 	select {
 	case <-allDoneCh:
-		log.Printf("All completed")
+		log.Info("All completed")
 	case <-time.After(5 * time.Second):
-		log.Printf("Still waiting; killing all")
+		log.Info("Still waiting; killing all")
 	}
 	c.mu.Lock()
 
@@ -109,7 +109,7 @@ func (c *Cmds) Kill() {
 	// They've been warned; now send SIGKILL
 	for _, c := range c.watching {
 		if p := c.Process; p != nil {
-			log.Printf("SIGKILL: %d %v", p.Pid, c.Path)
+			log.Info("SIGKILL: %d %v", p.Pid, c.Path)
 			syscall.Kill(-1*p.Pid, syscall.SIGKILL)
 		}
 	}
@@ -137,14 +137,14 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 	if c.killed {
 		return fmt.Errorf("killed; cannot start new cmds")
 	}
-	log.Println("Starting", cmd.Args)
+	log.Info("Starting", cmd.Args)
 	err := cmd.Start()
 	if err == nil {
 		go func() {
 			pid := cmd.Process.Pid
-			log.Printf("Cmd %v started as %v", cmd.Args, pid)
+			log.Info("Cmd %v started as %v", cmd.Args, pid)
 			cmd.Wait()
-			log.Printf("Cmd %v (%v) finished", pid, cmd.Path)
+			log.Info("Cmd %v (%v) finished", pid, cmd.Path)
 			c.remove(cmd)
 			c.Kill()
 		}()
@@ -154,11 +154,11 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 
 // RunCmd runs a Cmd that was created by Command
 func (c *Cmds) RunCmd(cmd *exec.Cmd) error {
-	log.Println("Running", cmd.Args)
+	log.Info("Running", cmd.Args)
 	// remove cmd once it's done
 	defer c.remove(cmd)
 	err := cmd.Run()
-	log.Println("Run Done: ", err)
+	log.Info("Run Done: ", err)
 	return err
 }
 

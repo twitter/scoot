@@ -3,8 +3,8 @@ package fuse
 import (
 	"bufio"
 	"errors"
+	log "github.com/inconshreveable/log15"
 	"io"
-	"log"
 	"sync"
 )
 
@@ -30,9 +30,9 @@ func lineLogger(wg *sync.WaitGroup, prefix string, ignore func(line string) bool
 		if ignore(line) {
 			continue
 		}
-		log.Printf("%s: %s", prefix, line)
+		log.Info("%s: %s", prefix, line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Printf("%s, error reading: %v", prefix, err)
+		log.Info("%s, error reading: %v", prefix, err)
 	}
 }

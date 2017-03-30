@@ -2,7 +2,7 @@ package fuse
 
 import (
 	"fmt"
-	"log"
+	log "github.com/inconshreveable/log15"
 	"net"
 	"os"
 	"os/exec"
@@ -104,7 +104,7 @@ func mount(dir string, conf *mountConfig, ready chan<- struct{}, errp *error) (f
 		case helperErr := <-helperErrCh:
 			// log the Wait error if it's not what we expected
 			if !isBoringFusermountError(err) {
-				log.Printf("mount helper failed: %v", err)
+				log.Info("mount helper failed: %v", err)
 			}
 			// and now return what we grabbed from stderr as the real
 			// error

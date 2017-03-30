@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 
 	"github.com/scootdev/scoot/fs/minfuse"
 )
@@ -9,7 +9,7 @@ import (
 func main() {
 	minfuse.SetupLog()
 	if opts, err := minfuse.InitFlags(); err != nil {
-		log.Print(err)
+		log.Info(err.Error())
 		return
 	} else {
 		minfuse.Runfs(opts)

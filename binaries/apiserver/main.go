@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	log "github.com/inconshreveable/log15"
 	"net/http"
 	"time"
 
@@ -25,7 +25,7 @@ func main() {
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	flag.Parse()
 
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	// The same config will be used for both bundlestore and frontend (TODO: frontend).
 	asset := func(s string) ([]byte, error) {
@@ -33,7 +33,7 @@ func main() {
 	}
 	configText, err := jsonconfig.GetConfigText(*configFlag, asset)
 	if err != nil {
-		log.Fatal(err)
+		log.Crit(err.Error())
 	}
 
 	type StoreAndHandler struct {

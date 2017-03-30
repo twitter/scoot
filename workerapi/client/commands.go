@@ -1,7 +1,7 @@
 package client
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 	"time"
 
 	"github.com/scootdev/scoot/runner"
@@ -28,10 +28,10 @@ func (rc *runCmd) run(cmd *cobra.Command, args []string) error {
 		Timeout:    rc.timeout,
 		SnapshotID: rc.snapshotID,
 	}
-	log.Printf("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
+	log.Info("Calling run RPC to Cloud Worker:\n%s", cmdToRun)
 
 	status, err := rc.client.Run(cmdToRun)
-	log.Printf("%v\nError: %v\n", status, err)
+	log.Info("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -48,10 +48,10 @@ func (ac *abortCmd) registerFlags(cmd *cobra.Command) {
 }
 
 func (ac *abortCmd) run(cmd *cobra.Command, args []string) error {
-	log.Println("Calling abort rpc to cloud worker", args)
+	log.Info("Calling abort rpc to cloud worker", args)
 
 	status, err := ac.client.Abort(runner.RunID(ac.runId))
-	log.Printf("%v\nError: %v\n", status, err)
+	log.Info("%v\nError: %v\n", status, err)
 	return nil
 }
 
@@ -63,10 +63,10 @@ type queryWorkerCmd struct {
 func (qc *queryWorkerCmd) registerFlags(cmd *cobra.Command) {}
 
 func (qc *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
-	log.Println("Calling queryworker rpc to cloud worker", args)
+	log.Info("Calling queryworker rpc to cloud worker", args)
 
 	status, err := qc.client.QueryWorker()
-	log.Printf("%v\nError: %v\n", status, err)
+	log.Info("%v\nError: %v\n", status, err)
 	return nil
 }
 

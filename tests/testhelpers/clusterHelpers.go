@@ -1,7 +1,7 @@
 package testhelpers
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -38,12 +38,12 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 // Until a successful response is returned.
 func WaitForClusterToBeReady(client scoot.CloudScoot) {
 	status, err := client.GetStatus("testJobId")
-	log.Printf("Waiting for Cluster Status: %+v, Error: %v", status, err)
+	log.Info("Waiting for Cluster Status: %+v, Error: %v", status, err)
 
 	for err != nil {
 		time.Sleep(500 * time.Millisecond)
 		status, err = client.GetStatus("testJobId")
-		log.Printf("Waiting for Cluster Status: %+v, Error: %v", status, err)
+		log.Info("Waiting for Cluster Status: %+v, Error: %v", status, err)
 	}
 
 	return

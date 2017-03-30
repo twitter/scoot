@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"log"
+	log "github.com/inconshreveable/log15"
 	"syscall"
 	"unsafe"
 )
@@ -202,7 +202,7 @@ func (c *Conn) read(b []byte) (int, error) {
 	for {
 		n, err := syscall.Read(c.fd(), b)
 		if err != nil {
-			log.Println("read.err ", n, err)
+			log.Info("read.err ", n, err)
 		}
 		if err == syscall.EINTR {
 			// OSXFUSE sends EINTR to userspace when a request interrupt
@@ -256,7 +256,7 @@ func (c *Conn) writeToKernel(msg []byte) error {
 	out.len = uint32(len(msg))
 
 	if Trace {
-		log.Print("fuse done")
+		log.Info("fuse done")
 	}
 	nn, err := syscall.Write(c.fd(), msg)
 	if err == nil && nn != len(msg) {

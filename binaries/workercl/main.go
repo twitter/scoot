@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
@@ -23,11 +23,11 @@ func main() {
 	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
 	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
-		log.Fatal("Failed to create worker CLIClient: ", err)
+		log.Crit("Failed to create worker CLIClient: ", err)
 	}
 
 	err = cl.Exec()
 	if err != nil {
-		log.Fatal("Error running workercl: ", err)
+		log.Crit("Error running workercl: ", err)
 	}
 }

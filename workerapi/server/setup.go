@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
@@ -68,11 +68,11 @@ func RunServer(
 	schema jsonconfig.Schema,
 	config []byte) {
 
-	log.Println("workerapi/server RunServer(), config is:", string(config))
+	log.Info("workerapi/server RunServer(), config is:", string(config))
 	// Parse Config
 	mod, err := schema.Parse(config)
 	if err != nil {
-		log.Fatal("Error configuring Worker: ", err)
+		log.Crit("Error configuring Worker: ", err)
 	}
 
 	// Initialize Objects Based on Config Settings
@@ -81,7 +81,7 @@ func RunServer(
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error injecting servers", err)
+		log.Crit("Error injecting servers", err)
 	}
 
 	errCh := make(chan error)
@@ -91,5 +91,5 @@ func RunServer(
 	go func() {
 		errCh <- servers.thrift.Serve()
 	}()
-	log.Fatal("Error serving: ", <-errCh)
+	log.Crit("Error serving: ", <-errCh)
 }

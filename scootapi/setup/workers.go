@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	"log"
+	log "github.com/inconshreveable/log15"
 	"strconv"
 
 	"github.com/scootdev/scoot/scootapi"
@@ -37,7 +37,7 @@ func NewInMemoryWorkers(workersCfg *WorkerConfig) *InMemoryWorkersStrategy {
 }
 
 func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
-	log.Println("Using in-memory workers")
+	log.Info("Using in-memory workers")
 	if s.workersCfg.Count == 0 {
 		return "local.memory", nil
 	}
@@ -67,14 +67,14 @@ func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *Loc
 }
 
 func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
-	log.Printf("Using local workers")
+	log.Info("Using local workers")
 	if s.workersCfg.Count < 0 {
 		return "", fmt.Errorf("LocalWorkers must start with at least 1 worker (or zero for default #): %v", s.workersCfg.Count)
 	} else if s.workersCfg.Count == 0 {
 		s.workersCfg.Count = DefaultWorkerCount
 	}
 
-	log.Printf("Using %d local workers", s.workersCfg.Count)
+	log.Info("Using %d local workers", s.workersCfg.Count)
 
 	bin, err := s.builder.Worker()
 	if err != nil {

@@ -3,7 +3,7 @@
 package server
 
 import (
-	"log"
+	log "github.com/inconshreveable/log15"
 	"sync"
 	"time"
 
@@ -105,7 +105,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Printf("Worker Running:%s", cmd)
+	log.Info("Worker Running:%s", cmd)
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)
