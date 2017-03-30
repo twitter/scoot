@@ -57,7 +57,7 @@
 	path = vendor/github.com/scootdev/groupcache
 	url = https://github.com/scootdev/groupcache
 	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
-[submodule "vendor/github.com/scootdev/groupcache"]
+[submodule "vendor/github.com/inconshreveable/log15"]
 	path = vendor/github.com/inconshreveable/log15
 	url = https://github.com/inconshreveable/log15
 	branch = 39bacc234bf1afd0b68573e95b45871f67ba2cd4
