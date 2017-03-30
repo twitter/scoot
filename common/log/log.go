@@ -21,7 +21,7 @@ var Log = log.New()
 
 // New returns a new Logger that has this logger's context plus the given context
 func New(ctx ...interface{}) log.Logger {
-	return log.New(ctx)
+	return Log.New(ctx)
 }
 
 // GetHandler gets the handler associated with the logger.
