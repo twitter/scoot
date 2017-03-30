@@ -9,7 +9,7 @@ import (
 func main() {
 	minfuse.SetupLog()
 	if opts, err := minfuse.InitFlags(); err != nil {
-		log.Debug(err.Error())
+		log.Info(err.Error())
 		return
 	} else {
 		minfuse.Runfs(opts)

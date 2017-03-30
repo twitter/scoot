@@ -55,7 +55,7 @@ func (schema Schema) Parse(text []byte) (Configuration, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse top-level config: %v", err)
 	}
-	log.Debug("config parsed to:%+v\n", parsedConfig)
+	log.Info("config parsed to:%+v\n", parsedConfig)
 
 	result := Configuration(make(map[string]ice.Module))
 	// Parse each option (aka Implementations, which isn't a valid variable name)
@@ -102,13 +102,13 @@ func parseType(data json.RawMessage) (string, error) {
 func GetConfigText(configFlag string, asset func(string) ([]byte, error)) ([]byte, error) {
 	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]*$`, []byte(configFlag)); matched {
 		configFileName := path.Join("config", configFlag)
-		log.Debug("reading config filename %v", configFileName)
+		log.Info("reading config filename %v", configFileName)
 		configText, err := asset(configFileName)
 		if err != nil {
 			return nil, fmt.Errorf("Scheduler: Error Loading Config File %v: %v", configFileName, err)
 		}
 		return configText, nil
 	}
-	log.Debug("Scheduler: using -config as JSON config: %v", configFlag)
+	log.Info("Scheduler: using -config as JSON config: %v", configFlag)
 	return []byte(configFlag), nil
 }

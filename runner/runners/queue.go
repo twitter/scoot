@@ -99,7 +99,7 @@ func (c *QueueController) start(cmd *runner.Command, id runner.RunID) {
 
 func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 	for st := range updateCh {
-		log.Debug("Queue pulled result:%+v\n", st)
+		log.Info("Queue pulled result:%+v\n", st)
 		if st.State.IsDone() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
@@ -108,7 +108,7 @@ func (c *QueueController) watch(updateCh <-chan runner.RunStatus) {
 			if len(c.queue) > 0 {
 				cmdAndID := c.queue[0]
 				c.queue = c.queue[1:]
-				log.Debug("Running from queue:%+v\n", cmdAndID)
+				log.Info("Running from queue:%+v\n", cmdAndID)
 				c.start(cmdAndID.cmd, cmdAndID.id)
 			}
 		}

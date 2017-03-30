@@ -36,8 +36,8 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
 
 	s := spew.Sdump(dest)
-	log.Debug("************* Extracted:")
-	log.Debug(s)
+	log.Info("************* Extracted:")
+	log.Info(s)
 	return nil
 }
 

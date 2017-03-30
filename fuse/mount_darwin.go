@@ -146,7 +146,7 @@ func callMount(bin string, daemonVar string, dir string, conf *mountConfig, f *o
 			case helperErr := <-helperErrCh:
 				// log the Wait error if it's not what we expected
 				if !isBoringMountOSXFUSEError(err) {
-					log.Debug("mount helper failed: %v", err)
+					log.Info("mount helper failed: %v", err)
 				}
 				// and now return what we grabbed from stderr as the real
 				// error

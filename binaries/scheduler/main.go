@@ -45,6 +45,6 @@ func main() {
 		},
 	)
 
-	log.Debug("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
+	log.Info("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
 	server.RunServer(bag, schema, configText)
 }

@@ -27,13 +27,13 @@ type httpStore struct {
 
 func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 	uri := s.rootURI + name
-	log.Debug("Fetching %s", uri)
+	log.Info("Fetching %s", uri)
 	resp, err := s.client.Get(uri)
 	if err != nil {
-		log.Debug("Fetched w/error: %s %v", uri, err)
+		log.Info("Fetched w/error: %s %v", uri, err)
 		return nil, err
 	}
-	log.Debug("Fetch result %s %v", uri, resp.StatusCode)
+	log.Info("Fetch result %s %v", uri, resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		return resp.Body, nil
@@ -65,7 +65,7 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 		return errors.New("'/' not allowed in name when writing bundles.")
 	}
 	uri := s.rootURI + name
-	log.Debug("Posting %s", uri)
+	log.Info("Posting %s", uri)
 	resp, err := s.client.Post(uri, "text/plain", data)
 	if err == nil {
 		defer resp.Body.Close()
@@ -74,6 +74,6 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 			return errors.New(resp.Status + ": " + string(data))
 		}
 	}
-	log.Debug("Posted %s, err: %v", uri, err)
+	log.Info("Posted %s, err: %v", uri, err)
 	return err
 }

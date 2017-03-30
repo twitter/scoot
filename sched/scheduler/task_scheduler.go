@@ -41,9 +41,9 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 	remainingTasks := getAssignments(cs, tasks, &assignments, nodeGroups, []string{""})
 	remainingTasks = getAssignments(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
 	if len(remainingTasks) == 0 {
-		log.Debug("Scheduled all tasks (%d)", len(tasks))
+		log.Info("Scheduled all tasks (%d)", len(tasks))
 	} else {
-		log.Debug("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
+		log.Info("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
 	}
 	return assignments, nodeGroups
 }
@@ -71,7 +71,7 @@ Loop:
 					}
 					nodeGroups[task.Def.SnapshotID].busy[nodeId] = node
 					delete(nodeGroups[snapId].idle, nodeId)
-					log.Debug("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
+					log.Info("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
 						task.JobId, task.TaskId, nodeId, len(*assignments), numTotalTasks)
 					continue Loop
 				}

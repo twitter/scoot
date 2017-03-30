@@ -113,10 +113,10 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			if _, ok := c.nodes[update.Node.Id()]; !ok {
 				c.nodes[update.Node.Id()] = newNodeState(update.Node)
 				c.nodeGroups[""].idle[update.Node.Id()] = update.Node
-				log.Debug("Added node: %+v, now have %d nodes\n", update.Node, len(c.nodes))
+				log.Info("Added node: %+v, now have %d nodes\n", update.Node, len(c.nodes))
 			}
 		case cluster.NodeRemoved:
-			log.Debug("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
+			log.Info("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
 			if nodeState, ok := c.nodes[update.Id]; ok {
 				delete(c.nodeGroups[nodeState.snapshotId].idle, update.Id)
 				delete(c.nodeGroups[nodeState.snapshotId].busy, update.Id)

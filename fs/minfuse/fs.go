@@ -55,8 +55,8 @@ func (n *minNode) Readlink() (string, error) {
 
 func (n *minNode) Lookup(name string) (fs.Node, error) {
 	if Trace {
-		log.Debug("Min: Lookup entry ", n.p, name)
-		defer log.Debug("Min: Lookup exit ", n.p, name)
+		log.Info("Min: Lookup entry ", n.p, name)
+		defer log.Info("Min: Lookup exit ", n.p, name)
 	}
 
 	// minNode stores the joined path so pass discards=false.
@@ -77,8 +77,8 @@ func (n *minNode) Lookup(name string) (fs.Node, error) {
 
 func (n *minNode) Open() (fs.Handle, error) {
 	if Trace {
-		log.Debug("Min: Open entry ", n.p)
-		defer log.Debug("Min: Open exit ", n.p)
+		log.Info("Min: Open entry ", n.p)
+		defer log.Info("Min: Open exit ", n.p)
 	}
 	return &minHandle{n.fs, n.p}, nil
 }
@@ -94,8 +94,8 @@ func (h *minHandle) Release() error {
 
 func (h *minHandle) ReadAt(data []byte, offset int64) (int, error) {
 	if Trace {
-		log.Debug("Min: Read entry ", h.p)
-		defer log.Debug("Min: Read exit ", h.p)
+		log.Info("Min: Read entry ", h.p)
+		defer log.Info("Min: Read exit ", h.p)
 	}
 	//TODO: snap.Open() should be called from minNode.Open() instead.
 	f, err := h.fs.snap.Open(h.p)
@@ -109,8 +109,8 @@ func (h *minHandle) ReadAt(data []byte, offset int64) (int, error) {
 
 func (h *minHandle) ReadDirAll() ([]fuse.Dirent, error) {
 	if Trace {
-		log.Debug("Min: ReadDirAll entry ", h.p)
-		defer log.Debug("Min: ReadDirAll exit ", h.p)
+		log.Info("Min: ReadDirAll entry ", h.p)
+		defer log.Info("Min: ReadDirAll exit ", h.p)
 	}
 	dirents, err := h.fs.snap.Readdirents(h.p)
 	if err != nil {
