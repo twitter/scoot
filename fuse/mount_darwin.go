@@ -3,7 +3,7 @@ package fuse
 import (
 	"errors"
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"os/exec"
 	"path"

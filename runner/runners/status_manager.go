@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"github.com/scootdev/scoot/runner"
 )
 

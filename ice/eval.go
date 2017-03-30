@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"reflect"
 	"runtime"
 	"runtime/debug"

@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"time"
 
 	"github.com/pkg/errors"

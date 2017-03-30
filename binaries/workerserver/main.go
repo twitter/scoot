@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"math/rand"
 	"net/http"
 	"strings"

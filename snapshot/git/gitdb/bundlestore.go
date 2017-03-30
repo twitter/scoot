@@ -3,7 +3,7 @@ package gitdb
 import (
 	"errors"
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"os"
 	"os/exec"

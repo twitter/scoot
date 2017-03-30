@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"strings"
 	"time"
 

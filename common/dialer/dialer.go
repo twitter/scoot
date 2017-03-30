@@ -4,7 +4,7 @@ package dialer
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )

@@ -5,7 +5,7 @@ package endpoints
 import (
 	"bytes"
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"net/http"
 	"time"

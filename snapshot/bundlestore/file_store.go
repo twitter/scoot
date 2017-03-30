@@ -2,7 +2,7 @@ package bundlestore
 
 import (
 	"errors"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"os"
 	"path/filepath"

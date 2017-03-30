@@ -7,7 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"os"
 	"path"
 

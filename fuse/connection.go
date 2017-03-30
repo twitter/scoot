@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"syscall"
 	"unsafe"
 )

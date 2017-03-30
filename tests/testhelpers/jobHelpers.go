@@ -2,7 +2,7 @@ package testhelpers
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"math/rand"
 	"sort"
 	"time"

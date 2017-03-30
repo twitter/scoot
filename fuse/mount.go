@@ -3,7 +3,7 @@ package fuse
 import (
 	"bufio"
 	"errors"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"sync"
 )

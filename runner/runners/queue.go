@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"

@@ -2,7 +2,7 @@ package gitfiler
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"os/exec"
 
 	"github.com/scootdev/scoot/common/stats"

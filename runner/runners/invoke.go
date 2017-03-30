@@ -2,7 +2,7 @@ package runners
 
 import (
 	"fmt"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"os"
 	"path/filepath"

@@ -6,14 +6,14 @@
 // Ex. For logging file & line # to stdout,
 //
 // import (
-// 		log "github.com/scootdev/scoot/common/logger"
+// 		"github.com/scootdev/scoot/common/log"
 // 		"github.com/inconshreveable/log15"
 // )
 //
 // h := log15.CallerFileHandler(log15.StdoutHandler)
 // log.SetHandler(h)
 
-package logger
+package log
 
 import log "github.com/inconshreveable/log15"
 

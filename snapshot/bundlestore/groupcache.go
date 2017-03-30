@@ -2,7 +2,7 @@ package bundlestore
 
 import (
 	"bytes"
-	log "github.com/scootdev/scoot/common/logger"
+	"github.com/scootdev/scoot/common/log"
 	"io"
 	"io/ioutil"
 	"net/http"
