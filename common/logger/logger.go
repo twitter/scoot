@@ -1,8 +1,7 @@
 // Wrapper for github.com/inconshreveable/log15
-// Allows configurable handlers for usage within Twitter source
-// Levels available for use are (in ascending order)
-// Crit, Info, and Debug
-
+// Allows configurable handlers for users of scoot
+// log15 handler docs are available at:
+// https://godoc.org/github.com/inconshreveable/log15#Handler
 package logger
 
 import log "github.com/inconshreveable/log15"
