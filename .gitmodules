@@ -203,3 +203,11 @@
 	path = vendor/github.com/pmezard/go-difflib
 	url = https://github.com/pmezard/go-difflib.git
 	branch = 792786c7400a136282c1664665ae0a8db921c6c2
+[submodule "vendor/github.com/go-stack/stack"]
+	path = vendor/github.com/go-stack/stack
+	url = https://github.com/go-stack/stack
+	branch = 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
+[submodule "vendor/github.com/mattn/go-colorable"]
+	path = vendor/github.com/mattn/go-colorable
+	url = https://github.com/mattn/go-colorable
+	branch = ded68f7a9561c023e790de24279db7ebf473ea80
