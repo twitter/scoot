@@ -7,7 +7,6 @@ package runner
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"time"
 )
 

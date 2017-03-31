@@ -29,7 +29,7 @@ type Options struct {
 }
 
 func SetupLog() {
-	// log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	log.SetFormatter(&log.TextFormatter{})
 }
 
 func InitFlags() (*Options, error) {

@@ -3,7 +3,6 @@ package runner
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 )
 
 type RunID string

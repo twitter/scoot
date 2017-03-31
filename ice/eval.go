@@ -61,7 +61,7 @@ func (s stack) String() string {
 	log.Infoln(b)
 	log.Infoln(b, "goice stacktrace:")
 	for _, f := range s {
-		log.Infof(b, "\t%s\n", f.key)
+		fmt.Fprintf(b, "\t%s\n", f.key)
 	}
 	log.Infoln(b, "end goice stacktrace")
 	return b.String()
