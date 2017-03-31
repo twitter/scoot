@@ -1,12 +1,11 @@
 package server
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/golang/mock/gomock"
-
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	s "github.com/scootdev/scoot/saga"

@@ -6,7 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"

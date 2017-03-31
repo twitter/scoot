@@ -2,7 +2,7 @@ package async
 
 import (
 	"errors"
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"testing"
 )
 

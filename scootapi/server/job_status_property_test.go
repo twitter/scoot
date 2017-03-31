@@ -3,7 +3,6 @@
 package server
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/leanovate/gopter"
@@ -11,6 +10,7 @@ import (
 
 	s "github.com/scootdev/scoot/saga"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 

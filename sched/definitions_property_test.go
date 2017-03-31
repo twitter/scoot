@@ -3,7 +3,7 @@
 package sched
 
 import (
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	"reflect"

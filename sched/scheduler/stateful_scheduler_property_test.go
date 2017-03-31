@@ -3,7 +3,7 @@
 package scheduler
 
 import (
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/sched"
 	"testing"

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 )
