@@ -70,34 +70,34 @@ func GetAndPrintStatus(jobId string, thriftClient scoot.CloudScoot) (*scoot.Stat
 }
 
 func PrintJobStatus(jobStatus *scoot.JobStatus) {
-	log.Printf("Job id: %s\n", jobStatus.ID)
-	log.Printf("Job status: %s\n", jobStatus.Status.String())
+	log.Infof("Job id: %s\n", jobStatus.ID)
+	log.Infof("Job status: %s\n", jobStatus.Status.String())
 	for taskId, taskStatus := range jobStatus.TaskStatus {
-		log.Printf("\tTask %s {\n", taskId)
-		log.Printf("\t\tStatus: %s\n", taskStatus.String())
+		log.Infof("\tTask %s {\n", taskId)
+		log.Infof("\t\tStatus: %s\n", taskStatus.String())
 		runStatus, ok := jobStatus.TaskData[taskId]
 		if ok {
 			if runStatus.OutUri != nil {
-				log.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+				log.Infof("\t\tStdout: %v\n", *runStatus.OutUri)
 			}
 			if runStatus.ErrUri != nil {
-				log.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+				log.Infof("\t\tStderr: %v\n", *runStatus.ErrUri)
 			}
 			if runStatus.SnapshotId != nil {
-				log.Printf("\t\tSnapshot: %v\n", *runStatus.SnapshotId)
+				log.Infof("\t\tSnapshot: %v\n", *runStatus.SnapshotId)
 			}
 			if taskStatus == scoot.Status_COMPLETED {
 				if runStatus.ExitCode != nil {
 					exitCode := *runStatus.ExitCode
-					log.Printf("\t\tExitCode: %d\n", exitCode)
+					log.Infof("\t\tExitCode: %d\n", exitCode)
 				}
 				if runStatus.Error != nil {
-					log.Printf("\t\tError: %v\n", *runStatus.Error)
+					log.Infof("\t\tError: %v\n", *runStatus.Error)
 				}
 			}
 
 		}
 
-		log.Printf("\t}\n")
+		log.Infof("\t}\n")
 	}
 }

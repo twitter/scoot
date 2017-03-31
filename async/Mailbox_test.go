@@ -58,7 +58,7 @@ func storeValue_withMailbox(num int) error {
 			successfulWrites++
 		}
 		returnedWrites++
-		log.Println("completedWrites", returnedWrites)
+		log.Infoln("completedWrites", returnedWrites)
 	}
 
 	// Send to Replica One

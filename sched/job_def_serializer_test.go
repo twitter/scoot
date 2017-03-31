@@ -63,20 +63,20 @@ func makeFixedSampleJob() *Job {
 }
 
 func Print(job *Job) {
-	log.Printf(fmt.Sprintf("job id:%s\n", job.Id))
-	log.Printf(fmt.Sprintf("job type:%s\n", job.Def.JobType))
+	log.Infof(fmt.Sprintf("job id:%s\n", job.Id))
+	log.Infof(fmt.Sprintf("job type:%s\n", job.Def.JobType))
 	for taskName, taskDef := range job.Def.Tasks {
-		log.Printf(fmt.Sprintf("taskName: %s\n", taskName))
-		log.Printf(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
-		log.Printf(fmt.Sprintf("\tsnapshotID: %s\n", taskDef.SnapshotID))
+		log.Infof(fmt.Sprintf("taskName: %s\n", taskName))
+		log.Infof(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
+		log.Infof(fmt.Sprintf("\tsnapshotID: %s\n", taskDef.SnapshotID))
 		for envVarName, envVarVal := range taskDef.EnvVars {
-			log.Printf(fmt.Sprintf("\tenvVar:%s = %s\n", envVarName, envVarVal))
+			log.Infof(fmt.Sprintf("\tenvVar:%s = %s\n", envVarName, envVarVal))
 		}
 		for i, arg := range taskDef.Argv {
-			log.Printf(fmt.Sprintf("\targ[%d]:%s\n", i, arg))
+			log.Infof(fmt.Sprintf("\targ[%d]:%s\n", i, arg))
 		}
 	}
-	log.Printf("\n")
+	log.Infof("\n")
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool) bool {
@@ -90,7 +90,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		asByteArray, err = thrifthelpers.BinarySerialize(thriftJob)
 	}
 	if err != nil {
-		log.Printf("error: couldn't serialize the fixed job def. %s\n", err.Error())
+		log.Infof("error: couldn't serialize the fixed job def. %s\n", err.Error())
 		return false
 
 	} else {
@@ -103,23 +103,23 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			err = thrifthelpers.BinaryDeserialize(newThriftJob, asByteArray)
 		}
 		if err != nil {
-			log.Printf("serialize/deserialize test couldn't deserialize object:\n")
+			log.Infof("serialize/deserialize test couldn't deserialize object:\n")
 			Print(domainJob)
-			log.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-			log.Printf("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
+			log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
+			log.Infof("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 			return false
 
 			// compare the orig and generated task definitions
 		} else {
 			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
 			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
-				log.Printf("serialize/deserialize test didn't return equivalent value:\n")
-				log.Printf("original jobDef:\n")
+				log.Infof("serialize/deserialize test didn't return equivalent value:\n")
+				log.Infof("original jobDef:\n")
 				Print(domainJob)
-				log.Printf(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-				log.Printf("deserialized to:\n")
+				log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
+				log.Infof("deserialized to:\n")
 				Print(newDomainJob)
-				log.Printf("fail: task definitions are not equal:\n")
+				log.Infof("fail: task definitions are not equal:\n")
 				return false
 			}
 		}

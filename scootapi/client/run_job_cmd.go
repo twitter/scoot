@@ -98,7 +98,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	log.Println(jobId.ID)
+	log.Infoln(jobId.ID)
 	log.Infof("JobID:%s\n", jobId.ID)
 
 	return nil

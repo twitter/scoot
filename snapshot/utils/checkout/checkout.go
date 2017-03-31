@@ -126,5 +126,5 @@ func main() {
 	}
 	ctx := checkoutContext{srcRoot: srcRoot, snap: snap, dstRoot: dstRoot}
 	copyFiles(&ctx, "")
-	log.Printf("Checked out\n")
+	log.Infof("Checked out\n")
 }
