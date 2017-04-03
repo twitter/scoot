@@ -24,7 +24,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 
 func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Infoln("Checking Status for Scoot Job", args)
+	log.Info("Checking Status for Scoot Job", args)
 
 	if len(args) == 0 {
 		return errors.New("a job id must be provided")
@@ -52,7 +52,7 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		}
 		log.Infof("%s\n", asJson)
 	} else {
-		log.Infoln("Job Status:", status)
+		log.Info("Job Status:", status)
 	}
 
 	return nil

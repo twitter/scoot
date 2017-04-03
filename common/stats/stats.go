@@ -199,7 +199,7 @@ func capture(src StatsRegistry, captured StatsRegistry) StatsRegistry {
 		case Latency:
 			captured.GetOrRegister(name, m.Capture())
 		default:
-			log.Infoln("Unrecognized capture instrument: ", name, i)
+			log.Info("Unrecognized capture instrument: ", name, i)
 		}
 	})
 	return captured
@@ -480,7 +480,7 @@ func (r *finagleStatsRegistry) MarshalAll() jsonMap {
 			l := stat.Capture()
 			r.marshalHistogram(data, name, l.(HistogramView), l.GetPrecision())
 		default:
-			log.Infoln("Unrecognized marshal instrument: ", name, i)
+			log.Info("Unrecognized marshal instrument: ", name, i)
 		}
 	})
 	return data

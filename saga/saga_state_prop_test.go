@@ -278,7 +278,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 									return false
 								}
 							default:
-								log.Infoln(fmt.Sprintf("Unrecognized state taskId: %s, taskState: %s ", taskId, taskState))
+								log.Info(fmt.Sprintf("Unrecognized state taskId: %s, taskState: %s ", taskId, taskState))
 								return false
 							}
 						}

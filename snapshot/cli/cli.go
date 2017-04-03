@@ -133,7 +133,7 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	log.Infoln(id)
+	log.Info(id)
 	return nil
 }
 
@@ -166,7 +166,7 @@ func (c *exportGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	log.Infoln(commit)
+	log.Info(commit)
 	return nil
 }
 
@@ -189,7 +189,7 @@ func (c *ingestDirCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) err
 		return err
 	}
 
-	log.Infoln(id)
+	log.Info(id)
 	return nil
 }
 

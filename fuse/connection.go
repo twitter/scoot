@@ -202,7 +202,7 @@ func (c *Conn) read(b []byte) (int, error) {
 	for {
 		n, err := syscall.Read(c.fd(), b)
 		if err != nil {
-			log.Infoln("read.err ", n, err)
+			log.Info("read.err ", n, err)
 		}
 		if err == syscall.EINTR {
 			// OSXFUSE sends EINTR to userspace when a request interrupt

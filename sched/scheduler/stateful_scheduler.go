@@ -307,7 +307,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			func(err error) {
 				// update the jobState
 				if err == nil {
-					log.Infoln("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.Info("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
 
 					jobState.taskCompleted(taskId)
 				} else {
@@ -315,13 +315,13 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Infoln("Error running job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
+					log.Info("Error running job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
 					jobState.errorRunningTask(taskId, err)
 				}
 
 				// update cluster state that this node is now free
 				s.clusterState.taskCompleted(nodeId, taskId)
-				log.Infoln("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
+				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}
 }

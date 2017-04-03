@@ -41,7 +41,7 @@ type TaskDef struct {
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
-	log.Infoln("Running on scoot", args)
+	log.Info("Running on scoot", args)
 
 	jobDef := scoot.NewJobDefinition()
 	switch {
@@ -49,7 +49,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		return errors.New("You must provide either args or a job definition")
 	case len(args) > 0:
 		if c.snapshotId == "" {
-			log.Infoln("No snapshotID provided - cmd will be run in an empty tmpdir.")
+			log.Info("No snapshotID provided - cmd will be run in an empty tmpdir.")
 		} else if !strings.Contains(c.snapshotId, "-") {
 			//this is not a bundleID, assume it's a sha that's available upstream. Cf. snapshot/git/gitdb/README.md
 			streamId := fmt.Sprintf("stream-swh-%s-%s", c.streamName, c.snapshotId)
@@ -98,7 +98,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	log.Infoln(jobId.ID)
+	log.Info(jobId.ID)
 	log.Infof("JobID:%s\n", jobId.ID)
 
 	return nil

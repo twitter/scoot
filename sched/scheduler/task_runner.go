@@ -34,7 +34,7 @@ type taskRunner struct {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Infoln("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
+	log.Info("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		return err

@@ -48,7 +48,7 @@ func (ac *abortCmd) registerFlags(cmd *cobra.Command) {
 }
 
 func (ac *abortCmd) run(cmd *cobra.Command, args []string) error {
-	log.Infoln("Calling abort rpc to cloud worker", args)
+	log.Info("Calling abort rpc to cloud worker", args)
 
 	status, err := ac.client.Abort(runner.RunID(ac.runId))
 	log.Infof("%v\nError: %v\n", status, err)
@@ -63,7 +63,7 @@ type queryWorkerCmd struct {
 func (qc *queryWorkerCmd) registerFlags(cmd *cobra.Command) {}
 
 func (qc *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
-	log.Infoln("Calling queryworker rpc to cloud worker", args)
+	log.Info("Calling queryworker rpc to cloud worker", args)
 
 	status, err := qc.client.QueryWorker()
 	log.Infof("%v\nError: %v\n", status, err)

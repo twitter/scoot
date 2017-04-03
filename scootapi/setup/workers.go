@@ -37,7 +37,7 @@ func NewInMemoryWorkers(workersCfg *WorkerConfig) *InMemoryWorkersStrategy {
 }
 
 func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
-	log.Infoln("Using in-memory workers")
+	log.Info("Using in-memory workers")
 	if s.workersCfg.Count == 0 {
 		return "local.memory", nil
 	}

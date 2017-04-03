@@ -36,8 +36,8 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
 
 	s := spew.Sdump(dest)
-	log.Infoln("************* Extracted:")
-	log.Infoln(s)
+	log.Info("************* Extracted:")
+	log.Info(s)
 	return nil
 }
 
@@ -58,12 +58,12 @@ type stack []frame
 
 func (s stack) String() string {
 	b := new(bytes.Buffer)
-	log.Infoln(b)
-	log.Infoln(b, "goice stacktrace:")
+	log.Info(b)
+	log.Info(b, "goice stacktrace:")
 	for _, f := range s {
 		fmt.Fprintf(b, "\t%s\n", f.key)
 	}
-	log.Infoln(b, "end goice stacktrace")
+	log.Info(b, "end goice stacktrace")
 	return b.String()
 }
 

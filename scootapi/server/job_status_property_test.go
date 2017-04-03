@@ -34,46 +34,46 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 			switch jobStatus.Status {
 			case scoot.Status_COMPLETED:
 				if !state.IsSagaCompleted() {
-					log.Infoln("Job Status is Completed when Saga is not")
+					log.Info("Job Status is Completed when Saga is not")
 					return false
 				}
 				if state.IsSagaAborted() {
-					log.Infoln("Job Status is Completed when Saga is Aborted")
+					log.Info("Job Status is Completed when Saga is Aborted")
 					return false
 				}
 
 			case scoot.Status_IN_PROGRESS:
 				if state.IsSagaCompleted() {
-					log.Infoln("Job Status is InProgress when Saga is Completed")
+					log.Info("Job Status is InProgress when Saga is Completed")
 					return false
 				}
 				if state.IsSagaAborted() {
-					log.Infoln("Job Status is InProgress when Saga is Aborted")
+					log.Info("Job Status is InProgress when Saga is Aborted")
 					return false
 				}
 
 			case scoot.Status_ROLLED_BACK:
 				if !state.IsSagaCompleted() {
-					log.Infoln("Job Status is RolledBack but Saga is not Completed")
+					log.Info("Job Status is RolledBack but Saga is not Completed")
 					return false
 				}
 				if !state.IsSagaAborted() {
-					log.Infoln("Job Status is RolledBack but Saga is not Aborted")
+					log.Info("Job Status is RolledBack but Saga is not Aborted")
 					return false
 				}
 
 			case scoot.Status_ROLLING_BACK:
 				if !state.IsSagaAborted() {
-					log.Infoln("Job Status is RollingBack but the Saga is not Aborted")
+					log.Info("Job Status is RollingBack but the Saga is not Aborted")
 					return false
 				}
 				if state.IsSagaCompleted() {
-					log.Infoln("Job Status is RollingBack but the Saga is Completed")
+					log.Info("Job Status is RollingBack but the Saga is Completed")
 					return false
 				}
 
 			case scoot.Status_NOT_STARTED:
-				log.Infoln("Unexepected Job State Not Started")
+				log.Info("Unexepected Job State Not Started")
 				return false
 			}
 
@@ -83,12 +83,12 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 				switch jobStatus.TaskStatus[id] {
 				case scoot.Status_COMPLETED:
 					if state.IsSagaAborted() {
-						log.Infoln("Task Status is Completed but Saga is Aborted, Expected RolledBack", id)
+						log.Info("Task Status is Completed but Saga is Aborted, Expected RolledBack", id)
 						return false
 					}
 
 					if !state.IsTaskCompleted(id) {
-						log.Infoln("Task Status is Completed but Saga Task is Not Completed, Expected InProgress", id)
+						log.Info("Task Status is Completed but Saga Task is Not Completed, Expected InProgress", id)
 						return false
 					}
 
@@ -99,37 +99,37 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 
 				case scoot.Status_IN_PROGRESS:
 					if state.IsSagaAborted() {
-						log.Infoln("Task Status is InProgress but Saga is Aborted, Expected RollingBack", id)
+						log.Info("Task Status is InProgress but Saga is Aborted, Expected RollingBack", id)
 						return false
 					}
 
 					if state.IsTaskCompleted(id) {
-						log.Infoln("Task Status is InProgress but Saga Task is Completed, Expected Completed", id)
+						log.Info("Task Status is InProgress but Saga Task is Completed, Expected Completed", id)
 						return false
 					}
 
 				case scoot.Status_ROLLED_BACK:
 					if !state.IsSagaAborted() {
-						log.Infoln("Task Status is Rolled Back but Saga is Not Aborted, Expected Completed", id)
+						log.Info("Task Status is Rolled Back but Saga is Not Aborted, Expected Completed", id)
 						return false
 					}
 
 					if !state.IsCompTaskCompleted(id) {
-						log.Infoln("Task Status is RolledBack but Saga has not completed the Comp Task, Expected RollingBack", id)
+						log.Info("Task Status is RolledBack but Saga has not completed the Comp Task, Expected RollingBack", id)
 						return false
 					}
 
 				case scoot.Status_ROLLING_BACK:
 					if !state.IsSagaAborted() {
-						log.Infoln("Task Status is RollingBack but Saga is Not Aborted, Expected In Progress", id)
+						log.Info("Task Status is RollingBack but Saga is Not Aborted, Expected In Progress", id)
 						return false
 					}
 
 					if state.IsCompTaskCompleted(id) {
-						log.Infoln("Task Status is RollingBack but Saga has completed CompTask, Expected RolledBack", id)
+						log.Info("Task Status is RollingBack but Saga has completed CompTask, Expected RolledBack", id)
 					}
 				case scoot.Status_NOT_STARTED:
-					log.Infoln("Unexepected Task State Not Started", id)
+					log.Info("Unexepected Task State Not Started", id)
 					return false
 				}
 			}

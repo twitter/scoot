@@ -137,7 +137,7 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 	if c.killed {
 		return fmt.Errorf("killed; cannot start new cmds")
 	}
-	log.Infoln("Starting", cmd.Args)
+	log.Info("Starting", cmd.Args)
 	err := cmd.Start()
 	if err == nil {
 		go func() {
@@ -154,11 +154,11 @@ func (c *Cmds) StartCmd(cmd *exec.Cmd) error {
 
 // RunCmd runs a Cmd that was created by Command
 func (c *Cmds) RunCmd(cmd *exec.Cmd) error {
-	log.Infoln("Running", cmd.Args)
+	log.Info("Running", cmd.Args)
 	// remove cmd once it's done
 	defer c.remove(cmd)
 	err := cmd.Run()
-	log.Infoln("Run Done: ", err)
+	log.Info("Run Done: ", err)
 	return err
 }
 

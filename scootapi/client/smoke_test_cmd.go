@@ -40,8 +40,8 @@ func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 	if err != nil {
 		return err
 	}
-	log.Infoln("Starting Smoke Test")
-	log.Infoln("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
+	log.Info("Starting Smoke Test")
+	log.Info("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
 	runner := &smokeTestRunner{cl: cl, tmp: tmp}
 	if err := runner.run(c.numJobs, c.numTasks, c.timeout); err != nil {
 		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.

@@ -181,7 +181,7 @@ func (s *servlet) HandleReaddir(req *fuse.ReaddirRequest, resp *fuse.ReaddirResp
 		var childrenInodes []fuse.NodeID
 		childrenInodes, err = s.controller.ReserveChildren(req.NodeID(), names)
 		if err != nil {
-			log.Infoln(err)
+			log.Info(err)
 			return err
 		}
 

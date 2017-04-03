@@ -40,7 +40,7 @@ func genSagaState(genParams *gopter.GenParameters, includeJob bool) *SagaState {
 	state, err := makeSagaState(sagaId, job)
 
 	if err != nil {
-		log.Infoln(err)
+		log.Info(err)
 	}
 
 	// is saga aborted or not

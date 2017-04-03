@@ -124,7 +124,7 @@ func Runfs(opts *Options) {
 	}()
 
 	go func() {
-		log.Infoln("pprof exit: ", http.ListenAndServe("localhost:6060", nil))
+		log.Info("pprof exit: ", http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	defer func() {

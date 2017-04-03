@@ -86,7 +86,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		}
 		PrintJobs(jobs)
 		if done {
-			log.Infoln("Done")
+			log.Info("Done")
 			return nil
 		}
 		time.Sleep(time.Second)
@@ -131,12 +131,12 @@ func PrintJobs(jobs map[string]*scoot.JobStatus) {
 		progs[i] = jobProgress{id: jobID, numTasks: len(tasks), numDone: numDone}
 	}
 
-	log.Infoln()
-	log.Infoln("Job Status")
+	log.Info()
+	log.Info("Job Status")
 
-	log.Infoln("Waiting", byStatus[scoot.Status_NOT_STARTED])
-	log.Infoln("Running", progs)
-	log.Infoln("Done", byStatus[scoot.Status_COMPLETED])
+	log.Info("Waiting", byStatus[scoot.Status_NOT_STARTED])
+	log.Info("Running", progs)
+	log.Info("Done", byStatus[scoot.Status_COMPLETED])
 }
 
 // Returns true if a job is completed or failed, false otherwise

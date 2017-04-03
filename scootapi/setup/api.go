@@ -41,7 +41,7 @@ func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalA
 }
 
 func (s *LocalApiStrategy) Startup() ([]string, error) {
-	log.Infoln("Starting up a Local ApiServer")
+	log.Info("Starting up a Local ApiServer")
 	if s.apiCfg.Count < 0 {
 		return nil, fmt.Errorf("ApiServer count must be >0 (or zero for default #), was: %d", s.apiCfg.Count)
 	} else if s.apiCfg.Count == 0 {
