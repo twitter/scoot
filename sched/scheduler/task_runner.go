@@ -14,6 +14,7 @@ import (
 )
 
 const DeadLetterExitCode = -200
+const DefaultRetryInterval = time.Second
 
 type taskRunner struct {
 	saga   *saga.Saga
@@ -22,6 +23,7 @@ type taskRunner struct {
 
 	markCompleteOnFailure bool
 	defaultTaskTimeout    time.Duration
+	thriftRetryTimeout    time.Duration
 	runnerOverhead        time.Duration
 
 	jobId  string
@@ -78,32 +80,64 @@ func (r *taskRunner) run() error {
 	return err
 }
 
+// Run cmd and if there's a thrift error try re-running/re-querying until completion, retry timeout, or cmd timeout.
 func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runner.RunStatus, error) {
 	cmd := task.Command
 	if cmd.Timeout == 0 {
 		cmd.Timeout = r.defaultTaskTimeout
 	}
+	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
+	elapsedRetryTime := time.Duration(0)
+	var st runner.RunStatus
+	var err error
+	var id runner.RunID
 
-	endTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
-
-	st, err := r.runner.Run(&cmd)
-	if err != nil || st.State.IsDone() {
-		return st, err
+	// If thrift call returns an error then we treat it is a thrift error and will repeatedly retry.
+	// If thrift call returns a domain error that wasn't handled by the runner we should fail/return.
+	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
+	for {
+		st, err = r.runner.Run(&cmd)
+		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			time.Sleep(DefaultRetryInterval)
+			elapsedRetryTime += DefaultRetryInterval
+			continue
+		} else if err != nil || st.State.IsDone() {
+			return st, err
+		}
+		break
 	}
-
-	id := st.RunID
+	id = st.RunID
 
 	// Wait for the process to start running
-	st, err = r.queryWithTimeout(id, endTime, true)
-	if err != nil || st.State.IsDone() {
-		return st, err
+	elapsedRetryTime = 0
+	for {
+		st, err = r.queryWithTimeout(id, cmdEndTime, true)
+		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			time.Sleep(DefaultRetryInterval)
+			elapsedRetryTime += DefaultRetryInterval
+			continue
+		} else if err != nil || st.State.IsDone() {
+			return st, err
+		}
+		break
 	}
 
 	// It's running, but not done, so we want to log a second StartTask that includes
 	// its status, so a watcher can go investigate
 	r.logTaskStatus(&st, saga.StartTask)
 
-	return r.queryWithTimeout(id, endTime, false)
+	// Wait for the task to finish or timeout.
+	elapsedRetryTime = 0
+	for {
+		st, err = r.queryWithTimeout(id, cmdEndTime, false)
+		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			time.Sleep(DefaultRetryInterval)
+			elapsedRetryTime += DefaultRetryInterval
+			continue
+		}
+		break
+	}
+	return st, err
 }
 
 func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includeRunning bool) (runner.RunStatus, error) {

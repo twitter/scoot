@@ -315,12 +315,13 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Println("Error running job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "), retry)
+					log.Println("Error running job:", jobId, ", task:", taskId,
+						" command:", strings.Join(taskDef.Argv, " "), retry, " err:", err)
 					jobState.errorRunningTask(taskId, err)
 				}
 
-				// update cluster state that this node is now free
-				s.clusterState.taskCompleted(nodeId, taskId)
+				// update cluster state that this node is now free and if we had a non-domain (ex: thrift) error.
+				s.clusterState.taskCompleted(nodeId, taskId, (err != nil))
 				log.Println("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}

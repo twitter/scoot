@@ -85,7 +85,7 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		taskNodes[as.task.TaskId] = as.node.Id()
 		if as.task.TaskId != "task1" {
 			cs.taskScheduled(as.node.Id(), as.task.TaskId, as.task.Def.SnapshotID)
-			cs.taskCompleted(as.node.Id(), as.task.TaskId)
+			cs.taskCompleted(as.node.Id(), as.task.TaskId, false)
 		}
 	}
 

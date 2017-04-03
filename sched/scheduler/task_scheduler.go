@@ -38,8 +38,8 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random node from the idle pools of nodes associated with other snapshotIds.
 	var assignments []taskAssignment
-	remainingTasks := getAssignments(cs, tasks, &assignments, nodeGroups, []string{""})
-	remainingTasks = getAssignments(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
+	remainingTasks := assign(cs, tasks, &assignments, nodeGroups, []string{""})
+	remainingTasks = assign(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
 	if len(remainingTasks) == 0 {
 		log.Printf("Scheduled all tasks (%d)", len(tasks))
 	} else {
@@ -50,7 +50,9 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
 // Returns tasks that couldn't be scheduled using the task's snapshotId or any of this in snapIds.
-func getAssignments(
+//TODO(jschiller): soft/hard # of nodes reserved.
+//TODO(jschiller): take idle nodes from LRU snapId and/or from snapIds with spare soft reservations.
+func assign(
 	cs *clusterState,
 	tasks []*taskState,
 	assignments *[]taskAssignment,
@@ -64,12 +66,15 @@ Loop:
 	for _, task := range tasks {
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
-				for nodeId, node := range groups.idle {
-					*assignments = append(*assignments, taskAssignment{node: node, task: task})
+				for nodeId, ns := range groups.idle {
+					if ns.Lost() || ns.Flaky() {
+						continue
+					}
+					*assignments = append(*assignments, taskAssignment{node: ns.node, task: task})
 					if _, ok := nodeGroups[task.Def.SnapshotID]; !ok {
 						nodeGroups[task.Def.SnapshotID] = newNodeGroup()
 					}
-					nodeGroups[task.Def.SnapshotID].busy[nodeId] = node
+					nodeGroups[task.Def.SnapshotID].busy[nodeId] = ns
 					delete(nodeGroups[snapId].idle, nodeId)
 					log.Printf("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
 						task.JobId, task.TaskId, nodeId, len(*assignments), numTotalTasks)

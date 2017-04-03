@@ -51,16 +51,17 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if len(c.queue) >= c.capacity {
+		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
+	}
 	st, err := c.statusManager.NewRun()
+
 	if err != nil {
 		return st, err
 	}
 	if c.runningID == runner.RunID("") {
 		c.start(cmd, st.RunID)
 	} else {
-		if len(c.queue) >= c.capacity {
-			return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
-		}
 		c.queue = append(c.queue, cmdAndID{cmd, st.RunID})
 	}
 	return st, nil

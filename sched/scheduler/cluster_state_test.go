@@ -99,7 +99,7 @@ func Test_TaskCompleted(t *testing.T) {
 	cs.taskScheduled("node1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
-	cs.taskCompleted("node1", "task1")
+	cs.taskCompleted("node1", "task1", false)
 	if ns.runningTask != noTask {
 		t.Errorf("Expected Node1 to be running task1")
 	}
@@ -117,22 +117,22 @@ func Test_NodeGroups(t *testing.T) {
 	cs.taskScheduled("node3", "task3", "snapB")
 	expectedGroups := map[string]*nodeGroup{
 		"": &nodeGroup{
-			idle: map[cluster.NodeId]cluster.Node{
-				"node4": cs.nodes["node4"].node,
+			idle: map[cluster.NodeId]*nodeState{
+				"node4": cs.nodes["node4"],
 			},
-			busy: map[cluster.NodeId]cluster.Node{},
+			busy: map[cluster.NodeId]*nodeState{},
 		},
 		"snapA": &nodeGroup{
-			idle: map[cluster.NodeId]cluster.Node{},
-			busy: map[cluster.NodeId]cluster.Node{
-				"node1": cs.nodes["node1"].node,
-				"node2": cs.nodes["node2"].node,
+			idle: map[cluster.NodeId]*nodeState{},
+			busy: map[cluster.NodeId]*nodeState{
+				"node1": cs.nodes["node1"],
+				"node2": cs.nodes["node2"],
 			},
 		},
 		"snapB": &nodeGroup{
-			idle: map[cluster.NodeId]cluster.Node{},
-			busy: map[cluster.NodeId]cluster.Node{
-				"node3": cs.nodes["node3"].node,
+			idle: map[cluster.NodeId]*nodeState{},
+			busy: map[cluster.NodeId]*nodeState{
+				"node3": cs.nodes["node3"],
 			},
 		},
 	}
@@ -141,8 +141,8 @@ func Test_NodeGroups(t *testing.T) {
 	}
 
 	// Test that finishing a jobs moves it to the idle list for its snapshotId.
-	cs.taskCompleted("node1", "task1")
-	expectedGroups["snapA"].idle["node1"] = cs.nodes["node1"].node
+	cs.taskCompleted("node1", "task1", false)
+	expectedGroups["snapA"].idle["node1"] = cs.nodes["node1"]
 	delete(expectedGroups["snapA"].busy, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
 		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
@@ -150,7 +150,7 @@ func Test_NodeGroups(t *testing.T) {
 
 	// Test the rescheduling a task moves it correctly from an idle list to a busy one.
 	cs.taskScheduled("node1", "task1", "snapB")
-	expectedGroups["snapB"].busy["node1"] = cs.nodes["node1"].node
+	expectedGroups["snapB"].busy["node1"] = cs.nodes["node1"]
 	delete(expectedGroups["snapA"].idle, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
 		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
