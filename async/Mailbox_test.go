@@ -2,7 +2,7 @@ package async
 
 import (
 	"errors"
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"testing"
 )
 
@@ -58,7 +58,7 @@ func storeValue_withMailbox(num int) error {
 			successfulWrites++
 		}
 		returnedWrites++
-		fmt.Println("completedWrites", returnedWrites)
+		log.Info("completedWrites", returnedWrites)
 	}
 
 	// Send to Replica One

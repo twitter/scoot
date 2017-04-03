@@ -2,6 +2,7 @@ package saga
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/scootdev/scoot/common/thrifthelpers"
@@ -39,7 +40,7 @@ func genSagaState(genParams *gopter.GenParameters, includeJob bool) *SagaState {
 	state, err := makeSagaState(sagaId, job)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Info(err)
 	}
 
 	// is saga aborted or not
@@ -58,7 +59,7 @@ func genSagaState(genParams *gopter.GenParameters, includeJob bool) *SagaState {
 			flags = flags | TaskCompleted
 			err := genTaskCompletedData(state, taskId, genParams)
 			if err != nil {
-				fmt.Printf(fmt.Sprintf("Error generating complete task data for %s, %s", taskId, err.Error()))
+				log.Infof(fmt.Sprintf("Error generating complete task data for %s, %s", taskId, err.Error()))
 			}
 		}
 

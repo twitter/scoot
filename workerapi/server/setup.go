@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
@@ -68,7 +68,7 @@ func RunServer(
 	schema jsonconfig.Schema,
 	config []byte) {
 
-	log.Println("workerapi/server RunServer(), config is:", string(config))
+	log.Info("workerapi/server RunServer(), config is:", string(config))
 	// Parse Config
 	mod, err := schema.Parse(config)
 	if err != nil {

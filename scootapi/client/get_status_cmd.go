@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 type getStatusCmd struct {
@@ -24,7 +24,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 
 func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Println("Checking Status for Scoot Job", args)
+	log.Info("Checking Status for Scoot Job", args)
 
 	if len(args) == 0 {
 		return errors.New("a job id must be provided")
@@ -50,9 +50,9 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		if err != nil {
 			return fmt.Errorf("Error converting status to JSON: %v", err.Error())
 		}
-		fmt.Printf("%s\n", asJson)
+		log.Infof("%s\n", asJson)
 	} else {
-		fmt.Println("Job Status:", status)
+		log.Info("Job Status:", status)
 	}
 
 	return nil

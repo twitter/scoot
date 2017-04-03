@@ -4,7 +4,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -14,6 +14,7 @@ import (
 	"github.com/scootdev/scoot/binaries/workerserver/config"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
@@ -24,7 +25,6 @@ import (
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
-
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -36,9 +36,8 @@ var repoDir = flag.String("repo", "", "Abs dir path to a git repo to run against
 var storeHandle = flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
-
-	log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {
@@ -90,19 +89,19 @@ func main() {
 			if len(nodes) > 0 {
 				r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 				storeAddr = string(nodes[r.Intn(len(nodes))].Id())
-				log.Print("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
+				log.Info("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
 			} else {
 				_, storeAddr, _ = scootapi.GetScootapiAddr()
-				log.Print("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
+				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
 				return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
-			log.Print("No stores specified or found, creating a tmp file store")
+			log.Info("No stores specified or found, creating a tmp file store")
 			return bundlestore.MakeFileStoreInTemp(tmp)
 		},
 	)
 
-	log.Println("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
+	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
 	server.RunServer(bag, schema, configText)
 }

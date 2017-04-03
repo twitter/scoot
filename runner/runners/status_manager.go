@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/runner"
-	"log"
 )
 
 const UnknownRunIDMsg = "unknown run id %v"
@@ -68,13 +68,13 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 		newStatus.StderrRef = oldStatus.StderrRef
 	}
 
-	log.Printf("StatusManager is holding status:%+v", newStatus)
+	log.Infof("StatusManager is holding status:%+v", newStatus)
 	s.runs[newStatus.RunID] = newStatus
 
 	listeners := make([]queryAndCh, 0, len(s.listeners))
 	for _, listener := range s.listeners {
 		if listener.q.Matches(newStatus) {
-			log.Printf("StatusManager putting status %+v on listener channel\n", newStatus)
+			log.Infof("StatusManager putting status %+v on listener channel\n", newStatus)
 			listener.ch <- newStatus
 			close(listener.ch)
 		} else {

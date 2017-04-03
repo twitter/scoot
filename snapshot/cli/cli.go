@@ -39,10 +39,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/spf13/cobra"
 )
 
 type DBInjector interface {
@@ -133,7 +133,7 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	fmt.Println(id)
+	log.Info(id)
 	return nil
 }
 
@@ -166,7 +166,7 @@ func (c *exportGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	fmt.Println(commit)
+	log.Info(commit)
 	return nil
 }
 
@@ -189,7 +189,7 @@ func (c *ingestDirCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) err
 		return err
 	}
 
-	fmt.Println(id)
+	log.Info(id)
 	return nil
 }
 
@@ -213,7 +213,7 @@ func (c *catCommand) run(db snapshot.DB, _ *cobra.Command, filenames []string) e
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s", data)
+		log.Infof("%s", data)
 	}
 	return nil
 }

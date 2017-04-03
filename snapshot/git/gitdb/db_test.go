@@ -3,8 +3,8 @@ package gitdb
 import (
 	"flag"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"

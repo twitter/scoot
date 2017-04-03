@@ -1,15 +1,17 @@
 package main
 
 import (
-	"log"
+	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/fs/minfuse"
 )
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	minfuse.SetupLog()
 	if opts, err := minfuse.InitFlags(); err != nil {
-		log.Print(err)
+		log.Info(err)
 		return
 	} else {
 		minfuse.Runfs(opts)

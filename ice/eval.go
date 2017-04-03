@@ -3,8 +3,8 @@ package ice
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
-	"log"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -36,8 +36,8 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
 
 	s := spew.Sdump(dest)
-	log.Println("************* Extracted:")
-	log.Println(s)
+	log.Info("************* Extracted:")
+	log.Info(s)
 	return nil
 }
 
@@ -58,12 +58,12 @@ type stack []frame
 
 func (s stack) String() string {
 	b := new(bytes.Buffer)
-	fmt.Fprintln(b)
-	fmt.Fprintln(b, "goice stacktrace:")
+	log.Info(b)
+	log.Info(b, "goice stacktrace:")
 	for _, f := range s {
 		fmt.Fprintf(b, "\t%s\n", f.key)
 	}
-	fmt.Fprintln(b, "end goice stacktrace")
+	log.Info(b, "end goice stacktrace")
 	return b.String()
 }
 

@@ -3,9 +3,9 @@ package bundlestore
 import (
 	"errors"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -27,13 +27,13 @@ type httpStore struct {
 
 func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 	uri := s.rootURI + name
-	log.Printf("Fetching %s", uri)
+	log.Infof("Fetching %s", uri)
 	resp, err := s.client.Get(uri)
 	if err != nil {
-		log.Printf("Fetched w/error: %s %v", uri, err)
+		log.Infof("Fetched w/error: %s %v", uri, err)
 		return nil, err
 	}
-	log.Printf("Fetch result %s %v", uri, resp.StatusCode)
+	log.Infof("Fetch result %s %v", uri, resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		return resp.Body, nil
@@ -65,7 +65,7 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 		return errors.New("'/' not allowed in name when writing bundles.")
 	}
 	uri := s.rootURI + name
-	log.Printf("Posting %s", uri)
+	log.Infof("Posting %s", uri)
 	resp, err := s.client.Post(uri, "text/plain", data)
 	if err == nil {
 		defer resp.Body.Close()
@@ -74,6 +74,6 @@ func (s *httpStore) Write(name string, data io.Reader) error {
 			return errors.New(resp.Status + ": " + string(data))
 		}
 	}
-	log.Printf("Posted %s, err: %v", uri, err)
+	log.Infof("Posted %s, err: %v", uri, err)
 	return err
 }
