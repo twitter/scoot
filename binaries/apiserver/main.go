@@ -10,6 +10,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
@@ -21,11 +22,10 @@ import (
 )
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	flag.Parse()
-
-	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	// The same config will be used for both bundlestore and frontend (TODO: frontend).
 	asset := func(s string) ([]byte, error) {

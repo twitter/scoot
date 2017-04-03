@@ -14,6 +14,7 @@ import (
 	"github.com/scootdev/scoot/binaries/workerserver/config"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
@@ -24,7 +25,6 @@ import (
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
-
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
@@ -36,9 +36,8 @@ var repoDir = flag.String("repo", "", "Abs dir path to a git repo to run against
 var storeHandle = flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
-
-	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/scootdev/scoot/binaries/scheduler/config"
 	"github.com/scootdev/scoot/common/endpoints"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
 	"github.com/scootdev/scoot/os/temp"
@@ -24,9 +25,8 @@ var httpAddr = flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to ser
 var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
-
-	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

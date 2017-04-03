@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot"
@@ -18,7 +19,7 @@ import (
 )
 
 func main() {
-	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	log.AddHook(hooks.NewContextHook())
 
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
@@ -17,6 +18,7 @@ import (
 //      --addr [<host:port> of workerserver]
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 

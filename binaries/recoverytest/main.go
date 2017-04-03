@@ -5,11 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
 func main() {
+	log.AddHook(hooks.NewContextHook())
 
 	// RecoverTest Parameters
 	numJobs := 20

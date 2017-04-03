@@ -5,6 +5,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/daemon/server"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner/execer"
@@ -19,6 +20,7 @@ var qLen = flag.Int("test_q_len", 1000000, "queue length for testing")
 
 // A Scoot Daemon server.
 func main() {
+	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
 	var ex execer.Execer
 	switch *execerType {

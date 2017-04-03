@@ -5,6 +5,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/scootapi/client"
 )
 
@@ -18,7 +19,7 @@ import (
 //		--addr [<host:port> of cloud server]
 
 func main() {
-	// log.SetFlags(log.LstdFlags | log.LUTC | log.Lshortfile)
+	log.AddHook(hooks.NewContextHook())
 
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
