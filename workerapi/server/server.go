@@ -106,7 +106,8 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	}
 	for _, status := range st {
 		if status.State.IsDone() {
-			log.Printf("Worker returning finished run: %v", status)
+			// Note: TravisCI fails when output is too long so we set this to Debug and disable it when running in that env.
+			log.Debugf("Worker returning finished run: %v", status)
 		}
 		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))
 	}
@@ -125,7 +126,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	//Check if this is a dup retry for an already running command and if so get its status.
 	//TODO(jschiller): accept a cmd.Nonce field so we can better handle hiccups with dup cmd resends?
 	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c.Argv, h.currentCmd.Argv) {
-		log.Printf("Worker received dup request, recovering runID: %v", h.currentRunID)
+		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
 		status, err = h.run.Status(h.currentRunID)
 	}
 	if err != nil {
@@ -136,7 +137,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		h.currentCmd = c
 		h.currentRunID = status.RunID
 	}
-	log.Printf("Worker returning run status: %v", status)
+	log.Infof("Worker returning run status: %v", status)
 	return domain.DomainRunStatusToThrift(status), nil
 }
 
@@ -144,7 +145,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
-	log.Printf("Worker aborting runID: %s", runId)
+	log.Infof("Worker aborting runID: %s", runId)
 	status, err := h.run.Abort(runner.RunID(runId))
 	if err != nil {
 		// Set invalid status and nil err to indicate handleable domain err.
@@ -159,7 +160,7 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()
-	log.Printf("Worker erasing runID: %s", runId)
+	log.Infof("Worker erasing runID: %s", runId)
 	h.run.Erase(runner.RunID(runId))
 	return nil
 }

@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -23,10 +24,17 @@ import (
 var thriftAddr = flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
 var httpAddr = flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
 var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
+var loglevelFlag = flag.String("loglevel", "debug", "Log everything at this level and above (error|info|debug)")
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
+	level, err := log.ParseLevel(*loglevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

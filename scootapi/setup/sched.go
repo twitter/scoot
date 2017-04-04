@@ -1,9 +1,10 @@
 package setup
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/scootapi"
 )
@@ -47,6 +48,7 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 	}
 
 	if err := s.cmds.Start(bin,
+		"--loglevel", "info",
 		"--thrift_addr", scootapi.DefaultSched_Thrift,
 		"--http_addr", scootapi.DefaultSched_HTTP,
 		"-config", config); err != nil {

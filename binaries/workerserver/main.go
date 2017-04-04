@@ -4,11 +4,12 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/workerserver/config"
@@ -34,10 +35,17 @@ var configFlag = flag.String("config", "local.local", "Worker Server Config (eit
 var memCapFlag = flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 var repoDir = flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
 var storeHandle = flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
+var loglevelFlag = flag.String("loglevel", "debug", "Log everything at this level and above (error|info|debug)")
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 	flag.Parse()
+	level, err := log.ParseLevel(*loglevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

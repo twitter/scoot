@@ -2,8 +2,9 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"strconv"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/scootapi"
 )
@@ -87,6 +88,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		thriftPort := s.nextPort
 		s.nextPort++
 		if err := s.cmds.Start(bin,
+			"--loglevel", "info",
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
 			"-repo", s.workersCfg.RepoDir,
