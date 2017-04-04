@@ -4,8 +4,8 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
 
 	"github.com/scootdev/scoot/binaries/scheduler/config"
@@ -20,6 +20,7 @@ import (
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
 	// Set Flags Needed by this Server
 	// TODO: add support for in-memory workers doing real work with gitdb.
 	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")

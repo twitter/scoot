@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/daemon/server"
@@ -18,6 +19,7 @@ import (
 // A Scoot Daemon server.
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
 	execerType := flag.String("execer_type", "sim", "execer type; os or sim")
 	qLen := flag.Int("test_q_len", 1000000, "queue length for testing")
 	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
