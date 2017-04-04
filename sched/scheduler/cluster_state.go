@@ -15,11 +15,12 @@ var nilTime = time.Time{}
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
+// TODO(jschiller): we may prefer to assert that updateCh never blips on a node so we can remove lostNodes code.
 type clusterState struct {
 	updateCh   chan []cluster.NodeUpdate
 	nodes      map[cluster.NodeId]*nodeState // All healthy nodes and nodes temporarily marked flaky.
-	lostNodes  map[cluster.NodeId]*nodeState // All lost nodes, disjoint from 'nodes' above.
-	flakyNodes map[cluster.NodeId]*nodeState // All flaky nodes, included in 'nodes' above.
+	lostNodes  map[cluster.NodeId]*nodeState // All lost nodes, disjoint from 'nodes' and 'flakyNodes'.
+	flakyNodes map[cluster.NodeId]*nodeState // All flaky nodes, disjoint from 'lostNodes'.
 	nodeGroups map[string]*nodeGroup         //key is a snapshotId.
 }
 
@@ -41,12 +42,10 @@ type nodeState struct {
 	timeFlaky   time.Time // Time when node was marked flaky, if set.
 }
 
-func (ns *nodeState) Lost() bool {
-	return ns.timeLost != nilTime
-}
-
-func (ns *nodeState) Flaky() bool {
-	return ns.timeFlaky != nilTime
+// This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
+// or it experienced connection related errors so we sideline it for a little while.
+func (ns *nodeState) suspended() bool {
+	return ns.timeLost != nilTime || ns.timeFlaky != nilTime
 }
 
 // Initializes a Node State for the specified Node
@@ -55,6 +54,8 @@ func newNodeState(node cluster.Node) *nodeState {
 		node:        node,
 		runningTask: noTask,
 		snapshotId:  "",
+		timeLost:    time.Time{},
+		timeFlaky:   time.Time{},
 	}
 }
 
@@ -79,7 +80,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 
 // Update ClusterState to reflect that a task has been scheduled on a particular node
 // SnapshotId should be the value from the task definition associated with the given taskId.
-// TODO: taskId is not unique (and isn't currently required to be), but a jobId arg would fix that.
+// NOTE: taskId is not unique (and isn't currently required to be), but a jobId arg would fix that.
 func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotId string) {
 	ns := c.nodes[nodeId]
 
@@ -96,9 +97,14 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snaps
 // Update ClusterState to reflect that a task has finished running on
 // a particular node, whether successfully or unsuccessfully
 func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string, flaky bool) {
-	// this node may have been removed from the cluster in the last update
-	if ns, ok := c.nodes[nodeId]; ok {
-		if flaky {
+	var ns *nodeState
+	var ok bool
+	if ns, ok = c.nodes[nodeId]; !ok {
+		// This node was removed from the cluster already, check if it was moved to lostNodes.
+		ns, ok = c.lostNodes[nodeId]
+	}
+	if ok {
+		if flaky && !ns.suspended() {
 			c.flakyNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
 		}
@@ -133,7 +139,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		switch update.UpdateType {
 		case cluster.NodeAdded:
 			if ns, ok := c.lostNodes[update.Id]; ok {
-				// This node was lost earlier, we can recover it now.
+				// This node was lost earlier (assuming id is unique to a running node instance), we can recover it now.
 				ns.timeLost = nilTime
 				c.nodes[update.Id] = ns
 				delete(c.lostNodes, update.Id)
@@ -153,10 +159,12 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				// Node already lost, log this spurious remove.
 				log.Infof("Node already marked lost: %v (%v)", update.Id, ns)
 			} else if ns, ok := c.nodes[update.Id]; ok {
-				// This was a healthy node, mark it as lost now.
+				// This was a healthy node, mark it as lost now. Also lost supersedes flaky, so remove the latter attribute.
 				ns.timeLost = time.Now()
+				ns.timeFlaky = time.Time{}
 				c.lostNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
+				delete(c.flakyNodes, update.Id)
 				log.Infof("Removing node by marking as lost: %v (%v), now have %d nodes\n", update.Id, ns, len(c.nodes))
 			} else {
 				// We don't know about this node, log spurious remove.

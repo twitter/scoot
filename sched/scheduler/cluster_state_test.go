@@ -39,8 +39,8 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
 	}
-	if len(cs.nodeGroups[""].idle) != 0 {
-		t.Errorf("expected clusterGroup[].idle size to be 0")
+	if len(cs.nodeGroups[""].idle) != 1 || cs.lostNodes["node1"] == nil {
+		t.Errorf("expected clusterGroup[].idle size to be 1 and lostNodes.node1 to exist.")
 	}
 }
 

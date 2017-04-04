@@ -1,9 +1,10 @@
 package hooks
 
 import (
-	"github.com/Sirupsen/logrus"
 	"runtime/debug"
 	"strings"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type contextHook struct {
@@ -32,7 +33,7 @@ func (hook contextHook) Fire(entry *logrus.Entry) error {
 			continue
 		}
 		ctx := strings.Split(lines[i], "scoot/")
-		entry.Data["file:line"] = ctx[len(ctx)-1]
+		entry.Data["file:line"] = strings.TrimSpace(ctx[len(ctx)-1])
 	}
 	return nil
 }

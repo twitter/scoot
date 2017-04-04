@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -21,6 +23,7 @@ import (
 var tmp *temp.TempDir
 
 func TestMain(m *testing.M) {
+	log.AddHook(hooks.NewContextHook())
 	tmp, _ = temp.NewTempDir("", "task_runner_test")
 	os.Exit(m.Run())
 }

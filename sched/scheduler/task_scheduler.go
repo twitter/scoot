@@ -67,7 +67,7 @@ Loop:
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
 				for nodeId, ns := range groups.idle {
-					if ns.Lost() || ns.Flaky() {
+					if ns.suspended() {
 						continue
 					}
 					*assignments = append(*assignments, taskAssignment{node: ns.node, task: task})

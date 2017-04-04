@@ -96,9 +96,11 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	// If thrift call returns an error then we treat it is a thrift error and will repeatedly retry.
 	// If thrift call returns a domain error that wasn't handled by the runner we should fail/return.
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
+	log.Infof("Run() for job:%s taskId:%s", r.jobId, taskId)
 	for {
 		st, err = r.runner.Run(&cmd)
 		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			log.Infof("Retrying run() for job:%s taskId:%s", r.jobId, taskId)
 			time.Sleep(DefaultRetryInterval)
 			elapsedRetryTime += DefaultRetryInterval
 			continue
@@ -109,11 +111,13 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	}
 	id = st.RunID
 
+	log.Infof("Query(running) for job:%s, taskId:%s", r.jobId, taskId)
 	// Wait for the process to start running
 	elapsedRetryTime = 0
 	for {
 		st, err = r.queryWithTimeout(id, cmdEndTime, true)
 		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			log.Infof("Retrying query(running) for job:%s, taskId:%s", r.jobId, taskId)
 			time.Sleep(DefaultRetryInterval)
 			elapsedRetryTime += DefaultRetryInterval
 			continue
@@ -128,10 +132,12 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	r.logTaskStatus(&st, saga.StartTask)
 
 	// Wait for the task to finish or timeout.
+	log.Infof("Query(completed) for job:%s, taskId:%s", r.jobId, taskId)
 	elapsedRetryTime = 0
 	for {
 		st, err = r.queryWithTimeout(id, cmdEndTime, false)
 		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+			log.Infof("Retrying query(completed) for job:%s, taskId:%s", r.jobId, taskId)
 			time.Sleep(DefaultRetryInterval)
 			elapsedRetryTime += DefaultRetryInterval
 			continue
@@ -155,12 +161,8 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
-	if sts == nil {
-		//TODO return timeout domain err
-	}
 
 	var st runner.RunStatus
-
 	if len(sts) == 1 {
 		st = sts[0]
 	} else {
