@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -17,9 +19,20 @@ import (
 //		run_smoke_test
 //	Global flags:
 //		--addr [<host:port> of cloud server]
+// 		--log_level [<error|info|debug> level and above should be logged]
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
+	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()

@@ -15,13 +15,21 @@ import (
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
-var execerType = flag.String("execer_type", "sim", "execer type; os or sim")
-var qLen = flag.Int("test_q_len", 1000000, "queue length for testing")
-
 // A Scoot Daemon server.
 func main() {
 	log.AddHook(hooks.NewContextHook())
+	execerType := flag.String("execer_type", "sim", "execer type; os or sim")
+	qLen := flag.Int("test_q_len", 1000000, "queue length for testing")
+	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
+
 	var ex execer.Execer
 	switch *execerType {
 	case "sim":
