@@ -28,16 +28,24 @@ import (
 	"github.com/scootdev/scoot/workerapi/server"
 )
 
-var thriftAddr = flag.String("thrift_addr", scootapi.DefaultWorker_Thrift, "addr to serve thrift on")
-var httpAddr = flag.String("http_addr", scootapi.DefaultWorker_HTTP, "addr to serve http on")
-var configFlag = flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
-var memCapFlag = flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
-var repoDir = flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
-var storeHandle = flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
-
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
+	thriftAddr := flag.String("thrift_addr", scootapi.DefaultWorker_Thrift, "addr to serve thrift on")
+	httpAddr := flag.String("http_addr", scootapi.DefaultWorker_HTTP, "addr to serve http on")
+	configFlag := flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
+	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
+	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
+	storeHandle := flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
+	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

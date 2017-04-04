@@ -21,15 +21,17 @@ type LocalSchedStrategy struct {
 	workers    WorkersStrategy
 	builder    Builder
 	cmds       *Cmds
+	logLevel   log.Level
 }
 
 // Create a new Local Scheduler that will talk to workers, using builder and cmds to start
-func NewLocalSchedStrategy(workersCfg *WorkerConfig, workers WorkersStrategy, builder Builder, cmds *Cmds) *LocalSchedStrategy {
+func NewLocalSchedStrategy(workersCfg *WorkerConfig, workers WorkersStrategy, builder Builder, cmds *Cmds, level log.Level) *LocalSchedStrategy {
 	return &LocalSchedStrategy{
 		workersCfg: workersCfg,
 		workers:    workers,
 		builder:    builder,
 		cmds:       cmds,
+		logLevel:   level,
 	}
 }
 
@@ -47,8 +49,9 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 	}
 
 	if err := s.cmds.Start(bin,
-		"--thrift_addr", scootapi.DefaultSched_Thrift,
-		"--http_addr", scootapi.DefaultSched_HTTP,
+		"-thrift_addr", scootapi.DefaultSched_Thrift,
+		"-http_addr", scootapi.DefaultSched_HTTP,
+		"-log_level", s.logLevel.String(),
 		"-config", config); err != nil {
 		return "", err
 	}
@@ -66,11 +69,11 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 }
 
 // Create a SchedulerStrategy with a local scheduler and in-memory workers
-func NewLocalMemory(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalSchedStrategy {
-	return NewLocalSchedStrategy(workersCfg, NewInMemoryWorkers(workersCfg), builder, cmds)
+func NewLocalMemory(workersCfg *WorkerConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalSchedStrategy {
+	return NewLocalSchedStrategy(workersCfg, NewInMemoryWorkers(workersCfg, logLevel), builder, cmds, logLevel)
 }
 
 // Create a SchedulerStrategy with a local scheduler and local workers
-func NewLocalLocal(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalSchedStrategy {
-	return NewLocalSchedStrategy(workersCfg, NewLocalWorkers(workersCfg, builder, cmds), builder, cmds)
+func NewLocalLocal(workersCfg *WorkerConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalSchedStrategy {
+	return NewLocalSchedStrategy(workersCfg, NewLocalWorkers(workersCfg, builder, cmds, logLevel), builder, cmds, logLevel)
 }

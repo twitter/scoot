@@ -26,14 +26,15 @@ type WorkerConfig struct {
 // InMemoryWorkersStrategy will use in-memory workers (to test the Scheduler logic)
 type InMemoryWorkersStrategy struct {
 	workersCfg *WorkerConfig
+	logLevel   log.Level
 }
 
 // NewInMemoryWorkers creates a new InMemoryWorkersStartup
-func NewInMemoryWorkers(workersCfg *WorkerConfig) *InMemoryWorkersStrategy {
+func NewInMemoryWorkers(workersCfg *WorkerConfig, logLevel log.Level) *InMemoryWorkersStrategy {
 	if workersCfg == nil {
 		workersCfg = &WorkerConfig{}
 	}
-	return &InMemoryWorkersStrategy{workersCfg: workersCfg}
+	return &InMemoryWorkersStrategy{workersCfg: workersCfg, logLevel: logLevel}
 }
 
 func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
@@ -51,10 +52,11 @@ type LocalWorkersStrategy struct {
 	builder    Builder
 	cmds       *Cmds
 	nextPort   int
+	logLevel   log.Level
 }
 
 // NewLocalWorkers creates a new LocalWorkersStartup
-func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalWorkersStrategy {
+func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalWorkersStrategy {
 	if workersCfg == nil {
 		workersCfg = &WorkerConfig{}
 	}
@@ -63,6 +65,7 @@ func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *Loc
 		builder:    builder,
 		cmds:       cmds,
 		nextPort:   scootapi.WorkerPorts,
+		logLevel:   logLevel,
 	}
 }
 
@@ -89,6 +92,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		if err := s.cmds.Start(bin,
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
+			"-log_level", s.logLevel.String(),
 			"-repo", s.workersCfg.RepoDir,
 		); err != nil {
 			return "", err

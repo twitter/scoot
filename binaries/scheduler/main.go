@@ -18,15 +18,22 @@ import (
 	"github.com/scootdev/scoot/scootapi/server"
 )
 
-// Set Flags Needed by this Server
-//TODO: add support for in-memory workers doing real work with gitdb.
-var thriftAddr = flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
-var httpAddr = flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
-var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
-
 func main() {
 	log.AddHook(hooks.NewContextHook())
+	// Set Flags Needed by this Server
+	// TODO: add support for in-memory workers doing real work with gitdb.
+	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
+	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
+	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
+	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
 	if err != nil {

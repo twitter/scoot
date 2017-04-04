@@ -23,9 +23,18 @@ import (
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
+	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	// The same config will be used for both bundlestore and frontend (TODO: frontend).
 	asset := func(s string) ([]byte, error) {

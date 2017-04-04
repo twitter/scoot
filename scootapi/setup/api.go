@@ -26,17 +26,19 @@ type ApiConfig struct {
 
 // LocalApiStrategy starts up a local apiserver
 type LocalApiStrategy struct {
-	apiCfg  *ApiConfig
-	builder Builder
-	cmds    *Cmds
+	apiCfg   *ApiConfig
+	builder  Builder
+	cmds     *Cmds
+	logLevel log.Level
 }
 
 // Create a new Local ApiServer that will serve the bundlestore api, using builder and cmds to start
-func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalApiStrategy {
+func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds, level log.Level) *LocalApiStrategy {
 	return &LocalApiStrategy{
-		apiCfg:  apiCfg,
-		builder: builder,
-		cmds:    cmds,
+		apiCfg:   apiCfg,
+		builder:  builder,
+		cmds:     cmds,
+		logLevel: level,
 	}
 }
 
@@ -66,7 +68,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	for i := 0; i < s.apiCfg.Count; i++ {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
-		cmd := s.cmds.Command(bin, "-http_addr", httpAddr)
+		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-log_level", s.logLevel.String())
 		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
@@ -81,9 +83,9 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 }
 
 // Create an ApiServer Strategy with a local apiserver.
-func NewLocal(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalApiStrategy {
+func NewLocal(apiCfg *ApiConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalApiStrategy {
 	if apiCfg == nil {
 		apiCfg = &ApiConfig{}
 	}
-	return NewLocalApiStrategy(apiCfg, builder, cmds)
+	return NewLocalApiStrategy(apiCfg, builder, cmds, logLevel)
 }
