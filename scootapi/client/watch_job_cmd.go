@@ -2,7 +2,7 @@ package client
 
 import (
 	"fmt"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func (c *watchJobCmd) registerFlags() *cobra.Command {
 
 func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Println("Watching job:", args)
+	log.Info("Watching job:", args)
 
 	if args == nil || len(args) == 0 {
 		return errors.New("a job id must be provided")
@@ -70,34 +70,34 @@ func GetAndPrintStatus(jobId string, thriftClient scoot.CloudScoot) (*scoot.Stat
 }
 
 func PrintJobStatus(jobStatus *scoot.JobStatus) {
-	fmt.Printf("Job id: %s\n", jobStatus.ID)
-	fmt.Printf("Job status: %s\n", jobStatus.Status.String())
+	log.Infof("Job id: %s\n", jobStatus.ID)
+	log.Infof("Job status: %s\n", jobStatus.Status.String())
 	for taskId, taskStatus := range jobStatus.TaskStatus {
-		fmt.Printf("\tTask %s {\n", taskId)
-		fmt.Printf("\t\tStatus: %s\n", taskStatus.String())
+		log.Infof("\tTask %s {\n", taskId)
+		log.Infof("\t\tStatus: %s\n", taskStatus.String())
 		runStatus, ok := jobStatus.TaskData[taskId]
 		if ok {
 			if runStatus.OutUri != nil {
-				fmt.Printf("\t\tStdout: %v\n", *runStatus.OutUri)
+				log.Infof("\t\tStdout: %v\n", *runStatus.OutUri)
 			}
 			if runStatus.ErrUri != nil {
-				fmt.Printf("\t\tStderr: %v\n", *runStatus.ErrUri)
+				log.Infof("\t\tStderr: %v\n", *runStatus.ErrUri)
 			}
 			if runStatus.SnapshotId != nil {
-				fmt.Printf("\t\tSnapshot: %v\n", *runStatus.SnapshotId)
+				log.Infof("\t\tSnapshot: %v\n", *runStatus.SnapshotId)
 			}
 			if taskStatus == scoot.Status_COMPLETED {
 				if runStatus.ExitCode != nil {
 					exitCode := *runStatus.ExitCode
-					fmt.Printf("\t\tExitCode: %d\n", exitCode)
+					log.Infof("\t\tExitCode: %d\n", exitCode)
 				}
 				if runStatus.Error != nil {
-					fmt.Printf("\t\tError: %v\n", *runStatus.Error)
+					log.Infof("\t\tError: %v\n", *runStatus.Error)
 				}
 			}
 
 		}
 
-		fmt.Printf("\t}\n")
+		log.Infof("\t}\n")
 	}
 }

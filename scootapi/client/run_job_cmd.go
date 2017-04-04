@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -41,7 +41,7 @@ type TaskDef struct {
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
-	log.Println("Running on scoot", args)
+	log.Info("Running on scoot", args)
 
 	jobDef := scoot.NewJobDefinition()
 	switch {
@@ -49,11 +49,11 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		return errors.New("You must provide either args or a job definition")
 	case len(args) > 0:
 		if c.snapshotId == "" {
-			log.Println("No snapshotID provided - cmd will be run in an empty tmpdir.")
+			log.Info("No snapshotID provided - cmd will be run in an empty tmpdir.")
 		} else if !strings.Contains(c.snapshotId, "-") {
 			//this is not a bundleID, assume it's a sha that's available upstream. Cf. snapshot/git/gitdb/README.md
 			streamId := fmt.Sprintf("stream-swh-%s-%s", c.streamName, c.snapshotId)
-			log.Printf("Converting sha to a stream-based snapshot_id: %s -> %s", c.snapshotId, streamId)
+			log.Infof("Converting sha to a stream-based snapshot_id: %s -> %s", c.snapshotId, streamId)
 			c.snapshotId = streamId
 		}
 		task := scoot.NewTaskDefinition()
@@ -98,8 +98,8 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	fmt.Println(jobId.ID)
-	log.Printf("JobID:%s\n", jobId.ID)
+	log.Info(jobId.ID)
+	log.Infof("JobID:%s\n", jobId.ID)
 
 	return nil
 }

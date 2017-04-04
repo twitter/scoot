@@ -1,9 +1,10 @@
 package scheduler
 
 import (
-	"log"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
@@ -242,7 +243,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 				},
 				func(err error) {
 					if err == nil {
-						log.Printf("Job %v Completed \n", j.Job.Id)
+						log.Infof("Job %v Completed \n", j.Job.Id)
 						// This job is fully processed remove from
 						// InProgressJobs
 						delete(s.inProgressJobs, j.Job.Id)
@@ -285,7 +286,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId, taskDef.SnapshotID)
-		log.Printf("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
+		log.Infof("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 
 		runner := &taskRunner{
@@ -307,7 +308,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			func(err error) {
 				// update the jobState
 				if err == nil {
-					log.Println("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.Info("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
 
 					jobState.taskCompleted(taskId)
 				} else {
@@ -315,14 +316,14 @@ func (s *statefulScheduler) scheduleTasks() {
 					if preventRetries {
 						retry = "(will not be retried)"
 					}
-					log.Println("Error running job:", jobId, ", task:", taskId,
+					log.Info("Error running job:", jobId, ", task:", taskId,
 						" command:", strings.Join(taskDef.Argv, " "), retry, " err:", err)
 					jobState.errorRunningTask(taskId, err)
 				}
 
 				// update cluster state that this node is now free and if we had a non-domain (ex: thrift) error.
 				s.clusterState.taskCompleted(nodeId, taskId, (err != nil))
-				log.Println("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
+				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}
 }

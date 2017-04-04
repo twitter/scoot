@@ -66,7 +66,7 @@ package fuse // import "github.com/scootdev/scoot/fuse"
 
 import (
 	"fmt"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"os"
 	"syscall"
 	"time"
@@ -270,7 +270,7 @@ func processBuf(b []byte, scope *RequestScope, handler Servlet) (req Request, re
 			handleErr = handler.HandleRelease(req.(*ReleaseRequest), resp.(*ReleaseResponse))
 		}
 	default:
-		log.Printf("Unknown request type %v", h.opcode)
+		log.Infof("Unknown request type %v", h.opcode)
 		return nil, nil, fmt.Errorf("Not implemented")
 	}
 

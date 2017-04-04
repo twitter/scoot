@@ -3,7 +3,7 @@
 package scheduler
 
 import (
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/sched"
 	"testing"
@@ -49,5 +49,5 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("Task to Node Distribution: %+v", taskCountMap)
+	log.Infof("Task to Node Distribution: %+v", taskCountMap)
 }

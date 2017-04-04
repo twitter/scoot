@@ -4,7 +4,7 @@ package dialer
 
 import (
 	"fmt"
-	"log"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 )
@@ -26,7 +26,7 @@ func NewSimpleDialer(tf thrift.TTransportFactory, pf thrift.TProtocolFactory) Di
 }
 
 func (d *simpleDialer) Dial(addr string) (thrift.TTransport, thrift.TProtocolFactory, error) {
-	log.Println("Dialing", addr)
+	log.Info("Dialing", addr)
 
 	var transport thrift.TTransport
 	transport, err := thrift.NewTSocket(addr)

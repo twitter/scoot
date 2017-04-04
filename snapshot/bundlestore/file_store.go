@@ -2,8 +2,8 @@ package bundlestore
 
 import (
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,7 +52,7 @@ func (s *FileStore) Write(name string, data io.Reader) error {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}
 	bundlePath := filepath.Join(s.bundleDir, name)
-	log.Printf("Writing %s to %s", name, bundlePath)
+	log.Infof("Writing %s to %s", name, bundlePath)
 	f, err := os.Create(bundlePath)
 	if err != nil {
 		return err

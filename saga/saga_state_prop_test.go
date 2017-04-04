@@ -5,6 +5,7 @@ package saga
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
@@ -277,7 +278,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 									return false
 								}
 							default:
-								fmt.Println(fmt.Sprintf("Unrecognized state taskId: %s, taskState: %s ", taskId, taskState))
+								log.Info(fmt.Sprintf("Unrecognized state taskId: %s, taskState: %s ", taskId, taskState))
 								return false
 							}
 						}

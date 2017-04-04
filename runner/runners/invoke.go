@@ -2,8 +2,8 @@ package runners
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -53,7 +53,7 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 // Run will not return until the process is not running.
 // NOTE: kind of gnarly since our filer implementation (gitdb) currently mutates the same worktree on every op.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
-	log.Printf("run. id: %v, cmd: %+v", id, cmd)
+	log.Infof("run. id: %v, cmd: %+v", id, cmd)
 	defer func() {
 		updateCh <- r
 		close(updateCh)
@@ -65,7 +65,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		if cmd.SnapshotID == "" {
 			//TODO: we don't want this logic to live here, these decisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
-				log.Printf("RunID:%s has no snapshotID! Using a nop-checkout initialized with tmpDir.\n", id)
+				log.Infof("RunID:%s has no snapshotID! Using a nop-checkout initialized with tmpDir.\n", id)
 			}
 			if tmp, err := inv.tmp.TempDir("invoke_nop_checkout"); err != nil {
 				checkoutCh <- err
@@ -75,7 +75,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 		} else {
 			//NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
-			log.Printf("RunID:%s checking out snapshotID:%s", id, cmd.SnapshotID)
+			log.Infof("RunID:%s checking out snapshotID:%s", id, cmd.SnapshotID)
 			var err error
 			co, err = inv.filer.Checkout(cmd.SnapshotID)
 			checkoutCh <- err
@@ -100,7 +100,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
 	}
-	log.Printf("checkout done. id: %v, cmd: %+v, checkout: %v", id, cmd, co.Path())
+	log.Infof("checkout done. id: %v, cmd: %+v, checkout: %v", id, cmd, co.Path())
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
@@ -118,7 +118,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	format := "%s\n\nDate: %v\nSelf: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	stdout.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stdout.URI(), cmd, marker)))
 	stderr.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stderr.URI(), cmd, marker)))
-	log.Printf("RunID: %s, stdout: %s, stderr: %s\n", id, stdout.AsFile(), stderr.AsFile())
+	log.Infof("RunID: %s, stdout: %s, stderr: %s\n", id, stdout.AsFile(), stderr.AsFile())
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
@@ -154,7 +154,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	case st = <-processCh:
 	}
 
-	log.Printf("run done. id: %v, status: %+v, cmd: %+v, checkout: %v", id, st, cmd, co.Path())
+	log.Infof("run done. id: %v, status: %+v, cmd: %+v, checkout: %v", id, st, cmd, co.Path())
 
 	switch st.State {
 	case execer.COMPLETE:

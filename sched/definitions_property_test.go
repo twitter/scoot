@@ -3,7 +3,7 @@
 package sched
 
 import (
-	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 	"reflect"
@@ -20,13 +20,13 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 
 			binaryJob, err := job.Serialize()
 			if err != nil {
-				fmt.Println("Unxepected Error Occurred when Serializing Job %v", err)
+				log.Info("Unxepected Error Occurred when Serializing Job %v", err)
 				return false
 			}
 
 			deserializedJob, err := DeserializeJob(binaryJob)
 			if err != nil {
-				fmt.Println("Unexpected Error Occurred when Deserializing Job %v", err)
+				log.Info("Unexpected Error Occurred when Deserializing Job %v", err)
 				return false
 			}
 

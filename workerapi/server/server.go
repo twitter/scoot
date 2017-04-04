@@ -3,10 +3,11 @@
 package server
 
 import (
-	"log"
 	"reflect"
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
@@ -116,7 +117,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Printf("Worker trying to run cmd: %v", cmd)
+	log.Infof("Worker trying to run cmd: %v", cmd)
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)

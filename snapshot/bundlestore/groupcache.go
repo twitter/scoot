@@ -2,9 +2,9 @@ package bundlestore
 
 import (
 	"bytes"
+	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -41,7 +41,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 	// Create the cache which knows how to retrieve the underlying bundle data.
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
-			log.Print("Not cached, try to fetch bundle and populate cache: ", bundleName)
+			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
 			stat.Counter("readUnderlyingCounter").Inc(1)
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
@@ -71,7 +71,7 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 	for _, node := range nodes {
 		peers = append(peers, "http://"+string(node.Id()))
 	}
-	log.Print("New groupcacheStore peers: ", peers)
+	log.Info("New groupcacheStore peers: ", peers)
 	stat.Counter("peerDiscoveryCounter").Inc(1)
 	stat.Gauge("peerCountGauge").Update(int64(len(peers)))
 	return peers
@@ -123,7 +123,7 @@ type groupcacheStore struct {
 }
 
 func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
-	log.Print("Read() checking for cached bundle: ", name)
+	log.Info("Read() checking for cached bundle: ", name)
 	defer s.stat.Latency("readLatency_ms").Time().Stop()
 	s.stat.Counter("readCounter").Inc(1)
 	var data []byte
@@ -135,7 +135,7 @@ func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {
-	log.Print("Exists() checking for cached bundle: ", name)
+	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency("existsLatency_ms").Time().Stop()
 	s.stat.Counter("existsCounter").Inc(1)
 	if err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{})); err != nil {
@@ -146,7 +146,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 }
 
 func (s *groupcacheStore) Write(name string, data io.Reader) error {
-	log.Print("Write() populating cache: ", name)
+	log.Info("Write() populating cache: ", name)
 	defer s.stat.Latency("writeLatency_ms").Time().Stop()
 	s.stat.Counter("writeCounter").Inc(1)
 	b, err := ioutil.ReadAll(data)

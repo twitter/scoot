@@ -1,8 +1,9 @@
 package scheduler
 
 import (
-	"log"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 )
@@ -136,33 +137,31 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = nilTime
 				c.nodes[update.Id] = ns
 				delete(c.lostNodes, update.Id)
-				log.Printf("Found lost node %v (%v), now have %d healthy nodes, %d lost nodes",
+				log.Infof("Found lost node %v (%v), now have %d healthy nodes, %d lost nodes",
 					update.Id, ns, len(c.nodes), len(c.lostNodes))
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster.
 				c.nodes[update.Id] = newNodeState(update.Node)
 				c.nodeGroups[""].idle[update.Id] = c.nodes[update.Id]
-				log.Printf("Added new node: %v (%+v), now have %d nodes\n", update.Id, update.Node, len(c.nodes))
+				log.Infof("Added new node: %v (%+v), now have %d nodes\n", update.Id, update.Node, len(c.nodes))
 			} else {
 				// This node is already present, log this spurious add.
-				log.Printf("Node already added!! %v (%v)", update.Id, ns)
+				log.Infof("Node already added!! %v (%v)", update.Id, ns)
 			}
 		case cluster.NodeRemoved:
-			//log.Printf("Removed nodeId: %s (%v), now have %d nodes\n", string(update.Id), c.nodes[update.Id], len(c.nodes))
 			if ns, ok := c.lostNodes[update.Id]; ok {
 				// Node already lost, log this spurious remove.
-				log.Printf("Node already marked lost: %v (%v)", update.Id, ns)
+				log.Infof("Node already marked lost: %v (%v)", update.Id, ns)
 			} else if ns, ok := c.nodes[update.Id]; ok {
 				// This was a healthy node, mark it as lost now.
 				ns.timeLost = time.Now()
 				c.lostNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				log.Printf("Removing node by marking as lost: %v (%v), now have %d nodes\n", update.Id, ns, len(c.nodes))
+				log.Infof("Removing node by marking as lost: %v (%v), now have %d nodes\n", update.Id, ns, len(c.nodes))
 			} else {
 				// We don't know about this node, log spurious remove.
-				log.Printf("Cannot remove unknown node: %v", update.Id)
+				log.Infof("Cannot remove unknown node: %v", update.Id)
 			}
-
 		}
 	}
 
