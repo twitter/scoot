@@ -37,7 +37,7 @@ func main() {
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
 	storeHandle := flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
-	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)

@@ -15,7 +15,7 @@ import (
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)

@@ -26,7 +26,7 @@ func main() {
 	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
 	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
 	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
-	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)

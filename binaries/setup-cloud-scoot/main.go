@@ -17,7 +17,7 @@ func main() {
 	repoDir := flag.String("repo_dir", "", "backing repo to use as a basis for handling bundles")
 	workersFlag := flag.Int("workers", setup.DefaultWorkerCount, "number of workers to use")
 	apiserversFlag := flag.Int("apiservers", setup.DefaultApiServerCount, "number of apiservers to use")
-	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 	level, err := log.ParseLevel(*logLevelFlag)
 	if err != nil {

@@ -26,7 +26,7 @@ func main() {
 
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
-	logLevelFlag := flag.String("log_level", "debug", "Log everything at this level and above (error|info|debug)")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
