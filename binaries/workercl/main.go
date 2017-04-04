@@ -18,6 +18,7 @@ import (
 //      abort [run ID]
 //  Global flags:
 //      --addr [<host:port> of workerserver]
+// 		--log_level [<error|info|debug> level and above should be logged]
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
