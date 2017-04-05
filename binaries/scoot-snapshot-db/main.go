@@ -1,10 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/scootdev/scoot/common/dialer"
@@ -20,6 +21,16 @@ import (
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
+	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)
