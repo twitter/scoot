@@ -51,9 +51,17 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	log.Infof("Running, available slots:%d/%d, currentRun:%s cmd:%v", len(c.queue), c.capacity+1, c.runningID, cmd)
+	// Note, 'capacity' is the max number of queued cmds and we allow one running job before
+	//        we start queueing, so total allowed runs is actually defined as capacity+1.
+	numCmds := 0
 	isRunning := (c.runningID != runner.RunID(""))
-	if isRunning && len(c.queue) >= c.capacity {
+	if isRunning {
+		numCmds = 1 + len(c.queue)
+	}
+	log.Infof("Trying to run, available slots:%d/%d, currentRun:%s cmd:%v",
+		c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
+
+	if numCmds > c.capacity {
 		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
 	}
 	st, err := c.statusManager.NewRun()

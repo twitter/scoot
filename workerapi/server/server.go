@@ -124,8 +124,8 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	c := domain.ThriftRunCommandToDomain(cmd)
 	status, err := h.run.Run(c)
 	//Check if this is a dup retry for an already running command and if so get its status.
-	//TODO(jschiller): accept a cmd.Nonce field so we can better handle hiccups with dup cmd resends?
-	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c.Argv, h.currentCmd.Argv) {
+	//TODO(jschiller): accept a cmd.Nonce field so we can be precise about hiccups with dup cmd resends?
+	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c, h.currentCmd) {
 		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
 		status, err = h.run.Status(h.currentRunID)
 	}

@@ -323,6 +323,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 				// update cluster state that this node is now free and if we had a non-domain (ex: thrift) error.
 				s.clusterState.taskCompleted(nodeId, taskId, (err != nil))
+				//TODO don't count this as an error if it was a thrift error? keep separate count? what else?
 				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 			})
 	}

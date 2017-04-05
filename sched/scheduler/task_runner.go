@@ -88,7 +88,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 		cmd.Timeout = r.defaultTaskTimeout
 	}
 	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
-	elapsedRetryTime := time.Duration(0)
+	elapsedRetryDuration := time.Duration(0)
 	var st runner.RunStatus
 	var err error
 	var id runner.RunID
@@ -99,10 +99,10 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	log.Infof("Run() for job:%s taskId:%s", r.jobId, taskId)
 	for {
 		st, err = r.runner.Run(&cmd)
-		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
+		if err != nil && elapsedRetryDuration+DefaultRetryInterval < r.thriftRetryTimeout {
 			log.Infof("Retrying run() for job:%s taskId:%s", r.jobId, taskId)
 			time.Sleep(DefaultRetryInterval)
-			elapsedRetryTime += DefaultRetryInterval
+			elapsedRetryDuration += DefaultRetryInterval
 			continue
 		} else if err != nil || st.State.IsDone() {
 			return st, err
@@ -112,37 +112,27 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	id = st.RunID
 
 	log.Infof("Query(running) for job:%s, taskId:%s", r.jobId, taskId)
-	// Wait for the process to start running
-	elapsedRetryTime = 0
+	// Wait for the process to start running, log it, then wait for it to finish.
+	elapsedRetryDuration = 0
+	includeRunning := true
 	for {
-		st, err = r.queryWithTimeout(id, cmdEndTime, true)
-		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
-			log.Infof("Retrying query(running) for job:%s, taskId:%s", r.jobId, taskId)
+		st, err = r.queryWithTimeout(id, cmdEndTime, includeRunning)
+		elapsed := elapsedRetryDuration + DefaultRetryInterval
+		if (err != nil && elapsed >= r.thriftRetryTimeout) || st.State.IsDone() {
+			break
+		} else if err != nil {
+			log.Infof("Retrying query(includeRunning=%t) for job:%s, taskId:%s", includeRunning, r.jobId, taskId)
 			time.Sleep(DefaultRetryInterval)
-			elapsedRetryTime += DefaultRetryInterval
+			elapsedRetryDuration += DefaultRetryInterval
 			continue
-		} else if err != nil || st.State.IsDone() {
-			return st, err
+		} else if includeRunning {
+			// It's running, but not done, so we want to log a second StartTask that includes
+			// its status, so a watcher can go investigate. Strictly speaking this is optional
+			// in that we've already logged a start task and our only obligation is to log a
+			//corresponding end task.
+			r.logTaskStatus(&st, saga.StartTask)
+			includeRunning = false
 		}
-		break
-	}
-
-	// It's running, but not done, so we want to log a second StartTask that includes
-	// its status, so a watcher can go investigate
-	r.logTaskStatus(&st, saga.StartTask)
-
-	// Wait for the task to finish or timeout.
-	log.Infof("Query(completed) for job:%s, taskId:%s", r.jobId, taskId)
-	elapsedRetryTime = 0
-	for {
-		st, err = r.queryWithTimeout(id, cmdEndTime, false)
-		if err != nil && elapsedRetryTime+DefaultRetryInterval < r.thriftRetryTimeout {
-			log.Infof("Retrying query(completed) for job:%s, taskId:%s", r.jobId, taskId)
-			time.Sleep(DefaultRetryInterval)
-			elapsedRetryTime += DefaultRetryInterval
-			continue
-		}
-		break
 	}
 	return st, err
 }
