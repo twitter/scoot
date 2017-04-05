@@ -22,10 +22,10 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 	builder := setup.NewGoBuilder(clusterCmds)
 	go func() {
 		sched := map[string]setup.SchedulerStrategy{
-			"local.local": setup.NewLocalLocal(nil, builder, clusterCmds, log.DebugLevel),
+			"local.local": setup.NewLocalLocal(&setup.WorkerConfig{LogLevel: log.InfoLevel}, builder, clusterCmds),
 		}
 		api := map[string]setup.ApiStrategy{
-			"local": setup.NewLocal(nil, builder, clusterCmds, log.DebugLevel),
+			"local": setup.NewLocal(&setup.ApiConfig{LogLevel: log.InfoLevel}, builder, clusterCmds),
 		}
 		strategies := &setup.Strategies{Sched: sched, SchedStrategy: "local.local", Api: api, ApiStrategy: "local"}
 		setup.Main(clusterCmds, strategies, []string{})

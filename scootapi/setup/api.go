@@ -10,6 +10,7 @@ import (
 )
 
 const DefaultApiServerCount int = 3
+const DefaultApiServerLogLevel log.Level = log.InfoLevel
 
 // ApiStrategy will startup with a bundlestore (or setup a connection to one)
 type ApiStrategy interface {
@@ -18,27 +19,28 @@ type ApiStrategy interface {
 	Startup() ([]string, error)
 }
 
-// For now, just the number of apiserver instances to start.
+// We set the number of apiserver instances to start.
 // A default value will be assigned if unitialized.
+// We also set a logLevel, which determines the minimum level
+// to display in apiserver logs.
 type ApiConfig struct {
-	Count int
+	Count    int
+	LogLevel log.Level
 }
 
 // LocalApiStrategy starts up a local apiserver
 type LocalApiStrategy struct {
-	apiCfg   *ApiConfig
-	builder  Builder
-	cmds     *Cmds
-	logLevel log.Level
+	apiCfg  *ApiConfig
+	builder Builder
+	cmds    *Cmds
 }
 
 // Create a new Local ApiServer that will serve the bundlestore api, using builder and cmds to start
-func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds, level log.Level) *LocalApiStrategy {
+func NewLocalApiStrategy(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalApiStrategy {
 	return &LocalApiStrategy{
-		apiCfg:   apiCfg,
-		builder:  builder,
-		cmds:     cmds,
-		logLevel: level,
+		apiCfg:  apiCfg,
+		builder: builder,
+		cmds:    cmds,
 	}
 }
 
@@ -48,6 +50,12 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		return nil, fmt.Errorf("ApiServer count must be >0 (or zero for default #), was: %d", s.apiCfg.Count)
 	} else if s.apiCfg.Count == 0 {
 		s.apiCfg.Count = DefaultApiServerCount
+	}
+
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// besides log.Panic, so we set a default of Info.
+	if s.apiCfg.LogLevel <= 0 {
+		s.apiCfg.LogLevel = DefaultApiServerLogLevel
 	}
 
 	tmp, err := temp.TempDirDefault()
@@ -68,7 +76,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	for i := 0; i < s.apiCfg.Count; i++ {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
-		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-log_level", s.logLevel.String())
+		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-log_level", s.apiCfg.LogLevel.String())
 		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
@@ -83,9 +91,9 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 }
 
 // Create an ApiServer Strategy with a local apiserver.
-func NewLocal(apiCfg *ApiConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalApiStrategy {
+func NewLocal(apiCfg *ApiConfig, builder Builder, cmds *Cmds) *LocalApiStrategy {
 	if apiCfg == nil {
 		apiCfg = &ApiConfig{}
 	}
-	return NewLocalApiStrategy(apiCfg, builder, cmds, logLevel)
+	return NewLocalApiStrategy(apiCfg, builder, cmds)
 }

@@ -9,6 +9,7 @@ import (
 )
 
 const DefaultWorkerCount int = 5
+const DefaultWorkerLogLevel log.Level = log.InfoLevel
 
 // WorkersStrategy is a strategy to start workers and returns the config to pass to a scheduler to talk to them
 type WorkersStrategy interface {
@@ -18,23 +19,25 @@ type WorkersStrategy interface {
 
 // In addition to count, we'll optionally want repoDir to initialize workers' gitdb.
 // Whatever is unset will be given a default value.
+// We also set a logLevel, which determines the minimum level
+// to display in scheduler/worker logs.
 type WorkerConfig struct {
-	Count   int
-	RepoDir string
+	Count    int
+	RepoDir  string
+	LogLevel log.Level
 }
 
 // InMemoryWorkersStrategy will use in-memory workers (to test the Scheduler logic)
 type InMemoryWorkersStrategy struct {
 	workersCfg *WorkerConfig
-	logLevel   log.Level
 }
 
 // NewInMemoryWorkers creates a new InMemoryWorkersStartup
-func NewInMemoryWorkers(workersCfg *WorkerConfig, logLevel log.Level) *InMemoryWorkersStrategy {
+func NewInMemoryWorkers(workersCfg *WorkerConfig) *InMemoryWorkersStrategy {
 	if workersCfg == nil {
 		workersCfg = &WorkerConfig{}
 	}
-	return &InMemoryWorkersStrategy{workersCfg: workersCfg, logLevel: logLevel}
+	return &InMemoryWorkersStrategy{workersCfg: workersCfg}
 }
 
 func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
@@ -52,11 +55,10 @@ type LocalWorkersStrategy struct {
 	builder    Builder
 	cmds       *Cmds
 	nextPort   int
-	logLevel   log.Level
 }
 
 // NewLocalWorkers creates a new LocalWorkersStartup
-func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds, logLevel log.Level) *LocalWorkersStrategy {
+func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *LocalWorkersStrategy {
 	if workersCfg == nil {
 		workersCfg = &WorkerConfig{}
 	}
@@ -65,7 +67,6 @@ func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds, logL
 		builder:    builder,
 		cmds:       cmds,
 		nextPort:   scootapi.WorkerPorts,
-		logLevel:   logLevel,
 	}
 }
 
@@ -75,6 +76,12 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		return "", fmt.Errorf("LocalWorkers must start with at least 1 worker (or zero for default #): %v", s.workersCfg.Count)
 	} else if s.workersCfg.Count == 0 {
 		s.workersCfg.Count = DefaultWorkerCount
+	}
+
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// besides log.Panic, so we set a default of Info.
+	if s.workersCfg.LogLevel <= 0 {
+		s.workersCfg.LogLevel = DefaultWorkerLogLevel
 	}
 
 	log.Infof("Using %d local workers", s.workersCfg.Count)
@@ -92,7 +99,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		if err := s.cmds.Start(bin,
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
-			"-log_level", s.logLevel.String(),
+			"-log_level", s.workersCfg.LogLevel.String(),
 			"-repo", s.workersCfg.RepoDir,
 		); err != nil {
 			return "", err

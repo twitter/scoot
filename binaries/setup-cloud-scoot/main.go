@@ -36,15 +36,15 @@ func main() {
 
 	builder := setup.NewGoBuilder(cmds)
 
-	workersCfg := &setup.WorkerConfig{Count: *workersFlag, RepoDir: *repoDir}
+	workersCfg := &setup.WorkerConfig{Count: *workersFlag, RepoDir: *repoDir, LogLevel: level}
 	sched := map[string]setup.SchedulerStrategy{
-		"local.memory": setup.NewLocalMemory(workersCfg, builder, cmds, level),
-		"local.local":  setup.NewLocalLocal(workersCfg, builder, cmds, level),
+		"local.memory": setup.NewLocalMemory(workersCfg, builder, cmds),
+		"local.local":  setup.NewLocalLocal(workersCfg, builder, cmds),
 	}
 
-	apiCfg := &setup.ApiConfig{Count: *apiserversFlag}
+	apiCfg := &setup.ApiConfig{Count: *apiserversFlag, LogLevel: level}
 	api := map[string]setup.ApiStrategy{
-		"local": setup.NewLocal(apiCfg, builder, cmds, level),
+		"local": setup.NewLocal(apiCfg, builder, cmds),
 	}
 
 	strategies := &setup.Strategies{Sched: sched, SchedStrategy: *schedStrategy, Api: api, ApiStrategy: *apiStrategy}
