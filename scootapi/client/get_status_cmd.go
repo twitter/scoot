@@ -54,7 +54,7 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		fmt.Printf("%s\n", asJson) // must also go to stdout so Sickle can find the results
 	} else {
 		log.Info("Job Status:", status)
-		fmt.Printf("Job Status:", status) // must also go to stdout so Sickle can find the results
+		fmt.Println("Job Status:", status) // must also go to stdout so Sickle can find the results
 	}
 
 	return nil
