@@ -98,10 +98,8 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	log.Info(jobId.ID)
+	fmt.Println(jobId.ID) // must go to std out so Sickle can pick up the results
 	log.Info("JobID:%s\n", jobId.ID)
-	fmt.Printf(jobId.ID) // must go to std out so Sickle can pick up the results
-	fmt.Printf("JobID:%s\n", jobId.ID) // must go to std out so Sickle can pick up the results
 
 	return nil
 }
