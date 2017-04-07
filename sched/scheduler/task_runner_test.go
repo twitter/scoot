@@ -242,6 +242,39 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 	}
 }
 
+func Test_runTaskWithQueryRetry(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	s, _ := sagaCoord.MakeSaga("job1", nil)
+
+	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+	msgMatcher = TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+
+	runMock := runnermock.NewMockService(mockCtrl)
+	queryErr := errors.New("QueryErr")
+	runMock.EXPECT().Run(gomock.Any()).Return(runner.RunStatus{}, nil)
+	runMock.EXPECT().Query(gomock.Any(), gomock.Any()).Return([]runner.RunStatus{runner.RunStatus{}}, queryErr).Times(2)
+
+	tr := testTaskRunner(s, runMock, "task1", sched.GenTask(), true)
+	tr.runnerRetryTimeout = 3 * time.Millisecond
+	tr.runnerRetryInterval = 2 * time.Millisecond
+	err := tr.run()
+
+	if err == nil {
+		t.Errorf("Expected error to be non-nil")
+	} else if terr, ok := err.(*taskError); !ok {
+		t.Errorf("Expected error to be a *taskError, was: %v", err)
+	} else if terr.runnerErr != queryErr {
+		t.Errorf("Expected saga error: %v, got: %v", queryErr, terr.runnerErr)
+	}
+}
+
 var sagaStartTask = saga.StartTask
 var sagaEndTask = saga.EndTask
 

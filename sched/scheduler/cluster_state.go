@@ -9,18 +9,21 @@ import (
 )
 
 const noTask = ""
-const maxLostDuration = time.Minute  // after which we remove a node from the cluster entirely
-const maxFlakyDuration = time.Minute // after which we mark it not flaky and put it back in rotation.
+const defaultMaxLostDuration = time.Minute
+const defaultMaxFlakyDuration = time.Minute
+
 var nilTime = time.Time{}
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
 // TODO(jschiller): we may prefer to assert that updateCh never blips on a node so we can remove lost node concept.
 type clusterState struct {
-	updateCh       chan []cluster.NodeUpdate
-	nodes          map[cluster.NodeId]*nodeState // All healthy nodes.
-	suspendedNodes map[cluster.NodeId]*nodeState // All lost or flaky nodes, disjoint from 'nodes'.
-	nodeGroups     map[string]*nodeGroup         //key is a snapshotId.
+	updateCh         chan []cluster.NodeUpdate
+	nodes            map[cluster.NodeId]*nodeState // All healthy nodes.
+	suspendedNodes   map[cluster.NodeId]*nodeState // All lost or flaky nodes, disjoint from 'nodes'.
+	nodeGroups       map[string]*nodeGroup         //key is a snapshotId.
+	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
+	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 }
 
 type nodeGroup struct {
@@ -69,10 +72,12 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate)
 	}
 
 	return &clusterState{
-		updateCh:       updateCh,
-		nodes:          nodes,
-		suspendedNodes: map[cluster.NodeId]*nodeState{},
-		nodeGroups:     nodeGroups,
+		updateCh:         updateCh,
+		nodes:            nodes,
+		suspendedNodes:   map[cluster.NodeId]*nodeState{},
+		nodeGroups:       nodeGroups,
+		maxLostDuration:  defaultMaxLostDuration,
+		maxFlakyDuration: defaultMaxFlakyDuration,
 	}
 }
 
@@ -103,6 +108,7 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string, flaky
 	}
 	if ok {
 		if flaky && !ns.suspended() {
+			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
 		}
@@ -175,13 +181,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// Clean up lost nodes that haven't recovered in time, and put flaky nodes back in rotation.
 	now := time.Now()
 	for _, ns := range c.suspendedNodes {
-		if ns.timeLost != nilTime && now.Sub(ns.timeLost) > maxLostDuration {
+		if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			log.Infof("Deleting lost node: %v (%v), now have %d healthy, %d suspended",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1)
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
-		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > maxFlakyDuration {
+		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			log.Infof("Reinstating flaky node: %v (%v), now have %d healthy, %d suspended",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
 			delete(c.suspendedNodes, ns.node.Id())

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -154,6 +155,60 @@ func Test_NodeGroups(t *testing.T) {
 	delete(expectedGroups["snapA"].idle, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
 		t.Errorf("Expected: %v\nGot: %v", render.Render(expectedGroups), render.Render(cs.nodeGroups))
+	}
+
+	// Task finished and is marked as flaky
+	cs.taskCompleted("node1", "task1", true)
+	if _, ok := cs.nodes["node1"]; ok {
+		t.Errorf("Flaky node was not moved out of cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node1"]; !ok {
+		t.Errorf("Flaky node was not moved into cs.suspendedNodes")
+	} else if cs.suspendedNodes["node1"].timeFlaky == nilTime {
+		t.Errorf("Flaky nodes should record the time they were marked flaky")
+	}
+
+	// Nodes are removed and marked as lost
+	cl.remove("node2")
+	cs.updateCluster()
+	cl.remove("node3")
+	cs.updateCluster()
+	if _, ok := cs.nodes["node2"]; ok {
+		t.Errorf("Lost node was not moved out of cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node2"]; !ok {
+		t.Errorf("Lost node was not moved into cs.suspendedNodes")
+	} else if cs.suspendedNodes["node2"].timeLost == nilTime {
+		t.Errorf("Lost nodes should record the time they were marked lost")
+	}
+	if _, ok := cs.nodes["node3"]; ok {
+		t.Errorf("Lost node was not moved out of cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node3"]; !ok {
+		t.Errorf("Lost node was not moved into cs.suspendedNodes")
+	} else if cs.suspendedNodes["node3"].timeLost == nilTime {
+		t.Errorf("Lost nodes should record the time they were marked lost")
+	}
+
+	// Make sure suspended nodes are either discarded or reinstated as appropriate.
+	cs.maxLostDuration = time.Millisecond
+	cs.maxFlakyDuration = time.Millisecond
+	cl.add("node3")
+	time.Sleep(2 * time.Millisecond)
+	cs.updateCluster()
+	if _, ok := cs.suspendedNodes["node3"]; ok {
+		t.Errorf("revived node3 should have been removed from the suspended list")
+	} else if ns, ok := cs.nodes["node3"]; !ok {
+		t.Errorf("revived node3 should have been reinstated")
+	} else if ns.timeLost != nilTime {
+		t.Errorf("revived node3 should've been marked not lost")
+	}
+	if _, ok := cs.nodes["node1"]; !ok {
+		t.Errorf("flaky node1 should have been moved to cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node1"]; ok {
+		t.Errorf("flaky node1 should have been removed from suspended list")
+	}
+	if _, ok := cs.nodes["node2"]; ok {
+		t.Errorf("lost node2 should not have been moved to cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node2"]; ok {
+		t.Errorf("lost node2 should have been removed from suspended list")
 	}
 }
 
