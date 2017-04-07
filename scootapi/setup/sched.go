@@ -48,9 +48,9 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 	}
 
 	if err := s.cmds.Start(bin,
-		"--loglevel", "info",
-		"--thrift_addr", scootapi.DefaultSched_Thrift,
-		"--http_addr", scootapi.DefaultSched_HTTP,
+		"-thrift_addr", scootapi.DefaultSched_Thrift,
+		"-http_addr", scootapi.DefaultSched_HTTP,
+		"-log_level", s.workersCfg.LogLevel.String(),
 		"-config", config); err != nil {
 		return "", err
 	}

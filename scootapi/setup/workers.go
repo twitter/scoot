@@ -10,6 +10,7 @@ import (
 )
 
 const DefaultWorkerCount int = 5
+const DefaultWorkerLogLevel log.Level = log.InfoLevel
 
 // WorkersStrategy is a strategy to start workers and returns the config to pass to a scheduler to talk to them
 type WorkersStrategy interface {
@@ -19,9 +20,12 @@ type WorkersStrategy interface {
 
 // In addition to count, we'll optionally want repoDir to initialize workers' gitdb.
 // Whatever is unset will be given a default value.
+// We also set a logLevel, which determines the minimum level
+// to display in scheduler/worker logs.
 type WorkerConfig struct {
-	Count   int
-	RepoDir string
+	Count    int
+	RepoDir  string
+	LogLevel log.Level
 }
 
 // InMemoryWorkersStrategy will use in-memory workers (to test the Scheduler logic)
@@ -75,6 +79,12 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		s.workersCfg.Count = DefaultWorkerCount
 	}
 
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// besides log.Panic, so we set a default of Info.
+	if s.workersCfg.LogLevel <= 0 {
+		s.workersCfg.LogLevel = DefaultWorkerLogLevel
+	}
+
 	log.Infof("Using %d local workers", s.workersCfg.Count)
 
 	bin, err := s.builder.Worker()
@@ -91,6 +101,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 			"--loglevel", "info",
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
+			"-log_level", s.workersCfg.LogLevel.String(),
 			"-repo", s.workersCfg.RepoDir,
 		); err != nil {
 			return "", err

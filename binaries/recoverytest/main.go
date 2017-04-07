@@ -1,9 +1,11 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"flag"
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/scootapi"
@@ -12,6 +14,16 @@ import (
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
+	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.SetLevel(level)
 
 	// RecoverTest Parameters
 	numJobs := 20

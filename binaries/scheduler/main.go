@@ -6,7 +6,6 @@ import (
 	"flag"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/apache/thrift/lib/go/thrift"
 
 	"github.com/scootdev/scoot/binaries/scheduler/config"
@@ -19,17 +18,18 @@ import (
 	"github.com/scootdev/scoot/scootapi/server"
 )
 
-// Set Flags Needed by this Server
-//TODO: add support for in-memory workers doing real work with gitdb.
-var thriftAddr = flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
-var httpAddr = flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
-var configFlag = flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
-var loglevelFlag = flag.String("loglevel", "debug", "Log everything at this level and above (error|info|debug)")
-
 func main() {
 	log.AddHook(hooks.NewContextHook())
+
+	// Set Flags Needed by this Server
+	// TODO: add support for in-memory workers doing real work with gitdb.
+	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
+	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
+	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
-	level, err := log.ParseLevel(*loglevelFlag)
+
+	level, err := log.ParseLevel(*logLevelFlag)
 	if err != nil {
 		log.Error(err)
 		return

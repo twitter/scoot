@@ -10,6 +10,7 @@ import (
 )
 
 const DefaultApiServerCount int = 3
+const DefaultApiServerLogLevel log.Level = log.InfoLevel
 
 // ApiStrategy will startup with a bundlestore (or setup a connection to one)
 type ApiStrategy interface {
@@ -18,10 +19,13 @@ type ApiStrategy interface {
 	Startup() ([]string, error)
 }
 
-// For now, just the number of apiserver instances to start.
+// We set the number of apiserver instances to start.
 // A default value will be assigned if unitialized.
+// We also set a logLevel, which determines the minimum level
+// to display in apiserver logs.
 type ApiConfig struct {
-	Count int
+	Count    int
+	LogLevel log.Level
 }
 
 // LocalApiStrategy starts up a local apiserver
@@ -48,6 +52,12 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		s.apiCfg.Count = DefaultApiServerCount
 	}
 
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// besides log.Panic, so we set a default of Info.
+	if s.apiCfg.LogLevel <= 0 {
+		s.apiCfg.LogLevel = DefaultApiServerLogLevel
+	}
+
 	tmp, err := temp.TempDirDefault()
 	if err != nil {
 		return nil, err
@@ -66,7 +76,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	for i := 0; i < s.apiCfg.Count; i++ {
 		port := scootapi.ApiBundlestorePorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", port)
-		cmd := s.cmds.Command(bin, "-http_addr", httpAddr)
+		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-log_level", s.apiCfg.LogLevel.String())
 		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
