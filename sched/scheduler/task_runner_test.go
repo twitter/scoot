@@ -13,6 +13,7 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
+	runnermock "github.com/scootdev/scoot/runner/mocks"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
@@ -36,6 +37,8 @@ func testTaskRunner(s *saga.Saga, r runner.Service, id string, task sched.TaskDe
 
 		markCompleteOnFailure: markCompleteOnFailure,
 		defaultTaskTimeout:    30 * time.Second,
+		runnerRetryTimeout:    0,
+		runnerRetryInterval:   0,
 		runnerOverhead:        1 * time.Second,
 
 		taskId: id,
@@ -177,8 +180,65 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 
 	err := testTaskRunner(s, chaos, "task1", task, true).run()
 
-	if err != nil {
-		t.Errorf("Expected error to be nil not, %v", err)
+	if err.(*taskError).runnerErr == nil {
+		t.Errorf("Expected result error to not be nil, got: %v", err)
+	}
+}
+
+func Test_runTaskWithFailedStartTask(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	s, _ := sagaCoord.MakeSaga("job1", nil)
+
+	// StartTask err should result in the appropriate taskError below.
+	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	startTaskErr := errors.New("StartTaskErr")
+	sagaLogMock.EXPECT().LogMessage(msgMatcher).Return(startTaskErr)
+
+	runMock := runnermock.NewMockService(mockCtrl)
+	err := testTaskRunner(s, runMock, "task1", sched.GenTask(), true).run()
+	if err == nil {
+		t.Errorf("Expected error to be non-nil")
+	} else if terr, ok := err.(*taskError); !ok {
+		t.Errorf("Expected error to be a *taskError, was: %v", err)
+	} else if terr.sagaErr != startTaskErr {
+		t.Errorf("Expected saga error: %v, got: %v", startTaskErr, terr.sagaErr)
+	}
+}
+
+func Test_runTaskWithRunRetry(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	s, _ := sagaCoord.MakeSaga("job1", nil)
+
+	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+	msgMatcher = TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+
+	runMock := runnermock.NewMockService(mockCtrl)
+	runErr := errors.New("RunErr")
+	runMock.EXPECT().Run(gomock.Any()).Return(runner.RunStatus{}, runErr).Times(2)
+
+	tr := testTaskRunner(s, runMock, "task1", sched.GenTask(), true)
+	tr.runnerRetryTimeout = 3 * time.Millisecond
+	tr.runnerRetryInterval = 2 * time.Millisecond
+	err := tr.run()
+
+	if err == nil {
+		t.Errorf("Expected error to be non-nil")
+	} else if terr, ok := err.(*taskError); !ok {
+		t.Errorf("Expected error to be a *taskError, was: %v", err)
+	} else if terr.runnerErr != runErr {
+		t.Errorf("Expected saga error: %v, got: %v", runErr, terr.runnerErr)
 	}
 }
 

@@ -7,10 +7,11 @@ import (
 
 // Contains all the information for a job in progress
 type jobState struct {
-	Job        *sched.Job
-	Saga       *saga.Saga            // saga associated with this job
-	Tasks      map[string]*taskState //taskId to taskState
-	EndingSaga bool                  //denotes whether an EndSagaMsg is in progress or not
+	Job            *sched.Job
+	Saga           *saga.Saga            // saga associated with this job
+	Tasks          map[string]*taskState //taskId to taskState
+	EndingSaga     bool                  //denotes whether an EndSagaMsg is in progress or not
+	TasksCompleted int                   //number of tasks that've been marked completed so far.
 }
 
 // Contains all the information for a specified task
@@ -27,10 +28,11 @@ type taskState struct {
 // job and logged to the Sagalog
 func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 	j := &jobState{
-		Job:        job,
-		Saga:       saga,
-		Tasks:      make(map[string]*taskState),
-		EndingSaga: false,
+		Job:            job,
+		Saga:           saga,
+		Tasks:          make(map[string]*taskState),
+		EndingSaga:     false,
+		TasksCompleted: 0,
 	}
 
 	for taskId, taskDef := range job.Def.Tasks {
@@ -81,6 +83,7 @@ func (j *jobState) taskStarted(taskId string) {
 func (j *jobState) taskCompleted(taskId string) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.Completed
+	j.TasksCompleted++
 }
 
 // Update JobState to reflect that an error has occurred running this Task
@@ -91,10 +94,8 @@ func (j *jobState) errorRunningTask(taskId string, err error) {
 
 // Returns the Current Job Status
 func (j *jobState) getJobStatus() sched.Status {
-	for _, tState := range j.Tasks {
-		if tState.Status != sched.Completed {
-			return sched.InProgress
-		}
+	if j.TasksCompleted == len(j.Tasks) {
+		return sched.Completed
 	}
-	return sched.Completed
+	return sched.InProgress
 }

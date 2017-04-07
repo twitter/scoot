@@ -15,6 +15,9 @@ import (
 	"github.com/scootdev/scoot/sched"
 )
 
+const DefaultRunnerRetryTimeout = 10 * time.Second
+const DefaultRunnerRetryInterval = time.Second
+
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //     marking it as completed.
@@ -50,9 +53,11 @@ type statefulScheduler struct {
 	addJobCh      chan jobAddedMsg
 
 	// Scheduler config
-	maxRetriesPerTask  int
-	defaultTaskTimeout time.Duration
-	runnerOverhead     time.Duration
+	maxRetriesPerTask   int
+	defaultTaskTimeout  time.Duration
+	runnerRetryTimeout  time.Duration // see task_runner.go
+	runnerRetryInterval time.Duration // see task_runner.go
+	runnerOverhead      time.Duration
 
 	// Scheduler State
 	clusterState   *clusterState
@@ -107,9 +112,11 @@ func NewStatefulScheduler(
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
 
-		maxRetriesPerTask:  config.MaxRetriesPerTask,
-		defaultTaskTimeout: config.DefaultTaskTimeout,
-		runnerOverhead:     config.RunnerOverhead,
+		maxRetriesPerTask:   config.MaxRetriesPerTask,
+		defaultTaskTimeout:  config.DefaultTaskTimeout,
+		runnerRetryTimeout:  DefaultRunnerRetryTimeout,
+		runnerRetryInterval: DefaultRunnerRetryInterval,
+		runnerOverhead:      config.RunnerOverhead,
 
 		clusterState:   newClusterState(initialCluster, clusterUpdates),
 		inProgressJobs: make(map[string]*jobState),
@@ -184,12 +191,12 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		numTasks := int64(0)
+		numTasks := 0
 		for _, job := range s.inProgressJobs {
-			numTasks += int64(len(job.Tasks))
+			numTasks += (len(job.Tasks) - job.TasksCompleted)
 		}
 		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
-		s.stat.Gauge("schedInProgressTasksGauge").Update(numTasks)
+		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(numTasks))
 		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 		time.Sleep(50 * time.Millisecond) // TODO: find a better way to avoid pegging the cpu.
 	}
@@ -219,6 +226,22 @@ func (s *statefulScheduler) addJobs() {
 	select {
 	case newJobMsg := <-s.addJobCh:
 		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)
+
+		total := 0
+		running := 0
+		unscheduled := 0
+		for _, job := range s.inProgressJobs {
+			for _, state := range job.Tasks {
+				if state.Status == sched.NotStarted {
+					unscheduled += 1
+				} else if state.Status == sched.InProgress {
+					running += 1
+				}
+				total += 1
+			}
+		}
+		log.Infof("Created new Job: %s with %d tasks. Now: tasks unscheduled: %d, running: %d, total: %d",
+			newJobMsg.job.Id, len(newJobMsg.job.Def.Tasks), unscheduled, running, total)
 	default:
 	}
 }
@@ -243,7 +266,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 				},
 				func(err error) {
 					if err == nil {
-						log.Infof("Job %v Completed \n", j.Job.Id)
+						log.Infof("Job completed and logged: %v", j.Job.Id)
 						// This job is fully processed remove from
 						// InProgressJobs
 						delete(s.inProgressJobs, j.Job.Id)
@@ -252,6 +275,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
 						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1)
+						log.Infof("Job completed but failed to log: %v", j.Job.Id)
 					}
 				})
 		}
@@ -295,6 +319,8 @@ func (s *statefulScheduler) scheduleTasks() {
 			stat:   s.stat,
 
 			defaultTaskTimeout:    s.defaultTaskTimeout,
+			runnerRetryTimeout:    s.runnerRetryTimeout,
+			runnerRetryInterval:   s.runnerRetryInterval,
 			runnerOverhead:        s.runnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
@@ -306,25 +332,26 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.asyncRunner.RunAsync(
 			runner.run,
 			func(err error) {
-				// update the jobState
+				flaky := false
+				if err != nil {
+					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
+					taskErr := err.(*taskError)
+					flaky = (taskErr.runnerErr != nil)
+					if !preventRetries {
+						log.Info("Error running job:", jobId, ", task:", taskId, " cmd:", taskDef.Argv, "(will be retried)", " err:", err)
+						jobState.errorRunningTask(taskId, err)
+					} else {
+						log.Info("Error running job:", jobId, ", task:", taskId, " cmd:", taskDef.Argv, "(will not be retried)", " err:", err)
+						err = nil
+					}
+				}
 				if err == nil {
 					log.Info("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
-
 					jobState.taskCompleted(taskId)
-				} else {
-					retry := "(will be retried)"
-					if preventRetries {
-						retry = "(will not be retried)"
-					}
-					log.Info("Error running job:", jobId, ", task:", taskId,
-						" command:", strings.Join(taskDef.Argv, " "), retry, " err:", err)
-					jobState.errorRunningTask(taskId, err)
 				}
-
-				// update cluster state that this node is now free and if we had a non-domain (ex: thrift) error.
-				s.clusterState.taskCompleted(nodeId, taskId, (err != nil))
-				//TODO don't count this as an error if it was a thrift error? keep separate count? what else?
+				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
+				s.clusterState.taskCompleted(nodeId, taskId, flaky)
 			})
 	}
 }
