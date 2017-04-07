@@ -98,7 +98,6 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		thriftPort := s.nextPort
 		s.nextPort++
 		if err := s.cmds.Start(bin,
-			"--loglevel", "info",
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
 			"-log_level", s.workersCfg.LogLevel.String(),
