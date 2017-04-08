@@ -1,8 +1,9 @@
 package testhelpers
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
@@ -21,13 +22,14 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 	clusterCmds := setup.NewSignalHandlingCmds(tmp)
 	builder := setup.NewGoBuilder(clusterCmds)
 	go func() {
+		strategy := `local.local.{"SchedulerConfig": {"DefaultTaskTimeoutMs": 1000, "RunnerOverheadMs": 0}}`
 		sched := map[string]setup.SchedulerStrategy{
-			"local.local": setup.NewLocalLocal(&setup.WorkerConfig{LogLevel: log.InfoLevel}, builder, clusterCmds),
+			strategy: setup.NewLocalLocal(&setup.WorkerConfig{LogLevel: log.InfoLevel}, builder, clusterCmds),
 		}
 		api := map[string]setup.ApiStrategy{
 			"local": setup.NewLocal(&setup.ApiConfig{LogLevel: log.InfoLevel}, builder, clusterCmds),
 		}
-		strategies := &setup.Strategies{Sched: sched, SchedStrategy: "local.local", Api: api, ApiStrategy: "local"}
+		strategies := &setup.Strategies{Sched: sched, SchedStrategy: strategy, Api: api, ApiStrategy: "local"}
 		setup.Main(clusterCmds, strategies, []string{})
 	}()
 

@@ -3,9 +3,11 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"path"
 	"regexp"
+	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/ice"
 )
@@ -95,17 +97,50 @@ func parseType(data json.RawMessage) (string, error) {
 	return t.Type, nil
 }
 
+// No frills recursive merging of two maps with string keys, no support for arrays etc.
+func mergeMaps(x1, x2 map[string]interface{}) interface{} {
+	for k, v2 := range x2 {
+		if v1, ok := x1[k]; ok {
+			if m1, ok := v1.(map[string]interface{}); ok {
+				if m2, ok := v2.(map[string]interface{}); ok {
+					x1[k] = mergeMaps(m1, m2)
+					continue
+				}
+			}
+		}
+		x1[k] = v2
+	}
+	return x1
+}
+
 // GetConfigText finds the right text for a configFlag.
 // If configFlag looks like a filename (of the form foo.bar where foo and bar are just alphanumeric),
-// read it as an asset.
+// read it as an asset. This filename can optionally have appended json (foo.bar.<json>) to override the file.
 // Otherwise, assume it's the literal json text.
 func GetConfigText(configFlag string, asset func(string) ([]byte, error)) ([]byte, error) {
-	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]*$`, []byte(configFlag)); matched {
-		configFileName := path.Join("config", configFlag)
+	if matched, _ := regexp.Match(`^[[:alnum:]]*\.[[:alnum:]]*\.*.*$`, []byte(configFlag)); matched {
+		split := strings.SplitN(configFlag, ".", 3)
+		configFileName := path.Join("config", split[0]+"."+split[1])
 		log.Infof("reading config filename %v", configFileName)
 		configText, err := asset(configFileName)
 		if err != nil {
 			return nil, fmt.Errorf("Scheduler: Error Loading Config File %v: %v", configFileName, err)
+		}
+		if len(split) == 3 {
+			var jsonConfig interface{}
+			var jsonOverride interface{}
+			if err := json.Unmarshal(configText, &jsonConfig); err != nil {
+				return nil, fmt.Errorf("Scheduler: Error Parsing Config File %v: %v", configFileName, err)
+			}
+			if err := json.Unmarshal([]byte(split[2]), &jsonOverride); err != nil {
+				return nil, fmt.Errorf("Scheduler: Error Parsing Config File Suffix %v: %v", configFileName, err)
+			}
+			if jc, ok := jsonConfig.(map[string]interface{}); ok {
+				if jo, ok := jsonOverride.(map[string]interface{}); ok {
+					return json.Marshal(mergeMaps(jc, jo))
+				}
+			}
+			return nil, fmt.Errorf("Scheduler: Error Merging Config File Suffix %v: %v + %v", configFileName, jsonConfig, jsonOverride)
 		}
 		return configText, nil
 	}

@@ -45,7 +45,6 @@ vet:
 
 test:
 	# Runs only unit tests and property tests
-	go install ./binaries/...
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
@@ -63,13 +62,15 @@ testlocal: generate test
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
-	go install ./binaries/scoot-snapshot-db
-	go run ./binaries/setup-cloud-scoot/main.go --strategy local.local run \
-      go run ./binaries/scootapi/main.go run_smoke_test --num_jobs 10 --timeout 1m
+	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
+	go install ./binaries/...
+	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m
 
-#TODO: this may supercede swarmtest. need to clean up all targets based on overall use and scope.
 recoverytest:
-	go run ./binaries/recoverytest/main.go
+	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
+	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
+	go install ./binaries/...
+	recoverytest
 
 clean-mockgen:
 	rm */*_mock.go

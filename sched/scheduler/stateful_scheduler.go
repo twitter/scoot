@@ -25,7 +25,8 @@ const DefaultRunnerRetryInterval = time.Second
 //     the update loop.  Instead the loop must be advanced manually
 //     by calling step()
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
-//             from the sagalog, and restarts them.
+//     from the sagalog, and restarts them.
+
 type SchedulerConfig struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
@@ -191,14 +192,14 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		numTasks := 0
+		remaining := 0
 		for _, job := range s.inProgressJobs {
-			numTasks += (len(job.Tasks) - job.TasksCompleted)
+			remaining += (len(job.Tasks) - job.TasksCompleted)
 		}
 		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
-		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(numTasks))
+		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
 		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
-		time.Sleep(50 * time.Millisecond) // TODO: find a better way to avoid pegging the cpu.
+		time.Sleep(50 * time.Millisecond) // TODO(jschiller): find a better way to avoid pegging the cpu.
 	}
 }
 
@@ -227,21 +228,14 @@ func (s *statefulScheduler) addJobs() {
 	case newJobMsg := <-s.addJobCh:
 		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)
 
-		total := 0
-		running := 0
-		unscheduled := 0
+		var total, completed, running int
 		for _, job := range s.inProgressJobs {
-			for _, state := range job.Tasks {
-				if state.Status == sched.NotStarted {
-					unscheduled += 1
-				} else if state.Status == sched.InProgress {
-					running += 1
-				}
-				total += 1
-			}
+			total += len(job.Tasks)
+			completed += job.TasksCompleted
+			running += job.TasksRunning
 		}
-		log.Infof("Created new Job: %s with %d tasks. Now: tasks unscheduled: %d, running: %d, total: %d",
-			newJobMsg.job.Id, len(newJobMsg.job.Def.Tasks), unscheduled, running, total)
+		log.Infof("Created new Job: %s with %d tasks. Now: tasks unscheduled: %d, running: %d, completed: %d, total: %d",
+			newJobMsg.job.Id, len(newJobMsg.job.Def.Tasks), total-completed-running, running, completed, total)
 	default:
 	}
 }
@@ -352,6 +346,18 @@ func (s *statefulScheduler) scheduleTasks() {
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 				s.clusterState.taskCompleted(nodeId, taskId, flaky)
+
+				total := 0
+				completed := 0
+				running := 0
+				for _, job := range s.inProgressJobs {
+					total += len(job.Tasks)
+					completed += job.TasksCompleted
+					running += job.TasksRunning
+					log.Info("Job:", job.Job.Id, " #running:", job.TasksRunning, " #completed:", job.TasksCompleted,
+						" #total:", len(job.Tasks), " onedone:", (job.TasksCompleted == len(job.Tasks)))
+				}
+				log.Info("Jobs summary -> running:", running, " completed:", completed, " total:", total, " alldone:", (completed == total))
 			})
 	}
 }

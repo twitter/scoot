@@ -44,10 +44,9 @@ func NewInMemoryWorkers(workersCfg *WorkerConfig) *InMemoryWorkersStrategy {
 func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
 	log.Info("Using in-memory workers")
 	if s.workersCfg.Count == 0 {
-		return "local.memory", nil
+		s.workersCfg.Count = 10
 	}
-
-	return fmt.Sprintf(`{"Cluster": {"Type": "memory", "Count": %d}, "Workers": {"Type": "local"}}`, s.workersCfg.Count), nil
+	return fmt.Sprintf(`local.memory.{"Cluster": {"Count": %d}}`, s.workersCfg.Count), nil
 }
 
 // LocalWorkersStrategy will startup workers running locally
