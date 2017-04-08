@@ -3,6 +3,7 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/scootdev/scoot/ice"
@@ -135,7 +136,7 @@ func TestParse(t *testing.T) {
 
 func TestGetConfigText(t *testing.T) {
 	assets := map[string][]byte{
-		"config/local.local": []byte("yes"),
+		"config/local.local": []byte(`{"a":"yes","b":"no","c":{"j":"k","x":"y"}}`),
 	}
 
 	asset := func(name string) ([]byte, error) {
@@ -151,14 +152,14 @@ func TestGetConfigText(t *testing.T) {
 		data string
 		err  error
 	}{
-		{"local.local", "yes", nil},
+		{`local.local.{"b":"yes","c":{"x":"z"}}`, `{"a":"yes","b":"yes","c":{"j":"k","x":"z"}}`, nil},
 		{"nocal.local", "", fmt.Errorf("no such file")},
 		{`{"json": "values"}`, `{"json": "values"}`, nil},
 	}
 
 	for i, c := range cases {
 		data, err := GetConfigText(c.flag, asset)
-		if string(data) != c.data || (err == nil) != (c.err == nil) {
+		if !reflect.DeepEqual(string(data), c.data) || (err == nil) != (c.err == nil) {
 			t.Errorf("Error for %d %v: got %s, %v (expected %v, %v)", i, c.flag, data, err, c.data, c.err)
 		}
 	}

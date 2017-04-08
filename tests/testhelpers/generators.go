@@ -41,7 +41,7 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 func GenTask(rng *rand.Rand, snapshotID string) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
-	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 500", "complete 0"}
+	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 100", "complete 0"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd

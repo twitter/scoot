@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -140,12 +141,13 @@ func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error
 }
 
 func (r *smokeTestRunner) checkSnapshots(id1 string, id2 string) error {
+	// Note: worker output had a header that ends with "SCOOT_CMD_LOG". Just check the end of string and ignore the rest.
 	output, err := exec.Command("scoot-snapshot-db", "read", "cat", "--id", id1, "STDOUT").Output()
 	if err != nil {
 		return err
 	}
 	text := string(output)
-	if text != "first" {
+	if ok, _ := regexp.MatchString(`(?s).*first\z`, text); !ok {
 		return fmt.Errorf("expected first out snapshot %v to contain \"first\" but got %q", id1, text)
 	}
 
@@ -154,7 +156,7 @@ func (r *smokeTestRunner) checkSnapshots(id1 string, id2 string) error {
 		return err
 	}
 	text = string(output)
-	if text != "second" {
+	if ok, _ := regexp.MatchString(`(?s).*second\z`, text); !ok {
 		return fmt.Errorf("expected second out snapshot %v to contain \"second\" but got %q", id2, text)
 	}
 

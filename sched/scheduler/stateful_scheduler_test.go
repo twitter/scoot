@@ -3,9 +3,10 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"testing"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -54,7 +55,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 
 func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 
-	return NewStatefulScheduler(
+	s := NewStatefulScheduler(
 		deps.initialCl,
 		deps.clUpdates,
 		deps.sc,
@@ -62,6 +63,9 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.config,
 		stats.NilStatsReceiver(),
 	)
+	s.runnerRetryTimeout = 0
+	s.runnerRetryInterval = 0
+	return s
 }
 
 func makeDefaultStatefulScheduler() *statefulScheduler {

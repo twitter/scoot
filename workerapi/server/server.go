@@ -3,13 +3,16 @@
 package server
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"reflect"
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
+	"github.com/scootdev/scoot/runner/runners"
 	domain "github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -28,10 +31,12 @@ func MakeServer(
 }
 
 type handler struct {
-	stat        stats.StatsReceiver
-	run         runner.Service
-	timeLastRpc time.Time
-	mu          sync.Mutex
+	stat         stats.StatsReceiver
+	run          runner.Service
+	timeLastRpc  time.Time
+	mu           sync.Mutex
+	currentCmd   *runner.Command
+	currentRunID runner.RunID
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
@@ -93,10 +98,18 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	ws := worker.NewWorkerStatus()
 	st, err := h.run.StatusAll()
 	if err != nil {
-		return nil, err
+		// Set invalid status and nil err to indicate handleable domain err.
+		//TODO(jschiller): add an err field to proto WorkerStatus so we don't need to add a dummy status to the list.
+		st = []runner.RunStatus{
+			runner.RunStatus{Error: err.Error(), State: runner.UNKNOWN},
+		}
 	}
-	for _, process := range st {
-		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(process))
+	for _, status := range st {
+		if status.State.IsDone() {
+			// Note: TravisCI fails when output is too long so we set this to Debug and disable it when running in that env.
+			log.Debugf("Worker returning finished run: %v", status)
+		}
+		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))
 	}
 	return ws, nil
 }
@@ -105,32 +118,49 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Infof("Worker Running:%s", cmd)
+	log.Infof("Worker trying to run cmd: %v", cmd)
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)
-	process, err := h.run.Run(c)
-	if err != nil {
-		return nil, err
+	status, err := h.run.Run(c)
+	//Check if this is a dup retry for an already running command and if so get its status.
+	//TODO(jschiller): accept a cmd.Nonce field so we can be precise about hiccups with dup cmd resends?
+	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c, h.currentCmd) {
+		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
+		status, err = h.run.Status(h.currentRunID)
 	}
-	return domain.DomainRunStatusToThrift(process), nil
+	if err != nil {
+		// Set invalid status and nil err to indicate handleable domain err.
+		status.Error = err.Error()
+		status.State = runner.BADREQUEST
+	} else {
+		h.currentCmd = c
+		h.currentRunID = status.RunID
+	}
+	log.Infof("Worker returning run status: %v", status)
+	return domain.DomainRunStatusToThrift(status), nil
 }
 
 // Implements worker.thrift Worker.Abort interface
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter("aborts").Inc(1)
 	h.updateTimeLastRpc()
-	process, err := h.run.Abort(runner.RunID(runId))
+	log.Infof("Worker aborting runID: %s", runId)
+	status, err := h.run.Abort(runner.RunID(runId))
 	if err != nil {
-		return nil, err
+		// Set invalid status and nil err to indicate handleable domain err.
+		status.Error = err.Error()
+		status.State = runner.UNKNOWN
+		status.RunID = runner.RunID(runId)
 	}
-	return domain.DomainRunStatusToThrift(process), nil
+	return domain.DomainRunStatusToThrift(status), nil
 }
 
 // Implements worker.thrift Worker.Erase interface
 func (h *handler) Erase(runId string) error {
 	h.stat.Counter("clears").Inc(1)
 	h.updateTimeLastRpc()
+	log.Infof("Worker erasing runID: %s", runId)
 	h.run.Erase(runner.RunID(runId))
 	return nil
 }

@@ -4,11 +4,12 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/workerserver/config"

@@ -1,9 +1,10 @@
 package setup
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/scootapi"
 )
