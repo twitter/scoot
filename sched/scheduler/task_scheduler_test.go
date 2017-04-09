@@ -68,11 +68,11 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3")
 	cs := newClusterState(testCluster.nodes, testCluster.ch)
 	tasks := []*taskState{
-		&taskState{TaskId: "task1", Def: sched.TaskDefinition{runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task2", Def: sched.TaskDefinition{runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task3", Def: sched.TaskDefinition{runner.Command{SnapshotID: "snapB"}}},
-		&taskState{TaskId: "task4", Def: sched.TaskDefinition{runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task5", Def: sched.TaskDefinition{runner.Command{SnapshotID: "snapB"}}},
+		&taskState{TaskId: "task1", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		&taskState{TaskId: "task2", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		&taskState{TaskId: "task3", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		&taskState{TaskId: "task4", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		&taskState{TaskId: "task5", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
 	assignments, _ := getTaskAssignments(cs, tasks)
 	if len(assignments) != 3 {
