@@ -13,6 +13,9 @@ import (
 // kind instead of type because type is a keyword
 type snapshotKind string
 
+// Returned by MakeDBNewRepo(), gets closed as soon as the repo is initialized.
+type InitCh <-chan struct{}
+
 const (
 	kindFSSnapshot        snapshotKind = "fs"
 	kindGitCommitSnapshot snapshotKind = "gc"
@@ -34,17 +37,18 @@ const (
 // MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDBFromRepo(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
 	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
+	db, _ := makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
+	return db
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
 func MakeDBNewRepo(initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, InitCh) {
 	return makeDB(nil, initer, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, InitCh) {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
@@ -71,7 +75,7 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 	}
 
 	go result.loop(initer)
-	return result
+	return result, result.initDoneCh
 }
 
 type RepoIniter interface {

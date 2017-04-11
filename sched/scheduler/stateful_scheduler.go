@@ -107,6 +107,23 @@ func NewStatefulScheduler(
 	stat stats.StatsReceiver,
 ) *statefulScheduler {
 
+	nodeReadyFn := func(node cluster.Node) bool {
+		run := rf(node)
+		st, err := run.StatusAll()
+		if err != nil {
+			return false
+		}
+		if len(st) == 1 && st[0].Error == runner.NoRunnersMsg {
+			//TODO(jschiller) amend protocol to be more direct than this array of one with a particular error status.
+			return false
+		}
+		for _, s := range st {
+			log.Info("Aborting existing run on new node: ", node, s)
+			run.Abort(s.RunID)
+		}
+		return true
+	}
+
 	sched := &statefulScheduler{
 		sagaCoord:     sc,
 		runnerFactory: rf,
@@ -119,7 +136,7 @@ func NewStatefulScheduler(
 		runnerRetryInterval: DefaultRunnerRetryInterval,
 		runnerOverhead:      config.RunnerOverhead,
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates),
+		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),
 		inProgressJobs: make(map[string]*jobState),
 		stat:           stat,
 	}

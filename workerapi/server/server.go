@@ -33,6 +33,7 @@ func MakeServer(
 type handler struct {
 	stat         stats.StatsReceiver
 	run          runner.Service
+	runInitCh    runner.InitCh
 	timeLastRpc  time.Time
 	mu           sync.Mutex
 	currentCmd   *runner.Command
@@ -40,9 +41,9 @@ type handler struct {
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service, ic runner.InitCh) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run}
+	h := &handler{stat: scopedStat, run: run, runInitCh: ic}
 	go h.stats()
 	return h
 }
@@ -96,18 +97,30 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
-	st, err := h.run.StatusAll()
-	if err != nil {
-		// Set invalid status and nil err to indicate handleable domain err.
-		//TODO(jschiller): add an err field to proto WorkerStatus so we don't need to add a dummy status to the list.
+
+	var err error
+	var st []runner.RunStatus
+	select {
+	case <-h.runInitCh:
+		//TODO(jschiller): add an err field to proto WorkerStatus so we don't ever need to add a dummy status to the list.
+		if st, err = h.run.StatusAll(); err != nil {
+			// Runner is initialized. Set invalid status and nil err to indicate handleable domain err.
+			st = []runner.RunStatus{
+				runner.RunStatus{Error: err.Error(), State: runner.UNKNOWN},
+			}
+		}
+	default:
+		// Runner is not initialized. Set invalid status and nil err to indicate handleable domain err.
 		st = []runner.RunStatus{
-			runner.RunStatus{Error: err.Error(), State: runner.UNKNOWN},
+			runner.RunStatus{Error: runner.NoRunnersMsg, State: runner.UNKNOWN},
 		}
 	}
+
 	for _, status := range st {
 		if status.State.IsDone() {
-			// Note: TravisCI fails when output is too long so we set this to Debug and disable it when running in that env.
-			log.Debugf("Worker returning finished run: %v", status)
+			// Note: TravisCI fails when output is too long so we set full status to Debug and disable it when running in that env.
+			log.Info("Worker returning finished run: %v", status.RunID)
+			log.Debugf("Worker returning finished run (details): %v", status)
 		}
 		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))
 	}
