@@ -55,7 +55,7 @@ func (h *Handler) Poll(runIds []runner.RunID, timeout time.Duration, returnAll b
 		completed := false
 		statuses = nil
 		for _, runId := range runIds {
-			status, _ := h.runner.Status(runId)
+			status, _, _ := h.runner.Status(runId)
 			if status.State.IsDone() {
 				completed = true
 			}

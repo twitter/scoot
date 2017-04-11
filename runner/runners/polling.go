@@ -28,29 +28,31 @@ type PollingStatusQuerier struct {
 }
 
 // QueryNow returns all RunStatus'es matching q in their current state
-func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return r.del.QueryNow(q)
 }
 
 // Query returns all RunStatus'es matching q, waiting as described by w
-func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
+func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	end := time.Now().Add(wait.Timeout)
+	var service runner.ServiceStatus
 	for time.Now().Before(end) || wait.Timeout == 0 {
-		st, err := r.QueryNow(q)
+		st, svc, err := r.QueryNow(q)
+		service = svc
 		if err != nil || len(st) > 0 {
-			return st, err
+			return st, service, err
 		}
 		time.Sleep(r.period)
 	}
-	return nil, nil
+	return nil, service, nil
 }
 
 // Status returns the current status of id from q.
-func (r *PollingStatusQuerier) Status(id runner.RunID) (runner.RunStatus, error) {
+func (r *PollingStatusQuerier) Status(id runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
 	return runner.StatusNow(r, id)
 }
 
 // StatusAll returns the Current status of all runs
-func (r *PollingStatusQuerier) StatusAll() ([]runner.RunStatus, error) {
+func (r *PollingStatusQuerier) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return runner.StatusAll(r)
 }

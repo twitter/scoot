@@ -33,7 +33,6 @@ func MakeServer(
 type handler struct {
 	stat         stats.StatsReceiver
 	run          runner.Service
-	runInitCh    runner.InitCh
 	timeLastRpc  time.Time
 	mu           sync.Mutex
 	currentCmd   *runner.Command
@@ -41,9 +40,9 @@ type handler struct {
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, ic runner.InitCh) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, runInitCh: ic}
+	h := &handler{stat: scopedStat, run: run}
 	go h.stats()
 	return h
 }
@@ -51,7 +50,8 @@ func NewHandler(stat stats.StatsReceiver, run runner.Service, ic runner.InitCh) 
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 func (h *handler) stats() {
-	startTime := time.Now()
+	var startTime time.Time
+	nilTime := time.Time{}
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
 		select {
@@ -59,9 +59,12 @@ func (h *handler) stats() {
 			h.mu.Lock()
 			var numFailed int64
 			var numActive int64
-			processes, err := h.run.StatusAll()
+			processes, svc, err := h.run.StatusAll()
 			if err != nil {
 				continue
+			}
+			if svc.Initialized && startTime == nilTime {
+				startTime = time.Now()
 			}
 			for _, process := range processes {
 				if process.State == runner.FAILED {
@@ -75,11 +78,15 @@ func (h *handler) stats() {
 			if numActive > 0 {
 				timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			}
+			var uptime time.Duration
+			if startTime != nilTime {
+				uptime = time.Since(startTime)
+			}
 			h.stat.Gauge("activeRunsGauge").Update(numActive)
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
 			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
 			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
-			h.stat.Gauge("uptimeGauge_ms").Update(int64(time.Since(startTime) / time.Millisecond))
+			h.stat.Gauge("uptimeGauge_ms").Update(int64(uptime / time.Millisecond))
 			h.mu.Unlock()
 		}
 	}
@@ -98,23 +105,11 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
 
-	var err error
-	var st []runner.RunStatus
-	select {
-	case <-h.runInitCh:
-		//TODO(jschiller): add an err field to proto WorkerStatus so we don't ever need to add a dummy status to the list.
-		if st, err = h.run.StatusAll(); err != nil {
-			// Runner is initialized. Set invalid status and nil err to indicate handleable domain err.
-			st = []runner.RunStatus{
-				runner.RunStatus{Error: err.Error(), State: runner.UNKNOWN},
-			}
-		}
-	default:
-		// Runner is not initialized. Set invalid status and nil err to indicate handleable domain err.
-		st = []runner.RunStatus{
-			runner.RunStatus{Error: runner.NoRunnersMsg, State: runner.UNKNOWN},
-		}
+	st, svc, err := h.run.StatusAll()
+	if err != nil {
+		ws.Error = err.Error()
 	}
+	ws.Initialized = svc.Initialized
 
 	for _, status := range st {
 		if status.State.IsDone() {
@@ -140,7 +135,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	//TODO(jschiller): accept a cmd.Nonce field so we can be precise about hiccups with dup cmd resends?
 	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c, h.currentCmd) {
 		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
-		status, err = h.run.Status(h.currentRunID)
+		status, _, err = h.run.Status(h.currentRunID)
 	}
 	if err != nil {
 		// Set invalid status and nil err to indicate handleable domain err.

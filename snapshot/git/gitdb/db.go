@@ -13,9 +13,6 @@ import (
 // kind instead of type because type is a keyword
 type snapshotKind string
 
-// Returned by MakeDBNewRepo(), gets closed as soon as the repo is initialized.
-type InitCh <-chan struct{}
-
 const (
 	kindFSSnapshot        snapshotKind = "fs"
 	kindGitCommitSnapshot snapshotKind = "gc"
@@ -43,12 +40,12 @@ func MakeDBFromRepo(dataRepo *repo.Repository, tmp *temp.TempDir, stream *Stream
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
 func MakeDBNewRepo(initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, InitCh) {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, snap.InitDoneCh) {
 	return makeDB(nil, initer, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, InitCh) {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, snap.InitDoneCh) {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}

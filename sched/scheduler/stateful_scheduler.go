@@ -109,12 +109,8 @@ func NewStatefulScheduler(
 
 	nodeReadyFn := func(node cluster.Node) bool {
 		run := rf(node)
-		st, err := run.StatusAll()
-		if err != nil {
-			return false
-		}
-		if len(st) == 1 && st[0].Error == runner.NoRunnersMsg {
-			//TODO(jschiller) amend protocol to be more direct than this array of one with a particular error status.
+		st, svc, err := run.StatusAll()
+		if err != nil || !svc.Initialized {
 			return false
 		}
 		for _, s := range st {

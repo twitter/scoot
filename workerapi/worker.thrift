@@ -23,6 +23,8 @@ struct RunStatus {
 // TODO: add useful load information when it comes time to have multiple runs.
 struct WorkerStatus {
   1: required list<RunStatus> runs  # All runs excepting what's been Erase()'d
+  2: required bool initialized      # True if the worker has finished with any long-running init tasks.
+  3: required string error          # Set when a general worker error unrelated to a specific run has occurred.
 }
 
 struct RunCommand {

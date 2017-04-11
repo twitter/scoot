@@ -17,9 +17,6 @@ const NoRunnersMsg = "No runners available."
 const RunnerBusyMsg = "Runner is busy"
 const LoggingErrMsg = "Error initializing logging."
 
-// May be used to indicate if and when a Service instance is initialized.
-type InitCh <-chan struct{}
-
 // A command, execution environment, and timeout.
 type Command struct {
 	// Command line to run

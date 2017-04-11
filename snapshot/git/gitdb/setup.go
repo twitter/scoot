@@ -3,7 +3,6 @@ package gitdb
 import (
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
 	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/repo"
@@ -37,9 +36,6 @@ func (m module) Install(b *ice.MagicBag) {
 		MakeDBNewRepo,
 		func(db *DB) snap.DB {
 			return db
-		},
-		func(ic InitCh) runner.InitCh {
-			return runner.InitCh(ic)
 		},
 	)
 }

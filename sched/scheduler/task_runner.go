@@ -165,7 +165,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 		timeout = 0
 	}
 	w := runner.Wait{Timeout: timeout}
-	sts, err := r.runner.Query(q, w)
+	sts, _, err := r.runner.Query(q, w)
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
