@@ -17,6 +17,7 @@ import (
 
 const DefaultRunnerRetryTimeout = 10 * time.Second
 const DefaultRunnerRetryInterval = time.Second
+const DefaultReadyFnBackoff = 5 * time.Second
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -107,17 +108,17 @@ func NewStatefulScheduler(
 	stat stats.StatsReceiver,
 ) *statefulScheduler {
 
-	nodeReadyFn := func(node cluster.Node) bool {
+	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
 		st, svc, err := run.StatusAll()
 		if err != nil || !svc.Initialized {
-			return false
+			return false, DefaultReadyFnBackoff
 		}
 		for _, s := range st {
 			log.Info("Aborting existing run on new node: ", node, s)
 			run.Abort(s.RunID)
 		}
-		return true
+		return true, time.Duration(0)
 	}
 
 	sched := &statefulScheduler{

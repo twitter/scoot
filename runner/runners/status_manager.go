@@ -22,7 +22,7 @@ func NewStatusManager() *StatusManager {
 type StatusManager struct {
 	mu        sync.Mutex
 	runs      map[runner.RunID]runner.RunStatus
-	service   runner.ServiceStatus
+	svcStatus runner.ServiceStatus
 	nextRunID int64
 	listeners []queryAndCh
 }
@@ -51,15 +51,15 @@ func (s *StatusManager) NewRun() (runner.RunStatus, error) {
 }
 
 // Update the overall service status independent of run status.
-func (s *StatusManager) UpdateService(service runner.ServiceStatus) error {
+func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.service = service
+	s.svcStatus = svcStatus
 	return nil
 }
 
-// Update writes a new status.
+// Update writes a new status for a run.
 // It enforces several rules:
 //   cannot change a status once it is Done
 //   cannot erase Stdout/Stderr Refs
@@ -102,7 +102,7 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
 	if err != nil || len(current) > 0 || wait.Timeout == 0 {
-		return current, s.service, err
+		return current, s.svcStatus, err
 	}
 
 	var timeout <-chan time.Time
@@ -114,9 +114,9 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunSta
 
 	select {
 	case st := <-future:
-		return []runner.RunStatus{st}, s.service, nil
+		return []runner.RunStatus{st}, s.svcStatus, nil
 	case <-timeout:
-		return nil, s.service, nil
+		return nil, s.svcStatus, nil
 	}
 }
 

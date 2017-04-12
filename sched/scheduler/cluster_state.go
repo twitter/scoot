@@ -11,11 +11,11 @@ import (
 const noTask = ""
 const defaultMaxLostDuration = time.Minute
 const defaultMaxFlakyDuration = time.Minute
-const defaultReadyFnInterval = 5 * time.Second
 
 var nilTime = time.Time{}
 
-type ReadyFn func(cluster.Node) bool
+// Cluster will use this function to determine if newly added nodes are ready to be used.
+type ReadyFn func(cluster.Node) (ready bool, backoffDuration time.Duration)
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
@@ -27,7 +27,6 @@ type clusterState struct {
 	nodeGroups       map[string]*nodeGroup         // key is a snapshotId.
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
-	readyFnInterval  time.Duration                 // how often we should call readyFn to validate node.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 }
 
@@ -45,15 +44,26 @@ type nodeState struct {
 	node        cluster.Node
 	runningTask string
 	snapshotId  string
-	timeInit    time.Time // Time when new node was marked init'ing. Unset once init completes.
-	timeLost    time.Time // Time when node was marked lost, if set (lost and flaky are mutually exclusive).
-	timeFlaky   time.Time // Time when node was marked flaky, if set (lost and flaky are mutually exclusive).
+	timeLost    time.Time        // Time when node was marked lost, if set (lost and flaky are mutually exclusive).
+	timeFlaky   time.Time        // Time when node was marked flaky, if set (lost and flaky are mutually exclusive).
+	readyCh     chan interface{} // We create goroutines for each new node which will close this channel once the node is ready.
+	removedCh   chan interface{} // We send nil when a node has been removed and we want the above goroutine to exit.
 }
 
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
 // or it experienced connection related errors so we sideline it for a little while.
 func (ns *nodeState) suspended() bool {
-	return ns.timeInit != nilTime || ns.timeLost != nilTime || ns.timeFlaky != nilTime
+	return !ns.ready() || ns.timeLost != nilTime || ns.timeFlaky != nilTime
+}
+
+func (ns *nodeState) ready() bool {
+	ready := false
+	select {
+	case <-ns.readyCh:
+		ready = true
+	default:
+	}
+	return ready
 }
 
 // Initializes a Node State for the specified Node
@@ -62,22 +72,26 @@ func newNodeState(node cluster.Node) *nodeState {
 		node:        node,
 		runningTask: noTask,
 		snapshotId:  "",
-		timeInit:    nilTime,
 		timeLost:    nilTime,
 		timeFlaky:   nilTime,
+		readyCh:     make(chan interface{}),
+		removedCh:   make(chan interface{}),
 	}
 }
 
 // Creates a New State Distributor with the initial nodes, and which updates
 // nodes added or removed based on the supplied channel. ReadyFn is optional.
+// New cluster is returned along with a doneCh which the caller can close to exit our goroutine.
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn) *clusterState {
 	nodes := make(map[cluster.NodeId]*nodeState)
 	nodeGroups := map[string]*nodeGroup{"": newNodeGroup()}
 	for _, n := range initial {
 		nodes[n.Id()] = newNodeState(n)
 		nodeGroups[""].idle[n.Id()] = nodes[n.Id()]
+		if rfn == nil {
+			close(nodes[n.Id()].readyCh)
+		}
 	}
-
 	return &clusterState{
 		updateCh:         updateCh,
 		nodes:            nodes,
@@ -85,7 +99,6 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 		nodeGroups:       nodeGroups,
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
-		readyFnInterval:  defaultReadyFnInterval,
 		readyFn:          rfn,
 	}
 }
@@ -146,14 +159,15 @@ func (c *clusterState) updateCluster() {
 
 // Processes nodes being added and removed from the cluster & updates the distributor state accordingly.
 // Note, we don't expect there to be many updates after startup if the cluster is relatively stable.
-//TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we can't rely on that.
+//TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
 func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// Apply updates
 	for _, update := range updates {
 		switch update.UpdateType {
+
 		case cluster.NodeAdded:
 			if ns, ok := c.suspendedNodes[update.Id]; ok {
-				if ns.timeInit != nilTime {
+				if !ns.ready() {
 					// Adding a node that's already suspended as non-ready, leave it in that state until ready.
 					log.Infof("Suspended node re-added but still awaiting readiness check %v (%#v)", update.Id, ns)
 				} else {
@@ -168,17 +182,34 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
-				if c.readyFn == nil || c.readyFn(ns.node) {
-					// We're either not checking readiness or it is ready, skip suspended state and add this as a healthy node.
+				if c.readyFn == nil {
+					// We're not checking readiness, skip suspended state and add this as a healthy node.
 					c.nodes[update.Id] = newNodeState(update.Node)
 					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
 				} else {
-					// Add this to the suspended nodes to be checked on every update().
-					c.suspendedNodes[update.Id] = newNodeState(update.Node)
-					c.suspendedNodes[update.Id].timeInit = time.Now()
+					// Add this to the suspended nodes and start a goroutine to check for readiness.
+					ns = newNodeState(update.Node)
+					c.suspendedNodes[update.Id] = ns
 					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
+					go func() {
+						done := false
+						for !done {
+							// Loop checking node readiness, waiting 'backoff' time between checks, and cancel if node is fully removed.
+							if ready, backoff := c.readyFn(ns.node); ready {
+								close(ns.readyCh)
+								done = true
+							} else {
+								select {
+								case <-ns.removedCh:
+									done = true
+								case <-time.After(backoff):
+									break
+								}
+							}
+						}
+					}()
 				}
 				c.nodeGroups[""].idle[update.Id] = c.nodes[update.Id]
 
@@ -186,6 +217,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				// This node is already present, log this spurious add.
 				log.Infof("Node already added!! %v (%#v)", update.Id, ns)
 			}
+
 		case cluster.NodeRemoved:
 			if ns, ok := c.suspendedNodes[update.Id]; ok {
 				// Node already suspended, make sure it's now marked as lost and not flaky (keep readiness status intact).
@@ -212,29 +244,31 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// and check if newly added non-ready nodes are ready to be put into rotation.
 	now := time.Now()
 	for _, ns := range c.suspendedNodes {
-		if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
+		if ns.ready() && ns.timeLost == nilTime {
+			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
+			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
+				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+			c.nodes[ns.node.Id()] = ns
+			delete(c.suspendedNodes, ns.node.Id())
+		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
+			// This node has been missing too long, delete all references to it.
+			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
 			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended)",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1)
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
-
+			select {
+			case ns.removedCh <- nil:
+			default:
+			}
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
+			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
 			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended)",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
-
-		} else if ns.timeInit != nilTime && now.Sub(ns.timeInit) > c.readyFnInterval {
-			if c.readyFn(ns.node) {
-				log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
-					ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
-				c.nodes[ns.node.Id()] = ns
-				ns.timeInit = nilTime
-			} else {
-				ns.timeInit = now
-			}
 		}
 	}
 }
