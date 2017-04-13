@@ -186,7 +186,7 @@ func TestInit(t *testing.T) {
 		RefSpec: "refs/remotes/ro/master",
 	}
 
-	db, _ := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
 	defer db.Close()
 
 	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
@@ -225,7 +225,7 @@ func TestInitFails(t *testing.T) {
 		RefSpec: "refs/remotes/ro/master",
 	}
 
-	db, _ := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	db := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
 	defer db.Close()
 
 	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
