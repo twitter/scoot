@@ -14,7 +14,9 @@ import (
 
 //TODO: test workerStatus.
 type WorkerStatus struct {
-	Runs []runner.RunStatus
+	Runs        []runner.RunStatus
+	Initialized bool
+	Error       string
 }
 
 func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) WorkerStatus {
@@ -22,7 +24,7 @@ func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) WorkerStatus {
 	for _, r := range thrift.Runs {
 		runs = append(runs, ThriftRunStatusToDomain(r))
 	}
-	return WorkerStatus{runs}
+	return WorkerStatus{runs, thrift.Initialized, thrift.Error}
 }
 
 func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
@@ -30,6 +32,8 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 	thrift.Runs = make([]*worker.RunStatus, 0)
 	for _, r := range domain.Runs {
 		thrift.Runs = append(thrift.Runs, DomainRunStatusToThrift(r))
+		thrift.Initialized = domain.Initialized
+		thrift.Error = domain.Error
 	}
 	return thrift
 }

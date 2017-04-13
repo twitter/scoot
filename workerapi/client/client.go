@@ -111,34 +111,36 @@ func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, error) {
-	st, err := c.QueryWorker()
+func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
+	ws, err := c.QueryWorker()
 	if err != nil {
-		return runner.RunStatus{}, err
+		return runner.RunStatus{}, runner.ServiceStatus{}, err
 	}
-	for _, p := range st.Runs {
+	svc := runner.ServiceStatus{Initialized: ws.Initialized}
+	for _, p := range ws.Runs {
 		if p.RunID == id {
-			return p, nil
+			return p, svc, nil
 		}
 	}
-	return runner.RunStatus{}, fmt.Errorf("no such process %v", id)
+	return runner.RunStatus{}, svc, fmt.Errorf("no such process %v", id)
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) StatusAll() ([]runner.RunStatus, error) {
-	st, err := c.QueryWorker()
+func (c *simpleClient) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
+	ws, err := c.QueryWorker()
 	if err != nil {
-		return nil, err
+		return nil, runner.ServiceStatus{}, err
 	}
-	return st.Runs, nil
+	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized}, nil
 }
 
-func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
-	stats, err := c.StatusAll()
+func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	st, svc, err := c.StatusAll()
 	if err != nil {
-		return nil, err
+		return nil, runner.ServiceStatus{}, err
 	}
-	return runners.StatusesRO(stats).QueryNow(q)
+	st, err = runners.StatusesRO(st).QueryNow(q)
+	return st, svc, err
 }
 
 //TODO: implement erase

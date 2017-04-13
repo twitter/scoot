@@ -50,22 +50,24 @@ func (_mr *_MockServiceRecorder) Erase(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Erase", arg0)
 }
 
-func (_m *MockService) Query(_param0 runner.Query, _param1 runner.Wait) ([]runner.RunStatus, error) {
+func (_m *MockService) Query(_param0 runner.Query, _param1 runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ret := _m.ctrl.Call(_m, "Query", _param0, _param1)
 	ret0, _ := ret[0].([]runner.RunStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(runner.ServiceStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockServiceRecorder) Query(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Query", arg0, arg1)
 }
 
-func (_m *MockService) QueryNow(_param0 runner.Query) ([]runner.RunStatus, error) {
+func (_m *MockService) QueryNow(_param0 runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ret := _m.ctrl.Call(_m, "QueryNow", _param0)
 	ret0, _ := ret[0].([]runner.RunStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(runner.ServiceStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockServiceRecorder) QueryNow(arg0 interface{}) *gomock.Call {
@@ -83,22 +85,24 @@ func (_mr *_MockServiceRecorder) Run(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Run", arg0)
 }
 
-func (_m *MockService) Status(_param0 runner.RunID) (runner.RunStatus, error) {
+func (_m *MockService) Status(_param0 runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
 	ret := _m.ctrl.Call(_m, "Status", _param0)
 	ret0, _ := ret[0].(runner.RunStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(runner.ServiceStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockServiceRecorder) Status(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Status", arg0)
 }
 
-func (_m *MockService) StatusAll() ([]runner.RunStatus, error) {
+func (_m *MockService) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ret := _m.ctrl.Call(_m, "StatusAll")
 	ret0, _ := ret[0].([]runner.RunStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(runner.ServiceStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockServiceRecorder) StatusAll() *gomock.Call {

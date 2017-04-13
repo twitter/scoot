@@ -60,34 +60,34 @@ func (r *ChaosRunner) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	return r.del.Run(cmd)
 }
 
-func (r *ChaosRunner) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, error) {
+func (r *ChaosRunner) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return nil, err
+		return nil, runner.ServiceStatus{}, err
 	}
 	return r.del.Query(q, w)
 }
 
-func (r *ChaosRunner) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+func (r *ChaosRunner) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return nil, err
+		return nil, runner.ServiceStatus{}, err
 	}
 	return r.del.QueryNow(q)
 }
 
-func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, error) {
+func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.RunStatus{}, err
+		return runner.RunStatus{}, runner.ServiceStatus{}, err
 	}
 	return r.del.Status(run)
 }
 
-func (r *ChaosRunner) StatusAll() ([]runner.RunStatus, error) {
+func (r *ChaosRunner) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return nil, err
+		return nil, runner.ServiceStatus{}, err
 	}
 	return r.del.StatusAll()
 }

@@ -55,7 +55,7 @@ type Wait struct {
 // StatusQuerier allows reading Status by Query'ing.
 type StatusQuerier interface {
 	// Query returns all RunStatus'es matching q, waiting as described by w
-	Query(q Query, w Wait) ([]RunStatus, error)
+	Query(q Query, w Wait) ([]RunStatus, ServiceStatus, error)
 
 	StatusQueryNower
 }
@@ -68,17 +68,17 @@ type StatusQuerier interface {
 // We will implement a PollingQueuer that wraps a StatusQueryNower and satisfies StatusQuerier.
 type StatusQueryNower interface {
 	// QueryNow returns all RunStatus'es matching q in their current state
-	QueryNow(q Query) ([]RunStatus, error)
+	QueryNow(q Query) ([]RunStatus, ServiceStatus, error)
 }
 
 // LegacyStatusReader contains legacy methods to read Status'es.
 // Prefer using the convenience methods above.
 type LegacyStatusReader interface {
 	// Status returns the current status of id from q.
-	Status(run RunID) (RunStatus, error)
+	Status(run RunID) (RunStatus, ServiceStatus, error)
 
 	// StatusAll returns the Current status of all runs
-	StatusAll() ([]RunStatus, error)
+	StatusAll() ([]RunStatus, ServiceStatus, error)
 }
 
 // StatusReader includes both the preferred and the legacy api.
@@ -94,8 +94,11 @@ type StatusWriter interface {
 	// NewRun creates a new RunID in state Preparing
 	NewRun() (RunStatus, error)
 
+	// Update overall service status.
+	UpdateService(st ServiceStatus) error
+
 	// Update writes a new status.
-	UpdateStatus(st RunStatus) error
+	Update(st RunStatus) error
 
 	StatusEraser
 }

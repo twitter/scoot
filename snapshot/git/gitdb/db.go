@@ -49,8 +49,8 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
 	result := &DB{
-		reqCh:      make(chan req),
 		initDoneCh: make(chan struct{}),
+		reqCh:      make(chan req),
 		dataRepo:   dataRepo,
 		tmp:        tmp,
 		checkouts:  make(map[string]bool),

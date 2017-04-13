@@ -151,3 +151,12 @@ func PreparingStatus(runID RunID) (r RunStatus) {
 	r.State = PREPARING
 	return r
 }
+
+// This is for overall runner status, just 'initialized' status for now.
+type ServiceStatus struct {
+	Initialized bool
+}
+
+func (s ServiceStatus) String() string {
+	return fmt.Sprintf("--- Service Status ---\n\tInitialized:%t\n", s.Initialized)
+}

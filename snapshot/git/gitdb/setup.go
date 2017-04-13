@@ -34,7 +34,12 @@ func (m module) Install(b *ice.MagicBag) {
 			return AutoUploadBundlestore
 		},
 		MakeDBNewRepo,
-		func(db *DB) snap.DB { return db },
+		func(db *DB) snap.DB {
+			return db
+		},
+		func(db *DB) snap.InitDoneCh {
+			return db.initDoneCh
+		},
 	)
 }
 

@@ -215,7 +215,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.State = execer.FAILED
-		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), runners.NewNullOutputCreator(), tmp)
+		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)

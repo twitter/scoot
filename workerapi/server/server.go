@@ -50,7 +50,8 @@ func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 func (h *handler) stats() {
-	startTime := time.Now()
+	var startTime time.Time
+	nilTime := time.Time{}
 	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
 	for {
 		select {
@@ -58,9 +59,12 @@ func (h *handler) stats() {
 			h.mu.Lock()
 			var numFailed int64
 			var numActive int64
-			processes, err := h.run.StatusAll()
+			processes, svc, err := h.run.StatusAll()
 			if err != nil {
 				continue
+			}
+			if svc.Initialized && startTime == nilTime {
+				startTime = time.Now()
 			}
 			for _, process := range processes {
 				if process.State == runner.FAILED {
@@ -74,11 +78,15 @@ func (h *handler) stats() {
 			if numActive > 0 {
 				timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			}
+			var uptime time.Duration
+			if startTime != nilTime {
+				uptime = time.Since(startTime)
+			}
 			h.stat.Gauge("activeRunsGauge").Update(numActive)
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
 			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
 			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
-			h.stat.Gauge("uptimeGauge_ms").Update(int64(time.Since(startTime) / time.Millisecond))
+			h.stat.Gauge("uptimeGauge_ms").Update(int64(uptime / time.Millisecond))
 			h.mu.Unlock()
 		}
 	}
@@ -96,18 +104,18 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter("workerQueries").Inc(1)
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
-	st, err := h.run.StatusAll()
+
+	st, svc, err := h.run.StatusAll()
 	if err != nil {
-		// Set invalid status and nil err to indicate handleable domain err.
-		//TODO(jschiller): add an err field to proto WorkerStatus so we don't need to add a dummy status to the list.
-		st = []runner.RunStatus{
-			runner.RunStatus{Error: err.Error(), State: runner.UNKNOWN},
-		}
+		ws.Error = err.Error()
 	}
+	ws.Initialized = svc.Initialized
+
 	for _, status := range st {
 		if status.State.IsDone() {
-			// Note: TravisCI fails when output is too long so we set this to Debug and disable it when running in that env.
-			log.Debugf("Worker returning finished run: %v", status)
+			// Note: TravisCI fails when output is too long so we set full status to Debug and disable it when running in that env.
+			log.Info("Worker returning finished run: %v", status.RunID)
+			log.Debugf("Worker returning finished run (details): %v", status)
 		}
 		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))
 	}
@@ -127,7 +135,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	//TODO(jschiller): accept a cmd.Nonce field so we can be precise about hiccups with dup cmd resends?
 	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c, h.currentCmd) {
 		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
-		status, err = h.run.Status(h.currentRunID)
+		status, _, err = h.run.Status(h.currentRunID)
 	}
 	if err != nil {
 		// Set invalid status and nil err to indicate handleable domain err.

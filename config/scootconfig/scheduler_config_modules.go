@@ -7,6 +7,10 @@ import (
 	"github.com/scootdev/scoot/sched/scheduler"
 )
 
+const DefaultRunnerRetryTimeout = 10 * time.Second // How long to keep retrying a runner req
+const DefaultRunnerRetryInterval = time.Second     // How long to sleep between runner req retries.
+const DefaultReadyFnBackoff = 5 * time.Second      // How long to wait between runner status queries to determine [init] status.
+
 // Parameters to configure the Stateful Scheduler
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //                     marking it as completed.
@@ -37,5 +41,8 @@ func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
 		RecoverJobsOnStartup: c.RecoverJobsOnStartup,
 		DefaultTaskTimeout:   time.Duration(c.DefaultTaskTimeoutMs) * time.Millisecond,
 		RunnerOverhead:       time.Duration(c.RunnerOverheadMs) * time.Millisecond,
+		RunnerRetryTimeout:   DefaultRunnerRetryTimeout,
+		RunnerRetryInterval:  DefaultRunnerRetryInterval,
+		ReadyFnBackoff:       DefaultReadyFnBackoff,
 	}
 }

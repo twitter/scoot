@@ -14,7 +14,7 @@ import (
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	tmp, _ := temp.NewTempDir("", "runner_polling_test")
 	ex := execers.NewSimExecer()
-	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), NewNullOutputCreator(), tmp)
+	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, NewNullOutputCreator(), tmp)
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
@@ -29,7 +29,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 	if err != nil {
 		t.Fatal(st, err)
 	}
-	st, err = runner.FinalStatus(poller, st.RunID)
+	st, _, err = runner.FinalStatus(poller, st.RunID)
 	if err != nil {
 		t.Fatal(st, err)
 	}
@@ -48,7 +48,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 	}
 
 	go func() {
-		st, err := runner.FinalStatus(poller, st.RunID)
+		st, _, err := runner.FinalStatus(poller, st.RunID)
 		stCh <- st
 		errCh <- err
 	}()
@@ -80,7 +80,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 	}
 
 	go func() {
-		st, err := runner.FinalStatus(poller, st.RunID)
+		st, _, err := runner.FinalStatus(poller, st.RunID)
 		stCh <- st
 		errCh <- err
 	}()
@@ -120,7 +120,7 @@ func TestPolling_ErrorPolling(t *testing.T) {
 	}
 
 	go func() {
-		st, err := runner.FinalStatus(poller, st.RunID)
+		st, _, err := runner.FinalStatus(poller, st.RunID)
 		stCh <- st
 		errCh <- err
 	}()

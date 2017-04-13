@@ -3,12 +3,13 @@ package gitdb
 import (
 	"flag"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"

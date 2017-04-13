@@ -7,6 +7,9 @@ import (
 // ID identifies a Snapshot in DB. (Cf. doc.go for explanation of Snapshot) Opaque to the client.
 type ID string
 
+// DB may require some form of initialization, in which case this chan should be provided by the db impl.
+type InitDoneCh <-chan struct{}
+
 // Creator allows creating new Snapshots.
 type Creator interface {
 	// Ingest

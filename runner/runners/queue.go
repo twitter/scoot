@@ -20,24 +20,36 @@ type cmdAndID struct {
 }
 
 // NewQueueRunner creates a new Service that uses a Queue
+// The init chan is optional and may be nil if the filer has no initializion step.
 func NewQueueRunner(
-	exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir, capacity int,
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int,
 ) runner.Service {
 	statusManager := NewStatusManager()
 	inv := NewInvoker(exec, filer, output, tmp)
-	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
-	runner := &Service{controller, statusManager, statusManager}
-	return runner
+	controller := &QueueController{statusManager: statusManager, inv: inv, initDoneCh: idc, capacity: capacity}
+	run := &Service{controller, statusManager, statusManager}
+
+	statusManager.UpdateService(runner.ServiceStatus{Initialized: idc == nil})
+	if idc != nil {
+		go func() {
+			<-idc
+			statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+		}()
+	}
+
+	return run
 }
 
-func NewSingleRunner(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) runner.Service {
-	return NewQueueRunner(exec, filer, output, tmp, 0)
+func NewSingleRunner(
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir) runner.Service {
+	return NewQueueRunner(exec, filer, idc, output, tmp, 0)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).
 type QueueController struct {
 	inv           *Invoker
 	statusManager *StatusManager
+	initDoneCh    snapshot.InitDoneCh
 	capacity      int
 
 	mu           sync.Mutex
@@ -97,7 +109,8 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 
 	// Unlock so watch() abort can call c.statusManager.Update()
 	c.mu.Unlock()
-	return runner.FinalStatus(c.statusManager, run)
+	status, _, err := runner.FinalStatus(c.statusManager, run)
+	return status, err
 }
 
 // start starts a command, returning the current status

@@ -47,7 +47,7 @@ func assertRun(t *testing.T, r runner.Service, expected runner.RunStatus, args .
 }
 
 func assertWait(t *testing.T, r runner.Service, runId runner.RunID, expected runner.RunStatus, args ...string) {
-	actual := wait(r, runId, expected)
+	actual, _ := wait(r, runId, expected)
 	assertStatus(t, actual, expected, args...)
 }
 
@@ -80,10 +80,10 @@ func run(t *testing.T, r runner.Service, args []string) runner.RunID {
 	return status.RunID
 }
 
-func wait(r runner.Service, run runner.RunID, expected runner.RunStatus) runner.RunStatus {
-	st, err := runner.WaitForState(r, run, expected.State)
+func wait(r runner.Service, run runner.RunID, expected runner.RunStatus) (runner.RunStatus, runner.ServiceStatus) {
+	st, svc, err := runner.WaitForState(r, run, expected.State)
 	if err != nil {
 		panic(err)
 	}
-	return st
+	return st, svc
 }

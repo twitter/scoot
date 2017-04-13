@@ -22,6 +22,7 @@ func NewStatusManager() *StatusManager {
 type StatusManager struct {
 	mu        sync.Mutex
 	runs      map[runner.RunID]runner.RunStatus
+	svcStatus runner.ServiceStatus
 	nextRunID int64
 	listeners []queryAndCh
 }
@@ -49,13 +50,23 @@ func (s *StatusManager) NewRun() (runner.RunStatus, error) {
 	return st, nil
 }
 
-// Update writes a new status.
+// Update the overall service status independent of run status.
+func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.svcStatus = svcStatus
+	return nil
+}
+
+// Update writes a new status for a run.
 // It enforces several rules:
 //   cannot change a status once it is Done
 //   cannot erase Stdout/Stderr Refs
 func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	oldStatus, ok := s.runs[newStatus.RunID]
 	if ok && oldStatus.State.IsDone() {
 		return nil
@@ -87,11 +98,11 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 
 // Reader interface (implements runner.StatusQuerier)
 
-// Query returns all RunStatus'es matching q, waiting as described by w
-func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, error) {
+// Query returns all RunStatus'es matching q, waiting as described by w, plus the overall service status.
+func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
 	if err != nil || len(current) > 0 || wait.Timeout == 0 {
-		return current, err
+		return current, s.svcStatus, err
 	}
 
 	var timeout <-chan time.Time
@@ -103,24 +114,24 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunSta
 
 	select {
 	case st := <-future:
-		return []runner.RunStatus{st}, nil
+		return []runner.RunStatus{st}, s.svcStatus, nil
 	case <-timeout:
-		return nil, nil
+		return nil, s.svcStatus, nil
 	}
 }
 
 // QueryNow returns all RunStatus'es matching q in their current state
-func (s *StatusManager) QueryNow(q runner.Query) ([]runner.RunStatus, error) {
+func (s *StatusManager) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return s.Query(q, runner.Wait{})
 }
 
 // Status returns the current status of id from q.
-func (s *StatusManager) Status(id runner.RunID) (runner.RunStatus, error) {
+func (s *StatusManager) Status(id runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
 	return runner.StatusNow(s, id)
 }
 
 // StatusAll returns the Current status of all runs
-func (s *StatusManager) StatusAll() ([]runner.RunStatus, error) {
+func (s *StatusManager) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return runner.StatusAll(s)
 }
 
@@ -140,7 +151,8 @@ func (s *StatusManager) Erase(run runner.RunID) error {
 //   the current results
 //   a channel that will hold the next result (if current is empty and err is nil)
 //   error
-func (s *StatusManager) queryAndListen(q runner.Query, listen bool) (current []runner.RunStatus, future chan runner.RunStatus, err error) {
+func (s *StatusManager) queryAndListen(q runner.Query, listen bool) (
+	current []runner.RunStatus, future chan runner.RunStatus, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
