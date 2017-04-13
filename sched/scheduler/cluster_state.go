@@ -56,14 +56,38 @@ func (ns *nodeState) suspended() bool {
 	return !ns.ready() || ns.timeLost != nilTime || ns.timeFlaky != nilTime
 }
 
+// This node is ready if the readyCh has been closed, either upon creation or in the startReadyLoop() goroutine.
 func (ns *nodeState) ready() bool {
-	ready := false
-	select {
-	case <-ns.readyCh:
-		ready = true
-	default:
+	ready := (ns.readyCh == nil)
+	if !ready {
+		select {
+		case <-ns.readyCh:
+			ready = true
+			ns.readyCh = nil
+		default:
+		}
 	}
 	return ready
+}
+
+// Stars a goroutine loop checking node readiness, waiting 'backoff' time between checks, and exiting if node is fully removed.
+func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
+	go func() {
+		done := false
+		for !done {
+			if ready, backoff := rfn(ns.node); ready {
+				close(ns.readyCh)
+				done = true
+			} else {
+				select {
+				case <-ns.removedCh:
+					done = true
+				case <-time.After(backoff):
+					break
+				}
+			}
+		}
+	}()
 }
 
 // Initializes a Node State for the specified Node
@@ -85,17 +109,23 @@ func newNodeState(node cluster.Node) *nodeState {
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn) *clusterState {
 	nodes := make(map[cluster.NodeId]*nodeState)
 	nodeGroups := map[string]*nodeGroup{"": newNodeGroup()}
+	suspendedNodes := map[cluster.NodeId]*nodeState{}
 	for _, n := range initial {
 		nodes[n.Id()] = newNodeState(n)
 		nodeGroups[""].idle[n.Id()] = nodes[n.Id()]
 		if rfn == nil {
 			close(nodes[n.Id()].readyCh)
+		} else {
+			nodes[n.Id()].startReadyLoop(rfn)
 		}
+	}
+	if rfn != nil {
+		nodes, suspendedNodes = suspendedNodes, nodes
 	}
 	return &clusterState{
 		updateCh:         updateCh,
 		nodes:            nodes,
-		suspendedNodes:   map[cluster.NodeId]*nodeState{},
+		suspendedNodes:   suspendedNodes,
 		nodeGroups:       nodeGroups,
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
@@ -154,6 +184,7 @@ func (c *clusterState) updateCluster() {
 		}
 		c.update(updates)
 	default:
+		c.update(nil)
 	}
 }
 
@@ -163,6 +194,7 @@ func (c *clusterState) updateCluster() {
 func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// Apply updates
 	for _, update := range updates {
+		var newNode *nodeState
 		switch update.UpdateType {
 
 		case cluster.NodeAdded:
@@ -184,34 +216,19 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
 				if c.readyFn == nil {
 					// We're not checking readiness, skip suspended state and add this as a healthy node.
-					c.nodes[update.Id] = newNodeState(update.Node)
+					newNode = newNodeState(update.Node)
+					c.nodes[update.Id] = newNode
 					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
-					ns = newNodeState(update.Node)
-					c.suspendedNodes[update.Id] = ns
+					newNode = newNodeState(update.Node)
+					c.suspendedNodes[update.Id] = newNode
 					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
-					go func() {
-						done := false
-						for !done {
-							// Loop checking node readiness, waiting 'backoff' time between checks, and cancel if node is fully removed.
-							if ready, backoff := c.readyFn(ns.node); ready {
-								close(ns.readyCh)
-								done = true
-							} else {
-								select {
-								case <-ns.removedCh:
-									done = true
-								case <-time.After(backoff):
-									break
-								}
-							}
-						}
-					}()
+					newNode.startReadyLoop(c.readyFn)
 				}
-				c.nodeGroups[""].idle[update.Id] = c.nodes[update.Id]
+				c.nodeGroups[""].idle[update.Id] = newNode
 
 			} else {
 				// This node is already present, log this spurious add.

@@ -3,12 +3,13 @@ package gitdb
 import (
 	"flag"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
@@ -185,7 +186,7 @@ func TestInit(t *testing.T) {
 		RefSpec: "refs/remotes/ro/master",
 	}
 
-	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	db, _ := MakeDBNewRepo(&bundleIniter{mirror, ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
 	defer db.Close()
 
 	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
@@ -224,7 +225,7 @@ func TestInitFails(t *testing.T) {
 		RefSpec: "refs/remotes/ro/master",
 	}
 
-	db := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	db, _ := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
 	defer db.Close()
 
 	ingestDir, err := fixture.tmp.TempDir("ingest_dir")

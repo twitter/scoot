@@ -21,7 +21,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
-	cs := newClusterState(testCluster.nodes, testCluster.ch)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
 	assignments, _ := getTaskAssignments(cs, jobState.getUnScheduledTasks())
 
 	if len(assignments) != 0 {
@@ -32,7 +32,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
 	assignments, _ := getTaskAssignments(cs, []*taskState{})
 
 	if len(assignments) != 0 {
@@ -51,7 +51,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
 	unScheduledTasks := jobState.getUnScheduledTasks()
 	assignments, _ := getTaskAssignments(cs, unScheduledTasks)
 
@@ -66,7 +66,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3")
-	cs := newClusterState(testCluster.nodes, testCluster.ch)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
 	tasks := []*taskState{
 		&taskState{TaskId: "task1", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		&taskState{TaskId: "task2", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},

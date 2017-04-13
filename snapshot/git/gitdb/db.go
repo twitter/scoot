@@ -34,24 +34,23 @@ const (
 // MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDBFromRepo(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
 	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	db, _ := makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
-	return db
+	return makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
 func MakeDBNewRepo(initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, snap.InitDoneCh) {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
 	return makeDB(nil, initer, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) (*DB, snap.InitDoneCh) {
+	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
 	result := &DB{
-		reqCh:      make(chan req),
 		initDoneCh: make(chan struct{}),
+		reqCh:      make(chan req),
 		dataRepo:   dataRepo,
 		tmp:        tmp,
 		checkouts:  make(map[string]bool),
@@ -72,7 +71,7 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 	}
 
 	go result.loop(initer)
-	return result, result.initDoneCh
+	return result
 }
 
 type RepoIniter interface {

@@ -32,7 +32,7 @@ func TestOutput(t *testing.T) {
 	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
 	id := assertRun(t, r, complete(0),
 		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
-	st, err := r.Status(id)
+	st, _, err := r.Status(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestAbort(t *testing.T) {
 	assertWait(t, r, runID, running(), args...)
 	r.Abort(runID)
 	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
-	st, err := r.Status(runID)
+	st, _, err := r.Status(runID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestMemCap(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"bash", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
 	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
-	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), NewNullOutputCreator(), tmp)
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -117,7 +117,7 @@ func TestMemCap(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-	if runs, err := r.Query(query, runner.Wait{Timeout: 2 * time.Second}); err != nil { //travis may be slow, wait a super long time?
+	if runs, _, err := r.Query(query, runner.Wait{Timeout: 2 * time.Second}); err != nil { //travis may be slow, wait a super long time?
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
 		t.Fatalf("Expected result with FAILURE and matching err string, got: %v", runs)
@@ -135,6 +135,6 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, tmpDir)
+	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir)
 	return r, sim
 }

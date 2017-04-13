@@ -15,10 +15,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 )
 
-const DefaultRunnerRetryTimeout = 10 * time.Second
-const DefaultRunnerRetryInterval = time.Second
-const DefaultReadyFnBackoff = 5 * time.Second
-
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //     marking it as completed.
@@ -27,6 +23,16 @@ const DefaultReadyFnBackoff = 5 * time.Second
 //     by calling step()
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //     from the sagalog, and restarts them.
+// DefaultTaskTimeout -
+//     default timeout for tasks, in ms.
+// RunnerOverhead -
+//     default overhead to add (to account for network and downloading).
+// RunnerRetryTimeout -
+//     how long to keep retrying a runner req.
+// RunnerRetryInterval -
+//     how long to sleep between runner req retries.
+// ReadyFnBackoff -
+//     how long to wait between runner status queries to determine [init] status.
 
 type SchedulerConfig struct {
 	MaxRetriesPerTask    int
@@ -34,6 +40,9 @@ type SchedulerConfig struct {
 	RecoverJobsOnStartup bool
 	DefaultTaskTimeout   time.Duration
 	RunnerOverhead       time.Duration
+	RunnerRetryTimeout   time.Duration
+	RunnerRetryInterval  time.Duration
+	ReadyFnBackoff       time.Duration
 }
 
 type RunnerFactory func(node cluster.Node) runner.Service
@@ -57,9 +66,10 @@ type statefulScheduler struct {
 	// Scheduler config
 	maxRetriesPerTask   int
 	defaultTaskTimeout  time.Duration
-	runnerRetryTimeout  time.Duration // see task_runner.go
-	runnerRetryInterval time.Duration // see task_runner.go
+	runnerRetryTimeout  time.Duration
+	runnerRetryInterval time.Duration
 	runnerOverhead      time.Duration
+	readyFnBackoff      time.Duration
 
 	// Scheduler State
 	clusterState   *clusterState
@@ -112,13 +122,16 @@ func NewStatefulScheduler(
 		run := rf(node)
 		st, svc, err := run.StatusAll()
 		if err != nil || !svc.Initialized {
-			return false, DefaultReadyFnBackoff
+			return false, config.ReadyFnBackoff
 		}
 		for _, s := range st {
 			log.Info("Aborting existing run on new node: ", node, s)
 			run.Abort(s.RunID)
 		}
 		return true, time.Duration(0)
+	}
+	if config.ReadyFnBackoff == 0 {
+		nodeReadyFn = nil
 	}
 
 	sched := &statefulScheduler{
@@ -129,8 +142,8 @@ func NewStatefulScheduler(
 
 		maxRetriesPerTask:   config.MaxRetriesPerTask,
 		defaultTaskTimeout:  config.DefaultTaskTimeout,
-		runnerRetryTimeout:  DefaultRunnerRetryTimeout,
-		runnerRetryInterval: DefaultRunnerRetryInterval,
+		runnerRetryTimeout:  config.RunnerRetryTimeout,
+		runnerRetryInterval: config.RunnerRetryInterval,
 		runnerOverhead:      config.RunnerOverhead,
 
 		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),

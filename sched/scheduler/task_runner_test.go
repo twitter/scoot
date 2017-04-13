@@ -259,7 +259,8 @@ func Test_runTaskWithQueryRetry(t *testing.T) {
 	runMock := runnermock.NewMockService(mockCtrl)
 	queryErr := errors.New("QueryErr")
 	runMock.EXPECT().Run(gomock.Any()).Return(runner.RunStatus{}, nil)
-	runMock.EXPECT().Query(gomock.Any(), gomock.Any()).Return([]runner.RunStatus{runner.RunStatus{}}, queryErr).Times(2)
+	runMock.EXPECT().Query(gomock.Any(), gomock.Any()).Return(
+		[]runner.RunStatus{runner.RunStatus{}}, runner.ServiceStatus{}, queryErr).Times(2)
 
 	tr := testTaskRunner(s, runMock, "task1", sched.GenTask(), true)
 	tr.runnerRetryTimeout = 3 * time.Millisecond

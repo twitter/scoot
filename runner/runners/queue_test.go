@@ -79,7 +79,7 @@ func TestUnknownRunIDInStatusRequest(t *testing.T) {
 	env := setup(4, t)
 	defer env.teardown()
 
-	st, err := env.r.Status(runner.RunID("not a real run id"))
+	st, _, err := env.r.Status(runner.RunID("not a real run id"))
 	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf(UnknownRunIDMsg, "")) {
 		t.Fatalf("Should not be able to get status: %q %q", err, st)
 	}
@@ -125,7 +125,7 @@ func TestStatus(t *testing.T) {
 	run7 := assertRun(t, env.r, pending(), "complete 0")
 	run8 := assertRun(t, env.r, pending(), "complete 0")
 
-	all, err := env.r.StatusAll()
+	all, _, err := env.r.StatusAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestStatus(t *testing.T) {
 	// We've already waited for each status to be correct, so we trust that.
 	// So, for each status in StatusAll, we'll call Status on its ID and error if not equal
 	for _, st := range all {
-		st2, err := env.r.Status(st.RunID)
+		st2, _, err := env.r.Status(st.RunID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -160,7 +160,7 @@ func setup(capacity int, t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
-	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), outputCreator, tmpDir, capacity)
+	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, capacity)
 
 	return &env{sim: sim, r: r}
 }
