@@ -29,7 +29,7 @@ func main() {
 	level, err := log.ParseLevel(*logLevelFlag)
 	if err != nil {
 		log.Error(err)
-		return
+		level = "info"
 	}
 	log.SetLevel(level)
 
