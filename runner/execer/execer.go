@@ -7,6 +7,7 @@ import "io"
 // It's at the level of os/exec, not exec-as-a-service.
 
 // Memory in bytes.
+//FIXME(jschiller) arbitrary commands can spawn dissociated/untracked child processes (ppid=1)
 type Memory uint64
 
 type Command struct {

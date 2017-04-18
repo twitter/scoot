@@ -63,13 +63,12 @@ func TestOutput(t *testing.T) {
 func TestMemUsage(t *testing.T) {
 	// Command to increase memory by 10MB every .1s until we hit 50MB after .5s.
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
-	str := "python -c \"import time\nx=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)\" &"
-	cmd := execer.Command{Argv: []string{"bash", "-c", str}}
+	str := `import time; exec("x=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
+	cmd := execer.Command{Argv: []string{"python", "-c", str}}
 	process, err := NewExecer().Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-
 	// Check for growing memory usage at [.2, .4]s. Then check that the usage is a reasonable minimum value (25MB).
 	prevUsage := 0
 	for i := 0; i < 2; i++ {

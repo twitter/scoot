@@ -2,9 +2,10 @@ package gitdb
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
 	"path/filepath"
+
+	log "github.com/Sirupsen/logrus"
 
 	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
@@ -30,8 +31,8 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 // checkout creates a checkout of id.
 func (db *DB) checkout(id snap.ID) (path string, err error) {
 	defer func() {
-		// If we're returning our repo dir, we need to keep the work tree locked.
-		// Otherwise, we can unlock it.
+		// If we're returning our repo dir, we need to keep the work tree locked, otherwise, we can unlock it.
+		// Note: we defer this to capture the various places 'path' is returned.
 		if path != db.dataRepo.Dir() {
 			db.workTreeLock.Unlock()
 		}

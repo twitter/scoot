@@ -35,6 +35,8 @@ func NewQueueRunner(
 			<-idc
 			statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
 		}()
+	} else {
+		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
 	}
 
 	return run

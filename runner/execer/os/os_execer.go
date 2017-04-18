@@ -13,6 +13,8 @@ import (
 
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func NewExecer() execer.Execer {
@@ -79,7 +81,6 @@ type osProcess struct {
 }
 
 // Periodically check to make sure memory constraints are respected.
-//TODO: may want to make this configurable.
 func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 	memTicker := time.NewTicker(100 * time.Millisecond)
 	defer memTicker.Stop()
@@ -94,9 +95,11 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			usage, _ := memUsage(p.cmd.Process.Pid)
 			stat.Gauge("memory").Update(int64(usage))
 			if usage >= memCap {
+				msg := fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d (%v)", usage, memCap, p.cmd.Args)
+				log.Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
-					Error: fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d", usage, memCap),
+					Error: msg,
 				}
 				p.mutex.Unlock()
 				return
@@ -175,8 +178,9 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 func memUsage(pgid int) (execer.Memory, error) {
 	// Pass children of pgid from 'pgrep', and pgid itself, into 'ps' to get rss memory usages in KB, then sum them.
 	// Note: there may be better ways to do this if we choose to handle osx/linux separately.
-	str := "echo $(ps -orss= -p$(echo -n $(pgrep -g %d | tr '\n' ',')%d) | tr '\n' '+') 0 | bc"
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid, pgid))
+	str := `function getp(){ cps=$(pgrep -P $1); for cp in $cps; do echo "$cp"; getp $cp; done }`
+	str += `;export P=%d; ps -orss $(getp $P) $P | grep -v RSS | tr '\n' '+' | grep -o '.*[^+]' | bc`
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid))
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
 	} else {
