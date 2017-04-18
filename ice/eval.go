@@ -3,11 +3,11 @@ package ice
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/davecgh/go-spew/spew"
 	"reflect"
 	"runtime"
 	"runtime/debug"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // Extract extracts a value from the MagicBag and puts it into dest, returning any errors
@@ -35,9 +35,6 @@ func (bag *MagicBag) Extract(dest interface{}) (result error) {
 	}
 	targetVal.Set(reflect.Value(eval.construct(targetType)))
 
-	s := spew.Sdump(dest)
-	log.Info("************* Extracted:")
-	log.Info(s)
 	return nil
 }
 
@@ -115,6 +112,7 @@ func (e *evaluation) construct(key Key) Value {
 		}
 	}
 	e.values[key] = Value(results[0])
+	log.Infof("Constructed: %T", results[0].Interface())
 	return e.values[key]
 }
 
