@@ -16,13 +16,11 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) 
 		js.ID = ""
 		js.Status = scoot.Status_NOT_STARTED
 
-		if err != nil {
-			switch err.(type) {
-			case s.InvalidRequestError:
-				err = scoot.NewInvalidRequest()
-			case s.InternalLogError:
-				err = scoot.NewScootServerError()
-			}
+		switch err.(type) {
+		case s.InvalidRequestError:
+			err = scoot.NewInvalidRequest()
+		case s.InternalLogError:
+			err = scoot.NewScootServerError()
 		}
 
 		return js, err
@@ -33,6 +31,8 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) 
 		js := scoot.NewJobStatus()
 		js.ID = jobId
 		js.Status = scoot.Status_NOT_STARTED
+		js.TaskStatus = make(map[string]scoot.Status)
+		js.TaskData = make(map[string]*scoot.RunStatus)
 
 		return js, nil
 	}
