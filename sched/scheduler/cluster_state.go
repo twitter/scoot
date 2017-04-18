@@ -107,30 +107,21 @@ func newNodeState(node cluster.Node) *nodeState {
 // nodes added or removed based on the supplied channel. ReadyFn is optional.
 // New cluster is returned along with a doneCh which the caller can close to exit our goroutine.
 func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn) *clusterState {
-	nodes := make(map[cluster.NodeId]*nodeState)
-	nodeGroups := map[string]*nodeGroup{"": newNodeGroup()}
-	suspendedNodes := map[cluster.NodeId]*nodeState{}
+	var updates []cluster.NodeUpdate
 	for _, n := range initial {
-		nodes[n.Id()] = newNodeState(n)
-		nodeGroups[""].idle[n.Id()] = nodes[n.Id()]
-		if rfn == nil {
-			close(nodes[n.Id()].readyCh)
-		} else {
-			nodes[n.Id()].startReadyLoop(rfn)
-		}
+		updates = append(updates, cluster.NewAdd(n))
 	}
-	if rfn != nil {
-		nodes, suspendedNodes = suspendedNodes, nodes
-	}
-	return &clusterState{
+	cs := &clusterState{
 		updateCh:         updateCh,
-		nodes:            nodes,
-		suspendedNodes:   suspendedNodes,
-		nodeGroups:       nodeGroups,
+		nodes:            make(map[cluster.NodeId]*nodeState),
+		suspendedNodes:   map[cluster.NodeId]*nodeState{},
+		nodeGroups:       map[string]*nodeGroup{"": newNodeGroup()},
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
 		readyFn:          rfn,
 	}
+	cs.update(updates)
+	return cs
 }
 
 // Update ClusterState to reflect that a task has been scheduled on a particular node
@@ -218,6 +209,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					// We're not checking readiness, skip suspended state and add this as a healthy node.
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
+					newNode.readyCh = nil
 					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
 				} else {
