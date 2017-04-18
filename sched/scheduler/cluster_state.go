@@ -53,7 +53,7 @@ type nodeState struct {
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
 // or it experienced connection related errors so we sideline it for a little while.
 func (ns *nodeState) suspended() bool {
-	return !ns.ready() || ns.timeLost != nilTime || ns.timeFlaky != nilTime
+	return ns.readyCh != nil || ns.timeLost != nilTime || ns.timeFlaky != nilTime
 }
 
 // This node is ready if the readyCh has been closed, either upon creation or in the startReadyLoop() goroutine.
@@ -63,7 +63,6 @@ func (ns *nodeState) ready() bool {
 		select {
 		case <-ns.readyCh:
 			ready = true
-			ns.readyCh = nil
 		default:
 		}
 	}
@@ -114,7 +113,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 		nodes[n.Id()] = newNodeState(n)
 		nodeGroups[""].idle[n.Id()] = nodes[n.Id()]
 		if rfn == nil {
-			close(nodes[n.Id()].readyCh)
+			nodes[n.Id()].readyCh = nil
 		} else {
 			nodes[n.Id()].startReadyLoop(rfn)
 		}
@@ -265,6 +264,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
 			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+			ns.readyCh = nil
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
