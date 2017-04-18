@@ -57,6 +57,7 @@ func (ns *nodeState) suspended() bool {
 }
 
 // This node is ready if the readyCh has been closed, either upon creation or in the startReadyLoop() goroutine.
+// Note, nodes can be ready and healthy but still suspended due to update() lagging behind async startReadyLoop().
 func (ns *nodeState) ready() bool {
 	ready := (ns.readyCh == nil)
 	if !ready {
@@ -260,11 +261,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// and check if newly added non-ready nodes are ready to be put into rotation.
 	now := time.Now()
 	for _, ns := range c.suspendedNodes {
-		if ns.ready() && ns.timeLost == nilTime {
+		if ns.ready() {
+			ns.readyCh = nil
+		}
+		if !ns.suspended() {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
 			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
-			ns.readyCh = nil
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
