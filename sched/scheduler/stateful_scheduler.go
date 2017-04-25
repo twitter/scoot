@@ -6,9 +6,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	uuid "github.com/nu7hatch/gouuid"
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -178,7 +178,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	s.stat.Counter("schedJobRequestsCounter").Inc(1)
 
 	job := &sched.Job{
-		Id:  generateJobId(),
+		Id:  common.GenUUID(),
 		Def: jobDef,
 	}
 
@@ -200,19 +200,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	}
 
 	return job.Id, nil
-}
-
-// generates a jobId using a random uuid
-func generateJobId() string {
-
-	// uuid.NewV4() should never actually return an error the code uses
-	// rand.Read Api to generate the uuid, which according to golang docs
-	// "Read always returns ... a nil error" https://golang.org/pkg/math/rand/#Read
-	for {
-		if id, err := uuid.NewV4(); err == nil {
-			return id.String()
-		}
-	}
 }
 
 // run the scheduler loop indefinitely

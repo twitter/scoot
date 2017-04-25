@@ -130,6 +130,7 @@ func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, 
 		ExitCode:   workerRunStatus.ExitCode,
 		Error:      workerRunStatus.Error,
 		SnapshotId: workerRunStatus.SnapshotId,
+		ClientId:   workerRunStatus.ClientId,
 	}
 
 	return &scootRunStatus, nil

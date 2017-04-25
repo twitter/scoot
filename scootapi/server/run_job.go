@@ -53,6 +53,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		if t.SnapshotId != nil {
 			task.SnapshotID = *t.SnapshotId
 		}
+		task.ClientID = t.ClientId
 		result.Tasks[taskId] = task
 	}
 

@@ -21,6 +21,7 @@ struct Command {
 
 struct TaskDefinition {
   1: required Command command,
+  2: required string clientId,
 }
 
 struct JobDefinition {

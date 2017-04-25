@@ -40,14 +40,18 @@ type Command struct {
 	//
 	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
 	// SnapshotPlan map[string]string
+
+	// ClientID is used to trace a task through the scheduler and a worker
+	ClientID string
 }
 
 func (c Command) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n\tClientID:\t%s\n",
 		c.SnapshotID,
 		c.Argv,
-		c.Timeout)
+		c.Timeout,
+		c.ClientID)
 
 	if len(c.EnvVars) > 0 {
 		fmt.Fprintf(&b, "\tEnv:\n")

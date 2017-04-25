@@ -77,12 +77,13 @@ type RunStatus struct {
 	ExitCode   int
 
 	// Only valid if State == (FAILED || BADREQUEST)
-	Error string
+	Error    string
+	ClientID string
 }
 
 func (p RunStatus) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n", p.RunID, p.SnapshotID, p.State)
+	fmt.Fprintf(&b, "--- Run Status ---\n\tRun:\t\t%s\n\tSnapshot:\t\t%s\n\tState:\t\t%s\n\tClientID:\t\t%s\n", p.RunID, p.SnapshotID, p.State, p.ClientID)
 
 	if p.State == COMPLETE {
 		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
@@ -98,57 +99,65 @@ func (p RunStatus) String() string {
 
 // Helper functions to create RunStatus
 
-func AbortStatus(runID RunID) (r RunStatus) {
+func AbortStatus(runID RunID, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = ABORTED
+	r.ClientID = clientID
 	return r
 }
 
-func TimeoutStatus(runID RunID) (r RunStatus) {
+func TimeoutStatus(runID RunID, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = TIMEDOUT
+	r.ClientID = clientID
 	return r
 }
 
-func ErrorStatus(runID RunID, err error) (r RunStatus) {
+func ErrorStatus(runID RunID, err error, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
+	r.ClientID = clientID
 	return r
 }
 
-func BadRequestStatus(runID RunID, err error) (r RunStatus) {
+func BadRequestStatus(runID RunID, err error, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = BADREQUEST
 	r.Error = err.Error()
+	r.ClientID = clientID
 	return r
 }
 
-func PendingStatus(runID RunID) (r RunStatus) {
+func PendingStatus(runID RunID, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = PENDING
+	r.ClientID = clientID
 	return r
 }
 
-func RunningStatus(runID RunID, stdoutRef, stderrRef string) (r RunStatus) {
+func RunningStatus(runID RunID, stdoutRef, stderrRef, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = RUNNING
 	r.StdoutRef = stdoutRef
 	r.StderrRef = stderrRef
+	r.ClientID = clientID
 	return r
 }
 
-func CompleteStatus(runID RunID, snapshotID string, exitCode int) (r RunStatus) {
+func CompleteStatus(runID RunID, snapshotID string, exitCode int, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = COMPLETE
 	r.SnapshotID = snapshotID
 	r.ExitCode = exitCode
+	r.ClientID = clientID
 	return r
 }
 
-func PreparingStatus(runID RunID) (r RunStatus) {
+func PreparingStatus(runID RunID, clientID string) (r RunStatus) {
 	r.RunID = runID
 	r.State = PREPARING
+	r.ClientID = clientID
 	return r
 }
 

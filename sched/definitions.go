@@ -75,7 +75,6 @@ const (
 
 // transforms a thrift Job into a scheduler Job
 func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
-
 	if thriftJob == nil {
 		return nil
 	}
@@ -92,6 +91,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 				EnvVars:    cmd.GetEnvVars(),
 				Timeout:    time.Duration(cmd.GetTimeout()),
 				SnapshotID: cmd.GetSnapshotId(),
+				ClientID:   task.GetClientId(),
 			}
 			domainTasks[taskName] = TaskDefinition{command}
 		}
@@ -127,7 +127,7 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			Timeout:    &to,
 			SnapshotId: domainTask.SnapshotID,
 		}
-		thriftTask := schedthrift.TaskDefinition{Command: &cmd}
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd, ClientId: domainTask.ClientID}
 		thriftTasks[taskName] = &thriftTask
 	}
 
