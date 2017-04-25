@@ -28,7 +28,7 @@ func GenJob(id string, numTasks int) Job {
 func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 	jobDef := GenRandomJobDef(numTasks, rng)
 	for taskId, task := range jobDef.Tasks {
-		newTask := TaskDefinition{}
+		var newTask TaskDefinition
 		newTask.Command = task.Command
 		newTask.JobID = id
 		jobDef.Tasks[taskId] = newTask

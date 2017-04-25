@@ -61,29 +61,9 @@ func makeFixedSampleJob() *Job {
 	args := []string{"arg1", "arg2"}
 	taskDefinition.Argv = args
 	jobDef.Tasks[taskId] = taskDefinition
-	//Print(jobDef)  -I enable this for debugging
 	job.Def = jobDef
 
 	return &job
-}
-
-func Print(job *Job) {
-	log.Infof(fmt.Sprintf("job id:%s", job.Id))
-	log.Infof(fmt.Sprintf("job type:%s", job.Def.JobType))
-	for taskName, taskDef := range job.Def.Tasks {
-		log.Infof(fmt.Sprintf("taskName: %s", taskName))
-		log.Infof(fmt.Sprintf("\ttimeout: %s", taskDef.Timeout.String()))
-		log.Infof(fmt.Sprintf("\tsnapshotID: %s", taskDef.SnapshotID))
-		log.Infof(fmt.Sprintf("\ttaskID: %s", taskDef.TaskID))
-		log.Infof(fmt.Sprintf("\tjobID: %s", taskDef.JobID))
-		for envVarName, envVarVal := range taskDef.EnvVars {
-			log.Infof(fmt.Sprintf("\tenvVar:%s = %s", envVarName, envVarVal))
-		}
-		for i, arg := range taskDef.Argv {
-			log.Infof(fmt.Sprintf("\targ[%d]:%s", i, arg))
-		}
-	}
-	log.Infof("\n")
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool) bool {
@@ -111,7 +91,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		}
 		if err != nil {
 			log.Infof("serialize/deserialize test couldn't deserialize object:")
-			Print(domainJob)
+			log.Info(domainJob)
 			log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
 			log.Infof("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 			return false
@@ -119,16 +99,10 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			// compare the orig and generated task definitions
 		} else {
 			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
-			if !reflect.DeepEqual(domainJob, newDomainJob) { //|| !reflect.DeepEqual(thriftJob, newThriftJob) {
+			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
 				log.Infof("serialize/deserialize test didn't return equivalent value:")
-				// log.Infof("original jobDef:")
-				// Print(domainJob)
-				// log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-				log.Info(domainJob)
-				log.Info("\nvs\n")
-				log.Info(newDomainJob)
-				// Print(newDomainJob)
-				log.Infof("fail: task definitions are not equal:")
+				log.Infof("Original job: %+v", domainJob)
+				log.Info("Deserialzied to: %+v", newDomainJob)
 				return false
 			}
 		}
