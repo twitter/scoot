@@ -48,7 +48,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command,
   2: optional string snapshotId,
-  4: required string taskId,
+  3: required string taskId,
 }
 
 struct JobDefinition {
