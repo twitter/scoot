@@ -18,7 +18,8 @@ struct RunStatus {
   5: optional string error
   6: optional i32 exitCode
   7: optional string snapshotId
-  8: required string clientId
+  8: required string jobId
+  9: required string taskId
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.
@@ -33,7 +34,8 @@ struct RunCommand {
   2: optional map<string,string> env  # Mapping of env name to value.
   3: optional string snapshotId       # Scheme'd id, could be a patchId, sha1, etc.
   4: optional i32 timeoutMs           # Kill the job if it hasn't completed in time (Status.TIMEOUT).
-  5: required string clientId
+  5: required string jobId
+  6: required string taskId
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.

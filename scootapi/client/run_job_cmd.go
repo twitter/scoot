@@ -10,7 +10,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
@@ -39,12 +38,12 @@ type JobDef struct {
 type TaskDef struct {
 	Args       []string
 	SnapshotID string
-	ClientID   string
+	JobID      string
+	TaskID     string
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Running on scoot", args)
-	clientId := common.GenUUID()
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
@@ -59,13 +58,14 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			c.snapshotId = streamId
 		}
 		task := scoot.NewTaskDefinition()
+		taskId := "task1"
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = args
 		task.SnapshotId = &c.snapshotId
-		task.ClientId = clientId
+		task.TaskId = taskId
 
 		jobDef.Tasks = map[string]*scoot.TaskDefinition{
-			"task1": task,
+			taskId: task,
 		}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
@@ -89,7 +89,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
 			jobDef.Tasks[taskName] = taskDef
-			taskDef.ClientId = clientId
+			taskDef.TaskId = taskName
 		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)
@@ -103,7 +103,6 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 	}
 
 	fmt.Println(jobId.ID) // must go to std out so Sickle can pick up the results
-	log.Infof("ClientID:%s\n", clientId)
 	log.Infof("JobID:%s\n", jobId.ID)
 
 	return nil

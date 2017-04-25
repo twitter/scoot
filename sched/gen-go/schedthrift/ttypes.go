@@ -295,10 +295,12 @@ func (p *Command) String() string {
 
 // Attributes:
 //  - Command
-//  - ClientId
+//  - TaskId
+//  - JobId
 type TaskDefinition struct {
-	Command  *Command `thrift:"command,1,required" json:"command"`
-	ClientId string   `thrift:"clientId,2,required" json:"clientId"`
+	Command *Command `thrift:"command,1,required" json:"command"`
+	TaskId  string   `thrift:"taskId,2,required" json:"taskId"`
+	JobId   string   `thrift:"jobId,3,required" json:"jobId"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -314,8 +316,12 @@ func (p *TaskDefinition) GetCommand() *Command {
 	return p.Command
 }
 
-func (p *TaskDefinition) GetClientId() string {
-	return p.ClientId
+func (p *TaskDefinition) GetTaskId() string {
+	return p.TaskId
+}
+
+func (p *TaskDefinition) GetJobId() string {
+	return p.JobId
 }
 func (p *TaskDefinition) IsSetCommand() bool {
 	return p.Command != nil
@@ -327,7 +333,8 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 	}
 
 	var issetCommand bool = false
-	var issetClientId bool = false
+	var issetTaskId bool = false
+	var issetJobId bool = false
 
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
@@ -347,7 +354,12 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 			if err := p.readField2(iprot); err != nil {
 				return err
 			}
-			issetClientId = true
+			issetTaskId = true
+		case 3:
+			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+			issetJobId = true
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -363,8 +375,11 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 	if !issetCommand {
 		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Command is not set"))
 	}
-	if !issetClientId {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field ClientId is not set"))
+	if !issetTaskId {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field TaskId is not set"))
+	}
+	if !issetJobId {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field JobId is not set"))
 	}
 	return nil
 }
@@ -381,7 +396,16 @@ func (p *TaskDefinition) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
-		p.ClientId = v
+		p.TaskId = v
+	}
+	return nil
+}
+
+func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.JobId = v
 	}
 	return nil
 }
@@ -394,6 +418,9 @@ func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -419,14 +446,27 @@ func (p *TaskDefinition) writeField1(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *TaskDefinition) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("clientId", thrift.STRING, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:clientId: ", p), err)
+	if err := oprot.WriteFieldBegin("taskId", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:taskId: ", p), err)
 	}
-	if err := oprot.WriteString(string(p.ClientId)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.clientId (2) field write error: ", p), err)
+	if err := oprot.WriteString(string(p.TaskId)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.taskId (2) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:clientId: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:taskId: ", p), err)
+	}
+	return err
+}
+
+func (p *TaskDefinition) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("jobId", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:jobId: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.JobId)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.jobId (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:jobId: ", p), err)
 	}
 	return err
 }

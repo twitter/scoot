@@ -30,7 +30,12 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 				return false
 			}
 
-			return reflect.DeepEqual(job, deserializedJob)
+			res := reflect.DeepEqual(job, deserializedJob)
+			if !res {
+				log.Warn("job: ", job)
+				log.Warn("deserializedJob: ", deserializedJob)
+			}
+			return res
 		},
 		GopterGenJob(),
 	))

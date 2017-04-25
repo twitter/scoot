@@ -38,7 +38,6 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	if def == nil {
 		return result, fmt.Errorf("nil job definition")
 	}
-
 	result.Tasks = make(map[string]sched.TaskDefinition)
 
 	for taskId, t := range def.Tasks {
@@ -53,7 +52,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		if t.SnapshotId != nil {
 			task.SnapshotID = *t.SnapshotId
 		}
-		task.ClientID = t.ClientId
+		t.TaskId = taskId
 		result.Tasks[taskId] = task
 	}
 

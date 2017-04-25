@@ -16,28 +16,30 @@ func teardown(t *testing.T) {
 	}
 }
 
+var r = runner.JobAndTaskID{}
+
 func complete(exitCode int) runner.RunStatus {
-	return runner.CompleteStatus(runner.RunID(""), "", exitCode)
+	return runner.CompleteStatus(runner.RunID(""), "", exitCode, r)
 }
 
 func pending() runner.RunStatus {
-	return runner.PendingStatus(runner.RunID(""))
+	return runner.PendingStatus(runner.RunID(""), r)
 }
 
 func running() runner.RunStatus {
-	return runner.RunningStatus(runner.RunID(""), "", "")
+	return runner.RunningStatus(runner.RunID(""), "", "", r)
 }
 
 func failed(errorText string) runner.RunStatus {
-	return runner.ErrorStatus(runner.RunID(""), fmt.Errorf(errorText))
+	return runner.ErrorStatus(runner.RunID(""), fmt.Errorf(errorText), r)
 }
 
 func aborted() runner.RunStatus {
-	return runner.AbortStatus(runner.RunID(""))
+	return runner.AbortStatus(runner.RunID(""), r)
 }
 
 func badRequest(errorText string) runner.RunStatus {
-	return runner.BadRequestStatus(runner.RunID(""), fmt.Errorf(errorText))
+	return runner.BadRequestStatus(runner.RunID(""), fmt.Errorf(errorText), r)
 }
 
 func assertRun(t *testing.T, r runner.Service, expected runner.RunStatus, args ...string) runner.RunID {

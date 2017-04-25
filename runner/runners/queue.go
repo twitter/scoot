@@ -104,7 +104,7 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 		for i, cmdAndID := range c.queue {
 			if run == cmdAndID.id {
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
-				c.statusManager.Update(runner.AbortStatus(run, cmdAndID.cmd.ClientID))
+				c.statusManager.Update(runner.AbortStatus(run, runner.JobAndTaskID{cmdAndID.cmd.JobID, cmdAndID.cmd.TaskID}))
 			}
 		}
 	}

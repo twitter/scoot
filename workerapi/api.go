@@ -3,8 +3,6 @@ package workerapi
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -41,7 +39,6 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 }
 
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
-	log.Info("Thrift to domain: ", thrift)
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
@@ -58,13 +55,12 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.SnapshotId != nil {
 		snapshotID = *thrift.SnapshotId
 	}
-	// required field, won't be nil
-	clientID := thrift.ClientId
-	return &runner.Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotID: snapshotID, ClientID: clientID}
+	taskID := thrift.TaskId
+	jobID := thrift.JobId
+	return &runner.Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotID: snapshotID, JobID: jobID, TaskID: taskID}
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
-	log.Info("Domain to thrift", domain)
 	thrift := worker.NewRunCommand()
 	timeoutMs := int32(domain.Timeout / time.Millisecond)
 	thrift.TimeoutMs = &timeoutMs
@@ -72,7 +68,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.Argv = domain.Argv
 	snapID := domain.SnapshotID
 	thrift.SnapshotId = &snapID
-	thrift.ClientId = domain.ClientID
+	thrift.JobId = domain.JobID
+	thrift.TaskId = domain.TaskID
 	return thrift
 }
 
@@ -112,7 +109,8 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.SnapshotId != nil {
 		domain.SnapshotID = *thrift.SnapshotId
 	}
-	domain.SnapshotID = thrift.ClientId
+	domain.JobID = thrift.JobId
+	domain.TaskID = thrift.TaskId
 	return domain
 }
 
@@ -150,7 +148,8 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
 	thrift.SnapshotId = copyString(domain.SnapshotID)
-	thrift.ClientId = domain.ClientID
+	thrift.JobId = domain.JobID
+	thrift.TaskId = domain.TaskID
 	return thrift
 }
 
