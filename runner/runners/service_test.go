@@ -16,7 +16,7 @@ func teardown(t *testing.T) {
 	}
 }
 
-var r = runner.JobAndTaskID{}
+var r runner.JobAndTaskID
 
 func complete(exitCode int) runner.RunStatus {
 	return runner.CompleteStatus(runner.RunID(""), "", exitCode, r)

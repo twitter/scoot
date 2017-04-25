@@ -41,11 +41,9 @@ type Command struct {
 	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
 	// SnapshotPlan map[string]string
 
+	// Runner is given JobID and TaskID to help trace tasks throughout their lifecycle
 	JobID  string
 	TaskID string
-
-	// ClientID is used to trace a task through the scheduler and a worker
-	// ClientID string
 }
 
 func (c Command) String() string {
