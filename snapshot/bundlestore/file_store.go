@@ -2,11 +2,12 @@ package bundlestore
 
 import (
 	"errors"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 )
@@ -47,7 +48,7 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader) error {
+func (s *FileStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}

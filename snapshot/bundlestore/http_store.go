@@ -3,13 +3,14 @@ package bundlestore
 import (
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func MakeHTTPStore(rootURI string) Store {
@@ -60,13 +61,29 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *httpStore) Write(name string, data io.Reader) error {
+func (s *httpStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name when writing bundles.")
 	}
 	uri := s.rootURI + name
 	log.Infof("Posting %s", uri)
-	resp, err := s.client.Post(uri, "text/plain", data)
+
+	post := func() (*http.Response, error) {
+		req, err := http.NewRequest("POST", uri, data)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "text/plain")
+		if ttl == nil {
+			ttl = &TTLConfig{DefaultTTL, DefaultTTLKey}
+		}
+		if ttl.TTL != 0 {
+			req.Header[ttl.TTLKey] = []string{ttl.TTL.String()}
+		}
+		return http.DefaultClient.Do(req)
+	}
+
+	resp, err := post()
 	if err == nil {
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
