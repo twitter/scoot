@@ -13,6 +13,7 @@ import (
 )
 
 // Create a fixed dir in tmp.
+// Note: this implementation does not currently support TTL.
 func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
 	bundleDir, err := tmp.FixedDir("bundles")
 	if err != nil {

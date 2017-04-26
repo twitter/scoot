@@ -80,7 +80,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 		if ttl.TTL != 0 {
 			req.Header[ttl.TTLKey] = []string{ttl.TTL.String()}
 		}
-		return http.DefaultClient.Do(req)
+		return s.client.Do(req)
 	}
 
 	resp, err := post()

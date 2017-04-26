@@ -6,7 +6,7 @@ import (
 )
 
 const DefaultTTL time.Duration = time.Hour * 24 * 30 //30 days.
-const DefaultTTLKey string = "x-scoot-expires"
+const DefaultTTLKey string = "x-scoot-expires"       //the primary use for this is communicating ttl over http.
 
 // Stores should generally support TTL, at this time only httpStore implements it.
 type TTLConfig struct {
