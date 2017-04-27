@@ -101,7 +101,7 @@ func (r *taskRunner) run() error {
 
 // Run cmd and if there's a runner error (ex: thrift) re-run/re-query until completion, retry timeout, or cmd timeout.
 func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runner.RunStatus, error) {
-	cmd := task.Command
+	cmd := &task.Command
 	if cmd.Timeout == 0 {
 		cmd.Timeout = r.defaultTaskTimeout
 	}
@@ -110,13 +110,14 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	var st runner.RunStatus
 	var err error
 	var id runner.RunID
-
+	cmd.TaskID = r.taskId
+	cmd.JobID = r.jobId
 	// If runner call returns an error then we treat it as an infrastructure error and will repeatedly retry.
 	// If runner call returns a result indicating cmd error we fail and return.
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
 	log.Infof("Run() for job:%s taskId:%s", r.jobId, taskId)
 	for {
-		st, err = r.runner.Run(&cmd)
+		st, err = r.runner.Run(cmd)
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.Infof("Retrying run() for job:%s taskId:%s", r.jobId, taskId)
 			time.Sleep(r.runnerRetryInterval)

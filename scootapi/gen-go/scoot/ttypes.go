@@ -513,6 +513,8 @@ func (p *ScootServerError) Error() string {
 //  - Error
 //  - ExitCode
 //  - SnapshotId
+//  - JobId
+//  - TaskId
 type RunStatus struct {
 	Status     RunStatusState `thrift:"status,1,required" json:"status"`
 	RunId      string         `thrift:"runId,2,required" json:"runId"`
@@ -521,6 +523,8 @@ type RunStatus struct {
 	Error      *string        `thrift:"error,5" json:"error,omitempty"`
 	ExitCode   *int32         `thrift:"exitCode,6" json:"exitCode,omitempty"`
 	SnapshotId *string        `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
+	JobId      *string        `thrift:"jobId,8" json:"jobId,omitempty"`
+	TaskId     *string        `thrift:"taskId,9" json:"taskId,omitempty"`
 }
 
 func NewRunStatus() *RunStatus {
@@ -579,6 +583,24 @@ func (p *RunStatus) GetSnapshotId() string {
 	}
 	return *p.SnapshotId
 }
+
+var RunStatus_JobId_DEFAULT string
+
+func (p *RunStatus) GetJobId() string {
+	if !p.IsSetJobId() {
+		return RunStatus_JobId_DEFAULT
+	}
+	return *p.JobId
+}
+
+var RunStatus_TaskId_DEFAULT string
+
+func (p *RunStatus) GetTaskId() string {
+	if !p.IsSetTaskId() {
+		return RunStatus_TaskId_DEFAULT
+	}
+	return *p.TaskId
+}
 func (p *RunStatus) IsSetOutUri() bool {
 	return p.OutUri != nil
 }
@@ -597,6 +619,14 @@ func (p *RunStatus) IsSetExitCode() bool {
 
 func (p *RunStatus) IsSetSnapshotId() bool {
 	return p.SnapshotId != nil
+}
+
+func (p *RunStatus) IsSetJobId() bool {
+	return p.JobId != nil
+}
+
+func (p *RunStatus) IsSetTaskId() bool {
+	return p.TaskId != nil
 }
 
 func (p *RunStatus) Read(iprot thrift.TProtocol) error {
@@ -644,6 +674,14 @@ func (p *RunStatus) Read(iprot thrift.TProtocol) error {
 			}
 		case 7:
 			if err := p.readField7(iprot); err != nil {
+				return err
+			}
+		case 8:
+			if err := p.readField8(iprot); err != nil {
+				return err
+			}
+		case 9:
+			if err := p.readField9(iprot); err != nil {
 				return err
 			}
 		default:
@@ -731,6 +769,24 @@ func (p *RunStatus) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *RunStatus) readField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.JobId = &v
+	}
+	return nil
+}
+
+func (p *RunStatus) readField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 9: ", err)
+	} else {
+		p.TaskId = &v
+	}
+	return nil
+}
+
 func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -754,6 +810,12 @@ func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField7(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField8(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField9(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -861,6 +923,36 @@ func (p *RunStatus) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:snapshotId: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunStatus) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJobId() {
+		if err := oprot.WriteFieldBegin("jobId", thrift.STRING, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:jobId: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.JobId)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.jobId (8) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:jobId: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunStatus) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskId() {
+		if err := oprot.WriteFieldBegin("taskId", thrift.STRING, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:taskId: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.TaskId)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.taskId (9) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:taskId: ", p), err)
 		}
 	}
 	return err
@@ -988,9 +1080,11 @@ func (p *Command) String() string {
 // Attributes:
 //  - Command
 //  - SnapshotId
+//  - TaskId
 type TaskDefinition struct {
 	Command    *Command `thrift:"command,1,required" json:"command"`
 	SnapshotId *string  `thrift:"snapshotId,2" json:"snapshotId,omitempty"`
+	TaskId     *string  `thrift:"taskId,3" json:"taskId,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -1014,12 +1108,25 @@ func (p *TaskDefinition) GetSnapshotId() string {
 	}
 	return *p.SnapshotId
 }
+
+var TaskDefinition_TaskId_DEFAULT string
+
+func (p *TaskDefinition) GetTaskId() string {
+	if !p.IsSetTaskId() {
+		return TaskDefinition_TaskId_DEFAULT
+	}
+	return *p.TaskId
+}
 func (p *TaskDefinition) IsSetCommand() bool {
 	return p.Command != nil
 }
 
 func (p *TaskDefinition) IsSetSnapshotId() bool {
 	return p.SnapshotId != nil
+}
+
+func (p *TaskDefinition) IsSetTaskId() bool {
+	return p.TaskId != nil
 }
 
 func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
@@ -1045,6 +1152,10 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 			issetCommand = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		case 3:
+			if err := p.readField3(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1082,6 +1193,15 @@ func (p *TaskDefinition) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.TaskId = &v
+	}
+	return nil
+}
+
 func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("TaskDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1090,6 +1210,9 @@ func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1124,6 +1247,21 @@ func (p *TaskDefinition) writeField2(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:snapshotId: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *TaskDefinition) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskId() {
+		if err := oprot.WriteFieldBegin("taskId", thrift.STRING, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:taskId: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.TaskId)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.taskId (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:taskId: ", p), err)
 		}
 	}
 	return err

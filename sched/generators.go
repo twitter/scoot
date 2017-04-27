@@ -17,7 +17,7 @@ func GenJob(id string, numTasks int) Job {
 
 	job := Job{
 		Id:  id,
-		Def: jobDef,
+		Def: *jobDef,
 	}
 
 	return job
@@ -27,10 +27,16 @@ func GenJob(id string, numTasks int) Job {
 // with the specified Id and number of Tasks
 func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 	jobDef := GenRandomJobDef(numTasks, rng)
+	for taskId, task := range jobDef.Tasks {
+		var newTask TaskDefinition
+		newTask.Command = task.Command
+		newTask.JobID = id
+		jobDef.Tasks[taskId] = newTask
+	}
 
 	job := Job{
 		Id:  id,
-		Def: jobDef,
+		Def: *jobDef,
 	}
 
 	return job
@@ -39,12 +45,12 @@ func GenRandomJob(id string, numTasks int, rng *rand.Rand) Job {
 // Generates a Random JobDefintion with the specified number of tasks
 func GenJobDef(numTasks int) JobDefinition {
 	rand := testhelpers.NewRand()
-	return GenRandomJobDef(numTasks, rand)
+	return *GenRandomJobDef(numTasks, rand)
 }
 
 // Generates a Random Job Definition, using the supplied Rand
 // with the specified number of Tasks
-func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
+func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
 	jobDef := JobDefinition{
 		JobType: fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
 		Tasks:   make(map[string]TaskDefinition),
@@ -54,10 +60,11 @@ func GenRandomJobDef(numTasks int, rng *rand.Rand) JobDefinition {
 	for i := 0; i < numTasks; i++ {
 		task := GenRandomTask(rng)
 		taskId := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(rng))
+		task.TaskID = taskId
 		jobDef.Tasks[taskId] = task
 	}
 
-	return jobDef
+	return &jobDef
 }
 
 // Generates a Random TaskDefinition
@@ -69,6 +76,7 @@ func GenTask() TaskDefinition {
 // Generates a Random TaskDefinition, using the supplied Rand
 func GenRandomTask(rng *rand.Rand) TaskDefinition {
 	snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(rng))
+	taskId := fmt.Sprintf("taskId:%s", testhelpers.GenRandomAlphaNumericString(rng))
 	numArgs := rng.Intn(5)
 	var j int
 	var args []string = []string{}
@@ -89,6 +97,7 @@ func GenRandomTask(rng *rand.Rand) TaskDefinition {
 		Argv:       args,
 		EnvVars:    envVarsMap,
 		Timeout:    timeout,
+		TaskID:     taskId,
 	}
 
 	return TaskDefinition{cmd}

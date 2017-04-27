@@ -43,41 +43,27 @@ func Test_SerializeNilJob(t *testing.T) {
 
 func makeFixedSampleJob() *Job {
 	job := Job{}
-	job.Id = "jobID"
+	jobId := "jobID"
+	taskId := "task0"
+	job.Id = jobId
 	jobDef := JobDefinition{}
 	jobDef.Tasks = make(map[string]TaskDefinition)
 	jobDef.JobType = "jobTypeVal"
 	taskDefinition := TaskDefinition{}
 	taskDefinition.SnapshotID = "snapshotIDVal"
 	taskDefinition.Timeout = 3
+	taskDefinition.TaskID = taskId
+	taskDefinition.JobID = jobId
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
 	envVars["envVar1"] = "var2Value"
 	envVars["envVar2"] = "var2Value"
 	args := []string{"arg1", "arg2"}
 	taskDefinition.Argv = args
-	jobDef.Tasks["task0"] = taskDefinition
-	//Print(jobDef)  -I enable this for debugging
+	jobDef.Tasks[taskId] = taskDefinition
 	job.Def = jobDef
 
 	return &job
-}
-
-func Print(job *Job) {
-	log.Infof(fmt.Sprintf("job id:%s\n", job.Id))
-	log.Infof(fmt.Sprintf("job type:%s\n", job.Def.JobType))
-	for taskName, taskDef := range job.Def.Tasks {
-		log.Infof(fmt.Sprintf("taskName: %s\n", taskName))
-		log.Infof(fmt.Sprintf("\ttimeout: %s\n", taskDef.Timeout.String()))
-		log.Infof(fmt.Sprintf("\tsnapshotID: %s\n", taskDef.SnapshotID))
-		for envVarName, envVarVal := range taskDef.EnvVars {
-			log.Infof(fmt.Sprintf("\tenvVar:%s = %s\n", envVarName, envVarVal))
-		}
-		for i, arg := range taskDef.Argv {
-			log.Infof(fmt.Sprintf("\targ[%d]:%s\n", i, arg))
-		}
-	}
-	log.Infof("\n")
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool) bool {
@@ -91,7 +77,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		asByteArray, err = thrifthelpers.BinarySerialize(thriftJob)
 	}
 	if err != nil {
-		log.Infof("error: couldn't serialize the fixed job def. %s\n", err.Error())
+		log.Infof("error: couldn't serialize the fixed job def. %s", err.Error())
 		return false
 
 	} else {
@@ -104,8 +90,8 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			err = thrifthelpers.BinaryDeserialize(newThriftJob, asByteArray)
 		}
 		if err != nil {
-			log.Infof("serialize/deserialize test couldn't deserialize object:\n")
-			Print(domainJob)
+			log.Infof("serialize/deserialize test couldn't deserialize object:")
+			log.Info(domainJob)
 			log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
 			log.Infof("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 			return false
@@ -114,13 +100,9 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		} else {
 			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
 			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
-				log.Infof("serialize/deserialize test didn't return equivalent value:\n")
-				log.Infof("original jobDef:\n")
-				Print(domainJob)
-				log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-				log.Infof("deserialized to:\n")
-				Print(newDomainJob)
-				log.Infof("fail: task definitions are not equal:\n")
+				log.Infof("serialize/deserialize test didn't return equivalent value:")
+				log.Infof("Original job: %+v", domainJob)
+				log.Info("Deserialzied to: %+v", newDomainJob)
 				return false
 			}
 		}
