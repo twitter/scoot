@@ -114,7 +114,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	for _, status := range st {
 		if status.State.IsDone() {
 			// Note: TravisCI fails when output is too long so we set full status to Debug and disable it when running in that env.
-			log.Info("Worker returning finished run: %v", status.RunID)
+			log.Infof("Worker returning finished run: %v", status.RunID)
 			log.Debugf("Worker returning finished run (details): %v", status)
 		}
 		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))

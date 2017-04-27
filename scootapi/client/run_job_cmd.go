@@ -62,7 +62,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = args
 		task.SnapshotId = &c.snapshotId
-		task.TaskId = taskId
+		task.TaskId = &taskId
 
 		jobDef.Tasks = map[string]*scoot.TaskDefinition{
 			taskId: task,
@@ -89,7 +89,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
 			jobDef.Tasks[taskName] = taskDef
-			taskDef.TaskId = taskName
+			taskDef.TaskId = &taskName
 		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)
