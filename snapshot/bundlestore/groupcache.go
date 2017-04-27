@@ -26,11 +26,11 @@ type PeerFetcher interface {
 	Fetch() ([]cluster.Node, error)
 }
 
-// Note: Endpoint is concatenated with Name in groupcache internals, and AddrSelf is expected as HOST:PORT.
+// Note: Endpoint is concatenated with Name in groupcache internals
 type GroupcacheConfig struct {
 	Name         string
 	Memory_bytes int64
-	AddrSelf     string
+	URLSelf      string // valid base URL that points to the current server, for example "http://example.net:8000"
 	Endpoint     string
 	Cluster      *cluster.Cluster
 }
@@ -60,7 +60,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 	// Create and initialize peer group.
 	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
 	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
-	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
+	pool := groupcache.NewHTTPPoolOpts(cfg.URLSelf, poolOpts)
 	go loop(cfg.Cluster, pool, cache, stat)
 
 	return &groupcacheStore{underlying: underlying, cache: cache, stat: stat}, pool, nil

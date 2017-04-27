@@ -75,7 +75,7 @@ func main() {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
-				AddrSelf:     *httpAddr,
+				URLSelf:      fmt.Sprintf("http://%s", *httpAddr),
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),
 			}
