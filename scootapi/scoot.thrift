@@ -36,8 +36,8 @@ struct RunStatus {
   5: optional string error
   6: optional i32 exitCode
   7: optional string snapshotId
-  8: required string jobId
-  9: required string taskId
+  8: optional string jobId
+  9: optional string taskId
 }
 
 

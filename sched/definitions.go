@@ -128,7 +128,9 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			Timeout:    &to,
 			SnapshotId: domainTask.SnapshotID,
 		}
-		thriftTask := schedthrift.TaskDefinition{Command: &cmd, JobId: domainJob.Id, TaskId: domainTask.TaskID}
+		jobId := domainJob.Id
+		taskId := domainTask.TaskID
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd, JobId: &jobId, TaskId: &taskId}
 		thriftTasks[taskName] = &thriftTask
 	}
 

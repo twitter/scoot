@@ -62,7 +62,7 @@ func (p RunState) String() string {
 	}
 }
 
-type JobAndTaskID struct {
+type LogTags struct {
 	JobID  string
 	TaskID string
 }
@@ -84,7 +84,7 @@ type RunStatus struct {
 	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
 
-	JobAndTaskID
+	LogTags
 }
 
 func (p RunStatus) String() string {
@@ -107,65 +107,65 @@ func (p RunStatus) String() string {
 
 // Helper functions to create RunStatus
 
-func AbortStatus(runID RunID, IDs JobAndTaskID) (r RunStatus) {
+func AbortStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = ABORTED
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func TimeoutStatus(runID RunID, IDs JobAndTaskID) (r RunStatus) {
+func TimeoutStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = TIMEDOUT
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func ErrorStatus(runID RunID, err error, IDs JobAndTaskID) (r RunStatus) {
+func ErrorStatus(runID RunID, err error, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func BadRequestStatus(runID RunID, err error, IDs JobAndTaskID) (r RunStatus) {
+func BadRequestStatus(runID RunID, err error, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = BADREQUEST
 	r.Error = err.Error()
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func PendingStatus(runID RunID, IDs JobAndTaskID) (r RunStatus) {
+func PendingStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = PENDING
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func RunningStatus(runID RunID, stdoutRef, stderrRef string, IDs JobAndTaskID) (r RunStatus) {
+func RunningStatus(runID RunID, stdoutRef, stderrRef string, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = RUNNING
 	r.StdoutRef = stdoutRef
 	r.StderrRef = stderrRef
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func CompleteStatus(runID RunID, snapshotID string, exitCode int, IDs JobAndTaskID) (r RunStatus) {
+func CompleteStatus(runID RunID, snapshotID string, exitCode int, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = COMPLETE
 	r.SnapshotID = snapshotID
 	r.ExitCode = exitCode
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
-func PreparingStatus(runID RunID, IDs JobAndTaskID) (r RunStatus) {
+func PreparingStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = PREPARING
-	r.JobAndTaskID = IDs
+	r.LogTags = IDs
 	return r
 }
 
