@@ -3,12 +3,13 @@ package gitdb
 import (
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
@@ -161,7 +162,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	}
 	defer f.Close()
 
-	if err := b.cfg.Store.Write(bundleName, f); err != nil {
+	if err := b.cfg.Store.Write(bundleName, f, nil); err != nil {
 		return nil, err
 	}
 

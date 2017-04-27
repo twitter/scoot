@@ -2,11 +2,12 @@ package bundlestore
 
 import (
 	"bytes"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/groupcache"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -145,7 +146,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *groupcacheStore) Write(name string, data io.Reader) error {
+func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 	log.Info("Write() populating cache: ", name)
 	defer s.stat.Latency("writeLatency_ms").Time().Stop()
 	s.stat.Counter("writeCounter").Inc(1)
@@ -153,7 +154,7 @@ func (s *groupcacheStore) Write(name string, data io.Reader) error {
 	if err != nil {
 		return err
 	}
-	err = s.underlying.Write(name, bytes.NewBuffer(b))
+	err = s.underlying.Write(name, bytes.NewBuffer(b), ttl)
 	if err != nil {
 		return err
 	}

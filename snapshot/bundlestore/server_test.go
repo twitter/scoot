@@ -3,6 +3,7 @@ package bundlestore
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -16,6 +17,7 @@ import (
 
 type FakeStore struct {
 	files map[string][]byte
+	ttl   *TTLConfig
 }
 
 func (f *FakeStore) Exists(name string) (bool, error) {
@@ -32,8 +34,10 @@ func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewBuffer(f.files[name])), nil
 }
 
-func (f *FakeStore) Write(name string, data io.Reader) error {
-	if data, err := ioutil.ReadAll(data); err != nil {
+func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
+	if !reflect.DeepEqual(f.ttl, ttl) {
+		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.ttl, ttl)
+	} else if data, err := ioutil.ReadAll(data); err != nil {
 		return err
 	} else {
 		f.files[name] = data
@@ -45,13 +49,15 @@ func (f *FakeStore) Write(name string, data io.Reader) error {
 
 func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
-	store := &FakeStore{files: map[string][]byte{}}
+	expectTTL := &TTLConfig{time.Minute, DefaultTTLKey}
+	serverTTL := &TTLConfig{time.Minute, DefaultTTLKey}
+	store := &FakeStore{files: map[string][]byte{}, ttl: expectTTL}
 	listener, _ := net.Listen("tcp", "localhost:0")
 	defer listener.Close()
 	addr := listener.Addr().String()
 
 	mux := http.NewServeMux()
-	mux.Handle("/bundle/", MakeServer(store, stats.NilStatsReceiver()))
+	mux.Handle("/bundle/", MakeServer(store, serverTTL, stats.NilStatsReceiver()))
 	go func() {
 		http.Serve(listener, mux)
 	}()
@@ -62,13 +68,17 @@ func TestServer(t *testing.T) {
 	// Try to write data.
 	bundle1ID := "bs-0000000000000000000000000000000000000001.bundle"
 	if resp, err := client.Post(rootUri+bundle1ID, "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	} else {
+		if resp.StatusCode != http.StatusOK {
+			body, err := ioutil.ReadAll(resp.Body)
+			t.Fatal(resp.Status, string(body), err)
+		}
 		resp.Body.Close()
 	}
 
 	if !reflect.DeepEqual(store.files[bundle1ID], []byte("baz_data")) {
-		t.Fatalf("Failed to post data.")
+		t.Fatalf("Failed to post data")
 	}
 
 	// Try to write data again.
@@ -105,9 +115,14 @@ func TestServer(t *testing.T) {
 	//
 
 	// Try to write data.
+	// We send a new TTL and reconfigure the server to transform the original ttl key to a new one.
+	expectTTL.TTL = time.Hour
+	expectTTL.TTLKey = "NEW_TTL"
+	serverTTL.TTLKey = "NEW_TTL"
+	clientTTL := &TTLConfig{time.Hour, DefaultTTLKey}
 	httpStore := MakeHTTPStore(rootUri)
 	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
-	if err := httpStore.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data"))); err != nil {
+	if err := httpStore.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {
 		t.Fatalf(err.Error())
 	}
 
