@@ -2,16 +2,18 @@ package bundlestore
 
 import (
 	"errors"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/scootdev/scoot/os/temp"
 )
 
 // Create a fixed dir in tmp.
+// Note: this implementation does not currently support TTL.
 func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
 	bundleDir, err := tmp.FixedDir("bundles")
 	if err != nil {
@@ -47,7 +49,7 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader) error {
+func (s *FileStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}

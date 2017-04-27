@@ -2,22 +2,28 @@ package bundlestore
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/stats"
 )
 
 type Server struct {
 	store Store
+	ttl   *TTLConfig
 	stat  stats.StatsReceiver
 }
 
-func MakeServer(s Store, stat stats.StatsReceiver) *Server {
-	return &Server{s, stat.Scope("bundlestoreServer")}
+// Make a new server that delegates to an underlying store.
+// TTL may be nil, in which case defaults are applied downstream.
+// TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
+func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
+	return &Server{s, ttl, stat.Scope("bundlestoreServer")}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -58,7 +64,28 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "Bundle %s already exists\n", bundleName)
 	}
 
-	if err := s.store.Write(bundleName, bundleData); err != nil {
+	// Get ttl if defaults were provided during Server construction or if it comes in this request header.
+	var ttl *TTLConfig
+	if s.ttl != nil {
+		ttl = &TTLConfig{s.ttl.TTL, s.ttl.TTLKey}
+	}
+	for k, _ := range req.Header {
+		if !strings.EqualFold(k, DefaultTTLKey) {
+			continue
+		}
+		if duration, err := time.ParseDuration(req.Header.Get(k)); err != nil {
+			http.Error(w, fmt.Sprintf("Error parsing TTL: %s", err), http.StatusInternalServerError)
+			return
+		} else {
+			if ttl != nil {
+				ttl.TTL = duration
+			} else {
+				ttl = &TTLConfig{duration, DefaultTTLKey}
+			}
+			break
+		}
+	}
+	if err := s.store.Write(bundleName, bundleData, ttl); err != nil {
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
 		return
 	}
