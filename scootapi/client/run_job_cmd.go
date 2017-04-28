@@ -88,8 +88,8 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
-			jobDef.Tasks[taskName] = taskDef
 			taskDef.TaskId = &taskName
+			jobDef.Tasks[taskName] = taskDef
 		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)
