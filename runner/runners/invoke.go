@@ -2,11 +2,12 @@ package runners
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -53,7 +54,7 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 // Run will not return until the process is not running.
 // NOTE: kind of gnarly since our filer implementation (gitdb) currently mutates the same worktree on every op.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
-	log.Infof("run. id: %v, cmd: %+v", id, cmd)
+	log.Infof("run. id: %v", id)
 	defer func() {
 		updateCh <- r
 		close(updateCh)
@@ -100,7 +101,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
 	}
-	log.Infof("checkout done. id: %v, cmd: %+v, checkout: %v", id, cmd, co.Path())
+	log.Infof("checkout done. id: %v, checkout: %v", id, co.Path())
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
@@ -154,7 +155,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	case st = <-processCh:
 	}
 
-	log.Infof("run done. id: %v, status: %+v, cmd: %+v, checkout: %v", id, st, cmd, co.Path())
+	log.Infof("run done. id: %v, status: %+v, checkout: %v", id, st, co.Path())
 
 	switch st.State {
 	case execer.COMPLETE:

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -82,8 +83,12 @@ type osProcess struct {
 
 // Periodically check to make sure memory constraints are respected.
 func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
-	memTicker := time.NewTicker(100 * time.Millisecond)
+	prevThreshold := 0.0   // The last reported (usage / mem_cap)
+	reportThreshold := 0.0 // Start reporting once we hit this utilization threshold.
+	reportIncrement := .1  // Report every time we increase utilization threshold thi amount.
+	memTicker := time.NewTicker(10 * time.Millisecond)
 	defer memTicker.Stop()
+	log.Infof("Monitoring memory for pid=%d", p.cmd.Process.Pid)
 	for {
 		select {
 		case <-memTicker.C:
@@ -103,6 +108,12 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 				}
 				p.mutex.Unlock()
 				return
+			}
+			threshold := float64(usage / memCap)
+			if threshold > reportThreshold && threshold > prevThreshold+reportIncrement {
+				log.Infof("Peaked %d%% mem_cap utilization (%d / %d) for pid=%v", threshold*100, usage, memCap, p.cmd.Process.Pid)
+				log.Info(exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-b1").CombinedOutput())
+				prevThreshold = threshold
 			}
 			p.mutex.Unlock()
 		}

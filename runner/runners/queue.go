@@ -72,10 +72,17 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	if isRunning {
 		numCmds = 1 + len(c.queue)
 	}
-	log.Infof("Trying to run, available slots:%d/%d, currentRun:%s cmd:%v",
-		c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
+	ready := false
+	select {
+	case <-c.initDoneCh:
+		ready = true
+	default:
+		ready = (c.initDoneCh == nil)
+	}
+	log.Infof("Trying to run, ready=%t, available slots:%d/%d, currentRun:%s cmd:%v",
+		ready, c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
 
-	if numCmds > c.capacity {
+	if !ready || numCmds > c.capacity {
 		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
 	}
 	st, err := c.statusManager.NewRun()

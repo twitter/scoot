@@ -14,9 +14,9 @@ import (
 )
 
 type Server struct {
-	store Store
-	ttl   *TTLConfig
-	stat  stats.StatsReceiver
+	store  Store
+	ttlCfg *TTLConfig
+	stat   stats.StatsReceiver
 }
 
 // Make a new server that delegates to an underlying store.
@@ -37,6 +37,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		s.HandleDownload(w, req)
 	default:
 		// TODO(dbentley): do we need to support HEAD?
+		log.Infof("Request err: %v --> StatusMethodNotAllowed (from %v)", req.Method, req.RemoteAddr)
 		http.Error(w, "only support POST and GET", http.StatusMethodNotAllowed)
 		return
 	}
@@ -44,11 +45,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
-	log.Infof("Uploading %v, %v", req.Host, req.URL)
+	log.Infof("Uploading %v, %v, %v (from %v)", req.Host, req.URL, req.Header, req.RemoteAddr)
 	defer s.stat.Latency("uploadLatency_ms").Time().Stop()
 	s.stat.Counter("uploadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
+		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -56,6 +58,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 
 	exists, err := s.store.Exists(bundleName)
 	if err != nil {
+		log.Infof("Exists err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error checking if bundle exists: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -65,27 +68,27 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get ttl if defaults were provided during Server construction or if it comes in this request header.
-	var ttl *TTLConfig
-	if s.ttl != nil {
-		ttl = &TTLConfig{s.ttl.TTL, s.ttl.TTLKey}
+	var ttl *TTLValue
+	if s.ttlCfg != nil {
+		ttl = &TTLValue{time.Now().Add(s.ttlCfg.TTL), s.ttlCfg.TTLKey}
 	}
 	for k, _ := range req.Header {
 		if !strings.EqualFold(k, DefaultTTLKey) {
 			continue
 		}
-		if duration, err := time.ParseDuration(req.Header.Get(k)); err != nil {
+		if ttlTime, err := time.Parse(time.RFC1123, req.Header.Get(k)); err != nil {
+			log.Infof("TTL err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 			http.Error(w, fmt.Sprintf("Error parsing TTL: %s", err), http.StatusInternalServerError)
 			return
+		} else if ttl != nil {
+			ttl.TTL = ttlTime
 		} else {
-			if ttl != nil {
-				ttl.TTL = duration
-			} else {
-				ttl = &TTLConfig{duration, DefaultTTLKey}
-			}
-			break
+			ttl = &TTLValue{ttlTime, DefaultTTLKey}
 		}
+		break
 	}
 	if err := s.store.Write(bundleName, bundleData, ttl); err != nil {
+		log.Infof("Write err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -94,25 +97,29 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
-	log.Infof("Downloading %v %v", req.Host, req.URL)
+	log.Infof("Downloading %v %v (from %v)", req.Host, req.URL, req.RemoteAddr)
 	defer s.stat.Latency("downloadLatency_ms").Time().Stop()
 	s.stat.Counter("downloadCounter").Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
+		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	r, err := s.store.OpenForRead(bundleName)
 	if err != nil {
+		log.Infof("Read err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
 		http.NotFound(w, req)
 		return
 	}
 	if _, err := io.Copy(w, r); err != nil {
-		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
+		log.Infof("Copy err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
+		http.Error(w, fmt.Sprintf("Error copying Bundle: %s", err), http.StatusInternalServerError)
 		return
 	}
 	if err := r.Close(); err != nil {
+		log.Infof("Close err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
 		return
 	}
