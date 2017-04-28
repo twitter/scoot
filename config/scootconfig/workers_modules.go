@@ -3,7 +3,6 @@ package scootconfig
 import (
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/ice"
@@ -12,6 +11,7 @@ import (
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi/client"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 // Parameters for configuring connections to remote (Thrift) workers.

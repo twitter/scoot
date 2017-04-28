@@ -11,7 +11,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/workerserver/config"
 	"github.com/scootdev/scoot/cloud/cluster/local"
 	"github.com/scootdev/scoot/common/endpoints"
@@ -27,6 +26,7 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 	"github.com/scootdev/scoot/workerapi/server"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 func main() {

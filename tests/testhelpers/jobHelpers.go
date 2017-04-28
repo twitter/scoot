@@ -7,10 +7,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 // Creates a CloudScootClient that talks to the specified address

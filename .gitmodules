@@ -203,3 +203,23 @@
 	path = vendor/github.com/pmezard/go-difflib
 	url = https://github.com/pmezard/go-difflib.git
 	branch = 792786c7400a136282c1664665ae0a8db921c6c2
+[submodule "vendor/golang.org/x/sync"]
+	path = vendor/golang.org/x/sync
+	url = https://go.googlesource.com/sync
+	branch = de49d9dcd27d4f764488181bea099dfe6179bcf0
+[submodule "vendor/google.golang.org/genproto"]
+	path = vendor/google.golang.org/genproto
+	url = https://github.com/google/go-genproto
+	branch = 411e09b969b1170a9f0c467558eb4c4c110d9c77
+[submodule "vendor/gopkg.in/airbrake/gobrake.v2"]
+	path = vendor/gopkg.in/airbrake/gobrake.v2
+	url = https://gopkg.in/airbrake/gobrake.v2
+	branch = 668876711219e8b0206e2994bf0a59d889c775aa
+[submodule "vendor/gopkg.in/check.v1"]
+	path = vendor/gopkg.in/check.v1
+	url = https://gopkg.in/check.v1
+	branch = 20d25e2804050c1cd24a7eea1e7a6447dd0e74ec
+[submodule "vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2"]
+	path = vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	url = https://gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	branch = bfee1239d796830ca346767650cce5ba90d58c57

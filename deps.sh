@@ -15,15 +15,20 @@ GOPATH_NEW="$(mktemp -d -t TEMP.XXXXXXX)"
 export GOPATH="${GOPATH_NEW}"
 
 get_deps() {
-    cd "${GOPATH}/src/$1"
-    for need in $(go list -f '{{join .Deps "\n"}}' ./... | \
-                  xargs go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' 2>&1 | \
-                  grep "can't load package" | \
-                  sed -E 's,[^"]*"([^"]*).*,\1,' | \
-                  grep '\..*/'); do
-        go get -t -d "${need}" || true
-        get_deps "${need}"
-    done
+    if [[ -d "${GOPATH}/src/$1" ]]; then
+        cd "${GOPATH}/src/$1"
+        for need in $(go list -f '{{join .Deps "\n"}}' ./... | \
+                      xargs go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' 2>&1 | \
+                      grep "can't load package" | \
+                      sed -E 's,[^"]*"([^"]*).*,\1,' | \
+                      grep '\..*/'); do
+                        if [[ $need == *"github.com/apache/thrift/lib/go/thrift"* ]]; then
+                            need="github.com/scootdev/thrift/lib/go/thrift"
+                        fi
+            go get -t -d "${need}" || true
+            get_deps "${need}"
+        done
+    fi
 }
 
 if [[ -z "${DEP_REPO:-}" ]]; then

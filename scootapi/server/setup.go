@@ -4,7 +4,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"time"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
@@ -16,6 +15,7 @@ import (
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 type servers struct {
