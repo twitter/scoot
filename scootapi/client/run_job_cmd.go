@@ -33,13 +33,15 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 
 // Types to handle JobDefinitions from JSON files
 type JobDef struct {
-	Tasks map[string]TaskDef
+	Tasks     map[string]TaskDef
+	TimeoutMs int32
 }
 type TaskDef struct {
 	Args       []string
 	SnapshotID string
 	JobID      string
 	TaskID     string
+	TimeoutMs  int32
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
@@ -82,6 +84,9 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			return err
 		}
 
+		if jsonJob.TimeoutMs > 0 {
+			jobDef.TimeoutMs = &jsonJob.TimeoutMs
+		}
 		jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
 		for taskName, jsonTask := range jsonJob.Tasks {
 			taskDef := scoot.NewTaskDefinition()
@@ -90,6 +95,9 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.SnapshotId = &jsonTask.SnapshotID
 			jobDef.Tasks[taskName] = taskDef
 			taskDef.TaskId = &taskName
+			if jsonTask.TimeoutMs > 0 {
+				taskDef.TimeoutMs = &jsonTask.TimeoutMs
+			}
 		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)
