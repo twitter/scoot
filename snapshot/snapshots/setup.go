@@ -17,7 +17,7 @@ func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		NewViewServer,
 		func() *bundlestore.TTLConfig {
-			return &bundlestore.TTLConfig{TTL: bundlestore.DefaultTTL, TTLKey: bundlestore.DefaultTTLKey}
+			return &bundlestore.TTLConfig{bundlestore.DefaultTTL, bundlestore.DefaultTTLKey}
 		},
 	)
 }

@@ -5,6 +5,9 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
+GO15VENDOREXPERIMENT := 1
+export GO15VENDOREXPERIMENT
+
 default:
 	go build $$(go list ./... | grep -v /vendor/)
 
@@ -31,10 +34,8 @@ check-dependencies:
 	./deps.sh
 	go get github.com/golang/mock/mockgen
 
-gen:
+generate:
 	go generate $$(go list ./... | grep -v /vendor/)
-
-generate: gen format
 
 format:
 	go fmt $$(go list ./... | grep -v /vendor/)
@@ -43,17 +44,18 @@ vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
 test:
-	# Runs unit & property tests and records test coverage
+	# Runs only unit tests and property tests
+	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 	sh testCoverage.sh
 
 test-unit:
 	# Runs only unit tests
-	go test -race $$(go list ./... | grep -v /vendor/)
+	go test -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 test-integration:
 	# Runs all tests including integration and property tests
 	# We don't currently have any integration tests, but we're leaving this so we can add more.
-	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/)
+	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 
