@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -122,13 +124,17 @@ func NewStatefulScheduler(
 		run := rf(node)
 		st, svc, err := run.StatusAll()
 		if err != nil || !svc.Initialized {
+			if svc.Error != nil {
+				log.Info("Received service err during init of new node: %v, err: %v", node, svc.Error)
+				return false, 0
+			}
 			return false, config.ReadyFnBackoff
 		}
 		for _, s := range st {
 			log.Info("Aborting existing run on new node: ", node, s)
 			run.Abort(s.RunID)
 		}
-		return true, time.Duration(0)
+		return true, 0
 	}
 	if config.ReadyFnBackoff == 0 {
 		nodeReadyFn = nil
@@ -323,7 +329,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobId := ta.task.JobId
 		taskId := ta.task.TaskId
 		taskDef := ta.task.Def
-		saga := s.inProgressJobs[jobId].Saga
+		sa := s.inProgressJobs[jobId].Saga
 		jobState := s.inProgressJobs[jobId]
 		nodeId := ta.node.Id()
 
@@ -334,8 +340,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		log.Infof("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 		jobState.taskStarted(taskId)
 
-		runner := &taskRunner{
-			saga:   saga,
+		run := &taskRunner{
+			saga:   sa,
 			runner: s.runnerFactory(ta.node),
 			stat:   s.stat,
 
@@ -348,28 +354,46 @@ func (s *statefulScheduler) scheduleTasks() {
 			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
+			nodeId: nodeId,
 		}
 
 		s.asyncRunner.RunAsync(
-			runner.run,
+			run.run,
 			func(err error) {
 				flaky := false
 				if err != nil {
 					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
 					taskErr := err.(*taskError)
 					flaky = (taskErr.runnerErr != nil)
-					if !preventRetries {
-						log.Info("Error running job:", jobId, ", task:", taskId, " cmd:", taskDef.Argv, "(will be retried)", " err:", err)
-						jobState.errorRunningTask(taskId, err)
-					} else {
-						log.Info("Error running job:", jobId, ", task:", taskId, " cmd:", taskDef.Argv, "(will not be retried)", " err:", err)
+
+					msg := "Error running job (will be retried):"
+					if taskErr.resultErr != nil && taskErr.st.State == runner.COMPLETE {
+						msg = "Error running job (quitting, tasks that run to completion are not retried):"
 						err = nil
+					} else if preventRetries {
+						msg = fmt.Sprintf("Error running job (quitting, hit max retries of %d):", s.maxRetriesPerTask)
+						err = nil
+					} else {
+						jobState.errorRunningTask(taskId, err)
+					}
+					log.Info(msg, jobId, ", task:", taskId, " err:", taskErr, " cmd:", taskDef.Argv)
+
+					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
+					if taskErr.sagaErr != nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
+						log.Info(msg, jobId, ", task:", taskId, " -> starting goroutine to handle failed saga.EndTask. ")
+						go func() {
+							for err := errors.New(""); err != nil; err = run.logTaskStatus(&taskErr.st, saga.EndTask) {
+								time.Sleep(time.Second)
+							}
+							log.Info(msg, jobId, ", task:", taskId, " -> finished goroutine to handle failed saga.EndTask. ")
+						}()
 					}
 				}
 				if err == nil {
 					log.Info("Ending job:", jobId, ", task:", taskId, " command:", strings.Join(taskDef.Argv, " "))
 					jobState.taskCompleted(taskId)
 				}
+
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.Info("Freeing node:", nodeId, ", removed job:", jobId, ", task:", taskId)
 				s.clusterState.taskCompleted(nodeId, taskId, flaky)
@@ -381,9 +405,9 @@ func (s *statefulScheduler) scheduleTasks() {
 					total += len(job.Tasks)
 					completed += job.TasksCompleted
 					running += job.TasksRunning
-					log.Info("Job:", job.Job.Id, " #running:", job.TasksRunning, " #completed:", job.TasksCompleted,
-						" #total:", len(job.Tasks), " onedone:", (job.TasksCompleted == len(job.Tasks)))
 				}
+				log.Info("Job:", jobState.Job.Id, " #running:", jobState.TasksRunning, " #completed:", jobState.TasksCompleted,
+					" #total:", len(jobState.Tasks), " isdone:", (jobState.TasksCompleted == len(jobState.Tasks)))
 				log.Info("Jobs summary -> running:", running, " completed:", completed, " total:", total, " alldone:", (completed == total))
 			})
 	}

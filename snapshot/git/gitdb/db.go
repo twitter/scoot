@@ -49,7 +49,8 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
 	result := &DB{
-		initDoneCh: make(chan struct{}),
+		initDoneCh: make(chan error),
+		InitDoneCh: make(chan error, 1),
 		reqCh:      make(chan req),
 		dataRepo:   dataRepo,
 		tmp:        tmp,
@@ -85,8 +86,10 @@ type DB struct {
 
 	// Our init can fail, and if it did, err will be non-nil, so before sending
 	// to reqCh, read from initDoneCh (which will be closed after initialization is done)
-	// and test if err is non-nil
-	initDoneCh chan struct{}
+	// and test if err is non-nil.
+	// Using both an internal initDoneCh and a public InitDoneCh for external consumption.
+	initDoneCh chan error
+	InitDoneCh chan error
 	err        error
 
 	// must hold workTreeLock before sending a checkoutReq to reqCh
@@ -119,8 +122,10 @@ func (db *DB) Close() {
 // initialize our repo (if necessary)
 func (db *DB) init(initer RepoIniter) {
 	defer close(db.initDoneCh)
+	defer close(db.InitDoneCh)
 	if initer != nil {
 		db.dataRepo, db.err = initer.Init()
+		db.InitDoneCh <- db.err
 	}
 }
 

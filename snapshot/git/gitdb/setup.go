@@ -38,7 +38,7 @@ func (m module) Install(b *ice.MagicBag) {
 			return db
 		},
 		func(db *DB) snap.InitDoneCh {
-			return db.initDoneCh
+			return db.InitDoneCh
 		},
 	)
 }

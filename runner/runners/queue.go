@@ -13,6 +13,8 @@ import (
 )
 
 const QueueFullMsg = "No resources available. Please try later."
+const QueueInitingMsg = "Queue is still initializing. Please try later."
+const QueueInvalidMsg = "Failed initialization, queue permanently broken."
 
 type cmdAndID struct {
 	cmd *runner.Command
@@ -24,16 +26,24 @@ type cmdAndID struct {
 func NewQueueRunner(
 	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int,
 ) runner.Service {
-	statusManager := NewStatusManager()
+	history := 1
+	if capacity > 0 {
+		history = 0 // unlimited if acting as a queue (vs single runner).
+	}
+	statusManager := NewStatusManager(history)
 	inv := NewInvoker(exec, filer, output, tmp)
-	controller := &QueueController{statusManager: statusManager, inv: inv, initDoneCh: idc, capacity: capacity}
+	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
 	run := &Service{controller, statusManager, statusManager}
 
-	statusManager.UpdateService(runner.ServiceStatus{Initialized: idc == nil})
+	log.Info("Starting goroutine to check for snapshot init: ", (idc != nil))
 	if idc != nil {
 		go func() {
-			<-idc
-			statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+			err := <-idc
+			if err != nil {
+				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
+			} else {
+				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+			}
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
@@ -51,7 +61,6 @@ func NewSingleRunner(
 type QueueController struct {
 	inv           *Invoker
 	statusManager *StatusManager
-	initDoneCh    snapshot.InitDoneCh
 	capacity      int
 
 	mu           sync.Mutex
@@ -72,9 +81,14 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	if isRunning {
 		numCmds = 1 + len(c.queue)
 	}
-	log.Infof("Trying to run, available slots:%d/%d, currentRun:%s cmd:%v",
-		c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
 
+	_, svcStatus, _ := c.statusManager.StatusAll()
+	log.Infof("Trying to run, ready=%t, err=%v, available slots:%d/%d, currentRun:%s cmd:%v",
+		svcStatus.Initialized, svcStatus.Error, c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
+
+	if !svcStatus.Initialized {
+		return runner.RunStatus{Error: svcStatus.Error.Error()}, fmt.Errorf(QueueInitingMsg)
+	}
 	if numCmds > c.capacity {
 		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
 	}

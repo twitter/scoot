@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -82,27 +84,43 @@ type osProcess struct {
 
 // Periodically check to make sure memory constraints are respected.
 func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
-	memTicker := time.NewTicker(100 * time.Millisecond)
+	pid := p.cmd.Process.Pid
+	thresholdsIdx := 0
+	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
+	memTicker := time.NewTicker(10 * time.Millisecond)
 	defer memTicker.Stop()
+	log.Infof("Monitoring memory for pid=%d", pid)
 	for {
 		select {
 		case <-memTicker.C:
 			p.mutex.Lock()
 			if p.result != nil {
 				p.mutex.Unlock()
+				log.Infof("Finished monitoring memory for pid=%d", pid)
 				return
 			}
-			usage, _ := memUsage(p.cmd.Process.Pid)
-			stat.Gauge("memory").Update(int64(usage))
-			if usage >= memCap {
-				msg := fmt.Sprintf("Cmd exceeded MemoryCap: %d > %d (%v)", usage, memCap, p.cmd.Args)
+			mem, _ := memUsage(pid)
+			stat.Gauge("memory").Update(int64(mem))
+			if mem >= memCap {
+				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting: %d > %d (%v)", mem, memCap, p.cmd.Args)
 				log.Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: msg,
 				}
 				p.mutex.Unlock()
+				p.Abort()
 				return
+			}
+			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
+			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
+			if memUsagePct > reportThresholds[thresholdsIdx] {
+				log.Infof("Increased to %d%% mem_cap utilization (%d / %d) for pid=%v", int(memUsagePct*100), mem, memCap, pid)
+				top, err := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
+				log.Infof("%s\n---\nerr: %v", string(top), err)
+				for memUsagePct > reportThresholds[thresholdsIdx] {
+					thresholdsIdx++
+				}
 			}
 			p.mutex.Unlock()
 		}
@@ -110,9 +128,13 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 }
 
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
+	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+
+	top, _ := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
+	log.Infof("Pid=%d exit, current top:\n%s", pid, string(top))
 
 	if p.result != nil {
 		return *p.result
@@ -175,12 +197,33 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	return result
 }
 
-func memUsage(pgid int) (execer.Memory, error) {
-	// Pass children of pgid from 'pgrep', and pgid itself, into 'ps' to get rss memory usages in KB, then sum them.
-	// Note: there may be better ways to do this if we choose to handle osx/linux separately.
-	str := `function getp(){ cps=$(pgrep -P $1); for cp in $cps; do echo "$cp"; getp $cp; done }`
-	str += `;export P=%d; ps -orss $(getp $P) $P | grep -v RSS | tr '\n' '+' | grep -o '.*[^+]' | bc`
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pgid))
+func memUsage(pid int) (execer.Memory, error) {
+	// Query for all sets of (pid, ppid, rss) and create a graph. Given a pid, walk the graph accruing memory.
+	// Note: look at the revision history for previous approaches which seemed inaccurate at times? ex:
+	//   str := "export P=%d; echo $(ps -orss= -p$(echo -n $(pgrep -g $P | tr '\n' ',')$P) | tr '\n' '+') 0 | bc"
+	str := `
+PID=%d
+PSLIST=$(ps -e -o pid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
+echo "
+
+children=dict()
+memory=dict()
+total=0
+for line in \"$PSLIST\".split(';'):
+  pid, ppid, mem = tuple(line.split())
+  children.setdefault(ppid, []).append(pid)
+  memory[pid] = mem
+def walk(p):
+  global total
+  total += int(memory[p])
+  for c in children.setdefault(p, []):
+    walk(c)
+walk(\"$PID\")
+print total
+
+" | python
+`
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
 	} else {
