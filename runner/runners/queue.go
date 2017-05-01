@@ -35,6 +35,7 @@ func NewQueueRunner(
 	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
 	run := &Service{controller, statusManager, statusManager}
 
+	log.Info("Starting goroutine to check for snapshot init: ", (idc != nil))
 	if idc != nil {
 		go func() {
 			err := <-idc

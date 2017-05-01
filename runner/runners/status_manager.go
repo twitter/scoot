@@ -64,6 +64,7 @@ func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	log.Debugf("StatusManager updating svc:%v", svcStatus)
 	s.svcStatus = svcStatus
 	return nil
 }
@@ -77,6 +78,9 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 	defer s.mu.Unlock()
 
 	oldStatus, ok := s.runs[newStatus.RunID]
+	if !ok {
+		return fmt.Errorf("Cannot update non-existing runID: %s", newStatus.RunID)
+	}
 	if ok && oldStatus.State.IsDone() {
 		return nil
 	}

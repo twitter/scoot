@@ -1,9 +1,11 @@
 package scheduler
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 )
@@ -50,6 +52,11 @@ type nodeState struct {
 	removedCh   chan interface{} // We send nil when a node has been removed and we want the above goroutine to exit.
 }
 
+func (n *nodeState) String() string {
+	return fmt.Sprintf("{node:%s, runningTask:%s, snapshotId:%s, timeLost:%v, timeFlaky:%v, ready:%t}",
+		spew.Sdump(n.node), n.runningTask, n.snapshotId, n.timeLost, n.timeFlaky, (n.readyCh == nil))
+}
+
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
 // or it experienced connection related errors so we sideline it for a little while.
 func (ns *nodeState) suspended() bool {
@@ -77,6 +84,8 @@ func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
 		for !done {
 			if ready, backoff := rfn(ns.node); ready {
 				close(ns.readyCh)
+				done = true
+			} else if backoff == 0 {
 				done = true
 			} else {
 				select {

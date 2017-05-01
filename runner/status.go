@@ -169,7 +169,7 @@ func PreparingStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	return r
 }
 
-// This is for overall runner status, just 'initialized' status for now.
+// This is for overall runner status, just 'initialized' status and error for now.
 type ServiceStatus struct {
 	Initialized bool
 	Error       error
