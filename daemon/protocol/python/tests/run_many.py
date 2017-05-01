@@ -102,7 +102,7 @@ def test_many():
   id = proto.run(argv=sleepDef.cmd, timeout_ns=rpc_timeout_ns, snapshot_id=s_ids[sleepDef.snapshot_key])
   runs[id] = "sleep"
   
-  # run ~200 requests, 10 repetitions of 20 successful, 1 error
+  # run ~50 requests, 5 repetitions of 10 successful, 1 error
   for i in range(5):
     for j in range(10):
       try:
@@ -129,7 +129,7 @@ def test_many():
   start = time.time()
   allDone = False
   elapsedTime = 0
-  while not allDone and elapsedTime < 10.0: #FIXME: seeing spurious failures in travis-ci, making this extra long for now.
+  while not allDone and elapsedTime < 20.0: #FIXME: seeing spurious failures in travis-ci, making this extra long for now.
       ids = runs.keys()
       statuses = proto.poll(run_ids=ids, timeout_ns=int(3000 * 1e6), return_all=False)
       if len(statuses) == len(ids):
