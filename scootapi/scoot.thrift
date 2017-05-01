@@ -36,6 +36,8 @@ struct RunStatus {
   5: optional string error
   6: optional i32 exitCode
   7: optional string snapshotId
+  8: optional string jobId
+  9: optional string taskId
 }
 
 
@@ -46,6 +48,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command,
   2: optional string snapshotId,
+  3: optional string taskId,
 }
 
 struct JobDefinition {

@@ -3,11 +3,12 @@
 package sched
 
 import (
+	"reflect"
+	"testing"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
-	"reflect"
-	"testing"
 )
 
 func Test_JobSerializeDeserialize(t *testing.T) {
@@ -29,7 +30,6 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 				log.Info("Unexpected Error Occurred when Deserializing Job %v", err)
 				return false
 			}
-
 			return reflect.DeepEqual(job, deserializedJob)
 		},
 		GopterGenJob(),

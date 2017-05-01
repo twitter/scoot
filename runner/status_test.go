@@ -7,16 +7,20 @@ import (
 
 func TestCommandStringSimple(t *testing.T) {
 	c := Command{
-		Argv:       []string{"./pants", "test", "science/src/go/twitter.biz::"},
+		Argv:       []string{"./run", "a", "--command"},
 		EnvVars:    map[string]string{"GOOS": "linux"},
 		Timeout:    10 * time.Minute,
 		SnapshotID: "git-abcd1234",
+		JobID:      "job-abcd1234",
+		TaskID:     "task-abcd1234",
 	}
 
 	expected := `Command
 	SnapshotID:	git-abcd1234
-	Argv:	["./pants" "test" "science/src/go/twitter.biz::"]
+	Argv:	["./run" "a" "--command"]
 	Timeout:	10m0s
+	JobID:		job-abcd1234
+	TaskID:		task-abcd1234
 	Env:
 		GOOS: linux
 `
@@ -34,11 +38,15 @@ func TestProcStatusStringCompleted(t *testing.T) {
 		StderrRef:  "stderr",
 		ExitCode:   9,
 	}
+	ps.JobID = "46"
+	ps.TaskID = "2"
 
 	expected := `--- Run Status ---
-	Run:		12
-	Snapshot:		21
+	RunID:		12
+	SnapshotID:		21
 	State:		COMPLETE
+	JobID:		46
+	TaskID:		2
 	ExitCode:	9
 	Stdout:		stdout
 	Stderr:		stderr
@@ -59,10 +67,15 @@ func TestProcStatusStringError(t *testing.T) {
 		Error:      "The thing blew up.",
 	}
 
+	ps.JobID = "cdefg"
+	ps.TaskID = "hijkl"
+
 	expected := `--- Run Status ---
-	Run:		aaaaa
-	Snapshot:		bb
+	RunID:		aaaaa
+	SnapshotID:		bb
 	State:		FAILED
+	JobID:		cdefg
+	TaskID:		hijkl
 	Error:		The thing blew up.
 	Stdout:		stdout
 	Stderr:		stderr

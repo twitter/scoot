@@ -7,8 +7,8 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-
 	uuid "github.com/nu7hatch/gouuid"
+
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"

@@ -17,7 +17,7 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 	//initialize NodeMap to keep track of tasks per node
 	taskMap := make(map[string]cluster.NodeId)
 
-	/*jobId, _ :=*/ s.ScheduleJob(jobDef)
+	s.ScheduleJob(jobDef)
 	s.step()
 
 	for len(s.inProgressJobs) > 0 {

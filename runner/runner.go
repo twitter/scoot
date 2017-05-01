@@ -40,14 +40,20 @@ type Command struct {
 	//
 	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
 	// SnapshotPlan map[string]string
+
+	// Runner is given JobID and TaskID to help trace tasks throughout their lifecycle
+	JobID  string
+	TaskID string
 }
 
 func (c Command) String() string {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n",
+	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n\tJobID:\t\t%s\n\tTaskID:\t\t%s\n",
 		c.SnapshotID,
 		c.Argv,
-		c.Timeout)
+		c.Timeout,
+		c.JobID,
+		c.TaskID)
 
 	if len(c.EnvVars) > 0 {
 		fmt.Fprintf(&b, "\tEnv:\n")

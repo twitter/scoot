@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"io/ioutil"
-	"os"
 
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
@@ -38,11 +38,12 @@ type JobDef struct {
 type TaskDef struct {
 	Args       []string
 	SnapshotID string
+	JobID      string
+	TaskID     string
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Running on scoot", args)
-
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
@@ -57,12 +58,14 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			c.snapshotId = streamId
 		}
 		task := scoot.NewTaskDefinition()
+		taskId := "task1"
 		task.Command = scoot.NewCommand()
 		task.Command.Argv = args
 		task.SnapshotId = &c.snapshotId
+		task.TaskId = &taskId
 
 		jobDef.Tasks = map[string]*scoot.TaskDefinition{
-			"task1": task,
+			taskId: task,
 		}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
@@ -86,6 +89,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
 			jobDef.Tasks[taskName] = taskDef
+			taskDef.TaskId = &taskName
 		}
 	}
 	jobId, err := cl.scootClient.RunJob(jobDef)

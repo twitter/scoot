@@ -34,19 +34,24 @@ var tests = []struct {
 	//Cmd
 	{
 		0, cmdFromThrift, nil,
-		&worker.RunCommand{Argv: []string{}, Env: nil, SnapshotId: nil, TimeoutMs: nil},
-		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero)},
+		&worker.RunCommand{Argv: []string{}, Env: nil, SnapshotId: nil, TimeoutMs: nil, JobId: &deadbeefID, TaskId: &deadbeefID},
+		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero), JobID: deadbeefID, TaskID: deadbeefID},
 	},
 	{
 		1, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero},
-		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero)},
+		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero, JobId: &nonemptystr, TaskId: &emptystr},
+		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero), JobID: nonemptystr, TaskID: emptystr},
 	},
 	{
 		2, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero},
+		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero, JobId: &emptystr, TaskId: &emptystr},
 		&runner.Command{Argv: someCmd, EnvVars: someEnv,
-			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotID: nonemptystr},
+			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotID: nonemptystr, JobID: emptystr, TaskID: emptystr},
+	},
+	{
+		3, cmdFromThrift, cmdToThrift,
+		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero, JobId: &emptystr, TaskId: &emptystr},
+		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero)},
 	},
 
 	//RunStatus
