@@ -124,13 +124,17 @@ func NewStatefulScheduler(
 		run := rf(node)
 		st, svc, err := run.StatusAll()
 		if err != nil || !svc.Initialized {
+			if svc.Error != nil {
+				log.Info("Received service err during init of new node: %v, err: %v", node, svc.Error)
+				return false, 0
+			}
 			return false, config.ReadyFnBackoff
 		}
 		for _, s := range st {
 			log.Info("Aborting existing run on new node: ", node, s)
 			run.Abort(s.RunID)
 		}
-		return true, time.Duration(0)
+		return true, 0
 	}
 	if config.ReadyFnBackoff == 0 {
 		nodeReadyFn = nil

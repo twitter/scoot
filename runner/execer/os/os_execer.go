@@ -84,21 +84,22 @@ type osProcess struct {
 
 // Periodically check to make sure memory constraints are respected.
 func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
+	pid := p.cmd.Process.Pid
 	thresholdsIdx := 0
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
 	memTicker := time.NewTicker(10 * time.Millisecond)
 	defer memTicker.Stop()
-	log.Infof("Monitoring memory for pid=%d", p.cmd.Process.Pid)
+	log.Infof("Monitoring memory for pid=%d", pid)
 	for {
 		select {
 		case <-memTicker.C:
 			p.mutex.Lock()
 			if p.result != nil {
 				p.mutex.Unlock()
-				log.Infof("Finished monitoring memory for pid=%d", p.cmd.Process.Pid)
+				log.Infof("Finished monitoring memory for pid=%d", pid)
 				return
 			}
-			mem, _ := memUsage(p.cmd.Process.Pid)
+			mem, _ := memUsage(pid)
 			stat.Gauge("memory").Update(int64(mem))
 			if mem >= memCap {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting: %d > %d (%v)", mem, memCap, p.cmd.Args)
@@ -114,15 +115,11 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
 			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
 			if memUsagePct > reportThresholds[thresholdsIdx] {
-				log.Infof("Increased to %f%% mem_cap utilization (%d / %d) for pid=%v", memUsagePct*100, mem, memCap, p.cmd.Process.Pid)
-				log.Info(exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput())
+				log.Infof("Increased to %d%% mem_cap utilization (%d / %d) for pid=%v", int(memUsagePct*100), mem, memCap, pid)
+				top, err := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
+				log.Infof("%s\n---\nerr: %v", string(top), err)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
-				}
-			} else if memUsagePct < reportThresholds[thresholdsIdx] {
-				log.Infof("Reduced to %d%% mem_cap utilization (%d / %d) for pid=%v", memUsagePct*100, mem, memCap, p.cmd.Process.Pid)
-				for memUsagePct < reportThresholds[thresholdsIdx] {
-					thresholdsIdx--
 				}
 			}
 			p.mutex.Unlock()
@@ -131,9 +128,13 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 }
 
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
+	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+
+	top, _ := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
+	log.Infof("Pid=%d exit, current top:\n%s", pid, string(top))
 
 	if p.result != nil {
 		return *p.result
