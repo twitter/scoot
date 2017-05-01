@@ -13,8 +13,8 @@ import (
 const UnknownRunIDMsg = "unknown run id %v"
 
 // NewStatusManager creates a new empty StatusManager
-func NewStatusManager() *StatusManager {
-	return &StatusManager{runs: make(map[runner.RunID]runner.RunStatus)}
+func NewStatusManager(capacity int) *StatusManager {
+	return &StatusManager{runs: make(map[runner.RunID]runner.RunStatus), fifo: make([]runner.RunID, 0), capacity: capacity}
 }
 
 // StatusManager is a database of RunStatus'es. It allows clients to Write StatusManager, Query the
@@ -22,6 +22,8 @@ func NewStatusManager() *StatusManager {
 type StatusManager struct {
 	mu        sync.Mutex
 	runs      map[runner.RunID]runner.RunStatus
+	fifo      []runner.RunID
+	capacity  int
 	svcStatus runner.ServiceStatus
 	nextRunID int64
 	listeners []queryAndCh
@@ -47,6 +49,13 @@ func (s *StatusManager) NewRun() (runner.RunStatus, error) {
 		State: runner.PENDING,
 	}
 	s.runs[id] = st
+
+	s.fifo = append(s.fifo, id)
+	if s.capacity != 0 && len(s.fifo) > s.capacity {
+		delete(s.runs, s.fifo[0])
+		s.fifo = s.fifo[1:]
+	}
+
 	return st, nil
 }
 

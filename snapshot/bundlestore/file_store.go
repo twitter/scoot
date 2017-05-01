@@ -49,7 +49,7 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
+func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}

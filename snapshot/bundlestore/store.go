@@ -5,10 +5,15 @@ import (
 	"time"
 )
 
-const DefaultTTL time.Duration = time.Hour * 24 * 30 //30 days.
-const DefaultTTLKey string = "x-scoot-expires"       //the primary use for this is communicating ttl over http.
+var DefaultTTL time.Duration = time.Hour * 24 * 180 //180 days. If zero, no ttl will be applied by default.
+const DefaultTTLKey string = "x-scoot-expires"      //the primary use for this is communicating ttl(RFC1123) over http.
 
 // Stores should generally support TTL, at this time only httpStore implements it.
+type TTLValue struct {
+	TTL    time.Time
+	TTLKey string
+}
+
 type TTLConfig struct {
 	TTL    time.Duration
 	TTLKey string
@@ -27,7 +32,7 @@ type StoreRead interface {
 // If ttl config is nil then the store will use its defaults.
 type StoreWrite interface {
 	// Does a streaming write of the given bundle. There is no concept of partial writes (partial=failed).
-	Write(name string, data io.Reader, ttl *TTLConfig) error
+	Write(name string, data io.Reader, ttl *TTLValue) error
 }
 
 // Combines read and write operations on store. This is what most of the code will use.

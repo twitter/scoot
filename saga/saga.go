@@ -5,9 +5,7 @@
 // https://speakerdeck.com/caitiem20/applying-the-saga-pattern
 package saga
 
-import (
-	"sync"
-)
+import "sync"
 
 // Concurrent Object Representing a Saga
 // Methods update the state of the saga or
