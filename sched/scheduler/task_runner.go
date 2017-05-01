@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -33,6 +34,7 @@ type taskRunner struct {
 	jobId  string
 	taskId string
 	task   sched.TaskDefinition
+	nodeId cluster.NodeId
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -52,7 +54,7 @@ func (t *taskError) Error() string {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Info("Starting task - job:", r.jobId, " task:", r.taskId, " -> :", r.task)
+	log.Infof("Starting task - job: %s, task: %s, node: %s -> %v", r.jobId, r.taskId, r.nodeId, r.task)
 	taskErr := &taskError{}
 
 	// Log StartTask Message to SagaLog
@@ -93,7 +95,8 @@ func (r *taskRunner) run() error {
 			r.jobId, r.taskId, r.saga.GetState().SagaId(), taskErr)
 	}
 
-	log.Infof("End task - job:%s, task:%s, log:%t, runStatus:%s, err:%v", r.jobId, r.taskId, shouldLog, taskErr.st, taskErr)
+	log.Infof("End task - job:%s, task:%s, node:%s, log:%t, runStatus:%s, err:%v",
+		r.jobId, r.taskId, r.nodeId, shouldLog, taskErr.st, taskErr)
 	if !shouldLog {
 		return taskErr
 	}

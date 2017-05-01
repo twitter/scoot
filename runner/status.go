@@ -155,6 +155,7 @@ func PreparingStatus(runID RunID) (r RunStatus) {
 // This is for overall runner status, just 'initialized' status for now.
 type ServiceStatus struct {
 	Initialized bool
+	Error       error
 }
 
 func (s ServiceStatus) String() string {

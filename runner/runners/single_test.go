@@ -20,10 +20,11 @@ import (
 func TestRun(t *testing.T) {
 	defer teardown(t)
 	r, _ := newRunner()
-	firstID := assertRun(t, r, complete(0), "complete 0")
+	assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
-	// Now make sure that the first results are still available
-	assertWait(t, r, firstID, complete(0), "complete 0")
+	if status, _, err := r.StatusAll(); len(status) != 1 {
+		t.Fatalf("Expected history count of 1, got %d, err=%v", len(status), err)
+	}
 }
 
 func TestOutput(t *testing.T) {

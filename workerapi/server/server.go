@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
@@ -114,8 +115,11 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	for _, status := range st {
 		if status.State.IsDone() {
 			// Note: TravisCI fails when output is too long so we set full status to Debug and disable it when running in that env.
-			log.Infof("Worker returning finished run: %v", status.RunID)
-			log.Debugf("Worker returning finished run (details): %v", status)
+			if log.GetLevel() == log.DebugLevel {
+				log.Debugf("Worker returning finished run: %v", status)
+			} else {
+				log.Infof("Worker returning finished run: %v", status.RunID)
+			}
 		}
 		ws.Runs = append(ws.Runs, domain.DomainRunStatusToThrift(status))
 	}
@@ -126,7 +130,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency("runLatency_ms").Time().Stop()
 	h.stat.Counter("runs").Inc(1)
-	log.Infof("Worker trying to run cmd: %v", cmd)
+	log.Infof("Worker trying to run cmd: %s", spew.Sdump(cmd))
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)

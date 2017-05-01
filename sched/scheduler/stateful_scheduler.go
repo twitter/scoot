@@ -350,6 +350,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
+			nodeId: nodeId,
 		}
 
 		s.asyncRunner.RunAsync(
@@ -375,11 +376,12 @@ func (s *statefulScheduler) scheduleTasks() {
 
 					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
 					if taskErr.sagaErr != nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
-						log.Info(msg, jobId, ", task:", taskId, " -> starting goroutine to handle failed sagalog. ")
+						log.Info(msg, jobId, ", task:", taskId, " -> starting goroutine to handle failed saga.EndTask. ")
 						go func() {
 							for err := errors.New(""); err != nil; err = run.logTaskStatus(&taskErr.st, saga.EndTask) {
 								time.Sleep(time.Second)
 							}
+							log.Info(msg, jobId, ", task:", taskId, " -> finished goroutine to handle failed saga.EndTask. ")
 						}()
 					}
 				}

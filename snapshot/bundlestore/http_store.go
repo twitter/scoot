@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -27,21 +26,31 @@ type httpStore struct {
 }
 
 func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
+	return s.openForRead(name, false)
+}
+
+func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, error) {
+	label := "Read"
+	if existCheck {
+		label = "Exist"
+	}
 	uri := s.rootURI + name
-	log.Infof("Fetching %s", uri)
+	log.Infof("%sing %s", label, uri)
 	resp, err := s.client.Get(uri)
 	if err != nil {
-		log.Infof("Fetch error: %s %v", uri, err)
+		if !existCheck {
+			log.Infof("%s error: %s %v", label, uri, err)
+		}
 		return nil, err
 	}
-	log.Infof("Fetch result %s %v", uri, resp.StatusCode)
+	log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
 		return resp.Body, nil
 	}
 
 	resp.Body.Close()
-	log.Infof("Fetch response status error: %s %v", uri, resp.Status)
+	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
@@ -51,7 +60,7 @@ func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
 }
 
 func (s *httpStore) Exists(name string) (bool, error) {
-	r, err := s.OpenForRead(name)
+	r, err := s.openForRead(name, true)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -59,6 +68,7 @@ func (s *httpStore) Exists(name string) (bool, error) {
 		log.Infof("Exists error: %s %v", name, err)
 		return false, err
 	}
+	log.Infof("Exists ok: %s %v", name)
 	r.Close()
 	return true, nil
 }
@@ -91,11 +101,10 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	if err != nil {
 		log.Infof("Write error: %s %v", uri, err)
 	} else {
-		defer resp.Body.Close()
+		resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			data, _ := ioutil.ReadAll(resp.Body)
-			log.Infof("Write response status error: %s %v -- %s", uri, resp.Status, string(data))
-			return errors.New(resp.Status + ": " + string(data))
+			log.Infof("Write response status error: %s %v -- %s", uri, resp.Status)
+			return errors.New(resp.Status)
 		}
 	}
 	return err

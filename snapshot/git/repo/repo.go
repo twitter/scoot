@@ -5,10 +5,11 @@ package repo
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"os"
 	"os/exec"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // Repository represents a valid Git repository.
@@ -35,11 +36,11 @@ func (r *Repository) Command(args ...string) *exec.Cmd {
 
 // RunCmd runs cmd (that must have been created by Command), returning its output and error
 func (r *Repository) RunCmd(cmd *exec.Cmd) (string, error) {
-	log.Info("repo.Repository.Run", cmd.Args[1:])
+	log.Info("repo.Repository.Run, ", cmd.Args[1:])
 	data, err := cmd.Output()
-	log.Info("repo.Repository.Run complete", err)
+	log.Info("repo.Repository.Run complete, ", err)
 	if err != nil && err.(*exec.ExitError) != nil {
-		log.Info("repo.Repository.Run error:", string(err.(*exec.ExitError).Stderr))
+		log.Info("repo.Repository.Run error: ", string(err.(*exec.ExitError).Stderr))
 	}
 	return string(data), err
 }
@@ -83,7 +84,7 @@ func NewRepository(dir string) (*Repository, error) {
 		return nil, err
 	}
 	topLevel = strings.Replace(topLevel, "\n", "", -1)
-	log.Info("git.NewRepository:", dir, topLevel)
+	log.Info("git.NewRepository: ", dir, ", top: ", topLevel)
 	r.dir = topLevel
 	return r, nil
 }
