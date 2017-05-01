@@ -95,6 +95,7 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			p.mutex.Lock()
 			if p.result != nil {
 				p.mutex.Unlock()
+				log.Infof("Finished monitoring memory for pid=%d", p.cmd.Process.Pid)
 				return
 			}
 			mem, _ := memUsage(p.cmd.Process.Pid)
@@ -113,7 +114,7 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
 			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
 			if memUsagePct > reportThresholds[thresholdsIdx] {
-				log.Infof("Increased to %d%% mem_cap utilization (%d / %d) for pid=%v", memUsagePct*100, mem, memCap, p.cmd.Process.Pid)
+				log.Infof("Increased to %f%% mem_cap utilization (%d / %d) for pid=%v", memUsagePct*100, mem, memCap, p.cmd.Process.Pid)
 				log.Info(exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-b1").CombinedOutput())
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
