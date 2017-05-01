@@ -115,7 +115,7 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
 			if memUsagePct > reportThresholds[thresholdsIdx] {
 				log.Infof("Increased to %f%% mem_cap utilization (%d / %d) for pid=%v", memUsagePct*100, mem, memCap, p.cmd.Process.Pid)
-				log.Info(exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-b1").CombinedOutput())
+				log.Info(exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput())
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}

@@ -118,7 +118,8 @@ func TestMemCap(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-	if runs, _, err := r.Query(query, runner.Wait{Timeout: 2 * time.Second}); err != nil { //travis may be slow, wait a super long time?
+	// Travis may be slow, wait a super long time? This may also be necessary due to slow debug output from os_execer? TBD.
+	if runs, _, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
 		status, _, err := r.StatusAll()
