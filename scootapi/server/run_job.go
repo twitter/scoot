@@ -55,8 +55,8 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		}
 		if t.TimeoutMs != nil {
 			task.Command.Timeout = time.Duration(*t.TimeoutMs) * time.Millisecond
-		} else if def.TimeoutMs != nil {
-			task.Command.Timeout = time.Duration(*def.TimeoutMs) * time.Millisecond
+		} else if def.DefaultTaskTimeoutMs != nil {
+			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond
 		}
 		t.TaskId = &taskId
 		result.Tasks[taskId] = task

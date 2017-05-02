@@ -55,7 +55,7 @@ struct TaskDefinition {
 struct JobDefinition {
   1: required map<string, TaskDefinition> tasks,
   2: optional JobType jobType,
-  3: optional i32 timeoutMs,
+  3: optional i32 defaultTaskTimeoutMs,
 }
 
 struct JobId {
