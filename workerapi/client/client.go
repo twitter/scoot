@@ -3,6 +3,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/scootdev/scoot/common/dialer"
@@ -116,7 +117,11 @@ func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, runner.Service
 	if err != nil {
 		return runner.RunStatus{}, runner.ServiceStatus{}, err
 	}
-	svc := runner.ServiceStatus{Initialized: ws.Initialized}
+	var svcErr error
+	if ws.Error != "" {
+		svcErr = errors.New(ws.Error)
+	}
+	svc := runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}
 	for _, p := range ws.Runs {
 		if p.RunID == id {
 			return p, svc, nil
@@ -131,7 +136,11 @@ func (c *simpleClient) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, er
 	if err != nil {
 		return nil, runner.ServiceStatus{}, err
 	}
-	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized}, nil
+	var svcErr error
+	if ws.Error != "" {
+		svcErr = errors.New(ws.Error)
+	}
+	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}, nil
 }
 
 func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {

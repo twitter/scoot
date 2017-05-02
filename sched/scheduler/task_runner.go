@@ -2,11 +2,11 @@ package scheduler
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -15,6 +15,10 @@ import (
 )
 
 const DeadLetterExitCode = -200
+
+func emptyStatusError(jobId string, taskId string, err error) string {
+	return fmt.Sprintf("Empty run status, job:%s, task:%s, err:%s", jobId, taskId, err)
+}
 
 type taskRunner struct {
 	saga   *saga.Saga
@@ -30,6 +34,7 @@ type taskRunner struct {
 	jobId  string
 	taskId string
 	task   sched.TaskDefinition
+	nodeId cluster.NodeId
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -49,7 +54,7 @@ func (t *taskError) Error() string {
 // are logged and the task completes
 // parameters:
 func (r *taskRunner) run() error {
-	log.Info("Starting task - job:", r.jobId, " task:", r.taskId, " command:", strings.Join(r.task.Argv, " "))
+	log.Infof("Starting task - job: %s, task: %s, node: %s -> %v", r.jobId, r.taskId, r.nodeId, r.task)
 	taskErr := &taskError{}
 
 	// Log StartTask Message to SagaLog
@@ -58,11 +63,13 @@ func (r *taskRunner) run() error {
 		return taskErr
 	}
 
+	// Run and update taskErr with the results.
 	st, err := r.runAndWait(r.taskId, r.task)
 	taskErr.runnerErr = err
+	taskErr.st = st
 
+	// We got a good message back, but it indicates an error. Update taskErr accordingly.
 	if err == nil && st.State != runner.COMPLETE {
-		// we got a good message back, but the message is that an error occured
 		switch st.State {
 		case runner.FAILED:
 			err = fmt.Errorf(st.Error)
@@ -72,23 +79,29 @@ func (r *taskRunner) run() error {
 		taskErr.resultErr = err
 	}
 
-	log.Infof("End task - job:%s, task:%s, runStatus:%s\n", r.jobId, r.taskId, st.String())
+	// We should write to sagalog if there's no error, or there's an error but the caller won't be retrying.
+	shouldDeadLetter := (err != nil && r.markCompleteOnFailure)
+	shouldLog := (err == nil) || shouldDeadLetter
 
-	shouldLog := (err == nil)
-	if err != nil && r.markCompleteOnFailure {
-		st.Error = err.Error()
-		st.ExitCode = DeadLetterExitCode
-		log.Infof(
-			`Error Running Task %v: dead lettering task after max retries.
-				TaskDef: %+v, Saga Id: %v, Error: %v`,
-			r.taskId, r.task, r.saga.GetState().SagaId(), err)
-		shouldLog = true
+	// Update taskErr state if it's empty or if we're doing deadletter..
+	if taskErr.st.State == runner.UNKNOWN {
+		taskErr.st.State = runner.FAILED
+		taskErr.st.Error = emptyStatusError(r.jobId, r.taskId, err)
 	}
+	if shouldDeadLetter {
+		taskErr.st.ExitCode = DeadLetterExitCode
+		log.Infof(
+			`Error Running Job %v, Task %v: dead lettering task after max retries. Saga Id: %v, Error: %v`,
+			r.jobId, r.taskId, r.saga.GetState().SagaId(), taskErr)
+	}
+
+	log.Infof("End task - job:%s, task:%s, node:%s, log:%t, runStatus:%s, err:%v",
+		r.jobId, r.taskId, r.nodeId, shouldLog, taskErr.st, taskErr)
 	if !shouldLog {
 		return taskErr
 	}
 
-	err = r.logTaskStatus(&st, saga.EndTask)
+	err = r.logTaskStatus(&taskErr.st, saga.EndTask)
 	taskErr.sagaErr = err
 	if taskErr.sagaErr == nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
 		r.stat.Counter("completedTaskCounter").Inc(1)

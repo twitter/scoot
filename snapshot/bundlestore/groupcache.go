@@ -146,7 +146,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
+func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	log.Info("Write() populating cache: ", name)
 	defer s.stat.Latency("writeLatency_ms").Time().Stop()
 	s.stat.Counter("writeCounter").Inc(1)

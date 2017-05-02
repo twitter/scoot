@@ -17,7 +17,7 @@ import (
 
 type FakeStore struct {
 	files map[string][]byte
-	ttl   *TTLConfig
+	ttl   *TTLValue
 }
 
 func (f *FakeStore) Exists(name string) (bool, error) {
@@ -34,8 +34,8 @@ func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewBuffer(f.files[name])), nil
 }
 
-func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
-	if !reflect.DeepEqual(f.ttl, ttl) {
+func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+	if (f.ttl == nil) != (ttl == nil) || (ttl != nil && (f.ttl.TTLKey != ttl.TTLKey || f.ttl.TTL.Sub(ttl.TTL) != 0)) {
 		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.ttl, ttl)
 	} else if data, err := ioutil.ReadAll(data); err != nil {
 		return err
@@ -45,19 +45,21 @@ func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLConfig) error {
 	}
 }
 
-//TODO: an end-end test that uses real a real store and real bundles.
+//TODO: an end-end test that uses a real store and real bundles.
 
 func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
-	expectTTL := &TTLConfig{time.Minute, DefaultTTLKey}
-	serverTTL := &TTLConfig{time.Minute, DefaultTTLKey}
-	store := &FakeStore{files: map[string][]byte{}, ttl: expectTTL}
+	now := time.Time{}.Add(time.Minute)
+	store := &FakeStore{files: map[string][]byte{}, ttl: nil}
+	DefaultTTL = 0
+
 	listener, _ := net.Listen("tcp", "localhost:0")
 	defer listener.Close()
 	addr := listener.Addr().String()
 
+	server := MakeServer(store, nil, stats.NilStatsReceiver())
 	mux := http.NewServeMux()
-	mux.Handle("/bundle/", MakeServer(store, serverTTL, stats.NilStatsReceiver()))
+	mux.Handle("/bundle/", server)
 	go func() {
 		http.Serve(listener, mux)
 	}()
@@ -116,10 +118,9 @@ func TestServer(t *testing.T) {
 
 	// Try to write data.
 	// We send a new TTL and reconfigure the server to transform the original ttl key to a new one.
-	expectTTL.TTL = time.Hour
-	expectTTL.TTLKey = "NEW_TTL"
-	serverTTL.TTLKey = "NEW_TTL"
-	clientTTL := &TTLConfig{time.Hour, DefaultTTLKey}
+	store.ttl = &TTLValue{now.Add(time.Hour), "NEW_TTL"}
+	server.ttlCfg = &TTLConfig{0, "NEW_TTL"}
+	clientTTL := &TTLValue{now.Add(time.Hour), DefaultTTLKey}
 	httpStore := MakeHTTPStore(rootUri)
 	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
 	if err := httpStore.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {

@@ -11,17 +11,19 @@ func NewDoneExecer() *DoneExecer {
 
 // doneExecer finishes something as soon as its run
 type DoneExecer struct {
-	State execer.ProcessState
+	State     execer.ProcessState
+	ExitCode  int
+	ExecError error
 }
 
 func (e *DoneExecer) Exec(command execer.Command) (execer.Process, error) {
-	return e, nil
+	return e, e.ExecError
 }
 
 func (e *DoneExecer) completeStatus() execer.ProcessStatus {
 	return execer.ProcessStatus{
 		State:    e.State,
-		ExitCode: 0,
+		ExitCode: e.ExitCode,
 	}
 }
 

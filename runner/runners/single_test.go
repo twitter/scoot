@@ -20,10 +20,11 @@ import (
 func TestRun(t *testing.T) {
 	defer teardown(t)
 	r, _ := newRunner()
-	firstID := assertRun(t, r, complete(0), "complete 0")
+	assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
-	// Now make sure that the first results are still available
-	assertWait(t, r, firstID, complete(0), "complete 0")
+	if status, _, err := r.StatusAll(); len(status) != 1 {
+		t.Fatalf("Expected history count of 1, got %d, err=%v", len(status), err)
+	}
 }
 
 func TestOutput(t *testing.T) {
@@ -117,10 +118,12 @@ func TestMemCap(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-	if runs, _, err := r.Query(query, runner.Wait{Timeout: 2 * time.Second}); err != nil { //travis may be slow, wait a super long time?
+	// Travis may be slow, wait a super long time? This may also be necessary due to slow debug output from os_execer? TBD.
+	if runs, _, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
-		t.Fatalf("Expected result with FAILURE and matching err string, got: %v", runs)
+		status, _, err := r.StatusAll()
+		t.Fatalf("Expected result with FAILURE and matching err string, got: %v -- status %v -- err %v", runs, status, err)
 	}
 }
 

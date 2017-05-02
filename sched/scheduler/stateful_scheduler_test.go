@@ -13,7 +13,6 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	"github.com/scootdev/scoot/runner/runners"
 	"github.com/scootdev/scoot/saga"
@@ -214,7 +213,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	tmp, _ := temp.TempDirDefault()
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
-		ex.State = execer.FAILED
+		ex.ExecError = errors.New("Test - failed to exec")
 		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
 	}
 

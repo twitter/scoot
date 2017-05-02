@@ -55,7 +55,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			log.Info("No snapshotID provided - cmd will be run in an empty tmpdir.")
 		} else if !strings.Contains(c.snapshotId, "-") {
 			//this is not a bundleID, assume it's a sha that's available upstream. Cf. snapshot/git/gitdb/README.md
-			streamId := fmt.Sprintf("stream-swh-%s-%s", c.streamName, c.snapshotId)
+			streamId := fmt.Sprintf("stream-gc-%s-%s", c.streamName, c.snapshotId)
 			log.Infof("Converting sha to a stream-based snapshot_id: %s -> %s", c.snapshotId, streamId)
 			c.snapshotId = streamId
 		}
