@@ -136,7 +136,7 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
 					log.Fields{
-						"pid", pid,
+						"pid": pid,
 						"ps":  string(ps),
 						"err": err,
 					}).Infof("ps after increasing mem_cap utilization for pid %d:", pid)
@@ -201,9 +201,7 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	result.ExitCode = -1
 	result.Error = "Aborted."
 
-	// pid and pgid should be equal (because SysProcAttr{Setgpid: true}).
-	// We want to kill the current process and all processes within
-	// its process group.
+	// pid and pgid should be equal (because SysProcAttr{Setgpid: true})
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -266,9 +264,9 @@ print total
 
 // Kill process along with all child processes, assuming no child processes called setpgid
 func cleanupProcs(pgid int) (err error) {
-	log.Info("Cleaning up process group %d", pgid)
+	log.Info("Cleaning up pgid %d", pgid)
 	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-		log.Errorf("Error cleaning up after process group %d: %v", pgid, err)
+		log.Errorf("Error cleaning up after pgid %d: %v", pgid, err)
 	}
 	return err
 }
