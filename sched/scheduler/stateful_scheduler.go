@@ -448,10 +448,11 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// This task is co-opting the node for some other running task, abort that task.
 		if ta.runningTask != nil {
-			ta.runningTask.runner.abortCh <- nil
+			close(ta.runningTask.runner.abortCh)
 			rt := ta.runningTask
 			err := fmt.Errorf("jobId:%s taskId%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
 			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, err)
+			s.clusterState.taskCompleted(nodeId, rt.taskId, false)
 		}
 
 		// Mark Task as Started
@@ -475,7 +476,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			task:   taskDef,
 			nodeId: nodeId,
 
-			abortCh: make(chan interface{}, 1),
+			abortCh: make(chan interface{}),
 		}
 		ta.task.runner = run
 
@@ -483,6 +484,10 @@ func (s *statefulScheduler) scheduleTasks() {
 			run.run,
 			func(err error) {
 				flaky := false
+				if jobState.getTask(taskId).Status != sched.InProgress {
+					log.Info("Task preempted, skipping asyncRun cleanup of node:", nodeId, ", job:", jobId, ", task:", taskId)
+					return
+				}
 				if err != nil {
 					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
 					taskErr := err.(*taskError)

@@ -40,11 +40,12 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 	var tasks []*taskState
 	numIdle := cs.numIdle
 	requestorTagsSeen := map[string]map[string]bool{}
-	numRunningTasks := map[int]int{0: 0, 1: 0, 2: 0, 3: 0}
+	numKillableTasks := map[int]int{0: 0, 1: 0, 2: 0, 3: 0}
 	priorityJobs := map[int][]*jobState{0: []*jobState{}, 1: []*jobState{}, 2: []*jobState{}, 3: []*jobState{}}
 	for _, job := range jobs {
-		p := min(1, int(job.Job.Def.Priority)) //TODO(jschiller): delete this. Add priority=2 and priority=3 task-killing
-		numRunningTasks[p] += job.TasksRunning
+		p := int(job.Job.Def.Priority)
+		//FIXME: don't kill tasks that've been running for too long
+		numKillableTasks[p] += job.TasksRunning
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
 
@@ -53,8 +54,15 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 Loop:
 	for p := range []int{1, 0} {
 		for _, job := range priorityJobs[p] {
+			numAvail := numIdle
+			if p == 3 {
+				numAvail += numKillableTasks[2] + numKillableTasks[1] + numKillableTasks[0]
+			} else if p == 2 {
+				numAvail += numKillableTasks[1] + numKillableTasks[0]
+			}
+
 			def := &job.Job.Def
-			if numIdle == 0 {
+			if numAvail == 0 {
 				break Loop
 			}
 			if tags, ok := requestorTagsSeen[def.Requestor]; ok {
@@ -77,10 +85,11 @@ Loop:
 				}
 			}
 
-			numSchedulable := min(ceil(float32(numTasks)*NodeScaleFactor), len(unsched), numIdle, DefaultMinNodes)
+			numSchedulable := min(ceil(float32(numTasks)*NodeScaleFactor), len(unsched), numAvail, DefaultMinNodes)
 			numSchedulable -= numRunning
 			if numSchedulable > 0 {
 				tasks = append(tasks, unsched[0:numSchedulable]...)
+				numAvail -= numSchedulable
 				numIdle -= numSchedulable
 			}
 

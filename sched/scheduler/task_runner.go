@@ -134,7 +134,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	for {
 		st, err = r.runner.Run(cmd)
 		if err != nil && r.abortRequested() {
-			log.Infof("Run aborted by scheduler: job:%s taskId:%s", r.jobId, taskId)
+			log.Infof("Initial run attempts aborted by scheduler : job:%s taskId:%s", r.jobId, taskId)
 			return st, err
 		}
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
@@ -187,6 +187,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	w := runner.Wait{Timeout: timeout, AbortCh: r.abortCh}
 	sts, _, err := r.runner.Query(q, w)
 	if err != nil {
+		if r.abortRequested() {
+			r.runner.Abort(id)
+			return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), nil
+		}
 		return runner.RunStatus{}, err
 	}
 
@@ -226,12 +230,8 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 }
 
 func (r *taskRunner) abortRequested() bool {
-	if r.abortCh == nil {
-		return true
-	}
 	select {
 	case <-r.abortCh:
-		r.abortCh = nil
 		return true
 	default:
 		return false
