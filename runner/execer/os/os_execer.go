@@ -91,7 +91,12 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 	memTicker := time.NewTicker(10 * time.Millisecond)
 	defer memTicker.Stop()
 	// Clean up after ourselves
-	defer cleanupProcs(pid)
+	pgid, err := syscall.Getpgid(pid)
+	if err != nil {
+		log.Errorf("Error finding pgid of pid %d, %v", pid, err)
+	} else {
+		defer cleanupProcs(pgid)
+	}
 	log.Infof("Monitoring memory for pid=%d", pid)
 	for {
 		select {
@@ -201,20 +206,6 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	result.ExitCode = -1
 	result.Error = "Aborted."
 
-	// pid and pgid should be equal (because SysProcAttr{Setgpid: true})
-	pid := p.cmd.Process.Pid
-	pgid, err := syscall.Getpgid(pid)
-	if err != nil {
-		log.WithFields(
-			log.Fields{
-				"pid":   pid,
-				"error": err,
-			}).Errorf("Error retrieving pgid for %d", pid)
-	} else {
-		if err = cleanupProcs(pgid); err != nil {
-			result.Error = fmt.Sprintf("Aborted. Couldn't kill process group: %v", err)
-		}
-	}
 	err = p.cmd.Process.Kill()
 	if err != nil {
 		result.Error = "Aborted. Couldn't kill process."
