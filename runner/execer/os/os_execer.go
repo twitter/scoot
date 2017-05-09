@@ -134,7 +134,12 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 						"pid":         pid,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
-				log.Infof("ps after increasing mem_cap utilization for pid %d: \n%s\n---\nerr: %v", pid, string(ps), err)
+				log.WithFields(
+					log.Fields{
+						"pid", pid,
+						"ps":  string(ps),
+						"err": err,
+					}).Infof("ps after increasing mem_cap utilization for pid %d:", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -259,9 +264,7 @@ print total
 	}
 }
 
-// This will kill the process identified by pid as well as all child processes, if
-// 1. The pid is a valid pgid (it should be, cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}) &
-// 2. No child process called setpgid
+// Kill process along with all child processes, assuming no child processes called setpgid
 func cleanupProcs(pgid int) (err error) {
 	log.Info("Cleaning up process group %d", pgid)
 	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
