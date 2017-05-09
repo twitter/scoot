@@ -206,7 +206,7 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	result.ExitCode = -1
 	result.Error = "Aborted."
 
-	err = p.cmd.Process.Kill()
+	err := p.cmd.Process.Kill()
 	if err != nil {
 		result.Error = "Aborted. Couldn't kill process."
 	}
