@@ -41,7 +41,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	}
 	result.Tasks = make(map[string]sched.TaskDefinition)
 
-	for taskId, t := range def.Tasks {
+	for _, t := range def.Tasks {
 		var task sched.TaskDefinition
 		if t == nil {
 			return result, fmt.Errorf("nil task definition")
@@ -58,8 +58,12 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		} else if def.DefaultTaskTimeoutMs != nil {
 			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond
 		}
-		t.TaskId = &taskId
-		result.Tasks[taskId] = task
+		if t.taskId == nil {
+			return result, fmt.Errorf("nil taskId")
+		}
+		task.TaskID = *t.taskId
+
+		result.Tasks = append(result.Tasks, task)
 	}
 
 	if def.JobType != nil {

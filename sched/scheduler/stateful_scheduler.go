@@ -3,6 +3,7 @@ package scheduler
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -16,6 +17,37 @@ import (
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched"
 )
+
+//TODO(jschiller): these all temporary and need to to be configurable from CLI.
+
+// Number of different requestors that can run jobs at any given time.
+const MaxRequestors = 100
+
+// Number of jobs any single requestor can have.
+const MaxJobsPerRequestor = 100
+
+//
+const MaxSchedulableTasks = 50000
+
+//
+const NodeScaleFactor = .01
+
+//
+const DefaultMinNodes = 250
+
+//
+func min(num int, nums ...int) int {
+	m := num
+	for _, n := range nums {
+		if n < m {
+			m = n
+		}
+	}
+	return m
+}
+func ceil(num float32) int {
+	return int(math.Ceil(float64(num)))
+}
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -63,6 +95,7 @@ type statefulScheduler struct {
 	sagaCoord     saga.SagaCoordinator
 	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
+	checkJobCh    chan jobCheckMsg
 	addJobCh      chan jobAddedMsg
 
 	// Scheduler config
@@ -75,7 +108,8 @@ type statefulScheduler struct {
 
 	// Scheduler State
 	clusterState   *clusterState
-	inProgressJobs map[string]*jobState // map of inprogress jobId to jobState
+	inProgressJobs []*jobState            // ordered list of inprogress jobId to job.
+	requestorMap   map[string][]*jobState // map of requestor to all its jobs. Default requestor="" is ok.
 
 	// stats
 	stat stats.StatsReceiver
@@ -144,6 +178,7 @@ func NewStatefulScheduler(
 		sagaCoord:     sc,
 		runnerFactory: rf,
 		asyncRunner:   async.NewRunner(),
+		checkJobCh:    make(chan jobCheckMsg, 1),
 		addJobCh:      make(chan jobAddedMsg, 1),
 
 		maxRetriesPerTask:   config.MaxRetriesPerTask,
@@ -153,7 +188,8 @@ func NewStatefulScheduler(
 		runnerOverhead:      config.RunnerOverhead,
 
 		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),
-		inProgressJobs: make(map[string]*jobState),
+		inProgressJobs: make([]*jobState, 0),
+		requestorMap:   make(map[string][]*jobState),
 		stat:           stat,
 	}
 
@@ -174,6 +210,11 @@ func NewStatefulScheduler(
 	return sched
 }
 
+type jobCheckMsg struct {
+	jobDef   sched.JobDefinition
+	resultCh chan error
+}
+
 type jobAddedMsg struct {
 	job  *sched.Job
 	saga *saga.Saga
@@ -182,6 +223,16 @@ type jobAddedMsg struct {
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
 	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
 	s.stat.Counter("schedJobRequestsCounter").Inc(1)
+
+	checkResultCh := make(chan error, 1)
+	s.checkJobCh <- jobCheckMsg{
+		jobDef:   jobDef,
+		resultCh: checkResultCh,
+	}
+	err := <-checkResultCh
+	if err != nil {
+		return "", err
+	}
 
 	job := &sched.Job{
 		Id:  generateJobId(),
@@ -257,20 +308,89 @@ func (s *statefulScheduler) step() {
 // Checks if any new jobs have been scheduled since the last loop and adds
 // them to the scheduler state
 func (s *statefulScheduler) addJobs() {
-	select {
-	case newJobMsg := <-s.addJobCh:
-		s.inProgressJobs[newJobMsg.job.Id] = newJobState(newJobMsg.job, newJobMsg.saga)
+checkLoop:
+	for {
+		select {
+		case checkJobMsg := <-s.checkJobCh:
+			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok {
+				if len(s.requestorMap) >= MaxRequestors {
+					err := fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, MaxRequestors)
+					checkJobMsg.resultCh <- err
+				}
+			} else if len(jobs) >= MaxJobsPerRequestor {
+				err := fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, MaxJobsPerRequestor)
+				checkJobMsg.resultCh <- err
+			} else if checkJobMsg.jobDef.Priority < 0 || checkJobMsg.jobDef.Priority > 3 {
+				err := fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
+				checkJobMsg.resultCh <- err
+			}
+			checkJobMsg.resultCh <- nil
+		default:
+			break checkLoop
+		}
+	}
 
-		var total, completed, running int
+	receivedJob := false
+	var total, completed, running int
+addLoop:
+	for {
+		select {
+		case newJobMsg := <-s.addJobCh:
+			receivedJob = true
+			js := newJobState(newJobMsg.job, newJobMsg.saga)
+			s.inProgressJobs = append(s.inProgressJobs, js)
+
+			req := newJobMsg.job.Def.Requestor
+			if _, ok := s.requestorMap[req]; !ok {
+				s.requestorMap[req] = []*jobState{}
+			}
+			s.requestorMap[req] = append(s.requestorMap[req], js)
+
+			log.Infof("Created new Job: %s, requestor: %s, with %d tasks.",
+				newJobMsg.job.Id, req, len(newJobMsg.job.Def.Tasks))
+		default:
+			break addLoop
+		}
+	}
+
+	if receivedJob {
 		for _, job := range s.inProgressJobs {
 			total += len(job.Tasks)
 			completed += job.TasksCompleted
 			running += job.TasksRunning
 		}
-		log.Infof("Created new Job: %s with %d tasks. Now: tasks unscheduled: %d, running: %d, completed: %d, total: %d",
-			newJobMsg.job.Id, len(newJobMsg.job.Def.Tasks), total-completed-running, running, completed, total)
-	default:
+		log.Infof("After adding jobs: tasks unscheduled: %d, running: %d, completed: %d, total: %d",
+			total-completed-running, running, completed, total)
 	}
+}
+
+// Helpers, assumes that jobId is present given a consistent scheduler state.
+func (s *statefulScheduler) deleteJob(jobId string) {
+	var requestor string
+	for i, job := range s.inProgressJobs {
+		if job.Job.Id == jobId {
+			requestor = job.Job.Def.Requestor
+			s.inProgressJobs = append(s.inProgressJobs[:i], s.inProgressJobs[i+1:]...)
+		}
+	}
+	jobs := s.requestorMap[requestor]
+	for i, job := range jobs {
+		if job.Job.Id == jobId {
+			s.requestorMap[requestor] = append(jobs[:i], jobs[i+1:]...)
+		}
+	}
+	if len(s.requestorMap[requestor]) == 0 {
+		delete(s.requestorMap, requestor)
+	}
+}
+
+func (s *statefulScheduler) getJob(jobId string) *jobState {
+	for _, job := range s.inProgressJobs {
+		if job.Job.Id == jobId {
+			return job
+		}
+	}
+	return nil
 }
 
 // checks if any of the in progress jobs are completed.  If a job is
@@ -294,9 +414,8 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 				func(err error) {
 					if err == nil {
 						log.Infof("Job completed and logged: %v", j.Job.Id)
-						// This job is fully processed remove from
-						// InProgressJobs
-						delete(s.inProgressJobs, j.Job.Id)
+						// This job is fully processed remove from InProgressJobs
+						s.deleteJob(j.Job.Id)
 					} else {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
@@ -311,17 +430,8 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 // figures out which tasks to schedule next and on which worker and then runs them
 func (s *statefulScheduler) scheduleTasks() {
-	// Get a list of all available tasks to be ran
-	var unscheduledTasks []*taskState
-	for _, jobState := range s.inProgressJobs {
-		unscheduledTasks = append(unscheduledTasks, jobState.getUnScheduledTasks()...)
-	}
-	if len(unscheduledTasks) == 0 {
-		return
-	}
-
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, unscheduledTasks)
+	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap)
 	s.clusterState.nodeGroups = nodeGroups
 	for _, ta := range taskAssignments {
 
@@ -329,11 +439,20 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobId := ta.task.JobId
 		taskId := ta.task.TaskId
 		taskDef := ta.task.Def
-		sa := s.inProgressJobs[jobId].Saga
-		jobState := s.inProgressJobs[jobId]
+		jobState := s.getJob(jobId)
+		sa := jobState.Saga
 		nodeId := ta.node.Id()
+		rs := s.runnerFactory(ta.node)
 
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
+
+		// This task is co-opting the node for some other running task, abort that task.
+		if ta.runningTask != nil {
+			ta.runningTask.runner.abortCh <- nil
+			rt := ta.runningTask
+			err := fmt.Errorf("jobId:%s taskId%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
+			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, err)
+		}
 
 		// Mark Task as Started
 		s.clusterState.taskScheduled(nodeId, taskId, taskDef.SnapshotID)
@@ -342,7 +461,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		run := &taskRunner{
 			saga:   sa,
-			runner: s.runnerFactory(ta.node),
+			runner: rs,
 			stat:   s.stat,
 
 			defaultTaskTimeout:    s.defaultTaskTimeout,
@@ -355,7 +474,10 @@ func (s *statefulScheduler) scheduleTasks() {
 			taskId: taskId,
 			task:   taskDef,
 			nodeId: nodeId,
+
+			abortCh: make(chan interface{}, 1),
 		}
+		ta.task.runner = run
 
 		s.asyncRunner.RunAsync(
 			run.run,

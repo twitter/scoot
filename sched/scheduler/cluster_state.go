@@ -30,6 +30,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
+	numIdle          int                           //
 }
 
 type nodeGroup struct {
@@ -147,6 +148,7 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snaps
 
 	ns.snapshotId = snapshotId
 	ns.runningTask = taskId
+	c.numIdle--
 }
 
 // Update ClusterState to reflect that a task has finished running on
@@ -163,6 +165,8 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string, flaky
 			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
+		} else {
+			c.numIdle++
 		}
 		ns.runningTask = noTask
 		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
@@ -221,6 +225,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode.readyCh = nil
 					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended)",
 						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
+					c.numIdle++
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
@@ -271,6 +276,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
+			c.numIdle++
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
 			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
@@ -290,6 +296,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
+			c.numIdle++
 		}
 	}
 }

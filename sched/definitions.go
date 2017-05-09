@@ -41,13 +41,18 @@ func DeserializeJob(input []byte) (*Job, error) {
 
 // JobDefinition is the definition the client sent us
 type JobDefinition struct {
-	JobType string
-	Tasks   map[string]TaskDefinition
+	JobType   string
+	Requestor string
+	Tag       string
+	Basis     string
+	Priority  int32
+	Tasks     []TaskDefinition
 }
 
 // Task is one task to run
 type TaskDefinition struct {
 	runner.Command
+	TaskID string
 }
 
 // Status for Job & Tasks
@@ -81,9 +86,9 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 
 	thriftJobDef := thriftJob.GetJobDefinition()
 
-	domainTasks := make(map[string]TaskDefinition)
+	domainTasks := make([]TaskDefinition, 0)
 	if thriftJobDef != nil {
-		for taskName, task := range thriftJobDef.GetTasks() {
+		for _, task := range thriftJobDef.GetTasks() {
 			cmd := task.GetCommand()
 
 			command := runner.Command{
@@ -94,7 +99,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 				JobID:      task.GetJobId(),
 				TaskID:     task.GetTaskId(),
 			}
-			domainTasks[taskName] = TaskDefinition{command}
+			domainTasks = append(domainTasks, TaskDefinition{command, task.GetTaskId()})
 		}
 	}
 
@@ -102,9 +107,34 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJobDef != nil {
 		jobType = thriftJobDef.GetJobType()
 	}
+
+	priority := int32(0)
+	if thriftJobDef != nil {
+		priority = thriftJobDef.GetPriority()
+	}
+
+	tag := ""
+	if thriftJobDef != nil {
+		tag = thriftJobDef.GetTag()
+	}
+
+	basis := ""
+	if thriftJobDef != nil {
+		basis = thriftJobDef.GetBasis()
+	}
+
+	requestor := ""
+	if thriftJobDef != nil {
+		requestor = thriftJobDef.GetRequestor()
+	}
+
 	domainJobDef := JobDefinition{
-		JobType: jobType,
-		Tasks:   domainTasks,
+		JobType:   jobType,
+		Tasks:     domainTasks,
+		Priority:  priority,
+		Tag:       tag,
+		Basis:     basis,
+		Requestor: requestor,
 	}
 
 	return &Job{
@@ -119,8 +149,8 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 		return nil, nil
 	}
 
-	thriftTasks := make(map[string]*schedthrift.TaskDefinition)
-	for taskName, domainTask := range domainJob.Def.Tasks {
+	thriftTasks := make([]*schedthrift.TaskDefinition, 0)
+	for _, domainTask := range domainJob.Def.Tasks {
 		to := int64(domainTask.Timeout)
 		cmd := schedthrift.Command{
 			Argv:       domainTask.Argv,
@@ -131,12 +161,16 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 		jobId := domainJob.Id
 		taskId := domainTask.TaskID
 		thriftTask := schedthrift.TaskDefinition{Command: &cmd, JobId: &jobId, TaskId: &taskId}
-		thriftTasks[taskName] = &thriftTask
+		thriftTasks = append(thriftTasks, &thriftTask)
 	}
 
 	thriftJobDefinition := schedthrift.JobDefinition{
-		JobType: &(*domainJob).Def.JobType,
-		Tasks:   thriftTasks,
+		JobType:   &(*domainJob).Def.JobType,
+		Tasks:     thriftTasks,
+		Priority:  &(*domainJob).Def.Priority,
+		Tag:       &(*domainJob).Def.Tag,
+		Basis:     &(*domainJob).Def.Basis,
+		Requestor: &(*domainJob).Def.Requestor,
 	}
 
 	thriftJob := schedthrift.Job{

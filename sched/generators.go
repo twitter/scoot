@@ -53,7 +53,7 @@ func GenJobDef(numTasks int) JobDefinition {
 func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
 	jobDef := JobDefinition{
 		JobType: fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
-		Tasks:   make(map[string]TaskDefinition),
+		Tasks:   make([]TaskDefinition, 0),
 	}
 
 	// Generate tasks
@@ -61,7 +61,7 @@ func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
 		task := GenRandomTask(rng)
 		taskId := fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(rng))
 		task.TaskID = taskId
-		jobDef.Tasks[taskId] = task
+		jobDef.Tasks = append(jobDef.Tasks, task)
 	}
 
 	return &jobDef
@@ -100,7 +100,7 @@ func GenRandomTask(rng *rand.Rand) TaskDefinition {
 		TaskID:     taskId,
 	}
 
-	return TaskDefinition{cmd}
+	return TaskDefinition{cmd, taskId}
 }
 
 // Randomly generates an Id that is valid for

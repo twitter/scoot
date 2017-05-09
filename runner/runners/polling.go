@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"errors"
 	"time"
 
 	"github.com/scootdev/scoot/runner"
@@ -37,6 +38,11 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 	end := time.Now().Add(wait.Timeout)
 	var service runner.ServiceStatus
 	for time.Now().Before(end) || wait.Timeout == 0 {
+		select {
+		case <-wait.AbortCh:
+			return nil, service, errors.New("Aborted")
+		default:
+		}
 		st, svc, err := r.QueryNow(q)
 		service = svc
 		if err != nil || len(st) > 0 {

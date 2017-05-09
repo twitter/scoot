@@ -35,6 +35,8 @@ type taskRunner struct {
 	taskId string
 	task   sched.TaskDefinition
 	nodeId cluster.NodeId
+
+	abortCh chan interface{}
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -131,6 +133,10 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	log.Infof("Run() for job:%s taskId:%s", r.jobId, taskId)
 	for {
 		st, err = r.runner.Run(cmd)
+		if err != nil && r.abortRequested() {
+			log.Infof("Run aborted by scheduler: job:%s taskId:%s", r.jobId, taskId)
+			return st, err
+		}
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.Infof("Retrying run() for job:%s taskId:%s", r.jobId, taskId)
 			time.Sleep(r.runnerRetryInterval)
@@ -178,7 +184,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	if timeout < 0 {
 		timeout = 0
 	}
-	w := runner.Wait{Timeout: timeout}
+	w := runner.Wait{Timeout: timeout, AbortCh: r.abortCh}
 	sts, _, err := r.runner.Query(q, w)
 	if err != nil {
 		return runner.RunStatus{}, err
@@ -217,4 +223,17 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	}
 
 	return err
+}
+
+func (r *taskRunner) abortRequested() bool {
+	if r.abortCh == nil {
+		return true
+	}
+	select {
+	case <-r.abortCh:
+		r.abortCh = nil
+		return true
+	default:
+		return false
+	}
 }

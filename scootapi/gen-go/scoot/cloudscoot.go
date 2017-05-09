@@ -99,16 +99,16 @@ func (p *CloudScootClient) recvRunJob() (value *JobId, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error7 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error8 error
-		error8, err = error7.Read(iprot)
+		error6 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error7 error
+		error7, err = error6.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error8
+		err = error7
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -183,16 +183,16 @@ func (p *CloudScootClient) recvGetStatus() (value *JobStatus, err error) {
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
-		error9 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error10 error
-		error10, err = error9.Read(iprot)
+		error8 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error9 error
+		error9, err = error8.Read(iprot)
 		if err != nil {
 			return
 		}
 		if err = iprot.ReadMessageEnd(); err != nil {
 			return
 		}
-		err = error10
+		err = error9
 		return
 	}
 	if mTypeId != thrift.REPLY {
@@ -237,10 +237,10 @@ func (p *CloudScootProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 
-	self11 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self11.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
-	self11.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
-	return self11
+	self10 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self10.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
+	self10.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
+	return self10
 }
 
 func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -253,12 +253,12 @@ func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bo
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x12 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x11 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x12.Write(oprot)
+	x11.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x12
+	return false, x11
 
 }
 

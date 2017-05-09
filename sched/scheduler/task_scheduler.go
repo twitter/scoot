@@ -7,8 +7,9 @@ import (
 )
 
 type taskAssignment struct {
-	node cluster.Node
-	task *taskState
+	node        cluster.Node
+	task        *taskState
+	runningTask *taskState
 }
 
 // Returns a list of taskAssigments of task to available node.
@@ -18,7 +19,9 @@ type taskAssignment struct {
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment, map[string]*nodeGroup) {
+func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[string][]*jobState) (
+	[]taskAssignment, map[string]*nodeGroup,
+) {
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
 	snapshotIds := []string{}
 	nodeGroups := map[string]*nodeGroup{}
@@ -31,6 +34,78 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 			nodeGroups[snapId].busy[nodeId] = node
 		}
 		snapshotIds = append(snapshotIds, snapId)
+	}
+
+	// Sort jobs by priority.
+	var tasks []*taskState
+	numIdle := cs.numIdle
+	requestorTagsSeen := map[string]map[string]bool{}
+	numRunningTasks := map[int]int{0: 0, 1: 0, 2: 0, 3: 0}
+	priorityJobs := map[int][]*jobState{0: []*jobState{}, 1: []*jobState{}, 2: []*jobState{}, 3: []*jobState{}}
+	for _, job := range jobs {
+		p := min(1, int(job.Job.Def.Priority)) //TODO(jschiller): delete this. Add priority=2 and priority=3 task-killing
+		numRunningTasks[p] += job.TasksRunning
+		priorityJobs[p] = append(priorityJobs[p], job)
+	}
+
+	// Assign each job the minimum number of nodes until idle nodes are exhausted.
+	remaining := map[int][][]*taskState{0: [][]*taskState{}, 1: [][]*taskState{}, 2: [][]*taskState{}, 3: [][]*taskState{}}
+Loop:
+	for p := range []int{1, 0} {
+		for _, job := range priorityJobs[p] {
+			def := &job.Job.Def
+			if numIdle == 0 {
+				break Loop
+			}
+			if tags, ok := requestorTagsSeen[def.Requestor]; ok {
+				if _, ok := tags[def.Tag]; ok {
+					continue
+				}
+			} else {
+				requestorTagsSeen[def.Requestor] = map[string]bool{}
+			}
+			requestorTagsSeen[def.Requestor][def.Tag] = true
+
+			numTasks := 0
+			numRunning := 0
+			unsched := []*taskState{}
+			for _, j := range requestors[def.Requestor] {
+				if j.Job.Def.Tag == def.Tag {
+					numTasks += len(j.Tasks)
+					numRunning += j.TasksRunning
+					unsched = append(j.getUnScheduledTasks(), unsched...)
+				}
+			}
+
+			numSchedulable := min(ceil(float32(numTasks)*NodeScaleFactor), len(unsched), numIdle, DefaultMinNodes)
+			numSchedulable -= numRunning
+			if numSchedulable > 0 {
+				tasks = append(tasks, unsched[0:numSchedulable]...)
+				numIdle -= numSchedulable
+			}
+
+			remaining[p] = append(remaining[p], unsched[numSchedulable:])
+		}
+	}
+
+	// If there are spare idle nodes, priority=3 jobs have been satisfied already.
+	// Assign a minimum of 50% to priority=2, and 25% each to priority=1 and priority=0
+LoopRemaining:
+	for _, pq := range [][]float32{[]float32{.5, .25, .25}, []float32{1, 1, 1}} {
+		for _, p := range []int{2, 1, 0} {
+			if numIdle == 0 {
+				break LoopRemaining
+			}
+			taskLists := remaining[p]
+			nodeQuota := ceil((float32(numIdle) * pq[p]) / float32(len(taskLists)))
+			for _, taskList := range taskLists {
+				nq := min(numIdle, nodeQuota, len(taskList))
+				if nq > 0 {
+					tasks = append(tasks, taskList[:nq]...)
+					numIdle -= nq
+				}
+			}
+		}
 	}
 
 	// Loop over all snapshotIds looking for an idle node. Prefer, in order:
@@ -49,9 +124,7 @@ func getTaskAssignments(cs *clusterState, tasks []*taskState) ([]taskAssignment,
 }
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
-// Returns tasks that couldn't be scheduled using the task's snapshotId or any of this in snapIds.
-//TODO(jschiller): soft/hard # of nodes reserved.
-//TODO(jschiller): take idle nodes from LRU snapId and/or from snapIds with spare soft reservations.
+// Returns tasks that couldn't be scheduled using the task's snapshotId or any of those in snapIds.
 func assign(
 	cs *clusterState,
 	tasks []*taskState,

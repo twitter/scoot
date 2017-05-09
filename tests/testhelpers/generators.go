@@ -20,7 +20,7 @@ func NewRand() *rand.Rand {
 // Generates a scoot.JobDefinition with numTasks tasks (or random if numTasks == -1)
 func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.JobDefinition {
 	def := scoot.NewJobDefinition()
-	def.Tasks = make(map[string]*scoot.TaskDefinition)
+	def.Tasks = make([]*scoot.TaskDefinition, 0)
 
 	if numTasks == -1 {
 		numTasks = rng.Intn(10) + 1
@@ -29,8 +29,9 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
 		taskDef := GenTask(rng, snapshotID)
+		taskDef.TaskId = &taskId
 
-		def.Tasks[taskId] = taskDef
+		def.Tasks = append(def.Tasks, taskDef)
 	}
 
 	return def

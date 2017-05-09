@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -130,6 +131,8 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunSta
 		return []runner.RunStatus{st}, s.svcStatus, nil
 	case <-timeout:
 		return nil, s.svcStatus, nil
+	case <-wait.AbortCh:
+		return nil, s.svcStatus, errors.New("Aborted")
 	}
 }
 

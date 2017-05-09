@@ -53,9 +53,17 @@ struct TaskDefinition {
 }
 
 struct JobDefinition {
-  1: required map<string, TaskDefinition> tasks,
+  1: required list<TaskDefinition> tasks,
   2: optional JobType jobType,
   3: optional i32 defaultTaskTimeoutMs,
+  # Priority levels are defined in docs.
+  4: optional i32 priority
+  # Tag allows related jobs to be grouped together.
+  5: optional string tag
+  # Basis is used to specify an ancestor for this job.
+  6: optional string basis
+  # Requestor is used for rate limiting. If unfilled, limit is applied to a no-name pool.
+  7: optional string requestor
 }
 
 struct JobId {
