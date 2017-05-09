@@ -62,6 +62,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		cmd.Stderr = stderrW.WriterDelegate()
 	}
 
+	// Sets pgid of all child processes to cmd's pid
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	err = cmd.Start()
@@ -89,11 +90,14 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
 	memTicker := time.NewTicker(10 * time.Millisecond)
 	defer memTicker.Stop()
+	// Clean up after ourselves
+	defer cleanupProcs(pid)
 	log.Infof("Monitoring memory for pid=%d", pid)
 	for {
 		select {
 		case <-memTicker.C:
 			p.mutex.Lock()
+			// Process is complete
 			if p.result != nil {
 				p.mutex.Unlock()
 				log.Infof("Finished monitoring memory for pid=%d", pid)
@@ -101,9 +105,15 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			}
 			mem, _ := memUsage(pid)
 			stat.Gauge("memory").Update(int64(mem))
+			// Aborting process, above memCap
 			if mem >= memCap {
-				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting: %d > %d (%v)", mem, memCap, p.cmd.Args)
-				log.Info(msg)
+				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, memCap, p.cmd.Args)
+				log.WithFields(log.Fields{
+					"mem":    mem,
+					"memCap": memCap,
+					"args":   p.cmd.Args,
+					"pid":    pid,
+				}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: msg,
@@ -115,9 +125,16 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
 			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
 			if memUsagePct > reportThresholds[thresholdsIdx] {
-				log.Infof("Increased to %d%% mem_cap utilization (%d / %d) for pid=%v", int(memUsagePct*100), mem, memCap, pid)
-				top, err := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
-				log.Infof("%s\n---\nerr: %v", string(top), err)
+				log.WithFields(
+					log.Fields{
+						"memUsagePct": int(memUsagePct * 100),
+						"mem":         mem,
+						"memCap":      memCap,
+						"args":        p.cmd.Args,
+						"pid":         pid,
+					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
+				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+				log.Infof("ps after increasing mem_cap utilization for pid %d: \n%s\n---\nerr: %v", pid, string(ps), err)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -132,9 +149,12 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	err := p.cmd.Wait()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-
-	top, _ := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
-	log.Infof("Pid=%d exit, current top:\n%s", pid, string(top))
+	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+	log.WithFields(
+		log.Fields{
+			"pid": pid,
+			"ps":  string(ps),
+		}).Infof("Current ps for pid %d", pid)
 
 	if p.result != nil {
 		return *p.result
@@ -172,22 +192,30 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	} else {
 		p.result = &result
 	}
-
 	result.State = execer.FAILED
 	result.ExitCode = -1
 	result.Error = "Aborted."
-	pgid, err := syscall.Getpgid(p.cmd.Process.Pid)
-	if err == nil {
-		err = syscall.Kill(-pgid, 15)
-	}
+
+	// pid and pgid should be equal (because SysProcAttr{Setgpid: true}).
+	// We want to kill the current process and all processes within
+	// its process group.
+	pid := p.cmd.Process.Pid
+	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
-		result.Error = "Aborted. Parent only, couldn't kill by pgid."
+		log.WithFields(
+			log.Fields{
+				"pid":   pid,
+				"error": err,
+			}).Errorf("Error retrieving pgid for %d", pid)
+	} else {
+		if err = cleanupProcs(pgid); err != nil {
+			result.Error = fmt.Sprintf("Aborted. Couldn't kill process group: %v", err)
+		}
 	}
 	err = p.cmd.Process.Kill()
 	if err != nil {
-		result.Error = "Aborted. Couldn't kill pgid or parent."
+		result.Error = "Aborted. Couldn't kill process."
 	}
-
 	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
@@ -198,27 +226,26 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 }
 
 func memUsage(pid int) (execer.Memory, error) {
-	// Query for all sets of (pid, ppid, rss) and create a graph. Given a pid, walk the graph accruing memory.
+	// Query for all sets of (pid, sid, rss). Given a pid, find its associated sid.
+	// From there, sum the memory of all processes with the same session id.
 	// Note: look at the revision history for previous approaches which seemed inaccurate at times? ex:
 	//   str := "export P=%d; echo $(ps -orss= -p$(echo -n $(pgrep -g $P | tr '\n' ',')$P) | tr '\n' '+') 0 | bc"
 	str := `
 PID=%d
-PSLIST=$(ps -e -o pid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
+PSLIST=$(ps -e -o pid= -o sess= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
 
-children=dict()
+processes=dict()
 memory=dict()
 total=0
 for line in \"$PSLIST\".split(';'):
-  pid, ppid, mem = tuple(line.split())
-  children.setdefault(ppid, []).append(pid)
+  pid, sess, mem = tuple(line.split())
+  if pid == \"$PID\":
+    session_id = sess
+  processes.setdefault(sess, []).append(pid)
   memory[pid] = mem
-def walk(p):
-  global total
+for p in processes.setdefault(session_id, []):
   total += int(memory[p])
-  for c in children.setdefault(p, []):
-    walk(c)
-walk(\"$PID\")
 print total
 
 " | python
@@ -227,7 +254,18 @@ print total
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
 	} else {
-		u, err := strconv.Atoi(strings.Trim(string(usageKB), "\n"))
+		u, err := strconv.Atoi(strings.TrimSpace(string(usageKB)))
 		return execer.Memory(u * 1024), err
 	}
+}
+
+// This will kill the process identified by pid as well as all child processes, if
+// 1. The pid is a valid pgid (it should be, cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}) &
+// 2. No child process called setpgid
+func cleanupProcs(pgid int) (err error) {
+	log.Info("Cleaning up process group %d", pgid)
+	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+		log.Errorf("Error cleaning up after process group %d: %v", pgid, err)
+	}
+	return err
 }
