@@ -45,6 +45,15 @@ func min(num int, nums ...int) int {
 	}
 	return m
 }
+func max(num int, nums ...int) int {
+	m := num
+	for _, n := range nums {
+		if n > m {
+			m = n
+		}
+	}
+	return m
+}
 func ceil(num float32) int {
 	return int(math.Ceil(float64(num)))
 }
@@ -307,6 +316,7 @@ func (s *statefulScheduler) step() {
 
 // Checks if any new jobs have been scheduled since the last loop and adds
 // them to the scheduler state
+// TODO(jschiller): kill current jobs which share the same job.Basis as these new jobs.
 func (s *statefulScheduler) addJobs() {
 checkLoop:
 	for {
@@ -323,8 +333,9 @@ checkLoop:
 			} else if checkJobMsg.jobDef.Priority < 0 || checkJobMsg.jobDef.Priority > 3 {
 				err := fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
 				checkJobMsg.resultCh <- err
+			} else {
+				checkJobMsg.resultCh <- nil
 			}
-			checkJobMsg.resultCh <- nil
 		default:
 			break checkLoop
 		}
@@ -448,11 +459,11 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// This task is co-opting the node for some other running task, abort that task.
 		if ta.runningTask != nil {
-			close(ta.runningTask.runner.abortCh)
+			close(ta.runningTask.Runner.abortCh)
 			rt := ta.runningTask
 			err := fmt.Errorf("jobId:%s taskId%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
 			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, err)
-			s.clusterState.taskCompleted(nodeId, rt.taskId, false)
+			s.clusterState.taskCompleted(nodeId, rt.TaskId, false)
 		}
 
 		// Mark Task as Started
@@ -478,7 +489,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 			abortCh: make(chan interface{}),
 		}
-		ta.task.runner = run
+		ta.task.Runner = run
 
 		s.asyncRunner.RunAsync(
 			run.run,

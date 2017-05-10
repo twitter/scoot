@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"sort"
+
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -11,6 +13,12 @@ type taskAssignment struct {
 	task        *taskState
 	runningTask *taskState
 }
+
+type KillableTasks []*taskState
+
+func (k KillableTasks) Len() int           { return len(k) }
+func (k KillableTasks) Swap(i, j int)      { k[i], k[j] = k[j], k[i] }
+func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.Before(k[j].TimeStarted) }
 
 // Returns a list of taskAssigments of task to available node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
@@ -23,7 +31,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 	[]taskAssignment, map[string]*nodeGroup,
 ) {
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
-	snapshotIds := []string{}
+	clusterSnapshotIds := []string{}
 	nodeGroups := map[string]*nodeGroup{}
 	for snapId, groups := range cs.nodeGroups {
 		nodeGroups[snapId] = newNodeGroup()
@@ -33,34 +41,41 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 		for nodeId, node := range groups.busy {
 			nodeGroups[snapId].busy[nodeId] = node
 		}
-		snapshotIds = append(snapshotIds, snapId)
+		clusterSnapshotIds = append(clusterSnapshotIds, snapId)
 	}
 
 	// Sort jobs by priority.
 	var tasks []*taskState
-	numIdle := cs.numIdle
+	numIdle := cs.numIdle - len(cs.suspendedNodes)
 	requestorTagsSeen := map[string]map[string]bool{}
-	numKillableTasks := map[int]int{0: 0, 1: 0, 2: 0, 3: 0}
-	priorityJobs := map[int][]*jobState{0: []*jobState{}, 1: []*jobState{}, 2: []*jobState{}, 3: []*jobState{}}
+	numKillableTasks := []int{0, 0, 0, 0}
+	priorityJobs := [][]*jobState{[]*jobState{}, []*jobState{}, []*jobState{}, []*jobState{}}
 	for _, job := range jobs {
 		p := int(job.Job.Def.Priority)
-		//FIXME: don't kill tasks that've been running for too long
 		numKillableTasks[p] += job.TasksRunning
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
 
-	// Assign each job the minimum number of nodes until idle nodes are exhausted.
-	remaining := map[int][][]*taskState{0: [][]*taskState{}, 1: [][]*taskState{}, 2: [][]*taskState{}, 3: [][]*taskState{}}
-Loop:
-	for p := range []int{1, 0} {
-		for _, job := range priorityJobs[p] {
-			numAvail := numIdle
-			if p == 3 {
-				numAvail += numKillableTasks[2] + numKillableTasks[1] + numKillableTasks[0]
-			} else if p == 2 {
-				numAvail += numKillableTasks[1] + numKillableTasks[0]
-			}
+	// List killable tasks first by ascending priority and next by ascending execution duration.
+	killableTasks := KillableTasks{}
+	for p := range []int{0, 1, 2} {
+		ts := KillableTasks{}
+		for _, j := range priorityJobs[p] {
+			copy(ts, j.Tasks)
+		}
+		sort.Sort(ts)
+		killableTasks = append(killableTasks, ts...)
+	}
 
+	// Assign each job the minimum number of nodes until idle nodes are exhausted.
+	// Remaining: indexed by priority and contains a list of jobs, each with a list of tasks.
+	nk := numKillableTasks
+	numKillableCounter := []int{0, 0, (nk[0] + nk[1]), (nk[0] + nk[1] + nk[2])}
+	remaining := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+Loop:
+	for p := range []int{3, 2, 1, 0} {
+		for _, job := range priorityJobs[p] {
+			numAvail := numIdle + numKillableCounter[p]
 			def := &job.Job.Def
 			if numAvail == 0 {
 				break Loop
@@ -89,8 +104,16 @@ Loop:
 			numSchedulable -= numRunning
 			if numSchedulable > 0 {
 				tasks = append(tasks, unsched[0:numSchedulable]...)
-				numAvail -= numSchedulable
-				numIdle -= numSchedulable
+				numFromIdle := min(numIdle, numSchedulable)
+				numFromKill := numSchedulable - numFromIdle
+				numIdle -= numFromIdle
+				if p == 3 {
+					numFromP2 := max(0, numFromKill-numKillableCounter[3])
+					numKillableCounter[3] -= min(numKillableCounter[p], numFromKill)
+					numKillableCounter[2] -= numFromP2
+				} else if p == 2 {
+					numKillableCounter[2] -= numFromKill
+				}
 			}
 
 			remaining[p] = append(remaining[p], unsched[numSchedulable:])
@@ -117,54 +140,57 @@ LoopRemaining:
 		}
 	}
 
-	// Loop over all snapshotIds looking for an idle node. Prefer, in order:
+	// Loop over all cluster snapshotIds looking for an idle node. Prefer, in order:
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random node from the idle pools of nodes associated with other snapshotIds.
-	var assignments []taskAssignment
-	remainingTasks := assign(cs, tasks, &assignments, nodeGroups, []string{""})
-	remainingTasks = assign(cs, remainingTasks, &assignments, nodeGroups, snapshotIds)
-	if len(remainingTasks) == 0 {
+	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...))
+	if len(assignments) == len(tasks) {
 		log.Infof("Scheduled all tasks (%d)", len(tasks))
 	} else {
-		log.Infof("Unable to schedule all tasks, remaining=%d/%d", len(remainingTasks), len(tasks))
+		log.Infof("Unable to schedule all tasks, scheduled=%d/%d", len(assignments), len(tasks))
 	}
 	return assignments, nodeGroups
 }
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
-// Returns tasks that couldn't be scheduled using the task's snapshotId or any of those in snapIds.
+// Should successfully assign all given
 func assign(
 	cs *clusterState,
 	tasks []*taskState,
-	assignments *[]taskAssignment,
+	killableTasks KillableTasks,
 	nodeGroups map[string]*nodeGroup,
 	snapIds []string,
-) []*taskState {
-
-	var remaining []*taskState
-	numTotalTasks := len(*assignments) + len(tasks)
-Loop:
+) (assignments []taskAssignment) {
 	for _, task := range tasks {
+		var snapshotId string
+		var nodeSt *nodeState
+	SnapshotsLoop:
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
-				for nodeId, ns := range groups.idle {
+				for _, ns := range groups.idle {
 					if ns.suspended() {
 						continue
 					}
-					*assignments = append(*assignments, taskAssignment{node: ns.node, task: task})
-					if _, ok := nodeGroups[task.Def.SnapshotID]; !ok {
-						nodeGroups[task.Def.SnapshotID] = newNodeGroup()
-					}
-					nodeGroups[task.Def.SnapshotID].busy[nodeId] = ns
-					delete(nodeGroups[snapId].idle, nodeId)
-					log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
-						task.JobId, task.TaskId, nodeId, len(*assignments), numTotalTasks)
-					continue Loop
+					snapshotId = snapId
+					nodeSt = ns
+					break SnapshotsLoop
 				}
 			}
 		}
-		remaining = append(remaining, task)
+		if task.OwnerJob.Job.Def.Priority >= 2 {
+			snapshotId = killableTasks[0].Def.SnapshotID
+			nodeSt = cs.nodes[killableTasks[0].Runner.nodeId]
+		}
+		assignments = append(assignments, taskAssignment{node: nodeSt.node, task: task})
+		if _, ok := nodeGroups[snapshotId]; !ok {
+			nodeGroups[snapshotId] = newNodeGroup()
+		}
+		nodeId := nodeSt.node.Id()
+		nodeGroups[snapshotId].busy[nodeId] = nodeSt
+		delete(nodeGroups[snapshotId].idle, nodeId)
+		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
+			task.JobId, task.TaskId, nodeId, len(assignments), len(assignments)+len(tasks))
 	}
-	return remaining
+	return assignments
 }

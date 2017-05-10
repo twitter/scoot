@@ -20,13 +20,14 @@ type jobState struct {
 
 // Contains all the information for a specified task
 type taskState struct {
+	OwnerJob      *jobState
 	JobId         string
 	TaskId        string
 	Def           sched.TaskDefinition
 	Status        sched.Status
 	TimeStarted   time.Time
 	NumTimesTried int
-	runner        *taskRunner
+	Runner        *taskRunner
 }
 
 // Creates a New Job State based on the specified Job and Saga
@@ -44,6 +45,7 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 
 	for _, taskDef := range job.Def.Tasks {
 		task := &taskState{
+			OwnerJob:      j,
 			JobId:         job.Id,
 			TaskId:        taskDef.TaskID,
 			Def:           taskDef,

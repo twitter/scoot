@@ -141,6 +141,10 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snaps
 	ns := c.nodes[nodeId]
 
 	delete(c.nodeGroups[ns.snapshotId].idle, nodeId)
+	if len(c.nodeGroups[ns.snapshotId].idle) == 0 && len(c.nodeGroups[ns.snapshotId].busy) == 0 {
+		delete(c.nodeGroups, ns.snapshotId)
+	}
+
 	if _, ok := c.nodeGroups[snapshotId]; !ok {
 		c.nodeGroups[snapshotId] = newNodeGroup()
 	}
