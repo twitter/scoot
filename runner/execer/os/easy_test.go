@@ -65,7 +65,8 @@ func TestMemUsage(t *testing.T) {
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
 	cmd := execer.Command{Argv: []string{"python", "-c", str}}
-	process, err := NewExecer().Exec(cmd)
+	e := NewExecer()
+	process, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -73,7 +74,7 @@ func TestMemUsage(t *testing.T) {
 	prevUsage := 0
 	for i := 0; i < 2; i++ {
 		time.Sleep(200 * time.Millisecond)
-		if newUsage, err := memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
+		if newUsage, err := e.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
 			t.Fatalf(err.Error())
 		} else if int(newUsage) <= prevUsage {
 			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*200)
@@ -83,6 +84,9 @@ func TestMemUsage(t *testing.T) {
 	}
 	if prevUsage < 25*1024*1024 {
 		t.Fatalf("Expected usage to be at least 25MB, was: %dB", prevUsage)
+	}
+	if prevUsage > 75*1024*1024 {
+		t.Fatalf("Expected usage to be less than 75MB, was: %dB", prevUsage)
 	}
 
 	process.Abort()
