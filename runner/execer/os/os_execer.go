@@ -85,6 +85,10 @@ type osProcess struct {
 	mutex  sync.Mutex
 }
 
+// TODO(rcouto): More we can do here to make sure we're
+// cleaning up after ourselves completely / not leaving
+// orphaned processes behind
+//
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
 func (e *osExecer) monitorMem(p *osProcess) {
