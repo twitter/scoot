@@ -21,20 +21,19 @@ import (
 )
 
 func NewExecer() *osExecer {
-	return &osExecer{OS: runtime.GOOS}
+	return &osExecer{}
 }
 
 // For now memory can be capped on a per-execer basis rather than a per-command basis.
 // This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
 func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), OS: runtime.GOOS}
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
 }
 
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
 	memCap execer.Memory
 	stat   stats.StatsReceiver
-	OS     string
 }
 
 type WriterDelegater interface {
@@ -169,7 +168,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 // Other architectures are yet to be investigated
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	var id string
-	switch e.OS {
+	switch runtime.GOOS {
 	case "darwin":
 		id = "pgid"
 	default:

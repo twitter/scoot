@@ -96,28 +96,19 @@ func TestMemUsage(t *testing.T) {
 func TestMemCap(t *testing.T) {
 	str := `import time; exec("x=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
 	cmd := execer.Command{Argv: []string{"python", "-c", str}}
-	e := NewBoundedExecer(execer.Memory(50*1024*1024), stats.NilStatsReceiver())
+	e := NewBoundedExecer(execer.Memory(5*1024*1024), stats.NilStatsReceiver())
 	process, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	// Check for growing memory usage at [.2, .4]s. Then check that the usage is a reasonable minimum value (25MB).
-	prevUsage := 0
-	for i := 0; i < 2; i++ {
-		time.Sleep(200 * time.Millisecond)
-		if newUsage, err := e.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
-			t.Fatalf(err.Error())
-		} else if int(newUsage) <= prevUsage {
-			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*200)
-		} else {
-			prevUsage = int(newUsage)
-		}
+	// Sleep to give bounded execer time to kill process
+	time.Sleep(2 * time.Second)
+	var usage execer.Memory
+	if usage, err = e.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
+		t.Fatalf(err.Error())
 	}
-	if prevUsage < 25*1024*1024 {
-		t.Fatalf("Expected usage to be at least 25MB, was: %dB", prevUsage)
-	}
-	if prevUsage > 75*1024*1024 {
-		t.Fatalf("Expected usage to be less than 75MB, was: %dB", prevUsage)
+	if usage > 5*1024*1024 {
+		t.Fatalf("Expected usage to be less than 5MB, was: %dB", usage)
 	}
 
 	process.Abort()
