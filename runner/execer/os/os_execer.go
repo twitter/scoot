@@ -7,7 +7,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -159,43 +158,31 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	}
 }
 
-// Query for all sets of (pid, id [sid/pgid], rss). Given a pid, find its associated id [sid/pgid].
-// From there, sum the memory of all processes with the same id.
-// We use sid by default in order to more accurately gauge memory usage, this includes other processes
-// that are not within the process group of pid but still should be counted to determine
-// overall memory usage, e.g. workerserver.
-// In MacOSX, all session ids are shown as 0 by the ps command, so we use pgid to determine memory usage.
-// Other architectures are yet to be investigated
+// Query for all sets of (pid, pgid, rss). Given a pid, find its associated pgid.
+// From there, sum the memory of all processes with the same pgid.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	var id string
-	switch runtime.GOOS {
-	case "darwin":
-		id = "pgid"
-	default:
-		id = "sess"
-	}
 	str := `
 PID=%d
-PSLIST=$(ps -e -o pid= -o %s= -o rss= | tr '\n' ';' | sed 's,;$,,')
+PSLIST=$(ps -e -o pid= -o pgid= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
 
 processes=dict()
 memory=dict()
+id=None
 total=0
 for line in \"$PSLIST\".split(';'):
-  pid, id, mem = tuple(line.split())
+  pid, pgid, mem = tuple(line.split())
   if pid == \"$PID\":
-    # id is either a pgid or sid/sess
-    mem_id = id
-  processes.setdefault(id, []).append(pid)
+    id = pgid
+  processes.setdefault(pgid, []).append(pid)
   memory[pid] = mem
-for p in processes.setdefault(mem_id, []):
+for p in processes.setdefault(id, []):
   total += int(memory[p])
 print total
 
 " | python
 `
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid, id))
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
 	if usageKB, err := cmd.Output(); err != nil {
 		return 0, err
 	} else {
