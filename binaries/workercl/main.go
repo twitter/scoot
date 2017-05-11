@@ -5,10 +5,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/workerapi/client"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 // CLI binary to talk to Workerserver

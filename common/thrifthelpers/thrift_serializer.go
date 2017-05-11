@@ -1,7 +1,7 @@
 // Utils for JSON and binary serialize/deserialize functions for Thrift structures
 package thrifthelpers
 
-import "github.com/apache/thrift/lib/go/thrift"
+import "github.com/scootdev/thrift/lib/go/thrift"
 
 // Json behavior
 

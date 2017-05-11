@@ -5,11 +5,11 @@
 # We should use go generate to run:
 # For now to Install Thrift:
 #     1. Install Thrift manually `brew install thrift` ensure version is greater that 0.9.3
-#     2. go get github.com/apache/thrift/lib/go/thrift
+#     2. go get github.com/scootdev/thrift/lib/go/thrift
 #
 
 # To Generate files run from this (github.com/scootdev/scoot/sched) directory
-#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift
+#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/scootdev/thrift/lib/go/thrift job_def.thrift
 
 
 struct Command {

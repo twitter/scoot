@@ -49,7 +49,7 @@ go run ./binaries/scootapi/main.go run_smoke_test
 __Generating thrift files (scootapi used as an example)__
 * To Generate files run from scoot's scootapi directory:
 ```sh
-thrift --gen go:package_prefix=github.com/scootdev/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
+thrift --gen go:package_prefix=github.com/scootdev/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/scootdev/thrift/lib/go/thrift scoot.thrift
 ```
 
 ## Scoot Protobuf Code
@@ -75,7 +75,7 @@ brew install thrift
 ```
 ### Thrift for go:
 ```sh
-go get github.com/apache/thrift/lib/go/thrift
+go get github.com/scootdev/thrift/lib/go/thrift
 ```
 
 ### Protobuf for the Scoot Daemon

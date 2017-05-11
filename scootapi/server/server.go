@@ -1,11 +1,11 @@
 package server
 
 import (
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/saga"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 // Creates and returns a new server Handler, which combines the scheduler,

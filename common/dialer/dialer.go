@@ -6,7 +6,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 // Interface for initializing a thrift connection for a client

@@ -3,7 +3,6 @@ package server
 import (
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
@@ -13,6 +12,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/scootdev/thrift/lib/go/thrift"
 )
 
 type servers struct {

@@ -6,7 +6,7 @@ import (
 	"flag"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/scootdev/thrift/lib/go/thrift"
 
 	"github.com/scootdev/scoot/binaries/scheduler/config"
 	"github.com/scootdev/scoot/common/endpoints"

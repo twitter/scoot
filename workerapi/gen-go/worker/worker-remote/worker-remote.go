@@ -6,8 +6,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/scootdev/thrift/lib/go/thrift"
 	"math"
 	"net"
 	"net/url"
