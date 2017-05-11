@@ -21,6 +21,9 @@ type CloudScoot interface {
 	// Parameters:
 	//  - JobId
 	GetStatus(jobId string) (r *JobStatus, err error)
+	// Parameters:
+	//  - JobId
+	KillJob(jobId string) (r *JobStatus, err error)
 }
 
 type CloudScootClient struct {
@@ -217,6 +220,90 @@ func (p *CloudScootClient) recvGetStatus() (value *JobStatus, err error) {
 	return
 }
 
+// Parameters:
+//  - JobId
+func (p *CloudScootClient) KillJob(jobId string) (r *JobStatus, err error) {
+	if err = p.sendKillJob(jobId); err != nil {
+		return
+	}
+	return p.recvKillJob()
+}
+
+func (p *CloudScootClient) sendKillJob(jobId string) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("KillJob", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootKillJobArgs{
+		JobId: jobId,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvKillJob() (value *JobStatus, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "KillJob" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "KillJob failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "KillJob failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error11 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error12 error
+		error12, err = error11.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error12
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "KillJob failed: invalid message type")
+		return
+	}
+	result := CloudScootKillJobResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
 type CloudScootProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      CloudScoot
@@ -237,10 +324,11 @@ func (p *CloudScootProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 
-	self11 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self11.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
-	self11.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
-	return self11
+	self13 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self13.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
+	self13.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
+	self13.processorMap["KillJob"] = &cloudScootProcessorKillJob{handler: handler}
+	return self13
 }
 
 func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -253,12 +341,12 @@ func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bo
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x12 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x14 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x12.Write(oprot)
+	x14.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x12
+	return false, x14
 
 }
 
@@ -355,6 +443,61 @@ func (p *cloudScootProcessorGetStatus) Process(seqId int32, iprot, oprot thrift.
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetStatus", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorKillJob struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorKillJob) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootKillJobArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("KillJob", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootKillJobResult{}
+	var retval *JobStatus
+	var err2 error
+	if retval, err2 = p.handler.KillJob(args.JobId); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing KillJob: "+err2.Error())
+			oprot.WriteMessageBegin("KillJob", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("KillJob", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -944,4 +1087,286 @@ func (p *CloudScootGetStatusResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("CloudScootGetStatusResult(%+v)", *p)
+}
+
+// Attributes:
+//  - JobId
+type CloudScootKillJobArgs struct {
+	JobId string `thrift:"jobId,1" json:"jobId"`
+}
+
+func NewCloudScootKillJobArgs() *CloudScootKillJobArgs {
+	return &CloudScootKillJobArgs{}
+}
+
+func (p *CloudScootKillJobArgs) GetJobId() string {
+	return p.JobId
+}
+func (p *CloudScootKillJobArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobArgs) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.JobId = v
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("KillJob_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("jobId", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:jobId: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.JobId)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.jobId (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:jobId: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootKillJobArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootKillJobArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Ir
+//  - Err
+type CloudScootKillJobResult struct {
+	Success *JobStatus        `thrift:"success,0" json:"success,omitempty"`
+	Ir      *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err     *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootKillJobResult() *CloudScootKillJobResult {
+	return &CloudScootKillJobResult{}
+}
+
+var CloudScootKillJobResult_Success_DEFAULT *JobStatus
+
+func (p *CloudScootKillJobResult) GetSuccess() *JobStatus {
+	if !p.IsSetSuccess() {
+		return CloudScootKillJobResult_Success_DEFAULT
+	}
+	return p.Success
+}
+
+var CloudScootKillJobResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootKillJobResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootKillJobResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootKillJobResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootKillJobResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootKillJobResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootKillJobResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootKillJobResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootKillJobResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootKillJobResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobResult) readField0(iprot thrift.TProtocol) error {
+	p.Success = &JobStatus{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("KillJob_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootKillJobResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootKillJobResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootKillJobResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootKillJobResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootKillJobResult(%+v)", *p)
 }

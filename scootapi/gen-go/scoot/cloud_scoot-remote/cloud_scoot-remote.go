@@ -22,6 +22,7 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "\nFunctions:")
 	fmt.Fprintln(os.Stderr, "  JobId RunJob(JobDefinition job)")
 	fmt.Fprintln(os.Stderr, "  JobStatus GetStatus(string jobId)")
+	fmt.Fprintln(os.Stderr, "  JobStatus KillJob(string jobId)")
 	fmt.Fprintln(os.Stderr)
 	os.Exit(0)
 }
@@ -121,19 +122,19 @@ func main() {
 			fmt.Fprintln(os.Stderr, "RunJob requires 1 args")
 			flag.Usage()
 		}
-		arg13 := flag.Arg(1)
-		mbTrans14 := thrift.NewTMemoryBufferLen(len(arg13))
-		defer mbTrans14.Close()
-		_, err15 := mbTrans14.WriteString(arg13)
-		if err15 != nil {
+		arg15 := flag.Arg(1)
+		mbTrans16 := thrift.NewTMemoryBufferLen(len(arg15))
+		defer mbTrans16.Close()
+		_, err17 := mbTrans16.WriteString(arg15)
+		if err17 != nil {
 			Usage()
 			return
 		}
-		factory16 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt17 := factory16.GetProtocol(mbTrans14)
+		factory18 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt19 := factory18.GetProtocol(mbTrans16)
 		argvalue0 := scoot.NewJobDefinition()
-		err18 := argvalue0.Read(jsProt17)
-		if err18 != nil {
+		err20 := argvalue0.Read(jsProt19)
+		if err20 != nil {
 			Usage()
 			return
 		}
@@ -149,6 +150,16 @@ func main() {
 		argvalue0 := flag.Arg(1)
 		value0 := argvalue0
 		fmt.Print(client.GetStatus(value0))
+		fmt.Print("\n")
+		break
+	case "KillJob":
+		if flag.NArg()-1 != 1 {
+			fmt.Fprintln(os.Stderr, "KillJob requires 1 args")
+			flag.Usage()
+		}
+		argvalue0 := flag.Arg(1)
+		value0 := argvalue0
+		fmt.Print(client.KillJob(value0))
 		fmt.Print("\n")
 		break
 	case "":

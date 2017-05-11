@@ -35,6 +35,9 @@ type taskRunner struct {
 	taskId string
 	task   sched.TaskDefinition
 	nodeId cluster.NodeId
+
+	runId   runner.RunID
+	abortCh chan interface{}
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -69,7 +72,7 @@ func (r *taskRunner) run() error {
 	taskErr.st = st
 
 	// We got a good message back, but it indicates an error. Update taskErr accordingly.
-	if err == nil && st.State != runner.COMPLETE {
+	if err == nil && st.State != runner.COMPLETE && st.State != runner.ABORTED {
 		switch st.State {
 		case runner.FAILED:
 			err = fmt.Errorf(st.Error)
@@ -103,7 +106,11 @@ func (r *taskRunner) run() error {
 
 	err = r.logTaskStatus(&taskErr.st, saga.EndTask)
 	taskErr.sagaErr = err
-	if taskErr.sagaErr == nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
+	if taskErr.st.State == runner.ABORTED {
+		// TODO do we need an aborted task counter?
+		r.stat.Counter("completedTaskCounter").Inc(1)
+		return taskErr
+	} else if taskErr.sagaErr == nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
 		r.stat.Counter("completedTaskCounter").Inc(1)
 		return nil
 	} else {
@@ -130,6 +137,13 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
 	log.Infof("Run() for job:%s taskId:%s", r.jobId, taskId)
 	for {
+		// was a job kill request recieved before we could start the run?
+		if r.abortRequested() {
+			st = r.getAbortedRunStatus()
+			log.Infof("The run was aborted by scheduler before it was sent to worker: job:%s taskId:%s", r.jobId, taskId)
+			return st, nil
+		}
+
 		st, err = r.runner.Run(cmd)
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.Infof("Retrying run() for job:%s taskId:%s", r.jobId, taskId)
@@ -142,12 +156,19 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 		break
 	}
 	id = st.RunID
+	r.runId = st.RunID
 
 	log.Infof("Query(running) for job:%s, taskId:%s", r.jobId, taskId)
 	// Wait for the process to start running, log it, then wait for it to finish.
 	elapsedRetryDuration = 0
 	includeRunning := true
 	for {
+		// was a job kill request recieved?
+		if r.abortRequested() {
+			st := r.Abort()
+			return st, nil
+		}
+
 		st, err = r.queryWithTimeout(id, cmdEndTime, includeRunning)
 		elapsed := elapsedRetryDuration + r.runnerRetryInterval
 		if (err != nil && elapsed >= r.runnerRetryTimeout) || st.State.IsDone() {
@@ -166,6 +187,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 			includeRunning = false
 		}
 	}
+
 	return st, err
 }
 
@@ -217,4 +239,32 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	}
 
 	return err
+}
+
+func (r *taskRunner) abortRequested() bool {
+	select {
+	case <-r.abortCh:
+		return true
+	default:
+		return false
+	}
+}
+
+/**
+send an async Abort request to the remote runner.  Construct a RunStatus
+indicating that the run was aborted
+*/
+func (r *taskRunner) Abort() runner.RunStatus {
+	//TODO - use async Runner to not drop the error if Abort() returns an error?
+	go func(runId runner.RunID) {
+		r.runner.Abort(runId)
+	}(r.runId)
+
+	return r.getAbortedRunStatus()
+}
+
+func (r *taskRunner) getAbortedRunStatus() runner.RunStatus {
+	return runner.RunStatus{RunID: r.runId,
+		State:   runner.ABORTED,
+		LogTags: runner.LogTags{JobID: r.jobId, TaskID: r.taskId}}
 }

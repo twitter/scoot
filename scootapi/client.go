@@ -106,3 +106,7 @@ func (c *CloudScootClient) Close() error {
 
 	return nil
 }
+
+func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error) {
+	return nil, nil
+}

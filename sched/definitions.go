@@ -63,6 +63,9 @@ const (
 	// Successfully Completed Job/Task
 	Completed
 
+	// Killed by request from Client
+	Killed
+
 	// Job was Aborted, Compensating Tasks are being Applied.
 	// A RollingBack task has not finished its compensating
 	// tasks yet.
@@ -72,6 +75,11 @@ const (
 	// have been applied.
 	RolledBack
 )
+
+func (s Status) String() string {
+	asString := [6]string{"NotStarted", "InProgress", "Completed", "Killed", "RollingBack", "RolledBack"}
+	return asString[s]
+}
 
 // transforms a thrift Job into a scheduler Job
 func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
