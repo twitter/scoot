@@ -1081,10 +1081,12 @@ func (p *Command) String() string {
 //  - Command
 //  - SnapshotId
 //  - TaskId
+//  - TimeoutMs
 type TaskDefinition struct {
 	Command    *Command `thrift:"command,1,required" json:"command"`
 	SnapshotId *string  `thrift:"snapshotId,2" json:"snapshotId,omitempty"`
 	TaskId     *string  `thrift:"taskId,3" json:"taskId,omitempty"`
+	TimeoutMs  *int32   `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -1117,6 +1119,15 @@ func (p *TaskDefinition) GetTaskId() string {
 	}
 	return *p.TaskId
 }
+
+var TaskDefinition_TimeoutMs_DEFAULT int32
+
+func (p *TaskDefinition) GetTimeoutMs() int32 {
+	if !p.IsSetTimeoutMs() {
+		return TaskDefinition_TimeoutMs_DEFAULT
+	}
+	return *p.TimeoutMs
+}
 func (p *TaskDefinition) IsSetCommand() bool {
 	return p.Command != nil
 }
@@ -1127,6 +1138,10 @@ func (p *TaskDefinition) IsSetSnapshotId() bool {
 
 func (p *TaskDefinition) IsSetTaskId() bool {
 	return p.TaskId != nil
+}
+
+func (p *TaskDefinition) IsSetTimeoutMs() bool {
+	return p.TimeoutMs != nil
 }
 
 func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
@@ -1156,6 +1171,10 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 			}
 		case 3:
 			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+		case 4:
+			if err := p.readField4(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1202,6 +1221,15 @@ func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *TaskDefinition) readField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.TimeoutMs = &v
+	}
+	return nil
+}
+
 func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("TaskDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1213,6 +1241,9 @@ func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField4(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1267,6 +1298,21 @@ func (p *TaskDefinition) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
+func (p *TaskDefinition) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeoutMs() {
+		if err := oprot.WriteFieldBegin("timeoutMs", thrift.I32, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:timeoutMs: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.TimeoutMs)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.timeoutMs (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:timeoutMs: ", p), err)
+		}
+	}
+	return err
+}
+
 func (p *TaskDefinition) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1277,9 +1323,11 @@ func (p *TaskDefinition) String() string {
 // Attributes:
 //  - Tasks
 //  - JobType
+//  - DefaultTaskTimeoutMs
 type JobDefinition struct {
-	Tasks   map[string]*TaskDefinition `thrift:"tasks,1,required" json:"tasks"`
-	JobType *JobType                   `thrift:"jobType,2" json:"jobType,omitempty"`
+	Tasks                map[string]*TaskDefinition `thrift:"tasks,1,required" json:"tasks"`
+	JobType              *JobType                   `thrift:"jobType,2" json:"jobType,omitempty"`
+	DefaultTaskTimeoutMs *int32                     `thrift:"defaultTaskTimeoutMs,3" json:"defaultTaskTimeoutMs,omitempty"`
 }
 
 func NewJobDefinition() *JobDefinition {
@@ -1298,8 +1346,21 @@ func (p *JobDefinition) GetJobType() JobType {
 	}
 	return *p.JobType
 }
+
+var JobDefinition_DefaultTaskTimeoutMs_DEFAULT int32
+
+func (p *JobDefinition) GetDefaultTaskTimeoutMs() int32 {
+	if !p.IsSetDefaultTaskTimeoutMs() {
+		return JobDefinition_DefaultTaskTimeoutMs_DEFAULT
+	}
+	return *p.DefaultTaskTimeoutMs
+}
 func (p *JobDefinition) IsSetJobType() bool {
 	return p.JobType != nil
+}
+
+func (p *JobDefinition) IsSetDefaultTaskTimeoutMs() bool {
+	return p.DefaultTaskTimeoutMs != nil
 }
 
 func (p *JobDefinition) Read(iprot thrift.TProtocol) error {
@@ -1325,6 +1386,10 @@ func (p *JobDefinition) Read(iprot thrift.TProtocol) error {
 			issetTasks = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		case 3:
+			if err := p.readField3(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1381,6 +1446,15 @@ func (p *JobDefinition) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *JobDefinition) readField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.DefaultTaskTimeoutMs = &v
+	}
+	return nil
+}
+
 func (p *JobDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("JobDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1389,6 +1463,9 @@ func (p *JobDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1434,6 +1511,21 @@ func (p *JobDefinition) writeField2(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:jobType: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *JobDefinition) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDefaultTaskTimeoutMs() {
+		if err := oprot.WriteFieldBegin("defaultTaskTimeoutMs", thrift.I32, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:defaultTaskTimeoutMs: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.DefaultTaskTimeoutMs)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.defaultTaskTimeoutMs (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:defaultTaskTimeoutMs: ", p), err)
 		}
 	}
 	return err

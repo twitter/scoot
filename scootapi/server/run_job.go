@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/sched"
@@ -51,6 +52,11 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		task.Command.Argv = t.Command.Argv
 		if t.SnapshotId != nil {
 			task.SnapshotID = *t.SnapshotId
+		}
+		if t.TimeoutMs != nil {
+			task.Command.Timeout = time.Duration(*t.TimeoutMs) * time.Millisecond
+		} else if def.DefaultTaskTimeoutMs != nil {
+			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond
 		}
 		t.TaskId = &taskId
 		result.Tasks[taskId] = task
