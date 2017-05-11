@@ -108,5 +108,24 @@ func (c *CloudScootClient) Close() error {
 }
 
 func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error) {
-	return nil, nil
+
+	if c.client == nil {
+		c.client, err = createClient(c.addr, c.dialer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	jobStatus, err := c.client.KillJob(jobId)
+
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+
+	return jobStatus, err
 }

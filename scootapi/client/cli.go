@@ -6,6 +6,7 @@ import (
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/spf13/cobra"
+	log "github.com/Sirupsen/logrus"
 )
 
 // Scoot API Client interface that includes CLI handling
@@ -18,6 +19,7 @@ type simpleCLIClient struct {
 	rootCmd     *cobra.Command
 	addr        string
 	dial        dialer.Dialer
+	logLevel    string
 	scootClient *scootapi.CloudScootClient
 }
 
@@ -37,11 +39,13 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 		PersistentPostRunE: c.Close,
 	}
 	c.rootCmd.PersistentFlags().StringVar(&c.addr, "addr", "", "scoot server address")
+	c.rootCmd.PersistentFlags().StringVar(&c.logLevel, "log_level", "info", "Log everything at this level and above (error|info|debug)")
 
 	c.addCmd(&runJobCmd{})
 	c.addCmd(&getStatusCmd{})
 	c.addCmd(&smokeTestCmd{})
 	c.addCmd(&watchJobCmd{})
+	c.addCmd(&killJobCmd{})
 
 	return c, nil
 }
@@ -55,6 +59,17 @@ func (c *simpleCLIClient) Init(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
 		}
 	}
+
+	if c.logLevel == "" {
+		c.logLevel = "info"
+	}
+
+	level, err := log.ParseLevel(c.logLevel)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.SetLevel(level)
 
 	c.scootClient = scootapi.NewCloudScootClient(
 		scootapi.CloudScootClientConfig{
