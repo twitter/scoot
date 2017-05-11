@@ -289,10 +289,10 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 			// set up variables for async functions for async function & callbacks
 			j := jobState
-			endSagaFn:= func() error {
+			endSagaFn := func() error {
 				return j.Saga.EndSaga()
 			}
-			if (jobState.JobKilled) {
+			if jobState.JobKilled {
 				endSagaFn = func() error {
 					return j.Saga.AbortSaga()
 				}
@@ -386,7 +386,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					if aborted {
 						msg = "Task aborted."
 					}
-  					if !aborted {
+					if !aborted {
 						if preventRetries {
 							msg = fmt.Sprintf("Error running job (quitting, hit max retries of %d):", s.maxRetriesPerTask)
 							err = nil

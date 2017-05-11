@@ -3,10 +3,10 @@ package client
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/spf13/cobra"
-	log "github.com/Sirupsen/logrus"
 )
 
 // Scoot API Client interface that includes CLI handling

@@ -7,6 +7,7 @@ import (
 )
 
 var PausingExecerMU sync.Mutex
+
 // Creates a new pausingExecer.  It's execution is blocked till Abort() or Resume() is called
 // if Resume is called and it is not running, it will return an error indicating it's current
 // state (completed or aborted)
@@ -33,7 +34,6 @@ func (e *PausingExecer) Exec(command execer.Command) (execer.Process, error) {
 	e.ExitCode = 0
 	return e, e.ExecError
 }
-
 
 // pauses processing till Resume() or Abort() is called
 func (e *PausingExecer) Wait() execer.ProcessStatus {

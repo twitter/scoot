@@ -1,8 +1,8 @@
 package execers
 
 import (
-	"testing"
 	"github.com/scootdev/scoot/runner/execer"
+	"testing"
 	"time"
 )
 
@@ -15,7 +15,6 @@ func TestPausingExecer(t *testing.T) {
 
 	// wait till it starts running
 	waitForStatus(ex, execer.RUNNING)
-
 
 	err := ex.Resume()
 	if err != nil {
@@ -52,8 +51,8 @@ func waitForStatus(ex *PausingExecer, targetState execer.ProcessState) {
 	// check for complete every 10 milliseconds up to 3 times
 	ticker := time.NewTicker(time.Millisecond * 10)
 	tries := 0
-	for true{
-		<- ticker.C
+	for true {
+		<-ticker.C
 		if lockingGetState(ex) == targetState || tries >= 3 {
 			ticker.Stop()
 			break
@@ -61,5 +60,3 @@ func waitForStatus(ex *PausingExecer, targetState execer.ProcessState) {
 		tries += 1
 	}
 }
-
-
