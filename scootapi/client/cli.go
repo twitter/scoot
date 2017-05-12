@@ -60,10 +60,6 @@ func (c *simpleCLIClient) Init(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if c.logLevel == "" {
-		c.logLevel = "info"
-	}
-
 	level, err := log.ParseLevel(c.logLevel)
 	if err != nil {
 		log.Error(err)

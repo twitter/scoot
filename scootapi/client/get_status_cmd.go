@@ -51,10 +51,10 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 			return fmt.Errorf("Error converting status to JSON: %v", err.Error())
 		}
 		log.Infof("%s\n", asJson)
-		fmt.Printf("%s\n", asJson) // must also go to stdout so Sickle can find the results
+		fmt.Printf("%s\n", asJson) // must also go to stdout in case caller looking in stdout for the results
 	} else {
 		log.Info("Job Status:", status)
-		fmt.Println("Job Status:", status) // must also go to stdout so Sickle can find the results
+		fmt.Println("Job Status:", status) // must also go to stdout in case caller looking in stdout for the results
 	}
 
 	return nil

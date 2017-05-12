@@ -64,7 +64,7 @@ type statefulScheduler struct {
 	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
 	addJobCh      chan jobAddedMsg
-	killJobCh     chan string
+	killJobCh     chan jobKillRequest
 
 	// Scheduler config
 	maxRetriesPerTask   int
@@ -80,6 +80,12 @@ type statefulScheduler struct {
 
 	// stats
 	stat stats.StatsReceiver
+}
+
+// contains jobId to be killed and callback for the result of processing the request
+type jobKillRequest struct {
+	jobId     string
+	responeCh chan error
 }
 
 // Create a New StatefulScheduler that implements the Scheduler interface
@@ -146,7 +152,7 @@ func NewStatefulScheduler(
 		runnerFactory: rf,
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
-		killJobCh:     make(chan string, 1),
+		killJobCh:     make(chan jobKillRequest, 1),
 
 		maxRetriesPerTask:   config.MaxRetriesPerTask,
 		defaultTaskTimeout:  config.DefaultTaskTimeout,
@@ -244,7 +250,6 @@ func (s *statefulScheduler) step() {
 	// nodes added or removed to cluster, new jobs scheduled,
 	// async functions completed & invoke callbacks
 	s.addJobs()
-	s.killJobs()
 	s.clusterState.updateCluster()
 	s.asyncRunner.ProcessMessages()
 
@@ -254,6 +259,7 @@ func (s *statefulScheduler) step() {
 	// have occurred
 
 	s.checkForCompletedJobs()
+	s.killJobs()
 	s.scheduleTasks()
 }
 
@@ -289,17 +295,11 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 			// set up variables for async functions for async function & callbacks
 			j := jobState
-			endSagaFn := func() error {
-				return j.Saga.EndSaga()
-			}
-			if jobState.JobKilled {
-				endSagaFn = func() error {
-					return j.Saga.AbortSaga()
-				}
-			}
 
 			s.asyncRunner.RunAsync(
-				endSagaFn,
+				func() error {
+					return j.Saga.EndSaga()
+				},
 				func(err error) {
 					if err == nil {
 						log.Infof("Job completed and logged: %v", j.Job.Id)
@@ -338,8 +338,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobId := ta.task.JobId
 		taskId := ta.task.TaskId
 		taskDef := ta.task.Def
-		sa := s.inProgressJobs[jobId].Saga
 		jobState := s.inProgressJobs[jobId]
+		sa := s.inProgressJobs[jobId].Saga
 		nodeId := ta.node.Id()
 
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
@@ -408,7 +408,7 @@ func (s *statefulScheduler) scheduleTasks() {
 						}()
 					}
 					if aborted {
-						jobState.taskKilled(taskId)
+						jobState.taskCompleted(taskId)
 					}
 				}
 				if err == nil {
@@ -436,51 +436,59 @@ func (s *statefulScheduler) scheduleTasks() {
 }
 
 /**
-If the job is pending or in progress kill it.
+Put the kill request on channel that is processed by the main
+scheduler loop, and wait for the response
 */
 func (s *statefulScheduler) KillJob(jobId string) error {
 
-	// can we find the job?
-	_, ok := s.inProgressJobs[jobId]
+	responseCh := make(chan error, 1)
+	req := jobKillRequest{jobId: jobId, responeCh: responseCh}
+	s.killJobCh <- req
 
-	if ok {
-		s.killJobCh <- jobId
+	return <-req.responeCh
 
-		return nil
-	} else {
-		// TODO see comment above for improving this behavior
-		return fmt.Errorf("Job Id %s, not found. "+
-			" The job may be finished, "+
-			" the request may still be in the queue to be scheduled, or "+
-			" the id may be invalid.  "+
-			" Check the job status, verify the id and/or resubmit the kill request after a few moments.",
-			jobId)
-	}
 }
 
-// process all the kill requests in the killJobCh
+// process all requests verifying that the jobIds exist:  Send errors back
+// immediately on the request channel for jobId that don't exist, then
+// kill all the jobs with a valid ID
+//
+// this function is part of the main scheduler loop
 func (s *statefulScheduler) killJobs() {
-	for {
+	var validKillRequests []jobKillRequest
+
+	// validate jobids and sending invalid ids back and building a list of valid ids
+	for haveKillRequest := true; haveKillRequest == true; {
 		select {
-		case jobId := <-s.killJobCh:
-			s.killJob(jobId)
+		case req := <-s.killJobCh:
+			// can we find the job?
+			_, ok := s.inProgressJobs[req.jobId]
+			if !ok {
+				req.responeCh <- fmt.Errorf("Job Id %s, not found. "+
+					" The job may be finished, "+
+					" the request may still be in the queue to be scheduled, or "+
+					" the id may be invalid.  "+
+					" Check the job status, verify the id and/or resubmit the kill request after a few moments.",
+					req.jobId)
+			} else {
+				validKillRequests = append(validKillRequests[:], req)
+			}
 		default:
-			return
+			haveKillRequest = false
 		}
 	}
 
-}
-
-// kill the job
-func (s *statefulScheduler) killJob(jobId string) {
-
-	jobState := s.inProgressJobs[jobId]
-	jobState.JobKilled = true
-	for _, task := range jobState.Tasks {
-		if task.Status != sched.Completed && task.Status != sched.Killed {
-			if task.TaskRunner != nil {
-				task.TaskRunner.abortCh <- 1
+	// kill the jobs with valid ids
+	for _, req := range validKillRequests {
+		jobState := s.inProgressJobs[req.jobId]
+		for _, task := range jobState.Tasks {
+			if task.Status != sched.Completed {
+				if task.TaskRunner != nil {
+					task.TaskRunner.abortCh <- 1
+				}
 			}
 		}
+
+		req.responeCh <- nil
 	}
 }

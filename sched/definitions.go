@@ -63,9 +63,6 @@ const (
 	// Successfully Completed Job/Task
 	Completed
 
-	// Killed by request from Client
-	Killed
-
 	// Job was Aborted, Compensating Tasks are being Applied.
 	// A RollingBack task has not finished its compensating
 	// tasks yet.

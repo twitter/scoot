@@ -20,6 +20,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/snapshot/snapshots"
+	"strings"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -312,30 +313,36 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, pausingExecer := initializeServices(sc, false)
+
 	jobId, taskId, _ := putJobInScheduler(1, s, pausingExecer)
 	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.NotStarted {
 		s.step()
 	}
 
-	err := s.KillJob(jobId)
-	if err != nil {
-		t.Errorf("Expected error to be nil, got:%s", err.Error())
-	}
+	respCh := sendKillRequest(jobId, s)
 
 	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.InProgress ||
 		s.inProgressJobs[jobId].Tasks[taskId].Status == sched.NotStarted {
 		s.step()
 	}
+	errResp := <-respCh
 
-	verifyJobStatus("verify kill", jobId, sched.Completed, []sched.Status{sched.Killed}, s, t)
+	if errResp != nil {
+		t.Fatalf("Expected no error from killJob request, instead got:%s", errResp.Error())
+	}
+	verifyJobStatus("verify kill", jobId, sched.Completed, []sched.Status{sched.Completed}, s, t)
 
 }
 
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
-	s, _ := initializeServices(sc, true)
+	s, ex := initializeServices(sc, false)
+	putJobInScheduler(1, s, ex)
 
-	err := s.KillJob("badJobId")
+	respCh := sendKillRequest("badJobId", s)
+
+	err := waitForResponse(respCh, s)
+
 	if err == nil {
 		t.Errorf("Expected to get job not found error, instead got nil")
 	}
@@ -364,15 +371,42 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 		s.step()
 	}
 
-	err := s.KillJob(jobId)
-	s.step()
+	respCh := sendKillRequest(jobId, s)
+
+	err := waitForResponse(respCh, s)
 
 	if err != nil {
-		t.Errorf("Expected err to be nil, instead is %v", err.Error())
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Expected err to be nil, instead is %v", err.Error())
+		}
+	} else {
+		verifyJobStatus("verify kill", jobId, sched.Completed, []sched.Status{sched.Completed}, s, t)
 	}
 
-	verifyJobStatus("verify kill", jobId, sched.Completed, []sched.Status{sched.Completed}, s, t)
+}
 
+func waitForResponse(respCh chan error, s *statefulScheduler) error {
+	var lookingForResp bool = true
+	for lookingForResp {
+		select {
+		case err := <-respCh:
+			return err
+		default:
+			s.step()
+		}
+	}
+
+	return nil
+}
+
+func sendKillRequest(jobId string, s *statefulScheduler) chan error {
+
+	respCh := make(chan error)
+	go func(respCh chan error) {
+		respCh <- s.KillJob(jobId)
+	}(respCh)
+
+	return respCh
 }
 
 func getFirstTaskId(jobDef sched.JobDefinition) string {
@@ -384,9 +418,9 @@ func getFirstTaskId(jobDef sched.JobDefinition) string {
 	return taskIds[0]
 }
 
-func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*statefulScheduler, *execers.PausingExecer) {
+func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*statefulScheduler, *execers.SimExecer) {
 	var deps *schedulerDeps
-	var ex *execers.PausingExecer = nil
+	var ex *execers.SimExecer = nil
 	if useDefaultDeps {
 		deps = getDefaultSchedDeps()
 	} else {
@@ -402,7 +436,7 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 	return makeStatefulSchedulerDeps(deps), ex
 }
 
-func putJobInScheduler(numTasks int, s *statefulScheduler, pausingExecer *execers.PausingExecer) (string, string, error) {
+func putJobInScheduler(numTasks int, s *statefulScheduler, pausingExecer *execers.SimExecer) (string, string, error) {
 	// create the job and run it to completion
 	jobDef := sched.GenJobDef(numTasks)
 	taskId := getFirstTaskId(jobDef)
@@ -411,6 +445,7 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, pausingExecer *execer
 		// set the command to pause
 		task := jobDef.Tasks[taskId]
 		task.Argv = []string{"pause"}
+		jobDef.Tasks[taskId] = task
 	}
 
 	// put the job on the jobs channel
@@ -441,12 +476,12 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus sched.Status, e
 
 }
 
-func getDepsWithPausingWorker() (*schedulerDeps, *execers.PausingExecer) {
+func getDepsWithPausingWorker() (*schedulerDeps, *execers.SimExecer) {
 
 	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
-	ex := execers.NewPausingExecer()
+	ex := execers.NewSimExecer()
 	worker := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
 
 	return &schedulerDeps{
