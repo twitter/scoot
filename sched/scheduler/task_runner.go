@@ -36,7 +36,7 @@ type taskRunner struct {
 	task   sched.TaskDefinition
 	nodeId cluster.NodeId
 
-	abortCh chan interface{}
+	abortCh chan bool
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -149,7 +149,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 			}
 			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId})
 			log.Infof("Initial run attempts aborted by scheduler : jobId: %s taskId: %s", r.jobId, taskId)
-			return st, err
+			err = nil
 		}
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
@@ -203,12 +203,16 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	}
 	w := runner.Wait{Timeout: timeout, AbortCh: r.abortCh}
 
-	// issue a query that blocks till get a response, w's timeout, or abort
+	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
+	// if the abort request triggers the Query() to return, Query() will put a new
+	// abort request on the channel to replace the one it consumed, so we know to send
+	// an abort to the runner below
 	sts, _, err := r.runner.Query(q, w)
 
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
+
 	if r.abortRequested() {
 		r.runner.Abort(id)
 		return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), nil

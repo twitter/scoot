@@ -16,6 +16,7 @@ type jobState struct {
 	EndingSaga     bool                  //denotes whether an EndSagaMsg is in progress or not
 	TasksCompleted int                   //number of tasks that've been marked completed so far.
 	TasksRunning   int                   //number of tasks that've been scheduled or started.
+	JobKilled      bool                  //indicates the job was killed
 }
 
 // Contains all the information for a specified task
@@ -40,6 +41,7 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 		EndingSaga:     false,
 		TasksCompleted: 0,
 		TasksRunning:   0,
+		JobKilled:      false,
 	}
 
 	for taskId, taskDef := range job.Def.Tasks {
