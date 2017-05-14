@@ -67,9 +67,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		task.SnapshotId = &c.snapshotId
 		task.TaskId = &taskId
 
-		jobDef.Tasks = map[string]*scoot.TaskDefinition{
-			taskId: task,
-		}
+		jobDef.Tasks = []*scoot.TaskDefinition{task}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
 		if err != nil {
@@ -88,13 +86,13 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		if jsonJob.DefaultTaskTimeoutMs > 0 {
 			jobDef.DefaultTaskTimeoutMs = &jsonJob.DefaultTaskTimeoutMs
 		}
-		jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
+		jobDef.Tasks = []*scoot.TaskDefinition{}
 		for taskName, jsonTask := range jsonJob.Tasks {
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
-			jobDef.Tasks[taskName] = taskDef
+			jobDef.Tasks = append(jobDef.Tasks, taskDef)
 			taskDef.TaskId = &taskName
 			if jsonTask.TimeoutMs > 0 {
 				taskDef.TimeoutMs = &jsonTask.TimeoutMs

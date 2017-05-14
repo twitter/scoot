@@ -60,7 +60,7 @@ struct JobDefinition {
   4: optional i32 priority
   # Tag allows related jobs to be grouped together.
   5: optional string tag
-  # Basis is used to specify an ancestor for this job.
+  # Basis is used to replace an ancestor of this job (keep only the latest job for a basis).
   6: optional string basis
   # Requestor is used for rate limiting. If unfilled, limit is applied to a no-name pool.
   7: optional string requestor

@@ -30,7 +30,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numIdle          int                           //
+	numIdle          int                           // Number of free nodes that are not in a suspended state.
 }
 
 type nodeGroup struct {

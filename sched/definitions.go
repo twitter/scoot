@@ -45,7 +45,7 @@ type JobDefinition struct {
 	Requestor string
 	Tag       string
 	Basis     string
-	Priority  int32
+	Priority  Priority
 	Tasks     []TaskDefinition
 }
 
@@ -76,6 +76,23 @@ const (
 	// Job/Task finished unsuccessfully all compensating actions
 	// have been applied.
 	RolledBack
+)
+
+type Priority int
+
+const (
+	// Default, queue new runs until any resources are available
+	P0 Priority = iota
+
+	// Run asap, ahead of priority=0, consuming nodes as they become available if no nodes are free
+	P1
+
+	// Run asap with at least MinRunningNodesForGivenJob, killing youngest lower priority tasks if no nodes are free
+	P2
+
+	// Run immediately trying to acquire as many nodes as required, killing all tasks with lower priority that
+	// have been executing with duration < 10min or so
+	P3
 )
 
 // transforms a thrift Job into a scheduler Job
@@ -131,7 +148,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	domainJobDef := JobDefinition{
 		JobType:   jobType,
 		Tasks:     domainTasks,
-		Priority:  priority,
+		Priority:  Priority(priority),
 		Tag:       tag,
 		Basis:     basis,
 		Requestor: requestor,
@@ -164,13 +181,14 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 		thriftTasks = append(thriftTasks, &thriftTask)
 	}
 
+	prio := int32(domainJob.Def.Priority)
 	thriftJobDefinition := schedthrift.JobDefinition{
 		JobType:   &(*domainJob).Def.JobType,
 		Tasks:     thriftTasks,
-		Priority:  &(*domainJob).Def.Priority,
-		Tag:       &(*domainJob).Def.Tag,
-		Basis:     &(*domainJob).Def.Basis,
-		Requestor: &(*domainJob).Def.Requestor,
+		Priority:  &prio,
+		Tag:       &(domainJob).Def.Tag,
+		Basis:     &(domainJob).Def.Basis,
+		Requestor: &(domainJob).Def.Requestor,
 	}
 
 	thriftJob := schedthrift.Job{

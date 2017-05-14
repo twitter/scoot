@@ -39,7 +39,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	if def == nil {
 		return result, fmt.Errorf("nil job definition")
 	}
-	result.Tasks = make(map[string]sched.TaskDefinition)
+	result.Tasks = []sched.TaskDefinition{}
 
 	for _, t := range def.Tasks {
 		var task sched.TaskDefinition
@@ -58,10 +58,10 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		} else if def.DefaultTaskTimeoutMs != nil {
 			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond
 		}
-		if t.taskId == nil {
+		if t.TaskId == nil {
 			return result, fmt.Errorf("nil taskId")
 		}
-		task.TaskID = *t.taskId
+		task.TaskID = *t.TaskId
 
 		result.Tasks = append(result.Tasks, task)
 	}
@@ -78,8 +78,8 @@ func validateJob(job sched.JobDefinition) error {
 	if len(job.Tasks) == 0 {
 		return NewInvalidJobRequest("invalid job. Must have at least 1 task; was empty")
 	}
-	for id, task := range job.Tasks {
-		if id == "" {
+	for _, task := range job.Tasks {
+		if task.TaskID == "" {
 			return NewInvalidJobRequest("invalid task id \"\".")
 		}
 		if len(task.Command.Argv) == 0 {

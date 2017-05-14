@@ -21,21 +21,24 @@ import (
 //TODO(jschiller): these all temporary and need to to be configurable from CLI.
 
 // Number of different requestors that can run jobs at any given time.
-const MaxRequestors = 100
+var MaxRequestors = 100
 
 // Number of jobs any single requestor can have.
-const MaxJobsPerRequestor = 100
+var MaxJobsPerRequestor = 100
 
-//
-const MaxSchedulableTasks = 50000
+// Expected number of nodes. Should roughly correspond with the actual number of healthy nodes.
+var NumConfiguredNodes = 2730
 
-//
-const NodeScaleFactor = .01
+// A reasonable maximum number of tasks we'd expect to queue.
+var MaxSchedulableTasks = 50000
 
-//
-const DefaultMinNodes = 250
+// Used to calculate how many tasks a job can run without adversely affecting other jobs.
+var NodeScaleFactor = float32(NumConfiguredNodes) / float32(MaxSchedulableTasks)
 
-//
+// The maximum number of jobs required to run a 'large' job in an acceptable amount of time.
+var LargeJobMaxNodes = 250
+
+// Helpers.
 func min(num int, nums ...int) int {
 	m := num
 	for _, n := range nums {
@@ -330,7 +333,7 @@ checkLoop:
 			} else if len(jobs) >= MaxJobsPerRequestor {
 				err := fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, MaxJobsPerRequestor)
 				checkJobMsg.resultCh <- err
-			} else if checkJobMsg.jobDef.Priority < 0 || checkJobMsg.jobDef.Priority > 3 {
+			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P3 {
 				err := fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
 				checkJobMsg.resultCh <- err
 			} else {
