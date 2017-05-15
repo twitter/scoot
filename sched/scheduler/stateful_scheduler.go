@@ -250,6 +250,9 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 		Id:  generateJobId(),
 		Def: jobDef,
 	}
+	if job.Def.Tag == "" {
+		job.Def.Tag = job.Id
+	}
 
 	asBytes, err := job.Serialize()
 	if err != nil {
@@ -295,7 +298,7 @@ func (s *statefulScheduler) loop() {
 		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
 		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
 		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
-		time.Sleep(50 * time.Millisecond) // TODO(jschiller): find a better way to avoid pegging the cpu.
+		time.Sleep(250 * time.Millisecond)
 	}
 }
 
@@ -319,7 +322,8 @@ func (s *statefulScheduler) step() {
 
 // Checks if any new jobs have been scheduled since the last loop and adds
 // them to the scheduler state
-// TODO(jschiller): kill current jobs which share the same job.Basis as these new jobs.
+// TODO(jschiller): kill current jobs which share the same Requestor and Basis as these new jobs.
+// TODO(jschiller): kill current tasks that share the same Requestor and Tag as these new tasks.
 func (s *statefulScheduler) addJobs() {
 checkLoop:
 	for {
@@ -446,7 +450,9 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap)
-	s.clusterState.nodeGroups = nodeGroups
+	if taskAssignments != nil {
+		s.clusterState.nodeGroups = nodeGroups
+	}
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
@@ -461,11 +467,15 @@ func (s *statefulScheduler) scheduleTasks() {
 		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
 
 		// This task is co-opting the node for some other running task, abort that task.
-		if ta.runningTask != nil {
-			close(ta.runningTask.Runner.abortCh)
-			rt := ta.runningTask
-			err := fmt.Errorf("jobId:%s taskId%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
-			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, err)
+		if ta.running != nil {
+			// Send the signal to abort whatever is currently running on the node we're about to co-opt.
+			rt := ta.running
+			endSagaTask := false
+			rt.Runner.abortCh <- endSagaTask
+			msg := fmt.Sprintf("jobId:%s taskId:%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
+			log.Infof(msg)
+			// Update jobState and clusterState here instead of in the async handler below.
+			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, errors.New(msg))
 			s.clusterState.taskCompleted(nodeId, rt.TaskId, false)
 		}
 

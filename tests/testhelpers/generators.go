@@ -28,9 +28,7 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
-		taskDef := GenTask(rng, snapshotID)
-		taskDef.TaskId = &taskId
-
+		taskDef := GenTask(rng, taskId, snapshotID)
 		def.Tasks = append(def.Tasks, taskDef)
 	}
 
@@ -39,13 +37,14 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 
 // Generates a scoot.TaskDefinition
 // TODO: actually make more realistic
-func GenTask(rng *rand.Rand, snapshotID string) *scoot.TaskDefinition {
+func GenTask(rng *rand.Rand, taskID, snapshotID string) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
 	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 100", "complete 0"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd
+	taskDef.TaskId = &taskID
 	taskDef.SnapshotId = &snapshotID
 
 	return taskDef

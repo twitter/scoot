@@ -47,7 +47,7 @@ func makeFixedSampleJob() *Job {
 	taskId := "task0"
 	job.Id = jobId
 	jobDef := JobDefinition{}
-	jobDef.Tasks = make(map[string]TaskDefinition)
+	jobDef.Tasks = []TaskDefinition{}
 	jobDef.JobType = "jobTypeVal"
 	taskDefinition := TaskDefinition{}
 	taskDefinition.SnapshotID = "snapshotIDVal"
@@ -60,7 +60,7 @@ func makeFixedSampleJob() *Job {
 	envVars["envVar2"] = "var2Value"
 	args := []string{"arg1", "arg2"}
 	taskDefinition.Argv = args
-	jobDef.Tasks[taskId] = taskDefinition
+	jobDef.Tasks = append(jobDef.Tasks, taskDefinition)
 	job.Def = jobDef
 
 	return &job
@@ -102,7 +102,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
 				log.Infof("serialize/deserialize test didn't return equivalent value:")
 				log.Infof("Original job: %+v", domainJob)
-				log.Info("Deserialzied to: %+v", newDomainJob)
+				log.Infof("Deserialized to: %+v", newDomainJob)
 				return false
 			}
 		}

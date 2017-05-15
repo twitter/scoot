@@ -10,9 +10,9 @@ import (
 )
 
 type taskAssignment struct {
-	node        cluster.Node
-	task        *taskState
-	runningTask *taskState
+	node    cluster.Node
+	task    *taskState
+	running *taskState
 }
 
 type KillableTasks []*taskState
@@ -31,6 +31,15 @@ func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.Before(k[j]
 func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[string][]*jobState) (
 	[]taskAssignment, map[string]*nodeGroup,
 ) {
+	// Exit if there are no unscheduled tasks.
+	totalUnschedTasks := 0
+	for _, j := range jobs {
+		totalUnschedTasks += (len(j.Tasks) - j.TasksCompleted - j.TasksRunning)
+	}
+	if totalUnschedTasks == 0 {
+		return nil, nil
+	}
+
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
 	clusterSnapshotIds := []string{}
 	nodeGroups := map[string]*nodeGroup{}
@@ -80,7 +89,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 	var tasks []*taskState
 	nk := numKillableTasks
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
-	numIdle := cs.numIdle - len(cs.suspendedNodes)
+	numIdle := cs.numIdle
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	requestorTagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
@@ -93,11 +102,12 @@ Loop:
 		for _, job := range priorityJobs[p] {
 			// The number of available nodes for this priority is the remaining idle nodes plus allowed killable nodes.
 			numAvailNodes := numIdle + numKillableCounter[p]
-			def := &job.Job.Def
 			if numAvailNodes == 0 {
 				break Loop
 			}
+
 			// If we've seen this tag for this requestor before then it's already been handled, so skip this job.
+			def := &job.Job.Def
 			if tags, ok := requestorTagsSeen[def.Requestor]; ok {
 				if _, ok := tags[def.Tag]; ok {
 					continue
@@ -117,7 +127,15 @@ Loop:
 					numTasks += len(j.Tasks)
 					numRunning += j.TasksRunning
 					unsched = append(j.getUnScheduledTasks(), unsched...)
+					// Stop checking for unscheduled tasks if they exceed available nodes (we'll cap it below).
+					if len(unsched) > numAvailNodes {
+						break
+					}
 				}
+			}
+			// No unscheduled tasks, continue onto the next job.
+			if len(unsched) == 0 {
+				continue
 			}
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
@@ -134,6 +152,9 @@ Loop:
 				numSchedulable = max(0, numSchedulable-numRunning)
 			}
 			if numSchedulable > 0 {
+				log.Infof("Job:%s, priority:%d, numSchedulable:%d, numRunning:%d", job.Job.Id, p, numSchedulable, numRunning)
+				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d, largeJobMaxNodes:%d) - numRunning:%d",
+					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, LargeJobMaxNodes, numRunning)
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the idle pool, and the number we must take from killable nodes.
 				numFromIdle := min(numIdle, numSchedulable)
@@ -178,6 +199,7 @@ LoopRemaining:
 				nTasks := min(numIdle, nodeQuota, len(taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
+					log.Infof("Assigning %d additional idle nodes to tasks with priority=%d", nTasks, p)
 					numIdle -= nTasks
 					tasks = append(tasks, taskList[:nTasks]...)
 					taskLists[i] = taskList[nTasks:]
@@ -188,6 +210,10 @@ LoopRemaining:
 				}
 			}
 		}
+	}
+	// Exit if no tasks qualify to be scheduled.
+	if len(tasks) == 0 {
+		return nil, nil
 	}
 
 	// Loop over all cluster snapshotIds looking for an idle node. Prefer, in order:
@@ -215,6 +241,7 @@ func assign(
 	for _, task := range tasks {
 		var snapshotId string
 		var nodeSt *nodeState
+		var wasRunning *taskState
 	SnapshotsLoop:
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
@@ -228,13 +255,15 @@ func assign(
 				}
 			}
 		}
-		// Could not find any more idle nodes, take killable nodes.
+		// Could not find any more idle nodes, take one from killable nodes.
 		if nodeSt == nil {
-			snapshotId = killableTasks[0].Def.SnapshotID
-			nodeSt = cs.nodes[killableTasks[0].Runner.nodeId]
+			wasRunning = killableTasks[0]
+			snapshotId = wasRunning.Def.SnapshotID
+			nodeSt = cs.nodes[wasRunning.Runner.nodeId]
 			killableTasks = killableTasks[1:]
+
 		}
-		assignments = append(assignments, taskAssignment{node: nodeSt.node, task: task})
+		assignments = append(assignments, taskAssignment{node: nodeSt.node, task: task, running: wasRunning})
 		if _, ok := nodeGroups[snapshotId]; !ok {
 			nodeGroups[snapshotId] = newNodeGroup()
 		}

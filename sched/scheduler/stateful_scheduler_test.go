@@ -98,6 +98,10 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 	s := makeStatefulSchedulerDeps(deps)
 
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, err := s.ScheduleJob(jobDef)
 	if id == "" {
 		t.Errorf("Expected successfully scheduled job to return non empty job string!")
@@ -121,6 +125,10 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 	s := makeStatefulSchedulerDeps(deps)
 
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, err := s.ScheduleJob(jobDef)
 	if id != "" {
 		t.Errorf("Expected unsuccessfully scheduled job to return an empty job string!")
@@ -134,6 +142,10 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 func Test_StatefulScheduler_AddJob(t *testing.T) {
 	s := makeDefaultStatefulScheduler()
 	jobDef := sched.GenJobDef(1)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler loop & then verify state
@@ -142,8 +154,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		t.Errorf("Expected In Progress Jobs to be 1 not %v", len(s.inProgressJobs))
 	}
 
-	_, ok := s.inProgressJobs[id]
-	if !ok {
+	if s.getJob(id) == nil {
 		t.Errorf("Expected the %v to be an inProgressJobs", id)
 	}
 }
@@ -152,8 +163,8 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 
 	taskId := taskIds[0]
@@ -174,16 +185,21 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify task was retried enough times.
-	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
-		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	if s.getJob(jobId).getTask(taskId).NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v",
+			deps.config.MaxRetriesPerTask+1, s.getJob(jobId).getTask(taskId).NumTimesTried)
 	}
 
 	// advance scheduler until job gets marked completed
@@ -196,8 +212,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 
 	taskId := taskIds[0]
@@ -218,16 +234,21 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify task was retried enough times.
-	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
-		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	if s.getJob(jobId).getTask(taskId).NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v",
+			deps.config.MaxRetriesPerTask+1, s.getJob(jobId).getTask(taskId).NumTimesTried)
 	}
 
 	// advance scheduler until job gets marked completed
@@ -241,8 +262,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 	taskId := taskIds[0]
 
@@ -263,6 +284,10 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	s := makeStatefulSchedulerDeps(deps)
 
 	// add job and run through scheduler
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
@@ -274,7 +299,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
-	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskId).Status == sched.NotStarted {
 		s.step()
 	}
 
@@ -284,7 +309,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until the task completes
-	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.InProgress {
+	for s.getJob(jobId).getTask(taskId).Status == sched.InProgress {
 		s.step()
 	}
 
@@ -294,12 +319,12 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify that EndSaga Message gets logged
-	if !s.inProgressJobs[jobId].EndingSaga {
+	if !s.getJob(jobId).EndingSaga {
 		t.Errorf("Expected Completed job to be EndingSaga")
 	}
 

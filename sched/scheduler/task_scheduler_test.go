@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"math"
 	"testing"
 
 	"github.com/luci/go-render/render"
@@ -17,12 +16,12 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
-	jobState := newJobState(&job, saga)
+	js := newJobState(&job, saga)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
-	assignments, _ := getTaskAssignments(cs, jobState.getUnScheduledTasks())
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -33,7 +32,7 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
-	assignments, _ := getTaskAssignments(cs, []*taskState{})
+	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -47,15 +46,16 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
-	jobState := newJobState(&job, saga)
+	js := newJobState(&job, saga)
+	req := map[string][]*jobState{"": []*jobState{js}}
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
-	unScheduledTasks := jobState.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(cs, unScheduledTasks)
+	unScheduledTasks := js.getUnScheduledTasks()
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req)
 
-	if float64(len(assignments)) != math.Min(float64(len(unScheduledTasks)), float64(len(testCluster.nodes))) {
+	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
       Number Of Available Nodes %v, Number of Unscheduled Tasks %v`,
 			len(assignments),
@@ -74,18 +74,22 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		&taskState{TaskId: "task4", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		&taskState{TaskId: "task5", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
-	assignments, _ := getTaskAssignments(cs, tasks)
+	js := &jobState{Job: &sched.Job{}, Tasks: tasks}
+	req := map[string][]*jobState{"": []*jobState{js}}
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req)
 	if len(assignments) != 3 {
-		t.Errorf("Expected first three tasks to be assigned")
+		t.Errorf("Expected first three tasks to be assigned, got %v", len(assignments))
 	}
 
-	// Schedule the first three tasks and then complete task2, task3.
+	// Schedule the first three tasks and complete task2, task3.
 	taskNodes := map[string]cluster.NodeId{}
 	for _, as := range assignments {
 		taskNodes[as.task.TaskId] = as.node.Id()
+		cs.taskScheduled(as.node.Id(), as.task.TaskId, as.task.Def.SnapshotID)
+		js.taskStarted(as.task.TaskId)
 		if as.task.TaskId != "task1" {
-			cs.taskScheduled(as.node.Id(), as.task.TaskId, as.task.Def.SnapshotID)
 			cs.taskCompleted(as.node.Id(), as.task.TaskId, false)
+			js.taskCompleted(as.task.TaskId)
 		}
 	}
 
@@ -93,7 +97,7 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	cs.update([]cluster.NodeUpdate{
 		cluster.NodeUpdate{UpdateType: cluster.NodeAdded, Id: "node4", Node: cluster.NewIdNode("node4")},
 	})
-	assignments, _ = getTaskAssignments(cs, tasks[3:])
+	assignments, _ = getTaskAssignments(cs, []*jobState{js}, req)
 	for _, as := range assignments {
 		if as.task.TaskId == "task4" {
 			if as.node.Id() != taskNodes["task2"] {

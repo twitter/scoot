@@ -52,7 +52,6 @@ type JobDefinition struct {
 // Task is one task to run
 type TaskDefinition struct {
 	runner.Command
-	TaskID string
 }
 
 // Status for Job & Tasks
@@ -116,7 +115,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 				JobID:      task.GetJobId(),
 				TaskID:     task.GetTaskId(),
 			}
-			domainTasks = append(domainTasks, TaskDefinition{command, task.GetTaskId()})
+			domainTasks = append(domainTasks, TaskDefinition{command})
 		}
 	}
 

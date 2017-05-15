@@ -48,6 +48,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command,
   2: optional string snapshotId,
+  # TaskId should generally be unique, otherwise previous tasks with the same Requestor and Tag will be stomped.
   3: optional string taskId,
   4: optional i32 timeoutMs,
 }
@@ -58,7 +59,7 @@ struct JobDefinition {
   3: optional i32 defaultTaskTimeoutMs,
   # Priority levels are defined in docs.
   4: optional i32 priority
-  # Tag allows related jobs to be grouped together.
+  # Tag allows related jobs to be grouped together. Set to JobId by default.
   5: optional string tag
   # Basis is used to replace an ancestor of this job (keep only the latest job for a basis).
   6: optional string basis
