@@ -143,7 +143,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 		// send the command to the worker
 		st, err = r.runner.Run(cmd)
 
-		// was a job kill request received while startingt the run?
+		// was a job kill request received while starting the run?
 		if r.abortRequested() {
 			if err == nil { // we should have a status with runId, abort the run
 				r.runner.Abort(st.RunID)

@@ -153,7 +153,7 @@ func NewStatefulScheduler(
 		runnerFactory: rf,
 		asyncRunner:   async.NewRunner(),
 		addJobCh:      make(chan jobAddedMsg, 1),
-		killJobCh:     make(chan jobKillRequest, 1000), // TODO - what should this value be?
+		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 
 		maxRetriesPerTask:   config.MaxRetriesPerTask,
 		defaultTaskTimeout:  config.DefaultTaskTimeout,
@@ -393,27 +393,46 @@ func (s *statefulScheduler) scheduleTasks() {
 							jobState.errorRunningTask(taskId, err)
 						}
 					}
-					log.Info(msg, ", jobId:", jobId, ", taskId:", taskId, " err:", taskErr, " cmd:", taskDef.Argv)
+					log.WithFields(log.Fields{
+						"jobId":    jobId,
+						"taskId": taskId,
+						"err": err,
+						"cmd": strings.Join(taskDef.Argv, " "),
+					}).Info(msg)
 
 					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
 					if taskErr.sagaErr != nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
-						log.Info(msg, ", jobId:", jobId, ", taskId:", taskId, " -> starting goroutine to handle failed saga.EndTask. ")
+						log.WithFields(log.Fields{
+							"jobId":    jobId,
+							"taskId": taskId,
+						}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
 						//TODO -this may results in closed channel panic due to sending endSaga to sagalog (below) before endTask
 						go func() {
 							for err := errors.New(""); err != nil; err = tRunner.logTaskStatus(&taskErr.st, saga.EndTask) {
 								time.Sleep(time.Second)
 							}
-							log.Info(msg, ", jobId:", jobId, ", task:", taskId, " -> finished goroutine to handle failed saga.EndTask. ")
+							log.WithFields(log.Fields{
+								"jobId":    jobId,
+								"taskId": taskId,
+							}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
 						}()
 					}
 				}
 				if err == nil || aborted {
-					log.Info("Ending task. jobId:", jobId, ", taskId:", taskId, " command:", strings.Join(taskDef.Argv, " "))
+					log.WithFields(log.Fields{
+						"jobId":    jobId,
+						"taskId": taskId,
+						"command": strings.Join(taskDef.Argv, " "),
+					}).Info("Ending task.")
 					jobState.taskCompleted(taskId)
 				}
 
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
-				log.Info("Freeing node:", nodeId, ", removed jobId:", jobId, ", taskId:", taskId)
+				log.WithFields(log.Fields{
+					"jobId":    jobId,
+					"taskId": taskId,
+					"nodeId": nodeId,
+				}).Info("Freeing node, removed job.")
 				s.clusterState.taskCompleted(nodeId, taskId, flaky)
 
 				total := 0
@@ -424,7 +443,9 @@ func (s *statefulScheduler) scheduleTasks() {
 					completed += job.TasksCompleted
 					running += job.TasksRunning
 				}
-				log.Info("JobId:", jobState.Job.Id, " #running:", jobState.TasksRunning, " #completed:", jobState.TasksCompleted,
+				log.WithFields(log.Fields{
+					"jobId":    jobId,
+				}).Info(" #running:", jobState.TasksRunning, " #completed:", jobState.TasksCompleted,
 					" #total:", len(jobState.Tasks), " isdone:", (jobState.TasksCompleted == len(jobState.Tasks)))
 				log.Info("Jobs summary -> running:", running, " completed:", completed, " total:", total, " alldone:", (completed == total))
 			})
