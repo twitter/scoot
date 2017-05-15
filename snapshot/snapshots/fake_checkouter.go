@@ -18,6 +18,12 @@ type noopCheckouter struct {
 	path string
 }
 
+// have to have a valid path in the checkouter otherwise exec'ing a command
+// from simple.go doesn't work
+func MakeNoOpCheckouter() snapshot.Checkouter {
+	return &noopCheckouter{path: "./"}
+}
+
 func (c *noopCheckouter) Checkout(id string) (snapshot.Checkout, error) {
 	return c.CheckoutAt(id, c.path)
 }
