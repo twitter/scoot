@@ -34,7 +34,7 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 // Scoot JobDefinitions specified in job_def JSON files should be able to
 // satisfy these types as populated via https://golang.org/pkg/encoding/json/#Unmarshal
 type JobDef struct {
-	Tasks                map[string]TaskDef
+	Tasks                []TaskDef
 	DefaultTaskTimeoutMs int32
 }
 type TaskDef struct {
@@ -87,13 +87,13 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			jobDef.DefaultTaskTimeoutMs = &jsonJob.DefaultTaskTimeoutMs
 		}
 		jobDef.Tasks = []*scoot.TaskDefinition{}
-		for taskName, jsonTask := range jsonJob.Tasks {
+		for _, jsonTask := range jsonJob.Tasks {
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jsonTask.Args
 			taskDef.SnapshotId = &jsonTask.SnapshotID
 			jobDef.Tasks = append(jobDef.Tasks, taskDef)
-			taskDef.TaskId = &taskName
+			taskDef.TaskId = &jsonTask.TaskID
 			if jsonTask.TimeoutMs > 0 {
 				taskDef.TimeoutMs = &jsonTask.TimeoutMs
 			}
