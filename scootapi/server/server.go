@@ -45,3 +45,10 @@ func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	h.stat.Counter("jobStatusRpmCounter").Inc(1)
 	return GetJobStatus(jobId, h.sagaCoord)
 }
+
+// Implements KillJob Cloud Scoot API
+func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
+	defer h.stat.Latency("jobKillLatency_ms").Time().Stop()
+	h.stat.Counter("jobKillRpmCounter").Inc(1)
+	return KillJob(jobId, h.scheduler, h.sagaCoord)
+}

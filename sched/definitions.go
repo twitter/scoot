@@ -73,6 +73,11 @@ const (
 	RolledBack
 )
 
+func (s Status) String() string {
+	asString := [6]string{"NotStarted", "InProgress", "Completed", "Killed", "RollingBack", "RolledBack"}
+	return asString[s]
+}
+
 // transforms a thrift Job into a scheduler Job
 func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJob == nil {

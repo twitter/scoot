@@ -16,6 +16,7 @@ type jobState struct {
 	EndingSaga     bool                  //denotes whether an EndSagaMsg is in progress or not
 	TasksCompleted int                   //number of tasks that've been marked completed so far.
 	TasksRunning   int                   //number of tasks that've been scheduled or started.
+	JobKilled      bool                  //indicates the job was killed
 }
 
 // Contains all the information for a specified task
@@ -26,6 +27,7 @@ type taskState struct {
 	Status        sched.Status
 	TimeStarted   time.Time
 	NumTimesTried int
+	TaskRunner    *taskRunner
 }
 
 // Creates a New Job State based on the specified Job and Saga
@@ -39,6 +41,7 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 		EndingSaga:     false,
 		TasksCompleted: 0,
 		TasksRunning:   0,
+		JobKilled:      false,
 	}
 
 	for taskId, taskDef := range job.Def.Tasks {
@@ -81,10 +84,11 @@ func (j *jobState) getUnScheduledTasks() []*taskState {
 }
 
 // Update JobState to reflect that a Task has been started
-func (j *jobState) taskStarted(taskId string) {
+func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.InProgress
 	taskState.TimeStarted = time.Now()
+	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
 	j.TasksRunning++
 }
@@ -94,6 +98,7 @@ func (j *jobState) taskCompleted(taskId string) {
 	taskState := j.Tasks[taskId]
 	taskState.Status = sched.Completed
 	taskState.TimeStarted = nilTime
+	taskState.TaskRunner = nil
 	j.TasksCompleted++
 	j.TasksRunning--
 }
