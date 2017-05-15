@@ -191,7 +191,7 @@ print total
 	}
 }
 
-/**
+/*
 Wait for the process to finish.
 
 If the command finishes without error return the status COMPLETE and exit Code 0.
@@ -200,7 +200,7 @@ If the command fails, and we can get the exit code from the command, return COMP
 
 if the command fails and we cannot get the exit code from the command, return FAILED and the error
 that prevented getting the exit code.
- */
+*/
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
