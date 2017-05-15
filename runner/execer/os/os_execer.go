@@ -191,6 +191,16 @@ print total
 	}
 }
 
+/**
+Wait for the process to finish.
+
+If the command finishes without error return the status COMPLETE and exit Code 0.
+
+If the command fails, and we can get the exit code from the command, return COMPLETE with the failing exit code.
+
+if the command fails and we cannot get the exit code from the command, return FAILED and the error
+that prevented getting the exit code.
+ */
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
@@ -209,16 +219,19 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 		p.result = &result
 	}
 	if err == nil {
+		// the command finished without an error
 		result.State = execer.COMPLETE
 		result.ExitCode = 0
-		// TODO(dbentley): set stdout and stderr
+		// stdout and stderr are collected and set by (invoke.go) runner
 		return result
 	}
 	if err, ok := err.(*exec.ExitError); ok {
+		// the command returned an error, if we can get a WaitStatus from the error,
+		// we can get the commands exit code
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
 			result.State = execer.COMPLETE
 			result.ExitCode = status.ExitStatus()
-			// TODO(dbentley): set stdout and stderr
+			// stdout and stderr are collected and set by (invoke.go) runner
 			return result
 		}
 		result.State = execer.FAILED

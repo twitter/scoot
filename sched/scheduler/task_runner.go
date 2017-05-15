@@ -43,7 +43,7 @@ type taskRunner struct {
 type taskError struct {
 	sagaErr   error
 	runnerErr error
-	resultErr error
+	resultErr error // Note: resultErr is the error from trying to get the results of the command, not an error from the command
 	st        runner.RunStatus
 }
 
@@ -51,10 +51,11 @@ func (t *taskError) Error() string {
 	return fmt.Sprintf("TaskError: saga: %v ### runner: %v ### result: %v", t.sagaErr, t.runnerErr, t.resultErr)
 }
 
-// Run the task on the specified worker, and update the SagaLog appropriately.  Returns an error if one
-// occurs while running a task or writing to the SagaLog.  This method blocks until all saga messages
-// are logged and the task completes
-// parameters:
+// Run the task on the specified worker, and update the SagaLog appropriately.  Returns an error if an
+// error occurs trying to run the task, getting the task results or writing to SagaLog.  (Note: if the
+// task's command errors when the command is run, this is not considered to be an error.)
+
+// This method blocks until all saga messages are logged and the task completes
 func (r *taskRunner) run() error {
 	log.Infof("Starting task - jobId: %s, taskId: %s, node: %s -> %v", r.jobId, r.taskId, r.nodeId, r.task)
 	taskErr := &taskError{}
