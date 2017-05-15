@@ -394,16 +394,16 @@ func (s *statefulScheduler) scheduleTasks() {
 						}
 					}
 					log.WithFields(log.Fields{
-						"jobId":    jobId,
+						"jobId":  jobId,
 						"taskId": taskId,
-						"err": err,
-						"cmd": strings.Join(taskDef.Argv, " "),
+						"err":    err,
+						"cmd":    strings.Join(taskDef.Argv, " "),
 					}).Info(msg)
 
 					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
 					if taskErr.sagaErr != nil && taskErr.runnerErr == nil && taskErr.resultErr == nil {
 						log.WithFields(log.Fields{
-							"jobId":    jobId,
+							"jobId":  jobId,
 							"taskId": taskId,
 						}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
 						//TODO -this may results in closed channel panic due to sending endSaga to sagalog (below) before endTask
@@ -412,7 +412,7 @@ func (s *statefulScheduler) scheduleTasks() {
 								time.Sleep(time.Second)
 							}
 							log.WithFields(log.Fields{
-								"jobId":    jobId,
+								"jobId":  jobId,
 								"taskId": taskId,
 							}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
 						}()
@@ -420,8 +420,8 @@ func (s *statefulScheduler) scheduleTasks() {
 				}
 				if err == nil || aborted {
 					log.WithFields(log.Fields{
-						"jobId":    jobId,
-						"taskId": taskId,
+						"jobId":   jobId,
+						"taskId":  taskId,
 						"command": strings.Join(taskDef.Argv, " "),
 					}).Info("Ending task.")
 					jobState.taskCompleted(taskId)
@@ -429,7 +429,7 @@ func (s *statefulScheduler) scheduleTasks() {
 
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.WithFields(log.Fields{
-					"jobId":    jobId,
+					"jobId":  jobId,
 					"taskId": taskId,
 					"nodeId": nodeId,
 				}).Info("Freeing node, removed job.")
@@ -444,7 +444,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					running += job.TasksRunning
 				}
 				log.WithFields(log.Fields{
-					"jobId":    jobId,
+					"jobId": jobId,
 				}).Info(" #running:", jobState.TasksRunning, " #completed:", jobState.TasksCompleted,
 					" #total:", len(jobState.Tasks), " isdone:", (jobState.TasksCompleted == len(jobState.Tasks)))
 				log.Info("Jobs summary -> running:", running, " completed:", completed, " total:", total, " alldone:", (completed == total))
