@@ -13,7 +13,7 @@ import (
 
 var mockCtrl *gomock.Controller
 
-/**
+/*
 note: this is a weak test, it validates that a call to KillJob() goes into a scheduler
 and sagaCoordinator only.  It would be better to validate that the return status shows
 the expected JobStatus of job completed with the expected tasks aborted, but that is
