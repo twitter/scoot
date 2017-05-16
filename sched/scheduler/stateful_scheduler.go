@@ -207,6 +207,7 @@ func NewStatefulScheduler(
 
 	if !config.DebugMode {
 		// start the scheduler loop
+		log.Info("Starting scheduler loop")
 		go func() {
 			sched.loop()
 		}()
@@ -235,6 +236,8 @@ type jobAddedMsg struct {
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
 	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
 	s.stat.Counter("schedJobRequestsCounter").Inc(1)
+	log.Infof("Job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
 
 	checkResultCh := make(chan error, 1)
 	s.checkJobCh <- jobCheckMsg{
@@ -243,6 +246,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	}
 	err := <-checkResultCh
 	if err != nil {
+		log.Infof("Rejected job request: %v -> %v", jobDef, err)
 		return "", err
 	}
 
@@ -256,15 +260,18 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 
 	asBytes, err := job.Serialize()
 	if err != nil {
+		log.Infof("Failed to serialize job request: %v -> %v", jobDef, err)
 		return "", err
 	}
 
 	// Log StartSaga Message
 	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, asBytes)
 	if err != nil {
+		log.Infof("Failed to create saga for job request: %v -> %v", jobDef, err)
 		return "", err
 	}
 
+	log.Infof("Queueing job request: %v", jobDef)
 	s.stat.Counter("schedJobsCounter").Inc(1)
 	s.addJobCh <- jobAddedMsg{
 		job:  job,
@@ -329,11 +336,9 @@ checkLoop:
 	for {
 		select {
 		case checkJobMsg := <-s.checkJobCh:
-			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok {
-				if len(s.requestorMap) >= MaxRequestors {
-					err := fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, MaxRequestors)
-					checkJobMsg.resultCh <- err
-				}
+			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= MaxRequestors {
+				err := fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, MaxRequestors)
+				checkJobMsg.resultCh <- err
 			} else if len(jobs) >= MaxJobsPerRequestor {
 				err := fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, MaxJobsPerRequestor)
 				checkJobMsg.resultCh <- err

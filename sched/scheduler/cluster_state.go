@@ -278,7 +278,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		if !ns.suspended() {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
 			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1)
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
 			c.numIdle++
@@ -297,7 +297,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
 			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1)
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
