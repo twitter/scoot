@@ -35,7 +35,7 @@ var MaxSchedulableTasks = 50000
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
 var NodeScaleFactor = float32(NumConfiguredNodes) / float32(MaxSchedulableTasks)
 
-// The maximum number of jobs required to run a 'large' job in an acceptable amount of time.
+// The maximum number of nodes required to run a 'large' job in an acceptable amount of time.
 var LargeJobMaxNodes = 250
 
 // Helpers.
