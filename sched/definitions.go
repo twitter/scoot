@@ -77,6 +77,11 @@ const (
 	RolledBack
 )
 
+func (s Status) String() string {
+	asString := [6]string{"NotStarted", "InProgress", "Completed", "Killed", "RollingBack", "RolledBack"}
+	return asString[s]
+}
+
 type Priority int
 
 const (

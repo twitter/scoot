@@ -1,7 +1,6 @@
 package runners
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -132,7 +131,11 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunSta
 	case <-timeout:
 		return nil, s.svcStatus, nil
 	case <-wait.AbortCh:
-		return nil, s.svcStatus, errors.New("Aborted")
+		// we just consumed the abort request without really aborting the run,
+		// put a new request on the channel so taskRunner will abort the run.
+		wait.AbortCh <- true
+		st := runner.RunStatus{State: runner.ABORTED}
+		return []runner.RunStatus{st}, s.svcStatus, nil
 	}
 }
 

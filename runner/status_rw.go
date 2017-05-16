@@ -48,7 +48,7 @@ type Query struct {
 type Wait struct {
 	// How long to wait for Statuses
 	Timeout time.Duration
-	AbortCh chan interface{}
+	AbortCh chan bool
 
 	// We might add whether to return as soon as one status matches, or waiting until all
 }

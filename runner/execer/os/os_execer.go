@@ -19,13 +19,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func NewExecer() execer.Execer {
+func NewExecer() *osExecer {
 	return &osExecer{}
 }
 
 // For now memory can be capped on a per-execer basis rather than a per-command basis.
 // This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
-func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) execer.Execer {
+func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
 	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
 }
 
@@ -62,6 +62,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		cmd.Stderr = stderrW.WriterDelegate()
 	}
 
+	// Sets pgid of all child processes to cmd's pid
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	err = cmd.Start()
@@ -71,7 +72,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 
 	proc := &osProcess{cmd: cmd}
 	if e.memCap > 0 {
-		go proc.monitorMem(e.memCap, e.stat)
+		go e.monitorMem(proc)
 	}
 	return proc, nil
 }
@@ -82,28 +83,46 @@ type osProcess struct {
 	mutex  sync.Mutex
 }
 
-// Periodically check to make sure memory constraints are respected.
-func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
+// TODO(rcouto): More we can do here to make sure we're
+// cleaning up after ourselves completely / not leaving
+// orphaned processes behind
+//
+// Periodically check to make sure memory constraints are respected,
+// and clean up after ourselves when the process has completed
+func (e *osExecer) monitorMem(p *osProcess) {
 	pid := p.cmd.Process.Pid
+	pgid, err := syscall.Getpgid(pid)
+	if err != nil {
+		log.Errorf("Error finding pgid of pid %d, %v", pid, err)
+	} else {
+		defer cleanupProcs(pgid)
+	}
 	thresholdsIdx := 0
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
-	memTicker := time.NewTicker(10 * time.Millisecond)
+	memTicker := time.NewTicker(250 * time.Millisecond)
 	defer memTicker.Stop()
 	log.Infof("Monitoring memory for pid=%d", pid)
 	for {
 		select {
 		case <-memTicker.C:
 			p.mutex.Lock()
+			// Process is complete
 			if p.result != nil {
 				p.mutex.Unlock()
 				log.Infof("Finished monitoring memory for pid=%d", pid)
 				return
 			}
-			mem, _ := memUsage(pid)
-			stat.Gauge("memory").Update(int64(mem))
-			if mem >= memCap {
-				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting: %d > %d (%v)", mem, memCap, p.cmd.Args)
-				log.Info(msg)
+			mem, _ := e.memUsage(pid)
+			e.stat.Gauge("memory").Update(int64(mem))
+			// Aborting process, above memCap
+			if mem >= e.memCap {
+				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
+				log.WithFields(log.Fields{
+					"mem":    mem,
+					"memCap": e.memCap,
+					"args":   p.cmd.Args,
+					"pid":    pid,
+				}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: msg,
@@ -113,11 +132,23 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 				return
 			}
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
-			memUsagePct := math.Min(1.0, float64(mem)/float64(memCap))
+			memUsagePct := math.Min(1.0, float64(mem)/float64(e.memCap))
 			if memUsagePct > reportThresholds[thresholdsIdx] {
-				log.Infof("Increased to %d%% mem_cap utilization (%d / %d) for pid=%v", int(memUsagePct*100), mem, memCap, pid)
-				top, err := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
-				log.Infof("%s\n---\nerr: %v", string(top), err)
+				log.WithFields(
+					log.Fields{
+						"memUsagePct": int(memUsagePct * 100),
+						"mem":         mem,
+						"memCap":      e.memCap,
+						"args":        p.cmd.Args,
+						"pid":         pid,
+					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
+				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+				log.WithFields(
+					log.Fields{
+						"pid": pid,
+						"ps":  string(ps),
+						"err": err,
+					}).Infof("ps after increasing mem_cap utilization for pid %d", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -127,14 +158,60 @@ func (p *osProcess) monitorMem(memCap execer.Memory, stat stats.StatsReceiver) {
 	}
 }
 
+// Query for all sets of (pid, pgid, rss). Given a pid, find its associated pgid.
+// From there, sum the memory of all processes with the same pgid.
+func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
+	str := `
+PID=%d
+PSLIST=$(ps -e -o pid= -o pgid= -o rss= | tr '\n' ';' | sed 's,;$,,')
+echo "
+
+processes=dict()
+memory=dict()
+id=None
+total=0
+for line in \"$PSLIST\".split(';'):
+  pid, pgid, mem = tuple(line.split())
+  if pid == \"$PID\":
+    id = pgid
+  processes.setdefault(pgid, []).append(pid)
+  memory[pid] = mem
+for p in processes.setdefault(id, []):
+  total += int(memory[p])
+print total
+
+" | python
+`
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
+	if usageKB, err := cmd.Output(); err != nil {
+		return 0, err
+	} else {
+		u, err := strconv.Atoi(strings.TrimSpace(string(usageKB)))
+		return execer.Memory(u * 1024), err
+	}
+}
+
+/*
+Wait for the process to finish.
+
+If the command finishes without error return the status COMPLETE and exit Code 0.
+
+If the command fails, and we can get the exit code from the command, return COMPLETE with the failing exit code.
+
+if the command fails and we cannot get the exit code from the command, return FAILED and the error
+that prevented getting the exit code.
+*/
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-
-	top, _ := exec.Command("top", "-u", strconv.Itoa(os.Getuid()), "-bn1").CombinedOutput()
-	log.Infof("Pid=%d exit, current top:\n%s", pid, string(top))
+	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+	log.WithFields(
+		log.Fields{
+			"pid": pid,
+			"ps":  string(ps),
+		}).Infof("Current ps for pid %d", pid)
 
 	if p.result != nil {
 		return *p.result
@@ -142,16 +219,19 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 		p.result = &result
 	}
 	if err == nil {
+		// the command finished without an error
 		result.State = execer.COMPLETE
 		result.ExitCode = 0
-		// TODO(dbentley): set stdout and stderr
+		// stdout and stderr are collected and set by (invoke.go) runner
 		return result
 	}
 	if err, ok := err.(*exec.ExitError); ok {
+		// the command returned an error, if we can get a WaitStatus from the error,
+		// we can get the commands exit code
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
 			result.State = execer.COMPLETE
 			result.ExitCode = status.ExitStatus()
-			// TODO(dbentley): set stdout and stderr
+			// stdout and stderr are collected and set by (invoke.go) runner
 			return result
 		}
 		result.State = execer.FAILED
@@ -172,22 +252,14 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	} else {
 		p.result = &result
 	}
-
 	result.State = execer.FAILED
 	result.ExitCode = -1
 	result.Error = "Aborted."
-	pgid, err := syscall.Getpgid(p.cmd.Process.Pid)
-	if err == nil {
-		err = syscall.Kill(-pgid, 15)
-	}
-	if err != nil {
-		result.Error = "Aborted. Parent only, couldn't kill by pgid."
-	}
-	err = p.cmd.Process.Kill()
-	if err != nil {
-		result.Error = "Aborted. Couldn't kill pgid or parent."
-	}
 
+	err := p.cmd.Process.Kill()
+	if err != nil {
+		result.Error = "Aborted. Couldn't kill process. Will still attempt cleanup."
+	}
 	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
@@ -197,37 +269,11 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	return result
 }
 
-func memUsage(pid int) (execer.Memory, error) {
-	// Query for all sets of (pid, ppid, rss) and create a graph. Given a pid, walk the graph accruing memory.
-	// Note: look at the revision history for previous approaches which seemed inaccurate at times? ex:
-	//   str := "export P=%d; echo $(ps -orss= -p$(echo -n $(pgrep -g $P | tr '\n' ',')$P) | tr '\n' '+') 0 | bc"
-	str := `
-PID=%d
-PSLIST=$(ps -e -o pid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
-echo "
-
-children=dict()
-memory=dict()
-total=0
-for line in \"$PSLIST\".split(';'):
-  pid, ppid, mem = tuple(line.split())
-  children.setdefault(ppid, []).append(pid)
-  memory[pid] = mem
-def walk(p):
-  global total
-  total += int(memory[p])
-  for c in children.setdefault(p, []):
-    walk(c)
-walk(\"$PID\")
-print total
-
-" | python
-`
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
-	if usageKB, err := cmd.Output(); err != nil {
-		return 0, err
-	} else {
-		u, err := strconv.Atoi(strings.Trim(string(usageKB), "\n"))
-		return execer.Memory(u * 1024), err
+// Kill process along with all child processes, assuming no child processes called setpgid
+func cleanupProcs(pgid int) (err error) {
+	log.Infof("Cleaning up pgid %d", pgid)
+	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+		log.Errorf("Error cleaning up after pgid %d: %v", pgid, err)
 	}
+	return err
 }

@@ -107,4 +107,8 @@ service CloudScoot {
     1: InvalidRequest ir,
     2: ScootServerError err,
   )
+  JobStatus KillJob(1: string jobId) throws (
+    1: InvalidRequest ir,
+    2: ScootServerError err,
+    )
 }

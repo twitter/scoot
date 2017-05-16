@@ -259,7 +259,7 @@ func assign(
 		if nodeSt == nil {
 			wasRunning = killableTasks[0]
 			snapshotId = wasRunning.Def.SnapshotID
-			nodeSt = cs.nodes[wasRunning.Runner.nodeId]
+			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeId]
 			killableTasks = killableTasks[1:]
 
 		}
