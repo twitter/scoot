@@ -189,8 +189,8 @@ type jobAddedMsg struct {
 }
 
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
-	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
-	s.stat.Counter("schedJobRequestsCounter").Inc(1)
+	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()	// TODO errata metric - remove if unused
+	s.stat.Counter("schedJobRequestsCounter").Inc(1)  		// TODO errata metric - remove if unused
 
 	job := &sched.Job{
 		Id:  generateJobId(),
@@ -311,7 +311,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
-						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1)
+						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1) // TODO errata metric - remove if unused
 						log.Infof("Job completed but failed to log: %v", j.Job.Id)
 					}
 				})
@@ -510,7 +510,7 @@ func (s *statefulScheduler) killJobs() {
 				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
 				if err != nil {
-					s.stat.Counter("failedTaskSerializeCounter").Inc(1)
+					s.stat.Counter("failedTaskSerializeCounter").Inc(1) // TODO errata metric - remove if unused
 				}
 				//TODO - is this the correct counter?
 				s.stat.Counter("completedTaskCounter").Inc(1)

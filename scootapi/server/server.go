@@ -34,8 +34,8 @@ type Handler struct {
 
 // Implements RunJob Cloud Scoot API
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
-	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
-	h.stat.Counter("runJobRpmCounter").Inc(1)
+	defer h.stat.Latency("runJobLatency_ms").Time().Stop()	// TODO errata metric - remove if unused
+	h.stat.Counter("runJobRpmCounter").Inc(1)		// TODO errata metric - remove if unused
 	return runJob(h.scheduler, def, h.stat)
 }
 

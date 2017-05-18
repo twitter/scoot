@@ -43,7 +43,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
 			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
-			stat.Counter("readUnderlyingCounter").Inc(1)
+			stat.Counter("readUnderlyingCounter").Inc(1)	// TODO errata metric - remove if unused
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return err
@@ -73,8 +73,8 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 		peers = append(peers, "http://"+string(node.Id()))
 	}
 	log.Info("New groupcacheStore peers: ", peers)
-	stat.Counter("peerDiscoveryCounter").Inc(1)
-	stat.Gauge("peerCountGauge").Update(int64(len(peers)))
+	stat.Counter("peerDiscoveryCounter").Inc(1)		// TODO errata metric - remove if unused
+	stat.Gauge("peerCountGauge").Update(int64(len(peers)))	// TODO errata metric - remove if unused
 	return peers
 }
 
@@ -98,23 +98,23 @@ func loop(c *cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group
 // The groupcache lib updates its stats in the background - we need to convert those to our own stat representation.
 // Gauges are expected to fluctuate, counters are expected to only ever increase.
 func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
-	stat.Gauge("mainBytesGauge").Update(cache.CacheStats(groupcache.MainCache).Bytes)
-	stat.Gauge("mainItemsGauge").Update(cache.CacheStats(groupcache.MainCache).Items)
-	stat.Counter("mainGetsCounter").Update(cache.CacheStats(groupcache.MainCache).Gets)
-	stat.Counter("mainHitsCounter").Update(cache.CacheStats(groupcache.MainCache).Hits)
+	stat.Gauge("mainBytesGauge").Update(cache.CacheStats(groupcache.MainCache).Bytes)	// TODO errata metric - remove if unused
+	stat.Gauge("mainItemsGauge").Update(cache.CacheStats(groupcache.MainCache).Items)	// TODO errata metric - remove if unused
+	stat.Counter("mainGetsCounter").Update(cache.CacheStats(groupcache.MainCache).Gets)	// TODO errata metric - remove if unused
+	stat.Counter("mainHitsCounter").Update(cache.CacheStats(groupcache.MainCache).Hits)	// TODO errata metric - remove if unused
 
-	stat.Gauge("hotBytesGauge").Update(cache.CacheStats(groupcache.HotCache).Bytes)
-	stat.Gauge("hotItemsGauge").Update(cache.CacheStats(groupcache.HotCache).Items)
-	stat.Counter("hotGetsCounter").Update(cache.CacheStats(groupcache.HotCache).Gets)
-	stat.Counter("hotHitsCounter").Update(cache.CacheStats(groupcache.HotCache).Hits)
+	stat.Gauge("hotBytesGauge").Update(cache.CacheStats(groupcache.HotCache).Bytes)		// TODO errata metric - remove if unused
+	stat.Gauge("hotItemsGauge").Update(cache.CacheStats(groupcache.HotCache).Items)		// TODO errata metric - remove if unused
+	stat.Counter("hotGetsCounter").Update(cache.CacheStats(groupcache.HotCache).Gets)	// TODO errata metric - remove if unused
+	stat.Counter("hotHitsCounter").Update(cache.CacheStats(groupcache.HotCache).Hits)	// TODO errata metric - remove if unused
 
-	stat.Counter("cacheGetCounter").Update(cache.Stats.Gets.Get())
-	stat.Counter("cacheHitCounter").Update(cache.Stats.CacheHits.Get())
-	stat.Counter("cachePeerGetsCounter").Update(cache.Stats.PeerLoads.Get())
-	stat.Counter("cachePeerErrCounter").Update(cache.Stats.PeerErrors.Get())
-	stat.Counter("cacheLocalLoadCounter").Update(cache.Stats.LocalLoads.Get())
-	stat.Counter("cacheLocalLoadErrCounter").Update(cache.Stats.LocalLoadErrs.Get())
-	stat.Counter("cacheIncomingRequestsCounter").Update(cache.Stats.ServerRequests.Get())
+	stat.Counter("cacheGetCounter").Update(cache.Stats.Gets.Get())				// TODO errata metric - remove if unused
+	stat.Counter("cacheHitCounter").Update(cache.Stats.CacheHits.Get())			// TODO errata metric - remove if unused
+	stat.Counter("cachePeerGetsCounter").Update(cache.Stats.PeerLoads.Get())		// TODO errata metric - remove if unused
+	stat.Counter("cachePeerErrCounter").Update(cache.Stats.PeerErrors.Get())		// TODO errata metric - remove if unused
+	stat.Counter("cacheLocalLoadCounter").Update(cache.Stats.LocalLoads.Get())		// TODO errata metric - remove if unused
+	stat.Counter("cacheLocalLoadErrCounter").Update(cache.Stats.LocalLoadErrs.Get())	// TODO errata metric - remove if unused
+	stat.Counter("cacheIncomingRequestsCounter").Update(cache.Stats.ServerRequests.Get())	// TODO errata metric - remove if unused
 }
 
 type groupcacheStore struct {
@@ -131,7 +131,7 @@ func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
 	if err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
 		return nil, err
 	}
-	s.stat.Counter("readOkCounter").Inc(1)
+	s.stat.Counter("readOkCounter").Inc(1) // TODO errata metric - remove if unused
 	return ioutil.NopCloser(bytes.NewReader(data)), nil
 }
 
@@ -142,7 +142,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	if err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{})); err != nil {
 		return false, nil
 	}
-	s.stat.Counter("existsOkCounter").Inc(1)
+	s.stat.Counter("existsOkCounter").Inc(1)	// TODO errata metric - remove if unused
 	return true, nil
 }
 
@@ -160,6 +160,6 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	}
 
 	s.cache.PopulateCache(name, b)
-	s.stat.Counter("writeOkCounter").Inc(1)
+	s.stat.Counter("writeOkCounter").Inc(1)	// TODO errata metric - remove if unused
 	return nil
 }

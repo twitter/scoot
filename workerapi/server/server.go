@@ -85,8 +85,8 @@ func (h *handler) stats() {
 			}
 			h.stat.Gauge("activeRunsGauge").Update(numActive)
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
-			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
+			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)	// TODO errata metric - remove if unused
+			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)	// TODO errata metric - remove if unused
 			h.stat.Gauge("uptimeGauge_ms").Update(int64(uptime / time.Millisecond))
 			h.mu.Unlock()
 		}
@@ -128,7 +128,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 
 // Implements worker.thrift Worker.Run interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
-	defer h.stat.Latency("runLatency_ms").Time().Stop()
+	defer h.stat.Latency("runLatency_ms").Time().Stop() // TODO errata metric - remove if unused
 	h.stat.Counter("runs").Inc(1)
 	log.Infof("Worker trying to run cmd: %s", spew.Sdump(cmd))
 

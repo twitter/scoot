@@ -110,7 +110,7 @@ func (r *taskRunner) run() error {
 		r.stat.Counter("completedTaskCounter").Inc(1)
 		return nil
 	} else {
-		r.stat.Counter("failedTaskSagaCounter").Inc(1)
+		r.stat.Counter("failedTaskSagaCounter").Inc(1) // TODO errata metric - remove if unused
 		return taskErr
 	}
 }
@@ -237,7 +237,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	if st != nil {
 		statusAsBytes, err = workerapi.SerializeProcessStatus(*st)
 		if err != nil {
-			r.stat.Counter("failedTaskSerializeCounter").Inc(1)
+			r.stat.Counter("failedTaskSerializeCounter").Inc(1) // TODO errata metric - remove if unused
 			return err
 		}
 	}
