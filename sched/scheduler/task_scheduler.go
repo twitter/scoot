@@ -148,10 +148,12 @@ Loop:
 			// Also keep track of how many total tasks were requested for these jobs and how many are currently running.
 			numTasks := 0
 			numRunning := 0
+			numCompleted := 0
 			unsched := []*taskState{}
 			for _, j := range requestors[def.Requestor] {
 				if j.Job.Def.Tag == def.Tag {
 					numTasks += len(j.Tasks)
+					numCompleted += j.TasksCompleted
 					numRunning += j.TasksRunning
 					unsched = append(unsched, j.getUnScheduledTasks()...)
 					// Stop checking for unscheduled tasks if they exceed available nodes (we'll cap it below).
@@ -180,7 +182,8 @@ Loop:
 			}
 
 			if numSchedulable > 0 {
-				log.Infof("Job:%s, priority:%d, numSchedulable:%d, numRunning:%d", job.Job.Id, p, numSchedulable, numRunning)
+				log.Infof("Job:%s, priority:%d, numTasks:%d, numSchedulable:%d, numRunning:%d, numCompleted:%d",
+					job.Job.Id, p, numTasks, numSchedulable, numRunning, numCompleted)
 				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d, largeJobMaxNodes:%d) - numRunning:%d",
 					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes, numRunning)
 				tasks = append(tasks, unsched[0:numSchedulable]...)
@@ -237,13 +240,15 @@ LoopRemaining:
 				nTasks := min(numIdle, nodeQuota, len(taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
-					log.Infof("Assigning %d additional idle nodes across tasks with priority=%d (numIdle was %d)", nTasks, p, numIdle)
+					log.Infof("Assigning %d additional idle nodes for each remaining jobId=%s tasks with priority=%d (numIdle was %d)",
+						nTasks, taskList[0].JobId, p, numIdle)
 					numIdle -= nTasks
 					tasks = append(tasks, taskList[:nTasks]...)
-					taskLists[i] = taskList[nTasks:]
 					// Remove jobs that have run out of runnable tasks.
-					if len(taskLists[i]) == 0 {
+					if len(taskLists[i])-nTasks == 0 {
 						(*remaining)[p] = append(taskLists[:i], taskLists[i+1:]...)
+					} else {
+						(*remaining)[p][i] = taskList[nTasks:]
 					}
 				}
 			}
@@ -312,7 +317,7 @@ func assign(
 		nodeId := nodeSt.node.Id()
 		nodeGroups[snapshotId].busy[nodeId] = nodeSt
 		delete(nodeGroups[snapshotId].idle, nodeId)
-		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
+		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, cross-job-progress=%d/%d",
 			task.JobId, task.TaskId, nodeId, len(assignments), len(tasks))
 		stat.Counter("scheduledTasksCounter").Inc(1)
 	}
