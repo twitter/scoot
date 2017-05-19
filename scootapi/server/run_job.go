@@ -28,7 +28,7 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.
 	id, err := scheduler.ScheduleJob(jobDef)
 
 	if err != nil {
-		return nil, scoot.NewCanNotScheduleNow()
+		return nil, err //TODO: use or delete scoot.NewCanNotScheduleNow()
 	}
 
 	return &scoot.JobId{ID: id}, nil

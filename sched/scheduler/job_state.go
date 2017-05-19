@@ -21,7 +21,6 @@ type jobState struct {
 
 // Contains all the information for a specified task
 type taskState struct {
-	OwnerJob      *jobState
 	JobId         string
 	TaskId        string
 	Def           sched.TaskDefinition
@@ -47,7 +46,6 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 
 	for _, taskDef := range job.Def.Tasks {
 		task := &taskState{
-			OwnerJob:      j,
 			JobId:         job.Id,
 			TaskId:        taskDef.TaskID,
 			Def:           taskDef,
@@ -117,11 +115,14 @@ func (j *jobState) taskCompleted(taskId string) {
 }
 
 // Update JobState to reflect that an error has occurred running this Task
-func (j *jobState) errorRunningTask(taskId string, err error) {
+func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = sched.NotStarted
 	taskState.TimeStarted = nilTime
 	j.TasksRunning--
+	if preempted {
+		taskState.NumTimesTried--
+	}
 }
 
 // Returns the Current Job Status

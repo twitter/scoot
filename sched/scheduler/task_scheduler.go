@@ -1,16 +1,17 @@
 package scheduler
 
 import (
+	"math"
 	"sort"
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/sched"
 )
 
 type taskAssignment struct {
-	node    cluster.Node
+	nodeSt  *nodeState
 	task    *taskState
 	running *taskState
 }
@@ -28,9 +29,23 @@ func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.Before(k[j]
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[string][]*jobState) (
+func getTaskAssignments(cs *clusterState, jobs []*jobState,
+	requestors map[string][]*jobState, config *SchedulerConfig, stat stats.StatsReceiver) (
 	[]taskAssignment, map[string]*nodeGroup,
 ) {
+	if stat == nil {
+		stat = stats.NilStatsReceiver()
+	}
+	defer stat.Latency("schedTaskAssignmentsLatency_ms").Time().Stop()
+
+	if config == nil {
+		config = &SchedulerConfig{
+			NumConfiguredNodes:      DefaultNumConfiguredNodes,
+			SoftMaxSchedulableTasks: DefaultSoftMaxSchedulableTasks,
+			LargeJobSoftMaxNodes:    DefaultLargeJobSoftMaxNodes,
+		}
+	}
+
 	// Exit if there are no unscheduled tasks.
 	totalUnschedTasks := 0
 	for _, j := range jobs {
@@ -66,15 +81,23 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 		numKillableTasks[p] += job.TasksRunning
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
+	stat.Gauge("priority0JobsGauge").Update(int64(len(priorityJobs[sched.P0])))
+	stat.Gauge("priority1JobsGauge").Update(int64(len(priorityJobs[sched.P1])))
+	stat.Gauge("priority2JobsGauge").Update(int64(len(priorityJobs[sched.P2])))
+	stat.Gauge("priority3JobsGauge").Update(int64(len(priorityJobs[sched.P3])))
 
 	// List killable tasks first by ascending priority and within that, by ascending execution duration.
 	//
-	// An array of *tasksState ordered by kill preference. Omits priority=3 since nothing should kill those tasks.
+	// An array of in-progress *tasksState ordered by kill preference. Omits priority=3 since nothing should kill those tasks.
 	killableTasks := KillableTasks{}
 	for p := range []sched.Priority{sched.P0, sched.P1, sched.P2} {
 		ts := KillableTasks{}
 		for _, j := range priorityJobs[p] {
-			copy(ts, j.Tasks)
+			for _, t := range j.Tasks {
+				if t.Status == sched.InProgress {
+					ts = append(ts, t)
+				}
+			}
 		}
 		sort.Sort(ts)
 		killableTasks = append(killableTasks, ts...)
@@ -83,20 +106,24 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState, requestors map[strin
 	// Assign each job the minimum number of nodes until idle nodes, and killable nodes if allowed, are exhausted.
 	// Priority3 jobs consume all available idle+killable nodes and starve jobs of a lower priority
 	// Priority2 jobs consume all remaining idle+killable nodes up to a limit, then give lower priority jobs a chance.
-	// Priority1 jobs consume all remaining idle nodes up to a limit, and are preferred of Priority0 jobs.
+	// Priority1 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority0 jobs.
 	// Priority0 jobs consume all remaining idle nodes up to a limit.
 	//
 	var tasks []*taskState
-	nk := numKillableTasks
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
 	numIdle := cs.numIdle
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	requestorTagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
 	// Only priority=3 and priority=2 jobs can kill other tasks (note, killable tasks are double counted here).
+	nk := numKillableTasks
 	numKillableCounter := []int{0, 0, (nk[0] + nk[1]), (nk[0] + nk[1] + nk[2])}
 	// An array indexed by priority. The value is a list of jobs, each with a list of tasks yet to be scheduled.
-	remaining := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+	// 'Optional' means tasks are associated with jobs that are already running with some minimum node quota.
+	// 'Required' means tasks are associated with jobs that haven't yet reach a minimum node quota.
+	// This distinction makes sure we don't starve lower priority jobs in the second-pass 'remaining' loop.
+	remainingOptional := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+	remainingRequired := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
 Loop:
 	for _, p := range []sched.Priority{sched.P3, sched.P2, sched.P1, sched.P0} {
 		for _, job := range priorityJobs[p] {
@@ -126,9 +153,9 @@ Loop:
 				if j.Job.Def.Tag == def.Tag {
 					numTasks += len(j.Tasks)
 					numRunning += j.TasksRunning
-					unsched = append(j.getUnScheduledTasks(), unsched...)
+					unsched = append(unsched, j.getUnScheduledTasks()...)
 					// Stop checking for unscheduled tasks if they exceed available nodes (we'll cap it below).
-					if len(unsched) > numAvailNodes {
+					if len(unsched) >= numAvailNodes {
 						break
 					}
 				}
@@ -139,7 +166,7 @@ Loop:
 			}
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
-			numScaledTasks := ceil(float32(numTasks) * NodeScaleFactor)
+			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor())
 			numSchedulable := 0
 			if p == sched.P3 {
 				// Priority=3 jobs always get the maximum number of available nodes, as needed, and in fifo order.
@@ -147,14 +174,15 @@ Loop:
 			} else {
 				// Get the lesser of the number of unscheduled tasks and number of available nodes.
 				// Further, get the lesser of that, the healthy task load, and default number of nodes to run a large job.
-				numSchedulable = min(len(unsched), numAvailNodes, numScaledTasks, LargeJobMaxNodes)
+				numSchedulable = min(len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes)
 				// The number of tasks we can schedule is reduced by the number of tasks we're already running.
 				numSchedulable = max(0, numSchedulable-numRunning)
 			}
+
 			if numSchedulable > 0 {
 				log.Infof("Job:%s, priority:%d, numSchedulable:%d, numRunning:%d", job.Job.Id, p, numSchedulable, numRunning)
 				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d, largeJobMaxNodes:%d) - numRunning:%d",
-					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, LargeJobMaxNodes, numRunning)
+					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes, numRunning)
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the idle pool, and the number we must take from killable nodes.
 				numFromIdle := min(numIdle, numSchedulable)
@@ -172,26 +200,36 @@ Loop:
 					// For priority=2, deduct from the p2 counter (and the p1 and p0 counters aren't used).
 					numKillableCounter[sched.P2] -= numFromKill
 				}
-			}
 
-			// We are unable to assign more nodes at this priority.
-			// Update remaining - append an array containing all unscheduled tasks for this requestor/tag combination.
-			remaining[p] = append(remaining[p], unsched[numSchedulable:])
+				// We are unable to assign more nodes at this priority.
+				// Append an array containing all unscheduled tasks for this requestor/tag combination.
+				//
+				// We have not met the minimum quota, append to the 'required' array.
+				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:])
+			} else {
+				// We have met the minimum quota, append to the 'optional' array.
+				remainingOptional[p] = append(remainingOptional[p], unsched[numSchedulable:])
+			}
 		}
 	}
 
 	// If there are spare idle nodes, priority=3 jobs have been satisfied already.
-	// Distribute a minimum of 50% idle to priority=2, and 25% each to priority=1 and priority=0
-	// TODO(jschiller) percentages should be configurable. Not super important as this will be infrequently exercised.
+	// Distribute a minimum of 75% idle to priority=2, 20% to priority=1 and 5% to priority=0
+	// TODO(jschiller) percentages should be configurable.
 LoopRemaining:
-	// First loop using the above percentages, and next, distribute remaining idle nodes to the highest priority tasks.
-	for _, pq := range [][]float32{[]float32{.5, .25, .25}, []float32{1, 1, 1}} {
+	// First, loop using the above percentages, and next, distribute remaining idle nodes to the highest priority tasks.
+	// Do this twice, once for 'required' tasks and again for 'optional' tasks.
+	for i, pq := range [][]float32{[]float32{.05, .2, .75}, []float32{1, 1, 1}, []float32{.05, .2, .75}, []float32{1, 1, 1}} {
+		remaining := &remainingRequired
+		if i > 1 {
+			remaining = &remainingOptional
+		}
 		for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
 			if numIdle == 0 {
 				break LoopRemaining
 			}
 			// The remaining tasks, bucketed by job, for a given priority.
-			taskLists := remaining[p]
+			taskLists := (*remaining)[p]
 			// Distribute the allowed number of idle nodes evenly across the bucketed jobs for a given priority.
 			nodeQuota := ceil((float32(numIdle) * pq[p]) / float32(len(taskLists)))
 			for i, taskList := range taskLists {
@@ -199,13 +237,13 @@ LoopRemaining:
 				nTasks := min(numIdle, nodeQuota, len(taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
-					log.Infof("Assigning %d additional idle nodes to tasks with priority=%d", nTasks, p)
+					log.Infof("Assigning %d additional idle nodes across tasks with priority=%d (numIdle was %d)", nTasks, p, numIdle)
 					numIdle -= nTasks
 					tasks = append(tasks, taskList[:nTasks]...)
 					taskLists[i] = taskList[nTasks:]
 					// Remove jobs that have run out of runnable tasks.
 					if len(taskLists[i]) == 0 {
-						remaining[p] = append(taskLists[:i], taskLists[i+1:]...)
+						(*remaining)[p] = append(taskLists[:i], taskLists[i+1:]...)
 					}
 				}
 			}
@@ -220,7 +258,7 @@ LoopRemaining:
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random node from the idle pools of nodes associated with other snapshotIds.
-	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...))
+	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
 	if len(assignments) == len(tasks) {
 		log.Infof("Scheduled all tasks (%d)", len(tasks))
 	} else {
@@ -237,6 +275,7 @@ func assign(
 	killableTasks KillableTasks,
 	nodeGroups map[string]*nodeGroup,
 	snapIds []string,
+	stat stats.StatsReceiver,
 ) (assignments []taskAssignment) {
 	for _, task := range tasks {
 		var snapshotId string
@@ -262,8 +301,11 @@ func assign(
 			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeId]
 			killableTasks = killableTasks[1:]
 
+			stat.Counter("preemptedTasksCounter").Inc(1)
+			log.Infof("jobId=%s, taskId=%s will preempt node=%s running jobId=%s, taskId=%s",
+				task.JobId, task.TaskId, nodeSt.node.Id(), wasRunning.JobId, wasRunning.TaskId)
 		}
-		assignments = append(assignments, taskAssignment{node: nodeSt.node, task: task, running: wasRunning})
+		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
 		if _, ok := nodeGroups[snapshotId]; !ok {
 			nodeGroups[snapshotId] = newNodeGroup()
 		}
@@ -271,7 +313,31 @@ func assign(
 		nodeGroups[snapshotId].busy[nodeId] = nodeSt
 		delete(nodeGroups[snapshotId].idle, nodeId)
 		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, progress=%d/%d",
-			task.JobId, task.TaskId, nodeId, len(assignments), len(assignments)+len(tasks))
+			task.JobId, task.TaskId, nodeId, len(assignments), len(tasks))
+		stat.Counter("scheduledTasksCounter").Inc(1)
 	}
 	return assignments
+}
+
+// Helpers.
+func min(num int, nums ...int) int {
+	m := num
+	for _, n := range nums {
+		if n < m {
+			m = n
+		}
+	}
+	return m
+}
+func max(num int, nums ...int) int {
+	m := num
+	for _, n := range nums {
+		if n > m {
+			m = n
+		}
+	}
+	return m
+}
+func ceil(num float32) int {
+	return int(math.Ceil(float64(num)))
 }

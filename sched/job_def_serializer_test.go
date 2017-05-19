@@ -44,7 +44,6 @@ func Test_SerializeNilJob(t *testing.T) {
 func makeFixedSampleJob() *Job {
 	job := Job{}
 	jobId := "jobID"
-	taskId := "task0"
 	job.Id = jobId
 	jobDef := JobDefinition{}
 	jobDef.Tasks = []TaskDefinition{}
@@ -52,14 +51,16 @@ func makeFixedSampleJob() *Job {
 	taskDefinition := TaskDefinition{}
 	taskDefinition.SnapshotID = "snapshotIDVal"
 	taskDefinition.Timeout = 3
-	taskDefinition.TaskID = taskId
+	taskDefinition.TaskID = "taskId0"
 	taskDefinition.JobID = jobId
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
 	envVars["envVar1"] = "var2Value"
 	envVars["envVar2"] = "var2Value"
-	args := []string{"arg1", "arg2"}
-	taskDefinition.Argv = args
+	taskDefinition.Argv = []string{"arg1", "arg2"}
+	jobDef.Tasks = append(jobDef.Tasks, taskDefinition)
+	taskDefinition.TaskID = "taskId1"
+	taskDefinition.Argv = []string{"argA", "argB"}
 	jobDef.Tasks = append(jobDef.Tasks, taskDefinition)
 	job.Def = jobDef
 

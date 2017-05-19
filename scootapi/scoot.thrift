@@ -59,7 +59,8 @@ struct JobDefinition {
   3: optional i32 defaultTaskTimeoutMs,
   # Priority levels are defined in docs.
   4: optional i32 priority
-  # Tag allows related jobs to be grouped together. Set to JobId by default.
+  # Tag allows related jobs to be grouped together (all using the same priority as the first seen job).
+  # Set to JobId by default.
   5: optional string tag
   # Basis is used to replace an ancestor of this job (keep only the latest job for a basis).
   6: optional string basis

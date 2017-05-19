@@ -3,7 +3,6 @@ package scheduler
 import (
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -19,48 +18,20 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
-//TODO(jschiller): these all temporary and need to to be configurable from CLI.
-
 // Number of different requestors that can run jobs at any given time.
-var MaxRequestors = 100
+const DefaultMaxRequestors = 100
 
 // Number of jobs any single requestor can have.
-var MaxJobsPerRequestor = 100
+const DefaultMaxJobsPerRequestor = 100
 
 // Expected number of nodes. Should roughly correspond with the actual number of healthy nodes.
-var NumConfiguredNodes = 2730
+const DefaultNumConfiguredNodes = 100
 
 // A reasonable maximum number of tasks we'd expect to queue.
-var MaxSchedulableTasks = 50000
-
-// Used to calculate how many tasks a job can run without adversely affecting other jobs.
-var NodeScaleFactor = float32(NumConfiguredNodes) / float32(MaxSchedulableTasks)
+const DefaultSoftMaxSchedulableTasks = 10000
 
 // The maximum number of nodes required to run a 'large' job in an acceptable amount of time.
-var LargeJobMaxNodes = 250
-
-// Helpers.
-func min(num int, nums ...int) int {
-	m := num
-	for _, n := range nums {
-		if n < m {
-			m = n
-		}
-	}
-	return m
-}
-func max(num int, nums ...int) int {
-	m := num
-	for _, n := range nums {
-		if n > m {
-			m = n
-		}
-	}
-	return m
-}
-func ceil(num float32) int {
-	return int(math.Ceil(float64(num)))
-}
+const DefaultLargeJobSoftMaxNodes = 50
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -82,14 +53,24 @@ func ceil(num float32) int {
 //     how long to wait between runner status queries to determine [init] status.
 
 type SchedulerConfig struct {
-	MaxRetriesPerTask    int
-	DebugMode            bool
-	RecoverJobsOnStartup bool
-	DefaultTaskTimeout   time.Duration
-	RunnerOverhead       time.Duration
-	RunnerRetryTimeout   time.Duration
-	RunnerRetryInterval  time.Duration
-	ReadyFnBackoff       time.Duration
+	MaxRetriesPerTask       int
+	DebugMode               bool
+	RecoverJobsOnStartup    bool
+	DefaultTaskTimeout      time.Duration
+	RunnerOverhead          time.Duration
+	RunnerRetryTimeout      time.Duration
+	RunnerRetryInterval     time.Duration
+	ReadyFnBackoff          time.Duration
+	MaxRequestors           int
+	MaxJobsPerRequestor     int
+	NumConfiguredNodes      int
+	SoftMaxSchedulableTasks int
+	LargeJobSoftMaxNodes    int
+}
+
+// Used to calculate how many tasks a job can run without adversely affecting other jobs.
+func (s *SchedulerConfig) GetNodeScaleFactor() float32 {
+	return float32(s.NumConfiguredNodes) / float32(s.SoftMaxSchedulableTasks)
 }
 
 type RunnerFactory func(node cluster.Node) runner.Service
@@ -105,20 +86,13 @@ type RunnerFactory func(node cluster.Node) runner.Service
 // The callbacks are executed as part of the scheduler loop.  They therefore can
 // safely read & modify the scheduler state.
 type statefulScheduler struct {
+	config        *SchedulerConfig
 	sagaCoord     saga.SagaCoordinator
 	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
 	checkJobCh    chan jobCheckMsg
 	addJobCh      chan jobAddedMsg
 	killJobCh     chan jobKillRequest
-
-	// Scheduler config
-	maxRetriesPerTask   int
-	defaultTaskTimeout  time.Duration
-	runnerRetryTimeout  time.Duration
-	runnerRetryInterval time.Duration
-	runnerOverhead      time.Duration
-	readyFnBackoff      time.Duration
 
 	// Scheduler State
 	clusterState   *clusterState
@@ -194,19 +168,30 @@ func NewStatefulScheduler(
 		nodeReadyFn = nil
 	}
 
+	if config.MaxRequestors == 0 {
+		config.MaxRequestors = DefaultMaxRequestors
+	}
+	if config.MaxJobsPerRequestor == 0 {
+		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
+	}
+	if config.NumConfiguredNodes == 0 {
+		config.NumConfiguredNodes = DefaultNumConfiguredNodes
+	}
+	if config.SoftMaxSchedulableTasks == 0 {
+		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
+	}
+	if config.LargeJobSoftMaxNodes == 0 {
+		config.LargeJobSoftMaxNodes = DefaultLargeJobSoftMaxNodes
+	}
+
 	sched := &statefulScheduler{
+		config:        &config,
 		sagaCoord:     sc,
 		runnerFactory: rf,
 		asyncRunner:   async.NewRunner(),
 		checkJobCh:    make(chan jobCheckMsg, 1),
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
-
-		maxRetriesPerTask:   config.MaxRetriesPerTask,
-		defaultTaskTimeout:  config.DefaultTaskTimeout,
-		runnerRetryTimeout:  config.RunnerRetryTimeout,
-		runnerRetryInterval: config.RunnerRetryInterval,
-		runnerOverhead:      config.RunnerOverhead,
 
 		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),
 		inProgressJobs: make([]*jobState, 0),
@@ -233,7 +218,7 @@ func NewStatefulScheduler(
 }
 
 type jobCheckMsg struct {
-	jobDef   sched.JobDefinition
+	jobDef   *sched.JobDefinition
 	resultCh chan error
 }
 
@@ -250,7 +235,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 
 	checkResultCh := make(chan error, 1)
 	s.checkJobCh <- jobCheckMsg{
-		jobDef:   jobDef,
+		jobDef:   &jobDef,
 		resultCh: checkResultCh,
 	}
 	err := <-checkResultCh
@@ -280,9 +265,8 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 		return "", err
 	}
 
-	log.Infof("Queueing job request: %v", jobDef) //FIXME: tmp
-	// log.Infof("Queueing job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
-	// 	jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
+	log.Infof("Queueing job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
 	s.stat.Counter("schedJobsCounter").Inc(1)
 	s.addJobCh <- jobAddedMsg{
 		job:  job,
@@ -349,12 +333,35 @@ checkLoop:
 		select {
 		case checkJobMsg := <-s.checkJobCh:
 			var err error
-			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= MaxRequestors {
-				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, MaxRequestors)
-			} else if len(jobs) >= MaxJobsPerRequestor {
-				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, MaxJobsPerRequestor)
+			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
+				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)
+			} else if len(jobs) >= s.config.MaxJobsPerRequestor {
+				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxJobsPerRequestor)
 			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P3 {
 				err = fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
+			} else {
+				seenTasks := map[string]bool{}
+				for _, t := range checkJobMsg.jobDef.Tasks {
+					if _, ok := seenTasks[t.TaskID]; ok {
+						err = fmt.Errorf("Invalid dup taskID %s", t.TaskID)
+						break
+					}
+					seenTasks[t.TaskID] = true
+				}
+				if _, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; ok && err == nil {
+					// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
+					// Not an error since we can consider priority to be a suggestion which we'll choose to ignore.
+					for _, js := range s.requestorMap[checkJobMsg.jobDef.Requestor] {
+						if js.Job.Def.Tag == checkJobMsg.jobDef.Tag &&
+							js.Job.Def.Basis != checkJobMsg.jobDef.Basis &&
+							js.Job.Def.Priority != checkJobMsg.jobDef.Priority {
+							m := checkJobMsg
+							log.Infof("Overriding job priority %d to match previous requestor/tag priority: "+
+								"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+								js.Job.Def.Priority, m.jobDef.Requestor, m.jobDef.Tag, m.jobDef.Basis, m.jobDef.Priority, len(m.jobDef.Tasks))
+						}
+					}
+				}
 			}
 			checkJobMsg.resultCh <- err
 		default:
@@ -463,49 +470,53 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 // figures out which tasks to schedule next and on which worker and then runs them
 func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap)
+	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, s.config, s.stat)
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
 	}
 	for _, ta := range taskAssignments {
 
 		// Set up variables for async functions & callback
-		jobId := ta.task.JobId
-		taskId := ta.task.TaskId
-		taskDef := ta.task.Def
+		task := ta.task
+		nodeSt := ta.nodeSt
+		nodeId := nodeSt.node.Id()
+		jobId := task.JobId
+		taskId := task.TaskId
+		taskDef := task.Def
 		jobState := s.getJob(jobId)
 		sa := jobState.Saga
-		nodeId := ta.node.Id()
-		rs := s.runnerFactory(ta.node)
+		rs := s.runnerFactory(nodeSt.node)
 
-		preventRetries := bool(ta.task.NumTimesTried >= s.maxRetriesPerTask)
+		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
 		// This task is co-opting the node for some other running task, abort that task.
 		if ta.running != nil {
 			// Send the signal to abort whatever is currently running on the node we're about to co-opt.
 			rt := ta.running
 			endSagaTask := false
+			flaky := false
+			preempted := true
 			rt.TaskRunner.abortCh <- endSagaTask
 			msg := fmt.Sprintf("jobId:%s taskId:%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
 			log.Infof(msg)
 			// Update jobState and clusterState here instead of in the async handler below.
-			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, errors.New(msg))
-			s.clusterState.taskCompleted(nodeId, rt.TaskId, false)
+			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, errors.New(msg), preempted)
+			s.clusterState.taskCompleted(nodeId, flaky)
 		}
 
 		// Mark Task as Started in the cluster
-		s.clusterState.taskScheduled(nodeId, taskId, taskDef.SnapshotID)
-		log.Infof("job:%s, task:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
+		s.clusterState.taskScheduled(nodeId, jobId, taskId, taskDef.SnapshotID)
+		log.Infof("jobId:%s, taskId:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
 
 		tRunner := &taskRunner{
 			saga:   sa,
 			runner: rs,
 			stat:   s.stat,
 
-			defaultTaskTimeout:    s.defaultTaskTimeout,
-			runnerRetryTimeout:    s.runnerRetryTimeout,
-			runnerRetryInterval:   s.runnerRetryInterval,
-			runnerOverhead:        s.runnerOverhead,
+			defaultTaskTimeout:    s.config.DefaultTaskTimeout,
+			runnerRetryTimeout:    s.config.RunnerRetryTimeout,
+			runnerRetryInterval:   s.config.RunnerRetryInterval,
+			runnerOverhead:        s.config.RunnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
 			jobId:  jobId,
@@ -522,12 +533,16 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.asyncRunner.RunAsync(
 			tRunner.run,
 			func(err error) {
-				if jobState.getTask(taskId).Status != sched.InProgress {
-					log.Info("Task preempted, skipping asyncRun cleanup of node:", nodeId, ", job:", jobId, ", task:", taskId)
+				// Tasks from the same job or related jobs will never preempt each other,
+				//  so we only need to check jobId to determine preemption.
+				if nodeSt.runningJob != jobId {
+					log.Infof("Task preempted on node %s. jobId:%s taskId:%s --> jobId:%s taskId:%s. Skipping asyncRun cleanup",
+						nodeId, jobId, taskId, nodeSt.runningJob, nodeSt.runningTask)
 					return
 				}
 
 				flaky := false
+				preempted := false
 				aborted := (err != nil && err.(*taskError).st.State == runner.ABORTED)
 				if err != nil {
 					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
@@ -540,10 +555,10 @@ func (s *statefulScheduler) scheduleTasks() {
 						err = nil
 					} else {
 						if preventRetries {
-							msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.maxRetriesPerTask)
+							msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.config.MaxRetriesPerTask)
 							err = nil
 						} else {
-							jobState.errorRunningTask(taskId, err)
+							jobState.errorRunningTask(taskId, err, preempted)
 						}
 					}
 					log.WithFields(log.Fields{
@@ -586,7 +601,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					"taskId": taskId,
 					"nodeId": nodeId,
 				}).Info("Freeing node, removed job.")
-				s.clusterState.taskCompleted(nodeId, taskId, flaky)
+				s.clusterState.taskCompleted(nodeId, flaky)
 
 				total := 0
 				completed := 0

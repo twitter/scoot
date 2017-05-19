@@ -46,7 +46,7 @@ type TaskDef struct {
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
-	log.Info("Running on scoot", args)
+	log.Info("Running on scoot, args:", args)
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
@@ -88,17 +88,19 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 		jobDef.Tasks = []*scoot.TaskDefinition{}
 		for _, jsonTask := range jsonJob.Tasks {
+			jt := jsonTask
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
-			taskDef.Command.Argv = jsonTask.Args
-			taskDef.SnapshotId = &jsonTask.SnapshotID
+			taskDef.Command.Argv = jt.Args
+			taskDef.SnapshotId = &jt.SnapshotID
+			taskDef.TaskId = &jt.TaskID
 			jobDef.Tasks = append(jobDef.Tasks, taskDef)
-			taskDef.TaskId = &jsonTask.TaskID
-			if jsonTask.TimeoutMs > 0 {
-				taskDef.TimeoutMs = &jsonTask.TimeoutMs
+			if jt.TimeoutMs > 0 {
+				taskDef.TimeoutMs = &jt.TimeoutMs
 			}
 		}
 	}
+
 	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
