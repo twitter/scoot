@@ -615,7 +615,8 @@ func (s *statefulScheduler) scheduleTasks() {
 					"jobId": jobId,
 				}).Info(" #running:", jobState.TasksRunning, " #completed:", jobState.TasksCompleted,
 					" #total:", len(jobState.Tasks), " isdone:", (jobState.TasksCompleted == len(jobState.Tasks)))
-				log.Info("Jobs summary -> running:", running, " completed:", completed, " total:", total, " alldone:", (completed == total))
+				log.Info("Jobs task summary -> running:", running, " completed:", completed,
+					" total:", total, " alldone:", (completed == total))
 			})
 	}
 }

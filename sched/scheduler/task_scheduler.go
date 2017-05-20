@@ -232,23 +232,25 @@ LoopRemaining:
 				break LoopRemaining
 			}
 			// The remaining tasks, bucketed by job, for a given priority.
-			taskLists := (*remaining)[p]
+			taskLists := &(*remaining)[p]
 			// Distribute the allowed number of idle nodes evenly across the bucketed jobs for a given priority.
-			nodeQuota := ceil((float32(numIdle) * pq[p]) / float32(len(taskLists)))
-			for i, taskList := range taskLists {
+			nodeQuota := ceil((float32(numIdle) * pq[p]) / float32(len(*taskLists)))
+			for i := 0; i < len(*taskLists); i++ {
+				taskList := &(*taskLists)[i]
 				// Noting that we use ceil() above, we may use less quota than assigned if it's unavailable or unneeded.
-				nTasks := min(numIdle, nodeQuota, len(taskList))
+				nTasks := min(numIdle, nodeQuota, len(*taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
 					log.Infof("Assigning %d additional idle nodes for each remaining jobId=%s tasks with priority=%d (numIdle was %d)",
-						nTasks, taskList[0].JobId, p, numIdle)
+						nTasks, (*taskList)[0].JobId, p, numIdle)
 					numIdle -= nTasks
-					tasks = append(tasks, taskList[:nTasks]...)
+					tasks = append(tasks, (*taskList)[:nTasks]...)
 					// Remove jobs that have run out of runnable tasks.
-					if len(taskLists[i])-nTasks == 0 {
-						(*remaining)[p] = append(taskLists[:i], taskLists[i+1:]...)
+					if len(*taskList)-nTasks > 0 {
+						*taskList = (*taskList)[nTasks:]
 					} else {
-						(*remaining)[p][i] = taskList[nTasks:]
+						*taskLists = append((*taskLists)[:i], (*taskLists)[i+1:]...)
+						i--
 					}
 				}
 			}
