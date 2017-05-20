@@ -64,32 +64,39 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 	jobs := make([]string, numJobs)
 
 	// (first job will test data)
+	t1, t2, t3, t4, t5, t6 := "id1", "id2", "id3", "id4", "id5", "id6"
 	jobs[0] = testhelpers.StartJob(r.cl.scootClient, &scoot.JobDefinition{
 		// Repeat tasks to better exercise Store w/groupcache.
-		Tasks: map[string]*scoot.TaskDefinition{
-			"id1": &scoot.TaskDefinition{
+		Tasks: []*scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id1,
+				TaskId:     &t1,
 			},
-			"id2": &scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id2,
+				TaskId:     &t2,
 			},
-			"id3": &scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id1,
+				TaskId:     &t3,
 			},
-			"id4": &scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id1,
+				TaskId:     &t4,
 			},
-			"id5": &scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id2,
+				TaskId:     &t5,
 			},
-			"id6": &scoot.TaskDefinition{
+			&scoot.TaskDefinition{
 				Command:    &scoot.Command{Argv: []string{"cat", "file.txt"}},
 				SnapshotId: &id2,
+				TaskId:     &t6,
 			},
 		}})
 

@@ -10,6 +10,7 @@ import (
 	"github.com/scootdev/scoot/cloud/cluster"
 )
 
+const noJob = ""
 const noTask = ""
 const defaultMaxLostDuration = time.Minute
 const defaultMaxFlakyDuration = time.Minute
@@ -30,6 +31,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
+	numIdle          int                           // Number of free nodes that are not in a suspended state.
 }
 
 type nodeGroup struct {
@@ -44,6 +46,7 @@ func newNodeGroup() *nodeGroup {
 // The State of A Node in the Cluster
 type nodeState struct {
 	node        cluster.Node
+	runningJob  string
 	runningTask string
 	snapshotId  string
 	timeLost    time.Time        // Time when node was marked lost, if set (lost and flaky are mutually exclusive).
@@ -53,8 +56,8 @@ type nodeState struct {
 }
 
 func (n *nodeState) String() string {
-	return fmt.Sprintf("{node:%s, runningTask:%s, snapshotId:%s, timeLost:%v, timeFlaky:%v, ready:%t}",
-		spew.Sdump(n.node), n.runningTask, n.snapshotId, n.timeLost, n.timeFlaky, (n.readyCh == nil))
+	return fmt.Sprintf("{node:%s, jobId:%s, taskId:%s, snapshotId:%s, timeLost:%v, timeFlaky:%v, ready:%t}",
+		spew.Sdump(n.node), n.runningJob, n.runningTask, n.snapshotId, n.timeLost, n.timeFlaky, (n.readyCh == nil))
 }
 
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
@@ -103,6 +106,7 @@ func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
 func newNodeState(node cluster.Node) *nodeState {
 	return &nodeState{
 		node:        node,
+		runningJob:  noJob,
 		runningTask: noTask,
 		snapshotId:  "",
 		timeLost:    nilTime,
@@ -135,23 +139,29 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 
 // Update ClusterState to reflect that a task has been scheduled on a particular node
 // SnapshotId should be the value from the task definition associated with the given taskId.
-// NOTE: taskId is not unique (and isn't currently required to be), but a jobId arg would fix that.
-func (c *clusterState) taskScheduled(nodeId cluster.NodeId, taskId string, snapshotId string) {
+func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snapshotId string) {
 	ns := c.nodes[nodeId]
 
 	delete(c.nodeGroups[ns.snapshotId].idle, nodeId)
+	empty := len(c.nodeGroups[ns.snapshotId].idle) == 0 && len(c.nodeGroups[ns.snapshotId].busy) == 0
+	if ns.snapshotId != "" && empty {
+		delete(c.nodeGroups, ns.snapshotId)
+	}
+
 	if _, ok := c.nodeGroups[snapshotId]; !ok {
 		c.nodeGroups[snapshotId] = newNodeGroup()
 	}
 	c.nodeGroups[snapshotId].busy[nodeId] = ns
 
-	ns.snapshotId = snapshotId
+	ns.runningJob = jobId
 	ns.runningTask = taskId
+	ns.snapshotId = snapshotId
+	c.numIdle--
 }
 
 // Update ClusterState to reflect that a task has finished running on
 // a particular node, whether successfully or unsuccessfully
-func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string, flaky bool) {
+func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 	var ns *nodeState
 	var ok bool
 	if ns, ok = c.nodes[nodeId]; !ok {
@@ -163,7 +173,10 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, taskId string, flaky
 			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
+		} else if !flaky {
+			c.numIdle++
 		}
+		ns.runningJob = noJob
 		ns.runningTask = noTask
 		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
 		c.nodeGroups[ns.snapshotId].idle[nodeId] = ns
@@ -208,8 +221,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					ns.timeFlaky = nilTime
 					c.nodes[update.Id] = ns
 					delete(c.suspendedNodes, update.Id)
-					log.Infof("Recovered suspended node %v (%#v), now have %d healthy nodes (%d suspended)",
-						update.Id, ns, len(c.nodes), len(c.suspendedNodes))
+					log.Infof("Recovered suspended node %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
+						update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numIdle)
 				}
 
 			} else if ns, ok := c.nodes[update.Id]; !ok {
@@ -219,14 +232,15 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
 					newNode.readyCh = nil
-					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
+					c.numIdle++
+					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
+						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numIdle)
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
 					c.suspendedNodes[update.Id] = newNode
-					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes))
+					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
+						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numIdle)
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
@@ -248,8 +262,9 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				log.Infof("Removing node by marking as lost: %v (%#v), now have %d nodes (%d suspended)",
-					update.Id, ns, len(c.nodes), len(c.suspendedNodes))
+				c.numIdle--
+				log.Infof("Removing node by marking as lost: %v (%#v), now have %d nodes (%d suspended, %d idle)",
+					update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numIdle)
 
 			} else {
 				// We don't know about this node, log spurious remove.
@@ -267,15 +282,16 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 		if !ns.suspended() {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
-			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended, %d idle)",
+				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1, c.numIdle+1)
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
+			c.numIdle++
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
 			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
-			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1)
+			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended, %d idle)",
+				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1, c.numIdle)
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
@@ -285,11 +301,12 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			}
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
-			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes))
+			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended, %d idle)",
+				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1, c.numIdle+1)
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
+			c.numIdle++
 		}
 	}
 }
