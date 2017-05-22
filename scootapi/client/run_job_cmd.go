@@ -34,7 +34,7 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 // Scoot JobDefinitions specified in job_def JSON files should be able to
 // satisfy these types as populated via https://golang.org/pkg/encoding/json/#Unmarshal
 type JobDef struct {
-	Tasks                map[string]TaskDef
+	Tasks                []TaskDef
 	DefaultTaskTimeoutMs int32
 }
 type TaskDef struct {
@@ -46,7 +46,7 @@ type TaskDef struct {
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
-	log.Info("Running on scoot", args)
+	log.Info("Running on scoot, args:", args)
 	jobDef := scoot.NewJobDefinition()
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
@@ -67,9 +67,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		task.SnapshotId = &c.snapshotId
 		task.TaskId = &taskId
 
-		jobDef.Tasks = map[string]*scoot.TaskDefinition{
-			taskId: task,
-		}
+		jobDef.Tasks = []*scoot.TaskDefinition{task}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
 		if err != nil {
@@ -88,19 +86,21 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		if jsonJob.DefaultTaskTimeoutMs > 0 {
 			jobDef.DefaultTaskTimeoutMs = &jsonJob.DefaultTaskTimeoutMs
 		}
-		jobDef.Tasks = make(map[string]*scoot.TaskDefinition)
-		for taskName, jsonTask := range jsonJob.Tasks {
+		jobDef.Tasks = []*scoot.TaskDefinition{}
+		for _, jsonTask := range jsonJob.Tasks {
+			jt := jsonTask
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
-			taskDef.Command.Argv = jsonTask.Args
-			taskDef.SnapshotId = &jsonTask.SnapshotID
-			jobDef.Tasks[taskName] = taskDef
-			taskDef.TaskId = &taskName
-			if jsonTask.TimeoutMs > 0 {
-				taskDef.TimeoutMs = &jsonTask.TimeoutMs
+			taskDef.Command.Argv = jt.Args
+			taskDef.SnapshotId = &jt.SnapshotID
+			taskDef.TaskId = &jt.TaskID
+			jobDef.Tasks = append(jobDef.Tasks, taskDef)
+			if jt.TimeoutMs > 0 {
+				taskDef.TimeoutMs = &jt.TimeoutMs
 			}
 		}
 	}
+
 	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {

@@ -63,7 +63,7 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch, nil)
 
-	cs.taskScheduled("node1", "task1", "")
+	cs.taskScheduled("node1", "job1", "task1", "")
 
 	// readd node to cluster
 	cl.add("node1")
@@ -85,7 +85,7 @@ func Test_ClusterState_TaskStarted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch, nil)
 
-	cs.taskScheduled("node1", "task1", "")
+	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
 	if ns.runningTask != "task1" {
@@ -97,10 +97,10 @@ func Test_ClusterState_TaskCompleted(t *testing.T) {
 	cl := makeTestCluster("node1")
 	cs := newClusterState(cl.nodes, cl.ch, nil)
 
-	cs.taskScheduled("node1", "task1", "")
+	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
 
-	cs.taskCompleted("node1", "task1", false)
+	cs.taskCompleted("node1", false)
 	if ns.runningTask != noTask {
 		t.Errorf("Expected Node1 to be running task1")
 	}
@@ -179,9 +179,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	}
 
 	// Test the the right idle/busy maps are filled out for each snapshotId.
-	cs.taskScheduled("node1", "task1", "snapA")
-	cs.taskScheduled("node2", "task2", "snapA")
-	cs.taskScheduled("node3", "task3", "snapB")
+	cs.taskScheduled("node1", "job1", "task1", "snapA")
+	cs.taskScheduled("node2", "job1", "task2", "snapA")
+	cs.taskScheduled("node3", "job1", "task3", "snapB")
 	expectedGroups := map[string]*nodeGroup{
 		"": &nodeGroup{
 			idle: map[cluster.NodeId]*nodeState{
@@ -208,7 +208,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	}
 
 	// Test that finishing a jobs moves it to the idle list for its snapshotId.
-	cs.taskCompleted("node1", "task1", false)
+	cs.taskCompleted("node1", false)
 	expectedGroups["snapA"].idle["node1"] = cs.nodes["node1"]
 	delete(expectedGroups["snapA"].busy, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
@@ -216,7 +216,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	}
 
 	// Test the rescheduling a task moves it correctly from an idle list to a busy one.
-	cs.taskScheduled("node1", "task1", "snapB")
+	cs.taskScheduled("node1", "job1", "task1", "snapB")
 	expectedGroups["snapB"].busy["node1"] = cs.nodes["node1"]
 	delete(expectedGroups["snapA"].idle, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
@@ -224,7 +224,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	}
 
 	// Task finished and is marked as flaky
-	cs.taskCompleted("node1", "task1", true)
+	cs.taskCompleted("node1", true)
 	if _, ok := cs.nodes["node1"]; ok {
 		t.Fatalf("Flaky node was not moved out of cs.nodes")
 	} else if _, ok := cs.suspendedNodes["node1"]; !ok {

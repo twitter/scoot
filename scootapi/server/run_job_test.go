@@ -50,11 +50,8 @@ func Test_RunJob_WithNoTasks(t *testing.T) {
 // Jobs with Invalid Task Ids should return an InvalidJobRequest error
 func Test_RunJob_InvalidTaskId(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
-	task := testhelpers.GenTask(testhelpers.NewRand(), "")
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"": task,
-	}
-
+	task := testhelpers.GenTask(testhelpers.NewRand(), "", "")
+	jobDef.Tasks = []*scoot.TaskDefinition{task}
 	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
 
 	if !IsInvalidJobRequest(err) {
@@ -69,12 +66,9 @@ func Test_RunJob_InvalidTaskId(t *testing.T) {
 // Jobs with Tasks with no commands should return InvalidJobRequest error
 func Test_RunJob_NoCommand(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
-	task := testhelpers.GenTask(testhelpers.NewRand(), "")
+	task := testhelpers.GenTask(testhelpers.NewRand(), "1", "")
 	task.Command.Argv = []string{}
-	jobDef.Tasks = map[string]*scoot.TaskDefinition{
-		"1": task,
-	}
-
+	jobDef.Tasks = []*scoot.TaskDefinition{task}
 	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
 
 	if !IsInvalidJobRequest(err) {

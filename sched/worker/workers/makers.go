@@ -21,7 +21,7 @@ func MakeDoneWorker(tmp *temp.TempDir) runner.Service {
 	ex := execers.NewDoneExecer()
 	r := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
 	chaos := runners.NewChaosRunner(r)
-	chaos.SetDelay(time.Duration(500) * time.Millisecond)
+	chaos.SetDelay(time.Duration(50) * time.Millisecond)
 	return chaos
 }
 

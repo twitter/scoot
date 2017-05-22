@@ -20,7 +20,7 @@ func NewRand() *rand.Rand {
 // Generates a scoot.JobDefinition with numTasks tasks (or random if numTasks == -1)
 func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.JobDefinition {
 	def := scoot.NewJobDefinition()
-	def.Tasks = make(map[string]*scoot.TaskDefinition)
+	def.Tasks = make([]*scoot.TaskDefinition, 0)
 
 	if numTasks == -1 {
 		numTasks = rng.Intn(10) + 1
@@ -28,9 +28,8 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 
 	for i := 0; i < numTasks; i++ {
 		taskId := fmt.Sprintf("%d%v", i, GenTaskId(rng))
-		taskDef := GenTask(rng, snapshotID)
-
-		def.Tasks[taskId] = taskDef
+		taskDef := GenTask(rng, taskId, snapshotID)
+		def.Tasks = append(def.Tasks, taskDef)
 	}
 
 	return def
@@ -38,13 +37,14 @@ func GenJobDefinition(rng *rand.Rand, numTasks int, snapshotID string) *scoot.Jo
 
 // Generates a scoot.TaskDefinition
 // TODO: actually make more realistic
-func GenTask(rng *rand.Rand, snapshotID string) *scoot.TaskDefinition {
+func GenTask(rng *rand.Rand, taskID, snapshotID string) *scoot.TaskDefinition {
 
 	cmd := scoot.NewCommand()
 	cmd.Argv = []string{execers.UseSimExecerArg, "sleep 100", "complete 0"}
 
 	taskDef := scoot.NewTaskDefinition()
 	taskDef.Command = cmd
+	taskDef.TaskId = &taskID
 	taskDef.SnapshotId = &snapshotID
 
 	return taskDef

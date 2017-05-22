@@ -150,7 +150,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 			}
 			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId})
 			log.Infof("Initial run attempts aborted by scheduler : jobId: %s taskId: %s", r.jobId, taskId)
-			err = nil
+			return st, nil
 		}
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
@@ -212,6 +212,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	sts, _, err := r.runner.Query(q, w)
 
 	if err != nil {
+		if r.abortRequested() {
+			r.runner.Abort(id)
+			return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), nil
+		}
 		return runner.RunStatus{}, err
 	}
 

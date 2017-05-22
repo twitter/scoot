@@ -50,8 +50,8 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.TaskStatus = make(map[string]scoot.Status)
 	js.TaskData = make(map[string]*scoot.RunStatus)
 	if job, err := sched.DeserializeJob(sagaState.Job()); err == nil {
-		for id, _ := range job.Def.Tasks {
-			js.TaskStatus[id] = scoot.Status_NOT_STARTED
+		for i, _ := range job.Def.Tasks {
+			js.TaskStatus[job.Def.Tasks[i].TaskID] = scoot.Status_NOT_STARTED
 		}
 	}
 

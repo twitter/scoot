@@ -1,10 +1,11 @@
 package scheduler
 
 import (
+	"testing"
+
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/tests/testhelpers"
-	"testing"
 )
 
 func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
@@ -27,8 +28,8 @@ func Test_NewJobState_PreviousProgress_StartedTasks(t *testing.T) {
 
 	// Mark all tasks as started, then create jobState
 	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
-	for taskId, _ := range job.Def.Tasks {
-		saga.StartTask(taskId, nil)
+	for _, task := range job.Def.Tasks {
+		saga.StartTask(task.TaskID, nil)
 	}
 	jobState := newJobState(&job, saga)
 
@@ -44,9 +45,9 @@ func Test_NewJobState_PreviousProgress_CompletedTasks(t *testing.T) {
 
 	// Mark all tasks as completed, then create jobState
 	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
-	for taskId, _ := range job.Def.Tasks {
-		saga.StartTask(taskId, nil)
-		saga.EndTask(taskId, nil)
+	for _, task := range job.Def.Tasks {
+		saga.StartTask(task.TaskID, nil)
+		saga.EndTask(task.TaskID, nil)
 	}
 	jobState := newJobState(&job, saga)
 

@@ -68,14 +68,14 @@ func schedJobDefToScootJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefin
 		return nil, nil
 	}
 
-	scootTasks := make(map[string]*scoot.TaskDefinition)
-	for taskName, schedTask := range schedJobDef.Tasks {
+	scootTasks := []*scoot.TaskDefinition{}
+	for _, schedTask := range schedJobDef.Tasks {
 		cmd := scoot.Command{
 			Argv:       schedTask.Argv,
 		}
 		taskId := schedTask.TaskID
 		scootTask := &scoot.TaskDefinition{Command: &cmd, TaskId: &taskId}
-		scootTasks[taskName] = scootTask
+		scootTasks = append(scootTasks,scootTask)
 	}
 
 	unknown := scoot.JobType(scoot.JobType_UNKNOWN)

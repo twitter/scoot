@@ -27,7 +27,7 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.
 	id, err := scheduler.ScheduleJob(jobDef)
 
 	if err != nil {
-		return nil, scoot.NewCanNotScheduleNow()
+		return nil, err //TODO: use or delete scoot.NewCanNotScheduleNow()
 	}
 
 	return &scoot.JobId{ID: id}, nil
@@ -38,9 +38,9 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	if def == nil {
 		return result, fmt.Errorf("nil job definition")
 	}
-	result.Tasks = make(map[string]sched.TaskDefinition)
+	result.Tasks = []sched.TaskDefinition{}
 
-	for taskId, t := range def.Tasks {
+	for _, t := range def.Tasks {
 		var task sched.TaskDefinition
 		if t == nil {
 			return result, fmt.Errorf("nil task definition")
@@ -57,8 +57,12 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		} else if def.DefaultTaskTimeoutMs != nil {
 			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond
 		}
-		t.TaskId = &taskId
-		result.Tasks[taskId] = task
+		if t.TaskId == nil {
+			return result, fmt.Errorf("nil taskId")
+		}
+		task.TaskID = *t.TaskId
+
+		result.Tasks = append(result.Tasks, task)
 	}
 
 	if def.JobType != nil {
@@ -73,8 +77,8 @@ func validateJob(job sched.JobDefinition) error {
 	if len(job.Tasks) == 0 {
 		return NewInvalidJobRequest("invalid job. Must have at least 1 task; was empty")
 	}
-	for id, task := range job.Tasks {
-		if id == "" {
+	for _, task := range job.Tasks {
+		if task.TaskID == "" {
 			return NewInvalidJobRequest("invalid task id \"\".")
 		}
 		if len(task.Command.Argv) == 0 {

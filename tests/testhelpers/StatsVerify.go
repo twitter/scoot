@@ -5,16 +5,10 @@ import (
 	"strings"
 	"reflect"
 	"fmt"
-)
-import (
-	"bytes"
-	"fmt"
-	"reflect"
 	"runtime"
 	"testing"
 
 	"github.com/scootdev/scoot/common/stats"
-	"strings"
 )
 
 /*

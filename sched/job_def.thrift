@@ -27,7 +27,11 @@ struct TaskDefinition {
 
 struct JobDefinition {
   1: optional string jobType,
-  2: optional map<string, TaskDefinition> tasks,
+  2: optional list<TaskDefinition> tasks,
+  3: optional i32 priority
+  4: optional string tag
+  5: optional string basis
+  6: optional string requestor
 }
 
 struct Job {
