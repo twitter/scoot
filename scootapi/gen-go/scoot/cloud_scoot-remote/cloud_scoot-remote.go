@@ -122,19 +122,19 @@ func main() {
 			fmt.Fprintln(os.Stderr, "RunJob requires 1 args")
 			flag.Usage()
 		}
-		arg15 := flag.Arg(1)
-		mbTrans16 := thrift.NewTMemoryBufferLen(len(arg15))
-		defer mbTrans16.Close()
-		_, err17 := mbTrans16.WriteString(arg15)
-		if err17 != nil {
+		arg14 := flag.Arg(1)
+		mbTrans15 := thrift.NewTMemoryBufferLen(len(arg14))
+		defer mbTrans15.Close()
+		_, err16 := mbTrans15.WriteString(arg14)
+		if err16 != nil {
 			Usage()
 			return
 		}
-		factory18 := thrift.NewTSimpleJSONProtocolFactory()
-		jsProt19 := factory18.GetProtocol(mbTrans16)
+		factory17 := thrift.NewTSimpleJSONProtocolFactory()
+		jsProt18 := factory17.GetProtocol(mbTrans15)
 		argvalue0 := scoot.NewJobDefinition()
-		err20 := argvalue0.Read(jsProt19)
-		if err20 != nil {
+		err19 := argvalue0.Read(jsProt18)
+		if err19 != nil {
 			Usage()
 			return
 		}

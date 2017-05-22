@@ -3,10 +3,11 @@
 package scheduler
 
 import (
+	"testing"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/sched"
-	"testing"
 )
 
 // verify that jobs are distributed evenly
@@ -17,17 +18,20 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 	//initialize NodeMap to keep track of tasks per node
 	taskMap := make(map[string]cluster.NodeId)
 
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	s.ScheduleJob(jobDef)
 	s.step()
 
 	for len(s.inProgressJobs) > 0 {
-		s.step()
-
 		for nodeId, state := range s.clusterState.nodes {
 			if state.runningTask != noTask {
 				taskMap[state.runningTask] = nodeId
 			}
 		}
+		s.step()
 	}
 
 	taskCountMap := make(map[cluster.NodeId]int)

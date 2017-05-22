@@ -3,13 +3,13 @@
 package server
 
 import (
-	"fmt"
+	"reflect"
+	"testing"
+
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"reflect"
-	"testing"
 )
 
 func TestTranslateJob(t *testing.T) {
@@ -35,10 +35,12 @@ func genTask() gopter.Gen {
 		return gen.SliceOfN(n.(int), gen.AnyString())
 	}, reflect.TypeOf([]string{}))
 	return args.FlatMap(func(args interface{}) gopter.Gen {
+		taskId := ""
 		c := scoot.NewCommand()
 		c.Argv = args.([]string)
 		t := scoot.NewTaskDefinition()
 		t.Command = c
+		t.TaskId = &taskId
 		return gen.Const(t)
 	}, reflect.TypeOf(scoot.NewTaskDefinition()))
 }
@@ -50,12 +52,12 @@ func genTasks(n interface{}) gopter.Gen {
 func genJobDef() gopter.Gen {
 	tasksGen := gen.IntRange(1, MAX_TASKS).FlatMap(genTasks, reflect.TypeOf([]*scoot.TaskDefinition{}))
 	taskMapGen := tasksGen.FlatMap(func(vs interface{}) gopter.Gen {
-		r := make(map[string]*scoot.TaskDefinition)
-		for idx, v := range vs.([]*scoot.TaskDefinition) {
-			r[fmt.Sprintf("task%d", idx)] = v
+		r := []*scoot.TaskDefinition{}
+		for _, v := range vs.([]*scoot.TaskDefinition) {
+			r = append(r, v)
 		}
 		return gen.Const(r)
-	}, reflect.TypeOf(map[string]*scoot.TaskDefinition{}))
+	}, reflect.TypeOf([]*scoot.TaskDefinition{}))
 
 	unknown := scoot.JobType_UNKNOWN
 	iron_tests := scoot.JobType_IRON_TESTS
@@ -66,7 +68,7 @@ func genJobDef() gopter.Gen {
 	return jobGens.FlatMap(func(vs interface{}) gopter.Gen {
 		values := vs.([]interface{})
 		j := scoot.NewJobDefinition()
-		j.Tasks = values[0].(map[string]*scoot.TaskDefinition)
+		j.Tasks = values[0].([]*scoot.TaskDefinition)
 		j.JobType = values[1].(*scoot.JobType)
 		return gen.Const(j)
 	}, reflect.TypeOf(scoot.NewJobDefinition()))

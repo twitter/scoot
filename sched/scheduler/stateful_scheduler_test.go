@@ -65,8 +65,8 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.config,
 		stats.NilStatsReceiver(),
 	)
-	s.runnerRetryTimeout = 0
-	s.runnerRetryInterval = 0
+	s.config.RunnerRetryTimeout = 0
+	s.config.RunnerRetryInterval = 0
 	return s
 }
 
@@ -101,6 +101,10 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 	s := makeStatefulSchedulerDeps(deps)
 
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, err := s.ScheduleJob(jobDef)
 	if id == "" {
 		t.Errorf("Expected successfully scheduled job to return non empty job string!")
@@ -124,6 +128,10 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 	s := makeStatefulSchedulerDeps(deps)
 
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, err := s.ScheduleJob(jobDef)
 	if id != "" {
 		t.Errorf("Expected unsuccessfully scheduled job to return an empty job string!")
@@ -137,6 +145,10 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 func Test_StatefulScheduler_AddJob(t *testing.T) {
 	s := makeDefaultStatefulScheduler()
 	jobDef := sched.GenJobDef(1)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	id, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler loop & then verify state
@@ -145,8 +157,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		t.Errorf("Expected In Progress Jobs to be 1 not %v", len(s.inProgressJobs))
 	}
 
-	_, ok := s.inProgressJobs[id]
-	if !ok {
+	if s.getJob(id) == nil {
 		t.Errorf("Expected the %v to be an inProgressJobs", id)
 	}
 }
@@ -155,8 +166,8 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 
 	taskId := taskIds[0]
@@ -177,16 +188,21 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify task was retried enough times.
-	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
-		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	if s.getJob(jobId).getTask(taskId).NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v",
+			deps.config.MaxRetriesPerTask+1, s.getJob(jobId).getTask(taskId).NumTimesTried)
 	}
 
 	// advance scheduler until job gets marked completed
@@ -199,8 +215,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 
 	taskId := taskIds[0]
@@ -221,16 +237,21 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify task was retried enough times.
-	if s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried != deps.config.MaxRetriesPerTask+1 {
-		t.Fatalf("Expected Tries: %v times, Actual Tries: %v", deps.config.MaxRetriesPerTask+1, s.inProgressJobs[jobId].Tasks[taskId].NumTimesTried)
+	if s.getJob(jobId).getTask(taskId).NumTimesTried != deps.config.MaxRetriesPerTask+1 {
+		t.Fatalf("Expected Tries: %v times, Actual Tries: %v",
+			deps.config.MaxRetriesPerTask+1, s.getJob(jobId).getTask(taskId).NumTimesTried)
 	}
 
 	// advance scheduler until job gets marked completed
@@ -244,8 +265,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobDef := sched.GenJobDef(1)
 	var taskIds []string
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 	taskId := taskIds[0]
 
@@ -266,6 +287,10 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	s := makeStatefulSchedulerDeps(deps)
 
 	// add job and run through scheduler
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
@@ -277,7 +302,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
-	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskId).Status == sched.NotStarted {
 		s.step()
 	}
 
@@ -287,7 +312,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until the task completes
-	for s.inProgressJobs[jobId].Tasks[taskId].Status == sched.InProgress {
+	for s.getJob(jobId).getTask(taskId).Status == sched.InProgress {
 		s.step()
 	}
 
@@ -297,12 +322,12 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
 	// verify that EndSaga Message gets logged
-	if !s.inProgressJobs[jobId].EndingSaga {
+	if !s.getJob(jobId).EndingSaga {
 		t.Errorf("Expected Completed job to be EndingSaga")
 	}
 
@@ -316,14 +341,14 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	s, _ := initializeServices(sc, false)
 
 	jobId, taskIds, _ := putJobInScheduler(1, s, true)
-	for s.inProgressJobs[jobId].Tasks[taskIds[0]].Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
 		s.step()
 	}
 
 	respCh := sendKillRequest(jobId, s)
 
-	for s.inProgressJobs[jobId].Tasks[taskIds[0]].Status == sched.InProgress ||
-		s.inProgressJobs[jobId].Tasks[taskIds[0]].Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.InProgress ||
+		s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
 		s.step()
 	}
 	errResp := <-respCh
@@ -358,7 +383,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	jobId, taskIds, _ := putJobInScheduler(1, s, false)
 
 	//advance scheduler until the task completes
-	for s.inProgressJobs[jobId].Tasks[taskIds[0]].Status == sched.InProgress {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.InProgress {
 		s.step()
 	}
 
@@ -368,7 +393,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.inProgressJobs[jobId].getJobStatus() != sched.Completed {
+	for s.getJob(jobId).getJobStatus() != sched.Completed {
 		s.step()
 	}
 
@@ -381,10 +406,10 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 			t.Errorf("Expected err to be nil, instead is %v", err.Error())
 		}
 	} else {
-		_, ok := s.inProgressJobs[jobId]
-		for ok {
+		j := s.getJob(jobId)
+		for j == nil {
 			s.step()
-			_, ok = s.inProgressJobs[jobId]
+			j = s.getJob(jobId)
 		}
 	}
 
@@ -423,10 +448,10 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 			t.Errorf("Expected err to be nil, instead is %v", err.Error())
 		}
 	} else {
-		_, ok := s.inProgressJobs[jobId2]
-		for ok {
+		j := s.getJob(jobId2)
+		for j == nil {
 			s.step()
-			_, ok = s.inProgressJobs[jobId2]
+			j = s.getJob(jobId2)
 		}
 	}
 
@@ -446,7 +471,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 }
 
 func allTasksInState(jobName string, jobId string, s *statefulScheduler, status sched.Status) bool {
-	for _, task := range s.inProgressJobs[jobId].Tasks {
+	for _, task := range s.getJob(jobId).Tasks {
 		if task.Status != status {
 			return false
 		}
@@ -501,19 +526,22 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, usingPausingExecer bo
 	var taskIds []string
 
 	if usingPausingExecer {
-		//change command to pause and taskId to taskNN
-		for _, task := range jobDef.Tasks {
+		//change command to pause.
+		for i, _ := range jobDef.Tasks {
 			// set the command to pause
-			task.Argv = []string{"pause"}
-			jobDef.Tasks[task.TaskID] = task
+			jobDef.Tasks[i].Argv = []string{"pause"}
 		}
 	}
 
-	for taskId, _ := range jobDef.Tasks {
-		taskIds = append(taskIds, taskId)
+	for _, task := range jobDef.Tasks {
+		taskIds = append(taskIds, task.TaskID)
 	}
 
 	// put the job on the jobs channel
+	go func() {
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
 	jobId, err := s.ScheduleJob(jobDef)
 
 	// force the first job to pending state without starting it
@@ -525,7 +553,7 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, usingPausingExecer bo
 func verifyJobStatus(tag string, jobId string, expectedJobStatus sched.Status, expectedTaskStatus []sched.Status,
 	s *statefulScheduler, t *testing.T) bool {
 
-	jobStatus := s.inProgressJobs[jobId]
+	jobStatus := s.getJob(jobId)
 
 	if jobStatus.getJobStatus() != expectedJobStatus {
 		t.Errorf("%s: Expected job status to be %s, got %s", tag, expectedJobStatus.String(), jobStatus.getJobStatus().String())
