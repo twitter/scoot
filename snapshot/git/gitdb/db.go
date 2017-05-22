@@ -166,8 +166,8 @@ func (db *DB) loop(initer RepoIniter) {
 			} else {
 				req.resultCh <- idAndError{id: s.ID()}
 			}
-		case storeFileReq:
-			s, err := db.bundles.storeFile(req.filePath, req.ttl)
+		case uploadFileReq:
+			s, err := db.bundles.uploadFile(req.filePath, req.ttl)
 			req.resultCh <- stringAndError{str: s, err: err}
 		case readFileAllReq:
 			data, err := db.readFileAll(req.id, req.path)
@@ -320,13 +320,13 @@ func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
 	return s.ID()
 }
 
-type storeFileReq struct {
+type uploadFileReq struct {
 	filePath string
 	ttl      *bundlestore.TTLValue
 	resultCh chan stringAndError
 }
 
-func (r storeFileReq) req() {}
+func (r uploadFileReq) req() {}
 
 // Below functions are utils not part of DB interface
 
@@ -334,12 +334,12 @@ func (r storeFileReq) req() {}
 // Intended for HTTP-backed stores that implement bundlestore's TTL fields
 // Base of the filePath will be used as bundle name
 // Returns location of stored file
-func (db *DB) StoreFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
+func (db *DB) UploadFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
 		return "", db.err
 	}
 	resultCh := make(chan stringAndError)
-	db.reqCh <- storeFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}
+	db.reqCh <- uploadFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}
 	result := <-resultCh
 	return result.str, result.err
 }

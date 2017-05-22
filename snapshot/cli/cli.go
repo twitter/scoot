@@ -116,7 +116,7 @@ type ingestGitCommitCommand struct {
 func (c *ingestGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest_git_commit",
-		Short: "ingests a git commit into the repo in cwd",
+		Short: "ingests a git commit into the repo in cwd and uploads it",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
 	return cmd
@@ -146,6 +146,9 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 // This is a workaround for creating arbitrary git bundles and keeping them in a Bundlestore.
 // We need this for now because generic bundles do not fit well with the existing
 // Snapshot, ID, Stream schemas.
+// Example usage: scoot-snapshot-db create publish_git_bundle \
+//	--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
+// Stdout: "http://localhost:9094/bundle/bs-<rev>-master.bundle"
 type createGitBundleCommand struct {
 	file  string
 	basis string
@@ -156,13 +159,13 @@ type createGitBundleCommand struct {
 
 func (c *createGitBundleCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create_git_bundle",
-		Short: "Creates a git bundle file as specified by basis and reference for the cwd repo",
+		Use:   "publish_git_bundle",
+		Short: "Creates and uploads a git bundle file as specified by basis/ref for the cwd repo",
 	}
 	// See https://git-scm.com/docs/git-bundle for basis, ref usage
 	cmd.Flags().StringVar(&c.file, "file", "", "Output bundle file (defaults to temp file)")
 	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
-	cmd.Flags().StringVar(&c.ref, "ref", "", "Reference to be packaged")
+	cmd.Flags().StringVar(&c.ref, "ref", "master", "Reference to be packaged")
 	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
 	cmd.Flags().BoolVar(&c.keep, "keepFile", false, "Keep created bundles file")
 	return cmd
@@ -221,7 +224,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	ttlP := &bundlestore.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: bundlestore.DefaultTTLKey}
-	location, err := gdb.StoreFile(bundleFilename, ttlP)
+	location, err := gdb.UploadFile(bundleFilename, ttlP)
 	if err != nil {
 		return err
 	}
