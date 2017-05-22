@@ -155,6 +155,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.Infof("Retrying run() for jobId: %s taskId: %s", r.jobId, taskId)
+			r.stat.Counter("taskStartRetries").Inc(1)
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
 			continue

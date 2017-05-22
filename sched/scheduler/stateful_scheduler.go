@@ -231,16 +231,11 @@ func generateJobId() string {
 }
 
 // run the scheduler loop indefinitely
+// we are not putting any logic other than looping in this method so unit tests can verify
+// behavior by controlling calls to step() below
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		remaining := 0
-		for _, job := range s.inProgressJobs {
-			remaining += (len(job.Tasks) - job.TasksCompleted)
-		}
-		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
-		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
-		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 		time.Sleep(50 * time.Millisecond) // TODO(jschiller): find a better way to avoid pegging the cpu.
 	}
 }
@@ -262,6 +257,14 @@ func (s *statefulScheduler) step() {
 	s.checkForCompletedJobs()
 	s.killJobs()
 	s.scheduleTasks()
+
+	remaining := 0
+	for _, job := range s.inProgressJobs {
+		remaining += (len(job.Tasks) - job.TasksCompleted)
+	}
+	s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
+	s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 }
 
 // Checks if any new jobs have been scheduled since the last loop and adds
@@ -334,7 +337,6 @@ func (s *statefulScheduler) scheduleTasks() {
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, unscheduledTasks)
 	s.clusterState.nodeGroups = nodeGroups
 	for _, ta := range taskAssignments {
-
 		// Set up variables for async functions & callback
 		jobId := ta.task.JobId
 		taskId := ta.task.TaskId

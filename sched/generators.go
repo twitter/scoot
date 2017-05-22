@@ -77,7 +77,7 @@ func GenTask() TaskDefinition {
 func GenRandomTask(rng *rand.Rand) TaskDefinition {
 	snapshotId := fmt.Sprintf("snapShotId:%s", testhelpers.GenRandomAlphaNumericString(rng))
 	taskId := fmt.Sprintf("taskId:%s", testhelpers.GenRandomAlphaNumericString(rng))
-	numArgs := rng.Intn(5)
+	numArgs := rng.Intn(5) + 1 // must have at least 1 arg
 	var j int
 	var args []string = []string{}
 	for j = 0; j < numArgs; j++ {
