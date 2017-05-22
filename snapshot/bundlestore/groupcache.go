@@ -163,3 +163,7 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	s.stat.Counter("writeOkCounter").Inc(1)
 	return nil
 }
+
+func (s *groupcacheStore) Root() string {
+	return s.underlying.Root()
+}

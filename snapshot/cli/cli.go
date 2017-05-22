@@ -38,8 +38,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path"
+	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
+	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 	"github.com/spf13/cobra"
 )
@@ -78,6 +83,7 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 	add(&ingestDirCommand{}, createCobraCmd)
+	add(&createGitBundleCommand{}, createCobraCmd)
 
 	readCobraCmd := &cobra.Command{
 		Use:   "read",
@@ -133,6 +139,94 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	fmt.Println(id)
+	return nil
+}
+
+// Subcommand for creating and uploading git bundles.
+// This is a workaround for creating arbitrary git bundles and keeping them in a Bundlestore.
+// We need this for now because generic bundles do not fit well with the existing
+// Snapshot, ID, Stream schemas.
+type createGitBundleCommand struct {
+	file  string
+	basis string
+	ref   string
+	ttld  time.Duration
+	keep  bool
+}
+
+func (c *createGitBundleCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create_git_bundle",
+		Short: "Creates a git bundle file as specified by basis and reference for the cwd repo",
+	}
+	// See https://git-scm.com/docs/git-bundle for basis, ref usage
+	cmd.Flags().StringVar(&c.file, "file", "", "Output bundle file (defaults to temp file)")
+	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
+	cmd.Flags().StringVar(&c.ref, "ref", "", "Reference to be packaged")
+	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
+	cmd.Flags().BoolVar(&c.keep, "keepFile", false, "Keep created bundles file")
+	return cmd
+}
+
+func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+	if c.basis == "" || c.ref == "" {
+		return fmt.Errorf("Create bundle command requires a basis and reference")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("cannot get working directory: wd")
+	}
+
+	ingestRepo, err := repo.NewRepository(wd)
+	if err != nil {
+		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
+	}
+
+	bundleFilename, tempDir := "", ""
+	if c.file != "" {
+		bundleFilename = c.file
+	} else {
+		td, err := temp.TempDirDefault()
+		if err != nil {
+			return fmt.Errorf("Couldn't create temp dir: %v", err)
+		}
+		tempDir = td.Dir
+		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%v-%v.bundle", c.basis, c.ref))
+	}
+
+	defer func() {
+		if !c.keep {
+			if tempDir != "" {
+				os.RemoveAll(tempDir)
+			} else {
+				os.Remove(bundleFilename)
+			}
+		}
+	}()
+
+	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
+	if _, err := ingestRepo.Run("-c",
+		"core.packobjectedgesonlyshallow=0",
+		"bundle",
+		"create",
+		bundleFilename,
+		revList); err != nil {
+		return err
+	}
+
+	gdb, ok := db.(*gitdb.DB)
+	if !ok {
+		return fmt.Errorf("create bundle requires a gitdb.DB snapshot.DB")
+	}
+
+	ttlP := &bundlestore.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: bundlestore.DefaultTTLKey}
+	location, err := gdb.StoreFile(bundleFilename, ttlP)
+	if err != nil {
+		return err
+	}
+	fmt.Println(location)
+
 	return nil
 }
 

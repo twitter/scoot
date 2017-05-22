@@ -128,7 +128,7 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 
 // TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.
 func (s *Server) checkBundleName(name string) error {
-	bundleRE := "^bs-[a-z0-9]{40}.bundle"
+	bundleRE := "^bs-[a-z0-9]{40}(-[a-z0-9]{1,40})?.bundle"
 	if ok, _ := regexp.MatchString(bundleRE, name); ok {
 		return nil
 	}

@@ -26,6 +26,9 @@ type StoreRead interface {
 
 	// Open the bundle for streaming read. It is the caller's responsibility to call Close().
 	OpenForRead(name string) (io.ReadCloser, error)
+
+	// Get the base location, like a directory or base URI that the Store writes to
+	Root() string
 }
 
 // Write operations on store, limited to a one-shot writing operation since bundles are immutable.
