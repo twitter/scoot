@@ -285,5 +285,5 @@ func (b *bundlestoreBackend) uploadFile(filePath string, ttl *bundlestore.TTLVal
 		return "", err
 	}
 
-	return path.Join(b.cfg.Store.Root(), name), nil
+	return b.cfg.Store.Root() + name, nil
 }
