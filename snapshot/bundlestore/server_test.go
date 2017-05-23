@@ -152,13 +152,6 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Expected data to not exist.")
 	}
 
-	// Check for non-existent data - double-ref name
-	if ok, err := httpStore.Exists("bs-0000000000000000000000000000000000000000-master.bundle"); err != nil {
-		t.Fatalf(err.Error())
-	} else if ok {
-		t.Fatalf("Expected data to not exist.")
-	}
-
 	// Check for invalid name error
 	if _, err := httpStore.Exists("foo"); err == nil {
 		t.Fatalf("Expected invalid input err.")

@@ -36,6 +36,7 @@ package cli
 //
 // dbCommand.run() does the work of calling a function on the SnapshotDB
 import (
+	"crypto/sha1"
 	"fmt"
 	"os"
 	"path"
@@ -187,6 +188,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	bundleFilename, tempDir := "", ""
+	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
 	if c.file != "" {
 		bundleFilename = c.file
 	} else {
@@ -195,7 +197,11 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 			return fmt.Errorf("Couldn't create temp dir: %v", err)
 		}
 		tempDir = td.Dir
-		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%v-%v.bundle", c.basis, c.ref))
+
+		// Don't use commit sha in case of collision with other bundle,
+		// create simple sha derived from basis and ref
+		sha := sha1.Sum([]byte(revList))
+		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha))
 	}
 
 	defer func() {
@@ -208,7 +214,6 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		}
 	}()
 
-	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
 	if _, err := ingestRepo.Run("-c",
 		"core.packobjectedgesonlyshallow=0",
 		"bundle",
