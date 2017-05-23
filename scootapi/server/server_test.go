@@ -28,6 +28,9 @@ func Test_RequestCounters(t *testing.T) {
 	handler := NewHandler(s, sc, statsReceiver)
 
 	domainJobDef := sched.GenJobDef(1)
+	if len(domainJobDef.Tasks[0].Argv) == 0 {
+		domainJobDef.Tasks[0].Argv = []string{"sampleArg"}
+	}
 
 	scootJobDef, _ := schedJobDefToScootJobDef(&domainJobDef)
 
