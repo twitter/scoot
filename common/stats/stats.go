@@ -445,25 +445,25 @@ func newNilLatency() Latency                          { return &nilLatency{} }
 //
 // Twitter/Finagle style metrics
 //
-type FinagleStatsRegistry struct {
+type finagleStatsRegistry struct {
 	metrics.Registry
 }
 
 func NewFinagleStatsRegistry() StatsRegistry {
-	return &FinagleStatsRegistry{metrics.NewRegistry()}
+	return &finagleStatsRegistry{metrics.NewRegistry()}
 }
 
 type jsonMap map[string]interface{}
 
 // MarshalJSON returns a byte slice containing a JSON representation of all
 // the metrics in the Registry.
-func (r *FinagleStatsRegistry) MarshalJSON() ([]byte, error) {
+func (r *finagleStatsRegistry) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.MarshalAll())
 }
-func (r *FinagleStatsRegistry) MarshalJSONPretty() ([]byte, error) {
+func (r *finagleStatsRegistry) MarshalJSONPretty() ([]byte, error) {
 	return json.MarshalIndent(r.MarshalAll(), "", "  ")
 }
-func (r *FinagleStatsRegistry) MarshalAll() jsonMap {
+func (r *finagleStatsRegistry) MarshalAll() jsonMap {
 	data := make(map[string]interface{}, 0)
 	r.Each(func(name string, i interface{}) {
 		switch stat := i.(type) {
@@ -485,7 +485,7 @@ func (r *FinagleStatsRegistry) MarshalAll() jsonMap {
 	})
 	return data
 }
-func (r *FinagleStatsRegistry) marshalHistogram(
+func (r *finagleStatsRegistry) marshalHistogram(
 	data jsonMap,
 	name string,
 	hist HistogramView,

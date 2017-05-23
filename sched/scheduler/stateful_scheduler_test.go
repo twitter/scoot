@@ -21,7 +21,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/snapshot/snapshots"
-	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
 // objects needed to initialize a stateful scheduler
@@ -60,7 +59,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 }
 
 func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry{ return deps.statsRegistry}, 0)
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return deps.statsRegistry }, 0)
 
 	s := NewStatefulScheduler(
 		deps.initialCl,
@@ -111,11 +110,11 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 		t.Errorf("Expected job to be Scheduled Successfully %v", err)
 	}
 
-	testhelpers.VerifyStats(statsRegistry, t,
-		map[string]testhelpers.Rule {
-			"schedJobsCounter" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 1},
-			"schedJobLatency_ms.avg" : testhelpers.Rule{Checker:testhelpers.FloatGTTest, Value: 0.0},
-			"schedJobRequestsCounter" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 1},
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			"schedJobsCounter":        {Checker: stats.Int64EqTest, Value: 1},
+			"schedJobLatency_ms.avg":  {Checker: stats.FloatGTTest, Value: 0.0},
+			"schedJobRequestsCounter": {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 
@@ -144,11 +143,11 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 		t.Error("Expected job return error")
 	}
 
-	testhelpers.VerifyStats(statsRegistry, t,
-		map[string]testhelpers.Rule {
-			"schedJobsCounter" : testhelpers.Rule{Checker:testhelpers.DoesNotExist, Value: nil},
-			"schedJobLatency_ms.avg" : testhelpers.Rule{Checker:testhelpers.FloatGTTest, Value: 0.0},
-			"schedJobRequestsCounter" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 1},
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			"schedJobsCounter":        {Checker: stats.DoesNotExist, Value: nil},
+			"schedJobLatency_ms.avg":  {Checker: stats.FloatGTTest, Value: 0.0},
+			"schedJobRequestsCounter": {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 
@@ -172,11 +171,11 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		t.Errorf("Expected the %v to be an inProgressJobs", id)
 	}
 
-	testhelpers.VerifyStats(statsRegistry, t,
-		map[string]testhelpers.Rule {
-			"schedInProgressJobsGauge" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 1},
-			"schedInProgressTasksGauge" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 2},
-			"schedNumRunningTasksGauge" : testhelpers.Rule{Checker:testhelpers.Int64EqTest, Value: 2},
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			"schedAcceptedJobsGauge":    {Checker: stats.Int64EqTest, Value: 1},
+			"schedInProgressTasksGauge": {Checker: stats.Int64EqTest, Value: 2},
+			"schedNumRunningTasksGauge": {Checker: stats.Int64EqTest, Value: 2},
 		})
 }
 
@@ -360,6 +359,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	s, _, _ := initializeServices(sc, false)
 
 	jobId, taskIds, _ := putJobInScheduler(1, s, true)
+	s.step() // get the first job in the queue
 	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
 		s.step()
 	}
@@ -399,6 +399,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, true)
 	jobId, taskIds, _ := putJobInScheduler(1, s, false)
+	s.step() // get the job in the queue
 
 	//advance scheduler until the task completes
 	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.InProgress {
@@ -434,10 +435,11 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 
 func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
-	s, _, _ := initializeServices(sc, false)
+	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
 	jobId1, _, _ := putJobInScheduler(5, s, true)
+	s.step()
 	for !allTasksInState("job1", jobId1, s, sched.InProgress) {
 		s.step()
 	}
@@ -445,10 +447,23 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	verifyJobStatus("verify started job1", jobId1, sched.InProgress,
 		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
 
+	stats.VerifyStats("first stage", statsRegistry, t,
+		map[string]stats.Rule{
+			"schedAcceptedJobsGauge": {Checker: stats.Int64EqTest, Value: 1},
+			"schedWaitingJobsGauge":  {Checker: stats.Int64EqTest, Value: 0},
+		})
+
 	// put a job with 3 tasks in the queue - all tasks should be in NotStarted state
 	jobId2, _, _ := putJobInScheduler(3, s, true)
+	s.step()
 	verifyJobStatus("verify put job2 in scheduler", jobId2, sched.InProgress,
 		[]sched.Status{sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
+
+	stats.VerifyStats("second stage", statsRegistry, t,
+		map[string]stats.Rule{
+			"schedAcceptedJobsGauge": {Checker: stats.Int64EqTest, Value: 2},
+			"schedWaitingJobsGauge":  {Checker: stats.Int64EqTest, Value: 1},
+		})
 
 	// kill the second job
 	respCh := sendKillRequest(jobId2, s)
@@ -560,9 +575,6 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, usingPausingExecer bo
 	}()
 	jobId, err := s.ScheduleJob(jobDef)
 
-	// force the first job to pending state without starting it
-	s.addJobs()
-
 	return jobId, taskIds, err
 }
 
@@ -613,4 +625,3 @@ func getDepsWithPausingWorker() (*schedulerDeps, []*execers.SimExecer) {
 	}, nil
 
 }
-

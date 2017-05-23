@@ -19,7 +19,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/worker/workers"
 	"github.com/scootdev/scoot/workerapi"
-	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
 var tmp *temp.TempDir
@@ -35,7 +34,7 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 	return &taskRunner{
 		saga:   s,
 		runner: r,
-		stat: stat,
+		stat:   stat,
 
 		markCompleteOnFailure: markCompleteOnFailure,
 		defaultTaskTimeout:    30 * time.Second,
@@ -249,9 +248,9 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 		t.Errorf("Expected saga error: %v, got: %v", runErr, terr.runnerErr)
 	}
 
-	testhelpers.VerifyStats(statsRegistry, t,
-		map[string]testhelpers.Rule {
-			"taskStartRetries" : {Checker:testhelpers.Int64EqTest, Value: 1},
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			"taskStartRetries": {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 

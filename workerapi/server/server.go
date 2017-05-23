@@ -85,8 +85,8 @@ func (h *handler) stats() {
 			}
 			h.stat.Gauge("activeRunsGauge").Update(numActive)
 			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
-			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)	// TODO errata metric - remove if unused
-			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)	// TODO errata metric - remove if unused
+			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
+			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)   // TODO errata metric - remove if unused
 			h.stat.Gauge("uptimeGauge_ms").Update(int64(uptime / time.Millisecond))
 			h.mu.Unlock()
 		}

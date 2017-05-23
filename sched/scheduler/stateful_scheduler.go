@@ -193,7 +193,7 @@ func NewStatefulScheduler(
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),
+		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs: make([]*jobState, 0),
 		requestorMap:   make(map[string][]*jobState),
 		stat:           stat,
@@ -228,8 +228,8 @@ type jobAddedMsg struct {
 }
 
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
-	defer s.stat.Latency("schedJobLatency_ms").Time().Stop() 	// TODO errata metric - remove if unused
-	s.stat.Counter("schedJobRequestsCounter").Inc(1)		// TODO errata metric - remove if unused
+	defer s.stat.Latency("schedJobLatency_ms").Time().Stop() // TODO errata metric - remove if unused
+	s.stat.Counter("schedJobRequestsCounter").Inc(1)         // TODO errata metric - remove if unused
 	log.Infof("Job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
 		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
 
@@ -318,10 +318,16 @@ func (s *statefulScheduler) step() {
 	s.scheduleTasks()
 
 	remaining := 0
+	waitingToStart := 0
 	for _, job := range s.inProgressJobs {
 		remaining += (len(job.Tasks) - job.TasksCompleted)
+		log.Infof("***jobid:%s, completed:%d, running:%d", job.Job.Id, job.TasksCompleted, job.TasksRunning)
+		if job.TasksCompleted+job.TasksRunning == 0 {
+			waitingToStart += 1
+		}
 	}
-	s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge("schedAcceptedJobsGauge").Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge("schedWaitingJobsGauge").Update(int64(waitingToStart))
 	s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
 	s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 }

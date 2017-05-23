@@ -5,12 +5,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/common/stats"
+	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/tests/testhelpers"
 )
 
 // ensure a scheduler initializes to the correct state
@@ -24,7 +23,7 @@ func Test_RequestCounters(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	statsRegistry := stats.NewFinagleStatsRegistry()
 
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry{ return statsRegistry}, 0)
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
 	handler := NewHandler(s, sc, statsReceiver)
 
@@ -34,33 +33,29 @@ func Test_RequestCounters(t *testing.T) {
 
 	_, err := handler.RunJob(scootJobDef)
 	if err != nil {
-		t.Errorf("RunJob returned err:%s",err.Error())
+		t.Errorf("RunJob returned err:%s", err.Error())
 	}
 
 	_, err = handler.GetStatus("testJobId")
 	if err != nil {
-		t.Errorf("GetStatus returned err:%s",err.Error())
+		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
 	_, err = handler.KillJob("testJobId")
 	if err != nil {
-		t.Errorf("GetStatus returned err:%s",err.Error())
+		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
-	testhelpers.VerifyStats(statsRegistry, t,
-		map[string]testhelpers.Rule{
-			"runJobRpmCounter" : {Checker:testhelpers.Int64EqTest, Value: 1},
-			"runJobLatency_ms.avg" : {Checker:testhelpers.FloatGTTest, Value: 0.0},
-			"jobStatusRpmCounter" : {Checker:testhelpers.Int64EqTest, Value: 1},
-			"jobStatusLatency_ms.avg" : {Checker:testhelpers.FloatGTTest, Value: 0.0},
-			"jobKillRpmCounter" : {Checker:testhelpers.Int64EqTest, Value: 1},
-			"jobKillLatency_ms.avg" : {Checker:testhelpers.FloatGTTest, Value: 0.0},
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			"runJobRpmCounter":        {Checker: stats.Int64EqTest, Value: 1},
+			"runJobLatency_ms.avg":    {Checker: stats.FloatGTTest, Value: 0.0},
+			"jobStatusRpmCounter":     {Checker: stats.Int64EqTest, Value: 1},
+			"jobStatusLatency_ms.avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			"jobKillRpmCounter":       {Checker: stats.Int64EqTest, Value: 1},
+			"jobKillLatency_ms.avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 		})
 }
-
-
-
-
 
 // converts a scheduler Job into a Thrift Job
 func schedJobDefToScootJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefinition, error) {
@@ -71,11 +66,11 @@ func schedJobDefToScootJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefin
 	scootTasks := []*scoot.TaskDefinition{}
 	for _, schedTask := range schedJobDef.Tasks {
 		cmd := scoot.Command{
-			Argv:       schedTask.Argv,
+			Argv: schedTask.Argv,
 		}
 		taskId := schedTask.TaskID
 		scootTask := &scoot.TaskDefinition{Command: &cmd, TaskId: &taskId}
-		scootTasks = append(scootTasks,scootTask)
+		scootTasks = append(scootTasks, scootTask)
 	}
 
 	unknown := scoot.JobType(scoot.JobType_UNKNOWN)
@@ -86,5 +81,3 @@ func schedJobDefToScootJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefin
 
 	return &scootJobDefinition, nil
 }
-
-

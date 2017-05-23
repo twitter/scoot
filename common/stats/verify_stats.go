@@ -1,22 +1,23 @@
-package testhelpers
+package stats
 
 import (
 	"bytes"
-	"strings"
-	"reflect"
 	"fmt"
+	"reflect"
 	"runtime"
+	"strings"
 	"testing"
-
-	"github.com/scootdev/scoot/common/stats"
 )
 
 /*
+Utilities for validating the stats registry contents
+*/
+/*
 add new Checker functions here as needed
- */
+*/
 /*
 errors if a is not float64, returns true if a == b
- */
+*/
 func FloatEqTest(a, b interface{}) bool {
 	if b == nil && a == nil {
 		return true
@@ -25,9 +26,10 @@ func FloatEqTest(a, b interface{}) bool {
 	bflt := b.(float64)
 	return aflt == bflt
 }
+
 /*
 errors if a is not float64, returns true if a > b
- */
+*/
 func FloatGTTest(a, b interface{}) bool {
 	if b == nil && a == nil {
 		return true
@@ -36,9 +38,10 @@ func FloatGTTest(a, b interface{}) bool {
 	bflt := b.(float64)
 	return aflt > bflt
 }
+
 /*
 errors if a is not int64, returns true if a == b
- */
+*/
 func Int64EqTest(a, b interface{}) bool {
 	if b == nil && a == nil {
 		return true
@@ -54,22 +57,23 @@ func DoesNotExist(a, b interface{}) bool {
 /*
 defines the condition checker to use to validate the measurement.  Each Checker(a, b) implementation
 will expect a to be the 'got' value and b to be the 'expected' value.
- */
+*/
 type Rule struct {
 	Checker func(interface{}, interface{}) bool
-	Value interface{}
+	Value   interface{}
 }
 
 /*
 Verify that the stats registry object contains values for the keys in the contains map parameter and that
 each entry conforms to the rule (condition) associated with that key.
- */
-func VerifyStats(statsRegistry stats.StatsRegistry, t *testing.T, contains map[string]Rule) {
+*/
+func VerifyStats(tag string, statsRegistry StatsRegistry, t *testing.T, contains map[string]Rule) {
 
-	asFinagleRegistry, ok := statsRegistry.(*stats.FinagleStatsRegistry)
+	asFinagleRegistry, ok := statsRegistry.(*finagleStatsRegistry)
 	err := false
 	var msg bytes.Buffer
-	msg.WriteString("stats registry error:\n")
+	msg.WriteString(tag)
+	msg.WriteString(":stats registry error:\n")
 
 	if ok {
 		asJson := asFinagleRegistry.MarshalAll()
@@ -93,5 +97,12 @@ func VerifyStats(statsRegistry stats.StatsRegistry, t *testing.T, contains map[s
 
 		}
 	}
+}
+
+func PPrintStats(tag string, statsRegistry StatsRegistry) {
+	fmt.Printf("%s\n", tag)
+	asFinagleRegistry, _ := statsRegistry.(*finagleStatsRegistry)
+	regBytes, _ := asFinagleRegistry.MarshalJSONPretty()
+	fmt.Printf("%s\n", regBytes)
 }
 
