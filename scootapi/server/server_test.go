@@ -28,11 +28,12 @@ func Test_RequestCounters(t *testing.T) {
 	handler := NewHandler(s, sc, statsReceiver)
 
 	domainJobDef := sched.GenJobDef(1)
+	domainJobDef.Tasks[0].Argv = []string{}
 	if len(domainJobDef.Tasks[0].Argv) == 0 {
 		domainJobDef.Tasks[0].Argv = []string{"sampleArg"}
 	}
 
-	scootJobDef, _ := schedJobDefToScootJobDef(&domainJobDef)
+	scootJobDef, _ := schedJobDefToScootAPIThriftJobDef(&domainJobDef)
 
 	_, err := handler.RunJob(scootJobDef)
 	if err != nil {
@@ -60,8 +61,19 @@ func Test_RequestCounters(t *testing.T) {
 		})
 }
 
-// converts a scheduler Job into a Thrift Job
-func schedJobDefToScootJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefinition, error) {
+/*
+TODO - reduce the number of JobDefinition structures in the platform!
+converts a scheduler JobDefinition into a scootapi Thrift JobDefinition.  Note: there are 3 JobDefinitions:
+sched.JobDefinition - the domain structure used through the scheduler implementation
+scoot.JobDefinition - the thrift structure created by scootapi's thrift definition
+schedthrift.JobDefinition - the thrift structure created by the scheduler's thrift definition
+(plus there is CLIJobDef which looks a lot like JobDefinition, but is only generated from the CLI's
+input job definition json file)
+
+At this point this functionality is only needed for testing because we are reusing the JobDefinition
+generator.
+*/
+func schedJobDefToScootAPIThriftJobDef(schedJobDef *sched.JobDefinition) (*scoot.JobDefinition, error) {
 	if schedJobDef == nil {
 		return nil, nil
 	}

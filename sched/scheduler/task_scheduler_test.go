@@ -16,9 +16,6 @@ import (
 )
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
@@ -27,7 +24,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil, nil, nil)
 
 	if len(assignments) != 0 {
@@ -36,12 +33,9 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 }
 
 func Test_TaskAssignment_NoTasks(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil, nil, nil)
 
 	if len(assignments) != 0 {
@@ -52,9 +46,6 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 // Currently we schedule based on availability only.  This
 // Test verifies that tasks are scheduled on all available nodes.
 func Test_TaskAssignments_TasksScheduled(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
@@ -64,9 +55,9 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	unScheduledTasks := js.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, stats.NilStatsReceiver())
 
 	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
@@ -78,11 +69,8 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 }
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	testCluster := makeTestCluster("node1", "node2", "node3")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	tasks := []*taskState{
 		&taskState{TaskId: "task1", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		&taskState{TaskId: "task2", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
@@ -129,9 +117,6 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 
 // We want to see three tasks with TagX scheduled first, followed by one TagY, then the final TagX
 func Test_TaskAssignments_RequestorBatching(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	js := []*jobState{
 		&jobState{
 			Job: &sched.Job{
@@ -169,7 +154,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{
@@ -204,9 +189,6 @@ Add Job1.P0, Job2.P1 Job3.P2, Job4.P3, Job5.P0
 With 4 nodes, expect: scheduled Job4, Job3, Job2, Job1
 */
 func Test_TaskAssignments_PrioritySimple(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	makeJob := func(jobId string, prio sched.Priority) *sched.Job {
 		return &sched.Job{Id: jobId, Def: sched.JobDefinition{Priority: prio, Tag: jobId}}
 	}
@@ -243,7 +225,7 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 
@@ -272,9 +254,6 @@ With 10 nodes: assign all 10 to the p3 tasks.
 After finishing p3 tasks: assign nodes for 5 P2, 3 P1, and 2 P0 tasks
 */
 func Test_TaskAssignments_PriorityStages(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	makeJob := func(jobId string, prio sched.Priority) *sched.Job {
 		return &sched.Job{Id: jobId, Def: sched.JobDefinition{Priority: prio, Tag: jobId}}
 	}
@@ -310,7 +289,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, statsReceiver)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{

@@ -145,7 +145,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedJobsCounter":        {Checker: stats.DoesNotExist, Value: nil},
+			"schedJobsCounter":        {Checker: stats.DoesNotExistTest, Value: nil},
 			"schedJobLatency_ms.avg":  {Checker: stats.FloatGTTest, Value: 0.0},
 			"schedJobRequestsCounter": {Checker: stats.Int64EqTest, Value: 1},
 		})

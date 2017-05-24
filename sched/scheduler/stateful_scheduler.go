@@ -321,7 +321,6 @@ func (s *statefulScheduler) step() {
 	waitingToStart := 0
 	for _, job := range s.inProgressJobs {
 		remaining += (len(job.Tasks) - job.TasksCompleted)
-		log.Infof("***jobid:%s, completed:%d, running:%d", job.Job.Id, job.TasksCompleted, job.TasksRunning)
 		if job.TasksCompleted+job.TasksRunning == 0 {
 			waitingToStart += 1
 		}
