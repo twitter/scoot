@@ -156,13 +156,8 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	f, err := os.Open(bundleFilename)
+	_, err = b.uploadFile(bundleFilename, nil)
 	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	if err := b.cfg.Store.Write(bundleName, f, nil); err != nil {
 		return nil, err
 	}
 
@@ -272,4 +267,23 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 
 func makeBundleName(key string) string {
 	return fmt.Sprintf("bs-%s.bundle", key)
+}
+
+func (b *bundlestoreBackend) uploadFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	name := path.Base(filePath)
+	if name == "." || name == "/" {
+		return "", fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name)
+	}
+
+	if err := b.cfg.Store.Write(name, f, ttl); err != nil {
+		return "", err
+	}
+
+	return b.cfg.Store.Root() + name, nil
 }

@@ -19,6 +19,8 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
+var dbTempDir string = ""
+
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
@@ -35,8 +37,10 @@ func main() {
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)
 	if err := cmd.Execute(); err != nil {
+		removeTemp()
 		log.Fatal(err)
 	}
+	removeTemp()
 }
 
 type injector struct {
@@ -53,6 +57,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	dbTempDir = tempDir.Dir
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -83,4 +88,10 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	store := bundlestore.MakeHTTPStore(url)
 	return gitdb.MakeDBFromRepo(dataRepo, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
 		gitdb.AutoUploadBundlestore), nil
+}
+
+func removeTemp() {
+	if dbTempDir != "" {
+		os.RemoveAll(dbTempDir)
+	}
 }
