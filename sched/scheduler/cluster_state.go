@@ -313,7 +313,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 	}
 
-	c.stats.Gauge("availableNodes").Update(int64(len(c.nodes)))
-	c.stats.Gauge("idleNodes").Update(int64(c.numIdle))
-	c.stats.Gauge("lostNodes").Update(int64(len(c.suspendedNodes)))
+	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
+	c.stats.Gauge(stats.ClusterIdleNodes).Update(int64(c.numIdle))
+	c.stats.Gauge(stats.ClusterLostNodes).Update(int64(len(c.suspendedNodes)))
 }

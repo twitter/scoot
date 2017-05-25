@@ -228,8 +228,8 @@ type jobAddedMsg struct {
 }
 
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
-	defer s.stat.Latency("schedJobLatency_ms").Time().Stop() // TODO errata metric - remove if unused
-	s.stat.Counter("schedJobRequestsCounter").Inc(1)         // TODO errata metric - remove if unused
+	defer s.stat.Latency(stats.SchedJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
+	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)         // TODO errata metric - remove if unused
 	log.Infof("Job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
 		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
 
@@ -267,7 +267,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 
 	log.Infof("Queueing job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
 		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
-	s.stat.Counter("schedJobsCounter").Inc(1)
+	s.stat.Counter(stats.SchedJobsCounter).Inc(1)
 	s.addJobCh <- jobAddedMsg{
 		job:  job,
 		saga: sagaObj,
@@ -325,10 +325,10 @@ func (s *statefulScheduler) step() {
 			waitingToStart += 1
 		}
 	}
-	s.stat.Gauge("schedAcceptedJobsGauge").Update(int64(len(s.inProgressJobs)))
-	s.stat.Gauge("schedWaitingJobsGauge").Update(int64(waitingToStart))
-	s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
-	s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
+	s.stat.Gauge(stats.SchedAcceptedJobsGauge).Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(waitingToStart))
+	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remaining))
+	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 }
 
 // Checks if any new jobs have been scheduled since the last loop and adds
@@ -467,7 +467,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
-						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1) // TODO errata metric - remove if unused
+						s.stat.Counter(stats.SchedRetriedEndSagaCounter).Inc(1) // TODO errata metric - remove if unused
 						log.Infof("Job completed but failed to log: %v", j.Job.Id)
 					}
 				})
@@ -686,10 +686,10 @@ func (s *statefulScheduler) killJobs() {
 				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
 				if err != nil {
-					s.stat.Counter("failedTaskSerializeCounter").Inc(1) // TODO errata metric - remove if unused
+					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
 				}
 				//TODO - is this the correct counter?
-				s.stat.Counter("completedTaskCounter").Inc(1)
+				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 				jobState.Saga.EndTask(task.TaskId, statusAsBytes)
 				jobState.taskCompleted(task.TaskId)
 			}
