@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/luci/go-render/render"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga/sagalogs"
 	"github.com/scootdev/scoot/sched"
@@ -23,7 +24,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil, nil, nil)
 
 	if len(assignments) != 0 {
@@ -34,7 +35,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil, nil, nil)
 
 	if len(assignments) != 0 {
@@ -54,9 +55,9 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	unScheduledTasks := js.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, stats.NilStatsReceiver())
 
 	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
@@ -69,7 +70,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	tasks := []*taskState{
 		&taskState{TaskId: "task1", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		&taskState{TaskId: "task2", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
@@ -153,7 +154,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{
@@ -224,7 +225,7 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 
@@ -288,7 +289,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil)
+	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{

@@ -193,7 +193,7 @@ func NewStatefulScheduler(
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn),
+		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs: make([]*jobState, 0),
 		requestorMap:   make(map[string][]*jobState),
 		stat:           stat,
@@ -228,8 +228,8 @@ type jobAddedMsg struct {
 }
 
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
-	defer s.stat.Latency("schedJobLatency_ms").Time().Stop()
-	s.stat.Counter("schedJobRequestsCounter").Inc(1)
+	defer s.stat.Latency("schedJobLatency_ms").Time().Stop() // TODO errata metric - remove if unused
+	s.stat.Counter("schedJobRequestsCounter").Inc(1)         // TODO errata metric - remove if unused
 	log.Infof("Job request: Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
 		jobDef.Requestor, jobDef.Tag, jobDef.Basis, jobDef.Priority, len(jobDef.Tasks))
 
@@ -290,16 +290,11 @@ func generateJobId() string {
 }
 
 // run the scheduler loop indefinitely
+// we are not putting any logic other than looping in this method so unit tests can verify
+// behavior by controlling calls to step() below
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		remaining := 0
-		for _, job := range s.inProgressJobs {
-			remaining += (len(job.Tasks) - job.TasksCompleted)
-		}
-		s.stat.Gauge("schedInProgressJobsGauge").Update(int64(len(s.inProgressJobs)))
-		s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
-		s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 		time.Sleep(250 * time.Millisecond)
 	}
 }
@@ -321,6 +316,19 @@ func (s *statefulScheduler) step() {
 	s.checkForCompletedJobs()
 	s.killJobs()
 	s.scheduleTasks()
+
+	remaining := 0
+	waitingToStart := 0
+	for _, job := range s.inProgressJobs {
+		remaining += (len(job.Tasks) - job.TasksCompleted)
+		if job.TasksCompleted+job.TasksRunning == 0 {
+			waitingToStart += 1
+		}
+	}
+	s.stat.Gauge("schedAcceptedJobsGauge").Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge("schedWaitingJobsGauge").Update(int64(waitingToStart))
+	s.stat.Gauge("schedInProgressTasksGauge").Update(int64(remaining))
+	s.stat.Gauge("schedNumRunningTasksGauge").Update(int64(s.asyncRunner.NumRunning()))
 }
 
 // Checks if any new jobs have been scheduled since the last loop and adds
@@ -459,7 +467,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
-						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1)
+						s.stat.Counter("schedRetriedEndSagaCounter").Inc(1) // TODO errata metric - remove if unused
 						log.Infof("Job completed but failed to log: %v", j.Job.Id)
 					}
 				})
@@ -475,7 +483,6 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.clusterState.nodeGroups = nodeGroups
 	}
 	for _, ta := range taskAssignments {
-
 		// Set up variables for async functions & callback
 		task := ta.task
 		nodeSt := ta.nodeSt
@@ -679,7 +686,7 @@ func (s *statefulScheduler) killJobs() {
 				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
 				if err != nil {
-					s.stat.Counter("failedTaskSerializeCounter").Inc(1)
+					s.stat.Counter("failedTaskSerializeCounter").Inc(1) // TODO errata metric - remove if unused
 				}
 				//TODO - is this the correct counter?
 				s.stat.Counter("completedTaskCounter").Inc(1)

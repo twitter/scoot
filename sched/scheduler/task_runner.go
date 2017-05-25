@@ -110,7 +110,7 @@ func (r *taskRunner) run() error {
 		r.stat.Counter("completedTaskCounter").Inc(1)
 		return nil
 	} else {
-		r.stat.Counter("failedTaskSagaCounter").Inc(1)
+		r.stat.Counter("failedTaskSagaCounter").Inc(1) // TODO errata metric - remove if unused
 		return taskErr
 	}
 }
@@ -155,6 +155,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.Infof("Retrying run() for jobId: %s taskId: %s", r.jobId, taskId)
+			r.stat.Counter("taskStartRetries").Inc(1)
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
 			continue
@@ -241,7 +242,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	if st != nil {
 		statusAsBytes, err = workerapi.SerializeProcessStatus(*st)
 		if err != nil {
-			r.stat.Counter("failedTaskSerializeCounter").Inc(1)
+			r.stat.Counter("failedTaskSerializeCounter").Inc(1) // TODO errata metric - remove if unused
 			return err
 		}
 	}

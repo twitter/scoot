@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 )
 
 const noJob = ""
@@ -32,6 +33,7 @@ type clusterState struct {
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numIdle          int                           // Number of free nodes that are not in a suspended state.
+	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
 type nodeGroup struct {
@@ -119,7 +121,7 @@ func newNodeState(node cluster.Node) *nodeState {
 // Creates a New State Distributor with the initial nodes, and which updates
 // nodes added or removed based on the supplied channel. ReadyFn is optional.
 // New cluster is returned along with a doneCh which the caller can close to exit our goroutine.
-func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn) *clusterState {
+func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
 	var updates []cluster.NodeUpdate
 	for _, n := range initial {
 		updates = append(updates, cluster.NewAdd(n))
@@ -132,6 +134,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
 		readyFn:          rfn,
+		stats:            stats,
 	}
 	cs.update(updates)
 	return cs
@@ -309,4 +312,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			c.numIdle++
 		}
 	}
+
+	c.stats.Gauge("availableNodes").Update(int64(len(c.nodes)))
+	c.stats.Gauge("idleNodes").Update(int64(c.numIdle))
+	c.stats.Gauge("lostNodes").Update(int64(len(c.suspendedNodes)))
 }

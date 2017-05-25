@@ -12,7 +12,6 @@ import (
 
 // Implementation of the RunJob API
 func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.StatsReceiver) (*scoot.JobId, error) {
-	stat.Counter("runJobRequestsCounter").Inc(1)
 
 	jobDef, err := thriftJobToScoot(def)
 	// TODO: change to return scoot.NewInvalidRequest()

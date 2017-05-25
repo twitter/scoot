@@ -7,13 +7,17 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/stats"
 )
 
 // ensures nodes can be added and removed
 func Test_ClusterState_UpdateCluster(t *testing.T) {
 
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	cl := makeTestCluster()
-	cs := newClusterState(cl.nodes, cl.ch, nil)
+	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
 
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
@@ -48,8 +52,11 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 // ensures that removing an untracked node succeeds
 func Test_ClusterState_RemoveNotTrackedNode(t *testing.T) {
 
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	cl := makeTestCluster()
-	cs := newClusterState(cl.nodes, cl.ch, nil)
+	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
 
 	cl.remove("node1")
 	cs.updateCluster()
@@ -60,8 +67,11 @@ func Test_ClusterState_RemoveNotTrackedNode(t *testing.T) {
 
 // ensures that adding a node more than once does not reset state
 func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil)
+	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 
@@ -82,8 +92,11 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 }
 
 func Test_ClusterState_TaskStarted(t *testing.T) {
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil)
+	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
@@ -94,8 +107,11 @@ func Test_ClusterState_TaskStarted(t *testing.T) {
 }
 
 func Test_ClusterState_TaskCompleted(t *testing.T) {
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil)
+	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
@@ -109,6 +125,9 @@ func Test_ClusterState_TaskCompleted(t *testing.T) {
 
 // verify that idle and busy maps are populated correctly and that flaky/lost/init'd status are as well.
 func Test_ClusterState_NodeGroups(t *testing.T) {
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
 	ready := map[string]chan interface{}{
 		"node1": make(chan interface{}), "node2": make(chan interface{}),
 		"node3": make(chan interface{}), "node4": make(chan interface{}),
@@ -125,7 +144,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 		close(ready[node])
 	}
 	cl := makeTestCluster("node1", "node2", "node3", "node4")
-	cs := newClusterState(cl.nodes, cl.ch, readyFn)
+	cs := newClusterState(cl.nodes, cl.ch, readyFn, statsReceiver)
 
 	// Test that nodes are added in the suspended state.
 	if len(cs.nodes) != 0 || len(cs.suspendedNodes) != 4 {
@@ -143,6 +162,13 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 		t.Fatalf("Expected healthy node1 in nodes and the rest in suspendedNodes, got: %s, %s",
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
+
+	stats.VerifyStats("1st stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			"availableNodes": {Checker: stats.Int64EqTest, Value: 1},
+			"idleNodes":      {Checker: stats.Int64EqTest, Value: 1},
+			"lostNodes":      {Checker: stats.Int64EqTest, Value: 3},
+		})
 
 	// Remove node2 and make sure its state is set correctly.
 	node2 := cs.suspendedNodes[cluster.NodeId("node2")]
@@ -162,6 +188,13 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
+	stats.VerifyStats("2nd stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			"availableNodes": {Checker: stats.Int64EqTest, Value: 1},
+			"idleNodes":      {Checker: stats.Int64EqTest, Value: 1},
+			"lostNodes":      {Checker: stats.Int64EqTest, Value: 3},
+		})
+
 	// Re-add node2 and set the rest as init'd, then check nodes/suspendedNodes.
 	cl.add("node2")
 	cs.updateCluster()
@@ -178,6 +211,12 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
+	stats.VerifyStats("3rd stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			"availableNodes": {Checker: stats.Int64EqTest, Value: 4},
+			"idleNodes":      {Checker: stats.Int64EqTest, Value: 3},
+			"lostNodes":      {Checker: stats.Int64EqTest, Value: 0},
+		})
 	// Test the the right idle/busy maps are filled out for each snapshotId.
 	cs.taskScheduled("node1", "job1", "task1", "snapA")
 	cs.taskScheduled("node2", "job1", "task2", "snapA")
