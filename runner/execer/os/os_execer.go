@@ -113,7 +113,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 				return
 			}
 			mem, _ := e.memUsage(pid)
-			e.stat.Gauge("memory").Update(int64(mem))
+			e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
 			// Aborting process, above memCap
 			if mem >= e.memCap {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
