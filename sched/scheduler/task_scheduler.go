@@ -36,7 +36,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	defer stat.Latency("schedTaskAssignmentsLatency_ms").Time().Stop()
+	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
 	if config == nil {
 		config = &SchedulerConfig{
@@ -81,10 +81,10 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 		numKillableTasks[p] += job.TasksRunning
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
-	stat.Gauge("priority0JobsGauge").Update(int64(len(priorityJobs[sched.P0])))
-	stat.Gauge("priority1JobsGauge").Update(int64(len(priorityJobs[sched.P1])))
-	stat.Gauge("priority2JobsGauge").Update(int64(len(priorityJobs[sched.P2])))
-	stat.Gauge("priority3JobsGauge").Update(int64(len(priorityJobs[sched.P3])))
+	stat.Gauge(stats.SchedPriority0JobsGauge).Update(int64(len(priorityJobs[sched.P0])))
+	stat.Gauge(stats.SchedPriority1JobsGauge).Update(int64(len(priorityJobs[sched.P1])))
+	stat.Gauge(stats.SchedPriority2JobsGauge).Update(int64(len(priorityJobs[sched.P2])))
+	stat.Gauge(stats.SchedPriority3JobsGauge).Update(int64(len(priorityJobs[sched.P3])))
 
 	// List killable tasks first by ascending priority and within that, by ascending execution duration.
 	//
@@ -308,7 +308,7 @@ func assign(
 			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeId]
 			killableTasks = killableTasks[1:]
 
-			stat.Counter("preemptedTasksCounter").Inc(1)
+			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
 			log.Infof("jobId=%s, taskId=%s will preempt node=%s running jobId=%s, taskId=%s",
 				task.JobId, task.TaskId, nodeSt.node.Id(), wasRunning.JobId, wasRunning.TaskId)
 		}
@@ -321,7 +321,7 @@ func assign(
 		delete(nodeGroups[snapshotId].idle, nodeId)
 		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, cross-job-progress=%d/%d",
 			task.JobId, task.TaskId, nodeId, len(assignments), len(tasks))
-		stat.Counter("scheduledTasksCounter").Inc(1)
+		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments
 }
