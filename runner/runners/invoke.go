@@ -76,7 +76,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 
 	go func() {
-
 		if cmd.SnapshotID == "" {
 			//TODO: we don't want this logic to live here, these decisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {

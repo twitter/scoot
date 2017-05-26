@@ -9,7 +9,6 @@ import (
 	"time"
 	log "github.com/Sirupsen/logrus"
 
-
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
