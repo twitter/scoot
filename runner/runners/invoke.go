@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -20,8 +21,11 @@ import (
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir) *Invoker {
-	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp}
+func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
+	if stat == nil {
+		stat = stats.NilStatsReceiver()
+	}
+	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp, stat: stat}
 }
 
 // TODO(dbentley): test this separately from the end-to-end runner tests
@@ -34,6 +38,7 @@ type Invoker struct {
 	filer  snapshot.Filer
 	output runner.OutputCreator
 	tmp    *temp.TempDir
+	stat   stats.StatsReceiver
 }
 
 // Run runs cmd
@@ -62,7 +67,16 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
+
+	// if we are checking out a snapsot, start the timer outside of go routine
+	var downloadTimer stats.Latency
+	if cmd.SnapshotID != "" {
+		downloadTimer = inv.stat.Latency(stats.WorkerDownloadLatency_ms).Time()
+		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
+	}
+
 	go func() {
+
 		if cmd.SnapshotID == "" {
 			//TODO: we don't want this logic to live here, these decisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
@@ -95,6 +109,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}()
 		return runner.AbortStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	case err := <-checkoutCh:
+		// stop the timer
+		// note: aborted runs don't stop the timer - the reported download time should remain 0
+		// successful and erroring downloads will report time values
+		if cmd.SnapshotID != "" {
+			downloadTimer.Stop()
+		}
 		if err != nil {
 			return runner.ErrorStatus(id, err, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
@@ -163,7 +183,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		if err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion dir: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
-		defer os.RemoveAll(tmp.Dir)
+		uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
+		inv.stat.Counter(stats.WorkerUploads).Inc(1)
+		defer func() {
+			os.RemoveAll(tmp.Dir)
+			uploadTimer.Stop()
+		}()
 		outPath := stdout.AsFile()
 		errPath := stderr.AsFile()
 		stdoutName := "STDOUT"
