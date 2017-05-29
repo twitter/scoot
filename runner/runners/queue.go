@@ -161,7 +161,9 @@ func (c *QueueController) loop() {
 		// Prefer to run an update first if we have one scheduled
 		select {
 		case <-c.updateCh:
-			c.filer.Update()
+			if err := c.filer.Update(); err != nil {
+				log.Errorf("Error running Filer Update: %v\n", err)
+			}
 			justUpdated = true
 		default:
 		}
@@ -174,7 +176,9 @@ func (c *QueueController) loop() {
 			if justUpdated {
 				justUpdated = false
 			} else {
-				c.filer.Update()
+				if err := c.filer.Update(); err != nil {
+					log.Errorf("Error running Filer Update: %v\n", err)
+				}
 			}
 
 		case cmdID, ok := <-c.startCh:
