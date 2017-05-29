@@ -11,14 +11,15 @@ import (
 
 // Utilities for creating Checkouters.
 
-// RepoIniter is an interface for initializing repositories
-type RepoIniter interface {
+// PooledRepoIniter is an interface for initializing repositories
+// Not widely used, renamed from RepoIniter for separation from gitdb.RepoIniter
+type PooledRepoIniter interface {
 	// Init initializes the Repository to use as a reference repository
 	// Takes a StatsReceiver to support instrumenting repo initialization
 	Init(stat stats.StatsReceiver) (*repo.Repository, error)
 }
 
-// RepoIniter implementation
+// PooledRepoIniter implementation
 type ConstantIniter struct {
 	Repo *repo.Repository
 }
@@ -28,7 +29,7 @@ func (g *ConstantIniter) Init(stat stats.StatsReceiver) (*repo.Repository, error
 }
 
 // Util for creating a Pool that will only have a single repo
-func NewSingleRepoPool(repoIniter RepoIniter,
+func NewSingleRepoPool(repoIniter PooledRepoIniter,
 	stat stats.StatsReceiver,
 	doneCh <-chan struct{}) *RepoPool {
 	singlePool := NewRepoPool(repoIniter, stat, []*repo.Repository{}, doneCh, 1)
@@ -36,7 +37,7 @@ func NewSingleRepoPool(repoIniter RepoIniter,
 }
 
 // A Checkouter that checks out from a single repo populated by a NewSingleRepoPool)
-func NewSingleRepoCheckouter(repoIniter RepoIniter,
+func NewSingleRepoCheckouter(repoIniter PooledRepoIniter,
 	stat stats.StatsReceiver,
 	doneCh <-chan struct{}) *Checkouter {
 	pool := NewSingleRepoPool(repoIniter, stat, doneCh)
@@ -44,7 +45,7 @@ func NewSingleRepoCheckouter(repoIniter RepoIniter,
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
-func NewRefRepoCloningCheckouter(refRepoIniter RepoIniter,
+func NewRefRepoCloningCheckouter(refRepoIniter PooledRepoIniter,
 	stat stats.StatsReceiver,
 	clonesDir *temp.TempDir,
 	doneCh <-chan struct{},

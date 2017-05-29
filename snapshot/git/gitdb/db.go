@@ -3,6 +3,7 @@ package gitdb
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
@@ -33,19 +34,19 @@ const (
 )
 
 // MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
-func MakeDBFromRepo(dataRepo *repo.Repository, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(dataRepo, nil, tmp, stream, tags, bundles, autoUploadDest)
+func MakeDBFromRepo(dataRepo *repo.Repository, updater RepoUpdater, tmp *temp.TempDir,
+	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	return makeDB(dataRepo, nil, updater, tmp, stream, tags, bundles, autoUploadDest)
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
-func MakeDBNewRepo(initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(nil, initer, tmp, stream, tags, bundles, autoUploadDest)
+func MakeDBNewRepo(initer RepoIniter, updater RepoUpdater, tmp *temp.TempDir,
+	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+	return makeDB(nil, initer, updater, tmp, stream, tags, bundles, autoUploadDest)
 }
 
-func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, stream *StreamConfig,
-	tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+func makeDB(dataRepo *repo.Repository, initer RepoIniter, updater RepoUpdater, tmp *temp.TempDir,
+	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
@@ -54,6 +55,7 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 		InitDoneCh: make(chan error, 1),
 		reqCh:      make(chan req),
 		dataRepo:   dataRepo,
+		updater:    updater,
 		tmp:        tmp,
 		checkouts:  make(map[string]bool),
 		local:      &localBackend{},
@@ -76,8 +78,17 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, tmp *temp.TempDir, str
 	return result
 }
 
+// Interface for defining initialization that results in a valid repo.Repository.
+// Distinct from gitfiler.RepoIniter
 type RepoIniter interface {
 	Init() (*repo.Repository, error)
+}
+
+// Interface for defining update behavior for an underlying repo.Repository.
+// Provides an update mechanism and an interval definition
+type RepoUpdater interface {
+	Update() error
+	UpdateInterval() time.Duration
 }
 
 // DB stores its data in a Git Repo
@@ -98,6 +109,7 @@ type DB struct {
 
 	// All data below here should be accessed only by the loop() goroutine
 	dataRepo   *repo.Repository
+	updater    RepoUpdater
 	tmp        *temp.TempDir
 	checkouts  map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local      *localBackend
@@ -128,6 +140,22 @@ func (db *DB) init(initer RepoIniter) {
 		db.dataRepo, db.err = initer.Init()
 		db.InitDoneCh <- db.err
 	}
+}
+
+// Update our repo with underlying RepoUpdater if provided
+func (db *DB) updateRepo() error {
+	if db.updater == nil {
+		return nil
+	}
+	return db.updater.Update()
+}
+
+// Returns RepoUpdater's interval if an updater exists, or a zero duration
+func (db *DB) UpdateInterval() time.Duration {
+	if db.updater == nil {
+		return snap.NoDuration
+	}
+	return db.updater.UpdateInterval()
 }
 
 // loop loops serving requests serially
@@ -180,11 +208,15 @@ func (db *DB) loop(initer RepoIniter) {
 		case exportGitCommitReq:
 			sha, err := db.exportGitCommit(req.id, req.exportRepo)
 			req.resultCh <- stringAndError{str: sha, err: err}
+		case updateRepoReq:
+			req.resultCh <- db.updateRepo()
 		default:
 			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
 		}
 	}
 }
+
+// Request entry points and request/result type defs
 
 type ingestReq struct {
 	dir      string
@@ -298,6 +330,8 @@ type exportGitCommitReq struct {
 
 func (r exportGitCommitReq) req() {}
 
+// ExportGitCommit applies a snapshot to a repository, returning the sha of
+// the exported commit or an error.
 func (db *DB) ExportGitCommit(id snap.ID, exportRepo *repo.Repository) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
 		return "", db.err
@@ -308,13 +342,27 @@ func (db *DB) ExportGitCommit(id snap.ID, exportRepo *repo.Repository) (string, 
 	return result.str, result.err
 }
 
-type downloadReq struct {
-	id       snap.ID
-	resultCh chan idAndError
+type updateRepoReq struct {
+	resultCh chan error
 }
 
-func (r downloadReq) req() {}
+func (r updateRepoReq) req() {}
 
+// Update is used to trigger an underlying RepoUpdater to Update() the Repository.
+// If db.updater is nil, has no effect.
+func (db *DB) Update() error {
+	if <-db.initDoneCh; db.err != nil {
+		return db.err
+	}
+	resultCh := make(chan error)
+	db.reqCh <- updateRepoReq{resultCh: resultCh}
+	result := <-resultCh
+	return result
+}
+
+// Below functions are utils not part of DB interface
+
+// IDForStreamCommitSHA gets a SnapshotID from a string name and commit sha
 func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
 	s := &streamSnapshot{sha: sha, kind: kindGitCommitSnapshot, streamName: streamName}
 	return s.ID()
@@ -327,8 +375,6 @@ type uploadFileReq struct {
 }
 
 func (r uploadFileReq) req() {}
-
-// Below functions are utils not part of DB interface
 
 // Manual write of a file (like an existing bundle) to the underlying store
 // Intended for HTTP-backed stores that implement bundlestore's TTL fields

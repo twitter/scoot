@@ -15,7 +15,7 @@ import (
 // hardlink. This means the clone is much faster and also takes very little extra hard disk space.
 // Cf. https://git-scm.com/docs/git-clone
 
-// RepoIniter implementation
+// PooledRepoIniter implementation
 // cloner clones a repo using --reference based on a reference repo
 type refCloner struct {
 	refPool   *RepoPool

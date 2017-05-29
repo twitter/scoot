@@ -1,6 +1,9 @@
 package snapshot
 
-import "os/exec"
+import (
+	"os/exec"
+	"time"
+)
 
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
 // This is useful for tools that want one file at a time, or for ScootFS to offer the data.
@@ -10,6 +13,7 @@ import "os/exec"
 type Filer interface {
 	Checkouter
 	Ingester
+	Updater
 }
 
 // Checkouter allows reading a Snapshot into the local filesystem.
@@ -44,6 +48,18 @@ type Ingester interface {
 	// Takes a mapping of source paths to be copied into corresponding destination directories.
 	// Source paths are absolute, and destination directories are relative to Checkout root.
 	IngestMap(srcToDest map[string]string) (id string, err error)
+}
+
+const NoDuration time.Duration = time.Duration(0) * time.Second
+
+// Updater allows Filers to have a means to manage updates on the underlying resources
+type Updater interface {
+	// Trigger an update on the underlying resource
+	Update() error
+
+	// Get the configured update frequency from the Updater.
+	// This lets us use the high-level interface to control update concurrency.
+	UpdateInterval() time.Duration
 }
 
 //TODO: this is temporary until we finalize snapshot.DB and gitDB.
@@ -83,6 +99,14 @@ func (dba *dbAdapter) Ingest(path string) (id string, err error) {
 
 func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (id string, err error) {
 	panic("not implemented")
+}
+
+func (dba *dbAdapter) Update() error {
+	return dba.db.Update()
+}
+
+func (dba *dbAdapter) UpdateInterval() time.Duration {
+	return dba.db.UpdateInterval()
 }
 
 type dbCheckout struct {

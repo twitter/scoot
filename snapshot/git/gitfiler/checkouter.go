@@ -3,6 +3,7 @@ package gitfiler
 import (
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/git/repo"
@@ -82,9 +83,11 @@ func (c *Checkouter) CheckoutAt(id string, dir string) (co snapshot.Checkout, er
 	return &UnmanagedCheckout{id: id, dir: dir}, nil
 }
 
-// Implement noop ingest so this Checkouter can be passed around as a Filer.
+// Implement noop ingest/update so this Checkouter can be passed around as a Filer.
 func (c *Checkouter) Ingest(string) (string, error)               { return "", nil }
 func (c *Checkouter) IngestMap(map[string]string) (string, error) { return "", nil }
+func (c *Checkouter) Update() error                               { return nil }
+func (c *Checkouter) UpdateInterval() time.Duration               { return snapshot.NoDuration }
 func (c *Checkouter) AsFiler() snapshot.Filer                     { return c }
 
 // Checkout holds one repo that is checked out to a specific ID

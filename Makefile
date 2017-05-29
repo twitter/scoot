@@ -43,10 +43,12 @@ format:
 vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
-test:
+coverage:
+	sh testCoverage.sh
+
+test-unit-property:
 	# Runs only unit tests and property tests
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
-	sh testCoverage.sh
 
 test-unit:
 	# Runs only unit tests
@@ -58,6 +60,10 @@ test-integration:
 	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
+
+testonly: test-unit-property
+
+test: test-unit-property coverage
 
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)

@@ -86,7 +86,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	}
 
 	store := bundlestore.MakeHTTPStore(url)
-	return gitdb.MakeDBFromRepo(dataRepo, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
+	return gitdb.MakeDBFromRepo(dataRepo, nil, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
 		gitdb.AutoUploadBundlestore), nil
 }
 

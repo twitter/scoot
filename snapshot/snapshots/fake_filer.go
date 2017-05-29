@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
@@ -14,26 +15,30 @@ import (
 
 // Make an invalid Filer
 func MakeInvalidFiler() snapshot.Filer {
-	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester())
+	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester(), MakeNoopUpdater())
 }
 func MakeNoopFiler(path string) snapshot.Filer {
-	return MakeFilerFacade(MakeNoopCheckouter(path), MakeNoopIngester())
+	return MakeFilerFacade(MakeNoopCheckouter(path), MakeNoopIngester(), MakeNoopUpdater())
 }
 
 // FilerFacade creates a Filer from a Checkouter and Ingester
 type FilerFacade struct {
 	snapshot.Checkouter
 	snapshot.Ingester
+	snapshot.Updater
 }
 
 // Make a Filer from a Checkouter and Ingester
-func MakeFilerFacade(checkouter snapshot.Checkouter, ingester snapshot.Ingester) *FilerFacade {
-	return &FilerFacade{checkouter, ingester}
+func MakeFilerFacade(
+	checkouter snapshot.Checkouter,
+	ingester snapshot.Ingester,
+	updater snapshot.Updater) *FilerFacade {
+	return &FilerFacade{checkouter, ingester, updater}
 }
 
 // Make a Filer that can Checkout() but does a noop Ingest().
 func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
-	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester())
+	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester(), MakeNoopUpdater())
 }
 
 // Creates a filer that copies ingested paths in and then back out for checkouts.
@@ -113,6 +118,10 @@ func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error)
 	}, nil
 }
 
+func (t *tempFiler) Update() error { return nil }
+
+func (t *tempFiler) UpdateInterval() time.Duration { return snapshot.NoDuration }
+
 // Make an Ingester that does nothing
 func MakeNoopIngester() *NoopIngester {
 	return &NoopIngester{}
@@ -127,3 +136,14 @@ func (n *NoopIngester) Ingest(string) (string, error) {
 func (n *NoopIngester) IngestMap(map[string]string) (string, error) {
 	return "", nil
 }
+
+// Make an Updater that does nothing
+func MakeNoopUpdater() *NoopUpdater {
+	return &NoopUpdater{}
+}
+
+type NoopUpdater struct{}
+
+func (n *NoopUpdater) Update() error { return nil }
+
+func (n *NoopUpdater) UpdateInterval() time.Duration { return snapshot.NoDuration }
