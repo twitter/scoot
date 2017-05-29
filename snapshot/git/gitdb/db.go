@@ -87,7 +87,7 @@ type RepoIniter interface {
 // Interface for defining update behavior for an underlying repo.Repository.
 // Provides an update mechanism and an interval definition
 type RepoUpdater interface {
-	Update() error
+	Update(r *repo.Repository) error
 	UpdateInterval() time.Duration
 }
 
@@ -147,7 +147,7 @@ func (db *DB) updateRepo() error {
 	if db.updater == nil {
 		return nil
 	}
-	return db.updater.Update()
+	return db.updater.Update(db.dataRepo)
 }
 
 // Returns RepoUpdater's interval if an updater exists, or a zero duration

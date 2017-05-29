@@ -187,7 +187,7 @@ func TestInitUpdate(t *testing.T) {
 		RefSpec: "refs/remotes/ro/master",
 	}
 
-	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, &pullUpdater{ro: ro}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
+	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, &pullUpdater{rw.Dir()}, fixture.tmp, streamCfg, nil, nil, AutoUploadNone)
 	defer db.Close()
 
 	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
@@ -270,15 +270,20 @@ func (i *bundleIniter) Init() (*repo.Repository, error) {
 }
 
 type pullUpdater struct {
-	ro *repo.Repository
+	rwDir string
 }
 
 func (p *pullUpdater) UpdateInterval() time.Duration {
 	return time.Duration(0) * time.Second
 }
 
-func (p *pullUpdater) Update() error {
-	_, err := p.ro.Run("pull", "origin", "master")
+// When used with a repo set up by bundleIniter, the only remote we have is the original
+// bundle, so we add the real remote repo to pull from. (We could also have re-written the bundle)
+func (p *pullUpdater) Update(r *repo.Repository) error {
+	if _, err := r.Run("remote", "add", "origin", p.rwDir); err != nil {
+		return err
+	}
+	_, err := r.Run("pull", "origin", "master")
 	return err
 }
 
