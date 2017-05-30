@@ -32,10 +32,7 @@ func NewQueueRunner(
 		history = 0 // unlimited if acting as a queue (vs single runner).
 	}
 
-	var updateTicker <-chan time.Time = nil
-	if filer.UpdateInterval() != snapshot.NoDuration {
-		updateTicker = time.NewTicker(filer.UpdateInterval()).C
-	}
+	updateTicker := makeSimpleTicker(filer.UpdateInterval())
 	statusManager := NewStatusManager(history)
 	inv := NewInvoker(exec, filer, output, tmp)
 
@@ -87,6 +84,13 @@ type QueueController struct {
 
 	startCh  chan cmdAndID
 	updateCh <-chan time.Time
+}
+
+func makeSimpleTicker(d time.Duration) <-chan time.Time {
+	if d != snapshot.NoDuration {
+		return time.NewTicker(d).C
+	}
+	return nil
 }
 
 // Run enqueues the command or rejects it, returning its status or an error.
@@ -154,6 +158,7 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 
 // Handle requests to run and update, to provide concurrency management between the two.
 // Although we can still receive run requests, runs and updates are done blocking.
+// TODO this should be smarter about not doing updates until repo was returned Initialized:true
 func (c *QueueController) loop() {
 	justUpdated := false
 
