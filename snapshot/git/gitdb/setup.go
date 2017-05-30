@@ -1,6 +1,8 @@
 package gitdb
 
 import (
+	"time"
+
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
@@ -20,6 +22,9 @@ func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func(tmp *temp.TempDir) RepoIniter {
 			return &NewRepoIniter{tmp: tmp}
+		},
+		func() RepoUpdater {
+			return &NewRepoUpdater{}
 		},
 		func(store bundlestore.Store) *BundlestoreConfig {
 			return &BundlestoreConfig{Store: store}
@@ -57,3 +62,10 @@ func (i *NewRepoIniter) Init() (*repo.Repository, error) {
 
 	return repo.InitRepo(repoTmp.Dir)
 }
+
+// Noop Repo Updater
+type NewRepoUpdater struct{}
+
+func (u *NewRepoUpdater) Update(*repo.Repository) error { return nil }
+
+func (u *NewRepoUpdater) UpdateInterval() time.Duration { return snap.NoDuration }
