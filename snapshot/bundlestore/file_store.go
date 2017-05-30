@@ -66,3 +66,7 @@ func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	}
 	return nil
 }
+
+func (s *FileStore) Root() string {
+	return s.bundleDir
+}

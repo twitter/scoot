@@ -34,6 +34,8 @@ func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewBuffer(f.files[name])), nil
 }
 
+func (f *FakeStore) Root() string { return "" }
+
 func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	if (f.ttl == nil) != (ttl == nil) || (ttl != nil && (f.ttl.TTLKey != ttl.TTLKey || f.ttl.TTL.Sub(ttl.TTL) != 0)) {
 		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.ttl, ttl)

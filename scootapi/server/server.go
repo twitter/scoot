@@ -34,14 +34,21 @@ type Handler struct {
 
 // Implements RunJob Cloud Scoot API
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
-	defer h.stat.Latency("runJobLatency_ms").Time().Stop()
-	h.stat.Counter("runJobRpmCounter").Inc(1)
+	defer h.stat.Latency(stats.SchedServerRunJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
+	h.stat.Counter(stats.SchedServerRunJobCounter).Inc(1)                 // TODO errata metric - remove if unused
 	return runJob(h.scheduler, def, h.stat)
 }
 
 // Implements GetStatus Cloud Scoot API
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
-	defer h.stat.Latency("jobStatusLatency_ms").Time().Stop()
-	h.stat.Counter("jobStatusRpmCounter").Inc(1)
+	defer h.stat.Latency(stats.SchedServerJobStatusLatency_ms).Time().Stop()
+	h.stat.Counter(stats.SchedServerJobStatusCounter).Inc(1)
 	return GetJobStatus(jobId, h.sagaCoord)
+}
+
+// Implements KillJob Cloud Scoot API
+func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
+	defer h.stat.Latency(stats.SchedServerJobKillLatency_ms).Time().Stop()
+	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
+	return KillJob(jobId, h.scheduler, h.sagaCoord)
 }

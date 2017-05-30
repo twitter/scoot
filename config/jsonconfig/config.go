@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/scootdev/scoot/ice"
 )
@@ -57,7 +58,7 @@ func (schema Schema) Parse(text []byte) (Configuration, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't parse top-level config: %v", err)
 	}
-	log.Infof("config parsed to:%+v\n", parsedConfig)
+	log.Infof("config parsed to:%s", spew.Sdump(parsedConfig))
 
 	result := Configuration(make(map[string]ice.Module))
 	// Parse each option (aka Implementations, which isn't a valid variable name)

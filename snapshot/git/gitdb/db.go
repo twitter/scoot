@@ -6,6 +6,7 @@ import (
 
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -174,6 +175,9 @@ func (db *DB) loop(initer RepoIniter) {
 			} else {
 				req.resultCh <- idAndError{id: s.ID()}
 			}
+		case uploadFileReq:
+			s, err := db.bundles.uploadFile(req.filePath, req.ttl)
+			req.resultCh <- stringAndError{str: s, err: err}
 		case readFileAllReq:
 			data, err := db.readFileAll(req.id, req.path)
 			req.resultCh <- stringAndError{str: data, err: err}
@@ -341,4 +345,28 @@ func (r downloadReq) req() {}
 func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
 	s := &streamSnapshot{sha: sha, kind: kindGitCommitSnapshot, streamName: streamName}
 	return s.ID()
+}
+
+type uploadFileReq struct {
+	filePath string
+	ttl      *bundlestore.TTLValue
+	resultCh chan stringAndError
+}
+
+func (r uploadFileReq) req() {}
+
+// Below functions are utils not part of DB interface
+
+// Manual write of a file (like an existing bundle) to the underlying store
+// Intended for HTTP-backed stores that implement bundlestore's TTL fields
+// Base of the filePath will be used as bundle name
+// Returns location of stored file
+func (db *DB) UploadFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
+	if <-db.initDoneCh; db.err != nil {
+		return "", db.err
+	}
+	resultCh := make(chan stringAndError)
+	db.reqCh <- uploadFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}
+	result := <-resultCh
+	return result.str, result.err
 }

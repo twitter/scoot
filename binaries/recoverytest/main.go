@@ -29,10 +29,12 @@ func main() {
 	numJobs := 20
 	timeout := time.Minute
 
+	log.Infof("Creating scoot client")
 	var wg sync.WaitGroup
 	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)
 
 	// Initialize Local Cluster
+	log.Infof("Creating test cluster")
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		log.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
@@ -45,13 +47,17 @@ func main() {
 	log.Infof("Add Jobs to Scoot Cloud Exec")
 	jobIds := make([]string, 0, numJobs)
 	for i := 0; i < numJobs; i++ {
-		jobIds = append(jobIds, testhelpers.StartJob(scootClient, testhelpers.GenerateJob(-1, "")))
+		log.Infof("Adding Job #%d", i)
+		jobId := testhelpers.StartJob(scootClient, testhelpers.GenerateJob(-1, ""))
+		jobIds = append(jobIds, jobId)
+		log.Infof("Added Job: %s", jobId)
 	}
 
 	// Wait for jobs to complete check in a separate go routine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		log.Info("Waiting for jobs to complete in new goroutine")
 		err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobIds, scootClient, timeout)
 		if err != nil {
 			log.Fatalf("Error Occurred Waiting For Jobs to Complete.  %v", err)

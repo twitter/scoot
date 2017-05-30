@@ -7,9 +7,14 @@ import (
 	"github.com/scootdev/scoot/sched/scheduler"
 )
 
-const DefaultRunnerRetryTimeout = 10 * time.Second // How long to keep retrying a runner req
-const DefaultRunnerRetryInterval = time.Second     // How long to sleep between runner req retries.
-const DefaultReadyFnBackoff = 5 * time.Second      // How long to wait between runner status queries to determine [init] status.
+// How long to keep retrying a runner req
+const DefaultRunnerRetryTimeout = 10 * time.Second
+
+// How long to sleep between runner req retries.
+const DefaultRunnerRetryInterval = time.Second
+
+// How long to wait between runner status queries to determine [init] status.
+const DefaultReadyFnBackoff = 5 * time.Second
 
 // Parameters to configure the Stateful Scheduler
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -22,12 +27,17 @@ const DefaultReadyFnBackoff = 5 * time.Second      // How long to wait between r
 // DefaultTaskTimeoutMs - default timeout for tasks, in ms
 // OverheadMs - default overhead to add (to account for network and downloading)
 type StatefulSchedulerConfig struct {
-	Type                 string
-	MaxRetriesPerTask    int
-	DebugMode            bool
-	RecoverJobsOnStartup bool
-	DefaultTaskTimeoutMs int
-	RunnerOverheadMs     int
+	Type                    string
+	MaxRetriesPerTask       int
+	DebugMode               bool
+	RecoverJobsOnStartup    bool
+	DefaultTaskTimeoutMs    int
+	RunnerOverheadMs        int
+	MaxRequestors           int
+	MaxJobsPerRequestor     int
+	NumConfiguredNodes      int
+	SoftMaxSchedulableTasks int
+	LargeJobSoftMaxNodes    int
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -36,13 +46,18 @@ func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
 
 func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
 	return scheduler.SchedulerConfig{
-		MaxRetriesPerTask:    c.MaxRetriesPerTask,
-		DebugMode:            c.DebugMode,
-		RecoverJobsOnStartup: c.RecoverJobsOnStartup,
-		DefaultTaskTimeout:   time.Duration(c.DefaultTaskTimeoutMs) * time.Millisecond,
-		RunnerOverhead:       time.Duration(c.RunnerOverheadMs) * time.Millisecond,
-		RunnerRetryTimeout:   DefaultRunnerRetryTimeout,
-		RunnerRetryInterval:  DefaultRunnerRetryInterval,
-		ReadyFnBackoff:       DefaultReadyFnBackoff,
+		MaxRetriesPerTask:       c.MaxRetriesPerTask,
+		DebugMode:               c.DebugMode,
+		RecoverJobsOnStartup:    c.RecoverJobsOnStartup,
+		DefaultTaskTimeout:      time.Duration(c.DefaultTaskTimeoutMs) * time.Millisecond,
+		RunnerOverhead:          time.Duration(c.RunnerOverheadMs) * time.Millisecond,
+		RunnerRetryTimeout:      DefaultRunnerRetryTimeout,
+		RunnerRetryInterval:     DefaultRunnerRetryInterval,
+		ReadyFnBackoff:          DefaultReadyFnBackoff,
+		MaxRequestors:           c.MaxRequestors,
+		MaxJobsPerRequestor:     c.MaxJobsPerRequestor,
+		NumConfiguredNodes:      c.NumConfiguredNodes,
+		SoftMaxSchedulableTasks: c.SoftMaxSchedulableTasks,
+		LargeJobSoftMaxNodes:    c.LargeJobSoftMaxNodes,
 	}
 }

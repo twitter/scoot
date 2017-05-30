@@ -11,11 +11,12 @@ import (
 // Note: Only Job, Saga, and Tasks are provided during scheduler recovery. Anything else must be initialized separately.
 type jobState struct {
 	Job            *sched.Job
-	Saga           *saga.Saga            //saga associated with this job
-	Tasks          map[string]*taskState //taskId to taskState
-	EndingSaga     bool                  //denotes whether an EndSagaMsg is in progress or not
-	TasksCompleted int                   //number of tasks that've been marked completed so far.
-	TasksRunning   int                   //number of tasks that've been scheduled or started.
+	Saga           *saga.Saga   //saga associated with this job
+	Tasks          []*taskState //ordered list of taskState
+	EndingSaga     bool         //denotes whether an EndSagaMsg is in progress or not
+	TasksCompleted int          //number of tasks that've been marked completed so far.
+	TasksRunning   int          //number of tasks that've been scheduled or started.
+	JobKilled      bool         //indicates the job was killed
 }
 
 // Contains all the information for a specified task
@@ -26,6 +27,7 @@ type taskState struct {
 	Status        sched.Status
 	TimeStarted   time.Time
 	NumTimesTried int
+	TaskRunner    *taskRunner
 }
 
 // Creates a New Job State based on the specified Job and Saga
@@ -35,21 +37,23 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 	j := &jobState{
 		Job:            job,
 		Saga:           saga,
-		Tasks:          make(map[string]*taskState),
+		Tasks:          make([]*taskState, 0),
 		EndingSaga:     false,
 		TasksCompleted: 0,
 		TasksRunning:   0,
+		JobKilled:      false,
 	}
 
-	for taskId, taskDef := range job.Def.Tasks {
-		j.Tasks[taskId] = &taskState{
+	for _, taskDef := range job.Def.Tasks {
+		task := &taskState{
 			JobId:         job.Id,
-			TaskId:        taskId,
+			TaskId:        taskDef.TaskID,
 			Def:           taskDef,
 			Status:        sched.NotStarted,
 			TimeStarted:   nilTime,
 			NumTimesTried: 0,
 		}
+		j.Tasks = append(j.Tasks, task)
 	}
 
 	// Assumes Forward Recovery only, tasks are either
@@ -58,12 +62,22 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 	// are considered not done and will be rescheduled.
 	for _, taskId := range saga.GetState().GetTaskIds() {
 		if saga.GetState().IsTaskCompleted(taskId) {
-			j.Tasks[taskId].Status = sched.Completed
+			j.getTask(taskId).Status = sched.Completed
 			j.TasksCompleted++
 		}
 	}
 
 	return j
+}
+
+// Helper, assumes that taskId is present given a consistent jobState.
+func (j *jobState) getTask(taskId string) *taskState {
+	for _, task := range j.Tasks {
+		if task.TaskId == taskId {
+			return task
+		}
+	}
+	return nil
 }
 
 // Returns a list of taskIds that can be scheduled currently.
@@ -81,29 +95,34 @@ func (j *jobState) getUnScheduledTasks() []*taskState {
 }
 
 // Update JobState to reflect that a Task has been started
-func (j *jobState) taskStarted(taskId string) {
-	taskState := j.Tasks[taskId]
+func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
+	taskState := j.getTask(taskId)
 	taskState.Status = sched.InProgress
 	taskState.TimeStarted = time.Now()
+	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
 	j.TasksRunning++
 }
 
 // Update JobState to reflect that a Task has been completed
 func (j *jobState) taskCompleted(taskId string) {
-	taskState := j.Tasks[taskId]
+	taskState := j.getTask(taskId)
 	taskState.Status = sched.Completed
 	taskState.TimeStarted = nilTime
+	taskState.TaskRunner = nil
 	j.TasksCompleted++
 	j.TasksRunning--
 }
 
 // Update JobState to reflect that an error has occurred running this Task
-func (j *jobState) errorRunningTask(taskId string, err error) {
-	taskState := j.Tasks[taskId]
+func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
+	taskState := j.getTask(taskId)
 	taskState.Status = sched.NotStarted
 	taskState.TimeStarted = nilTime
 	j.TasksRunning--
+	if preempted {
+		taskState.NumTimesTried--
+	}
 }
 
 // Returns the Current Job Status

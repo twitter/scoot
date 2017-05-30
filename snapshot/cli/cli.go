@@ -36,10 +36,16 @@ package cli
 //
 // dbCommand.run() does the work of calling a function on the SnapshotDB
 import (
+	"crypto/sha1"
 	"fmt"
 	"os"
+	"path"
+	"time"
 
+	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
+	"github.com/scootdev/scoot/snapshot/bundlestore"
+	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
 	"github.com/spf13/cobra"
 )
@@ -79,6 +85,7 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 	add(&ingestGitWorkingDirCommand{}, createCobraCmd)
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 	add(&ingestDirCommand{}, createCobraCmd)
+	add(&createGitBundleCommand{}, createCobraCmd)
 
 	readCobraCmd := &cobra.Command{
 		Use:   "read",
@@ -141,7 +148,7 @@ type ingestGitCommitCommand struct {
 func (c *ingestGitCommitCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest_git_commit",
-		Short: "ingests a git commit into the repo in cwd",
+		Short: "ingests a git commit into the repo in cwd and uploads it",
 	}
 	cmd.Flags().StringVar(&c.commit, "commit", "", "commit to ingest")
 	return cmd
@@ -164,6 +171,101 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 
 	fmt.Println(id)
+	return nil
+}
+
+// Subcommand for creating and uploading git bundles.
+// This is a workaround for creating arbitrary git bundles and keeping them in a Bundlestore.
+// We need this for now because generic bundles do not fit well with the existing
+// Snapshot, ID, Stream schemas.
+// Example usage: scoot-snapshot-db create publish_git_bundle \
+//	--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
+// Stdout: "http://localhost:9094/bundle/bs-<rev>-master.bundle"
+type createGitBundleCommand struct {
+	file  string
+	basis string
+	ref   string
+	ttld  time.Duration
+	keep  bool
+}
+
+func (c *createGitBundleCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "publish_git_bundle",
+		Short: "Creates and uploads a git bundle file as specified by basis/ref for the cwd repo",
+	}
+	// See https://git-scm.com/docs/git-bundle for basis, ref usage
+	cmd.Flags().StringVar(&c.file, "file", "", "Output bundle file (defaults to temp file)")
+	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
+	cmd.Flags().StringVar(&c.ref, "ref", "master", "Reference to be packaged")
+	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
+	cmd.Flags().BoolVar(&c.keep, "keepFile", false, "Keep created bundles file")
+	return cmd
+}
+
+func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+	if c.basis == "" || c.ref == "" {
+		return fmt.Errorf("Create bundle command requires a basis and reference")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("cannot get working directory: wd")
+	}
+
+	ingestRepo, err := repo.NewRepository(wd)
+	if err != nil {
+		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
+	}
+
+	bundleFilename, tempDir := "", ""
+	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
+	if c.file != "" {
+		bundleFilename = c.file
+	} else {
+		td, err := temp.TempDirDefault()
+		if err != nil {
+			return fmt.Errorf("Couldn't create temp dir: %v", err)
+		}
+		tempDir = td.Dir
+
+		// Don't use commit sha in case of collision with other bundle,
+		// create simple sha derived from basis and ref
+		sha := sha1.Sum([]byte(revList))
+		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha))
+	}
+
+	defer func() {
+		if !c.keep {
+			if tempDir != "" {
+				os.RemoveAll(tempDir)
+			} else {
+				os.Remove(bundleFilename)
+			}
+		}
+	}()
+
+	if _, err := ingestRepo.Run("-c",
+		"core.packobjectedgesonlyshallow=0",
+		"bundle",
+		"create",
+		bundleFilename,
+		revList); err != nil {
+		return err
+	}
+
+	gdb, ok := db.(*gitdb.DB)
+	if !ok {
+		return fmt.Errorf("create bundle requires a gitdb.DB snapshot.DB")
+	}
+
+	ttlP := &bundlestore.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: bundlestore.DefaultTTLKey}
+	location, err := gdb.UploadFile(bundleFilename, ttlP)
+	if err != nil {
+		return err
+	}
+	fmt.Println(location)
+
 	return nil
 }
 

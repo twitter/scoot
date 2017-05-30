@@ -9,4 +9,6 @@ import (
 
 type Scheduler interface {
 	ScheduleJob(jobDef sched.JobDefinition) (string, error)
+
+	KillJob(jobId string) error
 }

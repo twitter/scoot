@@ -39,3 +39,13 @@ func (_m *MockScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error)
 func (_mr *_MockSchedulerRecorder) ScheduleJob(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "ScheduleJob", arg0)
 }
+
+func (_m *MockScheduler) KillJob(jobId string) error {
+	ret := _m.ctrl.Call(_m, "KillJob", jobId)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockSchedulerRecorder) KillJob(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "KillJob", arg0)
+}

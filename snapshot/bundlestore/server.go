@@ -27,7 +27,7 @@ func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s.stat.Counter("serveCounter").Inc(1)
+	s.stat.Counter(stats.BundlestoreServeCounter).Inc(1) // TODO errata metric - remove if unused
 	switch req.Method {
 	case "POST":
 		s.HandleUpload(w, req)
@@ -41,13 +41,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "only support POST and GET", http.StatusMethodNotAllowed)
 		return
 	}
-	s.stat.Counter("serveOkCounter").Inc(1)
+	s.stat.Counter(stats.BundlestoreServeOkCounter).Inc(1) // TODO errata metric - remove if unused
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	log.Infof("Uploading %v, %v, %v (from %v)", req.Host, req.URL, req.Header, req.RemoteAddr)
-	defer s.stat.Latency("uploadLatency_ms").Time().Stop()
-	s.stat.Counter("uploadCounter").Inc(1)
+	defer s.stat.Latency(stats.BundlestoreUploadLatency_ms).Time().Stop()
+	s.stat.Counter(stats.BundlestoreUploadCounter).Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
 		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
@@ -63,7 +63,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if exists {
-		s.stat.Counter("uploadExistingCounter").Inc(1)
+		s.stat.Counter(stats.BundlestoreUploadExistingCounter).Inc(1) // TODO errata metric - remove if unused
 		fmt.Fprintf(w, "Bundle %s already exists\n", bundleName)
 	}
 
@@ -93,13 +93,13 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "Successfully wrote bundle %s\n", bundleName)
-	s.stat.Counter("uploadOkCounter").Inc(1)
+	s.stat.Counter(stats.BundlestoreUploadOkCounter).Inc(1) // TODO errata metric - remove if unused
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	log.Infof("Downloading %v %v (from %v)", req.Host, req.URL, req.RemoteAddr)
-	defer s.stat.Latency("downloadLatency_ms").Time().Stop()
-	s.stat.Counter("downloadCounter").Inc(1)
+	defer s.stat.Latency(stats.BundlestoreDownloadLatency_ms).Time().Stop()
+	s.stat.Counter(stats.BundlestoreDownloadCounter).Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := s.checkBundleName(bundleName); err != nil {
 		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
@@ -123,7 +123,7 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
 		return
 	}
-	s.stat.Counter("downloadOkCounter").Inc(1)
+	s.stat.Counter(stats.BundlestoreDownloadOkCounter).Inc(1) // TODO errata metric - remove if unused
 }
 
 // TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.

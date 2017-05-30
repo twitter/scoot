@@ -83,11 +83,11 @@ func (h *handler) stats() {
 			if startTime != nilTime {
 				uptime = time.Since(startTime)
 			}
-			h.stat.Gauge("activeRunsGauge").Update(numActive)
-			h.stat.Gauge("failedCachedRunsGauge").Update(numFailed)
-			h.stat.Gauge("endedCachedRunsGauge").Update(int64(len(processes)) - numActive)
-			h.stat.Gauge("timeSinceLastContactGauge_ms").Update(timeSinceLastContact_ms)
-			h.stat.Gauge("uptimeGauge_ms").Update(int64(uptime / time.Millisecond))
+			h.stat.Gauge(stats.WorkerActiveRunsGauge).Update(numActive)
+			h.stat.Gauge(stats.WorkerFailedCachedRunsGauge).Update(numFailed)
+			h.stat.Gauge(stats.WorkerEndedCachedRunsGauge).Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
+			h.stat.Gauge(stats.WorkerTimeSinceLastContactGauge_ms).Update(timeSinceLastContact_ms)   // TODO errata metric - remove if unused
+			h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(int64(uptime / time.Millisecond))
 			h.mu.Unlock()
 		}
 	}
@@ -102,7 +102,7 @@ func (h *handler) updateTimeLastRpc() {
 
 // Implements worker.thrift Worker.QueryWorker interface
 func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
-	h.stat.Counter("workerQueries").Inc(1)
+	h.stat.Counter(stats.WorkerServerQueries).Inc(1)
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
 
@@ -128,8 +128,8 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 
 // Implements worker.thrift Worker.Run interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
-	defer h.stat.Latency("runLatency_ms").Time().Stop()
-	h.stat.Counter("runs").Inc(1)
+	defer h.stat.Latency(stats.WorkerServerRunLatency_ms).Time().Stop() // TODO errata metric - remove if unused
+	h.stat.Counter(stats.WorkerServerRuns).Inc(1)
 	log.Infof("Worker trying to run cmd: %s", spew.Sdump(cmd))
 
 	h.updateTimeLastRpc()
@@ -155,7 +155,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 
 // Implements worker.thrift Worker.Abort interface
 func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
-	h.stat.Counter("aborts").Inc(1)
+	h.stat.Counter(stats.WorkerServerAborts).Inc(1)
 	h.updateTimeLastRpc()
 	log.Infof("Worker aborting runID: %s", runId)
 	status, err := h.run.Abort(runner.RunID(runId))
@@ -170,7 +170,7 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 
 // Implements worker.thrift Worker.Erase interface
 func (h *handler) Erase(runId string) error {
-	h.stat.Counter("clears").Inc(1)
+	h.stat.Counter(stats.WorkerServerClears).Inc(1)
 	h.updateTimeLastRpc()
 	log.Infof("Worker erasing runID: %s", runId)
 	h.run.Erase(runner.RunID(runId))

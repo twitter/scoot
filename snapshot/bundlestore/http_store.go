@@ -109,3 +109,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	}
 	return err
 }
+
+func (s *httpStore) Root() string {
+	return s.rootURI
+}
