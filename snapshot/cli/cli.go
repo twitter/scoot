@@ -82,6 +82,7 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 	}
 	rootCobraCmd.AddCommand(createCobraCmd)
 
+	add(&ingestGitWorkingDirCommand{}, createCobraCmd)
 	add(&ingestGitCommitCommand{}, createCobraCmd)
 	add(&ingestDirCommand{}, createCobraCmd)
 	add(&createGitBundleCommand{}, createCobraCmd)
@@ -108,6 +109,36 @@ func MakeDBCLI(injector DBInjector) *cobra.Command {
 type dbCommand interface {
 	register() *cobra.Command
 	run(db snapshot.DB, cmd *cobra.Command, args []string) error
+}
+
+type ingestGitWorkingDirCommand struct{}
+
+func (c *ingestGitWorkingDirCommand) register() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ingest_git_working_dir",
+		Short: "ingests HEAD plus the git working dir (into the repo in cwd)",
+	}
+	return cmd
+}
+
+func (c *ingestGitWorkingDirCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("cannot get working directory: wd")
+	}
+
+	ingestRepo, err := repo.NewRepository(wd)
+	if err != nil {
+		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
+	}
+
+	id, err := db.IngestGitWorkingDir(ingestRepo)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(id)
+	return nil
 }
 
 type ingestGitCommitCommand struct {

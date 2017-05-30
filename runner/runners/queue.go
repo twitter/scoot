@@ -83,8 +83,8 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	}
 
 	_, svcStatus, _ := c.statusManager.StatusAll()
-	log.Infof("Trying to run, ready=%t, err=%v, available slots:%d/%d, currentRun:%s cmd:%v",
-		svcStatus.Initialized, svcStatus.Error, c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd)
+	log.Infof("Trying to run, ready=%t, err=%v, available slots:%d/%d, currentRun:%s, jobID:%s, taskID:%s",
+		svcStatus.Initialized, svcStatus.Error, c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd.JobID, cmd.TaskID)
 
 	if !svcStatus.Initialized {
 		return runner.RunStatus{Error: svcStatus.Error.Error()}, fmt.Errorf(QueueInitingMsg)
