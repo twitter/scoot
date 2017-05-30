@@ -1,13 +1,13 @@
 package runners
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
-	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
@@ -129,12 +129,11 @@ func TestMemCap(t *testing.T) {
 	}
 }
 
-
 func TestDownloadCounter(t *testing.T) {
 	log.AddHook(hooks.NewContextHook())
 
 	statsReg := stats.NewFinagleStatsRegistry()
-	regFn := func() stats.StatsRegistry {return statsReg}
+	regFn := func() stats.StatsRegistry { return statsReg }
 	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
 	cmd := &runner.Command{Argv: []string{"ls"}, SnapshotID: "dummySnapshotId"}
 	tmp, _ := temp.TempDirDefault()
@@ -150,7 +149,6 @@ func TestDownloadCounter(t *testing.T) {
 	}
 	// wait for the run to finish
 	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
-
 
 	stats.VerifyStats("", statsReg, t,
 		map[string]stats.Rule{

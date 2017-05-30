@@ -362,6 +362,11 @@ const (
 	WorkerDownloads = "workerDownloads"
 
 	/*
+		the number of times a worker's inti failed.  Should be at most 1 for each worker
+	*/
+	WorkerDownloadInitFailure = "workerDownloadInitFailure"
+
+	/*
 		the amount of time spent downloading snapshots to the worker.  This includes time for
 		successful as well as erroring downloads
 	*/

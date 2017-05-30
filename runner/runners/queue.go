@@ -45,6 +45,7 @@ func NewQueueRunner(
 		go func() {
 			err := <-idc
 			if err != nil {
+				stat.Counter(stats.WorkerDownloadInitFailure).Inc(1)
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
