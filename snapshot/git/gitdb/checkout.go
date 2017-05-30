@@ -116,7 +116,7 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 		{"clean", "-f", "-f", "-d", "-x"},
 		// Note: our worktree cannot be in detached head state after checkout since [Twitter] git needs a valid ref to fetch.
 		//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
-		{"checkout", "-B", tempBranch, sha},
+		{"checkout", "-B", tempCheckoutBranch, sha},
 	}
 
 	for _, argv := range cmds {
@@ -173,9 +173,14 @@ func moveCommit(from *repo.Repository, to *repo.Repository, sha string) error {
 	// set the ref in 'from'.
 	// push from 'from' to 'to'.
 	// delete ref in both repos.
+	if from.Dir() == to.Dir() {
+		return nil
+	}
+
 	if _, err := to.Run("rev-parse", "--verify", fmt.Sprintf("%s^{commit}", sha)); err == nil {
 		return nil
 	}
+	log.Infof("Could not find commit=%s, continuing with moveCommit()", sha)
 
 	if _, err := to.Run("update-ref", "-d", tempRef); err != nil {
 		return err

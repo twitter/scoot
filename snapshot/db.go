@@ -27,6 +27,10 @@ type Creator interface {
 	// commitish may be any string that identifies a commit
 	// Creates a GitCommitSnapshot that mirrors the ingested commit.
 	IngestGitCommit(ingestRepo *repo.Repository, commitish string) (ID, error)
+
+	// IngestGitWorkingDir ingests HEAD + working dir modifications from ingestRepo.
+	// Creates a GitCommitSnapshot that mirrors the ingested commit.
+	IngestGitWorkingDir(ingestRepo *repo.Repository) (ID, error)
 }
 
 // Reader allows reading data from existing Snapshots

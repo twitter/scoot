@@ -106,6 +106,35 @@ func TestIngestCommit(t *testing.T) {
 		t.Fatalf("scratch.txt existed in %v; should not exist", co)
 	}
 
+	// Write temporary data into checkouts to make sure we can ingest uncommitted data.
+	if err := writeFileText(fixture.external.Dir(), "scratch.txt", "1"); err != nil {
+		t.Fatal(err)
+	}
+
+	id3, err := fixture.simpleDB.IngestGitWorkingDir(fixture.external)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fixture.simpleDB.ReleaseCheckout(co); err != nil {
+		t.Fatal(err)
+	}
+
+	co, err = fixture.simpleDB.Checkout(id3)
+	if err != nil {
+		t.Fatalf("error checking out %v, %v", id3, err)
+	}
+
+	// test contents
+	if err := assertFileContents(co, "file.txt", "second"); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = os.Open(filepath.Join(co, "scratch.txt"))
+	if err != nil {
+		t.Fatalf("scratch.txt should have existed in %v", co)
+	}
+
 }
 
 func TestStream(t *testing.T) {
