@@ -159,7 +159,16 @@ func (db *DB) loop(initer RepoIniter) {
 			if err == nil && db.autoUpload != nil {
 				s, err = db.autoUpload.upload(s, db)
 			}
-
+			if err != nil {
+				req.resultCh <- idAndError{err: err}
+			} else {
+				req.resultCh <- idAndError{id: s.ID()}
+			}
+		case ingestGitWorkingDirReq:
+			s, err := db.ingestGitWorkingDir(req.ingestRepo)
+			if err == nil && db.autoUpload != nil {
+				s, err = db.autoUpload.upload(s, db)
+			}
 			if err != nil {
 				req.resultCh <- idAndError{err: err}
 			} else {
@@ -220,6 +229,24 @@ func (db *DB) IngestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	}
 	resultCh := make(chan idAndError)
 	db.reqCh <- ingestGitCommitReq{ingestRepo: ingestRepo, commitish: commitish, resultCh: resultCh}
+	result := <-resultCh
+	return result.id, result.err
+}
+
+type ingestGitWorkingDirReq struct {
+	ingestRepo *repo.Repository
+	resultCh   chan idAndError
+}
+
+func (r ingestGitWorkingDirReq) req() {}
+
+// IngestGitWorkingDir ingests HEAD + working dir modifications from the ingestRepo.
+func (db *DB) IngestGitWorkingDir(ingestRepo *repo.Repository) (snap.ID, error) {
+	if <-db.initDoneCh; db.err != nil {
+		return "", db.err
+	}
+	resultCh := make(chan idAndError)
+	db.reqCh <- ingestGitWorkingDirReq{ingestRepo: ingestRepo, resultCh: resultCh}
 	result := <-resultCh
 	return result.id, result.err
 }
