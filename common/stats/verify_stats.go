@@ -18,12 +18,24 @@ type RuleChecker struct {
 	checker func(interface{}, interface{}) bool
 }
 
+func nilCheck(a, b interface{}) (nilFound, eqValues bool) {
+	nilFound = false
+	if b == nil && a == nil {
+		nilFound = true
+		eqValues = true
+	} else if b == nil || a == nil {
+		nilFound = true
+		eqValues = false
+	}
+	return
+}
+
 /*
 errors if a is not float64, returns true if a == b
 */
 func floatEqTest(a, b interface{}) bool {
-	if b == nil && a == nil {
-		return true
+	if nilFound, eqValue := nilCheck(a, b); nilFound {
+		return eqValue
 	}
 	aflt := a.(float64)
 	bflt := b.(float64)
@@ -36,8 +48,8 @@ var FloatEqTest = RuleChecker{name: "floatEqTest", checker: floatEqTest}
 errors if a is not float64, returns true if a > b
 */
 func floatGTTest(a, b interface{}) bool {
-	if b == nil && a == nil {
-		return true
+	if nilFound, eqValue := nilCheck(a, b); nilFound {
+		return eqValue
 	}
 	aflt := a.(float64)
 	bflt := b.(float64)
@@ -50,8 +62,8 @@ var FloatGTTest = RuleChecker{name: "floatGTTest", checker: floatGTTest}
 errors if a is not int64, returns true if a == b
 */
 func int64EqTest(a, b interface{}) bool {
-	if b == nil && a == nil {
-		return true
+	if nilFound, eqValue := nilCheck(a, b); nilFound {
+		return eqValue
 	}
 	aint := a.(int64)
 	bint := b.(int)
@@ -113,7 +125,7 @@ func VerifyStats(tag string, statsRegistry StatsRegistry, t *testing.T, contains
 }
 
 func PPrintStats(tag string, statsRegistry StatsRegistry) {
-	fmt.Printf("%s\n", tag)
+	fmt.Printf("%s:  Stats Registry:\n", tag)
 	asFinagleRegistry, _ := statsRegistry.(*finagleStatsRegistry)
 	regBytes, _ := asFinagleRegistry.MarshalJSONPretty()
 	fmt.Printf("%s\n", regBytes)

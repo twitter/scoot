@@ -250,7 +250,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"taskStartRetries": {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedTaskStartRetries: {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 

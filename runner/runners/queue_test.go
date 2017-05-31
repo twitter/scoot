@@ -160,7 +160,8 @@ func setup(capacity int, t *testing.T) *env {
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
-	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, capacity)
+
+	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, capacity, nil)
 
 	return &env{sim: sim, r: r}
 }

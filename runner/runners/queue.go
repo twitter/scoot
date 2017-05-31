@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
@@ -24,14 +25,18 @@ type cmdAndID struct {
 // NewQueueRunner creates a new Service that uses a Queue
 // The init chan is optional and may be nil if the filer has no initializion step.
 func NewQueueRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int,
-) runner.Service {
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
+
+	if stat == nil {
+		stat = stats.NilStatsReceiver()
+	}
+
 	history := 1
 	if capacity > 0 {
 		history = 0 // unlimited if acting as a queue (vs single runner).
 	}
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filer, output, tmp)
+	inv := NewInvoker(exec, filer, output, tmp, stat)
 	controller := &QueueController{statusManager: statusManager, inv: inv, capacity: capacity}
 	run := &Service{controller, statusManager, statusManager}
 
@@ -40,6 +45,7 @@ func NewQueueRunner(
 		go func() {
 			err := <-idc
 			if err != nil {
+				stat.Counter(stats.WorkerDownloadInitFailure).Inc(1)
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
@@ -53,8 +59,8 @@ func NewQueueRunner(
 }
 
 func NewSingleRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir) runner.Service {
-	return NewQueueRunner(exec, filer, idc, output, tmp, 0)
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
+	return NewQueueRunner(exec, filer, idc, output, tmp, 0, stat)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

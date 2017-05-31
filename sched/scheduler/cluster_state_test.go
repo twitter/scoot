@@ -165,9 +165,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 
 	stats.VerifyStats("1st stats check:", statsRegistry, t,
 		map[string]stats.Rule{
-			"availableNodes": {Checker: stats.Int64EqTest, Value: 1},
-			"idleNodes":      {Checker: stats.Int64EqTest, Value: 1},
-			"lostNodes":      {Checker: stats.Int64EqTest, Value: 3},
+			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
 		})
 
 	// Remove node2 and make sure its state is set correctly.
@@ -190,9 +190,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 
 	stats.VerifyStats("2nd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
-			"availableNodes": {Checker: stats.Int64EqTest, Value: 1},
-			"idleNodes":      {Checker: stats.Int64EqTest, Value: 1},
-			"lostNodes":      {Checker: stats.Int64EqTest, Value: 3},
+			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
 		})
 
 	// Re-add node2 and set the rest as init'd, then check nodes/suspendedNodes.
@@ -213,9 +213,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 
 	stats.VerifyStats("3rd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
-			"availableNodes": {Checker: stats.Int64EqTest, Value: 4},
-			"idleNodes":      {Checker: stats.Int64EqTest, Value: 3},
-			"lostNodes":      {Checker: stats.Int64EqTest, Value: 0},
+			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 4},
+			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 3},
+			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 0},
 		})
 	// Test the the right idle/busy maps are filled out for each snapshotId.
 	cs.taskScheduled("node1", "job1", "task1", "snapA")
