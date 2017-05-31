@@ -10,6 +10,7 @@ import (
 
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/common/log/hooks"
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/snapshot"
@@ -86,8 +87,12 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	}
 
 	store := bundlestore.MakeHTTPStore(url)
-	return gitdb.MakeDBFromRepo(dataRepo, nil, tempDir, nil, nil, &gitdb.BundlestoreConfig{Store: store},
-		gitdb.AutoUploadBundlestore), nil
+	return gitdb.MakeDBFromRepo(
+			dataRepo, nil, tempDir, nil, nil,
+			&gitdb.BundlestoreConfig{Store: store},
+			gitdb.AutoUploadBundlestore,
+			stats.NilStatsReceiver()),
+		nil
 }
 
 func removeTemp() {

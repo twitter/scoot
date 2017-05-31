@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
@@ -34,19 +35,41 @@ const (
 )
 
 // MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
-func MakeDBFromRepo(dataRepo *repo.Repository, updater RepoUpdater, tmp *temp.TempDir,
-	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(dataRepo, nil, updater, tmp, stream, tags, bundles, autoUploadDest)
+func MakeDBFromRepo(
+	dataRepo *repo.Repository,
+	updater RepoUpdater,
+	tmp *temp.TempDir,
+	stream *StreamConfig,
+	tags *TagsConfig,
+	bundles *BundlestoreConfig,
+	autoUploadDest AutoUploadDest,
+	stat stats.StatsReceiver) *DB {
+	return makeDB(dataRepo, nil, updater, tmp, stream, tags, bundles, autoUploadDest, stat)
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
-func MakeDBNewRepo(initer RepoIniter, updater RepoUpdater, tmp *temp.TempDir,
-	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
-	return makeDB(nil, initer, updater, tmp, stream, tags, bundles, autoUploadDest)
+func MakeDBNewRepo(
+	initer RepoIniter,
+	updater RepoUpdater,
+	tmp *temp.TempDir,
+	stream *StreamConfig,
+	tags *TagsConfig,
+	bundles *BundlestoreConfig,
+	autoUploadDest AutoUploadDest,
+	stat stats.StatsReceiver) *DB {
+	return makeDB(nil, initer, updater, tmp, stream, tags, bundles, autoUploadDest, stat)
 }
 
-func makeDB(dataRepo *repo.Repository, initer RepoIniter, updater RepoUpdater, tmp *temp.TempDir,
-	stream *StreamConfig, tags *TagsConfig, bundles *BundlestoreConfig, autoUploadDest AutoUploadDest) *DB {
+func makeDB(
+	dataRepo *repo.Repository,
+	initer RepoIniter,
+	updater RepoUpdater,
+	tmp *temp.TempDir,
+	stream *StreamConfig,
+	tags *TagsConfig,
+	bundles *BundlestoreConfig,
+	autoUploadDest AutoUploadDest,
+	stat stats.StatsReceiver) *DB {
 	if (dataRepo == nil) == (initer == nil) {
 		panic(fmt.Errorf("exactly one of dataRepo and initer must be non-nil in call to makeDB: %v %v", dataRepo, initer))
 	}
@@ -59,9 +82,10 @@ func makeDB(dataRepo *repo.Repository, initer RepoIniter, updater RepoUpdater, t
 		tmp:        tmp,
 		checkouts:  make(map[string]bool),
 		local:      &localBackend{},
-		stream:     &streamBackend{cfg: stream},
+		stream:     &streamBackend{cfg: stream, stat: stat},
 		tags:       &tagsBackend{cfg: tags},
 		bundles:    &bundlestoreBackend{cfg: bundles},
+		stat:       stat,
 	}
 
 	switch autoUploadDest {
@@ -120,6 +144,8 @@ type DB struct {
 
 	// TODO: reusing git checkout if its snap.ID matches the request - make this configurable at runtime...
 	currentSnapID snap.ID
+
+	stat stats.StatsReceiver
 }
 
 // req is a request interface

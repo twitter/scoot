@@ -41,7 +41,7 @@ func NewSingleRepoCheckouter(repoIniter PooledRepoIniter,
 	stat stats.StatsReceiver,
 	doneCh <-chan struct{}) *Checkouter {
 	pool := NewSingleRepoPool(repoIniter, stat, doneCh)
-	return NewCheckouter(pool)
+	return NewCheckouter(pool, stat)
 }
 
 // A Checkouter that creates a new repo with git clone --reference for each checkout
@@ -64,5 +64,5 @@ func NewRefRepoCloningCheckouter(refRepoIniter PooledRepoIniter,
 	}
 
 	pool := NewRepoPool(cloner, stat, clones, doneCh, maxClones)
-	return NewCheckouter(pool)
+	return NewCheckouter(pool, stat)
 }
