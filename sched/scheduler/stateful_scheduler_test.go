@@ -112,9 +112,9 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedJobsCounter":        {Checker: stats.Int64EqTest, Value: 1},
-			"schedJobLatency_ms.avg":  {Checker: stats.FloatGTTest, Value: 0.0},
-			"schedJobRequestsCounter": {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedJobsCounter:            {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedJobRequestsCounter:     {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 
@@ -145,9 +145,9 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedJobsCounter":        {Checker: stats.DoesNotExistTest, Value: nil},
-			"schedJobLatency_ms.avg":  {Checker: stats.FloatGTTest, Value: 0.0},
-			"schedJobRequestsCounter": {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedJobsCounter:            {Checker: stats.DoesNotExistTest, Value: nil},
+			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedJobRequestsCounter:     {Checker: stats.Int64EqTest, Value: 1},
 		})
 }
 
@@ -173,9 +173,9 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedAcceptedJobsGauge":    {Checker: stats.Int64EqTest, Value: 1},
-			"schedInProgressTasksGauge": {Checker: stats.Int64EqTest, Value: 2},
-			"schedNumRunningTasksGauge": {Checker: stats.Int64EqTest, Value: 2},
+			stats.SchedAcceptedJobsGauge:    {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedInProgressTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
+			stats.SchedNumRunningTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
 		})
 }
 
@@ -250,7 +250,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
-		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
+		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -449,8 +449,8 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 
 	stats.VerifyStats("first stage", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedAcceptedJobsGauge": {Checker: stats.Int64EqTest, Value: 1},
-			"schedWaitingJobsGauge":  {Checker: stats.Int64EqTest, Value: 0},
+			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 0},
 		})
 
 	// put a job with 3 tasks in the queue - all tasks should be in NotStarted state
@@ -461,8 +461,8 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 
 	stats.VerifyStats("second stage", statsRegistry, t,
 		map[string]stats.Rule{
-			"schedAcceptedJobsGauge": {Checker: stats.Int64EqTest, Value: 2},
-			"schedWaitingJobsGauge":  {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 2},
+			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 1},
 		})
 
 	// kill the second job
@@ -612,7 +612,7 @@ func getDepsWithPausingWorker() (*schedulerDeps, []*execers.SimExecer) {
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		rf: func(n cluster.Node) runner.Service {
 			ex := execers.NewSimExecer()
-			runner := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp)
+			runner := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
 			return runner
 		},
 		config: SchedulerConfig{
