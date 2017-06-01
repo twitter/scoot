@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/scootdev/scoot/snapshot"
 )
 
@@ -41,6 +43,7 @@ func (c *CountingUpdater) Update() error {
 		c.wg.Wait()
 	}
 
+	log.Infof("CountingUpdater - Update and increment var %v (current: %d)\n", c.pointer, *c.pointer)
 	*c.pointer += 1
 
 	if c.pause {
