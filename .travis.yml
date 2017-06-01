@@ -4,7 +4,7 @@ dist: trusty
 language: go
 
 go:
-  - 1.7.x
+  - 1.7
 
 git:
     submodules: false

@@ -18,10 +18,9 @@ import (
 //	2. Unpause() - first update continues (but we don't know that it's run yet)
 //  3. WaitForUpdateRunning() - 1st update has finished, 2nd is running (paused)
 
-func MakeCountingUpdater(p *int, i time.Duration, a bool) snapshot.Updater {
-	updater := &CountingUpdater{pointer: p, interval: i, pause: a}
-	if a {
-		updater.inProg.Lock()
+func MakeCountingUpdater(i *int, d time.Duration, p bool) snapshot.Updater {
+	updater := &CountingUpdater{pointer: i, interval: d, pause: p}
+	if p {
 		updater.wg.Add(1)
 	}
 	return updater
@@ -31,15 +30,20 @@ type CountingUpdater struct {
 	pointer  *int
 	interval time.Duration
 	pause    bool
+
+	// wg blocks an in-progress update until Unpause()'d
+	// mu is locked for the duration of an Update() including pause
 	wg       sync.WaitGroup
-	crit     sync.Mutex // critical section, locked while update is running including pause
-	inProg   sync.Mutex // locked while we are NOT running, grabbing this means an update started
+	mu       sync.Mutex
 }
 
 func (c *CountingUpdater) Update() error {
 	if c.pause {
-		c.crit.Lock()
-		c.inProg.Unlock()
+		// grab the lock
+		c.mu.Unlock()
+		c.mu.Lock()
+
+		// wait for Unpause
 		c.wg.Wait()
 	}
 
@@ -47,9 +51,9 @@ func (c *CountingUpdater) Update() error {
 	*c.pointer += 1
 
 	if c.pause {
+		// reset Unpause and release mu
 		c.wg.Add(1)
-		c.inProg.Unlock()
-		c.crit.Unlock()
+		c.mu.Unlock()
 	}
 	return nil
 }
@@ -62,12 +66,12 @@ func (c *CountingUpdater) UpdateInterval() time.Duration {
 func (c *CountingUpdater) Unpause() {
 	if c.pause {
 		c.wg.Done()
-		c.inProg.Lock()
 	}
 }
 
+// Not part of interface.
 func (c *CountingUpdater) WaitForUpdateRunning() {
 	if c.pause {
-		c.inProg.Lock()
+		c.mu.Lock()
 	}
 }

@@ -5,9 +5,6 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
-GO15VENDOREXPERIMENT := 1
-export GO15VENDOREXPERIMENT
-
 default:
 	go build $$(go list ./... | grep -v /vendor/)
 
