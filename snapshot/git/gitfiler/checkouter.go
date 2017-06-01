@@ -15,6 +15,7 @@ func NewCheckouter(repos *RepoPool, stat stats.StatsReceiver) *Checkouter {
 }
 
 // Checkouter checks out by checking out in a repo from pool
+// snapshot.Filer implementation
 type Checkouter struct {
 	repos *RepoPool
 	stat  stats.StatsReceiver

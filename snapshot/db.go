@@ -1,8 +1,6 @@
 package snapshot
 
 import (
-	"time"
-
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -54,19 +52,10 @@ type Reader interface {
 	ExportGitCommit(id ID, exportRepo *repo.Repository) (commit string, err error)
 }
 
-// Updater allows updating the underlying DB resource
-type ResourceUpdater interface {
-	// Update triggers an update of the underlying resource
-	Update() error
-
-	// UpdateInterval retrieves the specified interval for updating the underlying resource
-	UpdateInterval() time.Duration
-}
-
 // DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots,
 // and updating of the underlying DB resource.
 type DB interface {
 	Creator
 	Reader
-	ResourceUpdater
+	Updater
 }

@@ -46,10 +46,12 @@ func NewQueueRunner(
 	}
 	run := &Service{controller, statusManager, statusManager}
 
+	// QueueRunner will not serve requests if an idc is defined and returns an error
 	log.Info("Starting goroutine to check for snapshot init: ", (idc != nil))
+	var err error = nil
 	if idc != nil {
 		go func() {
-			err := <-idc
+			err = <-idc
 			if err != nil {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
 			} else {
@@ -60,7 +62,9 @@ func NewQueueRunner(
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
 	}
 
-	go controller.loop()
+	if err == nil {
+		go controller.loop()
+	}
 
 	return run
 }
@@ -71,6 +75,8 @@ func NewSingleRunner(
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).
+// Manages updates to underlying Filer via Filer's Update interface,
+// if a non-zero update interval is defined (updates and tasks cannot run concurrently)
 type QueueController struct {
 	inv           *Invoker
 	filer         snapshot.Filer
@@ -82,7 +88,9 @@ type QueueController struct {
 	runningID    runner.RunID
 	runningAbort chan<- struct{}
 
-	startCh  chan cmdAndID
+	// used to signal a cmd run request
+	startCh chan cmdAndID
+	// used to signal a request to update the Filer
 	updateCh <-chan time.Time
 }
 

@@ -50,7 +50,7 @@ type Ingester interface {
 	IngestMap(srcToDest map[string]string) (id string, err error)
 }
 
-const NoDuration time.Duration = time.Duration(0) * time.Second
+const NoDuration time.Duration = time.Duration(0)
 
 // Updater allows Filers to have a means to manage updates on the underlying resources
 type Updater interface {

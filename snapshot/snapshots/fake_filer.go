@@ -21,6 +21,11 @@ func MakeNoopFiler(path string) snapshot.Filer {
 	return MakeFilerFacade(MakeNoopCheckouter(path), MakeNoopIngester(), MakeNoopUpdater())
 }
 
+// Make invalid filer with an updater
+func MakeInvalidFilerUpdater(updater snapshot.Updater) snapshot.Filer {
+	return MakeFilerFacade(MakeInvalidCheckouter(), MakeNoopIngester(), updater)
+}
+
 // FilerFacade creates a Filer from a Checkouter and Ingester
 type FilerFacade struct {
 	snapshot.Checkouter
