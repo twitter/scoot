@@ -85,7 +85,7 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies recoverytest test clean-data
+travis: dependencies swarmtest test clean-data
 
 thrift-worker:
 	# Create generated code in github.com/scootdev/scoot/workerapi/gen-go/... from worker.thrift

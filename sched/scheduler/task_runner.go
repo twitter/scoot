@@ -72,7 +72,9 @@ func (r *taskRunner) run() error {
 	taskErr.st = st
 
 	// We got a good message back, but it indicates an error. Update taskErr accordingly.
-	if err == nil && st.State != runner.COMPLETE {
+	completed := (st.State == runner.COMPLETE)
+	aborted := (st.State == runner.ABORTED)
+	if err == nil && !completed {
 		switch st.State {
 		case runner.FAILED:
 			err = fmt.Errorf(st.Error)
@@ -83,7 +85,7 @@ func (r *taskRunner) run() error {
 	}
 
 	// We should write to sagalog if there's no error, or there's an error but the caller won't be retrying.
-	shouldDeadLetter := (err != nil && r.markCompleteOnFailure)
+	shouldDeadLetter := (err != nil && (aborted || r.markCompleteOnFailure))
 	shouldLog := (err == nil) || shouldDeadLetter
 
 	// Update taskErr state if it's empty or if we're doing deadletter..
@@ -211,17 +213,12 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	// an abort to the runner below
 	sts, _, err := r.runner.Query(q, w)
 
-	if err != nil {
-		if r.abortRequested() {
-			r.runner.Abort(id)
-			return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), nil
-		}
-		return runner.RunStatus{}, err
-	}
-
 	if r.abortRequested() {
 		r.runner.Abort(id)
 		return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), nil
+	}
+	if err != nil {
+		return runner.RunStatus{}, err
 	}
 
 	var st runner.RunStatus
@@ -262,6 +259,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 func (r *taskRunner) abortRequested() bool {
 	select {
 	case <-r.abortCh:
+		log.Infof("Abort requested, task - jobId: %s, taskId: %s, node: %s", r.jobId, r.taskId, r.nodeId)
 		return true
 	default:
 		return false

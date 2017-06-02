@@ -635,6 +635,9 @@ scheduler loop, and wait for the response
 */
 func (s *statefulScheduler) KillJob(jobId string) error {
 
+	log.WithFields(log.Fields{
+		"jobId": jobId,
+	}).Info("KillJob requested")
 	responseCh := make(chan error, 1)
 	req := jobKillRequest{jobId: jobId, responseCh: responseCh}
 	s.killJobCh <- req
