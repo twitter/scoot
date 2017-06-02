@@ -456,6 +456,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 			s.asyncRunner.RunAsync(
 				func() error {
+					//FIXME: seeing panic on closed channel here after killjob().
 					return j.Saga.EndSaga()
 				},
 				func(err error) {
@@ -468,7 +469,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
 						s.stat.Counter(stats.SchedRetriedEndSagaCounter).Inc(1) // TODO errata metric - remove if unused
-						log.Infof("Job completed but failed to log: %v", j.Job.Id)
+						log.Infof("Job completed but failed to log: %v, %v", j.Job.Id, err)
 					}
 				})
 		}

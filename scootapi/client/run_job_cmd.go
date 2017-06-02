@@ -36,6 +36,11 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 type CLIJobDef struct {
 	Tasks                []TaskDef
 	DefaultTaskTimeoutMs int32
+	Priority             int32
+	Tag                  string
+	Basis                string
+	JobType              string
+	Requestor            string
 }
 type TaskDef struct {
 	Args       []string
@@ -86,6 +91,11 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		if jsonJob.DefaultTaskTimeoutMs > 0 {
 			jobDef.DefaultTaskTimeoutMs = &jsonJob.DefaultTaskTimeoutMs
 		}
+		jobDef.Tag = &jsonJob.Tag
+		jobDef.Basis = &jsonJob.Basis
+		jobDef.JobType = &jsonJob.JobType
+		jobDef.Requestor = &jsonJob.Requestor
+		jobDef.Priority = &jsonJob.Priority
 		jobDef.Tasks = []*scoot.TaskDefinition{}
 		for _, jsonTask := range jsonJob.Tasks {
 			jt := jsonTask

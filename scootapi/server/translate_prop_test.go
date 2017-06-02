@@ -59,8 +59,8 @@ func genJobDef() gopter.Gen {
 		return gen.Const(r)
 	}, reflect.TypeOf([]*scoot.TaskDefinition{}))
 
-	unknown := scoot.JobType_UNKNOWN
-	iron_tests := scoot.JobType_IRON_TESTS
+	unknown := ""
+	iron_tests := "iron"
 	jobTypeGen := gen.OneConstOf(&unknown, &iron_tests, nil)
 
 	jobGens := gopter.CombineGens(taskMapGen, jobTypeGen)
@@ -69,7 +69,7 @@ func genJobDef() gopter.Gen {
 		values := vs.([]interface{})
 		j := scoot.NewJobDefinition()
 		j.Tasks = values[0].([]*scoot.TaskDefinition)
-		j.JobType = values[1].(*scoot.JobType)
+		j.JobType = values[1].(*string)
 		return gen.Const(j)
 	}, reflect.TypeOf(scoot.NewJobDefinition()))
 }
