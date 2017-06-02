@@ -62,13 +62,11 @@ func NewQueueRunner(
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+				go controller.loop()
 			}
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-	}
-
-	if err == nil {
 		go controller.loop()
 	}
 
