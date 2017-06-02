@@ -1,7 +1,6 @@
 package snapshots
 
 import (
-	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -21,7 +20,8 @@ import (
 func MakeCountingUpdater(i *int, d time.Duration, p bool) snapshot.Updater {
 	updater := &CountingUpdater{pointer: i, interval: d, pause: p}
 	if p {
-		updater.wg.Add(1)
+		updater.upRunCh = make(chan struct{})
+		updater.pauseCh = make(chan struct{})
 	}
 	return updater
 }
@@ -31,30 +31,21 @@ type CountingUpdater struct {
 	interval time.Duration
 	pause    bool
 
-	// wg blocks an in-progress update until Unpause()'d
-	// mu is locked for the duration of an Update() including pause
-	wg       sync.WaitGroup
-	mu       sync.Mutex
+	upRunCh chan struct{}
+	pauseCh chan struct{}
 }
 
+// update waits on unpauseCh
+// Unpause just sends to unpauseCh (which means Update() should be running when we hit unpause)
+// WFUR should wait on an updateRunningCh, that Update() sends to.
 func (c *CountingUpdater) Update() error {
 	if c.pause {
-		// grab the lock
-		c.mu.Unlock()
-		c.mu.Lock()
-
-		// wait for Unpause
-		c.wg.Wait()
+		c.upRunCh <- struct{}{}
+		<-c.pauseCh
 	}
 
 	log.Infof("CountingUpdater - Update and increment var %v (current: %d)\n", c.pointer, *c.pointer)
 	*c.pointer += 1
-
-	if c.pause {
-		// reset Unpause and release mu
-		c.wg.Add(1)
-		c.mu.Unlock()
-	}
 	return nil
 }
 
@@ -63,15 +54,15 @@ func (c *CountingUpdater) UpdateInterval() time.Duration {
 }
 
 // Not part of interface. If CountingUpdater was created without pause, no effect
+
 func (c *CountingUpdater) Unpause() {
 	if c.pause {
-		c.wg.Done()
+		c.pauseCh <- struct{}{}
 	}
 }
 
-// Not part of interface.
 func (c *CountingUpdater) WaitForUpdateRunning() {
 	if c.pause {
-		c.mu.Lock()
+		<-c.upRunCh
 	}
 }
