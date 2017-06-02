@@ -52,12 +52,12 @@ func Test_RequestCounters(t *testing.T) {
 
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
-			"runJobRpmCounter":        {Checker: stats.Int64EqTest, Value: 1},
-			"runJobLatency_ms.avg":    {Checker: stats.FloatGTTest, Value: 0.0},
-			"jobStatusRpmCounter":     {Checker: stats.Int64EqTest, Value: 1},
-			"jobStatusLatency_ms.avg": {Checker: stats.FloatGTTest, Value: 0.0},
-			"jobKillRpmCounter":       {Checker: stats.Int64EqTest, Value: 1},
-			"jobKillLatency_ms.avg":   {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedServerRunJobLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedServerJobStatusCounter:             {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedServerJobStatusLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedServerJobKillCounter:               {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedServerJobKillLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 		})
 }
 

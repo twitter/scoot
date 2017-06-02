@@ -1,6 +1,8 @@
 package gitdb
 
 import (
+	"time"
+
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
 	snap "github.com/scootdev/scoot/snapshot"
@@ -19,7 +21,10 @@ func Module() ice.Module {
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func(tmp *temp.TempDir) RepoIniter {
-			return &NewRepoIniter{tmp: tmp}
+			return &TmpRepoIniter{tmp: tmp}
+		},
+		func() RepoUpdater {
+			return &NoopRepoUpdater{}
 		},
 		func(store bundlestore.Store) *BundlestoreConfig {
 			return &BundlestoreConfig{Store: store}
@@ -43,13 +48,15 @@ func (m module) Install(b *ice.MagicBag) {
 	)
 }
 
-// NewRepoIniter creates a new Repo in a temp dir
-type NewRepoIniter struct {
+// Noop/Tmp/Default implementations of gitdb RepoIniter/RepoUpdater interfaces
+
+// TmpRepoIniter creates a new Repo in a temp dir
+type TmpRepoIniter struct {
 	tmp *temp.TempDir
 }
 
 // Init creates a new temp dir and a repo in it
-func (i *NewRepoIniter) Init() (*repo.Repository, error) {
+func (i *TmpRepoIniter) Init() (*repo.Repository, error) {
 	repoTmp, err := i.tmp.TempDir("gitdb-repo-")
 	if err != nil {
 		return nil, err
@@ -57,3 +64,9 @@ func (i *NewRepoIniter) Init() (*repo.Repository, error) {
 
 	return repo.InitRepo(repoTmp.Dir)
 }
+
+type NoopRepoUpdater struct{}
+
+func (u *NoopRepoUpdater) Update(*repo.Repository) error { return nil }
+
+func (u *NoopRepoUpdater) UpdateInterval() time.Duration { return snap.NoDuration }

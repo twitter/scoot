@@ -52,8 +52,10 @@ type Reader interface {
 	ExportGitCommit(id ID, exportRepo *repo.Repository) (commit string, err error)
 }
 
-// DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots.
+// DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots,
+// and updating of the underlying DB resource.
 type DB interface {
 	Creator
 	Reader
+	Updater
 }

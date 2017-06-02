@@ -83,17 +83,6 @@ const (
 	*/
 	ClusterLostNodes = "lostNodes"
 
-	/************************** Git Cloner ***************************/
-	/*
-		the number of failures trying to clone
-	*/
-	GitClonerInitFailures = "clonerInitFailures"
-
-	/*
-		the amount of time it took to clone
-	*/
-	GitClonerInitLatency_ms = "clonerInitLatency_ms"
-
 	/************************* Groupcache Metrics ***************************/ // TODO verify/update all groupcache descriptions
 	/*
 		the number of time groupcache tried to determine if a bundle existed
@@ -357,6 +346,22 @@ const (
 	WorkerActiveRunsGauge = "activeRunsGauge"
 
 	/*
+		the number of times the worker downloaded a snapshot from bundlestore
+	*/
+	WorkerDownloads = "workerDownloads"
+
+	/*
+		the number of times a worker's inti failed.  Should be at most 1 for each worker
+	*/
+	WorkerDownloadInitFailure = "workerDownloadInitFailure"
+
+	/*
+		the amount of time spent downloading snapshots to the worker.  This includes time for
+		successful as well as erroring downloads
+	*/
+	WorkerDownloadLatency_ms = "workerDownloadLatency_ms"
+
+	/*
 		The number of runs in the worker's statusAll() response that are not currently running
 		TODO - this includes runs that are waiting to start - will not be accurate if we go to a
 		worker that can run multiple commands
@@ -408,7 +413,39 @@ const (
 	WorkerTimeSinceLastContactGauge_ms = "timeSinceLastContactGauge_ms"
 
 	/*
+		the number of times the worker uploaded a snapshot to bundlestore
+	*/
+	WorkerUploads = "workerUploads"
+
+	/*
+		the amount of time spent uploading snapshots to bundlestore.  This includes time for
+		successful as well as erroring uploads
+	*/
+	WorkerUploadLatency_ms = "workerUploadLatency_ms"
+
+	/*
 		Time since the worker started
 	*/
 	WorkerUptimeGauge_ms = "uptimeGauge_ms"
+
+	/****************************** Git Metrics **********************************************/
+	/*
+		The number of failures trying to init a ref clone
+	*/
+	GitClonerInitFailures = "clonerInitFailures"
+
+	/*
+		The amount of time it took to init a ref clone
+	*/
+	GitClonerInitLatency_ms = "clonerInitLatency_ms"
+
+	/*
+		The number of times a gitfiler.Checkouter Checkout had to resort to a git fetch
+	*/
+	GitFilerCheckoutFetches = "gitfilerCheckoutFetches"
+
+	/*
+		The number of times a gitdb stream backend had to resort to a git fetch
+	*/
+	GitStreamUpdateFetches = "gitStreamUpdateFetches"
 )

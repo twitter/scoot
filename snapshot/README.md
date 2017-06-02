@@ -14,10 +14,11 @@ Key objects (not exhaustive, see code or godoc for more):
   * _FileCursor_ - interface for reading specific segments of files
 * __Higher-level abstractions for filesystem data__ - implementations in snapshot/snaphots/
   * _DB_ - interface to deal with Snapshots. Should replace the types below.
-  * _Filer_ - interface for treating snapshots as files, includes Checkouter and Ingester
+  * _Filer_ - interface for treating snapshots as files, includes Checkouter, Ingester and Updater
   * _Checkout_ - Specific instance or "checkout" of a snapshot
   * _Checkouter_ - Wrapping interface for managing snapshots on the local filesystem
   * _Ingester_ - interface for creating snapshots from the local filesystem
+  * _Updater_ - interface for updating underlying resource a Filer is utilizing
 * __git specific objects__
   * _package gitfiler_ - for checking out and handling snapshots from Git
     * _RepoPool_ - for handling concurrent access to Git repos

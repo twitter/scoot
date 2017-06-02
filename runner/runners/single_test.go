@@ -1,6 +1,7 @@
 package runners
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -109,7 +111,7 @@ func TestMemCap(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
 	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
-	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp)
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -127,6 +129,36 @@ func TestMemCap(t *testing.T) {
 	}
 }
 
+func TestDownloadCounter(t *testing.T) {
+	log.AddHook(hooks.NewContextHook())
+
+	statsReg := stats.NewFinagleStatsRegistry()
+	regFn := func() stats.StatsRegistry { return statsReg }
+	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+	cmd := &runner.Command{Argv: []string{"ls"}, SnapshotID: "dummySnapshotId"}
+	tmp, _ := temp.TempDirDefault()
+	e := os_execer.NewExecer()
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, stat)
+	if _, err := r.Run(cmd); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	query := runner.Query{
+		AllRuns: true,
+		States:  runner.MaskForState(runner.DONE_MASK),
+	}
+	// wait for the run to finish
+	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
+
+	stats.VerifyStats("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
+			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
+		})
+}
+
 func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
 	tmpDir, err := temp.TempDirDefault()
@@ -138,6 +170,6 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir)
+	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, nil)
 	return r, sim
 }

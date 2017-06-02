@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/scootdev/scoot/common/stats"
 	snap "github.com/scootdev/scoot/snapshot"
 )
 
@@ -29,7 +30,8 @@ const streamIDText = "stream"
 const streamIDFmt = "%s-%s-%s-%s"
 
 type streamBackend struct {
-	cfg *StreamConfig
+	cfg  *StreamConfig
+	stat stats.StatsReceiver
 }
 
 func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*streamSnapshot, error) {
@@ -88,7 +90,8 @@ func (b *streamBackend) updateStream(name string, db *DB) error {
 		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
 	}
 
-	// TODO(dbentley): keep stats about fetching (when we do it, last time we did it, etc.)
+	b.stat.Counter(stats.GitStreamUpdateFetches).Inc(1)
+
 	_, err := db.dataRepo.Run("fetch", b.cfg.Remote)
 	return err
 }
