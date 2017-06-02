@@ -12,7 +12,7 @@ type repoAndError struct {
 }
 
 // NewRepoPool creates a new RepoPool populated with existing repos and a initer that can get new ones
-func NewRepoPool(initer RepoIniter,
+func NewRepoPool(initer PooledRepoIniter,
 	stat stats.StatsReceiver,
 	repos []*repo.Repository,
 	doneCh <-chan struct{},
@@ -38,12 +38,12 @@ func NewRepoPool(initer RepoIniter,
 }
 
 // RepoPool lets clients Get a Repository for an operation, and then Release it when done
-// RepoPool can create a new Repository by using a supplied RepoIniter.
+// RepoPool can create a new Repository by using a supplied PooledRepoIniter.
 // New repos can be added by the client by Release'ing a new Repository
 // Cf. sync's Pool
 // Supports maximum pool capacity - 0 is unlimited
 type RepoPool struct {
-	initer RepoIniter
+	initer PooledRepoIniter
 	stat   stats.StatsReceiver
 
 	releaseCh chan repoAndError

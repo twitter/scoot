@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer/execers"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
@@ -17,7 +19,7 @@ import (
 // Then send a signal to allow the first (paused) run request to finish.
 // Wait that all are run
 func TestQueueing2Messages(t *testing.T) {
-	env := setup(10, t)
+	env := setup(10, snapshot.NoDuration, t)
 	defer env.teardown()
 
 	// send the first command - it should pause
@@ -29,7 +31,7 @@ func TestQueueing2Messages(t *testing.T) {
 }
 
 func TestQueueingMoreThanMaxMessage(t *testing.T) {
-	env := setup(4, t)
+	env := setup(4, snapshot.NoDuration, t)
 	defer env.teardown()
 
 	var runIDs []runner.RunID
@@ -76,7 +78,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 }
 
 func TestUnknownRunIDInStatusRequest(t *testing.T) {
-	env := setup(4, t)
+	env := setup(4, snapshot.NoDuration, t)
 	defer env.teardown()
 
 	st, _, err := env.r.Status(runner.RunID("not a real run id"))
@@ -86,7 +88,7 @@ func TestUnknownRunIDInStatusRequest(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	env := setup(4, t)
+	env := setup(4, snapshot.NoDuration, t)
 	defer env.teardown()
 
 	// We want to get lots of runs with statuses in different places:
@@ -149,7 +151,38 @@ func TestStatus(t *testing.T) {
 	assertWait(t, env.r, run8, complete(0))
 }
 
-func setup(capacity int, t *testing.T) *env {
+func TestUpdaterNoUpdate(t *testing.T) {
+	env := setup(1, snapshot.NoDuration, t)
+	defer env.teardown()
+
+	run1 := assertRun(t, env.r, running(), "pause", "complete 0")
+	env.sim.Resume()
+	assertWait(t, env.r, run1, complete(0), "n/a")
+
+	if *env.uc != 0 {
+		t.Fatalf("Unexpected Updates occurred (%d times)", *env.uc)
+	}
+}
+
+// Note: it's not currently possible to test precise occurrences of Updates and
+// Task runs, because ultimately the appearance of Updates() is dependent on a time.Ticker,
+// which will invariably fail in go's race detector, but this is not a problem in practice
+func TestUpdaterPeriodic(t *testing.T) {
+	env := setup(1, time.Duration(10)*time.Millisecond, t)
+	defer env.teardown()
+
+	env.u.WaitForUpdateRunning()
+	env.u.Unpause()
+	env.u.WaitForUpdateRunning()
+	env.u.Unpause()
+	env.u.WaitForUpdateRunning()
+
+	if *env.uc != 2 {
+		t.Fatalf("Expected to get 2 updates, got: %d", *env.uc)
+	}
+}
+
+func setup(capacity int, interval time.Duration, t *testing.T) *env {
 	sim := execers.NewSimExecer()
 	tmpDir, err := temp.TempDirDefault()
 	if err != nil {
@@ -161,14 +194,18 @@ func setup(capacity int, t *testing.T) *env {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
 
-	r := NewQueueRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, capacity, nil)
+	updateCount := 0
+	updater := snapshots.MakeCountingUpdater(&updateCount, interval, true).(*snapshots.CountingUpdater)
+	r := NewQueueRunner(sim, snapshots.MakeInvalidFilerUpdater(updater), nil, outputCreator, tmpDir, capacity, nil)
 
-	return &env{sim: sim, r: r}
+	return &env{sim: sim, r: r, u: updater, uc: &updateCount}
 }
 
 type env struct {
 	sim *execers.SimExecer
 	r   runner.Service
+	u   *snapshots.CountingUpdater
+	uc  *int
 }
 
 func (t *env) teardown() {

@@ -83,17 +83,6 @@ const (
 	*/
 	ClusterLostNodes = "lostNodes"
 
-	/************************** Git Cloner ***************************/
-	/*
-		the number of failures trying to clone
-	*/
-	GitClonerInitFailures = "clonerInitFailures"
-
-	/*
-		the amount of time it took to clone
-	*/
-	GitClonerInitLatency_ms = "clonerInitLatency_ms"
-
 	/************************* Groupcache Metrics ***************************/ // TODO verify/update all groupcache descriptions
 	/*
 		the number of time groupcache tried to determine if a bundle existed
@@ -438,4 +427,25 @@ const (
 		Time since the worker started
 	*/
 	WorkerUptimeGauge_ms = "uptimeGauge_ms"
+
+	/****************************** Git Metrics **********************************************/
+	/*
+		The number of failures trying to init a ref clone
+	*/
+	GitClonerInitFailures = "clonerInitFailures"
+
+	/*
+		The amount of time it took to init a ref clone
+	*/
+	GitClonerInitLatency_ms = "clonerInitLatency_ms"
+
+	/*
+		The number of times a gitfiler.Checkouter Checkout had to resort to a git fetch
+	*/
+	GitFilerCheckoutFetches = "gitfilerCheckoutFetches"
+
+	/*
+		The number of times a gitdb stream backend had to resort to a git fetch
+	*/
+	GitStreamUpdateFetches = "gitStreamUpdateFetches"
 )
