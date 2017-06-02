@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -220,6 +221,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 
 	bundleFilename, tempDir := "", ""
 	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
+
 	if c.file != "" {
 		bundleFilename = c.file
 	} else {
@@ -229,9 +231,17 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		}
 		tempDir = td.Dir
 
+		// Get the length of this revList for the sha we will compute for file name
+		// basis and ref alone do not guarantee uniqueness
+		revData, err := ingestRepo.Run("rev-list", revList)
+		if err != nil {
+			return fmt.Errorf("couldn't get rev-list for %s: %v", revList, err)
+		}
+		length := len(strings.Split(strings.TrimSpace(string(revData[:])), "\n"))
+
 		// Don't use commit sha in case of collision with other bundle,
 		// create simple sha derived from basis and ref
-		sha := sha1.Sum([]byte(revList))
+		sha := sha1.Sum([]byte(fmt.Sprintf("%s-%d", revList, length)))
 		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha))
 	}
 
