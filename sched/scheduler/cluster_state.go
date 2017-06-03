@@ -32,7 +32,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numIdle          int                           // Number of free nodes that are not in a suspended state.
+	numAvail         int                           // Number of free nodes that are not in a suspended state.
 	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
@@ -159,7 +159,7 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snaps
 	ns.runningJob = jobId
 	ns.runningTask = taskId
 	ns.snapshotId = snapshotId
-	c.numIdle--
+	c.numAvail--
 }
 
 // Update ClusterState to reflect that a task has finished running on
@@ -177,12 +177,14 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
 		} else if !flaky {
-			c.numIdle++
+			c.numAvail++
 		}
 		ns.runningJob = noJob
 		ns.runningTask = noTask
 		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
 		c.nodeGroups[ns.snapshotId].idle[nodeId] = ns
+	} else {
+		log.Infof("TaskCompleted specified an unknown node: %v (flaky=%t)", nodeId, flaky)
 	}
 }
 
@@ -218,14 +220,16 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				if !ns.ready() {
 					// Adding a node that's already suspended as non-ready, leave it in that state until ready.
 					log.Infof("Suspended node re-added but still awaiting readiness check %v (%#v)", update.Id, ns)
-				} else {
-					// This node was suspended earlier, we can recover it now.
+				} else if ns.timeLost != nilTime {
+					// This node was suspended as lost earlier, we can recover it now.
 					ns.timeLost = nilTime
-					ns.timeFlaky = nilTime
 					c.nodes[update.Id] = ns
 					delete(c.suspendedNodes, update.Id)
-					log.Infof("Recovered suspended node %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
-						update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numIdle)
+					c.numAvail++
+					log.Infof("Recovered suspended node %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
+						update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+				} else {
+					log.Infof("Ignoring NodeAdded event for suspended flaky node. %v (%#v)", update.Id, ns)
 				}
 
 			} else if ns, ok := c.nodes[update.Id]; !ok {
@@ -235,15 +239,15 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
 					newNode.readyCh = nil
-					c.numIdle++
-					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numIdle)
+					c.numAvail++
+					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
+						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
 					c.suspendedNodes[update.Id] = newNode
-					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended, %d idle)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numIdle)
+					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
+						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
@@ -265,9 +269,9 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				c.numIdle--
-				log.Infof("Removing node by marking as lost: %v (%#v), now have %d nodes (%d suspended, %d idle)",
-					update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numIdle)
+				c.numAvail--
+				log.Infof("Removing node by marking as lost: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
+					update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 
 			} else {
 				// We don't know about this node, log spurious remove.
@@ -285,35 +289,35 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 		if !ns.suspended() {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
-			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended, %d idle)",
-				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1, c.numIdle+1)
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
-			c.numIdle++
+			c.numAvail++
+			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended, %d avail)",
+				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
-			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
-			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended, %d idle)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1, c.numIdle)
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
+			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended, %d avail)",
+				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1, c.numAvail)
+			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
 			select {
 			case ns.removedCh <- nil:
 			default:
 			}
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
-			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended, %d idle)",
-				ns.node.Id(), ns, len(c.nodes)+1, len(c.suspendedNodes)-1, c.numIdle+1)
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
-			c.numIdle++
+			c.numAvail++
+			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended, %d avail)",
+				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 		}
 	}
 
 	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
-	c.stats.Gauge(stats.ClusterIdleNodes).Update(int64(c.numIdle))
+	c.stats.Gauge(stats.ClusterIdleNodes).Update(int64(c.numAvail))
 	c.stats.Gauge(stats.ClusterLostNodes).Update(int64(len(c.suspendedNodes)))
 }

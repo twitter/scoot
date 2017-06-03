@@ -45,16 +45,20 @@ vet:
 
 test:
 	# Runs only unit tests and property tests
-	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
+	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | grep -v 'line="runners/' | tee /dev/null
 	sh testCoverage.sh
 
 test-unit:
 	# Runs only unit tests
+	# Only invoked manually so we don't need to modify output.
 	go test -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 test-integration:
 	# Runs all tests including integration and property tests
 	# We don't currently have any integration tests, but we're leaving this so we can add more.
+	# Only invoked manually so we don't need to modify output.
 	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
@@ -63,14 +67,18 @@ swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
+	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	go install ./binaries/...
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m
+	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | grep -v 'line="runners/' | tee /dev/null
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
+	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	go install ./binaries/...
-	recoverytest
+	recoverytest 2>&1 | grep -v 'line="runners/' | tee /dev/null
 
 clean-mockgen:
 	rm */*_mock.go
@@ -85,7 +93,7 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies swarmtest test clean-data
+travis: dependencies recoverytest swarmtest test clean-data
 
 thrift-worker:
 	# Create generated code in github.com/scootdev/scoot/workerapi/gen-go/... from worker.thrift
