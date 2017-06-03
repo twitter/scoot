@@ -58,7 +58,7 @@ func main() {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
-	r := runners.NewQueueRunner(ex, filer, nil, outputCreator, tmp, *qLen)
+	r := runners.NewQueueRunner(ex, filer, nil, outputCreator, tmp, *qLen, nil)
 	h := server.NewHandler(r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {

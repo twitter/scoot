@@ -5,9 +5,6 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
-GO15VENDOREXPERIMENT := 1
-export GO15VENDOREXPERIMENT
-
 default:
 	go build $$(go list ./... | grep -v /vendor/)
 
@@ -43,12 +40,14 @@ format:
 vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
-test:
+coverage:
+	sh testCoverage.sh
+
+test-unit-property:
 	# Runs only unit tests and property tests
 	# Output can be overly long so strip out most worker logs (which come from the runners package).
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | grep -v 'line="runners/' | tee /dev/null
-	sh testCoverage.sh
 
 test-unit:
 	# Runs only unit tests
@@ -62,6 +61,10 @@ test-integration:
 	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
+
+testonly: test-unit-property
+
+test: test-unit-property coverage
 
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
