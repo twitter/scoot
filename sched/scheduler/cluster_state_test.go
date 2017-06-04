@@ -214,7 +214,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	stats.VerifyStats("3rd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 4},
-			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 3},
+			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 4},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 0},
 		})
 	// Test the the right idle/busy maps are filled out for each snapshotId.

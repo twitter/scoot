@@ -112,7 +112,7 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 // Reader interface (implements runner.StatusQuerier)
 
 // Query returns all RunStatus'es matching q, waiting as described by w, plus the overall service status.
-func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
+func (s *StatusManager) Query(q runner.Query, wait runner.Wait) (rs []runner.RunStatus, ss runner.ServiceStatus, e error) {
 	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
 	if err != nil || len(current) > 0 || wait.Timeout == 0 {
 		return current, s.svcStatus, err
@@ -131,9 +131,6 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) ([]runner.RunSta
 	case <-timeout:
 		return nil, s.svcStatus, nil
 	case <-wait.AbortCh:
-		// we just consumed the abort request without really aborting the run,
-		// put a new request on the channel so taskRunner will abort the run.
-		wait.AbortCh <- true
 		st := runner.RunStatus{State: runner.ABORTED}
 		return []runner.RunStatus{st}, s.svcStatus, nil
 	}

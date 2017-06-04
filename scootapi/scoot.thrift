@@ -55,7 +55,7 @@ struct TaskDefinition {
 
 struct JobDefinition {
   1: required list<TaskDefinition> tasks,
-  2: optional JobType jobType,
+  2: optional JobType DEPRECATED_jobType,
   3: optional i32 defaultTaskTimeoutMs,
   # Priority levels are defined in docs.
   4: optional i32 priority
@@ -66,6 +66,8 @@ struct JobDefinition {
   6: optional string basis
   # Requestor is used for rate limiting. If unfilled, limit is applied to a no-name pool.
   7: optional string requestor
+  # JobType is used for stats and does not affect scheduling.
+  8: optional string jobType
 }
 
 struct JobId {

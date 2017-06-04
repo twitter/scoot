@@ -40,9 +40,6 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 	for time.Now().Before(end) || wait.Timeout == 0 {
 		select {
 		case <-wait.AbortCh:
-			// we just consumed the abort request without aborting,
-			// put it back on the channel
-			wait.AbortCh <- true
 			return nil, service, errors.New("Aborted")
 		default:
 		}

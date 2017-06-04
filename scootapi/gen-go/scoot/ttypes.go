@@ -1322,20 +1322,22 @@ func (p *TaskDefinition) String() string {
 
 // Attributes:
 //  - Tasks
-//  - JobType
+//  - DEPRECATEDJobType
 //  - DefaultTaskTimeoutMs
 //  - Priority
 //  - Tag
 //  - Basis
 //  - Requestor
+//  - JobType
 type JobDefinition struct {
 	Tasks                []*TaskDefinition `thrift:"tasks,1,required" json:"tasks"`
-	JobType              *JobType          `thrift:"jobType,2" json:"jobType,omitempty"`
+	DEPRECATEDJobType    *JobType          `thrift:"DEPRECATED_jobType,2" json:"DEPRECATED_jobType,omitempty"`
 	DefaultTaskTimeoutMs *int32            `thrift:"defaultTaskTimeoutMs,3" json:"defaultTaskTimeoutMs,omitempty"`
 	Priority             *int32            `thrift:"priority,4" json:"priority,omitempty"`
 	Tag                  *string           `thrift:"tag,5" json:"tag,omitempty"`
 	Basis                *string           `thrift:"basis,6" json:"basis,omitempty"`
 	Requestor            *string           `thrift:"requestor,7" json:"requestor,omitempty"`
+	JobType              *string           `thrift:"jobType,8" json:"jobType,omitempty"`
 }
 
 func NewJobDefinition() *JobDefinition {
@@ -1346,13 +1348,13 @@ func (p *JobDefinition) GetTasks() []*TaskDefinition {
 	return p.Tasks
 }
 
-var JobDefinition_JobType_DEFAULT JobType
+var JobDefinition_DEPRECATEDJobType_DEFAULT JobType
 
-func (p *JobDefinition) GetJobType() JobType {
-	if !p.IsSetJobType() {
-		return JobDefinition_JobType_DEFAULT
+func (p *JobDefinition) GetDEPRECATEDJobType() JobType {
+	if !p.IsSetDEPRECATEDJobType() {
+		return JobDefinition_DEPRECATEDJobType_DEFAULT
 	}
-	return *p.JobType
+	return *p.DEPRECATEDJobType
 }
 
 var JobDefinition_DefaultTaskTimeoutMs_DEFAULT int32
@@ -1399,8 +1401,17 @@ func (p *JobDefinition) GetRequestor() string {
 	}
 	return *p.Requestor
 }
-func (p *JobDefinition) IsSetJobType() bool {
-	return p.JobType != nil
+
+var JobDefinition_JobType_DEFAULT string
+
+func (p *JobDefinition) GetJobType() string {
+	if !p.IsSetJobType() {
+		return JobDefinition_JobType_DEFAULT
+	}
+	return *p.JobType
+}
+func (p *JobDefinition) IsSetDEPRECATEDJobType() bool {
+	return p.DEPRECATEDJobType != nil
 }
 
 func (p *JobDefinition) IsSetDefaultTaskTimeoutMs() bool {
@@ -1421,6 +1432,10 @@ func (p *JobDefinition) IsSetBasis() bool {
 
 func (p *JobDefinition) IsSetRequestor() bool {
 	return p.Requestor != nil
+}
+
+func (p *JobDefinition) IsSetJobType() bool {
+	return p.JobType != nil
 }
 
 func (p *JobDefinition) Read(iprot thrift.TProtocol) error {
@@ -1468,6 +1483,10 @@ func (p *JobDefinition) Read(iprot thrift.TProtocol) error {
 			if err := p.readField7(iprot); err != nil {
 				return err
 			}
+		case 8:
+			if err := p.readField8(iprot); err != nil {
+				return err
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1511,7 +1530,7 @@ func (p *JobDefinition) readField2(iprot thrift.TProtocol) error {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
 		temp := JobType(v)
-		p.JobType = &temp
+		p.DEPRECATEDJobType = &temp
 	}
 	return nil
 }
@@ -1561,6 +1580,15 @@ func (p *JobDefinition) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *JobDefinition) readField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.JobType = &v
+	}
+	return nil
+}
+
 func (p *JobDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("JobDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1584,6 +1612,9 @@ func (p *JobDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField7(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField8(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1617,15 +1648,15 @@ func (p *JobDefinition) writeField1(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *JobDefinition) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetJobType() {
-		if err := oprot.WriteFieldBegin("jobType", thrift.I32, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:jobType: ", p), err)
+	if p.IsSetDEPRECATEDJobType() {
+		if err := oprot.WriteFieldBegin("DEPRECATED_jobType", thrift.I32, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:DEPRECATED_jobType: ", p), err)
 		}
-		if err := oprot.WriteI32(int32(*p.JobType)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.jobType (2) field write error: ", p), err)
+		if err := oprot.WriteI32(int32(*p.DEPRECATEDJobType)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.DEPRECATED_jobType (2) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:jobType: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:DEPRECATED_jobType: ", p), err)
 		}
 	}
 	return err
@@ -1701,6 +1732,21 @@ func (p *JobDefinition) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:requestor: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *JobDefinition) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetJobType() {
+		if err := oprot.WriteFieldBegin("jobType", thrift.STRING, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:jobType: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.JobType)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.jobType (8) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:jobType: ", p), err)
 		}
 	}
 	return err

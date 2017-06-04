@@ -138,7 +138,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	format := "%s\n\nDate: %v\nSelf: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	stdout.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stdout.URI(), cmd, marker)))
 	stderr.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stderr.URI(), cmd, marker)))
-	log.Infof("RunID: %s, stdout: %s, stderr: %s\n", id, stdout.AsFile(), stderr.AsFile())
+	log.Debugf("Output for RunID: %s -- stdout: %s, stderr: %s", id, stdout.AsFile(), stderr.AsFile())
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:   cmd.Argv,
