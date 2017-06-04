@@ -28,6 +28,34 @@ const (
 	ALL_MASK = math.MaxUint64
 )
 
+func (sm StateMask) String() string {
+	switch sm {
+	case UNKNOWN_MASK:
+		return "UNKNOWN_MASK"
+	case PENDING_MASK:
+		return "PENDING_MASK"
+	case PREPARING_MASK:
+		return "PREPARING_MASK"
+	case RUNNING_MASK:
+		return "RUNNING_MASK"
+	case COMPLETE_MASK:
+		return "COMPLETE_MASK"
+	case FAILED_MASK:
+		return "FAILED_MASK"
+	case ABORTED_MASK:
+		return "ABORTED_MASK"
+	case TIMEDOUT_MASK:
+		return "TIMEDOUT_MASK"
+	case BADREQUEST_MASK:
+		return "BADREQUEST_MASK"
+	case DONE_MASK:
+		return "DONE_MASK"
+	case ALL_MASK:
+		return "ALL_MASK"
+	}
+	return ""
+}
+
 // Helper Function to create StateMask that matches exactly state
 func MaskForState(state RunState) StateMask {
 	return 1 << uint(state)
@@ -48,8 +76,7 @@ type Query struct {
 type Wait struct {
 	// How long to wait for Statuses
 	Timeout time.Duration
-	AbortCh chan bool
-	Started chan bool
+	AbortCh chan interface{}
 
 	// We might add whether to return as soon as one status matches, or waiting until all
 }

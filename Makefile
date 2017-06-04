@@ -47,7 +47,10 @@ test-unit-property:
 	# Runs only unit tests and property tests
 	# Output can be overly long so strip out most worker logs (which come from the runners package).
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | grep -v 'line="runners/' | tee /dev/null
+	set -o pipefail
+	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | tee /dev/null | grep -v 'line="runners/'
+	#go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | grep -v 'line="runners/'
+
 
 test-unit:
 	# Runs only unit tests
@@ -72,16 +75,18 @@ swarmtest:
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Output can be overly long so strip out most worker logs (which come from the runners package).
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
+	set -o pipefail
 	go install ./binaries/...
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | grep -v 'line="runners/' | tee /dev/null
+	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | tee /dev/null | grep -v 'line="runners/'
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Output can be overly long so strip out most worker logs (which come from the runners package).
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
+	set -o pipefail
 	go install ./binaries/...
-	recoverytest 2>&1 | grep -v 'line="runners/' | tee /dev/null
+	recoverytest 2>&1 | tee /dev/null | grep -v 'line="runners/'
 
 clean-mockgen:
 	rm */*_mock.go
