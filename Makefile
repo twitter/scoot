@@ -47,12 +47,11 @@ coverage:
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	set -o pipefail
-	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | tee /dev/null | grep -v 'line="runners/'
-	#go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | grep -v 'line="runners/'
-
+	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | tee /dev/null | \
+		egrep -v 'line="(runners|repo|bundlestore)/'
 
 test-unit:
 	# Runs only unit tests
@@ -75,20 +74,21 @@ swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	set -o pipefail
 	go install ./binaries/...
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | tee /dev/null | grep -v 'line="runners/'
+	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | tee /dev/null | \
+		egrep -v 'line="(runners|repo|bundlestore)/'
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	# Output can be overly long so strip out most worker logs (which come from the runners package).
+	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	set -o pipefail
 	go install ./binaries/...
-	recoverytest 2>&1 | tee /dev/null | grep -v 'line="runners/'
+	recoverytest 2>&1 | tee /dev/null | egrep -v 'line="(runners|repo|bundlestore)/'
 
 clean-mockgen:
 	rm */*_mock.go
