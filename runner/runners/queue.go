@@ -170,7 +170,6 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 
 // Handle requests to run and update, to provide concurrency management between the two.
 // Although we can still receive run requests, runs and updates are done blocking.
-// TODO this should be smarter about not doing updates until repo was returned Initialized:true
 func (c *QueueController) loop() {
 	justUpdated := false
 

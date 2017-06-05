@@ -40,7 +40,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/scootdev/scoot/os/temp"
@@ -231,18 +230,13 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		}
 		tempDir = td.Dir
 
-		// Get the length of this revList for the sha we will compute for file name
-		// basis and ref alone do not guarantee uniqueness
+		// Don't use commit sha as bundle name as it could collide with other bundles.
+		// Use the rev-list for the given basis/ref to generate a unique sha
 		revData, err := ingestRepo.Run("rev-list", revList)
 		if err != nil {
 			return fmt.Errorf("couldn't get rev-list for %s: %v", revList, err)
 		}
-		length := len(strings.Split(strings.TrimSpace(string(revData[:])), "\n"))
-
-		// Don't use commit sha in case of collision with other bundle,
-		// create simple sha derived from basis and ref
-		sha := sha1.Sum([]byte(fmt.Sprintf("%s-%d", revList, length)))
-		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha))
+		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha1.Sum([]byte(revData))))
 	}
 
 	defer func() {
