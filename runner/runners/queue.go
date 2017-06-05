@@ -114,6 +114,7 @@ type QueueController struct {
 }
 
 // Start a goroutine that forwards update ticks to updateCh, so that we can skip if e.g. init failed
+// This doesn't support a stop mechanism, because QueueController doesn't support a stop/close semantic
 func startUpdateTicker(d time.Duration, u chan<- struct{}) {
 	if d == snapshot.NoDuration || u == nil {
 		return
