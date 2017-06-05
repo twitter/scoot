@@ -3,6 +3,7 @@ package scheduler
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +18,17 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/workerapi"
 )
+
+func init() {
+	if loglevel := os.Getenv("SCOOT_LOGLEVEL"); loglevel != "" {
+		level, err := log.ParseLevel(loglevel)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		log.SetLevel(level)
+	}
+}
 
 // Number of different requestors that can run jobs at any given time.
 const DefaultMaxRequestors = 100
@@ -456,6 +468,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 			s.asyncRunner.RunAsync(
 				func() error {
+					//FIXME: seeing panic on closed channel here after killjob().
 					return j.Saga.EndSaga()
 				},
 				func(err error) {
@@ -468,7 +481,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
 						s.stat.Counter(stats.SchedRetriedEndSagaCounter).Inc(1) // TODO errata metric - remove if unused
-						log.Infof("Job completed but failed to log: %v", j.Job.Id)
+						log.Infof("Job completed but failed to log: %v, %v", j.Job.Id, err)
 					}
 				})
 		}
@@ -503,7 +516,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			endSagaTask := false
 			flaky := false
 			preempted := true
-			rt.TaskRunner.abortCh <- endSagaTask
+			rt.TaskRunner.Abort(endSagaTask)
 			msg := fmt.Sprintf("jobId:%s taskId:%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobId, taskId)
 			log.Infof(msg)
 			// Update jobState and clusterState here instead of in the async handler below.
@@ -531,7 +544,8 @@ func (s *statefulScheduler) scheduleTasks() {
 			task:   taskDef,
 			nodeId: nodeId,
 
-			abortCh: make(chan bool, 1),
+			abortCh:      make(chan bool, 1),
+			queryAbortCh: make(chan interface{}, 1),
 		}
 
 		// mark the task as started in the jobState and record its taskRunner
@@ -634,6 +648,9 @@ scheduler loop, and wait for the response
 */
 func (s *statefulScheduler) KillJob(jobId string) error {
 
+	log.WithFields(log.Fields{
+		"jobId": jobId,
+	}).Info("KillJob requested")
 	responseCh := make(chan error, 1)
 	req := jobKillRequest{jobId: jobId, responseCh: responseCh}
 	s.killJobCh <- req
@@ -680,7 +697,7 @@ func (s *statefulScheduler) killJobs() {
 		for _, task := range jobState.Tasks {
 			if task.Status == sched.InProgress {
 				if task.TaskRunner != nil {
-					task.TaskRunner.abortCh <- true
+					task.TaskRunner.Abort(true)
 				}
 			} else if task.Status == sched.NotStarted {
 				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})

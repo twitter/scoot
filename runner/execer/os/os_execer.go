@@ -148,7 +148,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"pid": pid,
 						"ps":  string(ps),
 						"err": err,
-					}).Infof("ps after increasing mem_cap utilization for pid %d", pid)
+					}).Debugf("ps after increasing mem_cap utilization for pid %d", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -211,7 +211,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 		log.Fields{
 			"pid": pid,
 			"ps":  string(ps),
-		}).Infof("Current ps for pid %d", pid)
+		}).Debugf("Current ps for pid %d", pid)
 
 	if p.result != nil {
 		return *p.result

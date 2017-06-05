@@ -88,7 +88,7 @@ func schedJobDefToScootAPIThriftJobDef(schedJobDef *sched.JobDefinition) (*scoot
 		scootTasks = append(scootTasks, scootTask)
 	}
 
-	unknown := scoot.JobType(scoot.JobType_UNKNOWN)
+	unknown := ""
 	scootJobDefinition := scoot.JobDefinition{
 		JobType: &unknown,
 		Tasks:   scootTasks,
