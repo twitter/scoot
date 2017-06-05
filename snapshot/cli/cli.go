@@ -220,6 +220,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 
 	bundleFilename, tempDir := "", ""
 	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
+
 	if c.file != "" {
 		bundleFilename = c.file
 	} else {
@@ -229,10 +230,13 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		}
 		tempDir = td.Dir
 
-		// Don't use commit sha in case of collision with other bundle,
-		// create simple sha derived from basis and ref
-		sha := sha1.Sum([]byte(revList))
-		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha))
+		// Don't use commit sha as bundle name as it could collide with other bundles.
+		// Use the rev-list for the given basis/ref to generate a unique sha
+		revData, err := ingestRepo.Run("rev-list", revList)
+		if err != nil {
+			return fmt.Errorf("couldn't get rev-list for %s: %v", revList, err)
+		}
+		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha1.Sum([]byte(revData))))
 	}
 
 	defer func() {
