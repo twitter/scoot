@@ -51,7 +51,6 @@ func NewQueueRunner(
 		history = 0 // unlimited if acting as a queue (vs single runner).
 	}
 
-	updateTicker := makeSimpleTicker(filer.UpdateInterval())
 	statusManager := NewStatusManager(history)
 	inv := NewInvoker(exec, filer, output, tmp, stat)
 
@@ -61,7 +60,7 @@ func NewQueueRunner(
 		filer:         filer,
 		capacity:      capacity,
 		reqCh:         make(chan interface{}),
-		updateCh:      updateTicker,
+		updateCh:      make(chan struct{}),
 	}
 	run := &Service{controller, statusManager, statusManager}
 
@@ -76,13 +75,15 @@ func NewQueueRunner(
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-				go controller.loop()
+				startUpdateTicker(filer.UpdateInterval(), controller.updateCh)
 			}
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-		go controller.loop()
+		startUpdateTicker(filer.UpdateInterval(), controller.updateCh)
 	}
+
+	go controller.loop()
 
 	return run
 }
@@ -109,14 +110,20 @@ type QueueController struct {
 	// used to signal a cmd run request
 	reqCh chan interface{}
 	// used to signal a request to update the Filer
-	updateCh <-chan time.Time
+	updateCh chan struct{}
 }
 
-func makeSimpleTicker(d time.Duration) <-chan time.Time {
-	if d != snapshot.NoDuration {
-		return time.NewTicker(d).C
+// Start a goroutine that forwards update ticks to updateCh, so that we can skip if e.g. init failed
+func startUpdateTicker(d time.Duration, u chan<- struct{}) {
+	if d == snapshot.NoDuration || u == nil {
+		return
 	}
-	return nil
+	ticker := time.NewTicker(d).C
+	go func(t <-chan time.Time) {
+		for _ = range t {
+			u <- struct{}{}
+		}
+	}(ticker)
 }
 
 // Run enqueues the command or rejects it, returning its status or an error.
