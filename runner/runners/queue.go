@@ -2,16 +2,31 @@ package runners
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/snapshot"
 )
+
+// Used to get proper logging from tests...
+func init() {
+	if loglevel := os.Getenv("SCOOT_LOGLEVEL"); loglevel != "" {
+		level, err := log.ParseLevel(loglevel)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		log.SetLevel(level)
+		log.AddHook(hooks.NewContextHook())
+	}
+}
 
 const QueueFullMsg = "No resources available. Please try later."
 const QueueInitingMsg = "Queue is still initializing. Please try later."
@@ -46,9 +61,12 @@ func NewQueueRunner(
 		stat = stats.NilStatsReceiver()
 	}
 
+	//FIXME(jschiller): proper history config rather than keying off of capacity and if this is a SingleRunner.
 	history := 1
 	if capacity > 0 {
 		history = 0 // unlimited if acting as a queue (vs single runner).
+	} else if capacity == 0 {
+		capacity = 1 // singleRunner, override capacity so it can actually run a command.
 	}
 
 	statusManager := NewStatusManager(history)
@@ -135,38 +153,25 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	return result.st, result.err
 }
 
-func (c *QueueController) run(cmd *runner.Command) (runner.RunStatus, chan runner.RunStatus, error) {
-	// Note, 'capacity' is the max number of queued cmds and we allow one running job before
-	//        we start queueing, so total allowed runs is actually defined as capacity+1.
-	numCmds := 0
-	isRunning := (c.runningID != runner.RunID(""))
-	if isRunning {
-		numCmds = 1 + len(c.queue)
-	}
-	var watchCh chan runner.RunStatus
+func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error) {
 	_, svcStatus, _ := c.statusManager.StatusAll()
 	log.Infof("Trying to run, ready=%t, err=%v, available slots:%d/%d, currentRun:%s, jobID:%s, taskID:%s",
-		svcStatus.Initialized, svcStatus.Error, c.capacity+1-numCmds, c.capacity+1, c.runningID, cmd.JobID, cmd.TaskID)
+		svcStatus.Initialized, svcStatus.Error, c.capacity-len(c.queue), c.capacity, c.runningID, cmd.JobID, cmd.TaskID)
 
 	if !svcStatus.Initialized {
-		return runner.RunStatus{Error: svcStatus.Error.Error()}, nil, fmt.Errorf(QueueInitingMsg)
+		return runner.RunStatus{Error: svcStatus.Error.Error()}, fmt.Errorf(QueueInitingMsg)
 	}
-	if numCmds > c.capacity {
-		return runner.RunStatus{}, nil, fmt.Errorf(QueueFullMsg)
+	if len(c.queue) >= c.capacity {
+		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
 	}
-	st, err := c.statusManager.NewRun()
 
+	st, err := c.statusManager.NewRun()
 	if err != nil {
-		return st, nil, err
+		return st, err
 	}
-	if !isRunning {
-		c.runningID = st.RunID
-		c.runningCmd = cmd
-		watchCh = c.runAndWatch(cmdAndID{cmd, st.RunID})
-	} else {
-		c.queue = append(c.queue, cmdAndID{cmd, st.RunID})
-	}
-	return st, watchCh, nil
+	c.queue = append(c.queue, cmdAndID{cmd, st.RunID})
+
+	return st, nil
 }
 
 // Abort kills the given run, returning its final status.
@@ -203,32 +208,54 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 // Handle requests to run and update, to provide concurrency management between the two.
 // Although we can still receive run requests, runs and updates are done blocking.
 func (c *QueueController) loop() {
-	justUpdated := false
 	var watchCh chan runner.RunStatus
+	var updateDoneCh chan interface{}
+	updateRequested := false
 
-	for c.reqCh != nil {
-		// Prefer to run an update first if we have one scheduled
-		select {
-		case <-c.updateCh:
-			if err := c.filer.Update(); err != nil {
-				log.Errorf("Error running Filer Update: %v\n", err)
-			}
-			justUpdated = true
-		default:
-		}
-
-		// Wait on update or run start.
-		// If we just did an update above, just drain the updateCh and move on
-		// We still have to wait on updateCh here, or we'll never update without runs requests
-		select {
-		case <-c.updateCh:
-			if justUpdated {
-				justUpdated = false
-			} else {
+	tryUpdate := func() {
+		if updateDoneCh == nil && watchCh == nil {
+			updateRequested = false
+			updateDoneCh = make(chan interface{})
+			go func() {
 				if err := c.filer.Update(); err != nil {
 					log.Errorf("Error running Filer Update: %v\n", err)
 				}
+				updateDoneCh <- nil
+			}()
+		} else {
+			updateRequested = true
+		}
+	}
+
+	tryRun := func() {
+		if watchCh == nil && updateDoneCh == nil && len(c.queue) > 0 {
+			cmdID := c.queue[0]
+			watchCh = c.runAndWatch(cmdID)
+		}
+	}
+
+	for c.reqCh != nil {
+		// Prefer to run an update first if we have one scheduled. If not updating, try running.
+		if updateRequested {
+			tryUpdate()
+		} else {
+			select {
+			case <-c.updateCh:
+				tryUpdate()
+			default:
+				tryRun()
 			}
+		}
+
+		// Wait on update, updateDone, run start, or run abort.
+		select {
+		case <-c.updateCh:
+			tryUpdate()
+
+		case <-updateDoneCh:
+			// Give run() a chance right after we've finished updating.
+			updateDoneCh = nil
+			tryRun()
 
 		case req, ok := <-c.reqCh:
 			// Handle run and abort requests.
@@ -238,10 +265,7 @@ func (c *QueueController) loop() {
 			}
 			switch r := req.(type) {
 			case runReq:
-				st, watch, err := c.run(r.cmd)
-				if watch != nil {
-					watchCh = watch
-				}
+				st, err := c.enqueue(r.cmd)
 				r.resultCh <- result{st, err}
 			case abortReq:
 				st, err := c.abort(r.runID)
@@ -249,19 +273,12 @@ func (c *QueueController) loop() {
 			}
 
 		case <-watchCh:
-			// Handle finished run and starting new run if queued.
+			// Handle finished run by resetting state.
 			watchCh = nil
 			c.runningID = ""
 			c.runningCmd = nil
 			c.runningAbort = nil
-			if len(c.queue) > 0 {
-				cmdID := c.queue[0]
-				c.queue = c.queue[1:]
-				log.Infof("Running from queue:%+v\n", cmdID)
-				c.runningID = cmdID.id
-				c.runningCmd = cmdID.cmd
-				watchCh = c.runAndWatch(cmdID)
-			}
+			c.queue = c.queue[1:]
 		}
 	}
 }
@@ -269,12 +286,17 @@ func (c *QueueController) loop() {
 // Run cmd and then start a new goroutine to watch the cmd.
 // Returns a watchCh for goroutine completion.
 func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
+	log.Infof("Running: jobID:%s taskID=%s runID=%s, newLen:%d\n",
+		cmdID.cmd.JobID, cmdID.cmd.TaskID, cmdID.id, len(c.queue))
 	watchCh := make(chan runner.RunStatus)
 	abortCh, statusUpdateCh := c.inv.Run(cmdID.cmd, cmdID.id)
 	c.runningAbort = abortCh
+	c.runningID = cmdID.id
+	c.runningCmd = cmdID.cmd
 	go func() {
 		for st := range statusUpdateCh {
-			log.Debugf("Queue pulled result:%+v\n", st)
+			log.Debugf("Queue pulled result:%+v, jobID:%s taskID=%s runID=%s\n",
+				cmdID.cmd.JobID, cmdID.cmd.TaskID, cmdID.id, st)
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
 				watchCh <- st

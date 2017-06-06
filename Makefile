@@ -6,6 +6,7 @@ BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
 SHELL := /bin/bash
+SCOOT_LOGLEVEL := info
 
 default:
 	go build $$(go list ./... | grep -v /vendor/)
@@ -50,19 +51,19 @@ test-unit-property:
 	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
 	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 	set -o pipefail
-	go test -race -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | tee /dev/null | \
-		egrep -v 'line="(runners|repo|bundlestore)/'
+	go test -race -timeout 120s -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | \
+    tee /dev/null | egrep -v 'line="(runners|repo|bundlestore)/'
 
 test-unit:
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output.
-	go test -race $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 test-integration:
 	# Runs all tests including integration and property tests
 	# We don't currently have any integration tests, but we're leaving this so we can add more.
 	# Only invoked manually so we don't need to modify output.
-	go test -race -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 

@@ -1,13 +1,14 @@
 package runners
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
@@ -77,7 +78,7 @@ func TestSimul(t *testing.T) {
 	cmd.Argv = secondArgs
 	_, err := r.Run(cmd)
 	if err == nil {
-		t.Fatal(err)
+		t.Fatal("Expected: no resources available err.")
 	}
 
 	sim.Resume()
