@@ -41,7 +41,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	runIDs = append(runIDs, runID)
 
 	// fill the queue
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		runID := assertRun(t, env.r, pending(), "complete 0")
 		runIDs = append(runIDs, runID)
 	}
@@ -63,7 +63,7 @@ func TestQueueingMoreThanMaxMessage(t *testing.T) {
 	// repeat
 	runID = assertRun(t, env.r, running(), "pause", "complete 0")
 	runIDs = append(runIDs, runID)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		runID := assertRun(t, env.r, pending(), "complete 0")
 		runIDs = append(runIDs, runID)
 	}

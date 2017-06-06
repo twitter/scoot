@@ -12,6 +12,7 @@ import (
 
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -19,6 +20,7 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
+// Used to get proper logging from tests...
 func init() {
 	if loglevel := os.Getenv("SCOOT_LOGLEVEL"); loglevel != "" {
 		level, err := log.ParseLevel(loglevel)
@@ -27,6 +29,7 @@ func init() {
 			return
 		}
 		log.SetLevel(level)
+		log.AddHook(hooks.NewContextHook())
 	}
 }
 
