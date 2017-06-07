@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
+
 )
 
 /*
@@ -140,8 +143,9 @@ func StatsOk(tag string, statsRegistry StatsRegistry, t *testing.T, contains map
 }
 
 func PPrintStats(tag string, statsRegistry StatsRegistry) {
-	fmt.Printf("%s:  Stats Registry:\n", tag)
+	log.Infof("%s:  Stats Registry:\n", tag)
 	asFinagleRegistry, _ := statsRegistry.(*finagleStatsRegistry)
 	regBytes, _ := asFinagleRegistry.MarshalJSONPretty()
-	fmt.Printf("%s\n", regBytes)
+	log.Printf("%s\n", regBytes)
 }
+

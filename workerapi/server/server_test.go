@@ -34,12 +34,12 @@ func TestInitStats(t *testing.T) {
 	// verify stats during initialization
 	if !stats.StatsOk("validating worker still initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64EqTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerOngoingInitLatency_ms):        {Checker: stats.Int64GTTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.Int64EqTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 1},
+			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.DoesNotExistTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.DoesNotExistTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.DoesNotExistTest, Value: 0},
 		}) {
 		t.Fatal("init stats test failed")
 	}
