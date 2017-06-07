@@ -8,12 +8,13 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
+	"github.com/scootdev/scoot/snapshot"
 	domain "github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -31,42 +32,55 @@ func MakeServer(
 		protocolFactory)
 }
 
+// defining StatsCollectInterval type so it can be injected via ICE
+// (avoid conflict with other injected integers)
+type StatsCollectInterval int
+
 type handler struct {
-	stat         stats.StatsReceiver
-	run          runner.Service
-	timeLastRpc  time.Time
-	mu           sync.Mutex
-	currentCmd   *runner.Command
-	currentRunID runner.RunID
+	stat                 stats.StatsReceiver
+	run                  runner.Service
+	timeLastRpc          time.Time
+	mu                   sync.RWMutex
+	currentCmd           *runner.Command
+	currentRunID         runner.RunID
+	statsCollectInterval StatsCollectInterval
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service, idtCh snapshot.InitDoneTimeCh, statsCollectInterval StatsCollectInterval) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run}
-	go h.stats()
+	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), statsCollectInterval: statsCollectInterval}
+	go h.stats(idtCh)
 	return h
 }
 
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
-func (h *handler) stats() {
-	var startTime time.Time
+func (h *handler) stats(idtCh snapshot.InitDoneTimeCh) {
+	var startTime time.Time = time.Now()
 	nilTime := time.Time{}
-	ticker := time.NewTicker(time.Millisecond * time.Duration(500))
+	initDoneTime := nilTime
+	ticker := time.NewTicker(time.Millisecond * time.Duration(h.statsCollectInterval))
 	for {
+		if initDoneTime == nilTime {
+			// get the init done time if it's on the channel
+			select {
+			case initDoneTime = <-idtCh:
+			default:
+			}
+		}
+
 		select {
 		case <-ticker.C:
 			h.mu.Lock()
+
 			var numFailed int64
 			var numActive int64
-			processes, svc, err := h.run.StatusAll()
+			processes, _, err := h.run.StatusAll()
 			if err != nil {
 				continue
 			}
-			if svc.Initialized && startTime == nilTime {
-				startTime = time.Now()
-			}
+
 			for _, process := range processes {
 				if process.State == runner.FAILED {
 					numFailed++
@@ -76,18 +90,30 @@ func (h *handler) stats() {
 				}
 			}
 			timeSinceLastContact_ms := int64(0)
-			if numActive > 0 {
-				timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
-			}
+			timeSinceLastContact_ms = int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 			var uptime time.Duration
-			if startTime != nilTime {
-				uptime = time.Since(startTime)
+			var initTime time.Duration
+			// track the elapsed time for ongoing initializations and
+			// total init time for finished initializations separately
+			if initDoneTime != nilTime {
+				// if its done initializing, record the final initLatency time
+				// compute the uptime as time since init finished
+				uptime = time.Since(initDoneTime)
+				initTime = initDoneTime.Sub(startTime)
+				h.stat.Gauge(stats.WorkerFinalInitLatency_ms).Update(int64(initTime / time.Millisecond))
+				h.stat.Gauge(stats.WorkerOngoingInitLatency_ms).Update(0)
+			} else {
+				initTime = time.Now().Sub(startTime)
+				h.stat.Gauge(stats.WorkerFinalInitLatency_ms).Update(0)
+				h.stat.Gauge(stats.WorkerOngoingInitLatency_ms).Update(int64(initTime / time.Millisecond))
 			}
+
 			h.stat.Gauge(stats.WorkerActiveRunsGauge).Update(numActive)
 			h.stat.Gauge(stats.WorkerFailedCachedRunsGauge).Update(numFailed)
 			h.stat.Gauge(stats.WorkerEndedCachedRunsGauge).Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
 			h.stat.Gauge(stats.WorkerTimeSinceLastContactGauge_ms).Update(timeSinceLastContact_ms)   // TODO errata metric - remove if unused
 			h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(int64(uptime / time.Millisecond))
+
 			h.mu.Unlock()
 		}
 	}

@@ -2,8 +2,8 @@ package server
 
 import (
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
@@ -12,6 +12,7 @@ import (
 	"github.com/scootdev/scoot/runner/execer"
 	"github.com/scootdev/scoot/runner/execer/execers"
 	osexec "github.com/scootdev/scoot/runner/execer/os"
+	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
 
@@ -34,6 +35,9 @@ type module struct{}
 // Install installs functions for serving Thrift and HTTP
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
+		func() snapshot.InitDoneTimeCh { // add the callback channel for init done time
+			return make(snapshot.InitDoneTimeCh)
+		},
 		func() thrift.TTransportFactory {
 			return thrift.NewTTransportFactory()
 		},
@@ -46,8 +50,8 @@ func (m module) Install(b *ice.MagicBag) {
 		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
 		},
-		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
-			return NewHandler(stat, r)
+		func(stat stats.StatsReceiver, r runner.Service, idtCh snapshot.InitDoneTimeCh, statIntv StatsCollectInterval) worker.Worker {
+			return NewHandler(stat, r, idtCh, statIntv)
 		},
 		func(
 			handler worker.Worker,

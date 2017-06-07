@@ -52,10 +52,24 @@ type cmdAndID struct {
 	id  runner.RunID
 }
 
-// NewQueueRunner creates a new Service that uses a Queue
-// The init chan is optional and may be nil if the filer has no initializion step.
+/*
+NewQueueRunner creates a new Service that uses a Queue
+If the worker has an initialization step (indicated by non-nil in idc) the queue will wait for the
+worker to finish initialization before accepting any run requests.
+If the queue is full when a command is received, an empty RunStatus and a queue full error will be returned.
+
+@param: exec - runs the command
+@param: filer - uses the UpdateInterval from filer to ????
+@param: idc - channel that ?filer? will use to report when its initialization is done.
+The init chan is optional and may be nil if the filer has no initializion step.
+@param: idtCh - channel that queue uses to report (to handler) the time the initialization finished
+@param: output
+@param: tmp
+@param: capacity - the maximum number of commands to support on the queue.  If 0 then the queue is unbounded.
+@param: stats - the stats receiver the queue will use when reporting its metrics
+*/
 func NewQueueRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, idtCh snapshot.InitDoneTimeCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
 
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -91,9 +105,15 @@ func NewQueueRunner(
 			if err != nil {
 				stat.Counter(stats.WorkerDownloadInitFailure).Inc(1)
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
+				if idtCh != nil {
+					idtCh <- time.Time{}
+				}
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
 				startUpdateTicker(filer.UpdateInterval(), controller.updateCh)
+				if idtCh != nil {
+					idtCh <- time.Now()
+				}
 			}
 		}()
 	} else {
@@ -107,8 +127,8 @@ func NewQueueRunner(
 }
 
 func NewSingleRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
-	return NewQueueRunner(exec, filer, idc, output, tmp, 0, stat)
+	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, idtCh snapshot.InitDoneTimeCh, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
+	return NewQueueRunner(exec, filer, idc, idtCh, output, tmp, 0, stat)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

@@ -163,7 +163,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("1st stats check:", statsRegistry, t,
+	stats.StatsOk("1st stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
@@ -188,7 +188,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("2nd stats check:", statsRegistry, t,
+	stats.StatsOk("2nd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
@@ -211,7 +211,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("3rd stats check:", statsRegistry, t,
+	stats.StatsOk("3rd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 4},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 4},

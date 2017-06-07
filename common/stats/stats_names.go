@@ -376,6 +376,16 @@ const (
 	WorkerFailedCachedRunsGauge = "failedCachedRunsGauge"
 
 	/*
+		The amount of time it took a worker to init
+	*/
+	WorkerFinalInitLatency_ms = "workerFinishedInitTime"
+
+	/*
+		The number of workers who are currently exceeding the max init time
+	*/
+	WorkerOngoingInitLatency_ms = "workerActiveInitTime"
+
+	/*
 		the amount of worker's memory currently consumed by the current command (and its subprocesses)
 		TODO- verify with Ryan that this description is correct
 		scope is osexecer - change to worker?

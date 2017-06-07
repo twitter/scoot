@@ -1,6 +1,8 @@
 package snapshot
 
 import (
+	"time"
+
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
@@ -9,6 +11,7 @@ type ID string
 
 // DB may require some form of initialization, in which case this chan should be provided by the db impl.
 type InitDoneCh <-chan error
+type InitDoneTimeCh chan time.Time
 
 // Creator allows creating new Snapshots.
 type Creator interface {

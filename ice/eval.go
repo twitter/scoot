@@ -56,9 +56,9 @@ type stack []frame
 func (s stack) String() string {
 	b := new(bytes.Buffer)
 	log.Info(b)
-	log.Info(b, "goice stacktrace:")
+	log.Info(b, "goice stacktrace (constructor chain):")
 	for _, f := range s {
-		fmt.Fprintf(b, "\t%s\n", f.key)
+		log.Info(b, fmt.Sprintf("\t%s", f.key))
 	}
 	log.Info(b, "end goice stacktrace")
 	return b.String()
@@ -73,7 +73,7 @@ func (e *evaluation) construct(key Key) Value {
 	// Check for cycles (instead of just recurring infinitely and overflowing stack
 	for _, f := range e.stack[0 : len(e.stack)-1] {
 		if f.key == key {
-			throw("cycle in object graph: already constructing %v", key)
+			throw("cycle in object (dependency) graph: already constructing %v", key)
 		}
 	}
 
@@ -86,7 +86,7 @@ func (e *evaluation) construct(key Key) Value {
 	// Find who makes this
 	provider, ok := e.bag.bindings[key]
 	if !ok {
-		throw("target type %v is unbound", key)
+		throw("target type %v is unbound (no constructor for %v found in bag)", key, key)
 	}
 
 	// providerType must be a function; we check this in Put so we assume it here

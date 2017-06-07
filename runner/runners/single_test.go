@@ -112,7 +112,7 @@ func TestMemCap(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
 	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
-	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, nil)
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, nil, NewNullOutputCreator(), tmp, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -139,7 +139,7 @@ func TestDownloadCounter(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"ls"}, SnapshotID: "dummySnapshotId"}
 	tmp, _ := temp.TempDirDefault()
 	e := os_execer.NewExecer()
-	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, stat)
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, nil, NewNullOutputCreator(), tmp, stat)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -151,7 +151,7 @@ func TestDownloadCounter(t *testing.T) {
 	// wait for the run to finish
 	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
 
-	stats.VerifyStats("", statsReg, t,
+	stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
@@ -171,6 +171,6 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	if err != nil {
 		panic(err)
 	}
-	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, nil)
+	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, nil, outputCreator, tmpDir, nil)
 	return r, sim
 }

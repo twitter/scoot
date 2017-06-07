@@ -50,7 +50,7 @@ func Test_RequestCounters(t *testing.T) {
 		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerRunJobLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},

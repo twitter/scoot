@@ -248,7 +248,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 		t.Errorf("Expected saga error: %v, got: %v", runErr, terr.runnerErr)
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedTaskStartRetries: {Checker: stats.Int64EqTest, Value: 1},
 		})
