@@ -10,19 +10,25 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/sethgrid/pester"
 )
 
 func MakeHTTPStore(rootURI string) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := pester.New()
+	client.Backoff = pester.ExponentialBackoff
+	client.MaxRetries = 8
+	client.LogHook = func(e pester.ErrEntry) {
+		log.Infof("Retrying after failed attempt: %+v", e)
+	}
 	return &httpStore{rootURI, client}
 }
 
 type httpStore struct {
 	rootURI string
-	client  *http.Client
+	client  *pester.Client
 }
 
 func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {

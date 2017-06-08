@@ -1,9 +1,8 @@
 #!/bin/bash
 # Add new direct and transitive dependencies as submodules.
-# Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'
 #
 echo "Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'"
-echo "DO NOT install dependencies with go get before running this script, this script  will fail to find dependencies previously addedd via go get"
+echo "FIXME: will not work for gopkg.in: 'Unknown SSL protocol error in connection to gopkg.in:-9838'"
 
 set -euo pipefail
 trap "exit" INT TERM
@@ -14,10 +13,12 @@ GOPATH_ORIG="${GOPATH}"
 GOPATH_NEW="$(mktemp -d -t TEMP.XXXXXXX)"
 export GOPATH="${GOPATH_NEW}"
 
+#
 get_deps() {
     cd "${GOPATH}/src/$1"
     for need in $(go list -f '{{join .Deps "\n"}}' ./... | \
                   xargs go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}' 2>&1 | \
+                  grep -v "gopkg.in" | \
                   grep "can't load package" | \
                   sed -E 's,[^"]*"([^"]*).*,\1,' | \
                   grep '\..*/'); do

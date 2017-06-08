@@ -100,6 +100,13 @@ func (r *ChaosRunner) Abort(run runner.RunID) (runner.RunStatus, error) {
 	return r.del.Abort(run)
 }
 
+func (r *ChaosRunner) Release() {
+	// Always delegate release if del is present.
+	if r.del != nil {
+		r.del.Release()
+	}
+}
+
 func (r *ChaosRunner) Erase(run runner.RunID) error {
 	err := r.delay()
 	if err != nil {

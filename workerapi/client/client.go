@@ -97,6 +97,11 @@ func (c *simpleClient) Abort(runID runner.RunID) (runner.RunStatus, error) {
 	return workerapi.ThriftRunStatusToDomain(status), nil
 }
 
+// Release local resources.
+func (c *simpleClient) Release() {
+	c.Close()
+}
+
 // Implements Scoot Worker API
 func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 	workerClient, err := c.dial()
