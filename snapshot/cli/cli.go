@@ -42,12 +42,14 @@ import (
 	"path"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/spf13/cobra"
+
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/snapshot"
 	"github.com/scootdev/scoot/snapshot/bundlestore"
 	"github.com/scootdev/scoot/snapshot/git/gitdb"
 	"github.com/scootdev/scoot/snapshot/git/repo"
-	"github.com/spf13/cobra"
 )
 
 type DBInjector interface {
@@ -236,6 +238,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		if err != nil {
 			return fmt.Errorf("couldn't get rev-list for %s: %v", revList, err)
 		}
+		log.Infof("Using rev-list for %s:\n%s\n", revList, revData)
 		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha1.Sum([]byte(revData))))
 	}
 
