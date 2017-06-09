@@ -93,6 +93,7 @@ func NewQueueRunner(
 		capacity:      capacity,
 		reqCh:         make(chan interface{}),
 		updateCh:      make(chan struct{}),
+		cancelTimerCh: make(chan interface{}, 1),
 	}
 	run := &Service{controller, statusManager, statusManager}
 
@@ -110,7 +111,7 @@ func NewQueueRunner(
 				}
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-				startUpdateTicker(filer.UpdateInterval(), controller.updateCh)
+				startUpdateTicker(filer.UpdateInterval(), controller.updateCh, controller.cancelTimerCh)
 				if idtCh != nil {
 					idtCh <- time.Now()
 				}
@@ -118,7 +119,7 @@ func NewQueueRunner(
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-		startUpdateTicker(filer.UpdateInterval(), controller.updateCh)
+		startUpdateTicker(filer.UpdateInterval(), controller.updateCh, controller.cancelTimerCh)
 	}
 
 	go controller.loop()
@@ -149,20 +150,27 @@ type QueueController struct {
 	reqCh chan interface{}
 	// used to signal a request to update the Filer
 	updateCh chan struct{}
+	// used to cancel the timer goroutine if started.
+	cancelTimerCh chan interface{}
 }
 
 // Start a goroutine that forwards update ticks to updateCh, so that we can skip if e.g. init failed
-// This doesn't support a stop mechanism, because QueueController doesn't support a stop/close semantic
-func startUpdateTicker(d time.Duration, u chan<- struct{}) {
+func startUpdateTicker(d time.Duration, u chan<- struct{}, cancelCh chan interface{}) {
 	if d == snapshot.NoDuration || u == nil {
 		return
 	}
-	ticker := time.NewTicker(d).C
-	go func(t <-chan time.Time) {
-		for _ = range t {
-			u <- struct{}{}
+	ticker := time.NewTicker(d)
+	go func() {
+	Loop:
+		for {
+			select {
+			case <-ticker.C:
+				u <- struct{}{}
+			case <-cancelCh:
+				break Loop
+			}
 		}
-	}(ticker)
+	}()
 }
 
 // Run enqueues the command or rejects it, returning its status or an error.
@@ -225,6 +233,11 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	return status, err
 }
 
+// Cancels goroutines and exits run loop.
+func (c *QueueController) Release() {
+	close(c.reqCh)
+}
+
 // Handle requests to run and update, to provide concurrency management between the two.
 // Although we can still receive run requests, runs and updates are done blocking.
 func (c *QueueController) loop() {
@@ -281,7 +294,8 @@ func (c *QueueController) loop() {
 			// Handle run and abort requests.
 			if !ok {
 				c.reqCh = nil
-				continue
+				c.cancelTimerCh <- nil
+				return
 			}
 			switch r := req.(type) {
 			case runReq:

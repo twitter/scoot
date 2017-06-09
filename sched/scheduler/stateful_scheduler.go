@@ -557,6 +557,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.asyncRunner.RunAsync(
 			tRunner.run,
 			func(err error) {
+				defer rs.Release()
 				// Tasks from the same job or related jobs will never preempt each other,
 				//  so we only need to check jobId to determine preemption.
 				if nodeSt.runningJob != jobId {
@@ -677,7 +678,8 @@ func (s *statefulScheduler) killJobs() {
 			// can we find the job?
 			jobState := s.getJob(req.jobId)
 			if jobState == nil {
-				req.responseCh <- fmt.Errorf("Job Id %s, not found. "+
+				req.responseCh <- fmt.Errorf("Cannot kill Job Id %s, not found."+
+					" (This error can be ignored if kill was a fire-and-forget defensive request)."+
 					" The job may be finished, "+
 					" the request may still be in the queue to be scheduled, or "+
 					" the id may be invalid.  "+
