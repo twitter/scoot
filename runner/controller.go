@@ -14,6 +14,6 @@ type Controller interface {
 	// e.g. if it's already completed on its own)
 	Abort(run RunID) (RunStatus, error)
 
-	// Optional function to clean up resources, ex: cancel goroutines.
+	// Optional function to clean up process-local resources, ex: cancel goroutines, close connections, etc
 	Release()
 }

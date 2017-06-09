@@ -13,13 +13,15 @@ import (
 	"github.com/sethgrid/pester"
 )
 
+const DefaultHttpTries = 8 // ~5min total of trying with exponential backoff (0 and 1 both mean 1 try total)
+
 func MakeHTTPStore(rootURI string) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
 	client := pester.New()
 	client.Backoff = pester.ExponentialBackoff
-	client.MaxRetries = 8
+	client.MaxRetries = DefaultHttpTries
 	client.LogHook = func(e pester.ErrEntry) {
 		log.Infof("Retrying after failed attempt: %+v", e)
 	}
