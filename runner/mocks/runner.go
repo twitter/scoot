@@ -74,6 +74,14 @@ func (_mr *_MockServiceRecorder) QueryNow(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "QueryNow", arg0)
 }
 
+func (_m *MockService) Release() {
+	_m.ctrl.Call(_m, "Release")
+}
+
+func (_mr *_MockServiceRecorder) Release() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Release")
+}
+
 func (_m *MockService) Run(_param0 *runner.Command) (runner.RunStatus, error) {
 	ret := _m.ctrl.Call(_m, "Run", _param0)
 	ret0, _ := ret[0].(runner.RunStatus)

@@ -46,6 +46,10 @@
 	path = vendor/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid
 	branch = 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
+[submodule "vendor/github.com/sethgrid/pester"]
+	path = vendor/github.com/sethgrid/pester
+	url = https://github.com/sethgrid/pester
+	branch = 4f4c0a67b6496764028e1ab9fd8dfb630282ed2f
 
 # Added by hand b/c deps.sh currently bombs with an ssl error when git cloning gopkg.in/yaml.v2
 # Using forked scootdev/groupcache for now (we needed to add a public method for populating a cache).

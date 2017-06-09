@@ -123,21 +123,21 @@ func TestServer(t *testing.T) {
 	store.ttl = &TTLValue{now.Add(time.Hour), "NEW_TTL"}
 	server.ttlCfg = &TTLConfig{0, "NEW_TTL"}
 	clientTTL := &TTLValue{now.Add(time.Hour), DefaultTTLKey}
-	httpStore := MakeHTTPStore(rootUri)
+	hs := MakeHTTPStore(rootUri)
 	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
-	if err := httpStore.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {
+	if err := hs.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {
 		t.Fatalf(err.Error())
 	}
 
 	// Check if the write succeeded.
-	if ok, err := httpStore.Exists(bundle2ID); err != nil {
+	if ok, err := hs.Exists(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if !ok {
 		t.Fatalf("Expected data to exist.")
 	}
 
 	// Try to read data.
-	if reader, err := httpStore.OpenForRead(bundle2ID); err != nil {
+	if reader, err := hs.OpenForRead(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if data, err := ioutil.ReadAll(reader); err != nil {
 		t.Fatalf(err.Error())
@@ -146,14 +146,71 @@ func TestServer(t *testing.T) {
 	}
 
 	// Check for non-existent data.
-	if ok, err := httpStore.Exists("bs-0000000000000000000000000000000000000000.bundle"); err != nil {
+	if ok, err := hs.Exists("bs-0000000000000000000000000000000000000000.bundle"); err != nil {
 		t.Fatalf(err.Error())
 	} else if ok {
 		t.Fatalf("Expected data to not exist.")
 	}
 
 	// Check for invalid name error
-	if _, err := httpStore.Exists("foo"); err == nil {
+	if _, err := hs.Exists("foo"); err == nil {
 		t.Fatalf("Expected invalid input err.")
+	}
+}
+
+type fakeServer struct {
+	counter int
+	code    []int
+	times   []time.Time
+}
+
+func (s *fakeServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(s.code[s.counter])
+	s.times = append(s.times, time.Now())
+	s.counter++
+}
+
+func TestRetry(t *testing.T) {
+	listener, _ := net.Listen("tcp", "localhost:0")
+	defer listener.Close()
+	addr := listener.Addr().String()
+
+	server := &fakeServer{}
+	mux := http.NewServeMux()
+	mux.Handle("/bundle/", server)
+	go func() {
+		http.Serve(listener, mux)
+	}()
+	rootUri := "http://" + addr + "/bundle/"
+
+	// Try 3 times then fail
+	now := time.Now()
+	server.times = []time.Time{}
+	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable}
+	hs := MakeHTTPStore(rootUri)
+	hs.(*httpStore).client.Backoff = func(_ int) time.Duration { return 50 * time.Millisecond }
+	hs.(*httpStore).client.MaxRetries = 3
+	if _, err := hs.OpenForRead(""); err == nil {
+		t.Fatalf("Expected err, got nil")
+	}
+	if server.counter != 3 {
+		t.Fatalf("Expected 3 tries, got: %d", server.counter)
+	}
+	if server.times[2].Sub(now) > 150*time.Millisecond ||
+		server.times[2].Sub(now) < 100*time.Millisecond ||
+		server.times[1].Sub(now) < 50*time.Millisecond ||
+		server.times[0].Sub(now) > 50*time.Millisecond {
+		t.Fatalf("Expected 3 tries 50ms apart, got: %v", server.times)
+	}
+
+	// Try twice then succeed on the third time.
+	server.counter = 0
+	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusOK}
+	hs.(*httpStore).client.MaxRetries = 10
+	if _, err := hs.OpenForRead("foo"); err != nil {
+		t.Fatalf("Expected success, got: %v", err)
+	}
+	if server.counter != 3 {
+		t.Fatalf("Expected 3 tries, got: %d", server.counter)
 	}
 }

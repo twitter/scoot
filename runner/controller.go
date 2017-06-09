@@ -13,4 +13,7 @@ type Controller interface {
 	// Abort kills the given run. Returns its final status (which may not be aborted,
 	// e.g. if it's already completed on its own)
 	Abort(run RunID) (RunStatus, error)
+
+	// Optional function to clean up resources, ex: cancel goroutines.
+	Release()
 }
