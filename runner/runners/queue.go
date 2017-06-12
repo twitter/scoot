@@ -92,7 +92,7 @@ func NewQueueRunner(
 		filer:         filer,
 		capacity:      capacity,
 		reqCh:         make(chan interface{}),
-		updateCh:      make(chan struct{}),
+		updateCh:      make(chan interface{}),
 		cancelTimerCh: make(chan interface{}, 1),
 	}
 	run := &Service{controller, statusManager, statusManager}
@@ -149,13 +149,13 @@ type QueueController struct {
 	// used to signal a cmd run request
 	reqCh chan interface{}
 	// used to signal a request to update the Filer
-	updateCh chan struct{}
+	updateCh chan interface{}
 	// used to cancel the timer goroutine if started.
 	cancelTimerCh chan interface{}
 }
 
 // Start a goroutine that forwards update ticks to updateCh, so that we can skip if e.g. init failed
-func startUpdateTicker(d time.Duration, u chan<- struct{}, cancelCh chan interface{}) {
+func startUpdateTicker(d time.Duration, u chan<- interface{}, cancelCh <-chan interface{}) {
 	if d == snapshot.NoDuration || u == nil {
 		return
 	}
@@ -165,8 +165,9 @@ func startUpdateTicker(d time.Duration, u chan<- struct{}, cancelCh chan interfa
 		for {
 			select {
 			case <-ticker.C:
-				u <- struct{}{}
+				u <- nil
 			case <-cancelCh:
+				ticker.Stop()
 				break Loop
 			}
 		}
@@ -233,7 +234,7 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	return status, err
 }
 
-// Cancels goroutines and exits run loop.
+// Cancels all goroutines created by this instance and exits run loop.
 func (c *QueueController) Release() {
 	close(c.reqCh)
 }
