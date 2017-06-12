@@ -114,9 +114,11 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 		// -d removes directories. -x ignores gitignore and removes everything.
 		// -f is force. -f the second time removes directories even if they're git repos themselves
 		{"clean", "-f", "-f", "-d", "-x"},
+		// -f overrides modified files
+		// -B resets or creates the named branch when checking out the given sha.
 		// Note: our worktree cannot be in detached head state after checkout since [Twitter] git needs a valid ref to fetch.
 		//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
-		{"checkout", "-B", tempCheckoutBranch, sha},
+		{"checkout", "-fB", tempCheckoutBranch, sha},
 	}
 
 	for _, argv := range cmds {
