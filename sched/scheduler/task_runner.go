@@ -26,10 +26,10 @@ type taskRunner struct {
 	stat   stats.StatsReceiver
 
 	markCompleteOnFailure bool
+	taskTimeoutOverhead   time.Duration // How long to wait for a response after the task has timed out.
 	defaultTaskTimeout    time.Duration // Use this timeout as the default for any cmds that don't have one.
 	runnerRetryTimeout    time.Duration // How long to keep retrying a runner req
 	runnerRetryInterval   time.Duration // How long to sleep between runner req retries.
-	runnerOverhead        time.Duration // Runner will timeout after the caller-provided timeout plus this overhead.
 
 	jobId  string
 	taskId string
@@ -123,7 +123,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	if cmd.Timeout == 0 {
 		cmd.Timeout = r.defaultTaskTimeout
 	}
-	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
+	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.taskTimeoutOverhead)
 	elapsedRetryDuration := time.Duration(0)
 	var st runner.RunStatus
 	var err error
@@ -205,6 +205,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	if timeout < 0 {
 		timeout = 0
 	}
+	// The semantics of timeout changes here. Before, zero meant use the default, here it means return immediately.
 	w := runner.Wait{Timeout: timeout, AbortCh: r.queryAbortCh}
 	log.Infof("Query(includeRunning=%t) for jobId: %s, taskId: %s, timeout: %v", includeRunning, r.jobId, r.taskId, timeout)
 

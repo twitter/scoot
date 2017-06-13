@@ -1,6 +1,7 @@
 package main
 
 //go:generate go-bindata -pkg "config" -o ./config/config.go config
+//go:generate go fmt ./config/config.go
 
 import (
 	"flag"

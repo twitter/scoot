@@ -26,8 +26,7 @@ type Command struct {
 	EnvVars map[string]string
 
 	// Kill command after timeout. Zero value is ignored.
-	// TODO(dbentley): should this apply to the command, or include wall-time (including time spent
-	// in a queue, or checking out the snapshot)?
+	// Time spent prepping for this command (ex: git checkout) is counted towards the Timeout.
 	Timeout time.Duration
 
 	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.

@@ -33,6 +33,15 @@ func init() {
 	}
 }
 
+// Provide defaults for config settings that should never be uninitialized/zero.
+
+// Nothing should run forever by default, use this timeout as a fallback.
+const DefaultDefaultTaskTimeout = 30 * time.Minute
+
+// Allow extra time when waiting for a task response.
+// This includes network time and the time to upload logs to bundlestore.
+const DefaultTaskTimeoutOverhead = 15 * time.Second
+
 // Number of different requestors that can run jobs at any given time.
 const DefaultMaxRequestors = 100
 
@@ -57,9 +66,9 @@ const DefaultLargeJobSoftMaxNodes = 50
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //     from the sagalog, and restarts them.
 // DefaultTaskTimeout -
-//     default timeout for tasks, in ms.
-// RunnerOverhead -
-//     default overhead to add (to account for network and downloading).
+//     default timeout for tasks.
+// TaskTimeoutOverhead
+//     How long to wait for a response after the task has timed out.
 // RunnerRetryTimeout -
 //     how long to keep retrying a runner req.
 // RunnerRetryInterval -
@@ -72,7 +81,7 @@ type SchedulerConfig struct {
 	DebugMode               bool
 	RecoverJobsOnStartup    bool
 	DefaultTaskTimeout      time.Duration
-	RunnerOverhead          time.Duration
+	TaskTimeoutOverhead     time.Duration
 	RunnerRetryTimeout      time.Duration
 	RunnerRetryInterval     time.Duration
 	ReadyFnBackoff          time.Duration
@@ -183,6 +192,12 @@ func NewStatefulScheduler(
 		nodeReadyFn = nil
 	}
 
+	if config.DefaultTaskTimeout == 0 {
+		config.DefaultTaskTimeout = DefaultDefaultTaskTimeout
+	}
+	if config.TaskTimeoutOverhead == 0 {
+		config.TaskTimeoutOverhead = DefaultTaskTimeoutOverhead
+	}
 	if config.MaxRequestors == 0 {
 		config.MaxRequestors = DefaultMaxRequestors
 	}
@@ -537,9 +552,9 @@ func (s *statefulScheduler) scheduleTasks() {
 			stat:   s.stat,
 
 			defaultTaskTimeout:    s.config.DefaultTaskTimeout,
+			taskTimeoutOverhead:   s.config.TaskTimeoutOverhead,
 			runnerRetryTimeout:    s.config.RunnerRetryTimeout,
 			runnerRetryInterval:   s.config.RunnerRetryInterval,
-			runnerOverhead:        s.config.RunnerOverhead,
 			markCompleteOnFailure: preventRetries,
 
 			jobId:  jobId,
