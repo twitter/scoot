@@ -92,7 +92,8 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 		newStatus.StderrRef = oldStatus.StderrRef
 	}
 
-	log.Debugf("StatusManager is holding status:%+v", newStatus)
+	log.Debugf("StatusManager is holding status --- JobID:%s, TaskID:%s, RunID:%s, Status:%s",
+		newStatus.JobID, newStatus.TaskID, newStatus.RunID, newStatus.State)
 	s.runs[newStatus.RunID] = newStatus
 
 	listeners := make([]queryAndCh, 0, len(s.listeners))

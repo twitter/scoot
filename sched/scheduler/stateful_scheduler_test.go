@@ -23,6 +23,16 @@ import (
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
+//Mocks sometimes hang without useful output, this allows early exit with err msg.
+type TestTerminator struct{}
+
+func (t *TestTerminator) Errorf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+
 // objects needed to initialize a stateful scheduler
 type schedulerDeps struct {
 	initialCl       []cluster.Node
@@ -294,7 +304,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	deps.clUpdates = cl.ch
 
 	// sagalog mock to ensure all messages are logged appropriately
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
@@ -311,11 +321,14 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
-	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}).MaxTimes(1)
-	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
-	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
+	gomock.InOrder(
+		sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil)),
+		sagaLogMock.EXPECT().LogMessage(
+			TaskMessageMatcher{Type: &sagaStartTask, JobId: jobId, TaskId: taskId, Data: gomock.Any()}).MinTimes(0),
+		sagaLogMock.EXPECT().LogMessage(
+			TaskMessageMatcher{Type: &sagaEndTask, JobId: jobId, TaskId: taskId, Data: gomock.Any()}),
+		sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId)),
+	)
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
