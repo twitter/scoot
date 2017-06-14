@@ -5,8 +5,14 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/scootdev/scoot"
 
-SHELL := /bin/bash
-SCOOT_LOGLEVEL := info
+SHELL := /bin/bash -o pipefail
+
+# Libaries don't configure the logger by default - define this so they can init the logger during testing.
+SCOOT_LOGLEVEL ?= info
+
+# Output can be overly long and exceed TravisCI 4MB limit, so filter out some of the noisier logs.
+# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
+TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)/'
 
 default:
 	go build $$(go list ./... | grep -v /vendor/)
@@ -44,15 +50,11 @@ vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
 coverage:
-	sh testCoverage.sh
+	sh testCoverage.sh $(TRAVIS_FILTER)
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
-	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-	set -o pipefail
-	go test -race -timeout 120s -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) 2>&1 | \
-    tee /dev/null | egrep -v 'line="(runners|repo|bundlestore)/'
+	go test -race -timeout 120s -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
 test-unit:
 	# Runs only unit tests
@@ -75,21 +77,15 @@ swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
-	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-	set -o pipefail
 	go install ./binaries/...
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m 2>&1 | tee /dev/null | \
-		egrep -v 'line="(runners|repo|bundlestore)/'
+	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	# Output can be overly long so strip out most worker logs by filtering on the noisiest packages.
-	# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-	set -o pipefail
+	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
 	go install ./binaries/...
-	recoverytest 2>&1 | tee /dev/null | egrep -v 'line="(runners|repo|bundlestore)/'
+	recoverytest &>/dev/null
 
 clean-mockgen:
 	rm */*_mock.go
