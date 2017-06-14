@@ -1,8 +1,9 @@
 package server
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/cloud/cluster"
@@ -106,10 +107,9 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		"SchedulerConfig": {
 			"stateful": &scootconfig.StatefulSchedulerConfig{},
 			"": &scootconfig.StatefulSchedulerConfig{
-				Type:                 "stateful",
-				MaxRetriesPerTask:    0,
-				DefaultTaskTimeoutMs: 30 * 60 * 1000, // 30m
-				RunnerOverheadMs:     10 * 60 * 1000, // 10m
+				Type:               "stateful",
+				MaxRetriesPerTask:  0,
+				DefaultTaskTimeout: "30m",
 			},
 		},
 	})
