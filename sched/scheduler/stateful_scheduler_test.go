@@ -478,28 +478,21 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 1},
 		})
 
-	// kill the second job
+	// kill the second job twice to verify the killed 2x error message
 	respCh := sendKillRequest(jobId2, s)
-
-	// pause to let the scheduler pick up the first kill request first.
-	time.Sleep(500 * time.Millisecond)
-
-	// kill it a second time to verify the killed 2x error message
-	// kill the second job
 	respCh2 := sendKillRequest(jobId2, s)
+
+	// pause to let the scheduler pick up the kill requests, then step once to process them.
+	time.Sleep(500 * time.Millisecond)
+	s.step()
+
+	// wait for a response from the first kill and check for err == nil.
 	err := waitForResponse(respCh, s)
 	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
-			t.Errorf("Expected err to be nil, instead is %v", err.Error())
-		}
-	} else {
-		j := s.getJob(jobId2)
-		for j == nil {
-			s.step()
-			j = s.getJob(jobId2)
-		}
+		t.Errorf("Expected err to be nil, instead is %v", err.Error())
 	}
 
+	// wait for a response from the second kill and check for err != nil.
 	err = waitForResponse(respCh2, s)
 	if err == nil {
 		t.Error("Killed a job twice, expected an error, got nil")

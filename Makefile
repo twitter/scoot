@@ -12,7 +12,7 @@ SCOOT_LOGLEVEL ?= info
 
 # Output can be overly long and exceed TravisCI 4MB limit, so filter out some of the noisier logs.
 # Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)/'
+TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
 default:
 	go build $$(go list ./... | grep -v /vendor/)
