@@ -486,20 +486,16 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 	s.step()
 
-	// wait for a response from the first kill and check for err == nil.
+	// wait for a response from the first kill and check for one err == nil and one err != nil
 	err := waitForResponse(respCh, s)
-	if err != nil {
-		t.Errorf("Expected err to be nil, instead is %v", err.Error())
-	}
+	err2 := waitForResponse(respCh2, s)
 
-	// wait for a response from the second kill and check for err != nil.
-	err = waitForResponse(respCh2, s)
-	if err == nil {
-		t.Error("Killed a job twice, expected an error, got nil")
-
+	if (err == nil) == (err2 == nil) {
+		t.Errorf("Expected one nil and one non-nil err when killing job twice, got: %v, %v", err, err2)
+	} else if err == nil && !strings.Contains(err2.Error(), "was already killed,") {
+		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err2.Error())
 	} else if !strings.Contains(err.Error(), "was already killed,") {
 		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err.Error())
-
 	}
 
 	// verify that the first job is still running
