@@ -38,9 +38,9 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 
 		markCompleteOnFailure: markCompleteOnFailure,
 		defaultTaskTimeout:    30 * time.Second,
+		taskTimeoutOverhead:   1 * time.Second,
 		runnerRetryTimeout:    0,
 		runnerRetryInterval:   0,
-		runnerOverhead:        1 * time.Second,
 
 		jobId:  jobId,
 		taskId: taskId,

@@ -7,6 +7,8 @@ import (
 	"github.com/scootdev/scoot/sched/scheduler"
 )
 
+//TODO(jschiller): make these configurable.
+
 // How long to keep retrying a runner req
 const DefaultRunnerRetryTimeout = 10 * time.Second
 
@@ -24,15 +26,14 @@ const DefaultReadyFnBackoff = 5 * time.Second
 //             by calling step()
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //             from the sagalog, and restarts them.
-// DefaultTaskTimeoutMs - default timeout for tasks, in ms
-// OverheadMs - default overhead to add (to account for network and downloading)
+// DefaultTaskTimeout - default timeout for tasks, human readable ex: "30m"
 type StatefulSchedulerConfig struct {
 	Type                    string
 	MaxRetriesPerTask       int
 	DebugMode               bool
 	RecoverJobsOnStartup    bool
-	DefaultTaskTimeoutMs    int
-	RunnerOverheadMs        int
+	DefaultTaskTimeout      string
+	TaskTimeoutOverhead     string
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	NumConfiguredNodes      int
@@ -44,13 +45,29 @@ func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
-func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
+func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
+	var err error
+	var dtt time.Duration
+	if c.DefaultTaskTimeout != "" {
+		dtt, err = time.ParseDuration(c.DefaultTaskTimeout)
+		if err != nil {
+			return scheduler.SchedulerConfig{}, err
+		}
+	}
+	var tto time.Duration
+	if c.TaskTimeoutOverhead != "" {
+		tto, err = time.ParseDuration(c.TaskTimeoutOverhead)
+		if err != nil {
+			return scheduler.SchedulerConfig{}, err
+		}
+	}
+
 	return scheduler.SchedulerConfig{
 		MaxRetriesPerTask:       c.MaxRetriesPerTask,
 		DebugMode:               c.DebugMode,
 		RecoverJobsOnStartup:    c.RecoverJobsOnStartup,
-		DefaultTaskTimeout:      time.Duration(c.DefaultTaskTimeoutMs) * time.Millisecond,
-		RunnerOverhead:          time.Duration(c.RunnerOverheadMs) * time.Millisecond,
+		DefaultTaskTimeout:      dtt,
+		TaskTimeoutOverhead:     tto,
 		RunnerRetryTimeout:      DefaultRunnerRetryTimeout,
 		RunnerRetryInterval:     DefaultRunnerRetryInterval,
 		ReadyFnBackoff:          DefaultReadyFnBackoff,
@@ -59,5 +76,5 @@ func (c *StatefulSchedulerConfig) Create() scheduler.SchedulerConfig {
 		NumConfiguredNodes:      c.NumConfiguredNodes,
 		SoftMaxSchedulableTasks: c.SoftMaxSchedulableTasks,
 		LargeJobSoftMaxNodes:    c.LargeJobSoftMaxNodes,
-	}
+	}, nil
 }
