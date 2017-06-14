@@ -494,7 +494,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 		t.Errorf("Expected one nil and one non-nil err when killing job twice, got: %v, %v", err, err2)
 	} else if err == nil && !strings.Contains(err2.Error(), "was already killed,") {
 		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err2.Error())
-	} else if !strings.Contains(err.Error(), "was already killed,") {
+	} else if err != nil && !strings.Contains(err.Error(), "was already killed,") {
 		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err.Error())
 	}
 
