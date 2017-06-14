@@ -14,7 +14,7 @@ import (
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	tmp, _ := temp.NewTempDir("", "runner_polling_test")
 	ex := execers.NewSimExecer()
-	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil,  NewNullOutputCreator(), tmp, nil)
+	single := NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, NewNullOutputCreator(), tmp, nil)
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
