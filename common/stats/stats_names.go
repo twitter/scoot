@@ -222,7 +222,7 @@ const (
 	- the platform could not run the task
 	- the platform encountered an error reporting the end of the task to saga
 	*/
-	SchedFailedTaskSagaCounter = "failedTaskSagaCounter"
+	SchedFailedTaskCounter = "failedTaskCounter"
 
 	/*
 		the number of times the processing failed to serialize the workerapi status object
