@@ -383,7 +383,7 @@ const (
 	/*
 		The number of workers who are currently exceeding the max init time
 	*/
-	WorkerOngoingInitLatency_ms = "workerActiveInitLatency_ms"
+	WorkerActiveInitLatency_ms = "workerActiveInitLatency_ms"
 
 	/*
 		the amount of worker's memory currently consumed by the current command (and its subprocesses)

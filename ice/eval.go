@@ -1,7 +1,6 @@
 package ice
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -53,15 +52,12 @@ type frame struct {
 // a stack is just the in-order frames of our evaluation
 type stack []frame
 
-func (s stack) String() string {
-	b := new(bytes.Buffer)
-	log.Info(b)
-	log.Info(b, "goice stacktrace (constructor chain):")
+func (s stack) LogStack() {
+	log.Info("goice stacktrace (constructor chain):")
 	for _, f := range s {
-		log.Info(b, fmt.Sprintf("\t%s", f.key))
+		log.Info(fmt.Sprintf("\t%s", f.key))
 	}
-	log.Info(b, "end goice stacktrace")
-	return b.String()
+	log.Info("end goice stacktrace")
 }
 
 // one level of our evaluation. Constructs a Value for key

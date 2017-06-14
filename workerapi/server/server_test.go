@@ -35,7 +35,7 @@ func TestInitStats(t *testing.T) {
 	if !stats.StatsOk("validating worker still initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.DoesNotExistTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerOngoingInitLatency_ms):        {Checker: stats.Int64GTTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64GTTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 1},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.DoesNotExistTest, Value: 0},
@@ -51,7 +51,7 @@ func TestInitStats(t *testing.T) {
 	if !stats.StatsOk("validating worker done initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
-			fmt.Sprintf("handler/%s", stats.WorkerOngoingInitLatency_ms):        {Checker: stats.Int64EqTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
@@ -69,7 +69,7 @@ func TestInitStats(t *testing.T) {
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
-			fmt.Sprintf("handler/%s", stats.WorkerOngoingInitLatency_ms):        {Checker: stats.Int64EqTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
@@ -86,7 +86,7 @@ func TestInitStats(t *testing.T) {
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
-			fmt.Sprintf("handler/%s", stats.WorkerOngoingInitLatency_ms):        {Checker: stats.Int64EqTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
@@ -164,8 +164,8 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			return statsRec
 		},
 		func() StatsCollectInterval { return 50 }, // collect the stats every 50ms
-		func(stat stats.StatsReceiver, run runner.Service, idtCh snapshot.InitDoneTimeCh, stInv StatsCollectInterval) worker.Worker {
-			return NewHandler(stat, run, idtCh, stInv)
+		func(stat stats.StatsReceiver, run runner.Service, stInv StatsCollectInterval) worker.Worker {
+			return NewHandler(stat, run, stInv)
 		},
 	)
 	if useErrorExec {

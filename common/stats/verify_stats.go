@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
-
 )
 
 /*
@@ -148,4 +147,3 @@ func PPrintStats(tag string, statsRegistry StatsRegistry) {
 	regBytes, _ := asFinagleRegistry.MarshalJSONPretty()
 	log.Printf("%s\n", regBytes)
 }
-

@@ -14,7 +14,6 @@ import (
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshot"
 	domain "github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
 )
@@ -34,7 +33,7 @@ func MakeServer(
 
 // defining StatsCollectInterval type so it can be injected via ICE
 // (avoid conflict with other injected integers)
-type StatsCollectInterval int
+type StatsCollectInterval time.Duration
 
 type handler struct {
 	stat                 stats.StatsReceiver
@@ -47,43 +46,39 @@ type handler struct {
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, idtCh snapshot.InitDoneTimeCh, statsCollectInterval StatsCollectInterval) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service, statsCollectInterval StatsCollectInterval) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), statsCollectInterval: statsCollectInterval}
-	go h.stats(idtCh)
+	go h.stats()
 	return h
 }
 
 // Periodically output stats
 //TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
-func (h *handler) stats(idtCh snapshot.InitDoneTimeCh) {
+func (h *handler) stats() {
 	var startTime time.Time = time.Now()
 	var initTime time.Duration
 	nilTime := time.Time{}
 	initDoneTime := nilTime
 	ticker := time.NewTicker(time.Millisecond * time.Duration(h.statsCollectInterval))
 	for {
-		if initDoneTime == nilTime {
-			// get the init done time if it's on the channel
-			select {
-			case initDoneTime = <-idtCh:
-				initTime = initDoneTime.Sub(startTime)
-			default:
-			}
-		}
-
 		select {
 		case <-ticker.C:
 			h.mu.Lock()
 
-			if initDoneTime != nilTime {
+			processes, svcStatus, err := h.run.StatusAll()
+			if err != nil {
+				continue
+			}
+
+			if svcStatus.Initialized {
+				if initDoneTime == nilTime {
+					initDoneTime = time.Now()
+					initTime = initDoneTime.Sub(startTime)
+				}
 
 				var numFailed int64
 				var numActive int64
-				processes, _, err := h.run.StatusAll()
-				if err != nil {
-					continue
-				}
 
 				for _, process := range processes {
 					if process.State == runner.FAILED {
@@ -98,7 +93,7 @@ func (h *handler) stats(idtCh snapshot.InitDoneTimeCh) {
 				uptime := time.Since(initDoneTime)
 				timeSincelastContact_ms := int64(time.Now().Sub(h.timeLastRpc) / time.Millisecond)
 				h.stat.Gauge(stats.WorkerFinalInitLatency_ms).Update(int64(initTime / time.Millisecond))
-				h.stat.Gauge(stats.WorkerOngoingInitLatency_ms).Update(0)
+				h.stat.Gauge(stats.WorkerActiveInitLatency_ms).Update(0)
 				h.stat.Gauge(stats.WorkerActiveRunsGauge).Update(numActive)
 				h.stat.Gauge(stats.WorkerFailedCachedRunsGauge).Update(numFailed)
 				h.stat.Gauge(stats.WorkerEndedCachedRunsGauge).Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
@@ -106,7 +101,7 @@ func (h *handler) stats(idtCh snapshot.InitDoneTimeCh) {
 				h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(int64(uptime / time.Millisecond))
 			} else {
 				initTime := time.Now().Sub(startTime)
-				h.stat.Gauge(stats.WorkerOngoingInitLatency_ms).Update(int64(initTime / time.Millisecond))
+				h.stat.Gauge(stats.WorkerActiveInitLatency_ms).Update(int64(initTime / time.Millisecond))
 			}
 
 			h.mu.Unlock()

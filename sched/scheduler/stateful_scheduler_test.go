@@ -250,7 +250,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
-		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, nil, runners.NewNullOutputCreator(), tmp, nil)
+		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -612,7 +612,7 @@ func getDepsWithPausingWorker() (*schedulerDeps, []*execers.SimExecer) {
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		rf: func(n cluster.Node) runner.Service {
 			ex := execers.NewSimExecer()
-			runner := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, nil, runners.NewNullOutputCreator(), tmp, nil)
+			runner := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
 			return runner
 		},
 		config: SchedulerConfig{
