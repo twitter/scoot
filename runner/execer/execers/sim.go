@@ -75,7 +75,8 @@ func (e *SimExecer) parseArg(arg string) (simStep, error) {
 	case "complete":
 		i, err := strconv.Atoi(rest)
 		if err != nil {
-			return nil, err
+			t := fmt.Errorf("error parsing <n> in complete <n>:%s", err.Error())
+			return nil, t
 		}
 		return &completeStep{i}, nil
 	case "pause":
@@ -83,7 +84,8 @@ func (e *SimExecer) parseArg(arg string) (simStep, error) {
 	case "sleep":
 		i, err := strconv.Atoi(rest)
 		if err != nil {
-			return nil, err
+			t := fmt.Errorf("error parsing <n> in sleep <n>:%s", err.Error())
+			return nil, t
 		}
 		return &sleepStep{time.Duration(i) * time.Millisecond}, nil
 	case "stdout":

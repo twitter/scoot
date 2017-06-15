@@ -20,7 +20,7 @@ func NewStatusManager(capacity int) *StatusManager {
 // StatusManager is a database of RunStatus'es. It allows clients to Write StatusManager, Query the
 // current status, and listen for updates to status. It implements runner.RunStatus
 type StatusManager struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	runs      map[runner.RunID]runner.RunStatus
 	fifo      []runner.RunID
 	capacity  int
@@ -116,6 +116,8 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 func (s *StatusManager) Query(q runner.Query, wait runner.Wait) (rs []runner.RunStatus, ss runner.ServiceStatus, e error) {
 	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
 	if err != nil || len(current) > 0 || wait.Timeout == 0 {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return current, s.svcStatus, err
 	}
 
@@ -128,11 +130,17 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) (rs []runner.Run
 
 	select {
 	case st := <-future:
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return []runner.RunStatus{st}, s.svcStatus, nil
 	case <-timeout:
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return nil, s.svcStatus, nil
 	case <-wait.AbortCh:
 		st := runner.RunStatus{State: runner.ABORTED}
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return []runner.RunStatus{st}, s.svcStatus, nil
 	}
 }
