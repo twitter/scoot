@@ -12,18 +12,18 @@ import (
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-// snapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
+// SnapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
 // kind instead of type because type is a keyword
-type snapshotKind string
+type SnapshotKind string
 
 const (
-	kindFSSnapshot        snapshotKind = "fs"
-	kindGitCommitSnapshot snapshotKind = "gc"
+	KindFSSnapshot        SnapshotKind = "fs"
+	KindGitCommitSnapshot SnapshotKind = "gc"
 )
 
-var kinds = map[snapshotKind]bool{
-	kindFSSnapshot:        true,
-	kindGitCommitSnapshot: true,
+var kinds = map[SnapshotKind]bool{
+	KindFSSnapshot:        true,
+	KindGitCommitSnapshot: true,
 }
 
 type AutoUploadDest int
@@ -417,7 +417,7 @@ func (db *DB) Update() error {
 
 // IDForStreamCommitSHA gets a SnapshotID from a string name and commit sha
 func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
-	s := &streamSnapshot{sha: sha, kind: kindGitCommitSnapshot, streamName: streamName}
+	s := &streamSnapshot{sha: sha, kind: KindGitCommitSnapshot, streamName: streamName}
 	return s.ID()
 }
 
@@ -441,4 +441,11 @@ func (db *DB) UploadFile(filePath string, ttl *bundlestore.TTLValue) (string, er
 	db.reqCh <- uploadFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}
 	result := <-resultCh
 	return result.str, result.err
+}
+
+func (db *DB) StreamName() string {
+	if db.stream != nil && db.stream.cfg != nil {
+		return db.stream.cfg.Name
+	}
+	return ""
 }

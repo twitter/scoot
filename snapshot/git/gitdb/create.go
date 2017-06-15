@@ -40,7 +40,7 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, dir string) (snapshot, er
 		return nil, err
 	}
 
-	return &localSnapshot{sha: sha, kind: kindFSSnapshot}, nil
+	return &localSnapshot{sha: sha, kind: KindFSSnapshot}, nil
 }
 
 func (db *DB) ingestDir(dir string) (snapshot, error) {
@@ -58,14 +58,14 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	}
 
 	if err := db.shaPresent(sha); err == nil {
-		return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
+		return &localSnapshot{sha: sha, kind: KindGitCommitSnapshot}, nil
 	}
 
 	if err := moveCommit(ingestRepo, db.dataRepo, sha); err != nil {
 		return nil, err
 	}
 
-	return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
+	return &localSnapshot{sha: sha, kind: KindGitCommitSnapshot}, nil
 }
 
 func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error) {
@@ -84,7 +84,7 @@ func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error)
 		return nil, err
 	}
 
-	return &localSnapshot{sha: sha, kind: kindGitCommitSnapshot}, nil
+	return &localSnapshot{sha: sha, kind: KindGitCommitSnapshot}, nil
 }
 
 func (db *DB) shaPresent(sha string) error {

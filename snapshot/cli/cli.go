@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -184,12 +185,16 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 //	--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
 // Stdout: "http://localhost:9094/bundle/bs-<rev>-master.bundle"
 type createGitBundleCommand struct {
-	file  string
-	basis string
-	ref   string
-	ttld  time.Duration
-	keep  bool
+	basis  string
+	ref    string
+	ttld   time.Duration
+	output string
 }
+
+const outputTypeLocation = "location"
+const outputTypeSnapshotID = "snapshot-id"
+
+var outputTypes = []string{outputTypeLocation, outputTypeSnapshotID}
 
 func (c *createGitBundleCommand) register() *cobra.Command {
 	cmd := &cobra.Command{
@@ -197,17 +202,26 @@ func (c *createGitBundleCommand) register() *cobra.Command {
 		Short: "Creates and uploads a git bundle file as specified by basis/ref for the cwd repo",
 	}
 	// See https://git-scm.com/docs/git-bundle for basis, ref usage
-	cmd.Flags().StringVar(&c.file, "file", "", "Output bundle file (defaults to temp file)")
 	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
 	cmd.Flags().StringVar(&c.ref, "ref", "master", "Reference to be packaged")
 	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
-	cmd.Flags().BoolVar(&c.keep, "keepFile", false, "Keep created bundles file")
+	cmd.Flags().StringVar(&c.output, "output", "location", fmt.Sprintf("Output type, one of: %q", outputTypes))
 	return cmd
 }
 
 func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
 	if c.basis == "" || c.ref == "" {
 		return fmt.Errorf("Create bundle command requires a basis and reference")
+	}
+	validOutput := false
+	for _, o := range outputTypes {
+		if o == c.output {
+			validOutput = true
+			break
+		}
+	}
+	if !validOutput {
+		return fmt.Errorf("Output type must be one of: %q", outputTypes)
 	}
 
 	wd, err := os.Getwd()
@@ -220,37 +234,41 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return fmt.Errorf("not a valid repo dir: %v, %v", wd, err)
 	}
 
-	bundleFilename, tempDir := "", ""
-	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
-
-	if c.file != "" {
-		bundleFilename = c.file
-	} else {
-		td, err := temp.TempDirDefault()
-		if err != nil {
-			return fmt.Errorf("Couldn't create temp dir: %v", err)
-		}
-		tempDir = td.Dir
-
-		// Don't use commit sha as bundle name as it could collide with other bundles.
-		// Use the rev-list for the given basis/ref to generate a unique sha
-		revData, err := ingestRepo.Run("rev-list", revList)
-		if err != nil {
-			return fmt.Errorf("couldn't get rev-list for %s: %v", revList, err)
-		}
-		log.Infof("Using rev-list for %s:\n%s\n", revList, revData)
-		bundleFilename = path.Join(tempDir, fmt.Sprintf("bs-%x.bundle", sha1.Sum([]byte(revData))))
+	gdb, ok := db.(*gitdb.DB)
+	if !ok {
+		return fmt.Errorf("create bundle requires a gitdb.DB snapshot.DB")
 	}
 
+	td, err := temp.TempDirDefault()
+	if err != nil {
+		return fmt.Errorf("Couldn't create temp dir: %v", err)
+	}
 	defer func() {
-		if !c.keep {
-			if tempDir != "" {
-				os.RemoveAll(tempDir)
-			} else {
-				os.Remove(bundleFilename)
-			}
-		}
+		os.RemoveAll(td.Dir)
 	}()
+
+	// Don't use commit sha as bundle name as it could collide with other bundles.
+	// Use the rev-list for the given basis/ref to generate a unique sha
+	// Use this non-commit sha as bundleKey for a snapshot, but still parse
+	// commit sha of provided ref to use as snapshot sha
+
+	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
+	revData, err := ingestRepo.Run("rev-list", revList)
+	if err != nil {
+		return fmt.Errorf("Couldn't get rev-list for %s: %v", revList, err)
+	}
+	log.Infof("Using rev-list for %s:\n%s\n", revList, revData)
+	commit, err := ingestRepo.Run("rev-parse", c.ref)
+	if err != nil {
+		return fmt.Errorf("Couldn't rev-parse ref %s: %v", c.ref, err)
+	}
+	commit = strings.TrimSpace(commit)
+
+	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
+	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
+
+	// Create a bundlestoreSnapshot to be able to return a snapshot ID
+	bs := gitdb.CreateBundlestoreSnapshot(commit, gitdb.KindGitCommitSnapshot, revSha1, gdb.StreamName())
 
 	if _, err := ingestRepo.Run("-c",
 		"core.packobjectedgesonlyshallow=0",
@@ -261,18 +279,17 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	gdb, ok := db.(*gitdb.DB)
-	if !ok {
-		return fmt.Errorf("create bundle requires a gitdb.DB snapshot.DB")
-	}
-
 	ttlP := &bundlestore.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: bundlestore.DefaultTTLKey}
 	location, err := gdb.UploadFile(bundleFilename, ttlP)
 	if err != nil {
 		return err
 	}
-	fmt.Println(location)
 
+	if c.output == outputTypeLocation {
+		fmt.Println(location)
+	} else if c.output == outputTypeSnapshotID {
+		fmt.Println(bs.ID())
+	}
 	return nil
 }
 
