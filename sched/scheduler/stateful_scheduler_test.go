@@ -120,7 +120,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 		t.Errorf("Expected job to be Scheduled Successfully %v", err)
 	}
 
-	if ! stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedJobsCounter:            {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
@@ -155,7 +155,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 		t.Error("Expected job return error")
 	}
 
-	if ! stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedJobsCounter:            {Checker: stats.DoesNotExistTest, Value: nil},
 			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
@@ -185,7 +185,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		t.Errorf("Expected the %v to be an inProgressJobs", id)
 	}
 
-	if ! stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge:    {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedInProgressTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
@@ -466,7 +466,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	verifyJobStatus("verify started job1", jobId1, sched.InProgress,
 		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
 
-	if ! stats.StatsOk("first stage", statsRegistry, t,
+	if !stats.StatsOk("first stage", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 0},
@@ -480,7 +480,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	verifyJobStatus("verify put job2 in scheduler", jobId2, sched.InProgress,
 		[]sched.Status{sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
 
-	if ! stats.StatsOk("second stage", statsRegistry, t,
+	if !stats.StatsOk("second stage", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 2},
 			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 1},

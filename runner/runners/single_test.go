@@ -151,7 +151,7 @@ func TestDownloadCounter(t *testing.T) {
 	// wait for the run to finish
 	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
 
-	if ! stats.StatsOk("", statsReg, t,
+	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},

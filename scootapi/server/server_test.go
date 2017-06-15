@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"time"
 )
 
 // ensure a scheduler initializes to the correct state
@@ -54,7 +54,7 @@ func Test_RequestCounters(t *testing.T) {
 	}
 
 	time.Sleep(120 * time.Millisecond) // wait to make sure stats are generated
-	if ! stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerRunJobLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},
