@@ -8,7 +8,6 @@ package runner
 //Note: using reflection syntax due to Service's nested interfaces. Unlike our other mocks, this requires its own package?
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 )
@@ -26,8 +25,7 @@ type Command struct {
 	EnvVars map[string]string
 
 	// Kill command after timeout. Zero value is ignored.
-	// TODO(dbentley): should this apply to the command, or include wall-time (including time spent
-	// in a queue, or checking out the snapshot)?
+	// Time spent prepping for this command (ex: git checkout) is counted towards the timeout.
 	Timeout time.Duration
 
 	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.
@@ -47,22 +45,17 @@ type Command struct {
 }
 
 func (c Command) String() string {
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "Command\n\tSnapshotID:\t%s\n\tArgv:\t%q\n\tTimeout:\t%v\n\tJobID:\t\t%s\n\tTaskID:\t\t%s\n",
-		c.SnapshotID,
-		c.Argv,
-		c.Timeout,
-		c.JobID,
-		c.TaskID)
+	s := fmt.Sprintf("Command -- SnapshotID:%s # Argv:%q # Timeout:%v # JobID:%s # TaskID:%s",
+		c.SnapshotID, c.Argv, c.Timeout, c.JobID, c.TaskID)
 
 	if len(c.EnvVars) > 0 {
-		fmt.Fprintf(&b, "\tEnv:\n")
+		s += fmt.Sprintf(" # Env:")
 		for k, v := range c.EnvVars {
-			fmt.Fprintf(&b, "\t\t%s: %s\n", k, v)
+			s += fmt.Sprintf("  %s=%s", k, v)
 		}
 	}
 
-	return b.String()
+	return s
 }
 
 // Service allows starting/abort'ing runs and checking on their status.

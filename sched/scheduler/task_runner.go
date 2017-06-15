@@ -26,10 +26,10 @@ type taskRunner struct {
 	stat   stats.StatsReceiver
 
 	markCompleteOnFailure bool
+	taskTimeoutOverhead   time.Duration // How long to wait for a response after the task has timed out.
 	defaultTaskTimeout    time.Duration // Use this timeout as the default for any cmds that don't have one.
 	runnerRetryTimeout    time.Duration // How long to keep retrying a runner req
 	runnerRetryInterval   time.Duration // How long to sleep between runner req retries.
-	runnerOverhead        time.Duration // Runner will timeout after the caller-provided timeout plus this overhead.
 
 	jobId  string
 	taskId string
@@ -64,11 +64,12 @@ func (r *taskRunner) run() error {
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		taskErr.sagaErr = err
+		r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
 		return taskErr
 	}
 
 	// Run and update taskErr with the results.
-	st, end, err := r.runAndWait(r.taskId, r.task)
+	st, end, err := r.runAndWait()
 	taskErr.runnerErr = err
 	taskErr.st = st
 
@@ -103,6 +104,9 @@ func (r *taskRunner) run() error {
 	log.Infof("End task - jobId: %s, taskId: %s, node: %s, log: %t, runStatus: %s, err: %v",
 		r.jobId, r.taskId, r.nodeId, shouldLog, taskErr.st, taskErr)
 	if !shouldLog {
+		if taskErr != nil {
+			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
+		}
 		return taskErr
 	}
 
@@ -112,18 +116,18 @@ func (r *taskRunner) run() error {
 		r.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 		return nil
 	} else {
-		r.stat.Counter(stats.SchedFailedTaskSagaCounter).Inc(1) // TODO errata metric - remove if unused
+		r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
 		return taskErr
 	}
 }
 
 // Run cmd and if there's a runner error (ex: thrift) re-run/re-query until completion, retry timeout, or cmd timeout.
-func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runner.RunStatus, bool, error) {
-	cmd := &task.Command
+func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
+	cmd := &r.task.Command
 	if cmd.Timeout == 0 {
 		cmd.Timeout = r.defaultTaskTimeout
 	}
-	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.runnerOverhead)
+	cmdEndTime := time.Now().Add(cmd.Timeout).Add(r.taskTimeoutOverhead)
 	elapsedRetryDuration := time.Duration(0)
 	var st runner.RunStatus
 	var err error
@@ -134,12 +138,12 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	// If runner call returns an error then we treat it as an infrastructure error and will repeatedly retry.
 	// If runner call returns a result indicating cmd error we fail and return.
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
-	log.Infof("Run() for jobId: %s taskId: %s", r.jobId, taskId)
+	log.Infof("Run() for jobId: %s taskId: %s", r.jobId, r.taskId)
 	for {
 		// was a job kill request received before we could start the run?
 		if aborted, endTask := r.abortRequested(); aborted {
 			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId})
-			log.Infof("The run was aborted by scheduler before it was sent to worker: jobId: %s taskId: %s", r.jobId, taskId)
+			log.Infof("The run was aborted by scheduler before it was sent to worker: jobId: %s taskId: %s", r.jobId, r.taskId)
 			return st, endTask, nil
 		}
 
@@ -152,12 +156,12 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 				r.runner.Abort(st.RunID)
 			}
 			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId})
-			log.Infof("Initial run attempts aborted by scheduler : jobId: %s taskId: %s", r.jobId, taskId)
+			log.Infof("Initial run attempts aborted by scheduler : jobId: %s taskId: %s", r.jobId, r.taskId)
 			return st, endTask, nil
 		}
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
-			log.Infof("Retrying run() for jobId: %s taskId: %s", r.jobId, taskId)
+			log.Infof("Retrying run() for jobId: %s taskId: %s", r.jobId, r.taskId)
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
@@ -169,7 +173,6 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 	}
 	id = st.RunID
 
-	log.Infof("Query(running) for jobId: %s, taskId: %s", r.jobId, taskId)
 	// Wait for the process to start running, log it, then wait for it to finish.
 	elapsedRetryDuration = 0
 	includeRunning := true
@@ -179,7 +182,7 @@ func (r *taskRunner) runAndWait(taskId string, task sched.TaskDefinition) (runne
 		if (err != nil && elapsed >= r.runnerRetryTimeout) || st.State.IsDone() {
 			break
 		} else if err != nil {
-			log.Infof("Retrying query(includeRunning=%t) for jobId: %s, taskId: %s", includeRunning, r.jobId, taskId)
+			log.Infof("Retrying query for jobId: %s, taskId: %s", r.jobId, r.taskId)
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
 			continue
@@ -206,7 +209,9 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	if timeout < 0 {
 		timeout = 0
 	}
+	// The semantics of timeout changes here. Before, zero meant use the default, here it means return immediately.
 	w := runner.Wait{Timeout: timeout, AbortCh: r.queryAbortCh}
+	log.Infof("Query(includeRunning=%t) for jobId: %s, taskId: %s, timeout: %v", includeRunning, r.jobId, r.taskId, timeout)
 
 	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
 	// if the abort request triggers the Query() to return, Query() will put a new
@@ -235,6 +240,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 }
 
 func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessageType) error {
+	log.Infof("TryLogTaskStatus %v for jobId: %s, taskId: %s", msgType, r.jobId, r.taskId)
 	var statusAsBytes []byte
 	var err error
 	if st != nil {

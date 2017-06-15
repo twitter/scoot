@@ -1,9 +1,6 @@
 package runner
 
-import (
-	"bytes"
-	"fmt"
-)
+import "fmt"
 
 type RunID string
 type RunState int
@@ -88,21 +85,18 @@ type RunStatus struct {
 }
 
 func (p RunStatus) String() string {
-	var b bytes.Buffer
-	fmt.Fprintf(&b,
-		"--- Run Status ---\n\tRunID:\t\t%s\n\tSnapshotID:\t\t%s\n\tState:\t\t%s\n\tJobID:\t\t%s\n\tTaskID:\t\t%s\n",
+	s := fmt.Sprintf("RunStatus -- RunID:%s # SnapshotID:%s # State:%s # JobID:%s # TaskID:%s",
 		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID)
 
 	if p.State == COMPLETE {
-		fmt.Fprintf(&b, "\tExitCode:\t%d\n", p.ExitCode)
+		s += fmt.Sprintf(" # ExitCode:%d", p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		fmt.Fprintf(&b, "\tError:\t\t%s\n", p.Error)
+		s += fmt.Sprintf(" # Error:%s", p.Error)
 	}
+	s += fmt.Sprintf(" # Stdout:%s # Stderr:%s", p.StdoutRef, p.StderrRef)
 
-	fmt.Fprintf(&b, "\tStdout:\t\t%s\n\tStderr:\t\t%s\n", p.StdoutRef, p.StderrRef)
-
-	return b.String()
+	return s
 }
 
 // Helper functions to create RunStatus

@@ -38,9 +38,9 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 
 		markCompleteOnFailure: markCompleteOnFailure,
 		defaultTaskTimeout:    30 * time.Second,
+		taskTimeoutOverhead:   1 * time.Second,
 		runnerRetryTimeout:    0,
 		runnerRetryInterval:   0,
-		runnerOverhead:        1 * time.Second,
 
 		jobId:  jobId,
 		taskId: taskId,
@@ -248,7 +248,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 		t.Errorf("Expected saga error: %v, got: %v", runErr, terr.runnerErr)
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedTaskStartRetries: {Checker: stats.Int64EqTest, Value: 1},
 		})

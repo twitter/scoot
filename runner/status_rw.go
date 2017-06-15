@@ -72,7 +72,7 @@ type Query struct {
 
 // Wait describes how to Wait.
 // It differs from StatusQuery because StatusQuery describes what RunStatus'es to match, but
-// Wait describes how to Wait
+// Timeout of zero means return immediately, no blocking.
 type Wait struct {
 	// How long to wait for Statuses
 	Timeout time.Duration

@@ -64,6 +64,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		updateCh <- r
 		close(updateCh)
 	}()
+	start := time.Now()
 
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
@@ -152,7 +153,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	var timeoutCh <-chan time.Time
 	if cmd.Timeout > 0 { // Timeout if applicable
-		timeout := time.NewTicker(cmd.Timeout)
+		elapsed := time.Now().Sub(start)
+		timeout := time.NewTimer(cmd.Timeout - elapsed)
 		timeoutCh = timeout.C
 		defer timeout.Stop()
 	}

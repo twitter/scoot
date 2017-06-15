@@ -8,8 +8,7 @@
     "MaxRetriesPerTask" : 2,
     "DebugMode" : false,
     "RecoverJobsOnStartup" : false,
-    "DefaultTaskTimeoutMs" : 1800000,
-    "RunnerOverheadMs": 600000
+    "DefaultTaskTimeout" : "30m"
   },
   "SagaLog": {
     "Type": "memory"

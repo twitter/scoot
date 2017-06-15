@@ -23,6 +23,16 @@ import (
 	"github.com/scootdev/scoot/snapshot/snapshots"
 )
 
+//Mocks sometimes hang without useful output, this allows early exit with err msg.
+type TestTerminator struct{}
+
+func (t *TestTerminator) Errorf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+
 // objects needed to initialize a stateful scheduler
 type schedulerDeps struct {
 	initialCl       []cluster.Node
@@ -110,7 +120,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 		t.Errorf("Expected job to be Scheduled Successfully %v", err)
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedJobsCounter:            {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
@@ -143,7 +153,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 		t.Error("Expected job return error")
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedJobsCounter:            {Checker: stats.DoesNotExistTest, Value: nil},
 			stats.SchedJobLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
@@ -171,7 +181,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		t.Errorf("Expected the %v to be an inProgressJobs", id)
 	}
 
-	stats.VerifyStats("", statsRegistry, t,
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge:    {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedInProgressTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
@@ -294,7 +304,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	deps.clUpdates = cl.ch
 
 	// sagalog mock to ensure all messages are logged appropriately
-	mockCtrl := gomock.NewController(t)
+	mockCtrl := gomock.NewController(&TestTerminator{})
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
@@ -311,11 +321,14 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// add additional saga data
-	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil))
-	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}).MaxTimes(1)
-	endMessageMatcher := TaskMessageMatcher{JobId: jobId, TaskId: taskId, Data: gomock.Any()}
-	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
-	sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId))
+	gomock.InOrder(
+		sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage(jobId, taskId, nil)),
+		sagaLogMock.EXPECT().LogMessage(
+			TaskMessageMatcher{Type: &sagaStartTask, JobId: jobId, TaskId: taskId, Data: gomock.Any()}).MinTimes(0),
+		sagaLogMock.EXPECT().LogMessage(
+			TaskMessageMatcher{Type: &sagaEndTask, JobId: jobId, TaskId: taskId, Data: gomock.Any()}),
+		sagaLogMock.EXPECT().LogMessage(saga.MakeEndSagaMessage(jobId)),
+	)
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
@@ -447,7 +460,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	verifyJobStatus("verify started job1", jobId1, sched.InProgress,
 		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
 
-	stats.VerifyStats("first stage", statsRegistry, t,
+	stats.StatsOk("first stage", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 0},
@@ -459,41 +472,30 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	verifyJobStatus("verify put job2 in scheduler", jobId2, sched.InProgress,
 		[]sched.Status{sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
 
-	stats.VerifyStats("second stage", statsRegistry, t,
+	stats.StatsOk("second stage", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedAcceptedJobsGauge: {Checker: stats.Int64EqTest, Value: 2},
 			stats.SchedWaitingJobsGauge:  {Checker: stats.Int64EqTest, Value: 1},
 		})
 
-	// kill the second job
+	// kill the second job twice to verify the killed 2x error message
 	respCh := sendKillRequest(jobId2, s)
-
-	// pause to let the scheduler pick up the first kill request first.
-	time.Sleep(500 * time.Millisecond)
-
-	// kill it a second time to verify the killed 2x error message
-	// kill the second job
 	respCh2 := sendKillRequest(jobId2, s)
+
+	// pause to let the scheduler pick up the kill requests, then step once to process them.
+	time.Sleep(500 * time.Millisecond)
+	s.step()
+
+	// wait for a response from the first kill and check for one err == nil and one err != nil
 	err := waitForResponse(respCh, s)
-	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
-			t.Errorf("Expected err to be nil, instead is %v", err.Error())
-		}
-	} else {
-		j := s.getJob(jobId2)
-		for j == nil {
-			s.step()
-			j = s.getJob(jobId2)
-		}
-	}
+	err2 := waitForResponse(respCh2, s)
 
-	err = waitForResponse(respCh2, s)
-	if err == nil {
-		t.Error("Killed a job twice, expected an error, got nil")
-
-	} else if !strings.Contains(err.Error(), "was already killed,") {
+	if (err == nil) == (err2 == nil) {
+		t.Errorf("Expected one nil and one non-nil err when killing job twice, got: %v, %v", err, err2)
+	} else if err == nil && !strings.Contains(err2.Error(), "was already killed,") {
+		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err2.Error())
+	} else if err != nil && !strings.Contains(err.Error(), "was already killed,") {
 		t.Errorf("Killed a job twice, expected the error to contain 'was already killed', got %s", err.Error())
-
 	}
 
 	// verify that the first job is still running

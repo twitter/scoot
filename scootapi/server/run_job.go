@@ -52,7 +52,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		if t.SnapshotId != nil {
 			task.SnapshotID = *t.SnapshotId
 		}
-		if t.TimeoutMs != nil {
+		if t.TimeoutMs != nil && *t.TimeoutMs > 0 {
 			task.Command.Timeout = time.Duration(*t.TimeoutMs) * time.Millisecond
 		} else if def.DefaultTaskTimeoutMs != nil {
 			task.Command.Timeout = time.Duration(*def.DefaultTaskTimeoutMs) * time.Millisecond

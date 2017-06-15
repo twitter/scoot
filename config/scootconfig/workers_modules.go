@@ -16,15 +16,11 @@ import (
 
 // Parameters for configuring connections to remote (Thrift) workers.
 type WorkersThriftConfig struct {
-	Type               string
-	PollingPeriod      string // will be parsed to a time.Duration
-	EnforceTaskTimeout bool
-	TaskTimeout        string // will be parsed to a time.Duration
+	Type          string
+	PollingPeriod string // will be parsed to a time.Duration
 }
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond
-const defaultTaskTimeout = time.Duration(30) * time.Minute
-const defaultOverhead = time.Duration(5) * time.Minute
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,

@@ -4,17 +4,14 @@
   },
   "Workers": {
     "Type": "rpc",
-    "PollingPeriod": "250ms",
-    "EnforceTaskTimeout": true,
-    "TaskTimeout": "30m"
+    "PollingPeriod": "250ms"
   },
   "SchedulerConfig": {
     "Type": "stateful",
     "MaxRetriesPerTask" : 2,
     "DebugMode" : false,
     "RecoverJobsOnStartup" : true,
-    "DefaultTaskTimeoutMs" : 1800000,
-    "RunnerOverheadMs": 600000
+    "DefaultTaskTimeout" : "30m"
   },
   "SagaLog": {
     "Type": "file",
