@@ -67,6 +67,11 @@ const (
 	*/
 	BundlestoreUploadOkCounter = "uploadOkCounter"
 
+	/*
+		The length of time the server has been running
+	 */
+	BundlestoreUptime_ms = "bundlestoreUptime"
+
 	/****************** ClusterManger metrics ***************************/
 	/*
 		the number of worker nodes that are available or running tasks (not suspended)
@@ -332,6 +337,11 @@ const (
 		the number of times the task runner had to retry the task start
 	*/
 	SchedTaskStartRetries = "taskStartRetries"
+
+	/*
+		The length of time the server has been running
+	 */
+	SchedUptime_ms = "schedUptime"
 
 	/*
 		The number of jobs waiting to start in the inProgress list at the end of each time through the

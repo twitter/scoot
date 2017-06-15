@@ -72,6 +72,20 @@ func int64EqTest(a, b interface{}) bool {
 
 var Int64EqTest = RuleChecker{name: "IntEqTest", checker: int64EqTest}
 
+/*
+errors if a is not int64, returns true if a == b
+*/
+func int64GTTest(a, b interface{}) bool {
+	if nilFound, eqValue := nilCheck(a, b); nilFound {
+		return eqValue
+	}
+	aint := a.(int64)
+	bint := b.(int)
+	return aint > int64(bint)
+}
+
+var Int64GTTest = RuleChecker{name: "IntGTTest", checker: int64GTTest}
+
 func doesNotExistTest(a, b interface{}) bool {
 	return a == nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/scootdev/scoot/sched"
 	"github.com/scootdev/scoot/sched/scheduler"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"time"
 )
 
 // ensure a scheduler initializes to the correct state
@@ -25,7 +26,9 @@ func Test_RequestCounters(t *testing.T) {
 
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	handler := NewHandler(s, sc, statsReceiver)
+	upReportIntvl := stats.UpTimeReportIntvl(50 * time.Millisecond)
+
+	handler := NewHandler(s, sc, statsReceiver, upReportIntvl)
 
 	domainJobDef := sched.GenJobDef(1)
 	domainJobDef.Tasks[0].Argv = []string{}
@@ -50,6 +53,8 @@ func Test_RequestCounters(t *testing.T) {
 		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
+	time.Sleep(120 * time.Millisecond)
+
 	stats.VerifyStats("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
@@ -58,6 +63,7 @@ func Test_RequestCounters(t *testing.T) {
 			stats.SchedServerJobStatusLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SchedServerJobKillCounter:               {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerJobKillLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 99},
 		})
 }
 

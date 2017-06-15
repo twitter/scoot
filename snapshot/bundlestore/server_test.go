@@ -59,7 +59,9 @@ func TestServer(t *testing.T) {
 	defer listener.Close()
 	addr := listener.Addr().String()
 
-	server := MakeServer(store, nil, stats.NilStatsReceiver())
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry {return statsRegistry}, 0)
+	server := MakeServer(store, nil, statsReceiver, stats.UpTimeReportIntvl(50*time.Millisecond))
 	mux := http.NewServeMux()
 	mux.Handle("/bundle/", server)
 	go func() {
@@ -156,6 +158,15 @@ func TestServer(t *testing.T) {
 	if _, err := hs.Exists("foo"); err == nil {
 		t.Fatalf("Expected invalid input err.")
 	}
+
+	// check the uptime
+	time.Sleep(120 * time.Millisecond)
+
+	stats.VerifyStats("", statsRegistry, t,
+		map[string]stats.Rule{
+			stats.BundlestoreUptime_ms: {Checker: stats.Int64GTTest, Value: 99},
+		})
+
 }
 
 type fakeServer struct {
