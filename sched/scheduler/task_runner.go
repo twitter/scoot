@@ -64,6 +64,7 @@ func (r *taskRunner) run() error {
 	// Log StartTask Message to SagaLog
 	if err := r.logTaskStatus(nil, saga.StartTask); err != nil {
 		taskErr.sagaErr = err
+		r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
 		return taskErr
 	}
 
@@ -103,6 +104,9 @@ func (r *taskRunner) run() error {
 	log.Infof("End task - jobId: %s, taskId: %s, node: %s, log: %t, runStatus: %s, err: %v",
 		r.jobId, r.taskId, r.nodeId, shouldLog, taskErr.st, taskErr)
 	if !shouldLog {
+		if taskErr != nil {
+			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
+		}
 		return taskErr
 	}
 
@@ -112,7 +116,7 @@ func (r *taskRunner) run() error {
 		r.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 		return nil
 	} else {
-		r.stat.Counter(stats.SchedFailedTaskSagaCounter).Inc(1) // TODO errata metric - remove if unused
+		r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
 		return taskErr
 	}
 }

@@ -163,12 +163,14 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("1st stats check:", statsRegistry, t,
+	if ! stats.StatsOk("1st stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
-		})
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
 
 	// Remove node2 and make sure its state is set correctly.
 	node2 := cs.suspendedNodes[cluster.NodeId("node2")]
@@ -188,12 +190,14 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("2nd stats check:", statsRegistry, t,
+	if ! stats.StatsOk("2nd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
-		})
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
 
 	// Re-add node2 and set the rest as init'd, then check nodes/suspendedNodes.
 	cl.add("node2")
@@ -211,12 +215,14 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
 	}
 
-	stats.VerifyStats("3rd stats check:", statsRegistry, t,
+	if ! stats.StatsOk("3rd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 4},
 			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 4},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 0},
-		})
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
 	// Test the the right idle/busy maps are filled out for each snapshotId.
 	cs.taskScheduled("node1", "job1", "task1", "snapA")
 	cs.taskScheduled("node2", "job1", "task2", "snapA")

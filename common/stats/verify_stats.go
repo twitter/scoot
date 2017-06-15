@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 /*
@@ -73,7 +75,7 @@ func int64EqTest(a, b interface{}) bool {
 var Int64EqTest = RuleChecker{name: "IntEqTest", checker: int64EqTest}
 
 /*
-errors if a is not int64, returns true if a == b
+errors if a is not int64, returns true if a > b
 */
 func int64GTTest(a, b interface{}) bool {
 	if nilFound, eqValue := nilCheck(a, b); nilFound {
@@ -105,10 +107,10 @@ type Rule struct {
 Verify that the stats registry object contains values for the keys in the contains map parameter and that
 each entry conforms to the rule (condition) associated with that key.
 */
-func VerifyStats(tag string, statsRegistry StatsRegistry, t *testing.T, contains map[string]Rule) {
+func StatsOk(tag string, statsRegistry StatsRegistry, t *testing.T, contains map[string]Rule) bool {
 
 	asFinagleRegistry, ok := statsRegistry.(*finagleStatsRegistry)
-	err := false
+	statsOk := true
 	var msg bytes.Buffer
 	msg.WriteString(tag)
 	msg.WriteString(":stats registry error:\n")
@@ -120,27 +122,28 @@ func VerifyStats(tag string, statsRegistry StatsRegistry, t *testing.T, contains
 			gotValue, _ := asJson[key]
 			if !rule.Checker.checker(gotValue, rule.Value) {
 				if strings.Compare(rule.Checker.name, DoesNotExistTest.name) == 0 {
-					err = true
+					statsOk = false
 					ruleMsg := fmt.Sprintf("%s: found stat entry when there should not be one", key)
 					msg.WriteString(fmt.Sprintln(ruleMsg))
 
 				} else {
-					err = true
+					statsOk = false
 					ruleMsg := fmt.Sprintf("%s: got %v, expected to pass %s with %v", key, gotValue, rule.Checker.name, rule.Value)
 					msg.WriteString(fmt.Sprintln(ruleMsg))
 				}
 			}
 		}
-		if err {
-			t.Error(msg.String())
+		if !statsOk {
+			fmt.Println(msg.String())
 			PPrintStats(tag, asFinagleRegistry)
 		}
 	}
+	return statsOk
 }
 
 func PPrintStats(tag string, statsRegistry StatsRegistry) {
-	fmt.Printf("%s:  Stats Registry:\n", tag)
+	log.Infof("%s:  Stats Registry:\n", tag)
 	asFinagleRegistry, _ := statsRegistry.(*finagleStatsRegistry)
 	regBytes, _ := asFinagleRegistry.MarshalJSONPretty()
-	fmt.Printf("%s\n", regBytes)
+	log.Printf("%s\n", regBytes)
 }

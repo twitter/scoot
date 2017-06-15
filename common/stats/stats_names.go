@@ -227,7 +227,7 @@ const (
 	- the platform could not run the task
 	- the platform encountered an error reporting the end of the task to saga
 	*/
-	SchedFailedTaskSagaCounter = "failedTaskSagaCounter"
+	SchedFailedTaskCounter = "failedTaskCounter"
 
 	/*
 		the number of times the processing failed to serialize the workerapi status object
@@ -384,6 +384,16 @@ const (
 		response - how/when do old jobs drop out of StatusAll()?
 	*/
 	WorkerFailedCachedRunsGauge = "failedCachedRunsGauge"
+
+	/*
+		The amount of time it took a worker to init
+	*/
+	WorkerFinalInitLatency_ms = "workerFinishedInitLatency_ms"
+
+	/*
+		The number of workers who are currently exceeding the max init time
+	*/
+	WorkerActiveInitLatency_ms = "workerActiveInitLatency_ms"
 
 	/*
 		the amount of worker's memory currently consumed by the current command (and its subprocesses)

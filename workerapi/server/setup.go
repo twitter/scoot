@@ -2,8 +2,8 @@ package server
 
 import (
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/scootdev/scoot/common/endpoints"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
@@ -46,8 +46,8 @@ func (m module) Install(b *ice.MagicBag) {
 		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
 		},
-		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
-			return NewHandler(stat, r)
+		func(stat stats.StatsReceiver, r runner.Service, statIntv StatsCollectInterval) worker.Worker {
+			return NewHandler(stat, r, statIntv)
 		},
 		func(
 			handler worker.Worker,

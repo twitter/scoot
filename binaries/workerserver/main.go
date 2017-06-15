@@ -64,6 +64,7 @@ func main() {
 	bag.InstallModule(server.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "workerserver" },
+		func() server.StatsCollectInterval { return server.StatsCollectInterval(500 * time.Millisecond) }, // TODO - externalize this
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
 		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
 		func() (*repo.Repository, error) {

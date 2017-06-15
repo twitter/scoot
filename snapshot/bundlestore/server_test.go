@@ -162,10 +162,12 @@ func TestServer(t *testing.T) {
 	// check the uptime
 	time.Sleep(120 * time.Millisecond)
 
-	stats.VerifyStats("", statsRegistry, t,
+	if ! stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.BundlestoreUptime_ms: {Checker: stats.Int64GTTest, Value: 99},
-		})
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
 
 }
 
