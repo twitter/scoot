@@ -510,7 +510,6 @@ func (r *finagleStatsRegistry) marshalHistogram(
 var defaultPercentiles = []float64{0.5, 0.9, 0.95, 0.99, 0.999, 0.9999}
 var defaultPercentileLabels = []string{"p50", "p90", "p95", "p99", "p999", "p9999"}
 
-
 func StartUptimeReporting(stat StatsReceiver, statName string, upReportIntv UpTimeReportIntvl) {
 	startTime := time.Now()
 	ticker := time.NewTicker(time.Duration(upReportIntv))
@@ -518,7 +517,7 @@ func StartUptimeReporting(stat StatsReceiver, statName string, upReportIntv UpTi
 		for {
 			select {
 			case <-ticker.C:
-				upTime := time.Now().Sub(startTime)/time.Millisecond
+				upTime := time.Now().Sub(startTime) / time.Millisecond
 				stat.Gauge(statName).Update(int64(upTime))
 			}
 		}

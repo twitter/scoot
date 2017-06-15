@@ -60,7 +60,7 @@ func TestServer(t *testing.T) {
 	addr := listener.Addr().String()
 
 	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry {return statsRegistry}, 0)
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 	server := MakeServer(store, nil, statsReceiver, stats.UpTimeReportIntvl(50*time.Millisecond))
 	mux := http.NewServeMux()
 	mux.Handle("/bundle/", server)

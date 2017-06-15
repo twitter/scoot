@@ -69,7 +69,7 @@ const (
 
 	/*
 		The length of time the server has been running
-	 */
+	*/
 	BundlestoreUptime_ms = "bundlestoreUptime"
 
 	/****************** ClusterManger metrics ***************************/
@@ -340,7 +340,7 @@ const (
 
 	/*
 		The length of time the server has been running
-	 */
+	*/
 	SchedUptime_ms = "schedUptime"
 
 	/*

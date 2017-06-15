@@ -44,7 +44,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
 
-		func () stats.UpTimeReportIntvl {
+		func() stats.UpTimeReportIntvl {
 			return stats.UpTimeReportIntvl(500 * time.Millisecond)
 		},
 
