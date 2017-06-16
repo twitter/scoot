@@ -34,7 +34,7 @@ type streamBackend struct {
 	stat stats.StatsReceiver
 }
 
-func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*streamSnapshot, error) {
+func (b *streamBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []string) (*streamSnapshot, error) {
 	if b.cfg == nil {
 		return nil, errors.New("Stream backend not initialized.")
 	}
@@ -54,14 +54,14 @@ func (b *streamBackend) parseID(id snap.ID, kind snapshotKind, extraParts []stri
 // streamSnapshot represents a Snapshot that lives in a Stream
 type streamSnapshot struct {
 	sha        string
-	kind       snapshotKind
+	kind       SnapshotKind
 	streamName string
 }
 
 func (s *streamSnapshot) ID() snap.ID {
 	return snap.ID(fmt.Sprintf(streamIDFmt, streamIDText, s.kind, s.streamName, s.sha))
 }
-func (s *streamSnapshot) Kind() snapshotKind { return s.kind }
+func (s *streamSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *streamSnapshot) SHA() string        { return s.sha }
 
 func (s *streamSnapshot) Download(db *DB) error {

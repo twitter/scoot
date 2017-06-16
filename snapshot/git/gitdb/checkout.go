@@ -21,7 +21,7 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 		return "", err
 	}
 
-	if v.Kind() != kindFSSnapshot {
+	if v.Kind() != KindFSSnapshot {
 		return "", fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind())
 	}
 
@@ -48,10 +48,10 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 	}
 
 	switch v.Kind() {
-	case kindFSSnapshot:
+	case KindFSSnapshot:
 		// For FSSnapshots, we make a "bare checkout".
 		return db.checkoutFSSnapshot(v.SHA())
-	case kindGitCommitSnapshot:
+	case KindGitCommitSnapshot:
 		// For GitCommitSnapshot's, we use dataRepo's work tree.
 		if id == db.currentSnapID {
 			log.Infof("Using cached checkout for id=%s", id)
@@ -157,7 +157,7 @@ func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string
 		return "", err
 	}
 
-	if v.Kind() != kindGitCommitSnapshot {
+	if v.Kind() != KindGitCommitSnapshot {
 		return "", fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind())
 	}
 

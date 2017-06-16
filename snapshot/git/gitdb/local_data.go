@@ -14,10 +14,10 @@ type localBackend struct{}
 // localSnapshot holds a reference to a value that is in the local DB
 type localSnapshot struct {
 	sha  string
-	kind snapshotKind
+	kind SnapshotKind
 }
 
-func (b *localBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (*localSnapshot, error) {
+func (b *localBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []string) (*localSnapshot, error) {
 	if len(extraParts) != 1 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 3 extraParts in local id %s", id)
 	}
@@ -32,7 +32,7 @@ func (b *localBackend) parseID(id snap.ID, kind snapshotKind, extraParts []strin
 func (s *localSnapshot) ID() snap.ID {
 	return snap.ID(fmt.Sprintf(localIDFmt, localIDText, s.kind, s.sha))
 }
-func (s *localSnapshot) Kind() snapshotKind { return s.kind }
+func (s *localSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *localSnapshot) SHA() string        { return s.sha }
 
 func (s *localSnapshot) Download(db *DB) error {
