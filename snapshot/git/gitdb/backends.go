@@ -9,7 +9,7 @@ import (
 
 // backend allows getting a snapshot for an ID, which can then be used to download the ID
 type backend interface {
-	parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error)
+	parseID(id snap.ID, kind SnapshotKind, extraParts []string) (snapshot, error)
 }
 
 // upload allow uploading the ID. Note: The ID to upload will often be in another backend.
@@ -24,7 +24,7 @@ type uploader interface {
 type snapshot interface {
 	ID() snap.ID
 
-	Kind() snapshotKind
+	Kind() SnapshotKind
 	SHA() string
 	Download(db *DB) error
 }
@@ -39,7 +39,7 @@ func (db *DB) parseID(id snap.ID) (snapshot, error) {
 		return nil, fmt.Errorf("could not determine backend and kind in ID %s", id)
 	}
 
-	backendType, kind := parts[0], snapshotKind(parts[1])
+	backendType, kind := parts[0], SnapshotKind(parts[1])
 
 	if !kinds[kind] {
 		return nil, fmt.Errorf("invalid kind: %s", kind)

@@ -28,7 +28,7 @@ const bundlestoreIDText = "bs"
 
 // "bs-gc-<bundle>-<stream>-<sha>"
 
-func (b *bundlestoreBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
+func (b *bundlestoreBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []string) (snapshot, error) {
 	if b.cfg == nil {
 		return nil, errors.New("Bundlestore backend not initialized.")
 	}
@@ -84,7 +84,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	streamName := ""
 
 	switch s.kind {
-	case kindGitCommitSnapshot:
+	case KindGitCommitSnapshot:
 		// For a git commit, we want a bundle that has just the diff compared to the stream
 		// so find the merge base with our stream
 
@@ -104,7 +104,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 				// so we don't have to upload it, just return that snapshot
 				// if we don't do this, then our git bundle create will die
 				// because the bundle would be empty.
-				return &streamSnapshot{sha: commitSha, kind: kindGitCommitSnapshot, streamName: db.stream.cfg.Name}, nil
+				return &streamSnapshot{sha: commitSha, kind: KindGitCommitSnapshot, streamName: db.stream.cfg.Name}, nil
 			}
 
 			// if err != nil, it just means we don't have a merge-base
@@ -114,7 +114,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 			}
 
 		}
-	case kindFSSnapshot:
+	case KindFSSnapshot:
 		// For an FSSnapshot (which is stored as a git tree), create a git commit
 		// with no parent.
 		// (Eventually we could get smarter, e.g., if it's storing the output of running
@@ -169,9 +169,13 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	return &bundlestoreSnapshot{sha: s.sha, kind: s.Kind(), bundleKey: s.sha, streamName: streamName}, nil
 }
 
+func CreateBundlestoreSnapshot(sha string, kind SnapshotKind, bundleKey, streamName string) snapshot {
+	return &bundlestoreSnapshot{sha: sha, kind: kind, bundleKey: bundleKey, streamName: streamName}
+}
+
 type bundlestoreSnapshot struct {
 	sha  string
-	kind snapshotKind
+	kind SnapshotKind
 	// the (shortened) key to use in our key value store
 	// we actually store it as a name with a bit more around it,
 	// e.g., bundleKey is the sha, and then the name we send on the wire
@@ -183,7 +187,7 @@ type bundlestoreSnapshot struct {
 func (s *bundlestoreSnapshot) ID() snap.ID {
 	return snap.ID(strings.Join([]string{bundlestoreIDText, string(s.kind), s.bundleKey, s.streamName, s.sha}, "-"))
 }
-func (s *bundlestoreSnapshot) Kind() snapshotKind { return s.kind }
+func (s *bundlestoreSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
 func (s *bundlestoreSnapshot) Download(db *DB) error {

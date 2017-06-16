@@ -27,7 +27,7 @@ type tagsBackend struct {
 
 const tagsIDText = "tags"
 
-func (b *tagsBackend) parseID(id snap.ID, kind snapshotKind, extraParts []string) (snapshot, error) {
+func (b *tagsBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []string) (snapshot, error) {
 	if b.cfg == nil {
 		return nil, errors.New("Tags backend not initialized.")
 	}
@@ -72,14 +72,14 @@ func (b *tagsBackend) upload(s snapshot, db *DB) (snapshot, error) {
 // tagsSnapshot represents a Snapshot that lives in a Tag
 type tagsSnapshot struct {
 	sha  string
-	kind snapshotKind
+	kind SnapshotKind
 	name string
 }
 
 func (s *tagsSnapshot) ID() snap.ID {
 	return snap.ID(strings.Join([]string{tagsIDText, string(s.kind), s.name, s.sha}, "-"))
 }
-func (s *tagsSnapshot) Kind() snapshotKind { return s.kind }
+func (s *tagsSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *tagsSnapshot) SHA() string        { return s.sha }
 
 func (s *tagsSnapshot) Download(db *DB) error {
