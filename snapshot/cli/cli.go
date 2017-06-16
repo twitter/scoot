@@ -185,14 +185,14 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 //	--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
 // Stdout: "http://localhost:9094/bundle/bs-<rev>-master.bundle"
 type createGitBundleCommand struct {
-	basis  string
-	ref    string
-	ttld   time.Duration
-	output string
+	basis      string        // Git bundle basis commit
+	ref        string        // Git ref to bundle (will contain `rev-list basis..ref`)
+	ttld       time.Duration // TTL of uploaded bundle in Bundlestore
+	outputType string        // What data for generated bundle is printed to stdout
 }
 
-const outputTypeLocation = "location"
-const outputTypeSnapshotID = "snapshot-id"
+const outputTypeLocation = "location"      // Print the location of the uploaded bundle (e.g. the URL)
+const outputTypeSnapshotID = "snapshot-id" // Print the snapshot ID of the uploaded bundle
 
 var outputTypes = []string{outputTypeLocation, outputTypeSnapshotID}
 
@@ -205,17 +205,21 @@ func (c *createGitBundleCommand) register() *cobra.Command {
 	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
 	cmd.Flags().StringVar(&c.ref, "ref", "master", "Reference to be packaged")
 	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
-	cmd.Flags().StringVar(&c.output, "output", "location", fmt.Sprintf("Output type, one of: %q", outputTypes))
+	cmd.Flags().StringVar(&c.outputType, "output", "location", fmt.Sprintf("Output type, one of: %q", outputTypes))
 	return cmd
 }
 
+// Creates a local bundle file based on basis & reference (see `git help bundle`)
+// Bundle name is a sha generated from the rev-list contents of the bundle
+// Bundle is uploaded to Bundlestore
+// Returns location/URL of uploaded bundle, or SnapshotID of generated bundle
 func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []string) error {
 	if c.basis == "" || c.ref == "" {
 		return fmt.Errorf("Create bundle command requires a basis and reference")
 	}
 	validOutput := false
 	for _, o := range outputTypes {
-		if o == c.output {
+		if o == c.outputType {
 			validOutput = true
 			break
 		}
@@ -267,9 +271,6 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
 	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
 
-	// Create a bundlestoreSnapshot to be able to return a snapshot ID
-	bs := gitdb.CreateBundlestoreSnapshot(commit, gitdb.KindGitCommitSnapshot, revSha1, gdb.StreamName())
-
 	if _, err := ingestRepo.Run("-c",
 		"core.packobjectedgesonlyshallow=0",
 		"bundle",
@@ -285,9 +286,11 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	if c.output == outputTypeLocation {
+	if c.outputType == outputTypeLocation {
 		fmt.Println(location)
-	} else if c.output == outputTypeSnapshotID {
+	} else if c.outputType == outputTypeSnapshotID {
+		// Create a bundlestoreSnapshot to be able to return a valid snapshot ID
+		bs := gitdb.CreateBundlestoreSnapshot(commit, gitdb.KindGitCommitSnapshot, revSha1, gdb.StreamName())
 		fmt.Println(bs.ID())
 	}
 	return nil
