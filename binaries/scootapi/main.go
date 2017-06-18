@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
@@ -24,7 +26,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, time.Minute)
 	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
 		log.Fatal("Failed to create new ScootAPI CLI client: ", err)

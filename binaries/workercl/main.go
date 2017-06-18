@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -36,7 +37,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, time.Minute)
 	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
 		log.Fatal("Failed to create worker CLIClient: ", err)

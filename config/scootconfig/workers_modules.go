@@ -14,6 +14,8 @@ import (
 	"github.com/scootdev/scoot/workerapi/client"
 )
 
+type ClientTimeout time.Duration
+
 // Parameters for configuring connections to remote (Thrift) workers.
 type WorkersThriftConfig struct {
 	Type          string
@@ -24,7 +26,8 @@ const defaultPollingPeriod = time.Duration(250) * time.Millisecond
 
 func (c *WorkersThriftConfig) Create(
 	tf thrift.TTransportFactory,
-	pf thrift.TProtocolFactory) (func(cluster.Node) runner.Service, error) {
+	pf thrift.TProtocolFactory,
+	ct ClientTimeout) (func(cluster.Node) runner.Service, error) {
 
 	pollingPeriod := defaultPollingPeriod
 	var err error
@@ -38,7 +41,7 @@ func (c *WorkersThriftConfig) Create(
 	}
 
 	rf := func(node cluster.Node) runner.Service {
-		di := dialer.NewSimpleDialer(tf, pf)
+		di := dialer.NewSimpleDialer(tf, pf, time.Duration(ct))
 		cl, _ := client.NewSimpleClient(di, string(node.Id()))
 		return runners.NewPollingService(cl, cl, cl, pollingPeriod)
 	}

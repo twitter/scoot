@@ -640,6 +640,7 @@ func (s *statefulScheduler) scheduleTasks() {
 					"jobId":  jobId,
 					"taskId": taskId,
 					"nodeId": nodeId,
+					"flaky":  flaky,
 				}).Info("Freeing node, removed job.")
 				s.clusterState.taskCompleted(nodeId, flaky)
 
@@ -714,11 +715,11 @@ func (s *statefulScheduler) killJobs() {
 	// kill the jobs with valid ids
 	for _, req := range validKillRequests {
 		jobState := s.getJob(req.jobId)
+		inProgress, notStarted := 0, 0
 		for _, task := range jobState.Tasks {
 			if task.Status == sched.InProgress {
-				if task.TaskRunner != nil {
-					task.TaskRunner.Abort(true)
-				}
+				task.TaskRunner.Abort(true)
+				inProgress++
 			} else if task.Status == sched.NotStarted {
 				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
@@ -729,8 +730,14 @@ func (s *statefulScheduler) killJobs() {
 				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 				jobState.Saga.EndTask(task.TaskId, statusAsBytes)
 				jobState.taskCompleted(task.TaskId)
+				notStarted++
 			}
 		}
+		log.WithFields(log.Fields{
+			"jobId":           req.jobId,
+			"tasksNotStarted": notStarted,
+			"tasksInProgress": inProgress,
+		}).Info("killJobs handler")
 
 		req.responseCh <- nil
 	}

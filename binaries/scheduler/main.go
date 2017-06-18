@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
@@ -14,6 +15,7 @@ import (
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/config/jsonconfig"
+	"github.com/scootdev/scoot/config/scootconfig"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
 	"github.com/scootdev/scoot/scootapi/server"
@@ -43,7 +45,13 @@ func main() {
 	}
 	bag, schema := server.Defaults()
 	bag.PutMany(
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(*thriftAddr) },
+		func() (thrift.TServerTransport, error) {
+			return thrift.NewTServerSocket(*thriftAddr)
+		},
+
+		func() scootconfig.ClientTimeout {
+			return scootconfig.ClientTimeout(time.Minute)
+		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, nil)
