@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
@@ -50,7 +49,7 @@ func main() {
 		},
 
 		func() scootconfig.ClientTimeout {
-			return scootconfig.ClientTimeout(time.Minute)
+			return scootconfig.ClientTimeout(scootconfig.DefaultClientTimeout)
 		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {

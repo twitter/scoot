@@ -16,6 +16,8 @@ import (
 
 type ClientTimeout time.Duration
 
+const DefaultClientTimeout = time.Minute
+
 // Parameters for configuring connections to remote (Thrift) workers.
 type WorkersThriftConfig struct {
 	Type          string
