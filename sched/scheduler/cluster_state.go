@@ -176,7 +176,7 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
-		} else if !flaky {
+		} else if !flaky && !ns.suspended() {
 			c.numAvail++
 		}
 		ns.runningJob = noJob
@@ -184,7 +184,7 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
 		c.nodeGroups[ns.snapshotId].idle[nodeId] = ns
 	} else {
-		log.Infof("TaskCompleted specified an unknown node: %v (flaky=%t)", nodeId, flaky)
+		log.Infof("TaskCompleted specified an unknown node: %v (flaky=%t) (likely reaped already)", nodeId, flaky)
 	}
 }
 
@@ -269,7 +269,9 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				c.numAvail--
+				if ns.runningTask == noTask {
+					c.numAvail--
+				}
 				log.Infof("Removing node by marking as lost: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
 					update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 
@@ -296,6 +298,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
+			// note: numAvail remains unchanged - it has already been updated in the cluster.NodeRemoved handler.
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
