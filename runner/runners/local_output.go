@@ -102,7 +102,10 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
       var DONE=4, OK=200;
       if (xhr.readyState === DONE && xhr.status == OK) {
         var wasAtBottom = checkAtBottom()
-        document.body.innerText += xhr.responseText.substring(prevLength);
+        var div = document.getElementById("output");
+        var txt = xhr.responseText.substring(prevLength);
+        var content = document.createTextNode(txt);
+        div.appendChild(content);
         if (wasAtBottom)
           gotoBottom()
         prevLength = xhr.responseText.length
@@ -113,8 +116,9 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     xhr.send();
   };
   sendRequest()
-  setInterval(sendRequest, 2000)
+  setInterval(sendRequest, 5000)
 </script>
+<body><pre><div id="output"></div></pre></body>
 </html>
 `
 	if strings.TrimSuffix(r.URL.Path, "/")+"/" == s.HttpPath() {

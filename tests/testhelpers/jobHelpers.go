@@ -2,10 +2,11 @@ package testhelpers
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"math/rand"
 	"sort"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/common/dialer"
@@ -17,7 +18,7 @@ import (
 func CreateScootClient(addr string) *scootapi.CloudScootClient {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	di := dialer.NewSimpleDialer(transportFactory, protocolFactory)
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, time.Minute)
 
 	scootClient := scootapi.NewCloudScootClient(
 		scootapi.CloudScootClientConfig{
