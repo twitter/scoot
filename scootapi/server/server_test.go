@@ -26,7 +26,7 @@ func Test_RequestCounters(t *testing.T) {
 
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	upReportIntvl := stats.UpTimeReportIntvl(20 * time.Millisecond)
+	upReportIntvl := stats.UpTimeReportIntvl(500 * time.Millisecond)
 
 	handler := NewHandler(s, sc, statsReceiver, upReportIntvl)
 
@@ -53,7 +53,7 @@ func Test_RequestCounters(t *testing.T) {
 		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
-	time.Sleep(50 * time.Millisecond) // wait to make sure stats are generated
+	time.Sleep(505 * time.Millisecond) // wait to make sure stats are generated
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
@@ -62,7 +62,7 @@ func Test_RequestCounters(t *testing.T) {
 			stats.SchedServerJobStatusLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SchedServerJobKillCounter:               {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerJobKillLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
-			stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 39},
+			stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}

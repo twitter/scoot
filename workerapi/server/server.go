@@ -60,7 +60,7 @@ func (h *handler) stats() {
 	var initTime time.Duration
 	nilTime := time.Time{}
 	initDoneTime := nilTime
-	ticker := time.NewTicker(time.Millisecond * time.Duration(h.statsCollectInterval))
+	ticker := time.NewTicker(time.Duration(h.statsCollectInterval))
 	for {
 		select {
 		case <-ticker.C:
@@ -98,7 +98,8 @@ func (h *handler) stats() {
 				h.stat.Gauge(stats.WorkerFailedCachedRunsGauge).Update(numFailed)
 				h.stat.Gauge(stats.WorkerEndedCachedRunsGauge).Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
 				h.stat.Gauge(stats.WorkerTimeSinceLastContactGauge_ms).Update(timeSincelastContact_ms)   // TODO errata metric - remove if unused
-				h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(int64(uptime / time.Millisecond))
+				uptimeMs := int64(uptime / time.Millisecond)
+				h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(uptimeMs)
 			} else {
 				initTime := time.Now().Sub(startTime)
 				h.stat.Gauge(stats.WorkerActiveInitLatency_ms).Update(int64(initTime / time.Millisecond))
