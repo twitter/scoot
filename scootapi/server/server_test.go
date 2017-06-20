@@ -61,7 +61,7 @@ func Test_RequestCounters(t *testing.T) {
 			stats.SchedServerJobStatusLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SchedServerJobKillCounter:               {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerJobKillLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
-			stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 0},
+			//stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
