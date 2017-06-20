@@ -60,7 +60,7 @@ func (h *handler) stats() {
 	var initTime time.Duration
 	nilTime := time.Time{}
 	initDoneTime := nilTime
-	ticker := time.NewTicker(time.Millisecond * time.Duration(h.statsCollectInterval))
+	ticker := time.NewTicker(time.Duration(h.statsCollectInterval))
 	for {
 		select {
 		case <-ticker.C:

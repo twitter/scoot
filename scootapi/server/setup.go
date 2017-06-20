@@ -53,11 +53,16 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
 		},
 
+		func() stats.UpTimeReportIntvl {
+			return stats.UpTimeReportIntvl(500 * time.Millisecond)
+		},
+
 		func(
 			s scheduler.Scheduler,
 			sc saga.SagaCoordinator,
-			stat stats.StatsReceiver) scoot.CloudScoot {
-			return NewHandler(s, sc, stat)
+			stat stats.StatsReceiver,
+			uptimeReportIntv stats.UpTimeReportIntvl) scoot.CloudScoot {
+			return NewHandler(s, sc, stat, uptimeReportIntv)
 		},
 
 		func(
