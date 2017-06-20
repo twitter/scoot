@@ -169,9 +169,9 @@ func TestUptimeReporting(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 	MakeServer(store, nil, statsReceiver,
-		stats.UpTimeReportIntvl(500*time.Millisecond))
+		stats.UpTimeReportIntvl(10*time.Millisecond))
 
-	time.Sleep(510 * time.Millisecond)
+	time.Sleep(15 * time.Millisecond)
 
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
