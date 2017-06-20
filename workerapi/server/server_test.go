@@ -163,7 +163,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			statsRec, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 			return statsRec
 		},
-		func() StatsCollectInterval { return 100 * time.Millisecond }, // collect the stats every 100ms
+		func() StatsCollectInterval { return StatsCollectInterval(100 * time.Millisecond) }, // collect the stats every 100ms
 		func(stat stats.StatsReceiver, run runner.Service, stInv StatsCollectInterval) worker.Worker {
 			return NewHandler(stat, run, stInv)
 		},
