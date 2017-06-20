@@ -29,14 +29,14 @@ func TestInitStats(t *testing.T) {
 	// create a worker - (starting the init activity)
 	h, initDoneCh, statsRegistry, simExecer := setupTestEnv(false)
 
-	time.Sleep(time.Millisecond * 15) // wait for 2 stats to trigger (stats triggers every .5 seconds)
+	time.Sleep(time.Millisecond * 110) // wait for 2 stats to trigger (stats triggers every .5 seconds)
 
 	// verify stats during initialization
 	if !stats.StatsOk("validating worker still initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64GTTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 1},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.DoesNotExistTest, Value: 0},
@@ -46,11 +46,11 @@ func TestInitStats(t *testing.T) {
 
 	initDoneCh <- nil // trigger end of initialization
 
-	time.Sleep(time.Millisecond * 22) // wait for 2 stats to pick up the next values
+	time.Sleep(time.Millisecond * 110) // wait for 2 stats to pick up the next values
 	// verify stats after initialization
 	if !stats.StatsOk("validating worker done initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 0},
+			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
@@ -64,11 +64,11 @@ func TestInitStats(t *testing.T) {
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
 	h.Run(runCmd)
 
-	time.Sleep(time.Millisecond * 11) // wait for stats to pick up the next values
+	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 9},
+			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
@@ -81,11 +81,11 @@ func TestInitStats(t *testing.T) {
 	// let the command finish
 	simExecer.Resume()
 	// verify stats after command is done
-	time.Sleep(time.Millisecond * 11) // wait for stats to pick up the next values
+	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 9},
+			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.Int64GTTest, Value: 109},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.Int64EqTest, Value: 0},
@@ -104,18 +104,18 @@ func TestFailedRunsStats(t *testing.T) {
 	//setup the test environment
 	// create a worker - (starting the init activity)
 	h, initDoneCh, statsRegistry, simExecer := setupTestEnv(true)
-	time.Sleep(time.Millisecond * 11)
+	time.Sleep(time.Millisecond * 110)
 
 	initDoneCh <- nil // trigger end of initialization
-	time.Sleep(time.Millisecond * 11)
+	time.Sleep(time.Millisecond * 110)
 
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
 	h.Run(runCmd)
-	time.Sleep(time.Millisecond * 11)
+	time.Sleep(time.Millisecond * 110)
 
 	simExecer.Resume()
 	// verify stats after command is done
-	time.Sleep(time.Millisecond * 11) // wait for stats to pick up the next values
+	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
@@ -163,7 +163,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			statsRec, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 			return statsRec
 		},
-		func() StatsCollectInterval { return StatsCollectInterval(10*time.Millisecond) }, // collect the stats every 100ms
+		func() StatsCollectInterval { return StatsCollectInterval(50*time.Millisecond) }, // collect the stats every 100ms
 		func(stat stats.StatsReceiver, run runner.Service, stInv StatsCollectInterval) worker.Worker {
 			return NewHandler(stat, run, stInv)
 		},
@@ -252,7 +252,7 @@ func (pdb *pausingDB) Update() error {
 	return nil
 }
 func (pdb *pausingDB) UpdateInterval() time.Duration {
-	return time.Millisecond * 10
+	return time.Millisecond * 100
 }
 
 type erroringOutputCreator struct{}

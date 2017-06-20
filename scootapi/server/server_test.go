@@ -52,8 +52,8 @@ func Test_RequestCounters(t *testing.T) {
 		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
-	time.Sleep(505 * time.Millisecond)
-	if !stats.StatsOk("", statsRegistry, t,
+	//time.Sleep(505 * time.Millisecond)
+	stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerRunJobLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},
@@ -62,9 +62,7 @@ func Test_RequestCounters(t *testing.T) {
 			stats.SchedServerJobKillCounter:               {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerJobKillLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			//stats.SchedUptime_ms:                          {Checker: stats.Int64GTTest, Value: 0},
-		}) {
-		t.Fatal("stats check did not pass.")
-	}
+		})
 }
 
 /*
