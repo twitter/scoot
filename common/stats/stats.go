@@ -515,12 +515,10 @@ func StartUptimeReporting(stat StatsReceiver, statName string) {
 	startTime := time.Now()
 	ticker := time.NewTicker(time.Duration(StatReportIntvl))
 	for {
-		for {
-			select {
-			case <-ticker.C:
-				upTime := time.Now().Sub(startTime) / time.Millisecond
-				stat.Gauge(statName).Update(int64(upTime))
-			}
+		select {
+		case <-ticker.C:
+			upTime := time.Now().Sub(startTime) / time.Millisecond
+			stat.Gauge(statName).Update(int64(upTime))
 		}
 	}
 }
