@@ -70,7 +70,7 @@ const (
 	/*
 		The length of time the server has been running
 	*/
-	BundlestoreUptime_ms = "bundlestoreUptime"
+	BundlestoreUptime_ms = "bundlestoreUptimeGauge_ms"
 
 	/****************** ClusterManger metrics ***************************/
 	/*
@@ -341,7 +341,7 @@ const (
 	/*
 		The length of time the server has been running
 	*/
-	SchedUptime_ms = "schedUptime"
+	SchedUptime_ms = "schedUptimeGauge_ms"
 
 	/*
 		The number of jobs waiting to start in the inProgress list at the end of each time through the
@@ -446,7 +446,7 @@ const (
 	/*
 		Time since the worker started
 	*/
-	WorkerUptimeGauge_ms = "uptimeGauge_ms"
+	WorkerUptimeGauge_ms = "workerUptimeGauge_ms"
 
 	/****************************** Git Metrics **********************************************/
 	/*

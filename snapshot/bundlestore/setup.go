@@ -6,8 +6,6 @@ import (
 	"github.com/scootdev/scoot/ice"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/common/stats"
-	"time"
 )
 
 // Make a File Store based on the environment, or in temp if unset
@@ -32,7 +30,6 @@ type module struct{}
 
 // Install installs functions for serving Bundlestore
 func (m module) Install(b *ice.MagicBag) {
-	b.Put(func() stats.UpTimeReportIntvl {return stats.UpTimeReportIntvl(500 * time.Millisecond)})
 	b.Put(MakeFileStoreInEnvOrTemp)
 	b.Put(MakeServer)
 	b.Put(DefaultStore)

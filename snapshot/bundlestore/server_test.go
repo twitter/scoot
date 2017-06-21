@@ -164,7 +164,7 @@ func TestServer(t *testing.T) {
 
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
-			stats.BundlestoreUptime_ms: {Checker: stats.Int64GTTest, Value: 39},
+			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUptime_ms): {Checker: stats.Int64GTTest, Value: 39},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
