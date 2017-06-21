@@ -30,7 +30,8 @@ import (
 // For testing.
 var Time StatsTime = DefaultStatsTime()
 
-type UpTimeReportIntvl time.Duration
+var StatReportIntvl time.Duration = 500 *time.Millisecond
+
 
 // Stats users can either reference this global receiver or construct their own.
 var CurrentStatsReceiver StatsReceiver = NilStatsReceiver()
@@ -510,9 +511,9 @@ func (r *finagleStatsRegistry) marshalHistogram(
 var defaultPercentiles = []float64{0.5, 0.9, 0.95, 0.99, 0.999, 0.9999}
 var defaultPercentileLabels = []string{"p50", "p90", "p95", "p99", "p999", "p9999"}
 
-func StartUptimeReporting(stat StatsReceiver, statName string, upReportIntvl UpTimeReportIntvl) {
+func StartUptimeReporting(stat StatsReceiver, statName string) {
 	startTime := time.Now()
-	ticker := time.NewTicker(time.Duration(upReportIntvl))
+	ticker := time.NewTicker(time.Duration(StatReportIntvl))
 	for {
 		for {
 			select {

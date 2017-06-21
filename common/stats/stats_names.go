@@ -58,6 +58,11 @@ const (
 	BundlestoreUploadExistingCounter = "uploadExistingCounter"
 
 	/*
+		number of times an upload successfully overwrites an existing one
+	*/
+	BundlestoreUploadExistingOkCounter = "uploadExistingOkCounter"
+
+	/*
 		time to upload a snapshot to a bundlestore service
 	*/
 	BundlestoreUploadLatency_ms = "uploadLatency_ms"

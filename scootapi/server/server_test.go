@@ -26,9 +26,7 @@ func Test_RequestCounters(t *testing.T) {
 
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	upReportIntvl := stats.UpTimeReportIntvl(500 * time.Millisecond)
-
-	handler := NewHandler(s, sc, statsReceiver, upReportIntvl)
+	handler := NewHandler(s, sc, statsReceiver)
 
 	domainJobDef := sched.GenJobDef(1)
 	domainJobDef.Tasks[0].Argv = []string{}
@@ -53,7 +51,7 @@ func Test_RequestCounters(t *testing.T) {
 		t.Errorf("GetStatus returned err:%s", err.Error())
 	}
 
-	time.Sleep(505 * time.Millisecond) // wait to make sure stats are generated
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond)) // wait to make sure stats are generated
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},

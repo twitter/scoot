@@ -46,8 +46,8 @@ func (m module) Install(b *ice.MagicBag) {
 		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
 		},
-		func(stat stats.StatsReceiver, r runner.Service, statIntvl StatsCollectInterval) worker.Worker {
-			return NewHandler(stat, r, statIntvl)
+		func(stat stats.StatsReceiver, r runner.Service) worker.Worker {
+			return NewHandler(stat, r)
 		},
 		func(
 			handler worker.Worker,

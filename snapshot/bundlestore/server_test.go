@@ -61,7 +61,8 @@ func TestServer(t *testing.T) {
 
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-	server := MakeServer(store, nil, statsReceiver, stats.UpTimeReportIntvl(20*time.Millisecond))
+	stats.StatReportIntvl = 20 * time.Millisecond
+	server := MakeServer(store, nil, statsReceiver)
 	mux := http.NewServeMux()
 	mux.Handle("/bundle/", server)
 	go func() {
@@ -160,7 +161,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// check the uptime
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(2 * stats.StatReportIntvl + (10 * time.Millisecond))
 
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{

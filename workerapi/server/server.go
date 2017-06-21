@@ -42,13 +42,12 @@ type handler struct {
 	mu                   sync.RWMutex
 	currentCmd           *runner.Command
 	currentRunID         runner.RunID
-	statsCollectInterval StatsCollectInterval
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, statsCollectInterval StatsCollectInterval) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), statsCollectInterval: statsCollectInterval}
+	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
 	go h.stats()
 	return h
 }
@@ -60,7 +59,7 @@ func (h *handler) stats() {
 	var initTime time.Duration
 	nilTime := time.Time{}
 	initDoneTime := nilTime
-	ticker := time.NewTicker(time.Duration(h.statsCollectInterval))
+	ticker := time.NewTicker(time.Duration(stats.StatReportIntvl))
 	for {
 		select {
 		case <-ticker.C:

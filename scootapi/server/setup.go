@@ -44,10 +44,6 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.MakeStatsReceiver(scope).Precision(time.Millisecond)
 		},
 
-		func() stats.UpTimeReportIntvl {
-			return stats.UpTimeReportIntvl(500 * time.Millisecond)
-		},
-
 		func(
 			cl *cluster.Cluster,
 			sc saga.SagaCoordinator,
@@ -60,8 +56,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		func(
 			s scheduler.Scheduler,
 			sc saga.SagaCoordinator,
-			stat stats.StatsReceiver, upTimeReportIntvl stats.UpTimeReportIntvl) scoot.CloudScoot {
-			return NewHandler(s, sc, stat, upTimeReportIntvl)
+			stat stats.StatsReceiver) scoot.CloudScoot {
+			return NewHandler(s, sc, stat)
 		},
 
 		func(

@@ -60,7 +60,6 @@ func main() {
 	bag.InstallModule(endpoints.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "apiserver" },
-		func() stats.UpTimeReportIntvl { return stats.UpTimeReportIntvl(500 * time.Millisecond)},
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
 		func(bs *bundlestore.Server, vs *snapshots.ViewServer, sh *StoreAndHandler) map[string]http.Handler {
 			return map[string]http.Handler{
@@ -72,7 +71,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, upTimeReportIntvl stats.UpTimeReportIntvl, tmp *temp.TempDir) (*StoreAndHandler, error) {
+		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
@@ -80,7 +79,7 @@ func main() {
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),
 			}
-			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat, upTimeReportIntvl)
+			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat)
 			if err != nil {
 				return nil, err
 			}
