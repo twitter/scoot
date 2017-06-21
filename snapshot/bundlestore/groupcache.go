@@ -36,9 +36,9 @@ type GroupcacheConfig struct {
 }
 
 // Add in-memory caching to the given store.
-func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.StatsReceiver, upReportIntv stats.UpTimeReportIntvl) (Store, http.Handler, error) {
+func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.StatsReceiver, upReportIntvl stats.UpTimeReportIntvl) (Store, http.Handler, error) {
 	stat = stat.Scope("bundlestoreCache")
-	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, upReportIntv)
+	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, upReportIntvl)
 
 	// Create the cache which knows how to retrieve the underlying bundle data.
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(

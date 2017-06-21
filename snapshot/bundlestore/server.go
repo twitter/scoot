@@ -22,9 +22,9 @@ type Server struct {
 // Make a new server that delegates to an underlying store.
 // TTL may be nil, in which case defaults are applied downstream.
 // TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
-func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver, upReportIntv stats.UpTimeReportIntvl) *Server {
+func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver, upReportIntvl stats.UpTimeReportIntvl) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
-	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, upReportIntv)
+	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, upReportIntvl)
 
 	return &Server{s, ttl, scopedStat}
 }

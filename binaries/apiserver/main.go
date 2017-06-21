@@ -72,7 +72,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, upTimeReportIntv stats.UpTimeReportIntvl, tmp *temp.TempDir) (*StoreAndHandler, error) {
+		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, upTimeReportIntvl stats.UpTimeReportIntvl, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
@@ -80,7 +80,7 @@ func main() {
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),
 			}
-			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat, upTimeReportIntv)
+			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat, upTimeReportIntvl)
 			if err != nil {
 				return nil, err
 			}
