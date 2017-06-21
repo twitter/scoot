@@ -268,6 +268,10 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	}
 	commit = strings.TrimSpace(commit)
 
+	// Add ref name to the rev-list we are bundling - otherwise we can create collisions
+	// where a bundle with the same commit content but different ref name can get the same sha1
+	revData += c.ref
+
 	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
 	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
 
