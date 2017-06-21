@@ -254,7 +254,8 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	// Don't use commit sha as bundle name as it could collide with other bundles.
 	// Use the rev-list for the given basis/ref to generate a unique sha
 	// Use this non-commit sha as bundleKey for a snapshot, but still parse
-	// commit sha of provided ref to use as snapshot sha
+	// commit sha of provided ref to use as snapshot sha.
+	// TODO (dgassaway): this would be better off in a proper library package
 
 	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
 	revData, err := ingestRepo.Run("rev-list", revList)
