@@ -42,13 +42,12 @@ type handler struct {
 	mu                   sync.RWMutex
 	currentCmd           *runner.Command
 	currentRunID         runner.RunID
-	statsCollectInterval StatsCollectInterval
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, statsCollectInterval StatsCollectInterval) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), statsCollectInterval: statsCollectInterval}
+	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
 	go h.stats()
 	return h
 }
@@ -60,7 +59,7 @@ func (h *handler) stats() {
 	var initTime time.Duration
 	nilTime := time.Time{}
 	initDoneTime := nilTime
-	ticker := time.NewTicker(time.Millisecond * time.Duration(h.statsCollectInterval))
+	ticker := time.NewTicker(time.Duration(stats.StatReportIntvl))
 	for {
 		select {
 		case <-ticker.C:
@@ -98,7 +97,8 @@ func (h *handler) stats() {
 				h.stat.Gauge(stats.WorkerFailedCachedRunsGauge).Update(numFailed)
 				h.stat.Gauge(stats.WorkerEndedCachedRunsGauge).Update(int64(len(processes)) - numActive) // TODO errata metric - remove if unused
 				h.stat.Gauge(stats.WorkerTimeSinceLastContactGauge_ms).Update(timeSincelastContact_ms)   // TODO errata metric - remove if unused
-				h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(int64(uptime / time.Millisecond))
+				uptimeMs := int64(uptime / time.Millisecond)
+				h.stat.Gauge(stats.WorkerUptimeGauge_ms).Update(uptimeMs)
 			} else {
 				initTime := time.Now().Sub(startTime)
 				h.stat.Gauge(stats.WorkerActiveInitLatency_ms).Update(int64(initTime / time.Millisecond))

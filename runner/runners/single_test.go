@@ -151,13 +151,15 @@ func TestDownloadCounter(t *testing.T) {
 	// wait for the run to finish
 	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
 
-	stats.StatsOk("", statsReg, t,
+	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
-		})
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
 }
 
 func newRunner() (runner.Service, *execers.SimExecer) {
