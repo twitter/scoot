@@ -58,6 +58,11 @@ const (
 	BundlestoreUploadExistingCounter = "uploadExistingCounter"
 
 	/*
+		number of times an upload successfully overwrites an existing one
+	*/
+	BundlestoreUploadExistingOkCounter = "uploadExistingOkCounter"
+
+	/*
 		time to upload a snapshot to a bundlestore service
 	*/
 	BundlestoreUploadLatency_ms = "uploadLatency_ms"
@@ -66,6 +71,11 @@ const (
 		the number of bundlestore uploads that were successful
 	*/
 	BundlestoreUploadOkCounter = "uploadOkCounter"
+
+	/*
+		The length of time the server has been running
+	*/
+	BundlestoreUptime_ms = "bundlestoreUptimeGauge_ms"
 
 	/****************** ClusterManger metrics ***************************/
 	/*
@@ -339,6 +349,11 @@ const (
 	SchedTaskStartRetries = "taskStartRetries"
 
 	/*
+		The length of time the server has been running
+	*/
+	SchedUptime_ms = "schedUptimeGauge_ms"
+
+	/*
 		The number of jobs waiting to start in the inProgress list at the end of each time through the
 		scheduler's job handling loop.  (No tasks in this job have been started.)
 	*/
@@ -441,7 +456,7 @@ const (
 	/*
 		Time since the worker started
 	*/
-	WorkerUptimeGauge_ms = "uptimeGauge_ms"
+	WorkerUptimeGauge_ms = "workerUptimeGauge_ms"
 
 	/****************************** Git Metrics **********************************************/
 	/*

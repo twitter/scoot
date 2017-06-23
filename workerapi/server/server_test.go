@@ -29,14 +29,14 @@ func TestInitStats(t *testing.T) {
 	// create a worker - (starting the init activity)
 	h, initDoneCh, statsRegistry, simExecer := setupTestEnv(false)
 
-	time.Sleep(time.Millisecond * 110) // wait for 2 stats to trigger (stats triggers every .5 seconds)
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	// verify stats during initialization
 	if !stats.StatsOk("validating worker still initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64GTTest, Value: 0},
-			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 1},
+			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge):        {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.DoesNotExistTest, Value: 0},
@@ -46,7 +46,7 @@ func TestInitStats(t *testing.T) {
 
 	initDoneCh <- nil // trigger end of initialization
 
-	time.Sleep(time.Millisecond * 110) // wait for 2 stats to pick up the next values
+	time.Sleep(2 * stats.StatReportIntvl + (20 * time.Millisecond))
 	// verify stats after initialization
 	if !stats.StatsOk("validating worker done initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
@@ -57,14 +57,14 @@ func TestInitStats(t *testing.T) {
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.Int64GTTest, Value: 0},
 		}) {
-		t.Fatalf("init done stats test failed")
+		t.Fatal("init done stats test failed")
 	}
 
 	// trigger a pausing command
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
 	h.Run(runCmd)
 
-	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
@@ -75,13 +75,13 @@ func TestInitStats(t *testing.T) {
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.Int64GTTest, Value: 0},
 		}) {
-		t.Fatalf("init done stats test failed")
+		t.Fatal("init done stats test failed")
 	}
 
 	// let the command finish
 	simExecer.Resume()
 	// verify stats after command is done
-	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
@@ -92,7 +92,7 @@ func TestInitStats(t *testing.T) {
 			fmt.Sprintf("handler/%s", stats.WorkerTimeSinceLastContactGauge_ms): {Checker: stats.Int64GTTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerUptimeGauge_ms):               {Checker: stats.Int64GTTest, Value: 0},
 		}) {
-		t.Fatalf("init done stats test failed")
+		t.Fatal("init done stats test failed")
 	}
 }
 
@@ -104,30 +104,31 @@ func TestFailedRunsStats(t *testing.T) {
 	//setup the test environment
 	// create a worker - (starting the init activity)
 	h, initDoneCh, statsRegistry, simExecer := setupTestEnv(true)
-	time.Sleep(time.Millisecond * 110)
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	initDoneCh <- nil // trigger end of initialization
-	time.Sleep(time.Millisecond * 110)
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
 	h.Run(runCmd)
-	time.Sleep(time.Millisecond * 110)
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	simExecer.Resume()
 	// verify stats after command is done
-	time.Sleep(time.Millisecond * 110) // wait for stats to pick up the next values
+	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 	// verify stats during paused command
 	if !stats.StatsOk("validating command running stats ", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):       {Checker: stats.Int64EqTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerFailedCachedRunsGauge): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
-		t.Fatalf("init done stats test failed")
+		t.Fatal("init done stats test failed")
 	}
 }
 
 func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRegistry stats.StatsRegistry, simExecer *execers.SimExecer) {
 
+	stats.StatReportIntvl = 100 * time.Millisecond
 	log.AddHook(hooks.NewContextHook())
 
 	//use initDoneCh to control the initialization latency
@@ -163,9 +164,8 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			statsRec, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 			return statsRec
 		},
-		func() StatsCollectInterval { return 50 }, // collect the stats every 50ms
-		func(stat stats.StatsReceiver, run runner.Service, stInv StatsCollectInterval) worker.Worker {
-			return NewHandler(stat, run, stInv)
+		func(stat stats.StatsReceiver, run runner.Service) worker.Worker {
+			return NewHandler(stat, run)
 		},
 	)
 	if useErrorExec {
