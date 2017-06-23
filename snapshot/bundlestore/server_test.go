@@ -161,7 +161,7 @@ func TestServer(t *testing.T) {
 	}
 
 	// check the uptime
-	time.Sleep(2 * stats.StatReportIntvl + (10 * time.Millisecond))
+	time.Sleep(2*stats.StatReportIntvl + (10 * time.Millisecond))
 
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
@@ -201,9 +201,11 @@ func TestRetry(t *testing.T) {
 	now := time.Now()
 	server.times = []time.Time{}
 	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable}
-	hs := MakeHTTPStore(rootUri)
-	hs.(*httpStore).client.Backoff = func(_ int) time.Duration { return 50 * time.Millisecond }
-	hs.(*httpStore).client.MaxRetries = 3
+	client := MakePesterClient()
+	client.Backoff = func(_ int) time.Duration { return 50 * time.Millisecond }
+	client.MaxRetries = 3
+	hs := MakeCustomHTTPStore(rootUri, client)
+
 	if _, err := hs.OpenForRead(""); err == nil {
 		t.Fatalf("Expected err, got nil")
 	}
@@ -220,7 +222,7 @@ func TestRetry(t *testing.T) {
 	// Try twice then succeed on the third time.
 	server.counter = 0
 	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusOK}
-	hs.(*httpStore).client.MaxRetries = 10
+	client.MaxRetries = 10
 	if _, err := hs.OpenForRead("foo"); err != nil {
 		t.Fatalf("Expected success, got: %v", err)
 	}
