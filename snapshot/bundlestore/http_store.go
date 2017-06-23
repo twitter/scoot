@@ -15,22 +15,34 @@ import (
 
 const DefaultHttpTries = 8 // ~5min total of trying with exponential backoff (0 and 1 both mean 1 try total)
 
-func MakeHTTPStore(rootURI string) Store {
-	if !strings.HasSuffix(rootURI, "/") {
-		rootURI = rootURI + "/"
-	}
+func MakePesterClient() *pester.Client {
 	client := pester.New()
 	client.Backoff = pester.ExponentialBackoff
 	client.MaxRetries = DefaultHttpTries
 	client.LogHook = func(e pester.ErrEntry) {
 		log.Infof("Retrying after failed attempt: %+v", e)
 	}
+	return client
+}
+
+func MakeHTTPStore(rootURI string) Store {
+	return MakeCustomHTTPStore(rootURI, MakePesterClient())
+}
+
+func MakeCustomHTTPStore(rootURI string, client Client) Store {
+	if !strings.HasSuffix(rootURI, "/") {
+		rootURI = rootURI + "/"
+	}
 	return &httpStore{rootURI, client}
+}
+
+type Client interface {
+	Do(req *http.Request) (resp *http.Response, err error)
 }
 
 type httpStore struct {
 	rootURI string
-	client  *pester.Client
+	client  Client
 }
 
 func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
@@ -44,7 +56,15 @@ func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, er
 	}
 	uri := s.rootURI + name
 	log.Infof("%sing %s", label, uri)
-	resp, err := s.client.Get(uri)
+
+	var req *http.Request
+	if existCheck {
+		req, _ = http.NewRequest("HEAD", uri, nil)
+	} else {
+		req, _ = http.NewRequest("GET", uri, nil)
+	}
+
+	resp, err := s.client.Do(req)
 	if err != nil {
 		if !existCheck {
 			log.Infof("%s error: %s %v", label, uri, err)
