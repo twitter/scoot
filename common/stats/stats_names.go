@@ -79,6 +79,11 @@ const (
 	ClusterIdleNodes = "idleNodes"
 
 	/*
+		the number of running worker nodes (running + avail + suspended == allNodes)
+	*/
+	ClusterRunningNodes = "runningNodes"
+
+	/*
 		the number of lost worker nodes (not responding to status requests)
 	*/
 	ClusterLostNodes = "lostNodes"

@@ -111,7 +111,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	//
 	var tasks []*taskState
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
-	numAvail := cs.numAvail
+	numAvail := cs.numAvail()
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	requestorTagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
