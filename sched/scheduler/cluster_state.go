@@ -23,7 +23,7 @@ type ReadyFn func(cluster.Node) (ready bool, backoffDuration time.Duration)
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
-// TODO(jschiller): we may prefer to assert that updateCh never blips on a node so we can remove lost node concept.
+// NOTE: a node can be both running in scheduler and suspended here (distributed system eventual consistency...)
 type clusterState struct {
 	updateCh         chan []cluster.NodeUpdate
 	nodes            map[cluster.NodeId]*nodeState // All healthy nodes.
@@ -32,7 +32,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numAvail         int                           // Number of free nodes that are not in a suspended state.
+	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
@@ -140,6 +140,11 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 	return cs
 }
 
+// Number of free nodes that are not in a suspended state.
+func (c *clusterState) numFree() int {
+	return len(c.nodes) - c.numRunning
+}
+
 // Update ClusterState to reflect that a task has been scheduled on a particular node
 // SnapshotId should be the value from the task definition associated with the given taskId.
 func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snapshotId string) {
@@ -159,7 +164,7 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snaps
 	ns.runningJob = jobId
 	ns.runningTask = taskId
 	ns.snapshotId = snapshotId
-	c.numAvail--
+	c.numRunning++
 }
 
 // Update ClusterState to reflect that a task has finished running on
@@ -176,8 +181,6 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns
 			ns.timeFlaky = time.Now()
-		} else if !flaky && !ns.suspended() {
-			c.numAvail++
 		}
 		ns.runningJob = noJob
 		ns.runningTask = noTask
@@ -186,6 +189,7 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 	} else {
 		log.Infof("TaskCompleted specified an unknown node: %v (flaky=%t) (likely reaped already)", nodeId, flaky)
 	}
+	c.numRunning--
 }
 
 func (c *clusterState) getNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
@@ -225,9 +229,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					ns.timeLost = nilTime
 					c.nodes[update.Id] = ns
 					delete(c.suspendedNodes, update.Id)
-					c.numAvail++
-					log.Infof("Recovered suspended node %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
-						update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+					log.Infof("Recovered suspended node %v (%#v), %s", update.Id, ns, c.status())
 				} else {
 					log.Infof("Ignoring NodeAdded event for suspended flaky node. %v (%#v)", update.Id, ns)
 				}
@@ -239,15 +241,12 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
 					newNode.readyCh = nil
-					c.numAvail++
-					log.Infof("Added new node: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+					log.Infof("Added new node: %v (%#v), %s", update.Id, update.Node, c.status())
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
 					c.suspendedNodes[update.Id] = newNode
-					log.Infof("Added new suspended node: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
-						update.Id, update.Node, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+					log.Infof("Added new suspended node: %v (%#v), %s", update.Id, update.Node, c.status())
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
@@ -269,11 +268,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				if ns.runningTask == noTask {
-					c.numAvail--
-				}
-				log.Infof("Removing node by marking as lost: %v (%#v), now have %d healthy nodes (%d suspended, %d avail)",
-					update.Id, ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+				log.Infof("Removing node by marking as lost: %v (%#v), %s", update.Id, ns, c.status())
 
 			} else {
 				// We don't know about this node, log spurious remove.
@@ -293,17 +288,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
-			c.numAvail++
-			log.Infof("Node now ready, adding to rotation: %v (%#v), now have %d healthy (%d suspended, %d avail)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+			log.Infof("Node now ready, adding to rotation: %v (%#v), %s", ns.node.Id(), ns, c.status())
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
-			// note: numAvail remains unchanged - it has already been updated in the cluster.NodeRemoved handler.
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
-			log.Infof("Deleting lost node: %v (%#v), now have %d healthy (%d suspended, %d avail)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes)-1, c.numAvail)
+			log.Infof("Deleting lost node: %v (%#v), %s", ns.node.Id(), ns, c.status())
 			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
 			select {
 			case ns.removedCh <- nil:
@@ -314,13 +305,17 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			delete(c.suspendedNodes, ns.node.Id())
 			c.nodes[ns.node.Id()] = ns
 			ns.timeFlaky = nilTime
-			c.numAvail++
-			log.Infof("Reinstating flaky node: %v (%#v), now have %d healthy (%d suspended, %d avail)",
-				ns.node.Id(), ns, len(c.nodes), len(c.suspendedNodes), c.numAvail)
+			log.Infof("Reinstating flaky node: %v (%#v), %s", ns.node.Id(), ns, c.status())
 		}
 	}
 
 	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
-	c.stats.Gauge(stats.ClusterIdleNodes).Update(int64(c.numAvail))
+	c.stats.Gauge(stats.ClusterFreeNodes).Update(int64(c.numFree()))
+	c.stats.Gauge(stats.ClusterRunningNodes).Update(int64(c.numRunning))
 	c.stats.Gauge(stats.ClusterLostNodes).Update(int64(len(c.suspendedNodes)))
+}
+
+func (c *clusterState) status() string {
+	return fmt.Sprintf("now have %d healthy (%d free, %d running), and %d suspended",
+		len(c.nodes), c.numFree(), c.numRunning, len(c.suspendedNodes))
 }

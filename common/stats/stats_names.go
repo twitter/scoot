@@ -84,9 +84,14 @@ const (
 	ClusterAvailableNodes = "availableNodes"
 
 	/*
-		the number of idle worker nodes (available, but not running a task)
+		the number of free worker nodes (available, but not running a task)
 	*/
-	ClusterIdleNodes = "idleNodes"
+	ClusterFreeNodes = "freeNodes"
+
+	/*
+		the number of running worker nodes (running + free + suspended ~= allNodes (may lag))
+	*/
+	ClusterRunningNodes = "runningNodes"
 
 	/*
 		the number of lost worker nodes (not responding to status requests)

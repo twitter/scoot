@@ -58,7 +58,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}).MaxTimes(1)
-	endMessageMatcher := TaskMessageMatcher{JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	endMessageMatcher := TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
