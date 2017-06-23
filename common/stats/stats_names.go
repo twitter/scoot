@@ -89,7 +89,7 @@ const (
 	ClusterFreeNodes = "freeNodes"
 
 	/*
-		the number of running worker nodes (running + free + suspended == allNodes)
+		the number of running worker nodes (running + free + suspended ~= allNodes (may lag))
 	*/
 	ClusterRunningNodes = "runningNodes"
 

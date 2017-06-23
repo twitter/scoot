@@ -23,7 +23,7 @@ type ReadyFn func(cluster.Node) (ready bool, backoffDuration time.Duration)
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
-// TODO(jschiller): we may prefer to assert that updateCh never blips on a node so we can remove lost node concept.
+// NOTE: a node can be both running in scheduler and suspended here (distributed system eventual consistency...)
 type clusterState struct {
 	updateCh         chan []cluster.NodeUpdate
 	nodes            map[cluster.NodeId]*nodeState // All healthy nodes.
@@ -32,7 +32,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numRunning       int                           // Number of running nodes. running + free + suspended == allNodes
+	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
