@@ -254,7 +254,8 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	// Don't use commit sha as bundle name as it could collide with other bundles.
 	// Use the rev-list for the given basis/ref to generate a unique sha
 	// Use this non-commit sha as bundleKey for a snapshot, but still parse
-	// commit sha of provided ref to use as snapshot sha
+	// commit sha of provided ref to use as snapshot sha.
+	// TODO (dgassaway): this would be better off in a proper library package
 
 	revList := fmt.Sprintf("%s..%s", c.basis, c.ref)
 	revData, err := ingestRepo.Run("rev-list", revList)
@@ -267,6 +268,10 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return fmt.Errorf("Couldn't rev-parse ref %s: %v", c.ref, err)
 	}
 	commit = strings.TrimSpace(commit)
+
+	// Add ref name to the rev-list we are bundling - otherwise we can create collisions
+	// where a bundle with the same commit content but different ref name can get the same sha1
+	revData += c.ref
 
 	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
 	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
