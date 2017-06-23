@@ -22,7 +22,7 @@ func (k KillableTasks) Len() int           { return len(k) }
 func (k KillableTasks) Swap(i, j int)      { k[i], k[j] = k[j], k[i] }
 func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.Before(k[j].TimeStarted) }
 
-// Returns a list of taskAssigments of task to available node.
+// Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
 // Note: pure fn because it's confusing to have getTaskAssignments() modify clusterState based on the proposed
 //       scheduling and also require that the caller apply final modifications to clusterState as a second step)
@@ -103,15 +103,15 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 		killableTasks = append(killableTasks, ts...)
 	}
 
-	// Assign each job the minimum number of nodes until available idle nodes, and killable nodes if allowed, are exhausted.
-	// Priority3 jobs consume all available idle+killable nodes and starve jobs of a lower priority
+	// Assign each job the minimum number of nodes until free nodes, and killable nodes if allowed, are exhausted.
+	// Priority3 jobs consume all free idle+killable nodes and starve jobs of a lower priority
 	// Priority2 jobs consume all remaining idle+killable nodes up to a limit, then give lower priority jobs a chance.
 	// Priority1 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority0 jobs.
 	// Priority0 jobs consume all remaining idle nodes up to a limit.
 	//
 	var tasks []*taskState
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
-	numAvail := cs.numAvail()
+	numFree := cs.numFree()
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	requestorTagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
@@ -127,8 +127,8 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 Loop:
 	for _, p := range []sched.Priority{sched.P3, sched.P2, sched.P1, sched.P0} {
 		for _, job := range priorityJobs[p] {
-			// The number of available nodes for this priority is the remaining available idle nodes plus allowed killable nodes.
-			numAvailNodes := numAvail + numKillableCounter[p]
+			// The number of available nodes for this priority is the remaining free nodes plus allowed killable nodes.
+			numAvailNodes := numFree + numKillableCounter[p]
 			if numAvailNodes == 0 {
 				break Loop
 			}
@@ -187,12 +187,12 @@ Loop:
 				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d, largeJobMaxNodes:%d) - numRunning:%d",
 					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes, numRunning)
 				tasks = append(tasks, unsched[0:numSchedulable]...)
-				// Get the number of nodes we can take from the available idle pool, and the number we must take from killable nodes.
-				numFromAvail := min(numAvail, numSchedulable)
-				numFromKill := max(0, numSchedulable-numFromAvail)
-				// Deduct from the number of available nodes - this value gets used after we exit this loop.
-				numAvail -= numFromAvail
-				// If there weren't enough available nodes, grab more from the appropriate pool of killable nodes.
+				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
+				numFromFree := min(numFree, numSchedulable)
+				numFromKill := max(0, numSchedulable-numFromFree)
+				// Deduct from the number of free nodes - this value gets used after we exit this loop.
+				numFree -= numFromFree
+				// If there weren't enough free nodes, grab more from the appropriate pool of killable nodes.
 				// Note that numSchedulable should not exceed numAvailNodes so we don't do any checking for that.
 				if numFromKill > 0 && p == sched.P3 {
 					// For priority=3, deduct from the p3 counter and update the p2 counter to account for it.
@@ -216,11 +216,11 @@ Loop:
 		}
 	}
 
-	// If there are still available nodes, priority=3 jobs have been satisfied already.
-	// Distribute a minimum of 75% available to priority=2, 20% to priority=1 and 5% to priority=0
+	// If there are still free nodes, priority=3 jobs have been satisfied already.
+	// Distribute a minimum of 75% free to priority=2, 20% to priority=1 and 5% to priority=0
 	// TODO(jschiller) percentages should be configurable.
 LoopRemaining:
-	// First, loop using the above percentages, and next, distribute remaining available nodes to the highest priority tasks.
+	// First, loop using the above percentages, and next, distribute remaining free nodes to the highest priority tasks.
 	// Do this twice, once for 'required' tasks and again for 'optional' tasks.
 	for i, pq := range [][]float32{[]float32{.05, .2, .75}, []float32{1, 1, 1}, []float32{.05, .2, .75}, []float32{1, 1, 1}} {
 		remaining := &remainingRequired
@@ -228,22 +228,22 @@ LoopRemaining:
 			remaining = &remainingOptional
 		}
 		for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
-			if numAvail == 0 {
+			if numFree == 0 {
 				break LoopRemaining
 			}
 			// The remaining tasks, bucketed by job, for a given priority.
 			taskLists := &(*remaining)[p]
-			// Distribute the allowed number of available nodes evenly across the bucketed jobs for a given priority.
-			nodeQuota := ceil((float32(numAvail) * pq[p]) / float32(len(*taskLists)))
+			// Distribute the allowed number of free nodes evenly across the bucketed jobs for a given priority.
+			nodeQuota := ceil((float32(numFree) * pq[p]) / float32(len(*taskLists)))
 			for i := 0; i < len(*taskLists); i++ {
 				taskList := &(*taskLists)[i]
 				// Noting that we use ceil() above, we may use less quota than assigned if it's unavailable or unneeded.
-				nTasks := min(numAvail, nodeQuota, len(*taskList))
+				nTasks := min(numFree, nodeQuota, len(*taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
-					log.Infof("Assigning %d additional available nodes for each remaining jobId=%s tasks with priority=%d (numAvail was %d)",
-						nTasks, (*taskList)[0].JobId, p, numAvail)
-					numAvail -= nTasks
+					log.Infof("Assigning %d additional free nodes for each remaining jobId=%s tasks with priority=%d (numAFree was %d)",
+						nTasks, (*taskList)[0].JobId, p, numFree)
+					numFree -= nTasks
 					tasks = append(tasks, (*taskList)[:nTasks]...)
 					// Remove jobs that have run out of runnable tasks.
 					if len(*taskList)-nTasks > 0 {
@@ -261,10 +261,10 @@ LoopRemaining:
 		return nil, nil
 	}
 
-	// Loop over all cluster snapshotIds looking for an available node. Prefer, in order:
+	// Loop over all cluster snapshotIds looking for a usable node. Prefer, in order:
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
-	// - A random available node from the idle pools of nodes associated with other snapshotIds.
+	// - A random free node from the idle pools of nodes associated with other snapshotIds.
 	// - A node from the next killable task candidate.
 	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
 	if len(assignments) == len(tasks) {
@@ -302,7 +302,7 @@ func assign(
 				}
 			}
 		}
-		// Could not find any more available idle nodes, take one from killable nodes.
+		// Could not find any more free nodes, take one from killable nodes.
 		if nodeSt == nil {
 			wasRunning = killableTasks[0]
 			snapshotId = wasRunning.Def.SnapshotID

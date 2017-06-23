@@ -141,7 +141,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 }
 
 // Number of free nodes that are not in a suspended state.
-func (c *clusterState) numAvail() int {
+func (c *clusterState) numFree() int {
 	return len(c.nodes) - c.numRunning
 }
 
@@ -310,12 +310,12 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	}
 
 	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
-	c.stats.Gauge(stats.ClusterIdleNodes).Update(int64(c.numAvail()))
+	c.stats.Gauge(stats.ClusterFreeNodes).Update(int64(c.numFree()))
 	c.stats.Gauge(stats.ClusterRunningNodes).Update(int64(c.numRunning))
 	c.stats.Gauge(stats.ClusterLostNodes).Update(int64(len(c.suspendedNodes)))
 }
 
 func (c *clusterState) status() string {
 	return fmt.Sprintf("now have %d healthy (%d avail, %d running), and %d suspended",
-		len(c.nodes), c.numAvail(), c.numRunning, len(c.suspendedNodes))
+		len(c.nodes), c.numFree(), c.numRunning, len(c.suspendedNodes))
 }
