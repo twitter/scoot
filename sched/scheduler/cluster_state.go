@@ -32,7 +32,7 @@ type clusterState struct {
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numRunning       int                           // Number of running nodes. running + avail + suspended == allNodes
+	numRunning       int                           // Number of running nodes. running + free + suspended == allNodes
 	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
@@ -316,6 +316,6 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 }
 
 func (c *clusterState) status() string {
-	return fmt.Sprintf("now have %d healthy (%d avail, %d running), and %d suspended",
+	return fmt.Sprintf("now have %d healthy (%d free, %d running), and %d suspended",
 		len(c.nodes), c.numFree(), c.numRunning, len(c.suspendedNodes))
 }
