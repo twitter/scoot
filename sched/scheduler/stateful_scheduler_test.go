@@ -511,6 +511,9 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	// verify that the first job is still running
 	verifyJobStatus("verify job1 still running", jobId1, sched.InProgress,
 		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
+
+	// cleanup
+	sendKillRequest(jobId1, s)
 }
 
 func allTasksInState(jobName string, jobId string, s *statefulScheduler, status sched.Status) bool {

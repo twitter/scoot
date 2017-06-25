@@ -166,7 +166,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	if !stats.StatsOk("1st stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
-			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterFreeNodes:      {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
 		}) {
 		t.Fatal("stats check did not pass.")
@@ -193,7 +193,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	if !stats.StatsOk("2nd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
-			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterFreeNodes:      {Checker: stats.Int64EqTest, Value: 1},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 3},
 		}) {
 		t.Fatal("stats check did not pass.")
@@ -218,7 +218,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	if !stats.StatsOk("3rd stats check:", statsRegistry, t,
 		map[string]stats.Rule{
 			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 4},
-			stats.ClusterIdleNodes:      {Checker: stats.Int64EqTest, Value: 4},
+			stats.ClusterFreeNodes:      {Checker: stats.Int64EqTest, Value: 4},
 			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
