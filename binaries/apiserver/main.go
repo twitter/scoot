@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/cloud/cluster/local"
@@ -27,6 +28,7 @@ func main() {
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
+	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes.")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -74,7 +76,7 @@ func main() {
 		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
 			cfg := &bundlestore.GroupcacheConfig{
 				Name:         "apiserver",
-				Memory_bytes: 2 * 1024 * 1024 * 1024, //2GB
+				Memory_bytes: *cacheSize,
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),

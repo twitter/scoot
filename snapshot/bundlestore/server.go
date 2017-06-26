@@ -67,7 +67,8 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 	if exists {
 		s.stat.Counter(stats.BundlestoreUploadExistingCounter).Inc(1) // TODO errata metric - remove if unused
-		fmt.Fprintf(w, "Bundle %s already exists\n", bundleName)
+		fmt.Fprintf(w, "Bundle %s already exists, no-op and return\n", bundleName)
+		return
 	}
 
 	// Get ttl if defaults were provided during Server construction or if it comes in this request header.

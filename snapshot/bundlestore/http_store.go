@@ -13,7 +13,7 @@ import (
 	"github.com/sethgrid/pester"
 )
 
-const DefaultHttpTries = 8 // ~5min total of trying with exponential backoff (0 and 1 both mean 1 try total)
+const DefaultHttpTries = 7 // ~2min total of trying with exponential backoff (0 and 1 both mean 1 try total)
 
 func MakePesterClient() *pester.Client {
 	client := pester.New()
@@ -71,14 +71,14 @@ func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, er
 		}
 		return nil, err
 	}
-	log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 
 	if resp.StatusCode == http.StatusOK {
+		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 		return resp.Body, nil
 	}
+	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
 	resp.Body.Close()
-	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
