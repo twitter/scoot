@@ -3,32 +3,30 @@ package gitdb
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )
 
-func (db *DB) ingestDirWithRepo(repo *repo.Repository, dir string) (snapshot, error) {
+func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snapshot, error) {
 	// We ingest a dir using git commands:
-	// First, create a new index file.
+	// First, expect new or copied index file.
 	// Second, add all the files in the work tree.
 	// Third, write the tree.
 	// This doesn't create a commit, or otherwise mess with repo state.
-	indexDir, err := db.tmp.TempDir("git-index")
-	if err != nil {
-		return nil, err
-	}
 
-	indexFilename := filepath.Join(indexDir.Dir, "index")
-	defer os.RemoveAll(indexDir.Dir)
-
-	env := append(os.Environ(), "GIT_INDEX_FILE="+indexFilename, "GIT_WORK_TREE="+dir)
+	gitEnv := []string{"GIT_INDEX_FILE=" + index, "GIT_WORK_TREE=" + dir}
+	env := append(os.Environ(), gitEnv...)
+	log.Infof("Ingesting into %s, env=%s", repo.Dir(), gitEnv)
 
 	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
 	// (e.g., HEAD) and we should just use the lower-level plumbing command?
 	cmd := repo.Command("add", "--all")
 	cmd.Env = env
-	_, err = repo.RunCmd(cmd)
+	_, err := repo.RunCmd(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +42,12 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, dir string) (snapshot, er
 }
 
 func (db *DB) ingestDir(dir string) (snapshot, error) {
-	return db.ingestDirWithRepo(db.dataRepo, dir)
+	indexDir, err := db.tmp.TempDir("git-index")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(indexDir.Dir)
+	return db.ingestDirWithRepo(db.dataRepo, filepath.Join(indexDir.Dir, "index"), dir)
 }
 
 const tempBranch = "scoot/__temp_for_writing"
@@ -69,7 +72,18 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error) {
-	s, err := db.ingestDirWithRepo(ingestRepo, ingestRepo.Dir())
+	indexDir, err := db.tmp.TempDir("git-index")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(indexDir.Dir)
+
+	err = exec.Command("cp", filepath.Join(ingestRepo.Dir(), ".git/index"), indexDir.Dir).Run()
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := db.ingestDirWithRepo(ingestRepo, filepath.Join(indexDir.Dir, "index"), ingestRepo.Dir())
 	if err != nil {
 		return nil, err
 	}

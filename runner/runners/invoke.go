@@ -208,10 +208,29 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
-		snapshotID, err := inv.filer.Ingest(tmp.Dir)
-		if err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+
+		ingestCh := make(chan interface{})
+		go func() {
+			snapshotID, err := inv.filer.Ingest(tmp.Dir)
+			if err != nil {
+				ingestCh <- err
+			} else {
+				ingestCh <- snapshotID
+			}
+		}()
+
+		var snapshotID string
+		select {
+		case <-abortCh:
+			return runner.AbortStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		case res := <-ingestCh:
+			switch res.(type) {
+			case error:
+				return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", res), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			}
+			snapshotID = res.(string)
 		}
+
 		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
 		//Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 		status := runner.CompleteStatus(id, snapshotID, st.ExitCode, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
