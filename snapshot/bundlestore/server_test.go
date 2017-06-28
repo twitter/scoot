@@ -202,7 +202,7 @@ func TestRetry(t *testing.T) {
 	server.times = []time.Time{}
 	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable}
 	client := MakePesterClient()
-	client.Backoff = func(_ int) time.Duration { return 50 * time.Millisecond }
+	client.Backoff = func(_ int) time.Duration { return 500 * time.Millisecond }
 	client.MaxRetries = 3
 	hs := MakeCustomHTTPStore(rootUri, client)
 
@@ -212,11 +212,11 @@ func TestRetry(t *testing.T) {
 	if server.counter != 3 {
 		t.Fatalf("Expected 3 tries, got: %d", server.counter)
 	}
-	if server.times[2].Sub(now) > 150*time.Millisecond ||
-		server.times[2].Sub(now) < 100*time.Millisecond ||
-		server.times[1].Sub(now) < 50*time.Millisecond ||
-		server.times[0].Sub(now) > 50*time.Millisecond {
-		t.Fatalf("Expected 3 tries 50ms apart, got: %v", server.times)
+	if server.times[2].Sub(now) > 1500*time.Millisecond ||
+		server.times[2].Sub(now) < 1000*time.Millisecond ||
+		server.times[1].Sub(now) < 500*time.Millisecond ||
+		server.times[0].Sub(now) > 500*time.Millisecond {
+		t.Fatalf("Expected 3 tries 500ms apart, got: %v", server.times)
 	}
 
 	// Try twice then succeed on the third time.
