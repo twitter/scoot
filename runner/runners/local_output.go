@@ -118,7 +118,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   sendRequest()
   setInterval(sendRequest, 5000)
 </script>
-<body><pre><div id="output"></div></pre></body>
+<body><div id="output" style="white-space: pre-wrap"></div></body>
 </html>
 `
 	if strings.TrimSuffix(r.URL.Path, "/")+"/" == s.HttpPath() {
