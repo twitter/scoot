@@ -105,13 +105,15 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 }
 
 // Update JobState to reflect that a Task has been completed
-func (j *jobState) taskCompleted(taskId string) {
+func (j *jobState) taskCompleted(taskId string, running bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = sched.Completed
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksCompleted++
-	j.TasksRunning--
+	if running {
+		j.TasksRunning--
+	}
 }
 
 // Update JobState to reflect that an error has occurred running this Task
