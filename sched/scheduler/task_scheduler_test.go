@@ -93,7 +93,7 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		js.taskStarted(as.task.TaskId, &taskRunner{})
 		if as.task.TaskId != "task1" {
 			cs.taskCompleted(as.nodeSt.node.Id(), false)
-			js.taskCompleted(as.task.TaskId)
+			js.taskCompleted(as.task.TaskId, true)
 		}
 	}
 
@@ -309,7 +309,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		}
 		for _, j := range js {
 			if j.Job.Id == assignment.task.JobId {
-				j.taskCompleted(assignment.task.TaskId)
+				j.taskCompleted(assignment.task.TaskId, true)
 			}
 		}
 	}
