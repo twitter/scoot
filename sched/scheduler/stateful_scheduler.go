@@ -632,7 +632,7 @@ func (s *statefulScheduler) scheduleTasks() {
 						"taskId":  taskId,
 						"command": strings.Join(taskDef.Argv, " "),
 					}).Info("Ending task.")
-					jobState.taskCompleted(taskId)
+					jobState.taskCompleted(taskId, true)
 				}
 
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
@@ -729,7 +729,7 @@ func (s *statefulScheduler) killJobs() {
 				//TODO - is this the correct counter?
 				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 				jobState.Saga.EndTask(task.TaskId, statusAsBytes)
-				jobState.taskCompleted(task.TaskId)
+				jobState.taskCompleted(task.TaskId, false)
 				notStarted++
 			}
 		}
