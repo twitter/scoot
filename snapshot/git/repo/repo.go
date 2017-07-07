@@ -4,13 +4,17 @@
 package repo
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
+
+const gitCommandTimeout = 10 * time.Minute
 
 // Repository represents a valid Git repository.
 type Repository struct {
@@ -24,19 +28,25 @@ func (r *Repository) Dir() string {
 
 // Run a git command in r
 func (r *Repository) Run(args ...string) (string, error) {
-	return r.RunCmd(r.Command(args...))
+	cmd, cancel := r.Command(args...)
+	return r.RunCmd(cmd, cancel)
 }
 
 // Command creates an exec.Cmd to use to run in this Git Repo
-func (r *Repository) Command(args ...string) *exec.Cmd {
-	cmd := exec.Command("git", args...)
+// Forcefully adds a Command Context with a timeout set to gitCommandTimeout
+// as a failsafe against hanging git processes. This requires a CancelFunc
+// be passed back to the caller - see https://golang.org/pkg/os/exec/#CommandContext
+func (r *Repository) Command(args ...string) (*exec.Cmd, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), gitCommandTimeout)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = r.dir
-	return cmd
+	return cmd, cancel
 }
 
 // RunCmd runs cmd (that must have been created by Command), returning its output and error
-func (r *Repository) RunCmd(cmd *exec.Cmd) (string, error) {
+func (r *Repository) RunCmd(cmd *exec.Cmd, cancel context.CancelFunc) (string, error) {
 	log.Info("repo.Repository.Run, ", cmd.Args[1:])
+	defer cancel()
 	data, err := cmd.Output()
 	log.Info("repo.Repository.Run complete, ", err)
 	if err != nil && err.(*exec.ExitError) != nil {
@@ -55,8 +65,8 @@ func (r *Repository) RunSha(args ...string) (string, error) {
 }
 
 // RunCmdSha runs cmd (that must have been created by Command) expecting a sha
-func (r *Repository) RunCmdSha(cmd *exec.Cmd) (string, error) {
-	out, err := r.RunCmd(cmd)
+func (r *Repository) RunCmdSha(cmd *exec.Cmd, cancel context.CancelFunc) (string, error) {
+	out, err := r.RunCmd(cmd, cancel)
 	if err != nil {
 		return out, err
 	}

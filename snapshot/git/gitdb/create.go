@@ -24,16 +24,16 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snaps
 
 	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
 	// (e.g., HEAD) and we should just use the lower-level plumbing command?
-	cmd := repo.Command("add", "--all")
+	cmd, cancel := repo.Command("add", "--all")
 	cmd.Env = env
-	_, err := repo.RunCmd(cmd)
+	_, err := repo.RunCmd(cmd, cancel)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd = repo.Command("write-tree")
+	cmd, cancel = repo.Command("write-tree")
 	cmd.Env = env
-	sha, err := repo.RunCmdSha(cmd)
+	sha, err := repo.RunCmdSha(cmd, cancel)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +88,8 @@ func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error)
 		return nil, err
 	}
 
-	cmd := ingestRepo.Command("commit-tree", "-p", "HEAD", "-m", "__scoot_commit", s.SHA())
-	sha, err := ingestRepo.RunCmdSha(cmd)
+	cmd, cancel := ingestRepo.Command("commit-tree", "-p", "HEAD", "-m", "__scoot_commit", s.SHA())
+	sha, err := ingestRepo.RunCmdSha(cmd, cancel)
 	if err != nil {
 		return nil, err
 	}

@@ -30,8 +30,7 @@ import (
 // For testing.
 var Time StatsTime = DefaultStatsTime()
 
-var StatReportIntvl time.Duration = 500 *time.Millisecond
-
+var StatReportIntvl time.Duration = 500 * time.Millisecond
 
 // Stats users can either reference this global receiver or construct their own.
 var CurrentStatsReceiver StatsReceiver = NilStatsReceiver()

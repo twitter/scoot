@@ -36,12 +36,12 @@ func MakeServer(
 type StatsCollectInterval time.Duration
 
 type handler struct {
-	stat                 stats.StatsReceiver
-	run                  runner.Service
-	timeLastRpc          time.Time
-	mu                   sync.RWMutex
-	currentCmd           *runner.Command
-	currentRunID         runner.RunID
+	stat         stats.StatsReceiver
+	run          runner.Service
+	timeLastRpc  time.Time
+	mu           sync.RWMutex
+	currentCmd   *runner.Command
+	currentRunID runner.RunID
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
