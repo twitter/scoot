@@ -322,7 +322,6 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 	c.runningAbort = abortCh
 	c.runningID = cmdID.id
 	c.runningCmd = cmdID.cmd
-	// TODO never returned from fetch origin.
 	go func() {
 		for st := range statusUpdateCh {
 			log.Debugf("Queue pulled result:%+v, jobID:%s taskID=%s runID=%s\n",
