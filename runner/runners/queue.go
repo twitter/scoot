@@ -173,7 +173,7 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	resultCh := make(chan result)
 	c.reqCh <- runReq{cmd, resultCh}
 	result := <-resultCh
-	return result.st, result.err // TODO returning runner.RunStatus{} - empty??????? w/ an error
+	return result.st, result.err
 }
 
 func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error) {
