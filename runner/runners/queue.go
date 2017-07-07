@@ -173,7 +173,7 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	resultCh := make(chan result)
 	c.reqCh <- runReq{cmd, resultCh}
 	result := <-resultCh
-	return result.st, result.err
+	return result.st, result.err // TODO returning runner.RunStatus{} - empty??????? w/ an error
 }
 
 func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error) {
@@ -215,7 +215,7 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	} else {
 		for i, cmdID := range c.queue {
 			if run == cmdID.id {
-				log.Infof("Aborting queued run:%s, jobID:%s, taskID:%s", run, c.runningCmd.JobID, c.runningCmd.TaskID)
+				log.Infof("Aborting queued run:%s, jobID:%s, taskID:%s", run, cmdID.cmd.JobID, cmdID.cmd.TaskID)
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
 				c.statusManager.Update(runner.AbortStatus(
 					run,
@@ -241,7 +241,7 @@ func (c *QueueController) loop() {
 	updateRequested := false
 
 	tryUpdate := func() {
-		if updateDoneCh == nil && watchCh == nil {
+		if watchCh == nil && updateDoneCh == nil {
 			updateRequested = false
 			updateDoneCh = make(chan interface{})
 			go func() {
@@ -322,6 +322,7 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 	c.runningAbort = abortCh
 	c.runningID = cmdID.id
 	c.runningCmd = cmdID.cmd
+	// TODO never returned from fetch origin.
 	go func() {
 		for st := range statusUpdateCh {
 			log.Debugf("Queue pulled result:%+v, jobID:%s taskID=%s runID=%s\n",

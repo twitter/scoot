@@ -168,7 +168,7 @@ func TestUpdaterNoUpdate(t *testing.T) {
 // Task runs, because ultimately the appearance of Updates() is dependent on a time.Ticker,
 // which will invariably fail in go's race detector, but this is not a problem in practice
 func TestUpdaterPeriodic(t *testing.T) {
-	env := setup(1, time.Duration(10)*time.Millisecond, t)
+	env := setup(1, 10*time.Millisecond, t)
 	defer env.teardown()
 
 	env.u.WaitForUpdateRunning()
@@ -180,6 +180,23 @@ func TestUpdaterPeriodic(t *testing.T) {
 	if *env.uc != 2 {
 		t.Fatalf("Expected to get 2 updates, got: %d", *env.uc)
 	}
+}
+
+func TestAbortQueuedCommand(t *testing.T) {
+	env := setup(2, 10*time.Millisecond, t)
+	defer env.teardown()
+
+	// block the queue with an update
+	env.u.WaitForUpdateRunning()
+	run1 := assertRun(t, env.r, pending(), "complete 0")
+	assertRun(t, env.r, pending(), "complete 0")
+
+	if _, err := env.r.Abort(run1); err != nil {
+		t.Fatal(err)
+	}
+
+	env.u.Unpause()
+	assertWait(t, env.r, run1, aborted())
 }
 
 func setup(capacity int, interval time.Duration, t *testing.T) *env {
