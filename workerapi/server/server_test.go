@@ -46,7 +46,7 @@ func TestInitStats(t *testing.T) {
 
 	initDoneCh <- nil // trigger end of initialization
 
-	time.Sleep(2 * stats.StatReportIntvl + (20 * time.Millisecond))
+	time.Sleep(2*stats.StatReportIntvl + (20 * time.Millisecond))
 	// verify stats after initialization
 	if !stats.StatsOk("validating worker done initing stats ", statsRegistry, t,
 		map[string]stats.Rule{

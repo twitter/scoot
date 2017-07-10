@@ -215,7 +215,7 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	} else {
 		for i, cmdID := range c.queue {
 			if run == cmdID.id {
-				log.Infof("Aborting queued run:%s, jobID:%s, taskID:%s", run, c.runningCmd.JobID, c.runningCmd.TaskID)
+				log.Infof("Aborting queued run:%s, jobID:%s, taskID:%s", run, cmdID.cmd.JobID, cmdID.cmd.TaskID)
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
 				c.statusManager.Update(runner.AbortStatus(
 					run,
@@ -241,7 +241,7 @@ func (c *QueueController) loop() {
 	updateRequested := false
 
 	tryUpdate := func() {
-		if updateDoneCh == nil && watchCh == nil {
+		if watchCh == nil && updateDoneCh == nil {
 			updateRequested = false
 			updateDoneCh = make(chan interface{})
 			go func() {
