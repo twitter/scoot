@@ -182,7 +182,7 @@ func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error)
 		svcStatus.Initialized, svcStatus.Error, c.capacity-len(c.queue), c.capacity, c.runningID, cmd.JobID, cmd.TaskID)
 
 	if !svcStatus.Initialized {
-		return runner.RunStatus{Error: svcStatus.Error.Error()}, fmt.Errorf(QueueInitingMsg)
+		return runner.RunStatus{Error: QueueInitingMsg}, fmt.Errorf(QueueInitingMsg)
 	}
 	if len(c.queue) >= c.capacity {
 		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
