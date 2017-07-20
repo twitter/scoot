@@ -25,6 +25,7 @@ const (
 		1<<uint(FAILED) |
 		1<<uint(ABORTED) |
 		1<<uint(TIMEDOUT) |
+		1<<uint(UNKNOWN) |
 		1<<uint(BADREQUEST))
 	ALL_MASK = math.MaxUint64
 )
