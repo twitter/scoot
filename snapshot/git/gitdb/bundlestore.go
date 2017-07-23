@@ -152,7 +152,13 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	//
 	// error: pack-objects died
 	// so we pass it, but hope to remove it once the bug is fixed
-	if _, err := db.dataRepo.Run("-c", "core.packobjectedgesonlyshallow=0", "bundle", "create", bundleFilename, revList); err != nil {
+	if _, err := db.dataRepo.Run(
+		"-c", "core.packobjectedgesonlyshallow=0", // bundling may fail without this on some older git versions.
+		"-c", "pack.depth=0", // don't use object deltas in case the recipient is a shallow clone.
+		"bundle",
+		"create",
+		bundleFilename,
+		revList); err != nil {
 		return nil, err
 	}
 

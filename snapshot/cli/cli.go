@@ -276,8 +276,9 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
 	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
 
-	if _, err := ingestRepo.Run("-c",
-		"core.packobjectedgesonlyshallow=0",
+	if _, err := ingestRepo.Run(
+		"-c", "core.packobjectedgesonlyshallow=0", // bundling may fail without this on some older git versions.
+		"-c", "pack.depth=0", // don't use object deltas in case the recipient is a shallow clone.
 		"bundle",
 		"create",
 		bundleFilename,
