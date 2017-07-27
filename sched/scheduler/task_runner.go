@@ -6,7 +6,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -34,7 +33,7 @@ type taskRunner struct {
 	jobId  string
 	taskId string
 	task   sched.TaskDefinition
-	nodeId cluster.NodeId
+	nodeSt *nodeState
 
 	abortCh      chan bool        // Primary channel to check for aborts
 	queryAbortCh chan interface{} // Secondary channel to pass to blocking query.
@@ -58,7 +57,7 @@ func (t *taskError) Error() string {
 
 // This method blocks until all saga messages are logged and the task completes
 func (r *taskRunner) run() error {
-	log.Infof("Starting task - jobId: %s, taskId: %s, node: %s -> %v", r.jobId, r.taskId, r.nodeId, r.task)
+	log.Infof("Starting task - jobId: %s, taskId: %s, node: %s -> %v", r.jobId, r.taskId, r.nodeSt.node, r.task)
 	taskErr := &taskError{}
 
 	// Log StartTask Message to SagaLog
@@ -102,7 +101,7 @@ func (r *taskRunner) run() error {
 	}
 
 	log.Infof("End task - jobId: %s, taskId: %s, node: %s, log: %t, runStatus: %s, err: %v",
-		r.jobId, r.taskId, r.nodeId, shouldLog, taskErr.st, taskErr)
+		r.jobId, r.taskId, r.nodeSt.node, shouldLog, taskErr.st, taskErr)
 	if !shouldLog {
 		if taskErr != nil {
 			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
@@ -266,7 +265,8 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 func (r *taskRunner) abortRequested() (aborted bool, endTask bool) {
 	select {
 	case endTask := <-r.abortCh:
-		log.Infof("Abort requested, task - jobId: %s, taskId: %s, node: %s, endTask: %t", r.jobId, r.taskId, r.nodeId, endTask)
+		log.Infof("Abort requested, task - jobId: %s, taskId: %s, node: %s, endTask: %t",
+			r.jobId, r.taskId, r.nodeSt.node, endTask)
 		return true, endTask
 	default:
 		return false, false

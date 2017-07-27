@@ -306,12 +306,12 @@ func assign(
 		if nodeSt == nil {
 			wasRunning = killableTasks[0]
 			snapshotId = wasRunning.Def.SnapshotID
-			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeId]
+			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeSt.node.Id()]
 			killableTasks = killableTasks[1:]
 
 			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
 			log.Infof("jobId=%s, taskId=%s will preempt node=%s running jobId=%s, taskId=%s",
-				task.JobId, task.TaskId, nodeSt.node.Id(), wasRunning.JobId, wasRunning.TaskId)
+				task.JobId, task.TaskId, nodeSt.node, wasRunning.JobId, wasRunning.TaskId)
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
 		if _, ok := nodeGroups[snapshotId]; !ok {
@@ -321,7 +321,7 @@ func assign(
 		nodeGroups[snapshotId].busy[nodeId] = nodeSt
 		delete(nodeGroups[snapshotId].idle, nodeId)
 		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, cross-job-progress=%d/%d",
-			task.JobId, task.TaskId, nodeId, len(assignments), len(tasks))
+			task.JobId, task.TaskId, nodeSt.node, len(assignments), len(tasks))
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments
