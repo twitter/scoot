@@ -180,6 +180,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 		st, end, err = r.queryWithTimeout(id, cmdEndTime, includeRunning)
 		elapsed := elapsedRetryDuration + r.runnerRetryInterval
 		if (err != nil && elapsed >= r.runnerRetryTimeout) || st.State.IsDone() {
+			if st.State != runner.COMPLETE {
+				r.runner.Abort(id)
+			}
 			break
 		} else if err != nil {
 			log.Infof("Retrying query for jobId: %s, taskId: %s", r.jobId, r.taskId)
@@ -220,7 +223,6 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	sts, _, err := r.runner.Query(q, w)
 
 	if aborted, endTask := r.abortRequested(); aborted {
-		r.runner.Abort(id)
 		return runner.AbortStatus(id, runner.LogTags{JobID: r.jobId, TaskID: r.taskId}), endTask, nil
 	}
 	if err != nil {
