@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/mock/gomock"
+	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
@@ -45,6 +46,7 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 		jobId:  jobId,
 		taskId: taskId,
 		task:   task,
+		nodeSt: &nodeState{node: cluster.NewIdNode(jobId + "." + taskId)},
 	}
 }
 
@@ -275,6 +277,7 @@ func Test_runTaskWithQueryRetry(t *testing.T) {
 	runMock.EXPECT().Run(gomock.Any()).Return(runner.RunStatus{}, nil)
 	runMock.EXPECT().Query(gomock.Any(), gomock.Any()).Return(
 		[]runner.RunStatus{{}}, runner.ServiceStatus{}, queryErr).Times(2)
+	runMock.EXPECT().Abort(gomock.Any())
 
 	tr := get_testTaskRunner(s, runMock, "job1", "task1", sched.GenTask(), true, stats.NilStatsReceiver())
 	tr.runnerRetryTimeout = 3 * time.Millisecond

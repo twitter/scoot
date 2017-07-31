@@ -517,7 +517,6 @@ func (s *statefulScheduler) scheduleTasks() {
 		// Set up variables for async functions & callback
 		task := ta.task
 		nodeSt := ta.nodeSt
-		nodeId := nodeSt.node.Id()
 		jobId := task.JobId
 		taskId := task.TaskId
 		taskDef := task.Def
@@ -539,12 +538,12 @@ func (s *statefulScheduler) scheduleTasks() {
 			log.Infof(msg)
 			// Update jobState and clusterState here instead of in the async handler below.
 			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, errors.New(msg), preempted)
-			s.clusterState.taskCompleted(nodeId, flaky)
+			s.clusterState.taskCompleted(nodeSt.node.Id(), flaky)
 		}
 
 		// Mark Task as Started in the cluster
-		s.clusterState.taskScheduled(nodeId, jobId, taskId, taskDef.SnapshotID)
-		log.Infof("jobId:%s, taskId:%s, scheduled on node:%s\n", jobId, taskId, nodeId)
+		s.clusterState.taskScheduled(nodeSt.node.Id(), jobId, taskId, taskDef.SnapshotID)
+		log.Infof("jobId:%s, taskId:%s, scheduled on node:%s\n", jobId, taskId, nodeSt.node)
 
 		tRunner := &taskRunner{
 			saga:   sa,
@@ -560,7 +559,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			jobId:  jobId,
 			taskId: taskId,
 			task:   taskDef,
-			nodeId: nodeId,
+			nodeSt: nodeSt,
 
 			abortCh:      make(chan bool, 1),
 			queryAbortCh: make(chan interface{}, 1),
@@ -577,7 +576,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				//  so we only need to check jobId to determine preemption.
 				if nodeSt.runningJob != jobId {
 					log.Infof("Task preempted on node %s. jobId:%s taskId:%s --> jobId:%s taskId:%s. Skipping asyncRun cleanup",
-						nodeId, jobId, taskId, nodeSt.runningJob, nodeSt.runningTask)
+						nodeSt.node, jobId, taskId, nodeSt.runningJob, nodeSt.runningTask)
 					return
 				}
 
@@ -639,10 +638,10 @@ func (s *statefulScheduler) scheduleTasks() {
 				log.WithFields(log.Fields{
 					"jobId":  jobId,
 					"taskId": taskId,
-					"nodeId": nodeId,
+					"node":   nodeSt.node,
 					"flaky":  flaky,
 				}).Info("Freeing node, removed job.")
-				s.clusterState.taskCompleted(nodeId, flaky)
+				s.clusterState.taskCompleted(nodeSt.node.Id(), flaky)
 
 				total := 0
 				completed := 0
