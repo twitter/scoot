@@ -61,6 +61,7 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
 	log.Infof("run. id: %v", id)
 	defer func() {
+		inv.stat.Latency(stats.WorkerTaskLatency_ms).Time().Stop()
 		updateCh <- r
 		close(updateCh)
 	}()
@@ -172,6 +173,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.AbortStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	case <-timeoutCh:
 		p.Abort()
+		log.Infof("run timed out. %s", cmd.String())
 		return runner.TimeoutStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	case st = <-processCh:
 	}

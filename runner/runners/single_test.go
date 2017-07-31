@@ -130,15 +130,16 @@ func TestMemCap(t *testing.T) {
 	}
 }
 
-func TestDownloadCounter(t *testing.T) {
+func TestStats(t *testing.T) {
 	log.AddHook(hooks.NewContextHook())
 
 	statsReg := stats.NewFinagleStatsRegistry()
 	regFn := func() stats.StatsRegistry { return statsReg }
 	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
-	cmd := &runner.Command{Argv: []string{"ls"}, SnapshotID: "dummySnapshotId"}
+	args := []string{"sleep 50"}
+	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId"}
 	tmp, _ := temp.TempDirDefault()
-	e := os_execer.NewExecer()
+	e := execers.NewSimExecer()
 	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, stat)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
@@ -146,10 +147,13 @@ func TestDownloadCounter(t *testing.T) {
 
 	query := runner.Query{
 		AllRuns: true,
-		States:  runner.MaskForState(runner.DONE_MASK),
+		States:  runner.DONE_MASK,
 	}
 	// wait for the run to finish
-	r.Query(query, runner.Wait{Timeout: 5 * time.Second})
+	status, svcStatus, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second})
+	log.Infof("statusLen:%d", len(status))
+	log.Infof("svcStatus:%v", svcStatus)
+	log.Infof("err:%v:", err)
 
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
@@ -157,6 +161,45 @@ func TestDownloadCounter(t *testing.T) {
 			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
+			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+}
+
+func TestTimeout(t *testing.T) {
+	log.AddHook(hooks.NewContextHook())
+	logrusLevel, _ := log.ParseLevel("debug")
+	log.SetLevel(logrusLevel)
+
+	statsReg := stats.NewFinagleStatsRegistry()
+	regFn := func() stats.StatsRegistry { return statsReg }
+	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+	args := []string{"pause"}
+	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId", Timeout: 50 * time.Millisecond}
+	tmp, _ := temp.TempDirDefault()
+	e := execers.NewSimExecer()
+	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, stat)
+	if _, err := r.Run(cmd); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	query := runner.Query{
+		AllRuns: true,
+		States:  runner.DONE_MASK,
+	}
+	// wait for the run to finish
+	status, _, _ := r.Query(query, runner.Wait{Timeout: 20 * time.Second})
+	if len(status) != 1 {
+		t.Fatalf("expected 1 status entry, got %d", len(status))
+	}
+	if status[0].State != runner.TIMEDOUT {
+		t.Fatalf("expected timedout state, got %s", status[0].State.String())
+	}
+
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerTaskLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 50.0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}

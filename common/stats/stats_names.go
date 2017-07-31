@@ -430,12 +430,17 @@ const (
 	/*
 		the amount of time it takes the worker to put a run request on the worker's run queue
 	*/
-	WorkerServerRunLatency_ms = "runLatency_ms"
+	WorkerServerStartRunLatency_ms = "runLatency_ms"
 
 	/*
 		the number of run requests a worker has received
 	*/
 	WorkerServerRuns = "runs"
+
+	/*
+		The time it takes to run the task (including snapshot handling)
+	*/
+	WorkerTaskLatency_ms = "workerTaskLatency_ms"
 
 	/*
 		Time since the most recent run, status, abort, erase request

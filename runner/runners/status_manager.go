@@ -114,7 +114,7 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 
 // Query returns all RunStatus'es matching q, waiting as described by w, plus the overall service status.
 func (s *StatusManager) Query(q runner.Query, wait runner.Wait) (rs []runner.RunStatus, ss runner.ServiceStatus, e error) {
-	current, future, err := s.queryAndListen(q, wait.Timeout != 0)
+	current, listenerCh, err := s.queryAndListen(q, wait.Timeout != 0)
 	if err != nil || len(current) > 0 || wait.Timeout == 0 {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
@@ -129,7 +129,7 @@ func (s *StatusManager) Query(q runner.Query, wait runner.Wait) (rs []runner.Run
 	}
 
 	select {
-	case st := <-future:
+	case st := <-listenerCh:
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		return []runner.RunStatus{st}, s.svcStatus, nil
@@ -171,13 +171,14 @@ func (s *StatusManager) Erase(run runner.RunID) error {
 	return nil
 }
 
-// queryAndListen performs a query, returning the current results and optionally listens to the query
+// queryAndListen performs a query, returning the current results and optionally a channel for
+// listening for future results
 // returns:
 //   the current results
 //   a channel that will hold the next result (if current is empty and err is nil)
 //   error
 func (s *StatusManager) queryAndListen(q runner.Query, listen bool) (
-	current []runner.RunStatus, future chan runner.RunStatus, err error) {
+	current []runner.RunStatus, listenerCh chan runner.RunStatus, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
