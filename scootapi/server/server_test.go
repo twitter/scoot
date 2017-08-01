@@ -54,6 +54,7 @@ func Test_RequestCounters(t *testing.T) {
 	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond)) // wait to make sure stats are generated
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
+			stats.SchedStartingCounter:                    {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerRunJobCounter:                {Checker: stats.Int64EqTest, Value: 1},
 			stats.SchedServerRunJobLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SchedServerJobStatusCounter:             {Checker: stats.Int64EqTest, Value: 1},

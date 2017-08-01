@@ -47,6 +47,7 @@ type handler struct {
 func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
+	h.stat.Counter(stats.WorkerStartingCounter).Inc(1)
 	go h.stats()
 	return h
 }

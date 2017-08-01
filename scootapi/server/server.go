@@ -12,6 +12,7 @@ import (
 // saga coordinator and stats receivers.
 func NewHandler(scheduler scheduler.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	handler := &Handler{scheduler: scheduler, sagaCoord: sc, stat: stat}
+	stat.Counter(stats.SchedStartingCounter).Inc(1)
 	go stats.StartUptimeReporting(stat, stats.SchedUptime_ms)
 	return handler
 }

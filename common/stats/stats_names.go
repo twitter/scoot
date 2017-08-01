@@ -33,6 +33,11 @@ const (
 	BundlestoreDownloadCounter = "downloadCounter"
 
 	/*
+		number of times the bundlestore download (to the worker) failed
+	*/
+	BundlestoreDownloadErrCounter = "downloadErrCounter"
+
+	/*
 		number of times the bundlestore download (to the worker) succeeded
 	*/
 	BundlestoreDownloadOkCounter = "downloadOkCounter"
@@ -48,19 +53,24 @@ const (
 	BundlestoreServeOkCounter = "serveOkCounter"
 
 	/*
+		record when the Bundlestore service is starting
+	*/
+	BundlestoreStartingCounter = "bundlestoreStartingCounter"
+
+	/*
 		number of times a snapshot was uploaded to the bundlestore service
 	*/
 	BundlestoreUploadCounter = "uploadCounter"
 
 	/*
+		the number of bundlestore uploads that errored
+	*/
+	BundlestoreUploadErrCounter = "uploadErrCounter"
+
+	/*
 		number of times an upload is trying to overwrite an existing one
 	*/
 	BundlestoreUploadExistingCounter = "uploadExistingCounter"
-
-	/*
-		number of times an upload successfully overwrites an existing one
-	*/
-	BundlestoreUploadExistingOkCounter = "uploadExistingOkCounter"
 
 	/*
 		time to upload a snapshot to a bundlestore service
@@ -302,6 +312,11 @@ const (
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
 
 	/*
+		record when the scheduler service is starting
+	*/
+	SchedStartingCounter = "schedulerStartingCounter"
+
+	/*
 		the number of tasks that were scheduled to be started on nodes with the last
 		run of the scheduling algorithm
 		TODO- verify the description with Jason
@@ -436,6 +451,11 @@ const (
 		the number of run requests a worker has received
 	*/
 	WorkerServerRuns = "runs"
+
+	/*
+		record when a worker service is starting
+	*/
+	WorkerStartingCounter = "workerStartingCounter"
 
 	/*
 		The time it takes to run the task (including snapshot handling)

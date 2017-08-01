@@ -25,6 +25,7 @@ type Server struct {
 func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
 	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms)
+	scopedStat.Counter(stats.BundlestoreStartingCounter).Inc(1)
 
 	return &Server{s, ttl, scopedStat}
 }
@@ -55,6 +56,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	if err := s.checkBundleName(bundleName); err != nil {
 		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 		return
 	}
 	bundleData := req.Body
@@ -63,6 +65,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Infof("Exists err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error checking if bundle exists: %s", err), http.StatusInternalServerError)
+		s.stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 		return
 	}
 	if exists {
@@ -83,6 +86,7 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		if ttlTime, err := time.Parse(time.RFC1123, req.Header.Get(k)); err != nil {
 			log.Infof("TTL err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 			http.Error(w, fmt.Sprintf("Error parsing TTL: %s", err), http.StatusInternalServerError)
+			s.stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 			return
 		} else if ttl != nil {
 			ttl.TTL = ttlTime
@@ -94,13 +98,11 @@ func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	if err := s.store.Write(bundleName, bundleData, ttl); err != nil {
 		log.Infof("Write err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
+		s.stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 		return
 	}
 	fmt.Fprintf(w, "Successfully wrote bundle %s\n", bundleName)
 	s.stat.Counter(stats.BundlestoreUploadOkCounter).Inc(1)
-	if exists {
-		s.stat.Counter(stats.BundlestoreUploadExistingOkCounter).Inc(1)
-	}
 }
 
 func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
@@ -111,6 +113,7 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	if err := s.checkBundleName(bundleName); err != nil {
 		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
 
@@ -118,19 +121,22 @@ func (s *Server) HandleDownload(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Infof("Read err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
 		http.NotFound(w, req)
+		s.stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
 	if _, err := io.Copy(w, r); err != nil {
 		log.Infof("Copy err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error copying Bundle: %s", err), http.StatusInternalServerError)
+		s.stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
 	if err := r.Close(); err != nil {
 		log.Infof("Close err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
+		s.stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
-	s.stat.Counter(stats.BundlestoreDownloadOkCounter).Inc(1) // TODO errata metric - remove if unused
+	s.stat.Counter(stats.BundlestoreDownloadOkCounter).Inc(1)
 }
 
 // TODO(dbentley): comprehensive check if it's a legal bundle name. See README.md.
