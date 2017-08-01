@@ -286,7 +286,7 @@ func TestClean(t *testing.T) {
 	}
 
 	defer func() {
-		//os.RemoveAll(tmp.Dir)
+		os.RemoveAll(tmp.Dir)
 	}()
 
 	r, err := createRepo(tmp, "temp_repo")
