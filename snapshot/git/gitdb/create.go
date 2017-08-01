@@ -19,21 +19,16 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snaps
 	// This doesn't create a commit, or otherwise mess with repo state.
 
 	gitEnv := []string{"GIT_INDEX_FILE=" + index, "GIT_WORK_TREE=" + dir}
-	env := append(os.Environ(), gitEnv...)
 	log.Infof("Ingesting into %s, env=%s", repo.Dir(), gitEnv)
 
 	// TODO(dbentley): should we use update-index instead of add? Maybe add looks at repo state
 	// (e.g., HEAD) and we should just use the lower-level plumbing command?
-	cmd, cancel := repo.Command("add", "--all")
-	cmd.Env = env
-	_, err := repo.RunCmd(cmd, cancel)
+	_, err := repo.RunExtraEnv(gitEnv, "add", "--all")
 	if err != nil {
 		return nil, err
 	}
 
-	cmd, cancel = repo.Command("write-tree")
-	cmd.Env = env
-	sha, err := repo.RunCmdSha(cmd, cancel)
+	sha, err := repo.RunExtraEnvSha(gitEnv, "write-tree")
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +83,7 @@ func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error)
 		return nil, err
 	}
 
-	cmd, cancel := ingestRepo.Command("commit-tree", "-p", "HEAD", "-m", "__scoot_commit", s.SHA())
-	sha, err := ingestRepo.RunCmdSha(cmd, cancel)
+	sha, err := ingestRepo.RunSha("commit-tree", "-p", "HEAD", "-m", "__scoot_commit", s.SHA())
 	if err != nil {
 		return nil, err
 	}

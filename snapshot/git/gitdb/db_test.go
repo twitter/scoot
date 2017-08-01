@@ -279,6 +279,44 @@ func TestInitFails(t *testing.T) {
 	}
 }
 
+func TestClean(t *testing.T) {
+	tmp, err := temp.NewTempDir("", "db_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		//os.RemoveAll(tmp.Dir)
+	}()
+
+	r, err := createRepo(tmp, "temp_repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contents := "baz"
+	gitDir := filepath.Join(r.Dir(), ".git")
+	if err := writeFileText(r.Dir(), "foo.txt", contents); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFileText(gitDir, "index.lock", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(filepath.Join(gitDir, "index.lock")); err != nil {
+		t.Fatal(err)
+	}
+
+	r.CleanupKill()
+
+	if err := assertFileContents(r.Dir(), "foo.txt", contents); err == nil {
+		t.Fatal("Expected file foo.txt would not exist")
+	}
+	if _, err := os.Stat(filepath.Join(gitDir, "index.lock")); !os.IsNotExist(err) {
+		t.Fatalf("Expected .git/index.lock file would not exist: %v\n", err)
+	}
+}
+
 type bundleIniter struct {
 	mirror string
 	ro     *repo.Repository
