@@ -30,6 +30,7 @@ func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s.stat.Counter(stats.BundlestoreRequestCounter).Inc(1) // TODO errata metric - remove if unused
 	switch req.Method {
 	case "POST":
 		s.HandleUpload(w, req)
@@ -43,7 +44,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "only support POST and GET", http.StatusMethodNotAllowed)
 		return
 	}
-	s.stat.Counter(stats.BundlestoreServeOkCounter).Inc(1) // TODO errata metric - remove if unused
+	s.stat.Counter(stats.BundlestoreRequestOkCounter).Inc(1) // TODO errata metric - remove if unused
 }
 
 func (s *Server) HandleUpload(w http.ResponseWriter, req *http.Request) {

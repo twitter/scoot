@@ -42,15 +42,19 @@ const (
 	*/
 	BundlestoreDownloadOkCounter = "downloadOkCounter"
 
-
-	/* TODO - is this useful?
-	End of processing any bundlestore service request
+	/*
+	   bundlestore service request
 	*/
-	BundlestoreServeOkCounter = "serveOkCounter"
+	BundlestoreRequestCounter = "serveRequestCounter"
+
+	/*
+	   End of processing any bundlestore service request
+	*/
+	BundlestoreRequestOkCounter = "serveOkCounter"
 
 	/*
 		record the start of the bundlestore server
-	 */
+	*/
 	BundlestoreServerStartedGauge = "bundlestoreStartGauge"
 
 	/*
@@ -309,7 +313,7 @@ const (
 
 	/*
 		record the start of the scheduler server
-	 */
+	*/
 	SchedServerStartedGauge = "schedStartGauge"
 
 	/*
