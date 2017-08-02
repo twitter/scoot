@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 )
 
 const gitCommandTimeout = 10 * time.Minute
+const gitIndexLock = ".git/index.lock"
 
 // Repository represents a valid Git repository.
 type Repository struct {
@@ -28,27 +30,39 @@ func (r *Repository) Dir() string {
 
 // Run a git command in r
 func (r *Repository) Run(args ...string) (string, error) {
-	cmd, cancel := r.Command(args...)
-	return r.RunCmd(cmd, cancel)
+	cmd, ctx, cancel := r.Command(args...)
+	return r.RunCmd(cmd, ctx, cancel)
+}
+
+func (r *Repository) RunExtraEnv(extraEnv []string, args ...string) (string, error) {
+	cmd, ctx, cancel := r.Command(args...)
+	cmd.Env = append(cmd.Env, extraEnv...)
+	return r.RunCmd(cmd, ctx, cancel)
 }
 
 // Command creates an exec.Cmd to use to run in this Git Repo
 // Forcefully adds a Command Context with a timeout set to gitCommandTimeout
 // as a failsafe against hanging git processes. This requires a CancelFunc
 // be passed back to the caller - see https://golang.org/pkg/os/exec/#CommandContext
-func (r *Repository) Command(args ...string) (*exec.Cmd, context.CancelFunc) {
+func (r *Repository) Command(args ...string) (*exec.Cmd, context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), gitCommandTimeout)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = r.dir
-	return cmd, cancel
+	return cmd, ctx, cancel
 }
 
 // RunCmd runs cmd (that must have been created by Command), returning its output and error
-func (r *Repository) RunCmd(cmd *exec.Cmd, cancel context.CancelFunc) (string, error) {
+func (r *Repository) RunCmd(cmd *exec.Cmd, ctx context.Context, cancel context.CancelFunc) (string, error) {
 	log.Info("repo.Repository.Run, ", cmd.Args[1:])
 	defer cancel()
 	data, err := cmd.Output()
-	log.Info("repo.Repository.Run complete, ", err)
+
+	if ctx.Err() == context.DeadlineExceeded {
+		r.CleanupKill()
+		return string(data), ctx.Err()
+	}
+
+	log.Info("repo.Repository.Run complete. Err: ", err)
 	if err != nil && err.(*exec.ExitError) != nil {
 		log.Info("repo.Repository.Run error: ", string(err.(*exec.ExitError).Stderr))
 	}
@@ -65,8 +79,16 @@ func (r *Repository) RunSha(args ...string) (string, error) {
 }
 
 // RunCmdSha runs cmd (that must have been created by Command) expecting a sha
-func (r *Repository) RunCmdSha(cmd *exec.Cmd, cancel context.CancelFunc) (string, error) {
-	out, err := r.RunCmd(cmd, cancel)
+func (r *Repository) RunCmdSha(cmd *exec.Cmd, ctx context.Context, cancel context.CancelFunc) (string, error) {
+	out, err := r.RunCmd(cmd, ctx, cancel)
+	if err != nil {
+		return out, err
+	}
+	return validateSha(out)
+}
+
+func (r *Repository) RunExtraEnvSha(extraEnv []string, args ...string) (string, error) {
+	out, err := r.RunExtraEnv(extraEnv, args...)
 	if err != nil {
 		return out, err
 	}
@@ -108,4 +130,28 @@ func InitRepo(dir string) (*Repository, error) {
 		return nil, err
 	}
 	return NewRepository(dir)
+}
+
+// Cleanup actions to take after a git process had to be killed for whatever reason (like timeout).
+// This cleanup should not assume any state / be as safe as possible.
+func (r *Repository) CleanupKill() {
+	lockFile := path.Join(r.dir, gitIndexLock)
+	if _, err := os.Stat(lockFile); !os.IsNotExist(err) {
+		if err := os.Remove(lockFile); err != nil {
+			log.Errorf("Failed to remove git index lock file during cleanup. %s: %v\n", lockFile, err)
+		}
+	}
+
+	// Don't reuse higher-level public functions for cleanup
+	cmd := exec.Command("git", "reset", "--hard", "HEAD")
+	cmd.Dir = r.dir
+	if err := cmd.Run(); err != nil {
+		log.Errorf("Failed to run git reset during cleanup: %v\n", err)
+	}
+
+	cmd = exec.Command("git", "clean", "-f", "-f", "-d", "-x")
+	cmd.Dir = r.dir
+	if err := cmd.Run(); err != nil {
+		log.Errorf("Failed to run git clean during cleanup: %v\n", err)
+	}
 }

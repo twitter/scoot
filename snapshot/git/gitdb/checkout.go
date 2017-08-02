@@ -87,16 +87,12 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 
 	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir.Dir}
 
-	cmd, cancel := db.dataRepo.Command("read-tree", sha)
-	cmd.Env = append(cmd.Env, extraEnv...)
-	_, err = db.dataRepo.RunCmd(cmd, cancel)
+	_, err = db.dataRepo.RunExtraEnv(extraEnv, "read-tree", sha)
 	if err != nil {
 		return "", err
 	}
 
-	cmd, cancel = db.dataRepo.Command("checkout-index", "-a")
-	cmd.Env = append(cmd.Env, extraEnv...)
-	_, err = db.dataRepo.RunCmd(cmd, cancel)
+	_, err = db.dataRepo.RunExtraEnv(extraEnv, "checkout-index", "-a")
 	if err != nil {
 		return "", err
 	}
