@@ -42,10 +42,6 @@ const (
 	*/
 	BundlestoreDownloadOkCounter = "downloadOkCounter"
 
-	/*
-		Any bundlestore server request
-	*/
-	BundlestoreServeCounter = "serveCounter"
 
 	/* TODO - is this useful?
 	End of processing any bundlestore service request
@@ -53,9 +49,9 @@ const (
 	BundlestoreServeOkCounter = "serveOkCounter"
 
 	/*
-		record when the Bundlestore service is starting
-	*/
-	BundlestoreStartingCounter = "bundlestoreStartingCounter"
+		record the start of the bundlestore server
+	 */
+	BundlestoreServerStartedGauge = "bundlestoreStartGauge"
 
 	/*
 		number of times a snapshot was uploaded to the bundlestore service
@@ -312,9 +308,9 @@ const (
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
 
 	/*
-		record when the scheduler service is starting
-	*/
-	SchedStartingCounter = "schedulerStartingCounter"
+		record the start of the scheduler server
+	 */
+	SchedServerStartedGauge = "schedStartGauge"
 
 	/*
 		the number of tasks that were scheduled to be started on nodes with the last
@@ -455,7 +451,7 @@ const (
 	/*
 		record when a worker service is starting
 	*/
-	WorkerStartingCounter = "workerStartingCounter"
+	WorkerServerStartedGauge = "workerStartGauge"
 
 	/*
 		The time it takes to run the task (including snapshot handling)

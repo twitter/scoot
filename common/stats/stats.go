@@ -147,7 +147,7 @@ func NewCustomStatsReceiver(makeRegistry func() StatsRegistry, latched time.Dura
 	defaultStat := &defaultStatsReceiver{
 		makeRegistry: makeRegistry,
 		registry:     makeRegistry(),
-		precision:    time.Nanosecond,
+		precision:    time.Millisecond,
 	}
 	cancel := func() {}
 	if latched > 0 {
@@ -510,7 +510,8 @@ func (r *finagleStatsRegistry) marshalHistogram(
 var defaultPercentiles = []float64{0.5, 0.9, 0.95, 0.99, 0.999, 0.9999}
 var defaultPercentileLabels = []string{"p50", "p90", "p95", "p99", "p999", "p9999"}
 
-func StartUptimeReporting(stat StatsReceiver, statName string) {
+func StartUptimeReporting(stat StatsReceiver, statName string, serverStartGaugeName string) {
+	ReportServerRestart(stat, serverStartGaugeName)
 	startTime := time.Now()
 	ticker := time.NewTicker(time.Duration(StatReportIntvl))
 	for {
@@ -520,4 +521,12 @@ func StartUptimeReporting(stat StatsReceiver, statName string) {
 			stat.Gauge(statName).Update(int64(upTime))
 		}
 	}
+}
+
+func ReportServerRestart(stat StatsReceiver, statName string) {
+	stat.Gauge(statName).Update(int64(1))
+	go func(stat StatsReceiver, statName string) {
+		time.Sleep(1 *time.Minute)
+		stat.Gauge(statName).Update(0)
+	} (stat, statName)
 }

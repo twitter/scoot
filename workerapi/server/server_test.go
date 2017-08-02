@@ -34,7 +34,7 @@ func TestInitStats(t *testing.T) {
 	// verify stats during initialization
 	if !stats.StatsOk("validating worker still initing stats ", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("handler/%s", stats.WorkerStartingCounter):              {Checker: stats.Int64EqTest, Value: 1},
+			fmt.Sprintf("handler/%s", stats.WorkerServerStartedGauge):           {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("handler/%s", stats.WorkerFinalInitLatency_ms):          {Checker: stats.DoesNotExistTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveInitLatency_ms):         {Checker: stats.Int64GTTest, Value: 0},
 			fmt.Sprintf("handler/%s", stats.WorkerActiveRunsGauge):              {Checker: stats.DoesNotExistTest, Value: 0},

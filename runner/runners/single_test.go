@@ -199,7 +199,7 @@ func TestTimeout(t *testing.T) {
 
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
-			stats.WorkerTaskLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.WorkerTaskLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: (50.0)},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}

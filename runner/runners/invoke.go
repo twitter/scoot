@@ -60,11 +60,12 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 // NOTE: kind of gnarly since our filer implementation (gitdb) currently mutates the same worktree on every op.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
 	log.Infof("run. id: %v", id)
-	defer func() {
-		inv.stat.Latency(stats.WorkerTaskLatency_ms).Time().Stop()
+	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
+	defer func(taskTimer stats.Latency) {
+		taskTimer.Stop()
 		updateCh <- r
 		close(updateCh)
-	}()
+	}(taskTimer)
 	start := time.Now()
 
 	var co snapshot.Checkout

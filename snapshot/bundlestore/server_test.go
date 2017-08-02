@@ -91,7 +91,7 @@ func TestServer(t *testing.T) {
 	time.Sleep(2*stats.StatReportIntvl + (10 * time.Millisecond))
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreStartingCounter):       {Checker: stats.Int64EqTest, Value: 1},
+			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreServerStartedGauge):    {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadCounter):         {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadOkCounter):       {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadExistingCounter): {Checker: stats.Int64EqTest, Value: nil},

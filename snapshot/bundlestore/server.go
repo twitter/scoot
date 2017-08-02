@@ -24,14 +24,12 @@ type Server struct {
 // TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
 func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
-	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms)
-	scopedStat.Counter(stats.BundlestoreStartingCounter).Inc(1)
+	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge)
 
 	return &Server{s, ttl, scopedStat}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s.stat.Counter(stats.BundlestoreServeCounter).Inc(1) // TODO errata metric - remove if unused
 	switch req.Method {
 	case "POST":
 		s.HandleUpload(w, req)
