@@ -525,8 +525,8 @@ func StartUptimeReporting(stat StatsReceiver, statName string, serverStartGaugeN
 
 func ReportServerRestart(stat StatsReceiver, statName string) {
 	stat.Gauge(statName).Update(int64(1))
-	go func(stat StatsReceiver, statName string) {
+	go func() {
 		time.Sleep(1 * time.Minute)
 		stat.Gauge(statName).Update(0)
-	}(stat, statName)
+	}()
 }

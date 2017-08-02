@@ -131,11 +131,7 @@ func TestMemCap(t *testing.T) {
 }
 
 func TestStats(t *testing.T) {
-	log.AddHook(hooks.NewContextHook())
-
-	statsReg := stats.NewFinagleStatsRegistry()
-	regFn := func() stats.StatsRegistry { return statsReg }
-	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+	stat, statsReg := setupTest()
 	args := []string{"sleep 50"}
 	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId"}
 	tmp, _ := temp.TempDirDefault()
@@ -168,13 +164,7 @@ func TestStats(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	log.AddHook(hooks.NewContextHook())
-	logrusLevel, _ := log.ParseLevel("debug")
-	log.SetLevel(logrusLevel)
-
-	statsReg := stats.NewFinagleStatsRegistry()
-	regFn := func() stats.StatsRegistry { return statsReg }
-	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+	stat, statsReg := setupTest()
 	args := []string{"pause"}
 	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId", Timeout: 50 * time.Millisecond}
 	tmp, _ := temp.TempDirDefault()
@@ -218,4 +208,16 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	}
 	r := NewSingleRunner(sim, snapshots.MakeInvalidFiler(), nil, outputCreator, tmpDir, nil)
 	return r, sim
+}
+
+func setupTest() (stats.StatsReceiver, stats.StatsRegistry) {
+	log.AddHook(hooks.NewContextHook())
+	logrusLevel, _ := log.ParseLevel("debug")
+	log.SetLevel(logrusLevel)
+
+	statsReg := stats.NewFinagleStatsRegistry()
+	regFn := func() stats.StatsRegistry { return statsReg }
+	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+
+	return stat, statsReg
 }
