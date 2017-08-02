@@ -16,6 +16,7 @@ import (
 )
 
 const gitCommandTimeout = 10 * time.Minute
+const gitCleanupTimeout = 5 * time.Minute
 const gitIndexLock = ".git/index.lock"
 
 // Repository represents a valid Git repository.
@@ -143,14 +144,18 @@ func (r *Repository) CleanupKill() {
 	}
 
 	// Don't reuse higher-level public functions for cleanup
-	cmd := exec.Command("git", "reset", "--hard", "HEAD")
+	resetCtx, resetCancel := context.WithTimeout(context.Background(), gitCleanupTimeout)
+	cmd := exec.CommandContext(resetCtx, "git", "reset", "--hard", "HEAD")
 	cmd.Dir = r.dir
+	defer resetCancel()
 	if err := cmd.Run(); err != nil {
 		log.Errorf("Failed to run git reset during cleanup: %v\n", err)
 	}
 
-	cmd = exec.Command("git", "clean", "-f", "-f", "-d", "-x")
+	cleanCtx, cleanCancel := context.WithTimeout(context.Background(), gitCleanupTimeout)
+	cmd = exec.CommandContext(cleanCtx, "git", "clean", "-f", "-f", "-d", "-x")
 	cmd.Dir = r.dir
+	defer cleanCancel()
 	if err := cmd.Run(); err != nil {
 		log.Errorf("Failed to run git clean during cleanup: %v\n", err)
 	}
