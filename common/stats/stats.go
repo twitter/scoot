@@ -31,6 +31,7 @@ import (
 var Time StatsTime = DefaultStatsTime()
 
 var StatReportIntvl time.Duration = 500 * time.Millisecond
+var DefaultStartupGaugeSpikeLen time.Duration = 1 * time.Minute
 
 // Stats users can either reference this global receiver or construct their own.
 var CurrentStatsReceiver StatsReceiver = NilStatsReceiver()
@@ -510,8 +511,8 @@ func (r *finagleStatsRegistry) marshalHistogram(
 var defaultPercentiles = []float64{0.5, 0.9, 0.95, 0.99, 0.999, 0.9999}
 var defaultPercentileLabels = []string{"p50", "p90", "p95", "p99", "p999", "p9999"}
 
-func StartUptimeReporting(stat StatsReceiver, statName string, serverStartGaugeName string) {
-	ReportServerRestart(stat, serverStartGaugeName)
+func StartUptimeReporting(stat StatsReceiver, statName string, serverStartGaugeName string, startupGaugeSpikeLen time.Duration) {
+	ReportServerRestart(stat, serverStartGaugeName, startupGaugeSpikeLen)
 	startTime := time.Now()
 	ticker := time.NewTicker(time.Duration(StatReportIntvl))
 	for {
@@ -523,10 +524,10 @@ func StartUptimeReporting(stat StatsReceiver, statName string, serverStartGaugeN
 	}
 }
 
-func ReportServerRestart(stat StatsReceiver, statName string) {
+func ReportServerRestart(stat StatsReceiver, statName string, startupGaugeSpikeLen time.Duration) {
 	stat.Gauge(statName).Update(int64(1))
 	go func() {
-		time.Sleep(1 * time.Minute)
+		time.Sleep(startupGaugeSpikeLen)
 		stat.Gauge(statName).Update(0)
 	}()
 }

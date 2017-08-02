@@ -24,7 +24,7 @@ type Server struct {
 // TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
 func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
-	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge)
+	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 
 	return &Server{s, ttl, scopedStat}
 }

@@ -47,7 +47,7 @@ type handler struct {
 func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
-	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge)
+	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	go h.stats()
 	return h
 }
