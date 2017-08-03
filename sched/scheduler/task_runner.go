@@ -76,12 +76,15 @@ func (r *taskRunner) run() error {
 	completed := (st.State == runner.COMPLETE)
 	if err == nil && !completed {
 		switch st.State {
-		case runner.FAILED:
+		case runner.FAILED, runner.UNKNOWN:
+			// runnerErr can be thrift related, or in this case some other failure that's likely our fault.
 			err = fmt.Errorf(st.Error)
+			taskErr.runnerErr = err
 		default:
+			// resultErr can be (ABORTED,TIMEDOUT,BADREQUEST), which indicates a transient or user-related concern.
 			err = fmt.Errorf(st.State.String())
+			taskErr.resultErr = err
 		}
-		taskErr.resultErr = err
 	}
 
 	// We should write to sagalog if there's no error, or there's an error but the caller won't be retrying.
