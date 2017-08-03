@@ -59,8 +59,12 @@ func (sm StateMask) String() string {
 }
 
 // Helper Function to create StateMask that matches exactly state
-func MaskForState(state RunState) StateMask {
-	return 1 << uint(state)
+func MaskForState(state ...RunState) StateMask {
+	var mask StateMask
+	for _, s := range state {
+		mask = mask | (1 << uint(s))
+	}
+	return mask
 }
 
 // Query describes a query for RunStatuses.

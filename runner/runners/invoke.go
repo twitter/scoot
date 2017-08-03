@@ -244,7 +244,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		return status
 	case execer.FAILED:
-		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		// We treat failure here as a bad request since it's more likely a faulty cmd than something we did wrong.
+		return runner.BadRequestStatus(id, fmt.Errorf("error execing: %v", st.Error), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	default:
 		return runner.ErrorStatus(id, fmt.Errorf("unexpected exec state: %v", st.State), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	}
