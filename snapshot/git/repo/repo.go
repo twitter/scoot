@@ -142,12 +142,7 @@ func InitRepo(dir string) (*Repository, error) {
 // Cleanup actions to take after a git process had to be killed for whatever reason (like timeout).
 // This cleanup should not assume any state / be as safe as possible.
 func (r *Repository) CleanupKill() {
-	lockFile := path.Join(r.dir, gitIndexLock)
-	if _, err := os.Stat(lockFile); !os.IsNotExist(err) {
-		if err := os.Remove(lockFile); err != nil {
-			log.Errorf("Failed to remove git index lock file during cleanup. %s: %v\n", lockFile, err)
-		}
-	}
+	r.removeGitLockFile()
 
 	// Don't reuse higher-level public functions for cleanup
 	resetCtx, resetCancel := context.WithTimeout(context.Background(), gitCleanupTimeout)
@@ -158,11 +153,24 @@ func (r *Repository) CleanupKill() {
 		log.Errorf("Failed to run git reset during cleanup: %v\n", err)
 	}
 
+	// If we have to kill the reset command, which can timeout, we'll have another stale lock
+	r.removeGitLockFile()
+
+	// cleanup does not use or leave the lock file behind
 	cleanCtx, cleanCancel := context.WithTimeout(context.Background(), gitCleanupTimeout)
 	cmd = exec.CommandContext(cleanCtx, "git", "clean", "-f", "-f", "-d", "-x")
 	cmd.Dir = r.dir
 	defer cleanCancel()
 	if err := cmd.Run(); err != nil {
 		log.Errorf("Failed to run git clean during cleanup: %v\n", err)
+	}
+}
+
+func (r *Repository) removeGitLockFile() {
+	lockFile := path.Join(r.dir, gitIndexLock)
+	if _, err := os.Stat(lockFile); !os.IsNotExist(err) {
+		if err := os.Remove(lockFile); err != nil {
+			log.Errorf("Failed to remove git index lock file %s: %v\n", lockFile, err)
+		}
 	}
 }
