@@ -33,19 +33,29 @@ const (
 	BundlestoreDownloadCounter = "downloadCounter"
 
 	/*
+		number of times the bundlestore download (to the worker) failed
+	*/
+	BundlestoreDownloadErrCounter = "downloadErrCounter"
+
+	/*
 		number of times the bundlestore download (to the worker) succeeded
 	*/
 	BundlestoreDownloadOkCounter = "downloadOkCounter"
 
 	/*
-		Any bundlestore server request
+	   bundlestore service request
 	*/
-	BundlestoreServeCounter = "serveCounter"
+	BundlestoreRequestCounter = "serveRequestCounter"
 
-	/* TODO - is this useful?
-	End of processing any bundlestore service request
+	/*
+	   End of processing any bundlestore service request
 	*/
-	BundlestoreServeOkCounter = "serveOkCounter"
+	BundlestoreRequestOkCounter = "serveOkCounter"
+
+	/*
+		record the start of the bundlestore server
+	*/
+	BundlestoreServerStartedGauge = "bundlestoreStartGauge"
 
 	/*
 		number of times a snapshot was uploaded to the bundlestore service
@@ -53,14 +63,14 @@ const (
 	BundlestoreUploadCounter = "uploadCounter"
 
 	/*
+		the number of bundlestore uploads that errored
+	*/
+	BundlestoreUploadErrCounter = "uploadErrCounter"
+
+	/*
 		number of times an upload is trying to overwrite an existing one
 	*/
 	BundlestoreUploadExistingCounter = "uploadExistingCounter"
-
-	/*
-		number of times an upload successfully overwrites an existing one
-	*/
-	BundlestoreUploadExistingOkCounter = "uploadExistingOkCounter"
 
 	/*
 		time to upload a snapshot to a bundlestore service
@@ -302,6 +312,11 @@ const (
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
 
 	/*
+		record the start of the scheduler server
+	*/
+	SchedServerStartedGauge = "schedStartGauge"
+
+	/*
 		the number of tasks that were scheduled to be started on nodes with the last
 		run of the scheduling algorithm
 		TODO- verify the description with Jason
@@ -430,12 +445,22 @@ const (
 	/*
 		the amount of time it takes the worker to put a run request on the worker's run queue
 	*/
-	WorkerServerRunLatency_ms = "runLatency_ms"
+	WorkerServerStartRunLatency_ms = "runLatency_ms"
 
 	/*
 		the number of run requests a worker has received
 	*/
 	WorkerServerRuns = "runs"
+
+	/*
+		record when a worker service is starting
+	*/
+	WorkerServerStartedGauge = "workerStartGauge"
+
+	/*
+		The time it takes to run the task (including snapshot handling)
+	*/
+	WorkerTaskLatency_ms = "workerTaskLatency_ms"
 
 	/*
 		Time since the most recent run, status, abort, erase request

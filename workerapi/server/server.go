@@ -9,7 +9,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
@@ -48,6 +47,7 @@ type handler struct {
 func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
+	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	go h.stats()
 	return h
 }
@@ -144,9 +144,9 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 
 // Implements worker.thrift Worker.Run interface
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
-	defer h.stat.Latency(stats.WorkerServerRunLatency_ms).Time().Stop() // TODO errata metric - remove if unused
+	defer h.stat.Latency(stats.WorkerServerStartRunLatency_ms).Time().Stop()
 	h.stat.Counter(stats.WorkerServerRuns).Inc(1)
-	log.Infof("Worker trying to run cmd: %s", spew.Sdump(cmd))
+	log.Infof("Worker trying to run cmd: %s", cmd.String())
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)

@@ -8,15 +8,15 @@ import (
 
 func TestPrecisionChange(t *testing.T) {
 	stat := DefaultStatsReceiver().(*defaultStatsReceiver)
-	if stat.precision != time.Nanosecond {
+	if stat.precision != time.Millisecond {
 		t.Fatal("Default precision should be nanos.")
 	}
 
-	statp := stat.Precision(time.Millisecond).(*defaultStatsReceiver)
-	if stat.precision != time.Nanosecond {
+	statp := stat.Precision(time.Nanosecond).(*defaultStatsReceiver)
+	if stat.precision != time.Millisecond {
 		t.Fatal("Default precision should still nanos.")
 	}
-	if statp.precision != time.Millisecond {
+	if statp.precision != time.Nanosecond {
 		t.Fatal("New stat precision should be millis.")
 	}
 }
