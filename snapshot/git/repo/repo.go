@@ -37,6 +37,12 @@ func (r *Repository) Run(args ...string) (string, error) {
 
 func (r *Repository) RunExtraEnv(extraEnv []string, args ...string) (string, error) {
 	cmd, ctx, cancel := r.Command(args...)
+	// If cmd.Env is empty, it uses the current process's environment.
+	// If len(extraEnv) > 0, then we have to append both the current
+	// process's env and extraEnv to cmd.Env
+	if len(cmd.Env) == 0 && len(extraEnv) > 0 {
+		cmd.Env = os.Environ()
+	}
 	cmd.Env = append(cmd.Env, extraEnv...)
 	return r.RunCmd(cmd, ctx, cancel)
 }
