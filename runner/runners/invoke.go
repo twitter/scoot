@@ -171,9 +171,13 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	// Wait for process to complete (or cancel if we're told to)
 	select {
 	case <-abortCh:
+		stdout.Write([]byte(fmt.Sprintf("%s\n\nTask aborted: %v", marker, cmd.String())))
+		stderr.Write([]byte(fmt.Sprintf("$s\n\nTask aborted: %v", marker, cmd.String())))
 		p.Abort()
 		return runner.AbortStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	case <-timeoutCh:
+		stdout.Write([]byte(fmt.Sprintf("%s\n\nTask exceeded timeout %v: %v", marker, cmd.Timeout, cmd.String())))
+		stderr.Write([]byte(fmt.Sprintf("%s\n\nTask exceeded timeout %v: %v", marker, cmd.Timeout, cmd.String())))
 		p.Abort()
 		log.Infof("run timed out. %s", cmd.String())
 		return runner.TimeoutStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
