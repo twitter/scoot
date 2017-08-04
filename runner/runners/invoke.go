@@ -172,7 +172,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	select {
 	case <-abortCh:
 		stdout.Write([]byte(fmt.Sprintf("%s\n\nTask aborted: %v", marker, cmd.String())))
-		stderr.Write([]byte(fmt.Sprintf("$s\n\nTask aborted: %v", marker, cmd.String())))
+		stderr.Write([]byte(fmt.Sprintf("%s\n\nTask aborted: %v", marker, cmd.String())))
 		p.Abort()
 		return runner.AbortStatus(id, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	case <-timeoutCh:
