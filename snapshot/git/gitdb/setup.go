@@ -3,11 +3,11 @@ package gitdb
 import (
 	"time"
 
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/os/temp"
-	snap "github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/bundlestore"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/os/temp"
+	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 type module struct{}

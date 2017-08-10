@@ -1,8 +1,8 @@
 package snapshots
 
 import (
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot"
 )
 
 // Create a Checkouter that essentially does nothing, based on a static path

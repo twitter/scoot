@@ -28,7 +28,7 @@ get_deps() {
 }
 
 if [[ -z "${DEP_REPO:-}" ]]; then
-    DEP_REPO="github.com/scootdev/scoot"
+    DEP_REPO="github.com/twitter/scoot"
     scootdev="${GOPATH}/src/$(dirname ${DEP_REPO})"
     mkdir -p "${scootdev}" && cd "${scootdev}"
     git clone "https://${DEP_REPO}"

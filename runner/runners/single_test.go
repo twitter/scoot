@@ -10,14 +10,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	os_execer "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
+	os_execer "github.com/twitter/scoot/runner/execer/os"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 func TestRun(t *testing.T) {

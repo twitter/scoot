@@ -7,8 +7,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	snap "github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {

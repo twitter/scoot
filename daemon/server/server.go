@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/scootdev/scoot/daemon/protocol"
-	"github.com/scootdev/scoot/runner"
+	"github.com/twitter/scoot/daemon/protocol"
+	"github.com/twitter/scoot/runner"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )

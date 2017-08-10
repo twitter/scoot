@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/scootdev/scoot/ice"
+	"github.com/twitter/scoot/ice"
 )
 
 type fooDefaultConfig struct {

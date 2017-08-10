@@ -5,8 +5,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os"
 
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi"
 )
 
 const DefaultApiServerCount int = 3

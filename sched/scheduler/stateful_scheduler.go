@@ -10,14 +10,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 	uuid "github.com/nu7hatch/gouuid"
 
-	"github.com/scootdev/scoot/async"
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/workerapi"
+	"github.com/twitter/scoot/async"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/workerapi"
 )
 
 // Used to get proper logging from tests...

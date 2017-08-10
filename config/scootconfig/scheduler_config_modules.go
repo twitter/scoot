@@ -3,8 +3,8 @@ package scootconfig
 import (
 	"time"
 
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/sched/scheduler"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/sched/scheduler"
 )
 
 //TODO(jschiller): make these configurable.

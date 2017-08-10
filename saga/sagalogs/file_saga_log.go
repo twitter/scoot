@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/scootdev/scoot/saga"
+	"github.com/twitter/scoot/saga"
 )
 
 // Writes Saga Log to file system.  Not durable beyond machine failure

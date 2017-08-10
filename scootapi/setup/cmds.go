@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scootdev/scoot/os/temp"
+	"github.com/twitter/scoot/os/temp"
 )
 
 // Cmds runs commands for Cloud Scoot setup.

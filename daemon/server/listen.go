@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/scootdev/scoot/daemon/protocol"
+	"github.com/twitter/scoot/daemon/protocol"
 	"net"
 	"os"
 	"path"

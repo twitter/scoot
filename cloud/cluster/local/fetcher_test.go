@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster"
 )
 
 func TestFetcher(t *testing.T) {

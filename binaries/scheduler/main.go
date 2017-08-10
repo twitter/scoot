@@ -9,15 +9,15 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
 
-	"github.com/scootdev/scoot/binaries/scheduler/config"
-	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/config/scootconfig"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/scootapi/server"
+	"github.com/twitter/scoot/binaries/scheduler/config"
+	"github.com/twitter/scoot/common/endpoints"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/config/jsonconfig"
+	"github.com/twitter/scoot/config/scootconfig"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi/server"
 )
 
 func main() {

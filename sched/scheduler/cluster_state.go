@@ -7,8 +7,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/common/stats"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/stats"
 )
 
 const noJob = ""

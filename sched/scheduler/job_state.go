@@ -3,8 +3,8 @@ package scheduler
 import (
 	"time"
 
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
 )
 
 // Contains all the information for a job in progress
