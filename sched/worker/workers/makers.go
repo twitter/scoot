@@ -3,12 +3,12 @@ package workers
 import (
 	"time"
 
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/execer/execers"
+	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 // Makes a worker suitable for using as an in-memory worker.

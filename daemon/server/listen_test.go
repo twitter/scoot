@@ -1,7 +1,7 @@
 package server_test
 
 import (
-	"github.com/scootdev/scoot/daemon/server"
+	"github.com/twitter/scoot/daemon/server"
 	"io/ioutil"
 	"os"
 	"path"

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/scootdev/scoot/fs/perf"
+	"github.com/twitter/scoot/fs/perf"
 )
 
 var Trace bool

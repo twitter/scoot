@@ -10,8 +10,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/groupcache"
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/common/stats"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/stats"
 )
 
 //TODO: we should consider modifying google groupcache lib further to:

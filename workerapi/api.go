@@ -3,9 +3,9 @@ package workerapi
 import (
 	"time"
 
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/thrifthelpers"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 //

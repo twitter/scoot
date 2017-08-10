@@ -8,7 +8,7 @@ import tempfile
 
 
 gopath = re.split(":", os.environ['GOPATH'])[0]
-pypath = gopath + '/src/github.com/scootdev/scoot/daemon/protocol/python/scoot'
+pypath = gopath + '/src/github.com/twitter/scoot/daemon/protocol/python/scoot'
 cliPath = ['python', pypath + '/scoot.py']
 
 createSReq = ['snapshot', 'create']

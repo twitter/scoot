@@ -10,7 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/stats"
+	"github.com/twitter/scoot/common/stats"
 )
 
 type Server struct {

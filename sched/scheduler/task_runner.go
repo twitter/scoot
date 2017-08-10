@@ -6,11 +6,11 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/workerapi"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/workerapi"
 )
 
 const DeadLetterExitCode = -200

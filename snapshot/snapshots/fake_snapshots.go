@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot"
 )
 
 type FakeFile interface {

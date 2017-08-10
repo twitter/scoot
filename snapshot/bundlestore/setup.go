@@ -3,9 +3,9 @@ package bundlestore
 import (
 	"os"
 
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi"
 )
 
 // Make a File Store based on the environment, or in temp if unset

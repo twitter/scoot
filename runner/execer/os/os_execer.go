@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner/execer"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner/execer"
 
 	log "github.com/Sirupsen/logrus"
 )
