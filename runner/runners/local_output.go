@@ -85,6 +85,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		`<html>
 <script type="text/javascript">
   var prevLength = 0
+  var resourceId = ''
   checkAtBottom = function() {
     //scrolling: http://stackoverflow.com/a/22394544
     var scrollTop = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
@@ -101,14 +102,23 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     xhr.onreadystatechange = function () {
       var DONE=4, OK=200;
       if (xhr.readyState === DONE && xhr.status == OK) {
+        var id = xhr.getResponseHeader('X-Resource-Id')
+        var txt = xhr.responseText.substring(prevLength);
+        prevLength = xhr.responseText.length
+        if resourceId == ''
+          resourceId = id
+        if id != resourceId {
+          txt = Date() + ': Underlying resource changed! Quitting.'
+        }
         var wasAtBottom = checkAtBottom()
         var div = document.getElementById("output");
-        var txt = xhr.responseText.substring(prevLength);
         var content = document.createTextNode(txt);
         div.appendChild(content);
         if (wasAtBottom)
           gotoBottom()
-        prevLength = xhr.responseText.length
+        if id != resourceId {
+          throw new Error('ResourceId mismatch.')
+        }
       }
     }
     //TODO: request range to get delta.
@@ -135,6 +145,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("X-Resource-Id", filepath)
 		if r.URL.Query().Get("content") == "true" {
 			http.ServeContent(w, r, "", info.ModTime(), resource)
 		} else {
