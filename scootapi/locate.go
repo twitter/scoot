@@ -17,7 +17,8 @@ import (
 
 // Get the path of the file containing the address for scootapi to use
 func GetScootapiAddrPath() string {
-	return path.Join(os.Getenv("HOME"), ".cloudscootaddr")
+	optionalId := os.Getenv("SCOOT_ID") // Used to connect to a different set of scoot processes.
+	return path.Join(os.Getenv("HOME"), ".cloudscootaddr"+optionalId)
 }
 
 // Get the scootapi address (as host:port)

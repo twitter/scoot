@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"math"
 	"time"
 
 	"github.com/scootdev/scoot/saga"
@@ -28,12 +29,25 @@ type taskState struct {
 	TimeStarted   time.Time
 	NumTimesTried int
 	TaskRunner    *taskRunner
+	AvgDuration   time.Duration //average duration for previous runs with this taskId, if any.
+}
+
+type taskStatesByDuration []*taskState
+
+func (s taskStatesByDuration) Len() int {
+	return len(s)
+}
+func (s taskStatesByDuration) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s taskStatesByDuration) Less(i, j int) bool {
+	return s[i].AvgDuration < s[j].AvgDuration
 }
 
 // Creates a New Job State based on the specified Job and Saga
-// The jobState will reflect any previous progress made on this
-// job and logged to the Sagalog
-func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
+// The jobState will reflect any previous progress made on this job and logged to the Sagalog
+// Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
+func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]averageDuration) *jobState {
 	j := &jobState{
 		Job:            job,
 		Saga:           saga,
@@ -45,6 +59,10 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 	}
 
 	for _, taskDef := range job.Def.Tasks {
+		duration := taskDurations[taskDef.TaskID].duration
+		if duration == 0 {
+			duration = math.MaxInt64 // Set max duration if we don't have the average duration.
+		}
 		task := &taskState{
 			JobId:         job.Id,
 			TaskId:        taskDef.TaskID,
@@ -52,6 +70,7 @@ func newJobState(job *sched.Job, saga *saga.Saga) *jobState {
 			Status:        sched.NotStarted,
 			TimeStarted:   nilTime,
 			NumTimesTried: 0,
+			AvgDuration:   duration,
 		}
 		j.Tasks = append(j.Tasks, task)
 	}

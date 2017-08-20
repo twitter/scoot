@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -97,6 +98,16 @@ func (s *SchedulerConfig) GetNodeScaleFactor() float32 {
 	return float32(s.NumConfiguredNodes) / float32(s.SoftMaxSchedulableTasks)
 }
 
+type averageDuration struct {
+	count    int64
+	duration time.Duration
+}
+
+func (ad averageDuration) update(d time.Duration) {
+	ad.count++
+	ad.duration = ad.duration + time.Duration(int64(d-ad.duration)/ad.count)
+}
+
 type RunnerFactory func(node cluster.Node) runner.Service
 
 // Scheduler that keeps track of the state of running tasks & the cluster
@@ -120,8 +131,9 @@ type statefulScheduler struct {
 
 	// Scheduler State
 	clusterState   *clusterState
-	inProgressJobs []*jobState            // ordered list of inprogress jobId to job.
-	requestorMap   map[string][]*jobState // map of requestor to all its jobs. Default requestor="" is ok.
+	inProgressJobs []*jobState                // ordered list of inprogress jobId to job.
+	requestorMap   map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
+	taskDurations  map[string]averageDuration // map of taskId to running average of task duration.
 
 	// stats
 	stat stats.StatsReceiver
@@ -226,6 +238,7 @@ func NewStatefulScheduler(
 		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs: make([]*jobState, 0),
 		requestorMap:   make(map[string][]*jobState),
+		taskDurations:  make(map[string]averageDuration),
 		stat:           stat,
 	}
 
@@ -414,8 +427,11 @@ addLoop:
 		select {
 		case newJobMsg := <-s.addJobCh:
 			receivedJob = true
-			js := newJobState(newJobMsg.job, newJobMsg.saga)
+			js := newJobState(newJobMsg.job, newJobMsg.saga, s.taskDurations)
 			s.inProgressJobs = append(s.inProgressJobs, js)
+
+			// TODO(jschiller): associate related tasks, i.e. task retries that decorate the taskId?
+			sort.Sort(sort.Reverse(taskStatesByDuration(js.Tasks)))
 
 			req := newJobMsg.job.Def.Requestor
 			if _, ok := s.requestorMap[req]; !ok {
@@ -563,6 +579,8 @@ func (s *statefulScheduler) scheduleTasks() {
 
 			abortCh:      make(chan bool, 1),
 			queryAbortCh: make(chan interface{}, 1),
+
+			startTime: time.Now(),
 		}
 
 		// mark the task as started in the jobState and record its taskRunner
@@ -572,6 +590,12 @@ func (s *statefulScheduler) scheduleTasks() {
 			tRunner.run,
 			func(err error) {
 				defer rs.Release()
+				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
+				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
+					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
+					s.taskDurations[taskId].update(time.Now().Sub(tRunner.startTime))
+				}
+
 				// Tasks from the same job or related jobs will never preempt each other,
 				//  so we only need to check jobId to determine preemption.
 				if nodeSt.runningJob != jobId {

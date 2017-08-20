@@ -37,6 +37,8 @@ type taskRunner struct {
 
 	abortCh      chan bool        // Primary channel to check for aborts
 	queryAbortCh chan interface{} // Secondary channel to pass to blocking query.
+
+	startTime time.Time
 }
 
 // Return a custom error from run() so the scheduler has more context.
