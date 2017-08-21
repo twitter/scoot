@@ -78,12 +78,12 @@ func (r *taskRunner) run() error {
 	completed := (st.State == runner.COMPLETE)
 	if err == nil && !completed {
 		switch st.State {
-		case runner.FAILED, runner.UNKNOWN:
-			// runnerErr can be thrift related, or in this case some other failure that's likely our fault.
+		case runner.FAILED, runner.UNKNOWN, runner.BADREQUEST:
+			// runnerErr can be thrift related above, or in this case some other failure that's likely our fault.
 			err = fmt.Errorf(st.Error)
 			taskErr.runnerErr = err
 		default:
-			// resultErr can be (ABORTED,TIMEDOUT,BADREQUEST), which indicates a transient or user-related concern.
+			// resultErr can be (ABORTED,TIMEDOUT), which indicates a transient or user-related concern.
 			err = fmt.Errorf(st.State.String())
 			taskErr.resultErr = err
 		}
