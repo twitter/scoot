@@ -183,7 +183,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	for {
 		st, end, err = r.queryWithTimeout(id, cmdEndTime, includeRunning)
 		elapsed := elapsedRetryDuration + r.runnerRetryInterval
-		if (err != nil && elapsed >= r.runnerRetryTimeout) || st.State.IsDone() {
+		if (err != nil && elapsed >= r.runnerRetryTimeout) || (err == nil && st.State.IsDone()) {
 			if st.State != runner.COMPLETE {
 				r.runner.Abort(id)
 			}

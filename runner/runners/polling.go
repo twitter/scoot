@@ -43,8 +43,7 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 			return nil, service, errors.New("Aborted")
 		default:
 		}
-		st, svc, err := r.QueryNow(q)
-		service = svc
+		st, service, err := r.QueryNow(q)
 		if err != nil || len(st) > 0 {
 			return st, service, err
 		}

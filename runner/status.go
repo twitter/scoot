@@ -31,7 +31,7 @@ const (
 )
 
 func (p RunState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == UNKNOWN || p == BADREQUEST
 }
 
 func (p RunState) String() string {
