@@ -26,7 +26,7 @@ const (
 	ABORTED
 	// Operation timed out and was killed.
 	TIMEDOUT
-	// Invalid or error'd request. Original runner state not affected. Retry may work after mutation.
+	// Request rejected for reasons unrelated to the user.
 	BADREQUEST
 )
 

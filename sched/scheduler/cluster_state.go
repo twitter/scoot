@@ -84,6 +84,7 @@ func (ns *nodeState) ready() bool {
 
 // Stars a goroutine loop checking node readiness, waiting 'backoff' time between checks, and exiting if node is fully removed.
 func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
+	ns.readyCh = make(chan interface{})
 	go func() {
 		done := false
 		for !done {
@@ -302,10 +303,14 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			}
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
-			delete(c.suspendedNodes, ns.node.Id())
-			c.nodes[ns.node.Id()] = ns
+			// TimeFlaky should've been the only time* value set at this point, reset it.
+			// SnapshotId must be reset since it's used in taskScheduled() and may be gone from nodeGroups.
 			ns.timeFlaky = nilTime
-			log.Infof("Reinstating flaky node: %v (%#v), %s", ns.node.Id(), ns, c.status())
+			ns.snapshotId = ""
+			if c.readyFn != nil {
+				ns.startReadyLoop(c.readyFn)
+			}
+			log.Infof("Reinstating flaky node momentarily: %v (%#v), %s", ns.node.Id(), ns, c.status())
 		}
 	}
 

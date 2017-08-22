@@ -44,7 +44,7 @@ func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
 	// (1000 tasks/5 workers = average of 200 tasks/node)
 	// TODO(dbentley): lowered to 150 b/c I see an error in Travis where:
 	// TaskCountMap: map[node2:198 node1:209 node4:199 node3:166 node5:205]
-	// This is odd, because they only add up to 977 instead of 100, so 23 are being lost altogether.
+	// This is odd, because they only add up to 977 instead of 1000, so 23 are being lost altogether.
 	for nodeId, taskCount := range taskCountMap {
 		if taskCount < 150 || taskCount > 220 {
 			t.Fatalf(`Tasks were not evenly distributed across nodes.  Expected each node

@@ -119,7 +119,7 @@ func TestMemCap(t *testing.T) {
 
 	query := runner.Query{
 		AllRuns: true,
-		States:  runner.MaskForState(runner.BADREQUEST),
+		States:  runner.MaskForState(runner.FAILED),
 	}
 	// Travis may be slow, wait a super long time? This may also be necessary due to slow debug output from os_execer? TBD.
 	if runs, _, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {

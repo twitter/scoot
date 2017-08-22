@@ -21,10 +21,10 @@ enum RunStatusState {
   PENDING = 1      # Run scheduled but not yet started.
   RUNNING = 2      # Run is happening.
   COMPLETE = 3     # Succeeded or failed yielding an exit code. Only state with an exit code.
-  FAILED = 4       # Run mechanism failed and is no longer running. Retry may or may not work.
+  FAILED = 4       # Run mechanism failed and is no longer running.
   ABORTED = 5      # User requested that the run be killed.
   TIMEDOUT = 6     # Run timed out and was killed.
-  BADREQUEST = 7   # Invalid or error'd request. Retry may or may not work.
+  BADREQUEST = 7   # Request rejected for reasons unrelated to the user.
 }
 
 // Note, each worker has its own runId space which is unrelated to any external ids.
