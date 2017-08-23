@@ -11,13 +11,17 @@ import (
 // Where is Cloud Scoot running?
 // We store the answer (as host:port\nhost:port) in ~/.cloudscootaddr
 // There are two lines: first is the sched thrift addr, second is the bundlestore http addr.
+// The user may set SCOOT_ID=<ArbitraryId> to refer to a Scoot Cloud address other than the default.
+//  This is useful, for example, in dev testing of multiple *remote* Cloud Scoot instances.
+//
 // TODO: this will eventually store only the thrift addr and http addr
 //       for a single instance of apiserver, though several may be running.
 // TODO: can we get rid of this and exclusively rely on a Fetcher to find instances?
 
 // Get the path of the file containing the address for scootapi to use
 func GetScootapiAddrPath() string {
-	return path.Join(os.Getenv("HOME"), ".cloudscootaddr")
+	optionalId := os.Getenv("SCOOT_ID") // Used to connect to a different set of scoot processes.
+	return path.Join(os.Getenv("HOME"), ".cloudscootaddr"+optionalId)
 }
 
 // Get the scootapi address (as host:port)

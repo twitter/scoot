@@ -304,6 +304,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	cl.add("node3")
 	time.Sleep(2 * time.Millisecond)
 	cs.updateCluster()
+
 	if _, ok := cs.suspendedNodes["node3"]; ok {
 		t.Fatalf("revived node3 should have been removed from the suspended list")
 	} else if ns, ok := cs.nodes["node3"]; !ok {
@@ -311,16 +312,22 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	} else if ns.timeLost != nilTime {
 		t.Fatalf("revived node3 should've been marked not lost")
 	}
-	if _, ok := cs.nodes["node1"]; !ok {
-		t.Fatalf("flaky node1 should have been moved to cs.nodes")
-	} else if _, ok := cs.suspendedNodes["node1"]; ok {
-		t.Fatalf("flaky node1 should have been removed from suspended list")
-	}
+
 	if _, ok := cs.nodes["node2"]; ok {
 		t.Fatalf("lost node2 should not have been moved to cs.nodes")
 	} else if _, ok := cs.suspendedNodes["node2"]; ok {
 		t.Fatalf("lost node2 should have been removed from suspended list")
 	}
+
+	// Reinstating nodes is a two-step process, update the cluster one more time.
+	time.Sleep(2 * time.Millisecond)
+	cs.updateCluster()
+	if _, ok := cs.nodes["node1"]; !ok {
+		t.Fatalf("flaky node1 should have been moved to cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node1"]; ok {
+		t.Fatalf("flaky node1 should have been removed from suspended list")
+	}
+
 }
 
 type testCluster struct {

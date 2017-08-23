@@ -426,8 +426,10 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	}
 
 	// verify state changed appropriately
-	if s.clusterState.nodes["node1"].runningTask != noTask {
-		t.Errorf("Expected node1 to not have any running tasks")
+	for i := 0; i < 5; i++ {
+		if s.clusterState.nodes[cluster.NodeId(fmt.Sprintf("node%d", i+1))].runningTask != noTask {
+			t.Errorf("Expected nodes to not have any running tasks")
+		}
 	}
 
 	// advance scheduler until job gets marked completed
@@ -445,7 +447,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 		}
 	} else {
 		j := s.getJob(jobId)
-		for j == nil {
+		for j != nil {
 			s.step()
 			j = s.getJob(jobId)
 		}

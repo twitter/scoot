@@ -20,18 +20,18 @@ const (
 
 	// Succeeded or failed yielding an exit code. Only state with an exit code.
 	COMPLETE
-	// Run mechanism failed and run is no longer active. Retry may or may not work.
+	// Run mechanism failed in an expected way and is no longer running.
 	FAILED
 	// User requested that the run be killed.
 	ABORTED
 	// Operation timed out and was killed.
 	TIMEDOUT
-	// Invalid or error'd request. Original runner state not affected. Retry may work after mutation.
+	// Request rejected due to unexpected failure.
 	BADREQUEST
 )
 
 func (p RunState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == UNKNOWN || p == BADREQUEST
 }
 
 func (p RunState) String() string {
@@ -115,7 +115,7 @@ func TimeoutStatus(runID RunID, IDs LogTags) (r RunStatus) {
 	return r
 }
 
-func ErrorStatus(runID RunID, err error, IDs LogTags) (r RunStatus) {
+func FailedStatus(runID RunID, err error, IDs LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()

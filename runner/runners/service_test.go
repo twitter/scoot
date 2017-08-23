@@ -31,7 +31,7 @@ func running() runner.RunStatus {
 }
 
 func failed(errorText string) runner.RunStatus {
-	return runner.ErrorStatus(runner.RunID(""), fmt.Errorf(errorText), t)
+	return runner.FailedStatus(runner.RunID(""), fmt.Errorf(errorText), t)
 }
 
 func aborted() runner.RunStatus {

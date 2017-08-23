@@ -158,7 +158,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		status, _, err = h.run.Status(h.currentRunID)
 	}
 	if err != nil {
-		// Set invalid status and nil err to indicate handleable domain err.
+		// Set invalid status and nil err to indicate handleable internal err.
 		status.Error = err.Error()
 		status.State = runner.BADREQUEST
 	} else {

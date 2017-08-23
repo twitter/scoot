@@ -37,6 +37,8 @@ type taskRunner struct {
 
 	abortCh      chan bool        // Primary channel to check for aborts
 	queryAbortCh chan interface{} // Secondary channel to pass to blocking query.
+
+	startTime time.Time
 }
 
 // Return a custom error from run() so the scheduler has more context.
@@ -76,12 +78,12 @@ func (r *taskRunner) run() error {
 	completed := (st.State == runner.COMPLETE)
 	if err == nil && !completed {
 		switch st.State {
-		case runner.FAILED, runner.UNKNOWN:
-			// runnerErr can be thrift related, or in this case some other failure that's likely our fault.
+		case runner.FAILED, runner.UNKNOWN, runner.BADREQUEST:
+			// runnerErr can be thrift related above, or in this case some other failure that's likely our fault.
 			err = fmt.Errorf(st.Error)
 			taskErr.runnerErr = err
 		default:
-			// resultErr can be (ABORTED,TIMEDOUT,BADREQUEST), which indicates a transient or user-related concern.
+			// resultErr can be (ABORTED,TIMEDOUT), which indicates a transient or user-related concern.
 			err = fmt.Errorf(st.State.String())
 			taskErr.resultErr = err
 		}
@@ -181,7 +183,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	for {
 		st, end, err = r.queryWithTimeout(id, cmdEndTime, includeRunning)
 		elapsed := elapsedRetryDuration + r.runnerRetryInterval
-		if (err != nil && elapsed >= r.runnerRetryTimeout) || st.State.IsDone() {
+		if (err != nil && elapsed >= r.runnerRetryTimeout) || (err == nil && st.State.IsDone()) {
 			if st.State != runner.COMPLETE {
 				r.runner.Abort(id)
 			}
@@ -196,6 +198,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			// its status, so a watcher can go investigate. Strictly speaking this is optional
 			// in that we've already logged a start task and our only obligation is to log a
 			//corresponding end task.
+			log.Debugf("Update task - jobId: %s, taskId: %s, node: %s, runStatus: %s", r.jobId, r.taskId, r.nodeSt.node, st)
 			r.logTaskStatus(&st, saga.StartTask)
 			includeRunning = false
 		}
