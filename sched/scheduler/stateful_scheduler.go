@@ -98,6 +98,7 @@ func (s *SchedulerConfig) GetNodeScaleFactor() float32 {
 	return float32(s.NumConfiguredNodes) / float32(s.SoftMaxSchedulableTasks)
 }
 
+// Used to keep a running average of duration for a specific task.
 type averageDuration struct {
 	count    int64
 	duration time.Duration
@@ -133,7 +134,7 @@ type statefulScheduler struct {
 	clusterState   *clusterState
 	inProgressJobs []*jobState                // ordered list of inprogress jobId to job.
 	requestorMap   map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
-	taskDurations  map[string]averageDuration // map of taskId to running average of task duration.
+	taskDurations  map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
 
 	// stats
 	stat stats.StatsReceiver

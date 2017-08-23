@@ -59,7 +59,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 	}
 
 	for _, taskDef := range job.Def.Tasks {
-		duration := taskDurations[taskDef.TaskID].duration
+		duration := taskDurations[taskDef.TaskID].duration // This is safe since the map value is not a pointer.
 		if duration == 0 {
 			duration = math.MaxInt64 // Set max duration if we don't have the average duration.
 		}

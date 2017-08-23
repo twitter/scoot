@@ -94,9 +94,9 @@ func TestMemUsage(t *testing.T) {
 }
 
 func TestMemCap(t *testing.T) {
-	// Command to increase memory by 10MB every .1s.
+	// Command to increase memory by 10MB every .1s up to 5s.
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
-	str := `import time; exec("x=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
+	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
 	cmd := execer.Command{Argv: []string{"python", "-c", str}}
 	e := NewBoundedExecer(execer.Memory(5*1024*1024), stats.NilStatsReceiver())
 	process, err := e.Exec(cmd)
@@ -105,13 +105,13 @@ func TestMemCap(t *testing.T) {
 	}
 	defer process.Abort()
 	pid := process.(*osProcess).cmd.Process.Pid
-	// Sleep to give bounded execer time to kill process
-	time.Sleep(time.Millisecond * 500)
+	// Sleep to give bounded execer time to kill process and release memory
+	time.Sleep(time.Second)
 	var usage execer.Memory
 	if usage, err = e.memUsage(pid); err != nil {
 		t.Fatalf(err.Error())
 	}
-	if usage > 5*1024*1024 {
-		t.Fatalf("Expected usage to be less than 5MB, was: %dB", usage)
+	if usage != 0 {
+		t.Fatalf("Expected usage to be 0MB, was: %dB", usage)
 	}
 }

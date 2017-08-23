@@ -119,7 +119,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			downloadTimer.Stop()
 		}
 		if err != nil {
-			return runner.ErrorStatus(id, err, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, err, runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
@@ -128,13 +128,13 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
-		return runner.ErrorStatus(id, fmt.Errorf("could not create stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		return runner.FailedStatus(id, fmt.Errorf("could not create stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	}
 	defer stdout.Close()
 
 	stderr, err := inv.output.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
-		return runner.ErrorStatus(id, fmt.Errorf("could not create stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		return runner.FailedStatus(id, fmt.Errorf("could not create stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	}
 	defer stderr.Close()
 
@@ -151,7 +151,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		Stderr: stderr,
 	})
 	if err != nil {
-		return runner.ErrorStatus(id, fmt.Errorf("could not exec: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		return runner.FailedStatus(id, fmt.Errorf("could not exec: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	}
 
 	var timeoutCh <-chan time.Time
@@ -190,7 +190,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	case execer.COMPLETE:
 		tmp, err := inv.tmp.TempDir("invoke")
 		if err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion dir: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion dir: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
 		uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
 		inv.stat.Counter(stats.WorkerUploads).Inc(1)
@@ -203,18 +203,18 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stdoutName := "STDOUT"
 		stderrName := "STDERR"
 		if writer, err := os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if reader, err := os.Open(outPath); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
 		if writer, err := os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if reader, err := os.Open(errPath); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.ErrorStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
 
 		ingestCh := make(chan interface{})
@@ -234,7 +234,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		case res := <-ingestCh:
 			switch res.(type) {
 			case error:
-				return runner.ErrorStatus(id, fmt.Errorf("error ingesting results: %v", res), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+				return runner.FailedStatus(id, fmt.Errorf("error ingesting results: %v", res), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 			}
 			snapshotID = res.(string)
 		}
@@ -248,8 +248,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		return status
 	case execer.FAILED:
-		return runner.ErrorStatus(id, fmt.Errorf("error execing: %v", st.Error), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		return runner.FailedStatus(id, fmt.Errorf("error execing: %v", st.Error), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	default:
-		return runner.ErrorStatus(id, fmt.Errorf("unexpected exec state: %v", st), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 	}
 }
