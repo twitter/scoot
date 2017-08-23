@@ -198,6 +198,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			// its status, so a watcher can go investigate. Strictly speaking this is optional
 			// in that we've already logged a start task and our only obligation is to log a
 			//corresponding end task.
+			log.Debugf("Update task - jobId: %s, taskId: %s, node: %s, runStatus: %s", r.jobId, r.taskId, r.nodeSt.node, st)
 			r.logTaskStatus(&st, saga.StartTask)
 			includeRunning = false
 		}

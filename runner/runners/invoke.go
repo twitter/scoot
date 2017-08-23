@@ -202,19 +202,33 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		errPath := stderr.AsFile()
 		stdoutName := "STDOUT"
 		stderrName := "STDERR"
-		if writer, err := os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
-		} else if reader, err := os.Open(outPath); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		var writer *os.File
+		var reader *os.File
+		defer writer.Close()
+		defer reader.Close()
+
+		if writer, err = os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		} else if reader, err = os.Open(outPath); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
-		if writer, err := os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
-		} else if reader, err := os.Open(errPath); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+
+		writer.Close()
+		reader.Close()
+		if writer, err = os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+		} else if reader, err = os.Open(errPath); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err), runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID})
 		}
 
 		ingestCh := make(chan interface{})
