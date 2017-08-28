@@ -27,6 +27,8 @@ const DefaultReadyFnBackoff = 5 * time.Second
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //             from the sagalog, and restarts them.
 // DefaultTaskTimeout - default timeout for tasks, human readable ex: "30m"
+//
+// See scheduler.SchedulerConfig for comments on the remaining fields.
 type StatefulSchedulerConfig struct {
 	Type                    string
 	MaxRetriesPerTask       int

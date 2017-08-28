@@ -146,6 +146,7 @@ Loop:
 
 			// Find all jobs with the same requestor/tag combination and add their unscheduled tasks to 'unsched'.
 			// Also keep track of how many total tasks were requested for these jobs and how many are currently running.
+			// If later jobs in this group have a higher priority, we handle it by scheduling those first within the group.
 			numTasks := 0
 			numRunning := 0
 			numCompleted := 0
@@ -155,7 +156,11 @@ Loop:
 					numTasks += len(j.Tasks)
 					numCompleted += j.TasksCompleted
 					numRunning += j.TasksRunning
-					unsched = append(unsched, j.getUnScheduledTasks()...)
+					if j.Job.Def.Priority > p {
+						unsched = append(j.getUnScheduledTasks(), unsched...)
+					} else {
+						unsched = append(unsched, j.getUnScheduledTasks()...)
+					}
 					// Stop checking for unscheduled tasks if they exceed available nodes (we'll cap it below).
 					if len(unsched) >= numAvailNodes {
 						break
@@ -168,7 +173,7 @@ Loop:
 			}
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
-			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor())
+			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor(p))
 			numSchedulable := 0
 			if p == sched.P3 {
 				// Priority=3 jobs always get the maximum number of available nodes, as needed, and in fifo order.

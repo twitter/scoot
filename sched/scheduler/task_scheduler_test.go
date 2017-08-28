@@ -315,6 +315,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 
 	// Check for 5 P2, 3 P1, and 2 P0 tasks
+	NodeScaleAdjustment = 0
 	assignments, _ = getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 10 {
 		t.Fatalf("Expected ten tasks to be assigned, got %v", len(assignments))
