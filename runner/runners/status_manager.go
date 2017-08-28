@@ -64,7 +64,7 @@ func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	log.Debugf("StatusManager updating svc:%v", svcStatus)
+	log.Infof("StatusManager updating svc:%v", svcStatus)
 	s.svcStatus = svcStatus
 	return nil
 }
@@ -92,7 +92,7 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 		newStatus.StderrRef = oldStatus.StderrRef
 	}
 
-	log.Debugf("StatusManager is holding status --- JobID:%s, TaskID:%s, RunID:%s, Status:%s",
+	log.Infof("StatusManager is holding status --- JobID:%s, TaskID:%s, RunID:%s, Status:%s",
 		newStatus.JobID, newStatus.TaskID, newStatus.RunID, newStatus.State)
 	s.runs[newStatus.RunID] = newStatus
 

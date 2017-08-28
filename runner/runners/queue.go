@@ -328,7 +328,7 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 	c.runningCmd = cmdID.cmd
 	go func() {
 		for st := range statusUpdateCh {
-			log.Debugf("Queue pulled result:%+v, jobID:%s taskID=%s runID=%s\n",
+			log.Infof("Queue pulled result:%+v, jobID:%s taskID=%s runID=%s\n",
 				cmdID.cmd.JobID, cmdID.cmd.TaskID, cmdID.id, st)
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
