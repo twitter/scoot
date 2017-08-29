@@ -518,6 +518,27 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	sendKillRequest(jobId1, s)
 }
 
+func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
+	NodeScaleAdjustment = .5 // Setting this global setting explicitly for consistency.
+	s := &SchedulerConfig{SoftMaxSchedulableTasks: 1000}
+	numNodes := 20
+	numTasks := float32(1)
+	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 1 {
+		t.Errorf("Expected 1, got %d", n)
+	}
+
+	numTasks = float32(100)
+	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 2 {
+		t.Errorf("Expected 2, got %d", n)
+	}
+	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 1)); n != 3 {
+		t.Errorf("Expected 3, got %d", n)
+	}
+	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 2)); n != 4 {
+		t.Errorf("Expected 4, got %d", n)
+	}
+}
+
 func allTasksInState(jobName string, jobId string, s *statefulScheduler, status sched.Status) bool {
 	for _, task := range s.getJob(jobId).Tasks {
 		if task.Status != status {

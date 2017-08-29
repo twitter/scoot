@@ -35,6 +35,8 @@ func init() {
 }
 
 // Provide defaults for config settings that should never be uninitialized/zero.
+// These are reasonable defaults for a small cluster of around a couple dozen nodes.
+// FIXME(jschiller): overwrite SoftMaxSchedulableTasks at runtime if peak load is higher.
 
 // Nothing should run forever by default, use this timeout as a fallback.
 const DefaultDefaultTaskTimeout = 30 * time.Minute
@@ -44,19 +46,16 @@ const DefaultDefaultTaskTimeout = 30 * time.Minute
 const DefaultTaskTimeoutOverhead = 15 * time.Second
 
 // Number of different requestors that can run jobs at any given time.
-const DefaultMaxRequestors = 100
+const DefaultMaxRequestors = 10
 
-// Number of jobs any single requestor can have.
+// Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
 const DefaultMaxJobsPerRequestor = 100
 
-// Expected number of nodes. Should roughly correspond with the actual number of healthy nodes.
-const DefaultNumConfiguredNodes = 100
-
 // A reasonable maximum number of tasks we'd expect to queue.
-const DefaultSoftMaxSchedulableTasks = 10000
+const DefaultSoftMaxSchedulableTasks = 1000
 
-// The maximum number of nodes required to run a 'large' job in an acceptable amount of time.
-const DefaultLargeJobSoftMaxNodes = 50
+// Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
+var NodeScaleAdjustment = .5
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -88,14 +87,15 @@ type SchedulerConfig struct {
 	ReadyFnBackoff          time.Duration
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
-	NumConfiguredNodes      int
 	SoftMaxSchedulableTasks int
-	LargeJobSoftMaxNodes    int
 }
 
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
-func (s *SchedulerConfig) GetNodeScaleFactor() float32 {
-	return float32(s.NumConfiguredNodes) / float32(s.SoftMaxSchedulableTasks)
+// We account for priority by increasing the scale factor by an appropriate percentage.
+//  ex: p=0:scale*=1, p=1:scale*=1.5, p=2:scale*=2
+func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p sched.Priority) float32 {
+	sf := float32(numNodes) / float32(s.SoftMaxSchedulableTasks)
+	return sf * (1 + (float32(p) * float32(NodeScaleAdjustment)))
 }
 
 // Used to keep a running average of duration for a specific task.
@@ -217,14 +217,8 @@ func NewStatefulScheduler(
 	if config.MaxJobsPerRequestor == 0 {
 		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
 	}
-	if config.NumConfiguredNodes == 0 {
-		config.NumConfiguredNodes = DefaultNumConfiguredNodes
-	}
 	if config.SoftMaxSchedulableTasks == 0 {
 		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
-	}
-	if config.LargeJobSoftMaxNodes == 0 {
-		config.LargeJobSoftMaxNodes = DefaultLargeJobSoftMaxNodes
 	}
 
 	sched := &statefulScheduler{
@@ -402,7 +396,7 @@ checkLoop:
 				}
 				if _, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; ok && err == nil {
 					// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
-					// Not an error since we can consider priority to be a suggestion which we'll choose to ignore.
+					// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
 					for _, js := range s.requestorMap[checkJobMsg.jobDef.Requestor] {
 						if js.Job.Def.Tag == checkJobMsg.jobDef.Tag &&
 							js.Job.Def.Basis != checkJobMsg.jobDef.Basis &&
