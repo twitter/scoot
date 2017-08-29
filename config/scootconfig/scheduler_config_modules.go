@@ -38,9 +38,7 @@ type StatefulSchedulerConfig struct {
 	TaskTimeoutOverhead     string
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
-	NumConfiguredNodes      int
 	SoftMaxSchedulableTasks int
-	LargeJobSoftMaxNodes    int
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -75,8 +73,6 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 		ReadyFnBackoff:          DefaultReadyFnBackoff,
 		MaxRequestors:           c.MaxRequestors,
 		MaxJobsPerRequestor:     c.MaxJobsPerRequestor,
-		NumConfiguredNodes:      c.NumConfiguredNodes,
 		SoftMaxSchedulableTasks: c.SoftMaxSchedulableTasks,
-		LargeJobSoftMaxNodes:    c.LargeJobSoftMaxNodes,
 	}, nil
 }

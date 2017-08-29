@@ -18,9 +18,10 @@ type taskAssignment struct {
 
 type KillableTasks []*taskState
 
+// More recent tasks should come first in ascending sorts.
 func (k KillableTasks) Len() int           { return len(k) }
 func (k KillableTasks) Swap(i, j int)      { k[i], k[j] = k[j], k[i] }
-func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.Before(k[j].TimeStarted) }
+func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.After(k[j].TimeStarted) }
 
 // Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
@@ -40,9 +41,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 
 	if config == nil {
 		config = &SchedulerConfig{
-			NumConfiguredNodes:      DefaultNumConfiguredNodes,
 			SoftMaxSchedulableTasks: DefaultSoftMaxSchedulableTasks,
-			LargeJobSoftMaxNodes:    DefaultLargeJobSoftMaxNodes,
 		}
 	}
 
@@ -173,15 +172,15 @@ Loop:
 			}
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
-			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor(p))
+			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor(len(cs.nodes), p))
 			numSchedulable := 0
 			if p == sched.P3 {
 				// Priority=3 jobs always get the maximum number of available nodes, as needed, and in fifo order.
 				numSchedulable = min(len(unsched), numAvailNodes)
 			} else {
 				// Get the lesser of the number of unscheduled tasks and number of available nodes.
-				// Further, get the lesser of that, the healthy task load, and default number of nodes to run a large job.
-				numSchedulable = min(len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes)
+				// Further, get the lesser of that and the healthy task load.
+				numSchedulable = min(len(unsched), numAvailNodes, numScaledTasks)
 				// The number of tasks we can schedule is reduced by the number of tasks we're already running.
 				numSchedulable = max(0, numSchedulable-numRunning)
 			}
@@ -189,8 +188,8 @@ Loop:
 			if numSchedulable > 0 {
 				log.Infof("Job:%s, priority:%d, numTasks:%d, numSchedulable:%d, numRunning:%d, numCompleted:%d",
 					job.Job.Id, p, numTasks, numSchedulable, numRunning, numCompleted)
-				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d, largeJobMaxNodes:%d) - numRunning:%d",
-					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, config.LargeJobSoftMaxNodes, numRunning)
+				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d) - numRunning:%d",
+					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, numRunning)
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
 				numFromFree := min(numFree, numSchedulable)

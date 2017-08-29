@@ -35,6 +35,8 @@ func init() {
 }
 
 // Provide defaults for config settings that should never be uninitialized/zero.
+// These are reasonable defaults for a small cluster of around a couple dozen nodes.
+// FIXME(jschiller): overwrite SoftMaxSchedulableTasks at runtime if peak load is higher.
 
 // Nothing should run forever by default, use this timeout as a fallback.
 const DefaultDefaultTaskTimeout = 30 * time.Minute
@@ -49,14 +51,8 @@ const DefaultMaxRequestors = 10
 // Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
 const DefaultMaxJobsPerRequestor = 100
 
-// Expected number of nodes. Should roughly correspond with the actual number of healthy nodes.
-const DefaultNumConfiguredNodes = 20
-
-// The maximum number of nodes required to run a 'large' job in an acceptable amount of time.
-const DefaultLargeJobSoftMaxNodes = DefaultNumConfiguredNodes
-
 // A reasonable maximum number of tasks we'd expect to queue.
-const DefaultSoftMaxSchedulableTasks = 10000
+const DefaultSoftMaxSchedulableTasks = 1000
 
 // Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
 var NodeScaleAdjustment = .5
@@ -91,17 +87,14 @@ type SchedulerConfig struct {
 	ReadyFnBackoff          time.Duration
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
-	NumConfiguredNodes      int
 	SoftMaxSchedulableTasks int
-	LargeJobSoftMaxNodes    int
 }
 
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
-// We account for priority by increasing the default scale by an appropriate percentage.
+// We account for priority by increasing the scale factor by an appropriate percentage.
 //  ex: p=0:scale*=1, p=1:scale*=1.5, p=2:scale*=2
-//FIXME(jschiller): overwrite SoftMaxSchedulableTasks at runtime if peak load is higher.
-func (s *SchedulerConfig) GetNodeScaleFactor(p sched.Priority) float32 {
-	sf := float32(s.NumConfiguredNodes) / float32(s.SoftMaxSchedulableTasks)
+func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p sched.Priority) float32 {
+	sf := float32(numNodes) / float32(s.SoftMaxSchedulableTasks)
 	return sf * (1 + (float32(p) * float32(NodeScaleAdjustment)))
 }
 
@@ -224,14 +217,8 @@ func NewStatefulScheduler(
 	if config.MaxJobsPerRequestor == 0 {
 		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
 	}
-	if config.NumConfiguredNodes == 0 {
-		config.NumConfiguredNodes = DefaultNumConfiguredNodes
-	}
 	if config.SoftMaxSchedulableTasks == 0 {
 		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
-	}
-	if config.LargeJobSoftMaxNodes == 0 {
-		config.LargeJobSoftMaxNodes = config.NumConfiguredNodes
 	}
 
 	sched := &statefulScheduler{

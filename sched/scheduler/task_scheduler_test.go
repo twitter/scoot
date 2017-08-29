@@ -158,9 +158,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{
-		NumConfiguredNodes:      len(nodes), // GetNodeScaleFactor() is (NumConfiguredNodes / SoftMaxSchedulableTasks)
-		SoftMaxSchedulableTasks: 10,         // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
-		LargeJobSoftMaxNodes:    DefaultLargeJobSoftMaxNodes,
+		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 	}
 
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
@@ -293,9 +291,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 
 	req := map[string][]*jobState{"": js}
 	config := &SchedulerConfig{
-		NumConfiguredNodes:      len(nodes), // GetNodeScaleFactor() is (NumConfiguredNodes / SoftMaxSchedulableTasks)
-		SoftMaxSchedulableTasks: 50,         // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
-		LargeJobSoftMaxNodes:    DefaultLargeJobSoftMaxNodes,
+		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
 	}
 
 	// Check for all 10 P3 tasks
@@ -315,7 +311,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 
 	// Check for 5 P2, 3 P1, and 2 P0 tasks
-	NodeScaleAdjustment = 0
+	NodeScaleAdjustment = 0 //Reset this global setting to simplify testing here.
 	assignments, _ = getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 10 {
 		t.Fatalf("Expected ten tasks to be assigned, got %v", len(assignments))
