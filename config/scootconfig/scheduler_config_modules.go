@@ -27,6 +27,8 @@ const DefaultReadyFnBackoff = 5 * time.Second
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //             from the sagalog, and restarts them.
 // DefaultTaskTimeout - default timeout for tasks, human readable ex: "30m"
+//
+// See scheduler.SchedulerConfig for comments on the remaining fields.
 type StatefulSchedulerConfig struct {
 	Type                    string
 	MaxRetriesPerTask       int
@@ -36,9 +38,7 @@ type StatefulSchedulerConfig struct {
 	TaskTimeoutOverhead     string
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
-	NumConfiguredNodes      int
 	SoftMaxSchedulableTasks int
-	LargeJobSoftMaxNodes    int
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -73,8 +73,6 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 		ReadyFnBackoff:          DefaultReadyFnBackoff,
 		MaxRequestors:           c.MaxRequestors,
 		MaxJobsPerRequestor:     c.MaxJobsPerRequestor,
-		NumConfiguredNodes:      c.NumConfiguredNodes,
 		SoftMaxSchedulableTasks: c.SoftMaxSchedulableTasks,
-		LargeJobSoftMaxNodes:    c.LargeJobSoftMaxNodes,
 	}, nil
 }
