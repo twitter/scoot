@@ -55,7 +55,7 @@ const DefaultMaxJobsPerRequestor = 100
 const DefaultSoftMaxSchedulableTasks = 1000
 
 // Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
-var NodeScaleAdjustment = .5
+var NodeScaleAdjustment = 1.0
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -407,6 +407,12 @@ checkLoop:
 								js.Job.Def.Priority, m.jobDef.Requestor, m.jobDef.Tag, m.jobDef.Basis, m.jobDef.Priority, len(m.jobDef.Tasks))
 						}
 					}
+				} else if checkJobMsg.jobDef.Priority > sched.P1 {
+					// Priorities greater than 1 are disabled in job_state.go.
+					jd := checkJobMsg.jobDef
+					log.Infof("Overriding job priority %d to respect max priority of 1 (higher priority is untested and disabled)"+
+						"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+						jd.Priority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
 				}
 			}
 			checkJobMsg.resultCh <- err

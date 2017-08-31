@@ -155,7 +155,7 @@ Loop:
 					numTasks += len(j.Tasks)
 					numCompleted += j.TasksCompleted
 					numRunning += j.TasksRunning
-					if j.Job.Def.Priority > p {
+					if j.InsertionPriority > p {
 						unsched = append(j.getUnScheduledTasks(), unsched...)
 					} else {
 						unsched = append(unsched, j.getUnScheduledTasks()...)
