@@ -13,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
-const DeadLetterTrailer = " -> Canceling task, exceeded max tries."
+const DeadLetterTrailer = " -> Error(s) encountered, canceling task."
 
 func emptyStatusError(jobId string, taskId string, err error) string {
 	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %s", jobId, taskId, err)
