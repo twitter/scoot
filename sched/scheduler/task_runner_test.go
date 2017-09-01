@@ -175,8 +175,7 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	var retStatus runner.RunStatus
 
 	retStatus.State = runner.FAILED
-	retStatus.Error = emptyStatusError("job1", "task1", testErr)
-	retStatus.ExitCode = DeadLetterExitCode
+	retStatus.Error = emptyStatusError("job1", "task1", testErr) + DeadLetterTrailer
 	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(retStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
