@@ -15,9 +15,10 @@ import (
 )
 
 type runJobCmd struct {
-	streamName  string
-	snapshotId  string
-	jobFilePath string
+	streamName   string
+	snapshotId   string
+	jobFilePath  string
+	requestorTag string
 }
 
 func (c *runJobCmd) registerFlags() *cobra.Command {
@@ -28,6 +29,7 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 	r.Flags().StringVar(&c.streamName, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", "", "Repo checkout id: <master-sha> OR <backend>-<kind>(-<additional information>)+")
 	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from. Error if snapshot_id flag is also provided.")
+	r.Flags().StringVar(&c.requestorTag, "requestor_tag", "", "Tag can be specified by requestor in order to more easily trace a job through logs")
 	return r
 }
 
@@ -42,17 +44,20 @@ type CLIJobDef struct {
 	JobType              string
 	Requestor            string
 }
+
 type TaskDef struct {
-	Args       []string
-	SnapshotID string
-	JobID      string
-	TaskID     string
-	TimeoutMs  int32
+	Args         []string
+	SnapshotID   string
+	JobID        string
+	TaskID       string
+	RequestorTag string
+	TimeoutMs    int32
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Running on scoot, args:", args)
 	jobDef := scoot.NewJobDefinition()
+	jobDef.RequestorTag = &c.requestorTag
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
 		return errors.New("You must provide either args or a job definition")
@@ -71,7 +76,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		task.Command.Argv = args
 		task.SnapshotId = &c.snapshotId
 		task.TaskId = &taskId
-
+		task.RequestorTag = &c.requestorTag
 		jobDef.Tasks = []*scoot.TaskDefinition{task}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
@@ -122,7 +127,8 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 	}
 
 	fmt.Println(jobId.ID) // must go to std out in case caller looking in stdout for the results
-	log.Infof("JobID:%s\n", jobId.ID)
+	log.Infof("JobID: %s", jobId.ID)
+	log.Infof("Tag: %s", jobDef.RequestorTag)
 
 	return nil
 }

@@ -34,23 +34,29 @@ var tests = []struct {
 	//Cmd
 	{
 		0, cmdFromThrift, nil,
-		&worker.RunCommand{Argv: []string{}, Env: nil, SnapshotId: nil, TimeoutMs: nil, JobId: &deadbeefID, TaskId: &deadbeefID},
-		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero), JobID: deadbeefID, TaskID: deadbeefID},
+		&worker.RunCommand{Argv: []string{}, Env: nil, SnapshotId: nil, TimeoutMs: nil,
+			JobId: &deadbeefID, TaskId: &deadbeefID, RequestorTag: &deadbeefID},
+		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero),
+			JobID: deadbeefID, TaskID: deadbeefID, RequestorTag: deadbeefID},
 	},
 	{
 		1, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero, JobId: &nonemptystr, TaskId: &emptystr},
-		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero), JobID: nonemptystr, TaskID: emptystr},
+		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero,
+			JobId: &nonemptystr, TaskId: &emptystr, RequestorTag: &emptystr},
+		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero),
+			JobID: nonemptystr, TaskID: emptystr, RequestorTag: emptystr},
 	},
 	{
 		2, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero, JobId: &emptystr, TaskId: &emptystr},
-		&runner.Command{Argv: someCmd, EnvVars: someEnv,
-			Timeout: time.Duration(nonzero) * time.Millisecond, SnapshotID: nonemptystr, JobID: emptystr, TaskID: emptystr},
+		&worker.RunCommand{Argv: someCmd, Env: someEnv, SnapshotId: &nonemptystr, TimeoutMs: &nonzero,
+			JobId: &emptystr, TaskId: &emptystr, RequestorTag: &nonemptystr},
+		&runner.Command{Argv: someCmd, EnvVars: someEnv, SnapshotID: nonemptystr, Timeout: time.Duration(nonzero) * time.Millisecond,
+			JobID: emptystr, TaskID: emptystr, RequestorTag: nonemptystr},
 	},
 	{
 		3, cmdFromThrift, cmdToThrift,
-		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero, JobId: &emptystr, TaskId: &emptystr},
+		&worker.RunCommand{Argv: []string{}, Env: map[string]string{}, SnapshotId: &emptystr, TimeoutMs: &zero,
+			JobId: &emptystr, TaskId: &emptystr, RequestorTag: &emptystr},
 		&runner.Command{Argv: []string{}, EnvVars: map[string]string{}, Timeout: time.Duration(zero)},
 	},
 
@@ -58,7 +64,8 @@ var tests = []struct {
 	{
 		3, rsFromThrift, nil,
 		&worker.RunStatus{Status: worker.Status_UNKNOWN, RunId: "",
-			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil},
+			OutUri: nil, ErrUri: nil, Error: nil, ExitCode: nil,
+			JobId: nil, TaskId: nil, RequestorTag: nil},
 		runner.RunStatus{RunID: "", State: runner.UNKNOWN,
 			StdoutRef: "", StderrRef: "", ExitCode: 0, Error: ""},
 	},

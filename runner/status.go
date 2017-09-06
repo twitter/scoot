@@ -60,8 +60,9 @@ func (p RunState) String() string {
 }
 
 type LogTags struct {
-	JobID  string
-	TaskID string
+	JobID        string
+	TaskID       string
+	RequestorTag string
 }
 
 // Returned by the coordinator when a run request is made.
@@ -85,16 +86,16 @@ type RunStatus struct {
 }
 
 func (p RunStatus) String() string {
-	s := fmt.Sprintf("RunStatus -- RunID:%s # SnapshotID:%s # State:%s # JobID:%s # TaskID:%s",
-		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID)
+	s := fmt.Sprintf("RunStatus -- RunID: %s # SnapshotID: %s # State: %s # JobID: %s # TaskID: %s # RequestorTag: %s",
+		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID, p.RequestorTag)
 
 	if p.State == COMPLETE {
-		s += fmt.Sprintf(" # ExitCode:%d", p.ExitCode)
+		s += fmt.Sprintf(" # ExitCode: %d", p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
-		s += fmt.Sprintf(" # Error:%s", p.Error)
+		s += fmt.Sprintf(" # Error: %s", p.Error)
 	}
-	s += fmt.Sprintf(" # Stdout:%s # Stderr:%s", p.StdoutRef, p.StderrRef)
+	s += fmt.Sprintf(" # Stdout: %s # Stderr: %s", p.StdoutRef, p.StderrRef)
 
 	return s
 }

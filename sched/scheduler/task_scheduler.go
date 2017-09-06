@@ -186,10 +186,25 @@ Loop:
 			}
 
 			if numSchedulable > 0 {
-				log.Infof("Job:%s, priority:%d, numTasks:%d, numSchedulable:%d, numRunning:%d, numCompleted:%d",
-					job.Job.Id, p, numTasks, numSchedulable, numRunning, numCompleted)
-				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d) - numRunning:%d",
-					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, numRunning)
+				log.WithFields(
+					log.Fields{
+						"jobID":          job.Job.Id,
+						"priority":       p,
+						"numTasks":       numTasks,
+						"numSchedulable": numSchedulable,
+						"numRunning":     numRunning,
+						"numCompleted":   numCompleted,
+						"requestorTag":   job.Job.Def.RequestorTag,
+					}).Info("Schedulable tasks")
+				log.WithFields(
+					log.Fields{
+						"jobID":          job.Job.Id,
+						"unsched":        len(unsched),
+						"numAvailNodes":  numAvailNodes,
+						"numScaledTasks": numScaledTasks,
+						"numRunning":     numRunning,
+						"requestorTag":   job.Job.Def.RequestorTag,
+					}).Debug("Schedulable tasks")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
 				numFromFree := min(numFree, numSchedulable)
@@ -245,8 +260,13 @@ LoopRemaining:
 				nTasks := min(numFree, nodeQuota, len(*taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
-					log.Infof("Assigning %d additional free nodes for each remaining jobId=%s tasks with priority=%d (numAFree was %d)",
-						nTasks, (*taskList)[0].JobId, p, numFree)
+					log.WithFields(
+						log.Fields{
+							"nTasks":   nTasks,
+							"jobID":    (*taskList)[0].JobId,
+							"priority": p,
+							"numFree":  numFree,
+						}).Info("Assigning addtional free nodes for each remaining task in job")
 					numFree -= nTasks
 					tasks = append(tasks, (*taskList)[:nTasks]...)
 					// Remove jobs that have run out of runnable tasks.
@@ -272,9 +292,16 @@ LoopRemaining:
 	// - A node from the next killable task candidate.
 	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
 	if len(assignments) == len(tasks) {
-		log.Infof("Scheduled all tasks (%d)", len(tasks))
+		log.WithFields(
+			log.Fields{
+				"numTasks": len(tasks),
+			}).Info("Scheduled all tasks")
 	} else {
-		log.Infof("Unable to schedule all tasks, scheduled=%d/%d", len(assignments), len(tasks))
+		log.WithFields(
+			log.Fields{
+				"numAssignments": len(assignments),
+				"numTasks":       len(tasks),
+			}).Info("Unable to schedule all tasks")
 	}
 	return assignments, nodeGroups
 }
@@ -314,8 +341,15 @@ func assign(
 			killableTasks = killableTasks[1:]
 
 			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
-			log.Infof("jobId=%s, taskId=%s will preempt node=%s running jobId=%s, taskId=%s",
-				task.JobId, task.TaskId, nodeSt.node, wasRunning.JobId, wasRunning.TaskId)
+			log.WithFields(
+				log.Fields{
+					"jobID":                  task.JobId,
+					"taskID":                 task.TaskId,
+					"node":                   nodeSt.node,
+					"wasRunningJobID":        wasRunning.JobId,
+					"wasRunningTaskID":       wasRunning.TaskId,
+					"wasRunningRequestorTag": wasRunning.TaskRunner.requestorTag,
+				}).Info("Preempting node")
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
 		if _, ok := nodeGroups[snapshotId]; !ok {
@@ -324,8 +358,14 @@ func assign(
 		nodeId := nodeSt.node.Id()
 		nodeGroups[snapshotId].busy[nodeId] = nodeSt
 		delete(nodeGroups[snapshotId].idle, nodeId)
-		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, cross-job-progress=%d/%d",
-			task.JobId, task.TaskId, nodeSt.node, len(assignments), len(tasks))
+		log.WithFields(
+			log.Fields{
+				"jobID":          task.JobId,
+				"taskID":         task.TaskId,
+				"node":           nodeSt.node,
+				"numAssignments": len(assignments),
+				"numTasks":       len(tasks),
+			}).Info("Scheduled job")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments

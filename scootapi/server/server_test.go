@@ -90,7 +90,8 @@ func schedJobDefToScootAPIThriftJobDef(schedJobDef *sched.JobDefinition) (*scoot
 			Argv: schedTask.Argv,
 		}
 		taskId := schedTask.TaskID
-		scootTask := &scoot.TaskDefinition{Command: &cmd, TaskId: &taskId}
+		requestorTag := schedTask.RequestorTag
+		scootTask := &scoot.TaskDefinition{Command: &cmd, TaskId: &taskId, RequestorTag: &requestorTag}
 		scootTasks = append(scootTasks, scootTask)
 	}
 

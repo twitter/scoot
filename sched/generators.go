@@ -51,9 +51,11 @@ func GenJobDef(numTasks int) JobDefinition {
 // Generates a Random Job Definition, using the supplied Rand
 // with the specified number of Tasks
 func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
+	requestorTag := fmt.Sprintf("requestorTag:%s", testhelpers.GenRandomAlphaNumericString(rng))
 	jobDef := JobDefinition{
-		JobType: fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
-		Tasks:   make([]TaskDefinition, 0),
+		JobType:      fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
+		Tasks:        make([]TaskDefinition, 0),
+		RequestorTag: requestorTag,
 	}
 
 	// Generate tasks
@@ -63,6 +65,7 @@ func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
 		for {
 			if _, ok := seen[task.TaskID]; ok {
 				task.TaskID = fmt.Sprintf("taskName:%s", testhelpers.GenRandomAlphaNumericString(rng))
+				task.RequestorTag = requestorTag
 			} else {
 				break
 			}

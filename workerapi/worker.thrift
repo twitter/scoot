@@ -20,6 +20,7 @@ struct RunStatus {
   7: optional string snapshotId
   8: optional string jobId
   9: optional string taskId
+  10: optional string requestorTag
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.
@@ -36,6 +37,7 @@ struct RunCommand {
   4: optional i32 timeoutMs           # Kill the job if it hasn't completed in time (Status.TIMEOUT).
   5: optional string jobId
   6: optional string taskId
+  7: optional string requestorTag
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.

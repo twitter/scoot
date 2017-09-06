@@ -36,11 +36,13 @@ func genTask() gopter.Gen {
 	}, reflect.TypeOf([]string{}))
 	return args.FlatMap(func(args interface{}) gopter.Gen {
 		taskId := ""
+		requestorTag := ""
 		c := scoot.NewCommand()
 		c.Argv = args.([]string)
 		t := scoot.NewTaskDefinition()
 		t.Command = c
 		t.TaskId = &taskId
+		t.RequestorTag = &requestorTag
 		return gen.Const(t)
 	}, reflect.TypeOf(scoot.NewTaskDefinition()))
 }

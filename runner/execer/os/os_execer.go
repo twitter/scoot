@@ -93,7 +93,11 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
-		log.Errorf("Error finding pgid of pid %d, %v", pid, err)
+		log.WithFields(
+			log.Fields{
+				"pid":   pid,
+				"error": err,
+			}).Error("Error finding pgid")
 	} else {
 		defer cleanupProcs(pgid)
 	}
@@ -101,7 +105,10 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
 	memTicker := time.NewTicker(250 * time.Millisecond)
 	defer memTicker.Stop()
-	log.Infof("Monitoring memory for pid=%d", pid)
+	log.WithFields(
+		log.Fields{
+			"pid": pid,
+		}).Info("Monitoring memory")
 	for {
 		select {
 		case <-memTicker.C:
@@ -109,7 +116,10 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			// Process is complete
 			if p.result != nil {
 				p.mutex.Unlock()
-				log.Infof("Finished monitoring memory for pid=%d", pid)
+				log.WithFields(
+					log.Fields{
+						"pid": pid,
+					}).Info("Finished monitoring memory")
 				return
 			}
 			mem, _ := e.memUsage(pid)
@@ -117,12 +127,13 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			// Aborting process, above memCap
 			if mem >= e.memCap {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
-				log.WithFields(log.Fields{
-					"mem":    mem,
-					"memCap": e.memCap,
-					"args":   p.cmd.Args,
-					"pid":    pid,
-				}).Info(msg)
+				log.WithFields(
+					log.Fields{
+						"mem":    mem,
+						"memCap": e.memCap,
+						"args":   p.cmd.Args,
+						"pid":    pid,
+					}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: msg,
@@ -271,9 +282,16 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 
 // Kill process along with all child processes, assuming no child processes called setpgid
 func cleanupProcs(pgid int) (err error) {
-	log.Infof("Cleaning up pgid %d", pgid)
+	log.WithFields(
+		log.Fields{
+			"pgid": pgid,
+		}).Info("Cleaning up pgid")
 	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-		log.Errorf("Error cleaning up after pgid %d: %v", pgid, err)
+		log.WithFields(
+			log.Fields{
+				"pgid":  pgid,
+				"error": err,
+			}).Error("Error cleaning up pgid")
 	}
 	return err
 }

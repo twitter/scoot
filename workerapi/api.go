@@ -3,6 +3,8 @@ package workerapi
 import (
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -39,12 +41,14 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 }
 
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
+	log.Info("ThriftRunCommandToDomain %v", thrift)
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
 	snapshotID := ""
 	jobID := ""
 	taskID := ""
+	requestorTag := ""
 	if thrift.Argv != nil {
 		argv = thrift.Argv
 	}
@@ -63,7 +67,18 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.JobId != nil {
 		jobID = *thrift.JobId
 	}
-	return &runner.Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotID: snapshotID, JobID: jobID, TaskID: taskID}
+	if thrift.RequestorTag != nil {
+		requestorTag = *thrift.RequestorTag
+	}
+	return &runner.Command{
+		Argv:         argv,
+		EnvVars:      env,
+		Timeout:      timeout,
+		SnapshotID:   snapshotID,
+		JobID:        jobID,
+		TaskID:       taskID,
+		RequestorTag: requestorTag,
+	}
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
@@ -78,6 +93,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.JobId = &jobID
 	taskID := domain.TaskID
 	thrift.TaskId = &taskID
+	requestorTag := domain.RequestorTag
+	thrift.RequestorTag = &requestorTag
 	return thrift
 }
 
@@ -123,6 +140,9 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.TaskId != nil {
 		domain.TaskID = *thrift.TaskId
 	}
+	if thrift.RequestorTag != nil {
+		domain.RequestorTag = *thrift.RequestorTag
+	}
 	return domain
 }
 
@@ -162,6 +182,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.SnapshotId = copyString(domain.SnapshotID)
 	thrift.JobId = copyString(domain.JobID)
 	thrift.TaskId = copyString(domain.TaskID)
+	thrift.RequestorTag = copyString(domain.RequestorTag)
 	return thrift
 }
 
