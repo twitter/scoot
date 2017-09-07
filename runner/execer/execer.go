@@ -11,11 +11,11 @@ import "io"
 type Memory uint64
 
 type Command struct {
-	Argv []string
-	Dir  string
-
-	Stdout io.Writer
-	Stderr io.Writer
+	Argv         []string
+	Dir          string
+	Stdout       io.Writer
+	Stderr       io.Writer
+	RequestorTag string
 	// TODO(dbentley): environment variables?
 }
 
