@@ -13,7 +13,7 @@ import (
 	"github.com/scootdev/scoot/workerapi"
 )
 
-const DeadLetterExitCode = -200
+const DeadLetterTrailer = " -> Error(s) encountered, canceling task."
 
 func emptyStatusError(jobId string, taskId string, err error) string {
 	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %s", jobId, taskId, err)
@@ -107,7 +107,6 @@ func (r *taskRunner) run() error {
 		taskErr.st.Error = emptyStatusError(r.jobID, r.taskID, err)
 	}
 	if shouldDeadLetter {
-		taskErr.st.ExitCode = DeadLetterExitCode
 		log.WithFields(
 			log.Fields{
 				"jobID":        r.jobID,
@@ -115,7 +114,8 @@ func (r *taskRunner) run() error {
 				"sagaID":       r.saga.GetState().SagaId(),
 				"err":          taskErr,
 				"requestorTag": r.requestorTag,
-			}).Info("Error running job")
+			}).Info("Error running job, dead lettering task after max retries.")
+		taskErr.st.Error += DeadLetterTrailer
 	}
 
 	log.WithFields(
