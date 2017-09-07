@@ -25,20 +25,20 @@ func Test_FixedJob(t *testing.T) {
 
 func Test_SerializeNilJob(t *testing.T) {
 	if asByteArray, err := thrifthelpers.JsonSerialize(nil); err != nil || asByteArray != nil {
-		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+		t.Errorf("Error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
 	if asByteArray, err := thrifthelpers.BinarySerialize(nil); err != nil || asByteArray != nil {
-		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+		t.Errorf("Error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
 
 	job := schedthrift.Job{}
 	var emptyBytes []byte
 	if err := thrifthelpers.BinaryDeserialize(&job, emptyBytes); err != nil {
-		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+		t.Errorf("Error deserializing and empyt byte array %s\n", err.Error())
 	}
 
 	if err := thrifthelpers.JsonDeserialize(&job, emptyBytes); err != nil {
-		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+		t.Errorf("Error deserializing and empyt byte array %s\n", err.Error())
 	}
 }
 
@@ -72,7 +72,6 @@ func makeFixedSampleJob() *Job {
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool) bool {
-
 	var asByteArray []byte
 	var err error
 	thriftJob, _ := makeThriftJobFromDomainJob(domainJob)
@@ -95,9 +94,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			err = thrifthelpers.BinaryDeserialize(newThriftJob, asByteArray)
 		}
 		if err != nil {
-			log.Infof("serialize/deserialize test couldn't deserialize object:")
-			log.Info(domainJob)
-			log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
+			log.Infof("Serialize/deserialize test couldn't deserialize object: %+v", domainJob)
 			log.Infof("Error deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 			return false
 
@@ -105,7 +102,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		} else {
 			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
 			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
-				log.Infof("Serialize/deserialize test didn't return equivalent value:")
+				log.Info("Serialize/deserialize test didn't return equivalent value:")
 				log.Infof("Original job: %+v", domainJob)
 				log.Infof("Deserialized to: %+v", newDomainJob)
 				return false

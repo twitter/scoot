@@ -137,7 +137,6 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 		basis = thriftJobDef.GetBasis()
 		requestor = thriftJobDef.GetRequestor()
 		requestorTag = thriftJobDef.GetRequestorTag()
-
 	}
 
 	domainJobDef := JobDefinition{

@@ -46,7 +46,7 @@ type Command struct {
 }
 
 func (c Command) String() string {
-	s := fmt.Sprintf("Command -- SnapshotID: %s # Argv: %q # Timeout: %v # JobID: %s # TaskID: %s # RequestorTag: %s",
+	s := fmt.Sprintf("runner.Command -- SnapshotID: %s # Argv: %q # Timeout: %v # JobID: %s # TaskID: %s # RequestorTag: %s",
 		c.SnapshotID,
 		c.Argv,
 		c.Timeout,

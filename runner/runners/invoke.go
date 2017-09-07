@@ -63,7 +63,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		log.Fields{
 			"runID":        id,
 			"requestorTag": cmd.RequestorTag,
-		}).Info("run")
+		}).Info("*Invoker.run()")
 	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
 	defer func() {
 		taskTimer.Stop()

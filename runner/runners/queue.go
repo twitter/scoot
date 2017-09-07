@@ -361,11 +361,20 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 		for st := range statusUpdateCh {
 			log.WithFields(
 				log.Fields{
-					"jobID":        cmdID.cmd.JobID,
-					"taskID":       cmdID.cmd.TaskID,
-					"runID":        cmdID.id,
-					"status":       st,
-					"requestorTag": cmdID.cmd.RequestorTag,
+					"OGjobID":        cmdID.cmd.JobID,
+					"OGtaskID":       cmdID.cmd.TaskID,
+					"OGrunID":        cmdID.id,
+					"runID":          st.RunID,
+					"state":          st.State,
+					"stdout":         st.StdoutRef,
+					"stderr":         st.StderrRef,
+					"snapshotID":     st.SnapshotID,
+					"exitCode":       st.ExitCode,
+					"error":          st.Error,
+					"jobID":          st.JobID,
+					"taskID":         st.TaskID,
+					"requestorTag":   st.RequestorTag,
+					"OGrequestorTag": cmdID.cmd.RequestorTag,
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {

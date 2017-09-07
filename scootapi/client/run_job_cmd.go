@@ -128,7 +128,6 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 
 	fmt.Println(jobId.ID) // must go to std out in case caller looking in stdout for the results
 	log.Infof("JobID: %s", jobId.ID)
-	log.Infof("Tag: %s", jobDef.RequestorTag)
 
 	return nil
 }

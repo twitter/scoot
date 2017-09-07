@@ -60,7 +60,6 @@ func (t *taskError) Error() string {
 
 // This method blocks until all saga messages are logged and the task completes
 func (r *taskRunner) run() error {
-	log.Error(r.requestorTag)
 	log.WithFields(
 		log.Fields{
 			"jobID":        r.jobID,
@@ -121,13 +120,22 @@ func (r *taskRunner) run() error {
 
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.jobID,
-			"taskID":       r.taskID,
-			"node":         r.nodeSt.node,
-			"log":          shouldLog,
-			"runStatus":    taskErr.st,
-			"err":          taskErr,
-			"requestorTag": r.requestorTag,
+			"OGjobID":         r.jobID,
+			"OGtaskID":        r.taskID,
+			"node":            r.nodeSt.node,
+			"log":             shouldLog,
+			"runID":           taskErr.st.RunID,
+			"state":           taskErr.st.State,
+			"stdout":          taskErr.st.StdoutRef,
+			"stderr":          taskErr.st.StderrRef,
+			"snapshotID":      taskErr.st.SnapshotID,
+			"exitCode":        taskErr.st.ExitCode,
+			"error":           taskErr.st.Error,
+			"jobID":           taskErr.st.JobID,
+			"taskID":          taskErr.st.TaskID,
+			"requestorTag":    taskErr.st.RequestorTag,
+			"err":             taskErr,
+			"OG requestorTag": r.requestorTag,
 		}).Info("End task")
 	if !shouldLog {
 		if taskErr != nil {
@@ -165,8 +173,12 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	// If runner call returns a result indicating cmd error we fail and return.
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
 	log.WithFields(
-		log.Fields{})
-	log.Infof("Run() for jobId: %s taskId: %s", r.jobID, r.taskID)
+		log.Fields{
+			"jobID":        r.jobID,
+			"taskID":       r.taskID,
+			"requestorTag": r.requestorTag,
+		}).Info("runAndWait()")
+
 	for {
 		// was a job kill request received before we could start the run?
 		if aborted, endTask := r.abortRequested(); aborted {

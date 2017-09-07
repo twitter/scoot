@@ -203,7 +203,15 @@ func NewStatefulScheduler(
 			log.WithFields(
 				log.Fields{
 					"node":         node,
-					"status":       s,
+					"runID":        s.RunID,
+					"state":        s.State,
+					"stdout":       s.StdoutRef,
+					"stderr":       s.StderrRef,
+					"snapshotID":   s.SnapshotID,
+					"exitCode":     s.ExitCode,
+					"error":        s.Error,
+					"jobID":        s.JobID,
+					"taskID":       s.TaskID,
 					"requestorTag": s.RequestorTag,
 				}).Info("Aborting existing run on new node")
 			run.Abort(s.RunID)

@@ -6,7 +6,6 @@ import (
 )
 
 // Json behavior
-
 func JsonDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	if len(sourceBytes) == 0 {
 		return nil
@@ -36,7 +35,6 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 }
 
 // Binary behavior
-
 func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err error) {
 	if len(sourceBytes) == 0 {
 		return nil
@@ -54,7 +52,6 @@ func BinaryDeserialize(targetStruct thrift.TStruct, sourceBytes []byte) (err err
 }
 
 func BinarySerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
-
 	if sourceStruct == nil {
 		return nil, nil
 	}

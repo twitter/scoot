@@ -152,7 +152,7 @@ func TestStats(t *testing.T) {
 			"statusLen": len(status),
 			"svcStatus": svcStatus,
 			"err":       err,
-		})
+		}).Info("Received status")
 
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{

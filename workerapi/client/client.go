@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
-
 	"github.com/scootdev/scoot/common/dialer"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
@@ -73,8 +71,6 @@ func (c *simpleClient) Close() error {
 
 // Implements Scoot Worker API
 func (c *simpleClient) Run(cmd *runner.Command) (runner.RunStatus, error) {
-	log.Info("Running a command from workerapi client")
-	log.Info(cmd.String())
 	workerClient, err := c.dial()
 	if err != nil {
 		return runner.RunStatus{}, err

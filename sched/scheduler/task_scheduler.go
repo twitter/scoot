@@ -262,11 +262,12 @@ LoopRemaining:
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
 					log.WithFields(
 						log.Fields{
-							"nTasks":   nTasks,
-							"jobID":    (*taskList)[0].JobId,
-							"priority": p,
-							"numFree":  numFree,
-						}).Info("Assigning addtional free nodes for each remaining task in job")
+							"nTasks":       nTasks,
+							"jobID":        (*taskList)[0].JobId,
+							"priority":     p,
+							"numFree":      numFree,
+							"requestorTag": (*taskList)[0].Def.RequestorTag,
+						}).Info("Assigning additional free nodes for each remaining task in job")
 					numFree -= nTasks
 					tasks = append(tasks, (*taskList)[:nTasks]...)
 					// Remove jobs that have run out of runnable tasks.
@@ -294,13 +295,15 @@ LoopRemaining:
 	if len(assignments) == len(tasks) {
 		log.WithFields(
 			log.Fields{
-				"numTasks": len(tasks),
+				"numTasks":     len(tasks),
+				"requestorTag": tasks[0].Def.RequestorTag,
 			}).Info("Scheduled all tasks")
 	} else {
 		log.WithFields(
 			log.Fields{
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
+				"requestorTag":   tasks[0].Def.RequestorTag,
 			}).Info("Unable to schedule all tasks")
 	}
 	return assignments, nodeGroups
@@ -345,6 +348,7 @@ func assign(
 				log.Fields{
 					"jobID":                  task.JobId,
 					"taskID":                 task.TaskId,
+					"requestorTag":           task.Def.RequestorTag,
 					"node":                   nodeSt.node,
 					"wasRunningJobID":        wasRunning.JobId,
 					"wasRunningTaskID":       wasRunning.TaskId,
@@ -365,6 +369,7 @@ func assign(
 				"node":           nodeSt.node,
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
+				"requestorTag":   task.Def.RequestorTag,
 			}).Info("Scheduled job")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
