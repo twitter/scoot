@@ -120,22 +120,19 @@ func (r *taskRunner) run() error {
 
 	log.WithFields(
 		log.Fields{
-			"OGjobID":         r.jobID,
-			"OGtaskID":        r.taskID,
-			"node":            r.nodeSt.node,
-			"log":             shouldLog,
-			"runID":           taskErr.st.RunID,
-			"state":           taskErr.st.State,
-			"stdout":          taskErr.st.StdoutRef,
-			"stderr":          taskErr.st.StderrRef,
-			"snapshotID":      taskErr.st.SnapshotID,
-			"exitCode":        taskErr.st.ExitCode,
-			"error":           taskErr.st.Error,
-			"jobID":           taskErr.st.JobID,
-			"taskID":          taskErr.st.TaskID,
-			"requestorTag":    taskErr.st.RequestorTag,
-			"err":             taskErr,
-			"OG requestorTag": r.requestorTag,
+			"node":         r.nodeSt.node,
+			"log":          shouldLog,
+			"runID":        taskErr.st.RunID,
+			"state":        taskErr.st.State,
+			"stdout":       taskErr.st.StdoutRef,
+			"stderr":       taskErr.st.StderrRef,
+			"snapshotID":   taskErr.st.SnapshotID,
+			"exitCode":     taskErr.st.ExitCode,
+			"error":        taskErr.st.Error,
+			"jobID":        taskErr.st.JobID,
+			"taskID":       taskErr.st.TaskID,
+			"requestorTag": taskErr.st.RequestorTag,
+			"err":          taskErr,
 		}).Info("End task")
 	if !shouldLog {
 		if taskErr != nil {
