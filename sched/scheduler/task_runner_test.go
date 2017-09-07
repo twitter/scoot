@@ -44,8 +44,8 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 		runnerRetryInterval:   0,
 
 		task:   task,
-		jobId:  jobId,
-		taskId: taskId,
+		jobID:  jobId,
+		taskID: taskId,
 		nodeSt: &nodeState{node: cluster.NewIdNode(jobId + "." + taskId)},
 	}
 }

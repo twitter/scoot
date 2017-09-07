@@ -793,8 +793,7 @@ func (s *statefulScheduler) KillJob(jobID string) error {
 
 	log.WithFields(
 		log.Fields{
-			"jobID":        jobID,
-			"requestorTag": s.getJob(jobID).Job.Def.RequestorTag,
+			"jobID": jobID,
 		}).Info("KillJob requested")
 	responseCh := make(chan error, 1)
 	req := jobKillRequest{jobId: jobID, responseCh: responseCh}

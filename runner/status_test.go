@@ -16,7 +16,7 @@ func TestCommandStringSimple(t *testing.T) {
 		RequestorTag: "req-abcd1234",
 	}
 
-	expected := `Command -- SnapshotID: git-abcd1234 # Argv: ["./run" "a" "--command"] # Timeout: 10m0s` +
+	expected := `runner.Command -- SnapshotID: git-abcd1234 # Argv: ["./run" "a" "--command"] # Timeout: 10m0s` +
 		` # JobID: job-abcd1234 # TaskID: task-abcd1234 # RequestorTag: req-abcd1234 # Env:  GOOS=linux`
 	if s := c.String(); s != expected {
 		t.Errorf("Got:\n%s\nExpected:\n%s\n", s, expected)

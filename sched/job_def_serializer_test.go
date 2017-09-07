@@ -1,7 +1,6 @@
 package sched
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
