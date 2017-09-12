@@ -71,7 +71,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		return nil, err
 	}
 
-	proc := &osProcess{cmd: cmd, LogTags: tags.LogTags{RequestorTag: command.RequestorTag}}
+	proc := &osProcess{cmd: cmd, LogTags: command.LogTags}
 	if e.memCap > 0 {
 		go e.monitorMem(proc)
 	}

@@ -79,7 +79,8 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 		LogTags: tags.LogTags{
 			JobID:        jobID,
 			TaskID:       taskID,
-			RequestorTag: requestorTag},
+			RequestorTag: requestorTag,
+		},
 	}
 }
 

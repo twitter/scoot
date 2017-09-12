@@ -184,15 +184,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}).Debug("Stdout/Stderr output")
 
 	p, err := inv.exec.Exec(execer.Command{
-		Argv:   cmd.Argv,
-		Dir:    co.Path(),
-		Stdout: stdout,
-		Stderr: stderr,
-		LogTags: tags.LogTags{
-			RequestorTag: cmd.RequestorTag,
-			JobID:        cmd.JobID,
-			TaskID:       cmd.TaskID,
-		},
+		Argv:    cmd.Argv,
+		Dir:     co.Path(),
+		Stdout:  stdout,
+		Stderr:  stderr,
+		LogTags: cmd.LogTags,
 	})
 	if err != nil {
 		return runner.FailedStatus(id, fmt.Errorf("could not exec: %v", err),
