@@ -3,17 +3,21 @@ package runner
 import (
 	"testing"
 	"time"
+
+	"github.com/scootdev/scoot/common/log/tags"
 )
 
 func TestCommandStringSimple(t *testing.T) {
 	c := Command{
-		Argv:         []string{"./run", "a", "--command"},
-		EnvVars:      map[string]string{"GOOS": "linux"},
-		Timeout:      10 * time.Minute,
-		SnapshotID:   "git-abcd1234",
-		JobID:        "job-abcd1234",
-		TaskID:       "task-abcd1234",
-		RequestorTag: "req-abcd1234",
+		Argv:    []string{"./run", "a", "--command"},
+		EnvVars: map[string]string{"GOOS": "linux"},
+		Timeout: 10 * time.Minute,
+		LogTags: tags.LogTags{
+			JobID:        "job-abcd1234",
+			TaskID:       "task-abcd1234",
+			RequestorTag: "req-abcd1234",
+		},
+		SnapshotID: "git-abcd1234",
 	}
 
 	expected := `runner.Command -- SnapshotID: git-abcd1234 # Argv: ["./run" "a" "--command"] # Timeout: 10m0s` +

@@ -6,6 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -30,11 +31,9 @@ type taskRunner struct {
 	runnerRetryTimeout    time.Duration // How long to keep retrying a runner req
 	runnerRetryInterval   time.Duration // How long to sleep between runner req retries.
 
-	jobID        string
-	taskID       string
-	requestorTag string
-	task         sched.TaskDefinition
-	nodeSt       *nodeState
+	tags.LogTags
+	task   sched.TaskDefinition
+	nodeSt *nodeState
 
 	abortCh      chan bool        // Primary channel to check for aborts
 	queryAbortCh chan interface{} // Secondary channel to pass to blocking query.
@@ -62,11 +61,11 @@ func (t *taskError) Error() string {
 func (r *taskRunner) run() error {
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.jobID,
-			"taskID":       r.taskID,
+			"jobID":        r.JobID,
+			"taskID":       r.TaskID,
 			"node":         r.nodeSt.node,
 			"task":         r.task,
-			"requestorTag": r.requestorTag,
+			"requestorTag": r.RequestorTag,
 		}).Info("Starting task")
 	taskErr := &taskError{}
 
@@ -104,16 +103,16 @@ func (r *taskRunner) run() error {
 	// Update taskErr state if it's empty or if we're doing deadletter..
 	if taskErr.st.State == runner.UNKNOWN {
 		taskErr.st.State = runner.FAILED
-		taskErr.st.Error = emptyStatusError(r.jobID, r.taskID, err)
+		taskErr.st.Error = emptyStatusError(r.JobID, r.TaskID, err)
 	}
 	if shouldDeadLetter {
 		log.WithFields(
 			log.Fields{
-				"jobID":        r.jobID,
-				"taskID":       r.taskID,
+				"jobID":        r.JobID,
+				"taskID":       r.TaskID,
 				"sagaID":       r.saga.GetState().SagaId(),
 				"err":          taskErr,
-				"requestorTag": r.requestorTag,
+				"requestorTag": r.RequestorTag,
 			}).Info("Error running job, dead lettering task after max retries.")
 		taskErr.st.Error += DeadLetterTrailer
 	}
@@ -164,27 +163,27 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	var err error
 	var id runner.RunID
 	var end bool
-	cmd.TaskID = r.taskID
-	cmd.JobID = r.jobID
+	cmd.TaskID = r.TaskID
+	cmd.JobID = r.JobID
 	// If runner call returns an error then we treat it as an infrastructure error and will repeatedly retry.
 	// If runner call returns a result indicating cmd error we fail and return.
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.jobID,
-			"taskID":       r.taskID,
-			"requestorTag": r.requestorTag,
+			"jobID":        r.JobID,
+			"taskID":       r.TaskID,
+			"requestorTag": r.RequestorTag,
 		}).Info("runAndWait()")
 
 	for {
 		// was a job kill request received before we could start the run?
 		if aborted, endTask := r.abortRequested(); aborted {
-			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobID, TaskID: r.taskID})
+			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.jobID,
-					"taskID":       r.taskID,
-					"requestorTag": r.requestorTag,
+					"jobID":        r.JobID,
+					"taskID":       r.TaskID,
+					"requestorTag": r.RequestorTag,
 				}).Info("The run was aborted by the scheduler before it was sent to a worker")
 			return st, endTask, nil
 		}
@@ -197,12 +196,12 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			if err == nil { // we should have a status with runId, abort the run
 				r.runner.Abort(st.RunID)
 			}
-			st = runner.AbortStatus(id, runner.LogTags{JobID: r.jobID, TaskID: r.taskID})
+			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.jobID,
-					"taskID":       r.taskID,
-					"requestorTag": r.requestorTag,
+					"jobID":        r.JobID,
+					"taskID":       r.TaskID,
+					"requestorTag": r.RequestorTag,
 				}).Info("Initial run attempts aborted by the scheduler")
 			return st, endTask, nil
 		}
@@ -210,9 +209,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.jobID,
-					"taskID":       r.taskID,
-					"requestorTag": r.requestorTag,
+					"jobID":        r.JobID,
+					"taskID":       r.TaskID,
+					"requestorTag": r.RequestorTag,
 				}).Info("Retrying run()")
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
 			time.Sleep(r.runnerRetryInterval)
@@ -239,9 +238,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 		} else if err != nil {
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.jobID,
-					"taskID":       r.taskID,
-					"requestorTag": r.requestorTag,
+					"jobID":        r.JobID,
+					"taskID":       r.TaskID,
+					"requestorTag": r.RequestorTag,
 				}).Info("Retrying query")
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
@@ -253,11 +252,11 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			//corresponding end task.
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.jobID,
-					"taskID":       r.taskID,
+					"jobID":        r.JobID,
+					"taskID":       r.TaskID,
 					"node":         r.nodeSt.node,
 					"runStatus":    st,
-					"requestorTag": r.requestorTag,
+					"requestorTag": r.RequestorTag,
 				}).Debug("Update task")
 			r.logTaskStatus(&st, saga.StartTask)
 			includeRunning = false
@@ -281,10 +280,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	w := runner.Wait{Timeout: timeout, AbortCh: r.queryAbortCh}
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.jobID,
-			"taskID":       r.taskID,
+			"jobID":        r.JobID,
+			"taskID":       r.TaskID,
 			"timeout":      timeout,
-			"requestorTag": r.requestorTag,
+			"requestorTag": r.RequestorTag,
 		}).Infof("Query(includeRunning=%t)", includeRunning)
 
 	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
@@ -294,7 +293,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	sts, _, err := r.runner.Query(q, w)
 
 	if aborted, endTask := r.abortRequested(); aborted {
-		return runner.AbortStatus(id, runner.LogTags{JobID: r.jobID, TaskID: r.taskID}), endTask, nil
+		return runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID}), endTask, nil
 	}
 	if err != nil {
 		return runner.RunStatus{}, false, err
@@ -316,9 +315,9 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	log.WithFields(
 		log.Fields{
 			"msgType":      msgType,
-			"jobID":        r.jobID,
-			"taskID":       r.taskID,
-			"requestorTag": r.requestorTag,
+			"jobID":        r.JobID,
+			"taskID":       r.TaskID,
+			"requestorTag": r.RequestorTag,
 		}).Info("TryLogTaskStatus")
 	var statusAsBytes []byte
 	var err error
@@ -332,9 +331,9 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 
 	switch msgType {
 	case saga.StartTask:
-		err = r.saga.StartTask(r.taskID, statusAsBytes)
+		err = r.saga.StartTask(r.TaskID, statusAsBytes)
 	case saga.EndTask:
-		err = r.saga.EndTask(r.taskID, statusAsBytes)
+		err = r.saga.EndTask(r.TaskID, statusAsBytes)
 	default:
 		err = fmt.Errorf("unexpected saga message type: %v", msgType)
 	}
@@ -347,11 +346,11 @@ func (r *taskRunner) abortRequested() (aborted bool, endTask bool) {
 	case endTask := <-r.abortCh:
 		log.WithFields(
 			log.Fields{
-				"jobID":        r.jobID,
-				"taskID":       r.taskID,
+				"jobID":        r.JobID,
+				"taskID":       r.TaskID,
 				"node":         r.nodeSt.node,
 				"endTask":      endTask,
-				"requestorTag": r.requestorTag,
+				"requestorTag": r.RequestorTag,
 			}).Info("Abort requested")
 		return true, endTask
 	default:

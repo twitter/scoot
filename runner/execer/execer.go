@@ -1,6 +1,10 @@
 package execer
 
-import "io"
+import (
+	"io"
+
+	"github.com/scootdev/scoot/common/log/tags"
+)
 
 // Execer lets you run one Unix command. It differs from Runner in that it does not
 // know about Snapshots or Scoot. It's just a way to run a Unix process (or fake it).
@@ -11,11 +15,11 @@ import "io"
 type Memory uint64
 
 type Command struct {
-	Argv         []string
-	Dir          string
-	Stdout       io.Writer
-	Stderr       io.Writer
-	RequestorTag string
+	Argv   []string
+	Dir    string
+	Stdout io.Writer
+	Stderr io.Writer
+	tags.LogTags
 	// TODO(dbentley): environment variables?
 }
 

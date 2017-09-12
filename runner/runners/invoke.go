@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -63,6 +64,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		log.Fields{
 			"runID":        id,
 			"requestorTag": cmd.RequestorTag,
+			"jobID":        cmd.JobID,
+			"taskID":       cmd.TaskID,
 		}).Info("*Invoker.run()")
 	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
 	defer func() {
@@ -91,6 +94,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					log.Fields{
 						"runID":        id,
 						"requestorTag": cmd.RequestorTag,
+						"jobID":        cmd.JobID,
+						"taskID":       cmd.TaskID,
 					}).Info("No snapshotID! Using a nop-checkout initialized with tmpDir")
 			}
 			if tmp, err := inv.tmp.TempDir("invoke_nop_checkout"); err != nil {
@@ -105,6 +110,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				log.Fields{
 					"runID":        id,
 					"requestorTag": cmd.RequestorTag,
+					"jobID":        cmd.JobID,
+					"taskID":       cmd.TaskID,
 					"snapshotID":   cmd.SnapshotID,
 				}).Info("Checking out snapshotID")
 			var err error
@@ -124,7 +131,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			co.Release()
 		}()
 		return runner.AbortStatus(id,
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	case err := <-checkoutCh:
 		// stop the timer
 		// note: aborted runs don't stop the timer - the reported download time should remain 0
@@ -134,7 +141,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		if err != nil {
 			return runner.FailedStatus(id, err,
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
@@ -143,20 +150,22 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		log.Fields{
 			"runID":        id,
 			"requestorTag": cmd.RequestorTag,
+			"jobID":        cmd.JobID,
+			"taskID":       cmd.TaskID,
 			"checkout":     co.Path(),
 		}).Info("Checkout done")
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
 		return runner.FailedStatus(id, fmt.Errorf("could not create stdout: %v", err),
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	}
 	defer stdout.Close()
 
 	stderr, err := inv.output.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
 		return runner.FailedStatus(id, fmt.Errorf("could not create stderr: %v", err),
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	}
 	defer stderr.Close()
 
@@ -168,20 +177,26 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		log.Fields{
 			"runID":        id,
 			"requestorTag": cmd.RequestorTag,
+			"jobID":        cmd.JobID,
+			"taskID":       cmd.TaskID,
 			"stdout":       stdout.AsFile(),
 			"stderr":       stderr.AsFile(),
 		}).Debug("Stdout/Stderr output")
 
 	p, err := inv.exec.Exec(execer.Command{
-		Argv:         cmd.Argv,
-		Dir:          co.Path(),
-		Stdout:       stdout,
-		Stderr:       stderr,
-		RequestorTag: cmd.RequestorTag,
+		Argv:   cmd.Argv,
+		Dir:    co.Path(),
+		Stdout: stdout,
+		Stderr: stderr,
+		LogTags: tags.LogTags{
+			RequestorTag: cmd.RequestorTag,
+			JobID:        cmd.JobID,
+			TaskID:       cmd.TaskID,
+		},
 	})
 	if err != nil {
 		return runner.FailedStatus(id, fmt.Errorf("could not exec: %v", err),
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	}
 
 	var timeoutCh <-chan time.Time
@@ -193,7 +208,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 
 	updateCh <- runner.RunningStatus(id, stdout.URI(), stderr.URI(),
-		runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+		tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
@@ -206,7 +221,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\nTask aborted: %v", marker, cmd.String())))
 		p.Abort()
 		return runner.AbortStatus(id,
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	case <-timeoutCh:
 		stdout.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\nTask exceeded timeout %v: %v", marker, cmd.Timeout, cmd.String())))
 		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\nTask exceeded timeout %v: %v", marker, cmd.Timeout, cmd.String())))
@@ -215,15 +230,19 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			log.Fields{
 				"cmd":          cmd.String(),
 				"requestorTag": cmd.RequestorTag,
+				"jobID":        cmd.JobID,
+				"taskID":       cmd.TaskID,
 			}).Info("Run timedout")
 		return runner.TimeoutStatus(id,
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	case st = <-processCh:
 	}
 	log.WithFields(
 		log.Fields{
 			"runID":        id,
 			"requestorTag": cmd.RequestorTag,
+			"jobID":        cmd.JobID,
+			"taskID":       cmd.TaskID,
 			"status":       st,
 			"checkout":     co.Path(),
 		}).Info("Run done")
@@ -233,7 +252,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		tmp, err := inv.tmp.TempDir("invoke")
 		if err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion dir: %v", err),
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		}
 		uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
 		inv.stat.Counter(stats.WorkerUploads).Inc(1)
@@ -253,28 +272,28 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		if writer, err = os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
 
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		} else if reader, err = os.Open(outPath); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
 
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
 
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		}
 
 		writer.Close()
 		reader.Close()
 		if writer, err = os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		} else if reader, err = os.Open(errPath); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		}
 
 		ingestCh := make(chan interface{})
@@ -291,12 +310,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		select {
 		case <-abortCh:
 			return runner.AbortStatus(id,
-				runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		case res := <-ingestCh:
 			switch res.(type) {
 			case error:
 				return runner.FailedStatus(id, fmt.Errorf("error ingesting results: %v", res),
-					runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 			}
 			snapshotID = res.(string)
 		}
@@ -304,7 +323,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
 		//Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 		status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 		if cmd.SnapshotID != "" {
 			status.StdoutRef = snapshotID + "/" + stdoutName
 			status.StderrRef = snapshotID + "/" + stderrName
@@ -312,9 +331,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return status
 	case execer.FAILED:
 		return runner.FailedStatus(id, fmt.Errorf("error execing: %v", st.Error),
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	default:
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
-			runner.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, RequestorTag: cmd.RequestorTag})
 	}
 }

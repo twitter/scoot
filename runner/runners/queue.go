@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -244,7 +245,12 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
 				c.statusManager.Update(runner.AbortStatus(
 					run,
-					runner.LogTags{JobID: cmdID.cmd.JobID, TaskID: cmdID.cmd.TaskID}))
+					tags.LogTags{
+						JobID:        cmdID.cmd.JobID,
+						TaskID:       cmdID.cmd.TaskID,
+						RequestorTag: cmdID.cmd.RequestorTag,
+					},
+				))
 			}
 		}
 	}
@@ -275,6 +281,8 @@ func (c *QueueController) loop() {
 						log.Fields{
 							"err":          err,
 							"requestorTag": c.runningCmd.RequestorTag,
+							"jobID":        c.runningCmd.JobID,
+							"taskID":       c.runningCmd.TaskID,
 						}).Error("error running Filer Update")
 				}
 				updateDoneCh <- nil

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
 
@@ -70,7 +71,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		return nil, err
 	}
 
-	proc := &osProcess{cmd: cmd, requestorTag: command.RequestorTag}
+	proc := &osProcess{cmd: cmd, LogTags: tags.LogTags{RequestorTag: command.RequestorTag}}
 	if e.memCap > 0 {
 		go e.monitorMem(proc)
 	}
@@ -78,10 +79,10 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 }
 
 type osProcess struct {
-	cmd          *exec.Cmd
-	result       *execer.ProcessStatus
-	mutex        sync.Mutex
-	requestorTag string
+	cmd    *exec.Cmd
+	result *execer.ProcessStatus
+	mutex  sync.Mutex
+	tags.LogTags
 }
 
 // TODO(rcouto): More we can do here to make sure we're
@@ -98,7 +99,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			log.Fields{
 				"pid":          pid,
 				"error":        err,
-				"requestorTag": p.requestorTag,
+				"requestorTag": p.RequestorTag,
+				"jobID":        p.JobID,
+				"taskID":       p.TaskID,
 			}).Error("Error finding pgid")
 	} else {
 		defer cleanupProcs(pgid)
@@ -110,7 +113,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	log.WithFields(
 		log.Fields{
 			"pid":          pid,
-			"requestorTag": p.requestorTag,
+			"requestorTag": p.RequestorTag,
+			"jobID":        p.JobID,
+			"taskID":       p.TaskID,
 		}).Info("Monitoring memory")
 	for {
 		select {
@@ -122,7 +127,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 				log.WithFields(
 					log.Fields{
 						"pid":          pid,
-						"requestorTag": p.requestorTag,
+						"requestorTag": p.RequestorTag,
+						"jobID":        p.JobID,
+						"taskID":       p.TaskID,
 					}).Info("Finished monitoring memory")
 				return
 			}
@@ -137,7 +144,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"memCap":       e.memCap,
 						"args":         p.cmd.Args,
 						"pid":          pid,
-						"requestorTag": p.requestorTag,
+						"requestorTag": p.RequestorTag,
+						"jobID":        p.JobID,
+						"taskID":       p.TaskID,
 					}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
@@ -157,7 +166,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"memCap":       e.memCap,
 						"args":         p.cmd.Args,
 						"pid":          pid,
-						"requestorTag": p.requestorTag,
+						"requestorTag": p.RequestorTag,
+						"jobID":        p.JobID,
+						"taskID":       p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
@@ -165,7 +176,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"pid":          pid,
 						"ps":           string(ps),
 						"err":          err,
-						"requestorTag": p.requestorTag,
+						"requestorTag": p.RequestorTag,
+						"jobID":        p.JobID,
+						"taskID":       p.TaskID,
 					}).Debugf("ps after increasing mem_cap utilization for pid %d", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
@@ -228,7 +241,9 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	log.WithFields(
 		log.Fields{
 			"pid":          pid,
-			"requestorTag": p.requestorTag,
+			"requestorTag": p.RequestorTag,
+			"jobID":        p.JobID,
+			"taskID":       p.TaskID,
 			"ps":           string(ps),
 		}).Debugf("Current ps for pid %d", pid)
 

@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -71,13 +72,14 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 		requestorTag = *thrift.RequestorTag
 	}
 	return &runner.Command{
-		Argv:         argv,
-		EnvVars:      env,
-		Timeout:      timeout,
-		SnapshotID:   snapshotID,
-		JobID:        jobID,
-		TaskID:       taskID,
-		RequestorTag: requestorTag,
+		Argv:       argv,
+		EnvVars:    env,
+		Timeout:    timeout,
+		SnapshotID: snapshotID,
+		LogTags: tags.LogTags{
+			JobID:        jobID,
+			TaskID:       taskID,
+			RequestorTag: requestorTag},
 	}
 }
 

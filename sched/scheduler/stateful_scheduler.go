@@ -14,6 +14,7 @@ import (
 	"github.com/scootdev/scoot/async"
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/log/hooks"
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/saga"
@@ -650,11 +651,14 @@ func (s *statefulScheduler) scheduleTasks() {
 			runnerRetryInterval:   s.config.RunnerRetryInterval,
 			markCompleteOnFailure: preventRetries,
 
-			jobID:        jobID,
-			taskID:       taskID,
-			requestorTag: requestorTag,
-			task:         taskDef,
-			nodeSt:       nodeSt,
+			LogTags: tags.LogTags{
+				JobID:        jobID,
+				TaskID:       taskID,
+				RequestorTag: requestorTag,
+			},
+
+			task:   taskDef,
+			nodeSt: nodeSt,
 
 			abortCh:      make(chan bool, 1),
 			queryAbortCh: make(chan interface{}, 1),
@@ -851,7 +855,7 @@ func (s *statefulScheduler) killJobs() {
 				task.TaskRunner.Abort(true)
 				inProgress++
 			} else if task.Status == sched.NotStarted {
-				st := runner.AbortStatus("", runner.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
+				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
 				if err != nil {
 					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused

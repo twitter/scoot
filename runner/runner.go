@@ -10,6 +10,8 @@ package runner
 import (
 	"fmt"
 	"time"
+
+	"github.com/scootdev/scoot/common/log/tags"
 )
 
 const NoRunnersMsg = "No runners available."
@@ -40,9 +42,10 @@ type Command struct {
 	// SnapshotPlan map[string]string
 
 	// Runner is given JobID, TaskID, and RequestorTag to help trace tasks throughout their lifecycle
-	JobID        string
-	TaskID       string
-	RequestorTag string
+	// JobID        string
+	// TaskID       string
+	// RequestorTag string
+	tags.LogTags
 }
 
 func (c Command) String() string {

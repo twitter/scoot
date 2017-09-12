@@ -297,6 +297,7 @@ LoopRemaining:
 			log.Fields{
 				"numTasks":     len(tasks),
 				"requestorTag": tasks[0].Def.RequestorTag,
+				"jobID":        tasks[0].Def.JobID,
 			}).Info("Scheduled all tasks")
 	} else {
 		log.WithFields(
@@ -304,6 +305,7 @@ LoopRemaining:
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
 				"requestorTag":   tasks[0].Def.RequestorTag,
+				"jobID":          tasks[0].Def.JobID,
 			}).Info("Unable to schedule all tasks")
 	}
 	return assignments, nodeGroups
@@ -352,7 +354,7 @@ func assign(
 					"node":                   nodeSt.node,
 					"wasRunningJobID":        wasRunning.JobId,
 					"wasRunningTaskID":       wasRunning.TaskId,
-					"wasRunningRequestorTag": wasRunning.TaskRunner.requestorTag,
+					"wasRunningRequestorTag": wasRunning.TaskRunner.RequestorTag,
 				}).Info("Preempting node")
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})

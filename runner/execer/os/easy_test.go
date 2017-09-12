@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
 )
@@ -14,8 +15,12 @@ func TestAll(t *testing.T) {
 
 	// TODO(dbentley): factor out an assertRun method
 	cmd := execer.Command{
-		Argv:         []string{"true"},
-		RequestorTag: "requestorTag",
+		Argv: []string{"true"},
+		LogTags: tags.LogTags{
+			RequestorTag: "requestorTag",
+			JobID:        "jobID1234",
+			TaskID:       "taskID1234",
+		},
 	}
 	p, err := exer.Exec(cmd)
 	if err != nil {
@@ -46,10 +51,14 @@ func TestOutput(t *testing.T) {
 	stdoutExpected := "hello world\n"
 	// TODO(dbentley): factor out an assertRun method
 	cmd := execer.Command{
-		Argv:         []string{"echo", "-n", stdoutExpected},
-		Stdout:       &stdout,
-		Stderr:       &stderr,
-		RequestorTag: "requestorTag",
+		Argv:   []string{"echo", "-n", stdoutExpected},
+		Stdout: &stdout,
+		Stderr: &stderr,
+		LogTags: tags.LogTags{
+			RequestorTag: "requestorTag",
+			JobID:        "jobID1234",
+			TaskID:       "taskID1234",
+		},
 	}
 	p, err := exer.Exec(cmd)
 	if err != nil {
@@ -71,8 +80,12 @@ func TestMemUsage(t *testing.T) {
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(10):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
 	cmd := execer.Command{
-		Argv:         []string{"python", "-c", str},
-		RequestorTag: "requestorTag",
+		Argv: []string{"python", "-c", str},
+		LogTags: tags.LogTags{
+			RequestorTag: "requestorTag",
+			JobID:        "jobID1234",
+			TaskID:       "taskID1234",
+		},
 	}
 	e := NewExecer()
 	process, err := e.Exec(cmd)
@@ -106,8 +119,12 @@ func TestMemCap(t *testing.T) {
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
 	cmd := execer.Command{
-		Argv:         []string{"python", "-c", str},
-		RequestorTag: "requestorTag",
+		Argv: []string{"python", "-c", str},
+		LogTags: tags.LogTags{
+			RequestorTag: "requestorTag",
+			JobID:        "jobID1234",
+			TaskID:       "taskID1234",
+		},
 	}
 	e := NewBoundedExecer(execer.Memory(5*1024*1024), stats.NilStatsReceiver())
 	process, err := e.Exec(cmd)

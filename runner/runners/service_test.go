@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/runner"
 )
 
@@ -16,7 +17,7 @@ func teardown(t *testing.T) {
 	}
 }
 
-var t runner.LogTags
+var t tags.LogTags
 
 func complete(exitCode int) runner.RunStatus {
 	return runner.CompleteStatus(runner.RunID(""), "", exitCode, t)

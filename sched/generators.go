@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/leanovate/gopter"
+
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/tests/testhelpers"
 )
@@ -53,9 +55,11 @@ func GenJobDef(numTasks int) JobDefinition {
 func GenRandomJobDef(numTasks int, rng *rand.Rand) *JobDefinition {
 	requestorTag := fmt.Sprintf("requestorTag:%s", testhelpers.GenRandomAlphaNumericString(rng))
 	jobDef := JobDefinition{
-		JobType:      fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
-		Tasks:        make([]TaskDefinition, 0),
-		RequestorTag: requestorTag,
+		JobType: fmt.Sprintf("jobType:%s", testhelpers.GenRandomAlphaNumericString(rng)),
+		Tasks:   make([]TaskDefinition, 0),
+		LogTags: tags.LogTags{
+			RequestorTag: requestorTag,
+		},
 	}
 
 	// Generate tasks
@@ -106,7 +110,9 @@ func GenRandomTask(rng *rand.Rand) TaskDefinition {
 		Argv:       args,
 		EnvVars:    envVarsMap,
 		Timeout:    timeout,
-		TaskID:     taskId,
+		LogTags: tags.LogTags{
+			TaskID: taskId,
+		},
 	}
 
 	return TaskDefinition{cmd}

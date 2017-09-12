@@ -4,6 +4,7 @@ package sched
 import (
 	"time"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
@@ -41,13 +42,14 @@ func DeserializeJob(input []byte) (*Job, error) {
 
 // JobDefinition is the definition the client sent us
 type JobDefinition struct {
-	JobType      string
-	Requestor    string
-	RequestorTag string
-	Tag          string
-	Basis        string
-	Priority     Priority
-	Tasks        []TaskDefinition
+	JobType   string
+	Requestor string
+	// RequestorTag string
+	Tag      string
+	Basis    string
+	Priority Priority
+	Tasks    []TaskDefinition
+	tags.LogTags
 }
 
 // Task is one task to run
@@ -120,13 +122,15 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 			cmd := task.GetCommand()
 
 			command := runner.Command{
-				Argv:         cmd.GetArgv(),
-				EnvVars:      cmd.GetEnvVars(),
-				Timeout:      time.Duration(cmd.GetTimeout()),
-				SnapshotID:   cmd.GetSnapshotId(),
-				JobID:        task.GetJobId(),
-				TaskID:       task.GetTaskId(),
-				RequestorTag: task.GetRequestorTag(),
+				Argv:       cmd.GetArgv(),
+				EnvVars:    cmd.GetEnvVars(),
+				Timeout:    time.Duration(cmd.GetTimeout()),
+				SnapshotID: cmd.GetSnapshotId(),
+				LogTags: tags.LogTags{
+					JobID:        task.GetJobId(),
+					TaskID:       task.GetTaskId(),
+					RequestorTag: task.GetRequestorTag(),
+				},
 			}
 			domainTasks = append(domainTasks, TaskDefinition{command})
 		}
@@ -140,13 +144,15 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	}
 
 	domainJobDef := JobDefinition{
-		JobType:      jobType,
-		Tasks:        domainTasks,
-		Priority:     Priority(priority),
-		Tag:          tag,
-		Basis:        basis,
-		Requestor:    requestor,
-		RequestorTag: requestorTag,
+		JobType:   jobType,
+		Tasks:     domainTasks,
+		Priority:  Priority(priority),
+		Tag:       tag,
+		Basis:     basis,
+		Requestor: requestor,
+		LogTags: tags.LogTags{
+			RequestorTag: requestorTag,
+		},
 	}
 
 	return &Job{
