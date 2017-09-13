@@ -267,15 +267,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 		if writer, err = os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		} else if reader, err = os.Open(outPath); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
 
