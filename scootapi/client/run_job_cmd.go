@@ -11,7 +11,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 )
 
@@ -19,7 +18,7 @@ type runJobCmd struct {
 	streamName  string
 	snapshotId  string
 	jobFilePath string
-	tags.LogTags
+	tag         string
 }
 
 func (c *runJobCmd) registerFlags() *cobra.Command {
@@ -30,7 +29,7 @@ func (c *runJobCmd) registerFlags() *cobra.Command {
 	r.Flags().StringVar(&c.streamName, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", "", "Repo checkout id: <master-sha> OR <backend>-<kind>(-<additional information>)+")
 	r.Flags().StringVar(&c.jobFilePath, "job_def", "", "JSON file to read jobs from. Error if snapshot_id flag is also provided.")
-	r.Flags().StringVar(&c.RequestorTag, "requestor_tag", "", "Tag can be specified by requestor in order to more easily trace a job through logs")
+	r.Flags().StringVar(&c.tag, "tag", "", "Tag can be specified by requestor in order to more easily trace a job through logs")
 	return r
 }
 
@@ -50,13 +49,12 @@ type TaskDef struct {
 	Args       []string
 	SnapshotID string
 	TimeoutMs  int32
-	tags.LogTags
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Running on scoot, args:", args)
 	jobDef := scoot.NewJobDefinition()
-	jobDef.RequestorTag = &c.RequestorTag
+	jobDef.Tag = &c.tag
 	switch {
 	case len(args) > 0 && c.jobFilePath != "":
 		return errors.New("You must provide either args or a job definition")
@@ -75,7 +73,6 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		task.Command.Argv = args
 		task.SnapshotId = &c.snapshotId
 		task.TaskId = &taskId
-		task.RequestorTag = &c.RequestorTag
 		jobDef.Tasks = []*scoot.TaskDefinition{task}
 	case c.jobFilePath != "":
 		f, err := os.Open(c.jobFilePath)
@@ -107,7 +104,6 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jt.Args
 			taskDef.SnapshotId = &jt.SnapshotID
-			taskDef.TaskId = &jt.TaskID
 			jobDef.Tasks = append(jobDef.Tasks, taskDef)
 			if jt.TimeoutMs > 0 {
 				taskDef.TimeoutMs = &jt.TimeoutMs

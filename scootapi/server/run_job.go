@@ -80,8 +80,8 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	if def.Priority != nil {
 		result.Priority = sched.Priority(*def.Priority)
 	}
-	if def.RequestorTag != nil {
-		result.RequestorTag = *def.RequestorTag
+	if def.Tag != nil {
+		result.Tag = *def.Tag
 	}
 
 	return result, nil

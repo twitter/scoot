@@ -97,11 +97,11 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"pid":          pid,
-				"error":        err,
-				"requestorTag": p.RequestorTag,
-				"jobID":        p.JobID,
-				"taskID":       p.TaskID,
+				"pid":    pid,
+				"error":  err,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
 			}).Error("Error finding pgid")
 	} else {
 		defer cleanupProcs(pgid)
@@ -112,10 +112,10 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	defer memTicker.Stop()
 	log.WithFields(
 		log.Fields{
-			"pid":          pid,
-			"requestorTag": p.RequestorTag,
-			"jobID":        p.JobID,
-			"taskID":       p.TaskID,
+			"pid":    pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
 		}).Info("Monitoring memory")
 	for {
 		select {
@@ -126,10 +126,10 @@ func (e *osExecer) monitorMem(p *osProcess) {
 				p.mutex.Unlock()
 				log.WithFields(
 					log.Fields{
-						"pid":          pid,
-						"requestorTag": p.RequestorTag,
-						"jobID":        p.JobID,
-						"taskID":       p.TaskID,
+						"pid":    pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
 					}).Info("Finished monitoring memory")
 				return
 			}
@@ -140,13 +140,13 @@ func (e *osExecer) monitorMem(p *osProcess) {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
 				log.WithFields(
 					log.Fields{
-						"mem":          mem,
-						"memCap":       e.memCap,
-						"args":         p.cmd.Args,
-						"pid":          pid,
-						"requestorTag": p.RequestorTag,
-						"jobID":        p.JobID,
-						"taskID":       p.TaskID,
+						"mem":    mem,
+						"memCap": e.memCap,
+						"args":   p.cmd.Args,
+						"pid":    pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
 					}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
@@ -161,24 +161,24 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			if memUsagePct > reportThresholds[thresholdsIdx] {
 				log.WithFields(
 					log.Fields{
-						"memUsagePct":  int(memUsagePct * 100),
-						"mem":          mem,
-						"memCap":       e.memCap,
-						"args":         p.cmd.Args,
-						"pid":          pid,
-						"requestorTag": p.RequestorTag,
-						"jobID":        p.JobID,
-						"taskID":       p.TaskID,
+						"memUsagePct": int(memUsagePct * 100),
+						"mem":         mem,
+						"memCap":      e.memCap,
+						"args":        p.cmd.Args,
+						"pid":         pid,
+						"tag":         p.Tag,
+						"jobID":       p.JobID,
+						"taskID":      p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
 					log.Fields{
-						"pid":          pid,
-						"ps":           string(ps),
-						"err":          err,
-						"requestorTag": p.RequestorTag,
-						"jobID":        p.JobID,
-						"taskID":       p.TaskID,
+						"pid":    pid,
+						"ps":     string(ps),
+						"err":    err,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
 					}).Debugf("ps after increasing mem_cap utilization for pid %d", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
@@ -240,11 +240,11 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 	log.WithFields(
 		log.Fields{
-			"pid":          pid,
-			"requestorTag": p.RequestorTag,
-			"jobID":        p.JobID,
-			"taskID":       p.TaskID,
-			"ps":           string(ps),
+			"pid":    pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+			"ps":     string(ps),
 		}).Debugf("Current ps for pid %d", pid)
 
 	if p.result != nil {

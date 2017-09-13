@@ -49,7 +49,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	snapshotID := ""
 	jobID := ""
 	taskID := ""
-	requestorTag := ""
+	tag := ""
 	if thrift.Argv != nil {
 		argv = thrift.Argv
 	}
@@ -68,8 +68,8 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.JobId != nil {
 		jobID = *thrift.JobId
 	}
-	if thrift.RequestorTag != nil {
-		requestorTag = *thrift.RequestorTag
+	if thrift.Tag != nil {
+		tag = *thrift.Tag
 	}
 	return &runner.Command{
 		Argv:       argv,
@@ -77,9 +77,9 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 		Timeout:    timeout,
 		SnapshotID: snapshotID,
 		LogTags: tags.LogTags{
-			JobID:        jobID,
-			TaskID:       taskID,
-			RequestorTag: requestorTag,
+			JobID:  jobID,
+			TaskID: taskID,
+			Tag:    tag,
 		},
 	}
 }
@@ -96,8 +96,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.JobId = &jobID
 	taskID := domain.TaskID
 	thrift.TaskId = &taskID
-	requestorTag := domain.RequestorTag
-	thrift.RequestorTag = &requestorTag
+	tag := domain.Tag
+	thrift.Tag = &tag
 	return thrift
 }
 
@@ -143,8 +143,8 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.TaskId != nil {
 		domain.TaskID = *thrift.TaskId
 	}
-	if thrift.RequestorTag != nil {
-		domain.RequestorTag = *thrift.RequestorTag
+	if thrift.Tag != nil {
+		domain.Tag = *thrift.Tag
 	}
 	return domain
 }
@@ -185,7 +185,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.SnapshotId = copyString(domain.SnapshotID)
 	thrift.JobId = copyString(domain.JobID)
 	thrift.TaskId = copyString(domain.TaskID)
-	thrift.RequestorTag = copyString(domain.RequestorTag)
+	thrift.Tag = copyString(domain.Tag)
 	return thrift
 }
 

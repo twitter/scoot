@@ -17,9 +17,9 @@ func TestAll(t *testing.T) {
 	cmd := execer.Command{
 		Argv: []string{"true"},
 		LogTags: tags.LogTags{
-			RequestorTag: "requestorTag",
-			JobID:        "jobID1234",
-			TaskID:       "taskID1234",
+			Tag:    "tag",
+			JobID:  "jobID1234",
+			TaskID: "taskID1234",
 		},
 	}
 	p, err := exer.Exec(cmd)
@@ -55,9 +55,9 @@ func TestOutput(t *testing.T) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 		LogTags: tags.LogTags{
-			RequestorTag: "requestorTag",
-			JobID:        "jobID1234",
-			TaskID:       "taskID1234",
+			Tag:    "tag",
+			JobID:  "jobID1234",
+			TaskID: "taskID1234",
 		},
 	}
 	p, err := exer.Exec(cmd)
@@ -82,9 +82,9 @@ func TestMemUsage(t *testing.T) {
 	cmd := execer.Command{
 		Argv: []string{"python", "-c", str},
 		LogTags: tags.LogTags{
-			RequestorTag: "requestorTag",
-			JobID:        "jobID1234",
-			TaskID:       "taskID1234",
+			Tag:    "tag",
+			JobID:  "jobID1234",
+			TaskID: "taskID1234",
 		},
 	}
 	e := NewExecer()
@@ -121,9 +121,9 @@ func TestMemCap(t *testing.T) {
 	cmd := execer.Command{
 		Argv: []string{"python", "-c", str},
 		LogTags: tags.LogTags{
-			RequestorTag: "requestorTag",
-			JobID:        "jobID1234",
-			TaskID:       "taskID1234",
+			Tag:    "tag",
+			JobID:  "jobID1234",
+			TaskID: "taskID1234",
 		},
 	}
 	e := NewBoundedExecer(execer.Memory(5*1024*1024), stats.NilStatsReceiver())

@@ -95,11 +95,11 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 	}
 	log.WithFields(
 		log.Fields{
-			"jobID":        newStatus.JobID,
-			"taskID":       newStatus.TaskID,
-			"runID":        newStatus.RunID,
-			"status":       newStatus.State,
-			"requestorTag": newStatus.RequestorTag,
+			"jobID":  newStatus.JobID,
+			"taskID": newStatus.TaskID,
+			"runID":  newStatus.RunID,
+			"status": newStatus.State,
+			"tag":    newStatus.Tag,
 		}).Info("StatusManager is holding status")
 	s.runs[newStatus.RunID] = newStatus
 

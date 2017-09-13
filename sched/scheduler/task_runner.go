@@ -61,11 +61,11 @@ func (t *taskError) Error() string {
 func (r *taskRunner) run() error {
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.JobID,
-			"taskID":       r.TaskID,
-			"node":         r.nodeSt.node,
-			"task":         r.task,
-			"requestorTag": r.RequestorTag,
+			"jobID":  r.JobID,
+			"taskID": r.TaskID,
+			"node":   r.nodeSt.node,
+			"task":   r.task,
+			"tag":    r.Tag,
 		}).Info("Starting task")
 	taskErr := &taskError{}
 
@@ -108,30 +108,30 @@ func (r *taskRunner) run() error {
 	if shouldDeadLetter {
 		log.WithFields(
 			log.Fields{
-				"jobID":        r.JobID,
-				"taskID":       r.TaskID,
-				"sagaID":       r.saga.GetState().SagaId(),
-				"err":          taskErr,
-				"requestorTag": r.RequestorTag,
+				"jobID":  r.JobID,
+				"taskID": r.TaskID,
+				"sagaID": r.saga.GetState().SagaId(),
+				"err":    taskErr,
+				"tag":    r.Tag,
 			}).Info("Error running job, dead lettering task after max retries.")
 		taskErr.st.Error += DeadLetterTrailer
 	}
 
 	log.WithFields(
 		log.Fields{
-			"node":         r.nodeSt.node,
-			"log":          shouldLog,
-			"runID":        taskErr.st.RunID,
-			"state":        taskErr.st.State,
-			"stdout":       taskErr.st.StdoutRef,
-			"stderr":       taskErr.st.StderrRef,
-			"snapshotID":   taskErr.st.SnapshotID,
-			"exitCode":     taskErr.st.ExitCode,
-			"error":        taskErr.st.Error,
-			"jobID":        taskErr.st.JobID,
-			"taskID":       taskErr.st.TaskID,
-			"requestorTag": taskErr.st.RequestorTag,
-			"err":          taskErr,
+			"node":       r.nodeSt.node,
+			"log":        shouldLog,
+			"runID":      taskErr.st.RunID,
+			"state":      taskErr.st.State,
+			"stdout":     taskErr.st.StdoutRef,
+			"stderr":     taskErr.st.StderrRef,
+			"snapshotID": taskErr.st.SnapshotID,
+			"exitCode":   taskErr.st.ExitCode,
+			"error":      taskErr.st.Error,
+			"jobID":      taskErr.st.JobID,
+			"taskID":     taskErr.st.TaskID,
+			"tag":        taskErr.st.Tag,
+			"err":        taskErr,
 		}).Info("End task")
 	if !shouldLog {
 		if taskErr != nil {
@@ -170,9 +170,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 	//TODO(jschiller): add a Nonce to Cmd so worker knows what to do if it sees a dup command?
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.JobID,
-			"taskID":       r.TaskID,
-			"requestorTag": r.RequestorTag,
+			"jobID":  r.JobID,
+			"taskID": r.TaskID,
+			"tag":    r.Tag,
 		}).Info("runAndWait()")
 
 	for {
@@ -181,9 +181,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.JobID,
-					"taskID":       r.TaskID,
-					"requestorTag": r.RequestorTag,
+					"jobID":  r.JobID,
+					"taskID": r.TaskID,
+					"tag":    r.Tag,
 				}).Info("The run was aborted by the scheduler before it was sent to a worker")
 			return st, endTask, nil
 		}
@@ -199,9 +199,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.JobID,
-					"taskID":       r.TaskID,
-					"requestorTag": r.RequestorTag,
+					"jobID":  r.JobID,
+					"taskID": r.TaskID,
+					"tag":    r.Tag,
 				}).Info("Initial run attempts aborted by the scheduler")
 			return st, endTask, nil
 		}
@@ -209,9 +209,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.JobID,
-					"taskID":       r.TaskID,
-					"requestorTag": r.RequestorTag,
+					"jobID":  r.JobID,
+					"taskID": r.TaskID,
+					"tag":    r.Tag,
 				}).Info("Retrying run()")
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
 			time.Sleep(r.runnerRetryInterval)
@@ -238,9 +238,9 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 		} else if err != nil {
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.JobID,
-					"taskID":       r.TaskID,
-					"requestorTag": r.RequestorTag,
+					"jobID":  r.JobID,
+					"taskID": r.TaskID,
+					"tag":    r.Tag,
 				}).Info("Retrying query")
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
@@ -252,11 +252,11 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			//corresponding end task.
 			log.WithFields(
 				log.Fields{
-					"jobID":        r.JobID,
-					"taskID":       r.TaskID,
-					"node":         r.nodeSt.node,
-					"runStatus":    st,
-					"requestorTag": r.RequestorTag,
+					"jobID":     r.JobID,
+					"taskID":    r.TaskID,
+					"node":      r.nodeSt.node,
+					"runStatus": st,
+					"tag":       r.Tag,
 				}).Debug("Update task")
 			r.logTaskStatus(&st, saga.StartTask)
 			includeRunning = false
@@ -280,10 +280,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	w := runner.Wait{Timeout: timeout, AbortCh: r.queryAbortCh}
 	log.WithFields(
 		log.Fields{
-			"jobID":        r.JobID,
-			"taskID":       r.TaskID,
-			"timeout":      timeout,
-			"requestorTag": r.RequestorTag,
+			"jobID":   r.JobID,
+			"taskID":  r.TaskID,
+			"timeout": timeout,
+			"tag":     r.Tag,
 		}).Infof("Query(includeRunning=%t)", includeRunning)
 
 	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
@@ -314,10 +314,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessageType) error {
 	log.WithFields(
 		log.Fields{
-			"msgType":      msgType,
-			"jobID":        r.JobID,
-			"taskID":       r.TaskID,
-			"requestorTag": r.RequestorTag,
+			"msgType": msgType,
+			"jobID":   r.JobID,
+			"taskID":  r.TaskID,
+			"tag":     r.Tag,
 		}).Info("TryLogTaskStatus")
 	var statusAsBytes []byte
 	var err error
@@ -346,11 +346,11 @@ func (r *taskRunner) abortRequested() (aborted bool, endTask bool) {
 	case endTask := <-r.abortCh:
 		log.WithFields(
 			log.Fields{
-				"jobID":        r.JobID,
-				"taskID":       r.TaskID,
-				"node":         r.nodeSt.node,
-				"endTask":      endTask,
-				"requestorTag": r.RequestorTag,
+				"jobID":   r.JobID,
+				"taskID":  r.TaskID,
+				"node":    r.nodeSt.node,
+				"endTask": endTask,
+				"tag":     r.Tag,
 			}).Info("Abort requested")
 		return true, endTask
 	default:

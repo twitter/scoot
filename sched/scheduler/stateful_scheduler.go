@@ -203,17 +203,17 @@ func NewStatefulScheduler(
 		for _, s := range st {
 			log.WithFields(
 				log.Fields{
-					"node":         node,
-					"runID":        s.RunID,
-					"state":        s.State,
-					"stdout":       s.StdoutRef,
-					"stderr":       s.StderrRef,
-					"snapshotID":   s.SnapshotID,
-					"exitCode":     s.ExitCode,
-					"error":        s.Error,
-					"jobID":        s.JobID,
-					"taskID":       s.TaskID,
-					"requestorTag": s.RequestorTag,
+					"node":       node,
+					"runID":      s.RunID,
+					"state":      s.State,
+					"stdout":     s.StdoutRef,
+					"stderr":     s.StderrRef,
+					"snapshotID": s.SnapshotID,
+					"exitCode":   s.ExitCode,
+					"error":      s.Error,
+					"jobID":      s.JobID,
+					"taskID":     s.TaskID,
+					"tag":        s.Tag,
 				}).Info("Aborting existing run on new node")
 			run.Abort(s.RunID)
 		}
@@ -288,12 +288,11 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)         // TODO errata metric - remove if unused
 	log.WithFields(
 		log.Fields{
-			"requestor":    jobDef.Requestor,
-			"tag":          jobDef.Tag,
-			"basis":        jobDef.Basis,
-			"priority":     jobDef.Priority,
-			"numTasks":     len(jobDef.Tasks),
-			"requestorTag": jobDef.RequestorTag,
+			"requestor": jobDef.Requestor,
+			"tag":       jobDef.Tag,
+			"basis":     jobDef.Basis,
+			"priority":  jobDef.Priority,
+			"numTasks":  len(jobDef.Tasks),
 		}).Info("New job request")
 
 	checkResultCh := make(chan error, 1)
@@ -305,9 +304,12 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"jobDef":       jobDef,
-				"err":          err,
-				"requestorTag": jobDef.RequestorTag,
+				"jobDef":    jobDef,
+				"requestor": jobDef.Requestor,
+				"tag":       jobDef.Tag,
+				"basis":     jobDef.Basis,
+				"priority":  jobDef.Priority,
+				"err":       err,
 			}).Error("Rejected job request")
 		return "", err
 	}
@@ -324,9 +326,12 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"jobDef":       jobDef,
-				"err":          err,
-				"requestorTag": jobDef.RequestorTag,
+				"jobDef":    jobDef,
+				"requestor": jobDef.Requestor,
+				"tag":       jobDef.Tag,
+				"basis":     jobDef.Basis,
+				"priority":  jobDef.Priority,
+				"err":       err,
 			}).Error("Failed to serialize job request")
 		return "", err
 	}
@@ -336,20 +341,19 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"jobDef":       jobDef,
-				"err":          err,
-				"requestorTag": jobDef.RequestorTag,
+				"jobDef": jobDef,
+				"err":    err,
+				"tag":    jobDef.Tag,
 			}).Error("Failed to create saga for job request")
 		return "", err
 	}
 	log.WithFields(
 		log.Fields{
-			"requestor":    jobDef.Requestor,
-			"tag":          jobDef.Tag,
-			"basis":        jobDef.Basis,
-			"priority":     jobDef.Priority,
-			"numTasks":     len(jobDef.Tasks),
-			"requestorTag": jobDef.RequestorTag,
+			"requestor": jobDef.Requestor,
+			"tag":       jobDef.Tag,
+			"basis":     jobDef.Basis,
+			"priority":  jobDef.Priority,
+			"numTasks":  len(jobDef.Tasks),
 		}).Info("Queueing job request")
 	s.stat.Counter(stats.SchedJobsCounter).Inc(1)
 	s.addJobCh <- jobAddedMsg{
@@ -449,12 +453,11 @@ checkLoop:
 							m := checkJobMsg
 							log.WithFields(
 								log.Fields{
-									"requestor":    m.jobDef.Requestor,
-									"tag":          m.jobDef.Tag,
-									"basis":        m.jobDef.Basis,
-									"priority":     m.jobDef.Priority,
-									"numTasks":     len(m.jobDef.Tasks),
-									"requestorTag": m.jobDef.RequestorTag,
+									"requestor": m.jobDef.Requestor,
+									"tag":       m.jobDef.Tag,
+									"basis":     m.jobDef.Basis,
+									"priority":  m.jobDef.Priority,
+									"numTasks":  len(m.jobDef.Tasks),
 								}).Info("Overriding job priority to match previous requestor/tag priority")
 						}
 					}
@@ -492,10 +495,10 @@ addLoop:
 			s.requestorMap[req] = append(s.requestorMap[req], js)
 			log.WithFields(
 				log.Fields{
-					"jobID":        newJobMsg.job.Id,
-					"req":          req,
-					"numTasks":     len(newJobMsg.job.Def.Tasks),
-					"requestorTag": newJobMsg.job.Def.RequestorTag,
+					"jobID":    newJobMsg.job.Id,
+					"req":      req,
+					"numTasks": len(newJobMsg.job.Def.Tasks),
+					"tag":      newJobMsg.job.Def.Tag,
 				}).Info("Created new job")
 		default:
 			break addLoop
@@ -570,8 +573,8 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 					if err == nil {
 						log.WithFields(
 							log.Fields{
-								"jobID":        j.Job.Id,
-								"requestorTag": j.Job.Def.RequestorTag,
+								"jobID": j.Job.Id,
+								"tag":   j.Job.Def.Tag,
 							}).Info("Job completed and logged")
 						// This job is fully processed remove from InProgressJobs
 						s.deleteJob(j.Job.Id)
@@ -582,9 +585,9 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						s.stat.Counter(stats.SchedRetriedEndSagaCounter).Inc(1) // TODO errata metric - remove if unused
 						log.WithFields(
 							log.Fields{
-								"jobID":        j.Job.Id,
-								"err":          err,
-								"requestorTag": j.Job.Def.RequestorTag,
+								"jobID": j.Job.Id,
+								"err":   err,
+								"tag":   j.Job.Def.Tag,
 							}).Info("Job completed but failed to log")
 					}
 				})
@@ -605,10 +608,10 @@ func (s *statefulScheduler) scheduleTasks() {
 		nodeSt := ta.nodeSt
 		jobID := task.JobId
 		taskID := task.TaskId
-		requestorTag := s.getJob(jobID).Job.Def.RequestorTag
+		tag := s.getJob(jobID).Job.Def.Tag
 		taskDef := task.Def
 		taskDef.JobID = jobID
-		taskDef.RequestorTag = requestorTag
+		taskDef.Tag = tag
 		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
@@ -634,10 +637,10 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.clusterState.taskScheduled(nodeSt.node.Id(), jobID, taskID, taskDef.SnapshotID)
 		log.WithFields(
 			log.Fields{
-				"jobID":        jobID,
-				"taskID":       taskID,
-				"node":         nodeSt.node,
-				"requestorTag": requestorTag,
+				"jobID":  jobID,
+				"taskID": taskID,
+				"node":   nodeSt.node,
+				"tag":    tag,
 			}).Info("Task scheduled")
 
 		tRunner := &taskRunner{
@@ -652,9 +655,9 @@ func (s *statefulScheduler) scheduleTasks() {
 			markCompleteOnFailure: preventRetries,
 
 			LogTags: tags.LogTags{
-				JobID:        jobID,
-				TaskID:       taskID,
-				RequestorTag: requestorTag,
+				JobID:  jobID,
+				TaskID: taskID,
+				Tag:    tag,
 			},
 
 			task:   taskDef,
@@ -684,12 +687,12 @@ func (s *statefulScheduler) scheduleTasks() {
 				if nodeSt.runningJob != jobID {
 					log.WithFields(
 						log.Fields{
-							"node":         nodeSt.node,
-							"jobID":        jobID,
-							"taskID":       taskID,
-							"runningJob":   nodeSt.runningJob,
-							"runningTask":  nodeSt.runningTask,
-							"requestorTag": requestorTag,
+							"node":        nodeSt.node,
+							"jobID":       jobID,
+							"taskID":      taskID,
+							"runningJob":  nodeSt.runningJob,
+							"runningTask": nodeSt.runningTask,
+							"tag":         tag,
 						}).Info("Task preempted")
 					return
 				}
@@ -716,11 +719,11 @@ func (s *statefulScheduler) scheduleTasks() {
 					}
 					log.WithFields(
 						log.Fields{
-							"jobId":        jobID,
-							"taskId":       taskID,
-							"err":          taskErr,
-							"cmd":          strings.Join(taskDef.Argv, " "),
-							"requestorTag": requestorTag,
+							"jobId":  jobID,
+							"taskId": taskID,
+							"err":    taskErr,
+							"cmd":    strings.Join(taskDef.Argv, " "),
+							"tag":    tag,
 						}).Info(msg)
 
 					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
@@ -737,9 +740,9 @@ func (s *statefulScheduler) scheduleTasks() {
 							}
 							log.WithFields(
 								log.Fields{
-									"jobId":        jobID,
-									"taskId":       taskID,
-									"requestorTag": requestorTag,
+									"jobId":  jobID,
+									"taskId": taskID,
+									"tag":    tag,
 								}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
 						}()
 					}
@@ -747,10 +750,10 @@ func (s *statefulScheduler) scheduleTasks() {
 				if err == nil || aborted {
 					log.WithFields(
 						log.Fields{
-							"jobId":        jobID,
-							"taskId":       taskID,
-							"command":      strings.Join(taskDef.Argv, " "),
-							"requestorTag": requestorTag,
+							"jobId":   jobID,
+							"taskId":  taskID,
+							"command": strings.Join(taskDef.Argv, " "),
+							"tag":     tag,
 						}).Info("Ending task.")
 					jobState.taskCompleted(taskID, true)
 				}
@@ -758,11 +761,11 @@ func (s *statefulScheduler) scheduleTasks() {
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.WithFields(
 					log.Fields{
-						"jobId":        jobID,
-						"taskId":       taskID,
-						"node":         nodeSt.node,
-						"flaky":        flaky,
-						"requestorTag": requestorTag,
+						"jobId":  jobID,
+						"taskId": taskID,
+						"node":   nodeSt.node,
+						"flaky":  flaky,
+						"tag":    tag,
 					}).Info("Freeing node, removed job.")
 				s.clusterState.taskCompleted(nodeSt.node.Id(), flaky)
 
@@ -776,20 +779,20 @@ func (s *statefulScheduler) scheduleTasks() {
 				}
 				log.WithFields(
 					log.Fields{
-						"jobId":        jobID,
-						"running":      jobState.TasksRunning,
-						"completed":    jobState.TasksCompleted,
-						"total":        len(jobState.Tasks),
-						"isdone":       jobState.TasksCompleted == len(jobState.Tasks),
-						"requestorTag": requestorTag,
+						"jobId":     jobID,
+						"running":   jobState.TasksRunning,
+						"completed": jobState.TasksCompleted,
+						"total":     len(jobState.Tasks),
+						"isdone":    jobState.TasksCompleted == len(jobState.Tasks),
+						"tag":       tag,
 					}).Info()
 				log.WithFields(
 					log.Fields{
-						"running":      running,
-						"completed":    completed,
-						"total":        total,
-						"alldone":      completed == total,
-						"requestorTag": requestorTag,
+						"running":   running,
+						"completed": completed,
+						"total":     total,
+						"alldone":   completed == total,
+						"tag":       tag,
 					}).Info("Jobs task summary")
 			})
 	}
@@ -872,7 +875,7 @@ func (s *statefulScheduler) killJobs() {
 				"jobID":           req.jobId,
 				"tasksNotStarted": notStarted,
 				"tasksInProgress": inProgress,
-				"requestorTag":    s.getJob(req.jobId).Job.Def.RequestorTag,
+				"tag":             s.getJob(req.jobId).Job.Def.Tag,
 			}).Info("killJobs handler")
 
 		req.responseCh <- nil

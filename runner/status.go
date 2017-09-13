@@ -84,8 +84,8 @@ type RunStatus struct {
 }
 
 func (p RunStatus) String() string {
-	s := fmt.Sprintf("RunStatus -- RunID: %s # SnapshotID: %s # State: %s # JobID: %s # TaskID: %s # RequestorTag: %s",
-		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID, p.RequestorTag)
+	s := fmt.Sprintf("RunStatus -- RunID: %s # SnapshotID: %s # State: %s # JobID: %s # TaskID: %s # Tag: %s",
+		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID, p.Tag)
 
 	if p.State == COMPLETE {
 		s += fmt.Sprintf(" # ExitCode: %d", p.ExitCode)

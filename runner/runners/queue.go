@@ -188,7 +188,7 @@ func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error)
 			"currentRun":     c.runningID,
 			"jobID":          cmd.JobID,
 			"taskID":         cmd.TaskID,
-			"requestorTag":   cmd.RequestorTag,
+			"tag":            cmd.Tag,
 		}).Info("Trying to run")
 
 	if !svcStatus.Initialized {
@@ -224,10 +224,10 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 		if c.runningAbort != nil {
 			log.WithFields(
 				log.Fields{
-					"currentRun":   c.runningID,
-					"jobID":        c.runningCmd.JobID,
-					"taskID":       c.runningCmd.TaskID,
-					"requestorTag": c.runningCmd.RequestorTag,
+					"currentRun": c.runningID,
+					"jobID":      c.runningCmd.JobID,
+					"taskID":     c.runningCmd.TaskID,
+					"tag":        c.runningCmd.Tag,
 				}).Info("Aborting")
 			close(c.runningAbort)
 			c.runningAbort = nil
@@ -237,18 +237,18 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 			if run == cmdID.id {
 				log.WithFields(
 					log.Fields{
-						"run":          run,
-						"jobID":        cmdID.cmd.JobID,
-						"taskID":       cmdID.cmd.TaskID,
-						"requestorTag": cmdID.cmd.RequestorTag,
+						"run":    run,
+						"jobID":  cmdID.cmd.JobID,
+						"taskID": cmdID.cmd.TaskID,
+						"tag":    cmdID.cmd.Tag,
 					}).Info("Aborting queued run")
 				c.queue = append(c.queue[:i], c.queue[i+1:]...)
 				c.statusManager.Update(runner.AbortStatus(
 					run,
 					tags.LogTags{
-						JobID:        cmdID.cmd.JobID,
-						TaskID:       cmdID.cmd.TaskID,
-						RequestorTag: cmdID.cmd.RequestorTag,
+						JobID:  cmdID.cmd.JobID,
+						TaskID: cmdID.cmd.TaskID,
+						Tag:    cmdID.cmd.Tag,
 					},
 				))
 			}
@@ -279,10 +279,10 @@ func (c *QueueController) loop() {
 				if err := c.filer.Update(); err != nil {
 					log.WithFields(
 						log.Fields{
-							"err":          err,
-							"requestorTag": c.runningCmd.RequestorTag,
-							"jobID":        c.runningCmd.JobID,
-							"taskID":       c.runningCmd.TaskID,
+							"err":    err,
+							"tag":    c.runningCmd.Tag,
+							"jobID":  c.runningCmd.JobID,
+							"taskID": c.runningCmd.TaskID,
 						}).Error("error running Filer Update")
 				}
 				updateDoneCh <- nil
@@ -354,11 +354,11 @@ func (c *QueueController) loop() {
 func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 	log.WithFields(
 		log.Fields{
-			"jobID":        cmdID.cmd.JobID,
-			"taskID":       cmdID.cmd.TaskID,
-			"runID":        cmdID.id,
-			"newLen":       len(c.queue),
-			"requestorTag": cmdID.cmd.RequestorTag,
+			"jobID":  cmdID.cmd.JobID,
+			"taskID": cmdID.cmd.TaskID,
+			"runID":  cmdID.id,
+			"newLen": len(c.queue),
+			"tag":    cmdID.cmd.Tag,
 		}).Info("Running")
 	watchCh := make(chan runner.RunStatus)
 	abortCh, statusUpdateCh := c.inv.Run(cmdID.cmd, cmdID.id)
@@ -369,16 +369,16 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 		for st := range statusUpdateCh {
 			log.WithFields(
 				log.Fields{
-					"runID":        st.RunID,
-					"state":        st.State,
-					"stdout":       st.StdoutRef,
-					"stderr":       st.StderrRef,
-					"snapshotID":   st.SnapshotID,
-					"exitCode":     st.ExitCode,
-					"error":        st.Error,
-					"jobID":        st.JobID,
-					"taskID":       st.TaskID,
-					"requestorTag": st.RequestorTag,
+					"runID":      st.RunID,
+					"state":      st.State,
+					"stdout":     st.StdoutRef,
+					"stderr":     st.StderrRef,
+					"snapshotID": st.SnapshotID,
+					"exitCode":   st.ExitCode,
+					"error":      st.Error,
+					"jobID":      st.JobID,
+					"taskID":     st.TaskID,
+					"tag":        st.Tag,
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {

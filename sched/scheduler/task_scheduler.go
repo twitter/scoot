@@ -112,7 +112,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
 	numFree := cs.numFree()
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
-	requestorTagsSeen := map[string]map[string]bool{}
+	tagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
 	// Only priority=3 and priority=2 jobs can kill other tasks (note, killable tasks are double counted here).
 	nk := numKillableTasks
@@ -134,14 +134,14 @@ Loop:
 
 			// If we've seen this tag for this requestor before then it's already been handled, so skip this job.
 			def := &job.Job.Def
-			if tags, ok := requestorTagsSeen[def.Requestor]; ok {
+			if tags, ok := tagsSeen[def.Requestor]; ok {
 				if _, ok := tags[def.Tag]; ok {
 					continue
 				}
 			} else {
-				requestorTagsSeen[def.Requestor] = map[string]bool{}
+				tagsSeen[def.Requestor] = map[string]bool{}
 			}
-			requestorTagsSeen[def.Requestor][def.Tag] = true
+			tagsSeen[def.Requestor][def.Tag] = true
 
 			// Find all jobs with the same requestor/tag combination and add their unscheduled tasks to 'unsched'.
 			// Also keep track of how many total tasks were requested for these jobs and how many are currently running.
@@ -194,7 +194,7 @@ Loop:
 						"numSchedulable": numSchedulable,
 						"numRunning":     numRunning,
 						"numCompleted":   numCompleted,
-						"requestorTag":   job.Job.Def.RequestorTag,
+						"tag":            job.Job.Def.Tag,
 					}).Info("Schedulable tasks")
 				log.WithFields(
 					log.Fields{
@@ -203,7 +203,7 @@ Loop:
 						"numAvailNodes":  numAvailNodes,
 						"numScaledTasks": numScaledTasks,
 						"numRunning":     numRunning,
-						"requestorTag":   job.Job.Def.RequestorTag,
+						"tag":            job.Job.Def.Tag,
 					}).Debug("Schedulable tasks")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
@@ -262,11 +262,11 @@ LoopRemaining:
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
 					log.WithFields(
 						log.Fields{
-							"nTasks":       nTasks,
-							"jobID":        (*taskList)[0].JobId,
-							"priority":     p,
-							"numFree":      numFree,
-							"requestorTag": (*taskList)[0].Def.RequestorTag,
+							"nTasks":   nTasks,
+							"jobID":    (*taskList)[0].JobId,
+							"priority": p,
+							"numFree":  numFree,
+							"tag":      (*taskList)[0].Def.Tag,
 						}).Info("Assigning additional free nodes for each remaining task in job")
 					numFree -= nTasks
 					tasks = append(tasks, (*taskList)[:nTasks]...)
@@ -295,16 +295,16 @@ LoopRemaining:
 	if len(assignments) == len(tasks) {
 		log.WithFields(
 			log.Fields{
-				"numTasks":     len(tasks),
-				"requestorTag": tasks[0].Def.RequestorTag,
-				"jobID":        tasks[0].Def.JobID,
+				"numTasks": len(tasks),
+				"tag":      tasks[0].Def.Tag,
+				"jobID":    tasks[0].Def.JobID,
 			}).Info("Scheduled all tasks")
 	} else {
 		log.WithFields(
 			log.Fields{
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
-				"requestorTag":   tasks[0].Def.RequestorTag,
+				"tag":            tasks[0].Def.Tag,
 				"jobID":          tasks[0].Def.JobID,
 			}).Info("Unable to schedule all tasks")
 	}
@@ -348,13 +348,13 @@ func assign(
 			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
 			log.WithFields(
 				log.Fields{
-					"jobID":                  task.JobId,
-					"taskID":                 task.TaskId,
-					"requestorTag":           task.Def.RequestorTag,
-					"node":                   nodeSt.node,
-					"wasRunningJobID":        wasRunning.JobId,
-					"wasRunningTaskID":       wasRunning.TaskId,
-					"wasRunningRequestorTag": wasRunning.TaskRunner.RequestorTag,
+					"jobID":            task.JobId,
+					"taskID":           task.TaskId,
+					"tag":              task.Def.Tag,
+					"node":             nodeSt.node,
+					"wasRunningJobID":  wasRunning.JobId,
+					"wasRunningTaskID": wasRunning.TaskId,
+					"wasRunningTag":    wasRunning.TaskRunner.Tag,
 				}).Info("Preempting node")
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
@@ -371,7 +371,7 @@ func assign(
 				"node":           nodeSt.node,
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
-				"requestorTag":   task.Def.RequestorTag,
+				"tag":            task.Def.Tag,
 			}).Info("Scheduled job")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}

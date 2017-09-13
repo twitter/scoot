@@ -21,7 +21,7 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 
 			binaryJob, err := job.Serialize()
 			if err != nil {
-				log.Info("Unxepected Error Occurred when Serializing Job %v", err)
+				log.Info("Unexpected Error Occurred when Serializing Job %v", err)
 				return false
 			}
 

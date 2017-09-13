@@ -38,7 +38,7 @@ struct RunStatus {
   7: optional string snapshotId
   8: optional string jobId
   9: optional string taskId
-  10: optional string requestorTag
+  10: optional string tag
 }
 
 
@@ -52,7 +52,7 @@ struct TaskDefinition {
   # TaskId should generally be unique, otherwise previous tasks with the same Requestor and Tag will be stomped.
   3: optional string taskId,
   4: optional i32 timeoutMs,
-  5: optional string requestorTag
+  5: optional string tag
 }
 
 struct JobDefinition {
@@ -70,7 +70,6 @@ struct JobDefinition {
   7: optional string requestor
   # JobType is used for stats and does not affect scheduling.
   8: optional string jobType
-  9: optional string requestorTag
 }
 
 struct JobId {
