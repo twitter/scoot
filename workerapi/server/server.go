@@ -147,20 +147,15 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency(stats.WorkerServerStartRunLatency_ms).Time().Stop()
 	h.stat.Counter(stats.WorkerServerRuns).Inc(1)
-	snapID := helpers.CopyPointerToString(cmd.SnapshotId)
-	timeoutMs := helpers.CopyPointerToInt32(cmd.TimeoutMs)
-	jobID := helpers.CopyPointerToString(cmd.JobId)
-	taskID := helpers.CopyPointerToString(cmd.TaskId)
-	tag := helpers.CopyPointerToString(cmd.Tag)
 	log.WithFields(
 		log.Fields{
 			"argv":       cmd.Argv,
 			"env":        cmd.Env,
-			"snapshotId": snapID,
-			"timeoutMs":  timeoutMs,
-			"jobID":      jobID,
-			"taskID":     taskID,
-			"tag":        tag,
+			"snapshotId": helpers.CopyPointerToString(cmd.SnapshotId),
+			"timeoutMs":  helpers.CopyPointerToInt32(cmd.TimeoutMs),
+			"jobID":      helpers.CopyPointerToString(cmd.JobId),
+			"taskID":     helpers.CopyPointerToString(cmd.TaskId),
+			"tag":        helpers.CopyPointerToString(cmd.Tag),
 		}).Info("Worker trying to run cmd")
 
 	h.updateTimeLastRpc()
