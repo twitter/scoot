@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/scootdev/scoot/common/log/helpers"
 	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
@@ -149,13 +150,6 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	return domain
 }
 
-func copyString(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift := worker.NewRunStatus()
 	thrift.RunId = string(domain.RunID)
@@ -177,15 +171,15 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	case runner.BADREQUEST:
 		thrift.Status = worker.Status_BADREQUEST
 	}
-	thrift.OutUri = copyString(domain.StdoutRef)
-	thrift.ErrUri = copyString(domain.StderrRef)
-	thrift.Error = copyString(domain.Error)
+	thrift.OutUri = helpers.CopyString(domain.StdoutRef)
+	thrift.ErrUri = helpers.CopyString(domain.StderrRef)
+	thrift.Error = helpers.CopyString(domain.Error)
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
-	thrift.SnapshotId = copyString(domain.SnapshotID)
-	thrift.JobId = copyString(domain.JobID)
-	thrift.TaskId = copyString(domain.TaskID)
-	thrift.Tag = copyString(domain.Tag)
+	thrift.SnapshotId = helpers.CopyString(domain.SnapshotID)
+	thrift.JobId = helpers.CopyString(domain.JobID)
+	thrift.TaskId = helpers.CopyString(domain.TaskID)
+	thrift.Tag = helpers.CopyString(domain.Tag)
 	return thrift
 }
 
