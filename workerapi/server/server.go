@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
 
+	"github.com/scootdev/scoot/common/log/helpers"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/runner/runners"
@@ -150,11 +151,11 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		log.Fields{
 			"argv":       cmd.Argv,
 			"env":        cmd.Env,
-			"snapshotId": cmd.SnapshotId,
-			"timeoutMs":  cmd.TimeoutMs,
-			"jobID":      cmd.JobId,
-			"taskID":     cmd.TaskId,
-			"tag":        cmd.Tag,
+			"snapshotId": helpers.CopyPointerToString(cmd.SnapshotId),
+			"timeoutMs":  helpers.CopyPointerToInt32(cmd.TimeoutMs),
+			"jobID":      helpers.CopyPointerToString(cmd.JobId),
+			"taskID":     helpers.CopyPointerToString(cmd.TaskId),
+			"tag":        helpers.CopyPointerToString(cmd.Tag),
 		}).Info("Worker trying to run cmd")
 
 	h.updateTimeLastRpc()
