@@ -150,11 +150,11 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		log.Fields{
 			"argv":       cmd.Argv,
 			"env":        cmd.Env,
-			"snapshotId": cmd.SnapshotId,
-			"timeoutMs":  cmd.TimeoutMs,
-			"jobID":      cmd.JobId,
-			"taskID":     cmd.TaskId,
-			"tag":        cmd.Tag,
+			"snapshotId": *(cmd.SnapshotId),
+			"timeoutMs":  *(cmd.TimeoutMs),
+			"jobID":      *(cmd.JobId),
+			"taskID":     *(cmd.TaskId),
+			"tag":        *(cmd.Tag),
 		}).Info("Worker trying to run cmd")
 
 	h.updateTimeLastRpc()
