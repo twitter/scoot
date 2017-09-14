@@ -171,15 +171,15 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	case runner.BADREQUEST:
 		thrift.Status = worker.Status_BADREQUEST
 	}
-	thrift.OutUri = helpers.CopyString(domain.StdoutRef)
-	thrift.ErrUri = helpers.CopyString(domain.StderrRef)
-	thrift.Error = helpers.CopyString(domain.Error)
+	thrift.OutUri = helpers.CopyStringToPointer(domain.StdoutRef)
+	thrift.ErrUri = helpers.CopyStringToPointer(domain.StderrRef)
+	thrift.Error = helpers.CopyStringToPointer(domain.Error)
 	exitCode := int32(domain.ExitCode)
 	thrift.ExitCode = &exitCode
-	thrift.SnapshotId = helpers.CopyString(domain.SnapshotID)
-	thrift.JobId = helpers.CopyString(domain.JobID)
-	thrift.TaskId = helpers.CopyString(domain.TaskID)
-	thrift.Tag = helpers.CopyString(domain.Tag)
+	thrift.SnapshotId = helpers.CopyStringToPointer(domain.SnapshotID)
+	thrift.JobId = helpers.CopyStringToPointer(domain.JobID)
+	thrift.TaskId = helpers.CopyStringToPointer(domain.TaskID)
+	thrift.Tag = helpers.CopyStringToPointer(domain.Tag)
 	return thrift
 }
 
