@@ -9,8 +9,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/mock/gomock"
+
 	"github.com/scootdev/scoot/cloud/cluster"
 	"github.com/scootdev/scoot/common/log/hooks"
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/os/temp"
 	"github.com/scootdev/scoot/runner"
@@ -43,9 +45,11 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 		runnerRetryTimeout:    0,
 		runnerRetryInterval:   0,
 
-		jobId:  jobId,
-		taskId: taskId,
-		task:   task,
+		task: task,
+		LogTags: tags.LogTags{
+			JobID:  jobId,
+			TaskID: taskId,
+		},
 		nodeSt: &nodeState{node: cluster.NewIdNode(jobId + "." + taskId)},
 	}
 }

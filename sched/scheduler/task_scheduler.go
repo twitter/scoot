@@ -112,7 +112,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// The number of healthy nodes we can assign before killing tasks on other nodes.
 	numFree := cs.numFree()
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
-	requestorTagsSeen := map[string]map[string]bool{}
+	tagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
 	// Only priority=3 and priority=2 jobs can kill other tasks (note, killable tasks are double counted here).
 	nk := numKillableTasks
@@ -134,14 +134,14 @@ Loop:
 
 			// If we've seen this tag for this requestor before then it's already been handled, so skip this job.
 			def := &job.Job.Def
-			if tags, ok := requestorTagsSeen[def.Requestor]; ok {
+			if tags, ok := tagsSeen[def.Requestor]; ok {
 				if _, ok := tags[def.Tag]; ok {
 					continue
 				}
 			} else {
-				requestorTagsSeen[def.Requestor] = map[string]bool{}
+				tagsSeen[def.Requestor] = map[string]bool{}
 			}
-			requestorTagsSeen[def.Requestor][def.Tag] = true
+			tagsSeen[def.Requestor][def.Tag] = true
 
 			// Find all jobs with the same requestor/tag combination and add their unscheduled tasks to 'unsched'.
 			// Also keep track of how many total tasks were requested for these jobs and how many are currently running.
@@ -186,10 +186,25 @@ Loop:
 			}
 
 			if numSchedulable > 0 {
-				log.Infof("Job:%s, priority:%d, numTasks:%d, numSchedulable:%d, numRunning:%d, numCompleted:%d",
-					job.Job.Id, p, numTasks, numSchedulable, numRunning, numCompleted)
-				log.Debugf("Job:%s, min(unsched:%d, numAvailNodes:%d, numScaledTasks:%d) - numRunning:%d",
-					job.Job.Id, len(unsched), numAvailNodes, numScaledTasks, numRunning)
+				log.WithFields(
+					log.Fields{
+						"jobID":          job.Job.Id,
+						"priority":       p,
+						"numTasks":       numTasks,
+						"numSchedulable": numSchedulable,
+						"numRunning":     numRunning,
+						"numCompleted":   numCompleted,
+						"tag":            job.Job.Def.Tag,
+					}).Info("Schedulable tasks")
+				log.WithFields(
+					log.Fields{
+						"jobID":          job.Job.Id,
+						"unsched":        len(unsched),
+						"numAvailNodes":  numAvailNodes,
+						"numScaledTasks": numScaledTasks,
+						"numRunning":     numRunning,
+						"tag":            job.Job.Def.Tag,
+					}).Debug("Schedulable tasks")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
 				numFromFree := min(numFree, numSchedulable)
@@ -245,8 +260,14 @@ LoopRemaining:
 				nTasks := min(numFree, nodeQuota, len(*taskList))
 				if nTasks > 0 {
 					// Move the given number of tasks from remaining to the list of tasks that will be assigned nodes.
-					log.Infof("Assigning %d additional free nodes for each remaining jobId=%s tasks with priority=%d (numAFree was %d)",
-						nTasks, (*taskList)[0].JobId, p, numFree)
+					log.WithFields(
+						log.Fields{
+							"nTasks":   nTasks,
+							"jobID":    (*taskList)[0].JobId,
+							"priority": p,
+							"numFree":  numFree,
+							"tag":      (*taskList)[0].Def.Tag,
+						}).Info("Assigning additional free nodes for each remaining task in job")
 					numFree -= nTasks
 					tasks = append(tasks, (*taskList)[:nTasks]...)
 					// Remove jobs that have run out of runnable tasks.
@@ -272,9 +293,20 @@ LoopRemaining:
 	// - A node from the next killable task candidate.
 	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
 	if len(assignments) == len(tasks) {
-		log.Infof("Scheduled all tasks (%d)", len(tasks))
+		log.WithFields(
+			log.Fields{
+				"numTasks": len(tasks),
+				"tag":      tasks[0].Def.Tag,
+				"jobID":    tasks[0].Def.JobID,
+			}).Info("Scheduled all tasks")
 	} else {
-		log.Infof("Unable to schedule all tasks, scheduled=%d/%d", len(assignments), len(tasks))
+		log.WithFields(
+			log.Fields{
+				"numAssignments": len(assignments),
+				"numTasks":       len(tasks),
+				"tag":            tasks[0].Def.Tag,
+				"jobID":          tasks[0].Def.JobID,
+			}).Info("Unable to schedule all tasks")
 	}
 	return assignments, nodeGroups
 }
@@ -314,8 +346,16 @@ func assign(
 			killableTasks = killableTasks[1:]
 
 			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
-			log.Infof("jobId=%s, taskId=%s will preempt node=%s running jobId=%s, taskId=%s",
-				task.JobId, task.TaskId, nodeSt.node, wasRunning.JobId, wasRunning.TaskId)
+			log.WithFields(
+				log.Fields{
+					"jobID":            task.JobId,
+					"taskID":           task.TaskId,
+					"tag":              task.Def.Tag,
+					"node":             nodeSt.node,
+					"wasRunningJobID":  wasRunning.JobId,
+					"wasRunningTaskID": wasRunning.TaskId,
+					"wasRunningTag":    wasRunning.TaskRunner.Tag,
+				}).Info("Preempting node")
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
 		if _, ok := nodeGroups[snapshotId]; !ok {
@@ -324,8 +364,15 @@ func assign(
 		nodeId := nodeSt.node.Id()
 		nodeGroups[snapshotId].busy[nodeId] = nodeSt
 		delete(nodeGroups[snapshotId].idle, nodeId)
-		log.Infof("Scheduled jobId=%s, taskId=%s, node=%s, cross-job-progress=%d/%d",
-			task.JobId, task.TaskId, nodeSt.node, len(assignments), len(tasks))
+		log.WithFields(
+			log.Fields{
+				"jobID":          task.JobId,
+				"taskID":         task.TaskId,
+				"node":           nodeSt.node,
+				"numAssignments": len(assignments),
+				"numTasks":       len(tasks),
+				"tag":            task.Def.Tag,
+			}).Info("Scheduled job")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments

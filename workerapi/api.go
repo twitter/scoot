@@ -3,6 +3,9 @@ package workerapi
 import (
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
@@ -39,12 +42,14 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 }
 
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
+	log.Info("ThriftRunCommandToDomain %v", thrift)
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
 	snapshotID := ""
 	jobID := ""
 	taskID := ""
+	tag := ""
 	if thrift.Argv != nil {
 		argv = thrift.Argv
 	}
@@ -63,7 +68,20 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.JobId != nil {
 		jobID = *thrift.JobId
 	}
-	return &runner.Command{Argv: argv, EnvVars: env, Timeout: timeout, SnapshotID: snapshotID, JobID: jobID, TaskID: taskID}
+	if thrift.Tag != nil {
+		tag = *thrift.Tag
+	}
+	return &runner.Command{
+		Argv:       argv,
+		EnvVars:    env,
+		Timeout:    timeout,
+		SnapshotID: snapshotID,
+		LogTags: tags.LogTags{
+			JobID:  jobID,
+			TaskID: taskID,
+			Tag:    tag,
+		},
+	}
 }
 
 func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
@@ -78,6 +96,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.JobId = &jobID
 	taskID := domain.TaskID
 	thrift.TaskId = &taskID
+	tag := domain.Tag
+	thrift.Tag = &tag
 	return thrift
 }
 
@@ -123,6 +143,9 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.TaskId != nil {
 		domain.TaskID = *thrift.TaskId
 	}
+	if thrift.Tag != nil {
+		domain.Tag = *thrift.Tag
+	}
 	return domain
 }
 
@@ -162,6 +185,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.SnapshotId = copyString(domain.SnapshotID)
 	thrift.JobId = copyString(domain.JobID)
 	thrift.TaskId = copyString(domain.TaskID)
+	thrift.Tag = copyString(domain.Tag)
 	return thrift
 }
 

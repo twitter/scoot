@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/scootdev/scoot/common/log/tags"
 	"github.com/scootdev/scoot/common/stats"
 	"github.com/scootdev/scoot/runner/execer"
 
@@ -70,7 +71,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		return nil, err
 	}
 
-	proc := &osProcess{cmd: cmd}
+	proc := &osProcess{cmd: cmd, LogTags: command.LogTags}
 	if e.memCap > 0 {
 		go e.monitorMem(proc)
 	}
@@ -81,6 +82,7 @@ type osProcess struct {
 	cmd    *exec.Cmd
 	result *execer.ProcessStatus
 	mutex  sync.Mutex
+	tags.LogTags
 }
 
 // TODO(rcouto): More we can do here to make sure we're
@@ -93,7 +95,14 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
-		log.Errorf("Error finding pgid of pid %d, %v", pid, err)
+		log.WithFields(
+			log.Fields{
+				"pid":    pid,
+				"error":  err,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Error("Error finding pgid")
 	} else {
 		defer cleanupProcs(pgid)
 	}
@@ -101,7 +110,13 @@ func (e *osExecer) monitorMem(p *osProcess) {
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
 	memTicker := time.NewTicker(250 * time.Millisecond)
 	defer memTicker.Stop()
-	log.Infof("Monitoring memory for pid=%d", pid)
+	log.WithFields(
+		log.Fields{
+			"pid":    pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+		}).Info("Monitoring memory")
 	for {
 		select {
 		case <-memTicker.C:
@@ -109,7 +124,13 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			// Process is complete
 			if p.result != nil {
 				p.mutex.Unlock()
-				log.Infof("Finished monitoring memory for pid=%d", pid)
+				log.WithFields(
+					log.Fields{
+						"pid":    pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
+					}).Info("Finished monitoring memory")
 				return
 			}
 			mem, _ := e.memUsage(pid)
@@ -117,12 +138,16 @@ func (e *osExecer) monitorMem(p *osProcess) {
 			// Aborting process, above memCap
 			if mem >= e.memCap {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
-				log.WithFields(log.Fields{
-					"mem":    mem,
-					"memCap": e.memCap,
-					"args":   p.cmd.Args,
-					"pid":    pid,
-				}).Info(msg)
+				log.WithFields(
+					log.Fields{
+						"mem":    mem,
+						"memCap": e.memCap,
+						"args":   p.cmd.Args,
+						"pid":    pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
+					}).Info(msg)
 				p.result = &execer.ProcessStatus{
 					State: execer.FAILED,
 					Error: msg,
@@ -141,13 +166,19 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"memCap":      e.memCap,
 						"args":        p.cmd.Args,
 						"pid":         pid,
+						"tag":         p.Tag,
+						"jobID":       p.JobID,
+						"taskID":      p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
 					log.Fields{
-						"pid": pid,
-						"ps":  string(ps),
-						"err": err,
+						"pid":    pid,
+						"ps":     string(ps),
+						"err":    err,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
 					}).Debugf("ps after increasing mem_cap utilization for pid %d", pid)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
@@ -209,8 +240,11 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 	log.WithFields(
 		log.Fields{
-			"pid": pid,
-			"ps":  string(ps),
+			"pid":    pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+			"ps":     string(ps),
 		}).Debugf("Current ps for pid %d", pid)
 
 	if p.result != nil {
@@ -271,9 +305,16 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 
 // Kill process along with all child processes, assuming no child processes called setpgid
 func cleanupProcs(pgid int) (err error) {
-	log.Infof("Cleaning up pgid %d", pgid)
+	log.WithFields(
+		log.Fields{
+			"pgid": pgid,
+		}).Info("Cleaning up pgid")
 	if err = syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-		log.Errorf("Error cleaning up after pgid %d: %v", pgid, err)
+		log.WithFields(
+			log.Fields{
+				"pgid":  pgid,
+				"error": err,
+			}).Error("Error cleaning up pgid")
 	}
 	return err
 }

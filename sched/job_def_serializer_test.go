@@ -1,11 +1,11 @@
 package sched
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
 )
@@ -24,20 +24,20 @@ func Test_FixedJob(t *testing.T) {
 
 func Test_SerializeNilJob(t *testing.T) {
 	if asByteArray, err := thrifthelpers.JsonSerialize(nil); err != nil || asByteArray != nil {
-		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+		t.Errorf("Error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
 	if asByteArray, err := thrifthelpers.BinarySerialize(nil); err != nil || asByteArray != nil {
-		t.Errorf("error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
+		t.Errorf("Error: couldn't serialize a nil job. %s, %s\n", err.Error(), string(asByteArray))
 	}
 
 	job := schedthrift.Job{}
 	var emptyBytes []byte
 	if err := thrifthelpers.BinaryDeserialize(&job, emptyBytes); err != nil {
-		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+		t.Errorf("Error deserializing and empyt byte array %s\n", err.Error())
 	}
 
 	if err := thrifthelpers.JsonDeserialize(&job, emptyBytes); err != nil {
-		t.Errorf("error: error deserializing and empyt byte array %s\n", err.Error())
+		t.Errorf("Error deserializing and empyt byte array %s\n", err.Error())
 	}
 }
 
@@ -48,11 +48,14 @@ func makeFixedSampleJob() *Job {
 	jobDef := JobDefinition{}
 	jobDef.Tasks = []TaskDefinition{}
 	jobDef.JobType = "jobTypeVal"
+	jobDef.Requestor = "requestor"
+	jobDef.Tag = "tag"
 	taskDefinition := TaskDefinition{}
 	taskDefinition.SnapshotID = "snapshotIDVal"
 	taskDefinition.Timeout = 3
 	taskDefinition.TaskID = "taskId0"
 	taskDefinition.JobID = jobId
+	taskDefinition.Tag = "tag"
 	envVars := make(map[string]string)
 	taskDefinition.EnvVars = envVars
 	envVars["envVar1"] = "var2Value"
@@ -68,7 +71,6 @@ func makeFixedSampleJob() *Job {
 }
 
 func ValidateSerialization(domainJob *Job, useJson bool) bool {
-
 	var asByteArray []byte
 	var err error
 	thriftJob, _ := makeThriftJobFromDomainJob(domainJob)
@@ -78,7 +80,7 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 		asByteArray, err = thrifthelpers.BinarySerialize(thriftJob)
 	}
 	if err != nil {
-		log.Infof("error: couldn't serialize the fixed job def. %s", err.Error())
+		log.Infof("Error: couldn't serialize the fixed job def. %s", err.Error())
 		return false
 
 	} else {
@@ -91,19 +93,17 @@ func ValidateSerialization(domainJob *Job, useJson bool) bool {
 			err = thrifthelpers.BinaryDeserialize(newThriftJob, asByteArray)
 		}
 		if err != nil {
-			log.Infof("serialize/deserialize test couldn't deserialize object:")
-			log.Info(domainJob)
-			log.Infof(fmt.Sprintf("Serialized to:%s\n", string(asByteArray)))
-			log.Infof("error: deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
+			log.Infof("Serialize/deserialize test couldn't deserialize object: %+v", domainJob)
+			log.Infof("Error deserializing the byte Array: %s\n%s\n", string(asByteArray), err.Error())
 			return false
 
 			// compare the orig and generated task definitions
 		} else {
 			newDomainJob = makeDomainJobFromThriftJob(newThriftJob)
 			if !reflect.DeepEqual(domainJob, newDomainJob) || !reflect.DeepEqual(thriftJob, newThriftJob) {
-				log.Infof("serialize/deserialize test didn't return equivalent value:")
-				log.Infof("Original job: %+v", domainJob)
-				log.Infof("Deserialized to: %+v", newDomainJob)
+				log.Info("Serialize/deserialize test didn't return equivalent value:")
+				log.Infof("Original job:\n\n%+v\n", domainJob)
+				log.Infof("Deserialized to:\n\n%+v\n", newDomainJob)
 				return false
 			}
 		}

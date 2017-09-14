@@ -13,16 +13,15 @@
 
 
 struct Command {
-  1: required list<string> argv,
-  2: optional map<string, string> envVars,
-  3: optional i64 timeout,
-  4: required string snapshotId,
+  1: required list<string> argv
+  2: optional map<string, string> envVars
+  3: optional i64 timeout
+  4: required string snapshotId
 }
 
 struct TaskDefinition {
-  1: required Command command,
-  2: optional string taskId,
-  3: optional string jobId,
+  1: required Command command
+  2: optional string taskId
 }
 
 struct JobDefinition {

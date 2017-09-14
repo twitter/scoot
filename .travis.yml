@@ -10,8 +10,6 @@ git:
     submodules: false
 
 before_install:
-  - pip install -U grpcio==1.0.1
-  - pip install -U docopt==0.6.2
   - make dependencies
 
 before_script:

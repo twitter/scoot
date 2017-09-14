@@ -515,6 +515,7 @@ func (p *ScootServerError) Error() string {
 //  - SnapshotId
 //  - JobId
 //  - TaskId
+//  - Tag
 type RunStatus struct {
 	Status     RunStatusState `thrift:"status,1,required" json:"status"`
 	RunId      string         `thrift:"runId,2,required" json:"runId"`
@@ -525,6 +526,7 @@ type RunStatus struct {
 	SnapshotId *string        `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
 	JobId      *string        `thrift:"jobId,8" json:"jobId,omitempty"`
 	TaskId     *string        `thrift:"taskId,9" json:"taskId,omitempty"`
+	Tag        *string        `thrift:"tag,10" json:"tag,omitempty"`
 }
 
 func NewRunStatus() *RunStatus {
@@ -601,6 +603,15 @@ func (p *RunStatus) GetTaskId() string {
 	}
 	return *p.TaskId
 }
+
+var RunStatus_Tag_DEFAULT string
+
+func (p *RunStatus) GetTag() string {
+	if !p.IsSetTag() {
+		return RunStatus_Tag_DEFAULT
+	}
+	return *p.Tag
+}
 func (p *RunStatus) IsSetOutUri() bool {
 	return p.OutUri != nil
 }
@@ -627,6 +638,10 @@ func (p *RunStatus) IsSetJobId() bool {
 
 func (p *RunStatus) IsSetTaskId() bool {
 	return p.TaskId != nil
+}
+
+func (p *RunStatus) IsSetTag() bool {
+	return p.Tag != nil
 }
 
 func (p *RunStatus) Read(iprot thrift.TProtocol) error {
@@ -682,6 +697,10 @@ func (p *RunStatus) Read(iprot thrift.TProtocol) error {
 			}
 		case 9:
 			if err := p.readField9(iprot); err != nil {
+				return err
+			}
+		case 10:
+			if err := p.readField10(iprot); err != nil {
 				return err
 			}
 		default:
@@ -787,6 +806,15 @@ func (p *RunStatus) readField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *RunStatus) readField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 10: ", err)
+	} else {
+		p.Tag = &v
+	}
+	return nil
+}
+
 func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -816,6 +844,9 @@ func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField9(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField10(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -953,6 +984,21 @@ func (p *RunStatus) writeField9(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:taskId: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunStatus) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTag() {
+		if err := oprot.WriteFieldBegin("tag", thrift.STRING, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:tag: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.Tag)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.tag (10) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:tag: ", p), err)
 		}
 	}
 	return err

@@ -10,6 +10,8 @@ package runner
 import (
 	"fmt"
 	"time"
+
+	"github.com/scootdev/scoot/common/log/tags"
 )
 
 const NoRunnersMsg = "No runners available."
@@ -39,14 +41,18 @@ type Command struct {
 	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
 	// SnapshotPlan map[string]string
 
-	// Runner is given JobID and TaskID to help trace tasks throughout their lifecycle
-	JobID  string
-	TaskID string
+	// Runner is given JobID, TaskID, and Tag to help trace tasks throughout their lifecycle
+	tags.LogTags
 }
 
 func (c Command) String() string {
-	s := fmt.Sprintf("Command -- SnapshotID:%s # Argv:%q # Timeout:%v # JobID:%s # TaskID:%s",
-		c.SnapshotID, c.Argv, c.Timeout, c.JobID, c.TaskID)
+	s := fmt.Sprintf("runner.Command -- SnapshotID: %s # Argv: %q # Timeout: %v # JobID: %s # TaskID: %s # Tag: %s",
+		c.SnapshotID,
+		c.Argv,
+		c.Timeout,
+		c.JobID,
+		c.TaskID,
+		c.Tag)
 
 	if len(c.EnvVars) > 0 {
 		s += fmt.Sprintf(" # Env:")

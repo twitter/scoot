@@ -147,9 +147,12 @@ func TestStats(t *testing.T) {
 	}
 	// wait for the run to finish
 	status, svcStatus, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second})
-	log.Infof("statusLen:%d", len(status))
-	log.Infof("svcStatus:%v", svcStatus)
-	log.Infof("err:%v:", err)
+	log.WithFields(
+		log.Fields{
+			"statusLen": len(status),
+			"svcStatus": svcStatus,
+			"err":       err,
+		}).Info("Received status")
 
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{

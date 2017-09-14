@@ -1,3 +1,7 @@
+// +build daemon_test
+
+// daemon_test is disabled in travis-ci
+
 package integration_py_test
 
 import (

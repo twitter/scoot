@@ -63,8 +63,10 @@ func (s *StatusManager) NewRun() (runner.RunStatus, error) {
 func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	log.Infof("StatusManager updating svc:%v", svcStatus)
+	log.WithFields(
+		log.Fields{
+			"svcStatus": svcStatus,
+		}).Info("StatusManager updating svc")
 	s.svcStatus = svcStatus
 	return nil
 }
@@ -91,15 +93,23 @@ func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 	if newStatus.StderrRef == "" {
 		newStatus.StderrRef = oldStatus.StderrRef
 	}
-
-	log.Infof("StatusManager is holding status --- JobID:%s, TaskID:%s, RunID:%s, Status:%s",
-		newStatus.JobID, newStatus.TaskID, newStatus.RunID, newStatus.State)
+	log.WithFields(
+		log.Fields{
+			"jobID":  newStatus.JobID,
+			"taskID": newStatus.TaskID,
+			"runID":  newStatus.RunID,
+			"status": newStatus.State,
+			"tag":    newStatus.Tag,
+		}).Info("StatusManager is holding status")
 	s.runs[newStatus.RunID] = newStatus
 
 	listeners := make([]queryAndCh, 0, len(s.listeners))
 	for _, listener := range s.listeners {
 		if listener.q.Matches(newStatus) {
-			log.Debugf("StatusManager putting status %+v on listener channel\n", newStatus)
+			log.WithFields(
+				log.Fields{
+					"status": newStatus,
+				}).Debug("StatusManager is putting status on listener channel")
 			listener.ch <- newStatus
 			close(listener.ch)
 		} else {

@@ -146,7 +146,16 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency(stats.WorkerServerStartRunLatency_ms).Time().Stop()
 	h.stat.Counter(stats.WorkerServerRuns).Inc(1)
-	log.Infof("Worker trying to run cmd: %s", cmd.String())
+	log.WithFields(
+		log.Fields{
+			"argv":       cmd.Argv,
+			"env":        cmd.Env,
+			"snapshotId": cmd.SnapshotId,
+			"timeoutMs":  cmd.TimeoutMs,
+			"jobID":      cmd.JobId,
+			"taskID":     cmd.TaskId,
+			"tag":        cmd.Tag,
+		}).Info("Worker trying to run cmd")
 
 	h.updateTimeLastRpc()
 	c := domain.ThriftRunCommandToDomain(cmd)
@@ -165,7 +174,20 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 		h.currentCmd = c
 		h.currentRunID = status.RunID
 	}
-	log.Infof("Worker returning run status: %v", status)
+	// status's stdout, stderr, taskID, jobID, and tag might not be populated yet.
+	// h.run.Run(c) calls *runner.Invoker#run in a goroutine, and these fields are set on the fly
+	log.WithFields(
+		log.Fields{
+			"runID":      status.RunID,
+			"snapshotID": status.SnapshotID,
+			"state":      status.State,
+			"jobID":      status.JobID,
+			"taskID":     status.TaskID,
+			"tag":        status.Tag,
+			"stdout":     status.StdoutRef,
+			"stderr":     status.StderrRef,
+			"error":      status.Error,
+		}).Info("Worker returning run status")
 	return domain.DomainRunStatusToThrift(status), nil
 }
 
