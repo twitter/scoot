@@ -1128,13 +1128,11 @@ func (p *Command) String() string {
 //  - SnapshotId
 //  - TaskId
 //  - TimeoutMs
-//  - Tag
 type TaskDefinition struct {
 	Command    *Command `thrift:"command,1,required" json:"command"`
 	SnapshotId *string  `thrift:"snapshotId,2" json:"snapshotId,omitempty"`
 	TaskId     *string  `thrift:"taskId,3" json:"taskId,omitempty"`
 	TimeoutMs  *int32   `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
-	Tag        *string  `thrift:"tag,5" json:"tag,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -1176,15 +1174,6 @@ func (p *TaskDefinition) GetTimeoutMs() int32 {
 	}
 	return *p.TimeoutMs
 }
-
-var TaskDefinition_Tag_DEFAULT string
-
-func (p *TaskDefinition) GetTag() string {
-	if !p.IsSetTag() {
-		return TaskDefinition_Tag_DEFAULT
-	}
-	return *p.Tag
-}
 func (p *TaskDefinition) IsSetCommand() bool {
 	return p.Command != nil
 }
@@ -1199,10 +1188,6 @@ func (p *TaskDefinition) IsSetTaskId() bool {
 
 func (p *TaskDefinition) IsSetTimeoutMs() bool {
 	return p.TimeoutMs != nil
-}
-
-func (p *TaskDefinition) IsSetTag() bool {
-	return p.Tag != nil
 }
 
 func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
@@ -1236,10 +1221,6 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 			}
 		case 4:
 			if err := p.readField4(iprot); err != nil {
-				return err
-			}
-		case 5:
-			if err := p.readField5(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1295,15 +1276,6 @@ func (p *TaskDefinition) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *TaskDefinition) readField5(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 5: ", err)
-	} else {
-		p.Tag = &v
-	}
-	return nil
-}
-
 func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("TaskDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1318,9 +1290,6 @@ func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField4(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField5(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1385,21 +1354,6 @@ func (p *TaskDefinition) writeField4(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:timeoutMs: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *TaskDefinition) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTag() {
-		if err := oprot.WriteFieldBegin("tag", thrift.STRING, 5); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:tag: ", p), err)
-		}
-		if err := oprot.WriteString(string(*p.Tag)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.tag (5) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:tag: ", p), err)
 		}
 	}
 	return err

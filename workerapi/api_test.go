@@ -384,11 +384,11 @@ var tests = []struct {
 func TestTranslation(t *testing.T) {
 	for _, test := range tests {
 		if domain := test.thriftToDomain(test.thrift); !reflect.DeepEqual(domain, test.domain) {
-			t.Fatalf("%d expected %v; was: %v", test.id, test.domain, domain)
+			t.Fatalf("%d expected:\n%v; was:\n%v", test.id, test.domain, domain)
 		}
 		if test.domainToThrift != nil {
 			if thrift := test.domainToThrift(test.domain); !reflect.DeepEqual(thrift, test.thrift) {
-				t.Fatalf("%d expected %v; was: %v", test.id, test.thrift, thrift)
+				t.Fatalf("%d expected:\n%v; was:\n%v", test.id, test.thrift, thrift)
 			}
 		}
 	}
