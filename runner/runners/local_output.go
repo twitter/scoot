@@ -105,9 +105,9 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         var id = xhr.getResponseHeader('X-Resource-Id')
         var txt = xhr.responseText.substring(prevLength);
         prevLength = xhr.responseText.length
-        if resourceId == ''
+        if (resourceId == '')
           resourceId = id
-        if id != resourceId {
+        if (id != resourceId) {
           txt = Date() + ': Underlying resource changed! Quitting.'
         }
         var wasAtBottom = checkAtBottom()
@@ -116,7 +116,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         div.appendChild(content);
         if (wasAtBottom)
           gotoBottom()
-        if id != resourceId {
+        if (id != resourceId) {
           throw new Error('ResourceId mismatch.')
         }
       }
