@@ -5,9 +5,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os/exec"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // A Reference Repository is a way to clone repos locally so that the clone takes less time and disk space.

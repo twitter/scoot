@@ -1,8 +1,8 @@
 package gitfiler
 
 import (
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // repoAndError holds a repo and an error (just so we can pass it across a channel)

@@ -7,13 +7,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/snapshot"
 )
 
 // Used to get proper logging from tests...

@@ -5,7 +5,7 @@ package scheduler
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	sched "github.com/scootdev/scoot/sched"
+	sched "github.com/twitter/scoot/sched"
 )
 
 // Mock of Scheduler interface

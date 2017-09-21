@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/scootdev/scoot/ice"
+	"github.com/twitter/scoot/ice"
 )
 
 // Schema holds the different Implementations's the client wants to configure

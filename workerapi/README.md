@@ -5,5 +5,5 @@ server and client implementations.
 
 We should use go generate to run:
 ```sh
-thrift --gen go:package_prefix=github.com/scootdev/scoot/workerapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
+thrift --gen go:package_prefix=github.com/twitter/scoot/workerapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
 ```

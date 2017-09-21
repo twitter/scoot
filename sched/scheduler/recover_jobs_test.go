@@ -3,8 +3,8 @@ package scheduler
 import (
 	"errors"
 	"github.com/golang/mock/gomock"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
 	"testing"
 	"time"
 )

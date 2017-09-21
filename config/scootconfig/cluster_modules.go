@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/local"
-	"github.com/scootdev/scoot/ice"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/ice"
 )
 
 // Parameters for configuring an in-memory Scoot cluster

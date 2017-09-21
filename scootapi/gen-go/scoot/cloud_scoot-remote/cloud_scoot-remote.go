@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"math"
 	"net"
 	"net/url"

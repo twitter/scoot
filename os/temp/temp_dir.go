@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/scootdev/scoot/ice"
+	"github.com/twitter/scoot/ice"
 )
 
 // Create a new TempDir in directory dir with prefix string.
