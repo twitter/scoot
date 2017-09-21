@@ -6,14 +6,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/daemon/server"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	os_exec "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/daemon/server"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
+	os_exec "github.com/twitter/scoot/runner/execer/os"
+	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 // A Scoot Daemon server.

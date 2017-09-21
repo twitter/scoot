@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/scootdev/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer"
 )
 
 func TestSimExec(t *testing.T) {

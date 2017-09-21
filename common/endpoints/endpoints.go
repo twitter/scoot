@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/scootdev/scoot/common/stats"
+	"github.com/twitter/scoot/common/stats"
 )
 
 type Addr string

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/sched"
 )
 
 // verify that jobs are distributed evenly

@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func TestCheckouter(t *testing.T) {
@@ -101,7 +101,7 @@ func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Rep
 	if _, err = r.Run("config", "user.name", "Scoot Test"); err != nil {
 		return nil, err
 	}
-	if _, err = r.Run("config", "user.email", "scoottest@scootdev.github.io"); err != nil {
+	if _, err = r.Run("config", "user.email", "scoottest@twitter.github.io"); err != nil {
 		return nil, err
 	}
 

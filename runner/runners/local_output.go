@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	osexecer "github.com/scootdev/scoot/runner/execer/os"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	osexecer "github.com/twitter/scoot/runner/execer/os"
 )
 
 // local_output.go: output that's stored locally

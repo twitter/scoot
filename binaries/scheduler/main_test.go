@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/scootdev/scoot/binaries/scheduler/config"
-	apiserver "github.com/scootdev/scoot/scootapi/server"
+	"github.com/twitter/scoot/binaries/scheduler/config"
+	apiserver "github.com/twitter/scoot/scootapi/server"
 	"testing"
 )
 

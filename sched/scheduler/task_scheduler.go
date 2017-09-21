@@ -6,8 +6,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/sched"
 )
 
 type taskAssignment struct {

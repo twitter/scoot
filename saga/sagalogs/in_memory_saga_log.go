@@ -5,7 +5,7 @@ package sagalogs
 import (
 	"errors"
 	"fmt"
-	"github.com/scootdev/scoot/saga"
+	"github.com/twitter/scoot/saga"
 	"sync"
 )
 

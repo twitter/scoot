@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 var someCmd = []string{"", "x"}

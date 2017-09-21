@@ -3,9 +3,9 @@ package scheduler
 import (
 	"testing"
 
-	"github.com/scootdev/scoot/saga/sagalogs"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/saga/sagalogs"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
