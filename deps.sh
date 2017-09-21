@@ -27,7 +27,7 @@ get_deps() {
     done
 }
 
-depRepo="github.com/twitter/scoot"
+depRepo="github.com/scootdev/scoot"
 depDir="${GOPATH}/src/$(dirname ${depRepo})"
 mkdir -p "${depDir}" && cd "${depDir}"
 cp -R "${SCOOT_ORIG}" "./$(basename ${depRepo})"
@@ -40,7 +40,7 @@ echo "Windows Deps."
 export GOOS=windows GOARCH=amd64
 get_deps "${depRepo}"
 
-HANDLED=$(find ${GOPATH} -name .git | sort | uniq | sed -E "s,${GOPATH}/src/|/\.git,,g" | grep -v twitter)
+HANDLED=$(find ${GOPATH} -name .git | sort | uniq | sed -E "s,${GOPATH}/src/|/\.git,,g" | grep -v scootdev)
 
 cd "${SCOOT_ORIG}"
 for dep in ${HANDLED}; do
