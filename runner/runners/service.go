@@ -1,7 +1,7 @@
 package runners
 
 import (
-	"github.com/scootdev/scoot/runner"
+	"github.com/twitter/scoot/runner"
 )
 
 // Service makes a runner.Service from component parts.

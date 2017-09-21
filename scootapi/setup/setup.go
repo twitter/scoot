@@ -6,7 +6,7 @@ package setup
 import (
 	"fmt"
 
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi"
 )
 
 type Strategies struct {

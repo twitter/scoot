@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
 

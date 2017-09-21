@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster"
 )
 
 // Poor man's dynamic localhost cluster nodes.

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 // Implementation of the RunJob API

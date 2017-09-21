@@ -6,7 +6,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi"
 )
 
 const DefaultWorkerCount int = 5

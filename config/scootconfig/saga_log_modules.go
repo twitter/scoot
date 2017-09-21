@@ -1,9 +1,9 @@
 package scootconfig
 
 import (
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/saga/sagalogs"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/saga/sagalogs"
 )
 
 // InMemorySagaLog struct is used by goice to create an InMemory instance

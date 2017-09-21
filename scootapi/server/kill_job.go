@@ -1,9 +1,9 @@
 package server
 
 import (
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 /**

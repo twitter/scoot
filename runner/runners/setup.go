@@ -1,12 +1,12 @@
 package runners
 
 import (
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	osexec "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
+	osexec "github.com/twitter/scoot/runner/execer/os"
+	"github.com/twitter/scoot/snapshot"
 )
 
 // Module returns a module that creates a new Runner.

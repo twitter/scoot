@@ -5,9 +5,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func NewCheckouter(repos *RepoPool, stat stats.StatsReceiver) *Checkouter {

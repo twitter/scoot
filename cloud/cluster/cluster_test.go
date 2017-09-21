@@ -1,7 +1,7 @@
 package cluster_test
 
 import (
-	"github.com/scootdev/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster"
 	"testing"
 )
 
