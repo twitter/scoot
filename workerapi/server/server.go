@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/helpers"
 	"github.com/scootdev/scoot/common/stats"

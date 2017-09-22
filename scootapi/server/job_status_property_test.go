@@ -10,8 +10,8 @@ import (
 
 	s "github.com/scootdev/scoot/saga"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	log "github.com/sirupsen/logrus"
 )
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {

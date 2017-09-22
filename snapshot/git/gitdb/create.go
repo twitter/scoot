@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/scootdev/scoot/snapshot/git/repo"
 )

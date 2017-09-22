@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/golang/mock/gomock"
 	"github.com/scootdev/scoot/common/thrifthelpers"
 	"github.com/scootdev/scoot/runner"
@@ -13,6 +12,7 @@ import (
 	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
 	"github.com/scootdev/scoot/workerapi"
 	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	log "github.com/sirupsen/logrus"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {

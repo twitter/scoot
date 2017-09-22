@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/scootdev/scoot/binaries/workerserver/config"

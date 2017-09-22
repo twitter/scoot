@@ -5,7 +5,7 @@ package endpoints
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"time"
