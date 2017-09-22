@@ -60,11 +60,11 @@
 	url = https://github.com/golang/groupcache
 	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
 [submodule "github.com/twitter/groupcache"]
-	path = github.com/twitter/groupcache
+	path = vendor/github.com/twitter/groupcache
 	url = https://github.com/twitter/groupcache
 	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
 [submodule "github.com/twitter/fuse"]
-	path = github.com/twitter/fuse
+	path = vendor/github.com/twitter/fuse
 	url = https://github.com/twitter/fuse
 	branch = 18043572956a4a3bfe3e757a6ec9edb008ac8866
 
