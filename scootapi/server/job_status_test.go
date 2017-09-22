@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"

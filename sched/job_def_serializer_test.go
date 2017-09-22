@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/sched/gen-go/schedthrift"

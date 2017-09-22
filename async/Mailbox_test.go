@@ -2,7 +2,7 @@ package async
 
 import (
 	"errors"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"testing"
 )
 

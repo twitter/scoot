@@ -5,7 +5,7 @@ package scheduler
 import (
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/sched"
 )

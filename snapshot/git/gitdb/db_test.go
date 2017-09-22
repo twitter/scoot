@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"

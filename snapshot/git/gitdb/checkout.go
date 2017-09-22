@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"

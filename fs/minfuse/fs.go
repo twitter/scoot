@@ -1,7 +1,7 @@
 package minfuse
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"syscall"

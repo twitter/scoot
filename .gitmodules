@@ -53,7 +53,7 @@
 [submodule "vendor/github.com/Sirupsen/logrus"]
 	path = vendor/github.com/Sirupsen/logrus
 	url = https://github.com/Sirupsen/logrus
-	branch = 10f801ebc38b33738c9d17d50860f484a0988ff5
+	branch = f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 
 # Using forked scootdev/groupcache for now (we needed to add a public method for populating a cache).
 [submodule "vendor/github.com/golang/groupcache"]

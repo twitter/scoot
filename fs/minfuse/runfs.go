@@ -3,7 +3,7 @@ package minfuse
 import (
 	"errors"
 	"flag"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/signal"

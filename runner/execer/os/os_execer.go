@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner/execer"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func NewExecer() *osExecer {

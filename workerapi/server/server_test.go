@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
 

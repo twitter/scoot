@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	uuid "github.com/nu7hatch/gouuid"
 
 	"github.com/twitter/scoot/async"

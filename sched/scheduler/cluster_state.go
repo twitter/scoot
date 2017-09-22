@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/twitter/scoot/cloud/cluster"

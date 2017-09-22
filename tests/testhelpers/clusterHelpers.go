@@ -3,7 +3,7 @@ package testhelpers
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"

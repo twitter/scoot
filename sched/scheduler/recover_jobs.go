@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"sync"
 	"time"
