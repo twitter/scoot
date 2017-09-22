@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/scootdev/scoot/os/temp"

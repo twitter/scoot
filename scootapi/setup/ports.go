@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os/exec"
 	"strconv"
 	"time"

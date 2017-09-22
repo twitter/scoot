@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/sethgrid/pester"
+	log "github.com/sirupsen/logrus"
 )
 
 const DefaultHttpTries = 7 // ~2min total of trying with exponential backoff (0 and 1 both mean 1 try total)

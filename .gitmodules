@@ -61,10 +61,10 @@
 	path = vendor/github.com/scootdev/groupcache
 	url = https://github.com/scootdev/groupcache
 	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
-[submodule "vendor/github.com/Sirupsen/logrus"]
-	path = vendor/github.com/Sirupsen/logrus
-	url = https://github.com/Sirupsen/logrus
-	branch = 10f801ebc38b33738c9d17d50860f484a0988ff5
+[submodule "vendor/github.com/sirupsen/logrus"]
+	path = vendor/github.com/sirupsen/logrus
+	url = https://github.com/sirupsen/logrus
+	branch = 89742aefa4b206dcf400792f3bd35b542998eb3b
 
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
@@ -207,3 +207,35 @@
 	path = vendor/github.com/pmezard/go-difflib
 	url = https://github.com/pmezard/go-difflib.git
 	branch = 792786c7400a136282c1664665ae0a8db921c6c2
+[submodule "vendor/github.com/coreos/etcd"]
+	path = vendor/github.com/coreos/etcd
+	url = https://github.com/coreos/etcd
+	branch = 6515a1dfd0eaa7f9b09a8a7e28ddbd0546ea441d
+[submodule "vendor/github.com/coreos/go-semver"]
+	path = vendor/github.com/coreos/go-semver
+	url = https://github.com/coreos/go-semver
+	branch = 1817cd4bea52af76542157eeabd74b057d1a199e
+[submodule "vendor/github.com/mitchellh/go-homedir"]
+	path = vendor/github.com/mitchellh/go-homedir
+	url = https://github.com/mitchellh/go-homedir
+	branch = b8bc1bf767474819792c23f32d8286a45736f1c6
+[submodule "vendor/golang.org/x/sync"]
+	path = vendor/golang.org/x/sync
+	url = https://go.googlesource.com/sync
+	branch = f52d1811a62927559de87708c8913c1650ce4f26
+[submodule "vendor/google.golang.org/genproto"]
+	path = vendor/google.golang.org/genproto
+	url = https://github.com/google/go-genproto
+	branch = 1e559d0a00eef8a9a43151db4665280bd8dd5886
+[submodule "vendor/gopkg.in/airbrake/gobrake.v2"]
+	path = vendor/gopkg.in/airbrake/gobrake.v2
+	url = https://gopkg.in/airbrake/gobrake.v2
+	branch = 668876711219e8b0206e2994bf0a59d889c775aa
+[submodule "vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2"]
+	path = vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	url = https://gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	branch = e928b033a891c0175fb643d5aa0779e86325eb12
+[submodule "vendor/github.com/Sirupsen/logrus"]
+	path = vendor/github.com/Sirupsen/logrus
+	url = https://github.com/Sirupsen/logrus
+	branch = 89742aefa4b206dcf400792f3bd35b542998eb3b

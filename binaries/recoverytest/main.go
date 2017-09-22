@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/hooks"
 	"github.com/scootdev/scoot/scootapi"

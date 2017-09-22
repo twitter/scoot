@@ -3,7 +3,7 @@ package workerapi
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/scootdev/scoot/common/log/helpers"
 	"github.com/scootdev/scoot/common/log/tags"
