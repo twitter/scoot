@@ -50,18 +50,23 @@
 	path = vendor/github.com/sethgrid/pester
 	url = https://github.com/sethgrid/pester
 	branch = 4f4c0a67b6496764028e1ab9fd8dfb630282ed2f
-[submodule "vendor/github.com/golang/groupcache"]
-	path = vendor/github.com/golang/groupcache
-	url = https://github.com/golang/groupcache
-	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
-[submodule "vendor/github.com/scootdev/groupcache"]
-	path = vendor/github.com/scootdev/groupcache
-	url = https://github.com/scootdev/groupcache
-	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
 [submodule "vendor/github.com/sirupsen/logrus"]
 	path = vendor/github.com/sirupsen/logrus
 	url = https://github.com/sirupsen/logrus
     branch = f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+
+[submodule "vendor/github.com/golang/groupcache"]
+	path = vendor/github.com/golang/groupcache
+	url = https://github.com/golang/groupcache
+	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
+[submodule "github.com/twitter/groupcache"]
+	path = github.com/twitter/groupcache
+	url = https://github.com/twitter/groupcache
+	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
+[submodule "github.com/twitter/fuse"]
+	path = github.com/twitter/fuse
+	url = https://github.com/twitter/fuse
+	branch = 18043572956a4a3bfe3e757a6ec9edb008ac8866
 
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
