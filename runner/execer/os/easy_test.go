@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner/execer"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner/execer"
 )
 
 func TestAll(t *testing.T) {
@@ -134,7 +134,7 @@ func TestMemCap(t *testing.T) {
 	defer process.Abort()
 	pid := process.(*osProcess).cmd.Process.Pid
 	// Sleep to give bounded execer time to kill process and release memory
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	var usage execer.Memory
 	if usage, err = e.memUsage(pid); err != nil {
 		t.Fatalf(err.Error())

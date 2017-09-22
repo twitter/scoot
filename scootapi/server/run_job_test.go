@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 func IsInvalidJobRequest(err error) bool {

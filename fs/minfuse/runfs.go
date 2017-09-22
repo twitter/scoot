@@ -3,7 +3,7 @@ package minfuse
 import (
 	"errors"
 	"flag"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,9 +13,9 @@ import (
 
 	_ "net/http/pprof"
 
-	"github.com/scootdev/scoot/fs/min"
-	"github.com/scootdev/scoot/fuse"
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/fs/min"
+	"github.com/twitter/scoot/fuse"
+	"github.com/twitter/scoot/snapshot"
 )
 
 type Options struct {

@@ -7,9 +7,9 @@ import (
 
 	"github.com/leanovate/gopter"
 
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 // Generates a Random Job with the specified Id and number of Tasks

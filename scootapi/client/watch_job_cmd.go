@@ -2,11 +2,11 @@ package client
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
 )
 

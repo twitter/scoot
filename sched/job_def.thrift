@@ -8,8 +8,8 @@
 #     2. go get github.com/apache/thrift/lib/go/thrift
 #
 
-# To Generate files run from this (github.com/scootdev/scoot/sched) directory
-#     1. thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift
+# To Generate files run from this (github.com/twitter/scoot/sched) directory
+#     1. thrift --gen go:package_prefix=github.com/twitter/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift
 
 
 struct Command {

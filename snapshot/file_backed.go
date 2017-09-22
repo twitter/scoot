@@ -1,11 +1,11 @@
 package snapshot
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 
-	"github.com/scootdev/scoot/fs/perf"
+	"github.com/twitter/scoot/fs/perf"
 )
 
 var Trace bool

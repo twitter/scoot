@@ -3,7 +3,7 @@ package execer
 import (
 	"io"
 
-	"github.com/scootdev/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/log/tags"
 )
 
 // Execer lets you run one Unix command. It differs from Runner in that it does not

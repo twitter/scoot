@@ -3,7 +3,7 @@ package gitdb
 import (
 	"fmt"
 
-	snap "github.com/scootdev/scoot/snapshot"
+	snap "github.com/twitter/scoot/snapshot"
 )
 
 const localIDText = "local"

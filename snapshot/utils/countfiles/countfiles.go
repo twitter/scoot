@@ -6,11 +6,11 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
 
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot"
 )
 
 type countContext struct {

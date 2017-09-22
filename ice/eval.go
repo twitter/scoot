@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Extract extracts a value from the MagicBag and puts it into dest, returning any errors

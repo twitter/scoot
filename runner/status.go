@@ -3,7 +3,7 @@ package runner
 import (
 	"fmt"
 
-	"github.com/scootdev/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/log/tags"
 )
 
 type RunID string

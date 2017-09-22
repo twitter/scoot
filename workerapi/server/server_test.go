@@ -2,22 +2,22 @@ package server
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"testing"
 	"time"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/git/repo"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/config/jsonconfig"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
+	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 /*

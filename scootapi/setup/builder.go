@@ -17,7 +17,7 @@ type Builder interface {
 	ApiServer() (string, error)
 }
 
-const repoName = "github.com/scootdev/scoot"
+const repoName = "github.com/twitter/scoot"
 
 // GoBuilder uses the go command-line tools to build Scoot
 type GoBuilder struct {

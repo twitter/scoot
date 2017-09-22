@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/scootdev/scoot/runner"
+	"github.com/twitter/scoot/runner"
 )
 
 // chaos.go: impl that introduces errors (for testing)

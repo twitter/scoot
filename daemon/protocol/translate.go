@@ -1,6 +1,6 @@
 package protocol
 
-import "github.com/scootdev/scoot/runner"
+import "github.com/twitter/scoot/runner"
 
 // TODO(dbentley): we should go generate with command protoc daemon.proto --go_out=plugins=grpc:.
 

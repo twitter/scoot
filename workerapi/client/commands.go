@@ -1,10 +1,10 @@
 package client
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"time"
 
-	"github.com/scootdev/scoot/runner"
+	"github.com/twitter/scoot/runner"
 	"github.com/spf13/cobra"
 )
 

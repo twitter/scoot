@@ -3,20 +3,20 @@ package server
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/config/scootconfig"
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/endpoints"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/config/jsonconfig"
+	"github.com/twitter/scoot/config/scootconfig"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 type servers struct {

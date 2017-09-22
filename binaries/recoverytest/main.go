@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 func main() {

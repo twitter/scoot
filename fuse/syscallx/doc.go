@@ -10,4 +10,4 @@
 //
 // Options can be implemented with separate wrappers, in the style of
 // Linux getxattr/lgetxattr/fgetxattr.
-package syscallx // import "github.com/scootdev/scoot/fuse/syscallx"
+package syscallx // import "github.com/twitter/scoot/fuse/syscallx"
