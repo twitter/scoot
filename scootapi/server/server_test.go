@@ -6,11 +6,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/saga/sagalogs"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/sched/scheduler"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/saga/sagalogs"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 // ensure a scheduler initializes to the correct state

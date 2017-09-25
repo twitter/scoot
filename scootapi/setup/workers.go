@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi"
 )
 
 const DefaultWorkerCount int = 5

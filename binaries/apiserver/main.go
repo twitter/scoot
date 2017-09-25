@@ -6,20 +6,20 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/cloud/cluster/local"
-	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/snapshot/bundlestore"
-	"github.com/scootdev/scoot/snapshot/git/gitdb"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common/endpoints"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/config/jsonconfig"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/git/gitdb"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 func main() {

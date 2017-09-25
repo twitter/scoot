@@ -3,8 +3,8 @@ package server
 import (
 	"time"
 
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/snapshot"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/snapshot"
 )
 
 // Create a new handler that implements daemon protocol and works with domain types.

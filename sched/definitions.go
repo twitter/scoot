@@ -4,10 +4,10 @@ package sched
 import (
 	"time"
 
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/thrifthelpers"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/sched/gen-go/schedthrift"
 )
 
 // Job is the job Scoot can schedule

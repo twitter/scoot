@@ -1,16 +1,16 @@
 package minfuse
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"syscall"
 	"time"
 
-	fs "github.com/scootdev/scoot/fs/min/interface"
-	"github.com/scootdev/scoot/fs/perf"
-	"github.com/scootdev/scoot/fuse"
-	"github.com/scootdev/scoot/snapshot"
+	fs "github.com/twitter/scoot/fs/min/interface"
+	"github.com/twitter/scoot/fs/perf"
+	"github.com/twitter/scoot/fuse"
+	"github.com/twitter/scoot/snapshot"
 )
 
 const blockSize uint32 = 4096

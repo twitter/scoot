@@ -7,12 +7,12 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/luci/go-render/render"
-	"github.com/scootdev/scoot/cloud/cluster"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/saga/sagalogs"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/saga/sagalogs"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {

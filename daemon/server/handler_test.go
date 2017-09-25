@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/runner"
-	execer "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
+	execer "github.com/twitter/scoot/runner/execer/os"
+	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 // Run through an example daemon use case.

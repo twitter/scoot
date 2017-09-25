@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/scootdev/scoot/runner"
+	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/runner"
 )
 
 const UnknownRunIDMsg = "unknown run id %v"

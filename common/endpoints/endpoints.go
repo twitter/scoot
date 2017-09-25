@@ -5,12 +5,12 @@ package endpoints
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"time"
 
-	"github.com/scootdev/scoot/common/stats"
+	"github.com/twitter/scoot/common/stats"
 )
 
 type Addr string

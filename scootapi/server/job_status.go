@@ -1,11 +1,11 @@
 package server
 
 import (
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	s "github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/thrifthelpers"
+	s "github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {

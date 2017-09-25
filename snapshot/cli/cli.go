@@ -43,14 +43,14 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/bundlestore"
-	"github.com/scootdev/scoot/snapshot/git/gitdb"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/git/gitdb"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 type DBInjector interface {

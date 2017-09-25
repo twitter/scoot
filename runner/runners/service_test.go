@@ -5,8 +5,8 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/runner"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/runner"
 )
 
 // Utilities for testing a runner.Service (single_test.go and queue_test.go)

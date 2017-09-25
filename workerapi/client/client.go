@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/scootdev/scoot/common/dialer"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/runners"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/workerapi"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/workerapi"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 type Client interface {

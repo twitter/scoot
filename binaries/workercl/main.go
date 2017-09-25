@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/common/dialer"
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/config/scootconfig"
-	"github.com/scootdev/scoot/workerapi/client"
+	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/config/scootconfig"
+	"github.com/twitter/scoot/workerapi/client"
 )
 
 // CLI binary to talk to Workerserver

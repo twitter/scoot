@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/bash -x
 # Add new direct and transitive dependencies as submodules.
 #
 echo "Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'"
 echo "FIXME: may not work for gopkg.in on OSX: 'Unknown SSL protocol error in connection to gopkg.in:-9838'"
 echo "       see https://github.com/niemeyer/gopkg/issues/49 for context"
-echo '       also try temporarily doing:  git config --global url."http://".insteadOf https://  '
+echo '       also try temporarily doing:  'git config --global url."http://".insteadOf https://'
 
 set -euo pipefail
 trap "exit" INT TERM
@@ -40,7 +40,7 @@ echo "Windows Deps."
 export GOOS=windows GOARCH=amd64
 get_deps "${depRepo}"
 
-HANDLED=$(find ${GOPATH} -name .git | sort | uniq | sed -E "s,${GOPATH}/src/|/\.git,,g" | grep -v scootdev)
+HANDLED=$(find ${GOPATH} -name .git | sort | uniq | sed -E "s,${GOPATH}/src/|/\.git,,g" | grep -v twitter)
 
 cd "${SCOOT_ORIG}"
 for dep in ${HANDLED}; do

@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	snap "github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/bundlestore"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 var fixture *dbFixture
@@ -527,7 +527,7 @@ func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
 	if _, err = r.Run("config", "user.name", "Scoot Test"); err != nil {
 		return nil, err
 	}
-	if _, err = r.Run("config", "user.email", "scoottest@scootdev.github.io"); err != nil {
+	if _, err = r.Run("config", "user.email", "scoottest@twitter.github.io"); err != nil {
 		return nil, err
 	}
 

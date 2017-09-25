@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snapshot, error) {

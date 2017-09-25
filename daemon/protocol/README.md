@@ -49,7 +49,7 @@ daemon/protocol/python/deploy.sh
 
 * Install a protoc with libproto version >= 3.0.0 from https://github.com/google/protobuf
 * install protoc-gen-go from https://github.com/golang/protobuf (you need this to be on your $PATH, not your GOPATH)
-* In this directory (github.com/scootdev/scoot/daemon/protocol), run:
+* In this directory (github.com/twitter/scoot/daemon/protocol), run:
 ```sh
 protoc -I . daemon.proto --go_out=plugins=grpc:.
 ```

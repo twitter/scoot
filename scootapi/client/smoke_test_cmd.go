@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
-	"github.com/scootdev/scoot/tests/testhelpers"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 type smokeTestCmd struct {

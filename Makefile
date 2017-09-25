@@ -3,7 +3,7 @@ DESC := distributed build tools
 GOVERSION := $(shell go version)
 BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
-PROJECT_URL := "https://github.com/scootdev/scoot"
+PROJECT_URL := "https://github.com/twitter/scoot"
 
 SHELL := /bin/bash -o pipefail
 
@@ -103,15 +103,15 @@ fullbuild: dependencies generate test
 travis: dependencies recoverytest swarmtest test clean-data
 
 thrift-worker:
-	# Create generated code in github.com/scootdev/scoot/workerapi/gen-go/... from worker.thrift
-	cd workerapi && thrift --gen go:package_prefix=github.com/scootdev/scoot/workerapi/gen-go/,package=worker,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
+	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
+	cd workerapi && thrift --gen go:package_prefix=github.com/twitter/scoot/workerapi/gen-go/,package=worker,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
 
 thrift-sched:
-	# Create generated code in github.com/scootdev/scoot/sched/gen-go/... from job_def.thrift
-	cd sched && thrift --gen go:package_prefix=github.com/scootdev/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift && cd ..
+	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from job_def.thrift
+	cd sched && thrift --gen go:package_prefix=github.com/twitter/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift && cd ..
 
 thrift-scoot:
-	# Create generated code in github.com/scootdev/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && thrift --gen go:package_prefix=github.com/scootdev/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
+	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
+	cd scootapi && thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 
 thrift: thrift-worker thrift-sched thrift-scoot

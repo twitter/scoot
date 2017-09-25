@@ -1,13 +1,13 @@
 package scheduler
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/scootdev/scoot/saga"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/saga"
+	"github.com/twitter/scoot/sched"
 )
 
 // recovers all active sagas from the specified SagaCoordinator with ForwardRecovery.

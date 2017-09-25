@@ -6,12 +6,12 @@ import (
 	"sort"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/common/dialer"
-	"github.com/scootdev/scoot/scootapi"
-	"github.com/scootdev/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 // Creates a CloudScootClient that talks to the specified address

@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/scootapi"
+	"github.com/twitter/scoot/scootapi"
 )
 
 // SchedulerStrategy will startup a Scheduler (or setup a connection to one)

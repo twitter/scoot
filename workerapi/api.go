@@ -3,13 +3,13 @@ package workerapi
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/helpers"
-	"github.com/scootdev/scoot/common/log/tags"
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/log/helpers"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/thrifthelpers"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 //

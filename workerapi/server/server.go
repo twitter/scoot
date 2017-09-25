@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/helpers"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/runners"
-	domain "github.com/scootdev/scoot/workerapi"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/log/helpers"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/runners"
+	domain "github.com/twitter/scoot/workerapi"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 // Creates a Worker Server

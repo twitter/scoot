@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
 const (

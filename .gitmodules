@@ -50,21 +50,23 @@
 	path = vendor/github.com/sethgrid/pester
 	url = https://github.com/sethgrid/pester
 	branch = 4f4c0a67b6496764028e1ab9fd8dfb630282ed2f
+[submodule "vendor/github.com/sirupsen/logrus"]
+	path = vendor/github.com/sirupsen/logrus
+	url = https://github.com/sirupsen/logrus
+    branch = f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 
-# Added by hand b/c deps.sh currently bombs with an ssl error when git cloning gopkg.in/yaml.v2
-# Using forked scootdev/groupcache for now (we needed to add a public method for populating a cache).
 [submodule "vendor/github.com/golang/groupcache"]
 	path = vendor/github.com/golang/groupcache
 	url = https://github.com/golang/groupcache
 	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
-[submodule "vendor/github.com/scootdev/groupcache"]
-	path = vendor/github.com/scootdev/groupcache
-	url = https://github.com/scootdev/groupcache
+[submodule "github.com/twitter/groupcache"]
+	path = vendor/github.com/twitter/groupcache
+	url = https://github.com/twitter/groupcache
 	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
-[submodule "vendor/github.com/Sirupsen/logrus"]
-	path = vendor/github.com/Sirupsen/logrus
-	url = https://github.com/Sirupsen/logrus
-	branch = 10f801ebc38b33738c9d17d50860f484a0988ff5
+[submodule "github.com/twitter/fuse"]
+	path = vendor/github.com/twitter/fuse
+	url = https://github.com/twitter/fuse
+	branch = 18043572956a4a3bfe3e757a6ec9edb008ac8866
 
 #
 # Everything after here is a transitive dependency that is not required to use scoot.
@@ -207,3 +209,155 @@
 	path = vendor/github.com/pmezard/go-difflib
 	url = https://github.com/pmezard/go-difflib.git
 	branch = 792786c7400a136282c1664665ae0a8db921c6c2
+[submodule "vendor/github.com/coreos/etcd"]
+	path = vendor/github.com/coreos/etcd
+	url = https://github.com/coreos/etcd
+	branch = 527429f30ab169532bda25d268e18a1e2b22507e
+[submodule "vendor/github.com/coreos/go-semver"]
+	path = vendor/github.com/coreos/go-semver
+	url = https://github.com/coreos/go-semver
+	branch = 1817cd4bea52af76542157eeabd74b057d1a199e
+[submodule "vendor/github.com/mitchellh/go-homedir"]
+	path = vendor/github.com/mitchellh/go-homedir
+	url = https://github.com/mitchellh/go-homedir
+	branch = b8bc1bf767474819792c23f32d8286a45736f1c6
+[submodule "vendor/github.com/beorn7/perks"]
+	path = vendor/github.com/beorn7/perks
+	url = https://github.com/beorn7/perks
+	branch = 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+[submodule "vendor/github.com/bgentry/speakeasy"]
+	path = vendor/github.com/bgentry/speakeasy
+	url = https://github.com/bgentry/speakeasy
+	branch = 4aabc24848ce5fd31929f7d1e4ea74d3709c14cd
+[submodule "vendor/github.com/coreos/bbolt"]
+	path = vendor/github.com/coreos/bbolt
+	url = https://github.com/coreos/bbolt
+	branch = ebf39dca253747810b2f412f9e04befbd683be75
+[submodule "vendor/github.com/coreos/go-systemd"]
+	path = vendor/github.com/coreos/go-systemd
+	url = https://github.com/coreos/go-systemd
+	branch = d2196463941895ee908e13531a23a39feb9e1243
+[submodule "vendor/github.com/coreos/pkg"]
+	path = vendor/github.com/coreos/pkg
+	url = https://github.com/coreos/pkg
+	branch = 459346e834d8e97be707cd0ea1236acaaa159ffc
+[submodule "vendor/github.com/dgrijalva/jwt-go"]
+	path = vendor/github.com/dgrijalva/jwt-go
+	url = https://github.com/dgrijalva/jwt-go
+	branch = a539ee1a749a2b895533f979515ac7e6e0f5b650
+[submodule "vendor/github.com/dustin/go-humanize"]
+	path = vendor/github.com/dustin/go-humanize
+	url = https://github.com/dustin/go-humanize
+	branch = 79e699ccd02f240a1f1fbbdcee7e64c1c12e41aa
+[submodule "vendor/github.com/fatih/color"]
+	path = vendor/github.com/fatih/color
+	url = https://github.com/fatih/color
+	branch = 1535ebc2637cc042c938f07fa26c6356ab8f8504
+[submodule "vendor/github.com/ghodss/yaml"]
+	path = vendor/github.com/ghodss/yaml
+	url = https://github.com/ghodss/yaml
+	branch = 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
+[submodule "vendor/github.com/gogo/protobuf"]
+	path = vendor/github.com/gogo/protobuf
+	url = https://github.com/gogo/protobuf
+	branch = 2adc21fd136931e0388e278825291678e1d98309
+[submodule "vendor/github.com/google/btree"]
+	path = vendor/github.com/google/btree
+	url = https://github.com/google/btree
+	branch = 316fb6d3f031ae8f4d457c6c5186b9e3ded70435
+[submodule "vendor/github.com/grpc-ecosystem/go-grpc-prometheus"]
+	path = vendor/github.com/grpc-ecosystem/go-grpc-prometheus
+	url = https://github.com/grpc-ecosystem/go-grpc-prometheus
+	branch = 0dafe0d496ea71181bf2dd039e7e3f44b6bd11a7
+[submodule "vendor/github.com/grpc-ecosystem/grpc-gateway"]
+	path = vendor/github.com/grpc-ecosystem/grpc-gateway
+	url = https://github.com/grpc-ecosystem/grpc-gateway
+	branch = 8bec008bd140852468324fdd069ed8e38d37a963
+[submodule "vendor/github.com/jonboulle/clockwork"]
+	path = vendor/github.com/jonboulle/clockwork
+	url = https://github.com/jonboulle/clockwork
+	branch = bcac9884e7502bb2b474c0339d889cb981a2f27f
+[submodule "vendor/github.com/kr/pty"]
+	path = vendor/github.com/kr/pty
+	url = https://github.com/kr/pty
+	branch = 2c10821df3c3cf905230d078702dfbe9404c9b23
+[submodule "vendor/github.com/mattn/go-colorable"]
+	path = vendor/github.com/mattn/go-colorable
+	url = https://github.com/mattn/go-colorable
+	branch = ad5389df28cdac544c99bd7b9161a0b5b6ca9d1b
+[submodule "vendor/github.com/mattn/go-isatty"]
+	path = vendor/github.com/mattn/go-isatty
+	url = https://github.com/mattn/go-isatty
+	branch = fc9e8d8ef48496124e79ae0df75490096eccf6fe
+[submodule "vendor/github.com/mattn/go-runewidth"]
+	path = vendor/github.com/mattn/go-runewidth
+	url = https://github.com/mattn/go-runewidth
+	branch = 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+[submodule "vendor/github.com/matttproud/golang_protobuf_extensions"]
+	path = vendor/github.com/matttproud/golang_protobuf_extensions
+	url = https://github.com/matttproud/golang_protobuf_extensions
+	branch = c12348ce28de40eed0136aa2b644d0ee0650e56c
+[submodule "vendor/github.com/olekukonko/tablewriter"]
+	path = vendor/github.com/olekukonko/tablewriter
+	url = https://github.com/olekukonko/tablewriter
+	branch = 0fd34425a5aee40ff3f260b34e6c3b0d59f58c66
+[submodule "vendor/github.com/prometheus/client_golang"]
+	path = vendor/github.com/prometheus/client_golang
+	url = https://github.com/prometheus/client_golang
+	branch = 353b8c3f3776541879f9abfd8fa8b1ae162ab394
+[submodule "vendor/github.com/prometheus/client_model"]
+	path = vendor/github.com/prometheus/client_model
+	url = https://github.com/prometheus/client_model
+	branch = 6f3806018612930941127f2a7c6c453ba2c527d2
+[submodule "vendor/github.com/prometheus/common"]
+	path = vendor/github.com/prometheus/common
+	url = https://github.com/prometheus/common
+	branch = 2f17f4a9d485bf34b4bfaccc273805040e4f86c8
+[submodule "vendor/github.com/prometheus/procfs"]
+	path = vendor/github.com/prometheus/procfs
+	url = https://github.com/prometheus/procfs
+	branch = e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2
+[submodule "vendor/github.com/soheilhy/cmux"]
+	path = vendor/github.com/soheilhy/cmux
+	url = https://github.com/soheilhy/cmux
+	branch = bb79a83465015a27a175925ebd155e660f55e9f1
+[submodule "vendor/github.com/urfave/cli"]
+	path = vendor/github.com/urfave/cli
+	url = https://github.com/urfave/cli
+	branch = 7fb9c86b14e6a702a4157ccb5a863f07d844a207
+[submodule "vendor/github.com/xiang90/probing"]
+	path = vendor/github.com/xiang90/probing
+	url = https://github.com/xiang90/probing
+	branch = 07dd2e8dfe18522e9c447ba95f2fe95262f63bb2
+[submodule "vendor/golang.org/x/sync"]
+	path = vendor/golang.org/x/sync
+	url = https://go.googlesource.com/sync
+	branch = f52d1811a62927559de87708c8913c1650ce4f26
+[submodule "vendor/golang.org/x/time"]
+	path = vendor/golang.org/x/time
+	url = https://go.googlesource.com/time
+	branch = 8be79e1e0910c292df4e79c241bb7e8f7e725959
+[submodule "vendor/google.golang.org/genproto"]
+	path = vendor/google.golang.org/genproto
+	url = https://github.com/google/go-genproto
+	branch = 1e559d0a00eef8a9a43151db4665280bd8dd5886
+[submodule "vendor/gopkg.in/airbrake/gobrake.v2"]
+	path = vendor/gopkg.in/airbrake/gobrake.v2
+	url = https://gopkg.in/airbrake/gobrake.v2
+	branch = 668876711219e8b0206e2994bf0a59d889c775aa
+[submodule "vendor/gopkg.in/check.v1"]
+	path = vendor/gopkg.in/check.v1
+	url = https://gopkg.in/check.v1
+	branch = 20d25e2804050c1cd24a7eea1e7a6447dd0e74ec
+[submodule "vendor/gopkg.in/cheggaaa/pb.v1"]
+	path = vendor/gopkg.in/cheggaaa/pb.v1
+	url = https://gopkg.in/cheggaaa/pb.v1
+	branch = 657164d0228d6bebe316fdf725c69f131a50fb10
+[submodule "vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2"]
+	path = vendor/gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	url = https://gopkg.in/gemnasium/logrus-airbrake-hook.v2
+	branch = e928b033a891c0175fb643d5aa0779e86325eb12
+[submodule "vendor/gopkg.in/urfave/cli.v1"]
+	path = vendor/gopkg.in/urfave/cli.v1
+	url = https://gopkg.in/urfave/cli.v1
+	branch = cfb38830724cc34fedffe9a2a29fb54fa9169cd1

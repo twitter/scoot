@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/os/temp"
+	"github.com/twitter/scoot/os/temp"
 )
 
 // Create a fixed dir in tmp.

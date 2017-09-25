@@ -1,12 +1,12 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/scootdev/scoot/common/dialer"
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/config/scootconfig"
-	"github.com/scootdev/scoot/scootapi/client"
+	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/config/scootconfig"
+	"github.com/twitter/scoot/scootapi/client"
 )
 
 // CLI binary to talk to Cloud Scoot API

@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/thrifthelpers"
-	"github.com/scootdev/scoot/sched/gen-go/schedthrift"
+	"github.com/twitter/scoot/common/thrifthelpers"
+	"github.com/twitter/scoot/sched/gen-go/schedthrift"
 )
 
 func Test_FixedJob(t *testing.T) {

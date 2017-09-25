@@ -9,10 +9,10 @@ import (
 	"path"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	snap "github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/bundlestore"
+	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/bundlestore"
 )
 
 // BundlestoreConfig defines how to talk to Bundlestore

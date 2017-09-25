@@ -1,7 +1,7 @@
 # Scoot
-[![Build Status](https://travis-ci.org/scootdev/scoot.svg?branch=master)](https://travis-ci.org/scootdev/scoot)
-[![codecov.io](https://codecov.io/github/Kitware/candela/coverage.svg?branch=master)](https://codecov.io/gh/scootdev/scoot?branch=master)
-[![GoDoc](https://godoc.org/github.com/scootdev/scoot?status.svg)](https://godoc.org/github.com/scootdev/scoot)
+[![Build Status](https://travis-ci.org/twitter/scoot.svg?branch=master)](https://travis-ci.org/twitter/scoot)
+[![codecov.io](https://codecov.io/github/Kitware/candela/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
+[![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
 
 Scoot is infrastructure to make developer tools smaller, simpler, and more distributed. The core concept of Scoot is the Snapshot, which represents an immutable filesystem state. Scoot allows for execution of commands against input Snapshots to create new output Snapshots.
 
@@ -44,12 +44,12 @@ go run ./binaries/scootapi/main.go run_smoke_test
 ```
 
 ## Scoot Thrift Code
-(open source scoot code is in workspace/github.com/scootdev/scoot)
+(open source scoot code is in workspace/github.com/twitter/scoot)
 
 __Generating thrift files (scootapi used as an example)__
 * To Generate files run from scoot's scootapi directory:
 ```sh
-thrift --gen go:package_prefix=github.com/scootdev/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
+thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
 ```
 
 ## Scoot Protobuf Code
@@ -97,13 +97,13 @@ pip install docopt==0.6.2
 
 ## Install/Access Scoot Executables and libraries
 ### Scoot Local Daemon, Local Scheduler and Local Worker
-*cd to scoot directory (workspace/github.com/scootdev/scoot)
+*cd to scoot directory (workspace/github.com/twitter/scoot)
 *run: go install ./binaries/...
 ** the binaries will be installed in workspace/bin
 
 ### Scoot Local Daemon Command Line Client
-```python workspace/github.com/scootdev/scoot/daemon/protocol/python/scoot/scoot.py
+```python workspace/github.com/twitter/scoot/daemon/protocol/python/scoot/scoot.py
 
 ### Python client library
-Can be found at workspace/github.com/scootdev/scoot/daemon/protocol/python/scoot/client_lib.py
+Can be found at workspace/github.com/twitter/scoot/daemon/protocol/python/scoot/client_lib.py
 

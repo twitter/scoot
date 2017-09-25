@@ -62,11 +62,11 @@
 // Behavior and metadata of the mounted file system can be changed by
 // passing MountOption values to Mount.
 //
-package fuse // import "github.com/scootdev/scoot/fuse"
+package fuse // import "github.com/twitter/scoot/fuse"
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"syscall"
 	"time"

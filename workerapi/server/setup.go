@@ -1,18 +1,18 @@
 package server
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/endpoints"
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/config/jsonconfig"
-	"github.com/scootdev/scoot/ice"
-	"github.com/scootdev/scoot/runner"
-	"github.com/scootdev/scoot/runner/execer"
-	"github.com/scootdev/scoot/runner/execer/execers"
-	osexec "github.com/scootdev/scoot/runner/execer/os"
-	"github.com/scootdev/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/common/endpoints"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/config/jsonconfig"
+	"github.com/twitter/scoot/ice"
+	"github.com/twitter/scoot/runner"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
+	osexec "github.com/twitter/scoot/runner/execer/os"
+	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
 type servers struct {

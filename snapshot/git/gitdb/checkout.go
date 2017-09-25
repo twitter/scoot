@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	snap "github.com/scootdev/scoot/snapshot"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {

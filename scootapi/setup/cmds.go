@@ -2,7 +2,7 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scootdev/scoot/os/temp"
+	"github.com/twitter/scoot/os/temp"
 )
 
 // Cmds runs commands for Cloud Scoot setup.

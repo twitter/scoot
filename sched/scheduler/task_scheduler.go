@@ -4,10 +4,10 @@ import (
 	"math"
 	"sort"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/sched"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/sched"
 )
 
 type taskAssignment struct {

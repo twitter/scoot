@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/scootdev/scoot/common/log/hooks"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/scootapi/setup"
+	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scootapi/setup"
 )
 
 // Sets up a local swarm that serves scootapi, then waits or runs

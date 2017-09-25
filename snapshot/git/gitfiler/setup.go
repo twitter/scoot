@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/scootdev/scoot/common/stats"
-	"github.com/scootdev/scoot/os/temp"
-	"github.com/scootdev/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // Utilities for creating Checkouters.
