@@ -6,8 +6,8 @@ package main
 import (
 	"flag"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/binaries/scheduler/config"
 	"github.com/twitter/scoot/common/endpoints"

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/golang/mock/gomock"
+	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
 	s "github.com/twitter/scoot/saga"

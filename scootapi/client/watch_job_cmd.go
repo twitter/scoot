@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"github.com/spf13/cobra"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"time"
 
-	"github.com/twitter/scoot/runner"
 	"github.com/spf13/cobra"
+	"github.com/twitter/scoot/runner"
 )
 
 // Run
