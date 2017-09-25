@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/golang/mock/gomock"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/log/hooks"

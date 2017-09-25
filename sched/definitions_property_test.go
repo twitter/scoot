@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
+	log "github.com/sirupsen/logrus"
 )
 
 func Test_JobSerializeDeserialize(t *testing.T) {

@@ -5,10 +5,10 @@ package saga
 import (
 	"bytes"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+	log "github.com/sirupsen/logrus"
 	"strings"
 	"testing"
 )

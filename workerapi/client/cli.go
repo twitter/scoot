@@ -1,9 +1,9 @@
 package client
 
 import (
+	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/scootapi"
-	"github.com/spf13/cobra"
 )
 
 // Worker API Client interface that includes CLI handling

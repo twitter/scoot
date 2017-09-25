@@ -2,9 +2,9 @@ package saga
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
+	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"math"
