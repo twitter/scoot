@@ -27,7 +27,7 @@ get_deps() {
     done
 }
 
-depRepo="github.com/scootdev/scoot"
+depRepo="github.com/twitter/scoot"
 depDir="${GOPATH}/src/$(dirname ${depRepo})"
 mkdir -p "${depDir}" && cd "${depDir}"
 cp -R "${SCOOT_ORIG}" "./$(basename ${depRepo})"
