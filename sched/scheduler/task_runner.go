@@ -15,6 +15,7 @@ import (
 )
 
 const DeadLetterTrailer = " -> Error(s) encountered, canceling task."
+const DeadLetterExitCode = -200
 
 func emptyStatusError(jobId string, taskId string, err error) string {
 	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %s", jobId, taskId, err)
@@ -115,6 +116,7 @@ func (r *taskRunner) run() error {
 				"tag":    r.Tag,
 			}).Info("Error running job, dead lettering task after max retries.")
 		taskErr.st.Error += DeadLetterTrailer
+		taskErr.st.ExitCode = DeadLetterExitCode
 	}
 
 	log.WithFields(
