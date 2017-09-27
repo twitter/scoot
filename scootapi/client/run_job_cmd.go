@@ -49,6 +49,7 @@ type TaskDef struct {
 	Args       []string
 	SnapshotID string
 	TimeoutMs  int32
+	TaskID     string
 }
 
 func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
