@@ -104,6 +104,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jt.Args
 			taskDef.SnapshotId = &jt.SnapshotID
+			taskDef.TaskId = &jt.TaskID
 			jobDef.Tasks = append(jobDef.Tasks, taskDef)
 			if jt.TimeoutMs > 0 {
 				taskDef.TimeoutMs = &jt.TimeoutMs
