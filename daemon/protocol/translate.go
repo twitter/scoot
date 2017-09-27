@@ -24,7 +24,7 @@ func FromRunnerStatus(status runner.RunStatus) *PollReply_Status {
 		string(status.RunID),
 		state,
 		status.SnapshotID,
-		int32(status.ExitCode),
+		int32(*status.ExitCode),
 		status.Error,
 	}
 }
@@ -45,11 +45,12 @@ func ToRunnerStatus(status *PollReply_Status) runner.RunStatus {
 	case PollReply_Status_COMPLETED:
 		state = runner.COMPLETE
 	}
+	exitCode := int(status.ExitCode)
 	return runner.RunStatus{
 		RunID:      runner.RunID(status.RunId),
 		State:      state,
 		SnapshotID: status.SnapshotId,
-		ExitCode:   int(status.ExitCode),
+		ExitCode:   &exitCode,
 		Error:      status.Error,
 	}
 }

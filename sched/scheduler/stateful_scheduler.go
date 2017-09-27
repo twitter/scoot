@@ -678,7 +678,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				defer rs.Release()
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
 				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
-					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
+					(err.(*taskError).st.State == runner.COMPLETE && *err.(*taskError).st.ExitCode == 0) {
 					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
 				}
 

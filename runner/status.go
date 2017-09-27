@@ -68,7 +68,7 @@ type RunStatus struct {
 	RunID RunID
 
 	State    RunState
-	ExitCode int
+	ExitCode *int
 	tags.LogTags
 	// References to stdout and stderr, not their text
 	// Runner impls shall provide valid refs for all States (but optionally may not for UNKNOWN/BADREQUEST).
@@ -149,7 +149,7 @@ func CompleteStatus(runID RunID, snapshotID string, exitCode int, tags tags.LogT
 	r.RunID = runID
 	r.State = COMPLETE
 	r.SnapshotID = snapshotID
-	r.ExitCode = exitCode
+	r.ExitCode = &exitCode
 	r.LogTags = tags
 	return r
 }
