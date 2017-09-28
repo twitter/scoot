@@ -277,13 +277,20 @@ func (c *QueueController) loop() {
 			updateDoneCh = make(chan interface{})
 			go func() {
 				if err := c.filer.Update(); err != nil {
-					log.WithFields(
-						log.Fields{
+					var fields log.Fields
+					if c.runningCmd != nil {
+						fields = log.Fields{
 							"err":    err,
 							"tag":    c.runningCmd.Tag,
 							"jobID":  c.runningCmd.JobID,
 							"taskID": c.runningCmd.TaskID,
-						}).Error("error running Filer Update")
+						}
+					} else {
+						fields = log.Fields{
+							"err": err,
+						}
+					}
+					log.WithFields(fields).Error("error running Filer Update")
 				}
 				updateDoneCh <- nil
 			}()
