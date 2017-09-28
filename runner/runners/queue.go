@@ -222,18 +222,11 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	if run == c.runningID {
 		if c.runningAbort != nil {
-			var fields log.Fields
+			fields := log.Fields{"currentRun": c.runningID}
 			if c.runningCmd != nil {
-				fields = log.Fields{
-					"currentRun": c.runningID,
-					"jobID":      c.runningCmd.JobID,
-					"taskID":     c.runningCmd.TaskID,
-					"tag":        c.runningCmd.Tag,
-				}
-			} else {
-				fields = log.Fields{
-					"currentRun": c.runningID,
-				}
+				fields["jobID"] = c.runningCmd.JobID
+				fields["taskID"] = c.runningCmd.TaskID
+				fields["tag"] = c.runningCmd.Tag
 			}
 			log.WithFields(fields).Info("Aborting")
 			close(c.runningAbort)
@@ -284,18 +277,11 @@ func (c *QueueController) loop() {
 			updateDoneCh = make(chan interface{})
 			go func() {
 				if err := c.filer.Update(); err != nil {
-					var fields log.Fields
+					fields := log.Fields{"err": err}
 					if c.runningCmd != nil {
-						fields = log.Fields{
-							"err":    err,
-							"tag":    c.runningCmd.Tag,
-							"jobID":  c.runningCmd.JobID,
-							"taskID": c.runningCmd.TaskID,
-						}
-					} else {
-						fields = log.Fields{
-							"err": err,
-						}
+						fields["tag"] = c.runningCmd.Tag
+						fields["jobID"] = c.runningCmd.JobID
+						fields["taskID"] = c.runningAbort.TaskID
 					}
 					log.WithFields(fields).Error("error running Filer Update")
 				}
