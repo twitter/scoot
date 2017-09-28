@@ -281,7 +281,7 @@ func (c *QueueController) loop() {
 					if c.runningCmd != nil {
 						fields["tag"] = c.runningCmd.Tag
 						fields["jobID"] = c.runningCmd.JobID
-						fields["taskID"] = c.runningAbort.TaskID
+						fields["taskID"] = c.runningCmd.TaskID
 					}
 					log.WithFields(fields).Error("error running Filer Update")
 				}
