@@ -196,7 +196,7 @@
 [submodule "vendor/golang.org/x/text"]
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
-	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
+	branch = 1cbadb444a806fd9430d14ad08967ed91da4fa0a
 [submodule "vendor/github.com/stretchr/objx"]
 	path = vendor/github.com/stretchr/objx
 	url = https://github.com/stretchr/objx.git
