@@ -222,13 +222,20 @@ func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 	if run == c.runningID {
 		if c.runningAbort != nil {
-			log.WithFields(
-				log.Fields{
+			var fields log.Fields
+			if c.runningCmd != nil {
+				fields = log.Fields{
 					"currentRun": c.runningID,
 					"jobID":      c.runningCmd.JobID,
 					"taskID":     c.runningCmd.TaskID,
 					"tag":        c.runningCmd.Tag,
-				}).Info("Aborting")
+				}
+			} else {
+				fields = log.Fields{
+					"currentRun": c.runningID,
+				}
+			}
+			log.WithFields(fields).Info("Aborting")
 			close(c.runningAbort)
 			c.runningAbort = nil
 		}
