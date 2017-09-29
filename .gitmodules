@@ -21,7 +21,7 @@
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-	branch = 0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0
+	branch = 130e6b02ab059e7b717a096f397c5b60111cae74
 [submodule "vendor/github.com/golang/mock"]
 	path = vendor/github.com/golang/mock
 	url = https://github.com/golang/mock
