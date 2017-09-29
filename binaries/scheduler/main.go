@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"net"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +17,7 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
+	remote "github.com/twitter/scoot/remote/server"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/server"
 )
@@ -25,8 +27,9 @@ func main() {
 
 	// Set Flags Needed by this Server
 	// TODO: add support for in-memory workers doing real work with gitdb.
-	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server.")
-	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "addr to serve http on")
+	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server")
+	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "Bind address for http server")
+	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
@@ -54,6 +57,14 @@ func main() {
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
 			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, nil)
+		},
+
+		func() (net.Listener, error) {
+			return net.Listen("tcp", *grpcAddr)
+		},
+
+		func(l net.Listener) remote.GRPCServer {
+			return remote.NewExecutionServer(l)
 		},
 
 		func() (*temp.TempDir, error) {

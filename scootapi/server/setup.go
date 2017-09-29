@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/ice"
+	remote "github.com/twitter/scoot/remote/server"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
@@ -22,12 +24,14 @@ import (
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
+	grpc   remote.GRPCServer
 }
 
 func makeServers(
 	thrift thrift.TServer,
-	http *endpoints.TwitterServer) servers {
-	return servers{thrift, http}
+	http *endpoints.TwitterServer,
+	grpc remote.GRPCServer) servers {
+	return servers{thrift, http, grpc}
 }
 
 // Creates an MagicBag and a JsonSchema for this server and returns them
@@ -72,8 +76,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultSched_HTTP), s, nil)
 		},
 
-		func(t thrift.TServer, h *endpoints.TwitterServer) servers {
-			return makeServers(t, h)
+		func(t thrift.TServer, h *endpoints.TwitterServer, g remote.GRPCServer) servers {
+			return makeServers(t, h, g)
 		},
 
 		func(log saga.SagaLog) saga.SagaCoordinator {
@@ -82,6 +86,14 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() thrift.TProtocolFactory {
 			return thrift.NewTBinaryProtocolFactoryDefault()
+		},
+
+		func() (net.Listener, error) {
+			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
+		},
+
+		func(l net.Listener) remote.GRPCServer {
+			return remote.NewExecutionServer(l)
 		},
 	)
 
@@ -143,6 +155,9 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	}()
 	go func() {
 		errCh <- servers.thrift.Serve()
+	}()
+	go func() {
+		errCh <- servers.grpc.Serve()
 	}()
 	log.Fatal("Error serving: ", <-errCh)
 }
