@@ -1,0 +1,9 @@
+### Remote Execution for Scoot
+
+This contains initial server support for the Bazel gRPC Remote Execution API.
+
+The API Design Document can be found at: https://docs.google.com/document/d/1AaGk7fOPByEvpAbqeXIyE8HX_A3_axxNnvroblTZ_6s/edit#
+
+##### Running/testing the API:
+* The Scheduler, by default, will initialize and serve the API over gRPC on the default port.
+* A (very limited) test binary (binaries/execapi) can be built to send client requests against the Scheduler running the API.

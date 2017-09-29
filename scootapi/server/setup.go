@@ -13,7 +13,7 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/ice"
-	remote "github.com/twitter/scoot/remote/server"
+	remexec "github.com/twitter/scoot/remexec/server"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
@@ -24,13 +24,13 @@ import (
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
-	grpc   remote.GRPCServer
+	grpc   remexec.GRPCServer
 }
 
 func makeServers(
 	thrift thrift.TServer,
 	http *endpoints.TwitterServer,
-	grpc remote.GRPCServer) servers {
+	grpc remexec.GRPCServer) servers {
 	return servers{thrift, http, grpc}
 }
 
@@ -76,7 +76,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultSched_HTTP), s, nil)
 		},
 
-		func(t thrift.TServer, h *endpoints.TwitterServer, g remote.GRPCServer) servers {
+		func(t thrift.TServer, h *endpoints.TwitterServer, g remexec.GRPCServer) servers {
 			return makeServers(t, h, g)
 		},
 
@@ -92,8 +92,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
 		},
 
-		func(l net.Listener) remote.GRPCServer {
-			return remote.NewExecutionServer(l)
+		func(l net.Listener) remexec.GRPCServer {
+			return remexec.NewExecutionServer(l)
 		},
 	)
 

@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
-	remote "github.com/twitter/scoot/remote/server"
+	remexec "github.com/twitter/scoot/remexec/server"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/server"
 )
@@ -63,8 +63,8 @@ func main() {
 			return net.Listen("tcp", *grpcAddr)
 		},
 
-		func(l net.Listener) remote.GRPCServer {
-			return remote.NewExecutionServer(l)
+		func(l net.Listener) remexec.GRPCServer {
+			return remexec.NewExecutionServer(l)
 		},
 
 		func() (*temp.TempDir, error) {
