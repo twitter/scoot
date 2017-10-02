@@ -15,6 +15,10 @@ import (
 	"github.com/twitter/scoot/scootapi"
 )
 
+// CLI tool for making client requests to the gRPC remote execution API
+// Currently supports making a hardcoded Execute request, and prints the response
+// The server address and log level are configurable
+
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
@@ -34,6 +38,8 @@ func main() {
 		log.Fatalf("Could not connect to server at %s: %v\n", *grpcAddr, err)
 	}
 	defer conn.Close()
+
+	// Build and send an remoteexecution.ExecuteRequest message
 
 	// Stub to test Execute API
 	c := remoteexecution.NewExecutionClient(conn)
@@ -66,6 +72,7 @@ func main() {
 	req.TotalInputFileCount = 0
 	req.TotalInputFileBytes = 0
 
+	// make client request
 	res, err := c.Execute(context.Background(), &req)
 	if err != nil {
 		conn.Close()
