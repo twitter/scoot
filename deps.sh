@@ -4,7 +4,7 @@
 echo "Note: caller must validate/curate/commit changes to .gitmodules and 'vendor/'"
 echo "FIXME: may not work for gopkg.in on OSX: 'Unknown SSL protocol error in connection to gopkg.in:-9838'"
 echo "       see https://github.com/niemeyer/gopkg/issues/49 for context"
-echo '       also try temporarily doing:  'git config --global url."http://".insteadOf https://'
+echo "       also try temporarily doing:  'git config --global url.\"http://\"' instead of https://"
 
 set -euo pipefail
 trap "exit" INT TERM
