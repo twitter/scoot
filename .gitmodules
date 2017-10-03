@@ -13,15 +13,15 @@
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net
-	branch = bc3663df0ac92f928d419e31e0d2af22e683a5a2
+	branch = 0a9397675ba34b2845f758fe3cd68828369c6517
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
-	branch = 69420784d409f9ff88b424436f52001b26144e20
+	branch = f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-	branch = 0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0
+	branch = 130e6b02ab059e7b717a096f397c5b60111cae74
 [submodule "vendor/github.com/golang/mock"]
 	path = vendor/github.com/golang/mock
 	url = https://github.com/golang/mock
@@ -196,7 +196,7 @@
 [submodule "vendor/golang.org/x/text"]
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
-	branch = 1e65e9bf72c307081cea196f47ef37aed17eb316
+	branch = 1cbadb444a806fd9430d14ad08967ed91da4fa0a
 [submodule "vendor/github.com/stretchr/objx"]
 	path = vendor/github.com/stretchr/objx
 	url = https://github.com/stretchr/objx.git
