@@ -20,3 +20,11 @@ func CopyPointerToInt32(i *int32) int32 {
 	}
 	return *i
 }
+
+func CopyIntPointerToInt32Pointer(i *int) *int32 {
+	if i == nil {
+		return nil
+	}
+	i2 := int32(*i)
+	return &i2
+}

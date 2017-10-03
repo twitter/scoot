@@ -175,8 +175,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.OutUri = helpers.CopyStringToPointer(domain.StdoutRef)
 	thrift.ErrUri = helpers.CopyStringToPointer(domain.StderrRef)
 	thrift.Error = helpers.CopyStringToPointer(domain.Error)
-	exitCode := int32(*domain.ExitCode)
-	thrift.ExitCode = &exitCode
+	thrift.ExitCode = helpers.CopyIntPointerToInt32Pointer(domain.ExitCode)
 	thrift.SnapshotId = helpers.CopyStringToPointer(domain.SnapshotID)
 	thrift.JobId = helpers.CopyStringToPointer(domain.JobID)
 	thrift.TaskId = helpers.CopyStringToPointer(domain.TaskID)
@@ -185,7 +184,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 }
 
 func SerializeProcessStatus(processStatus runner.RunStatus) ([]byte, error) {
-
+	log.Errorf("processStatus: %+v", processStatus)
 	runStatus := DomainRunStatusToThrift(processStatus)
 
 	asBytes, err := thrifthelpers.JsonSerialize(runStatus)

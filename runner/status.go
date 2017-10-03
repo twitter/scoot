@@ -87,7 +87,7 @@ func (p RunStatus) String() string {
 		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID, p.Tag)
 
 	if p.State == COMPLETE {
-		s += fmt.Sprintf(" # ExitCode: %d", p.ExitCode)
+		s += fmt.Sprintf(" # ExitCode: %d", *p.ExitCode)
 	}
 	if p.State == FAILED || p.State == BADREQUEST {
 		s += fmt.Sprintf(" # Error: %s", p.Error)

@@ -62,7 +62,7 @@ func assertStatus(t *testing.T, actual runner.RunStatus, expected runner.RunStat
 	if expected.State != actual.State {
 		Fatalf("expected state %v; was: %v (cmd:%v)", expected.State, actual.State, args)
 	}
-	if expected.State == runner.COMPLETE && expected.ExitCode != actual.ExitCode {
+	if expected.State == runner.COMPLETE && *expected.ExitCode != *actual.ExitCode {
 		Fatalf("expected exit code %v; was: %v (cmd:%v)", expected.ExitCode, actual.ExitCode, args)
 	}
 	if expected.State == runner.FAILED && expected.Error != actual.Error {

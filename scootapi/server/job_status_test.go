@@ -201,13 +201,14 @@ func TestRunStatusRoundTrip(t *testing.T) {
 	}
 
 	stdoutRef := "http://example.com/stdout"
+	exitCode := 0
 
 	st := runner.RunStatus{
 		RunID:     runner.RunID("2"),
 		State:     runner.COMPLETE,
 		StdoutRef: stdoutRef,
 		StderrRef: "",
-		ExitCode:  0,
+		ExitCode:  &exitCode,
 		Error:     "",
 	}
 	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
