@@ -33,7 +33,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 	if err != nil {
 		t.Fatal(st, err)
 	}
-	if st.State != runner.COMPLETE || st.ExitCode != 42 {
+	if st.State != runner.COMPLETE || *st.ExitCode != 42 {
 		t.Fatal(st, err)
 	}
 }
@@ -64,7 +64,7 @@ func TestPollingWorker_Wait(t *testing.T) {
 
 	ex.Resume()
 	st, err = <-stCh, <-errCh
-	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
+	if err != nil || st.State != runner.COMPLETE || *st.ExitCode != 43 {
 		t.Fatal(st, err)
 	}
 

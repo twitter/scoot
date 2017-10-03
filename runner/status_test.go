@@ -28,13 +28,14 @@ func TestCommandStringSimple(t *testing.T) {
 }
 
 func TestProcStatusStringCompleted(t *testing.T) {
+	exitCode := 9
 	ps := RunStatus{
 		RunID:      RunID("12"),
 		SnapshotID: "21",
 		State:      COMPLETE,
 		StdoutRef:  "stdout",
 		StderrRef:  "stderr",
-		ExitCode:   9,
+		ExitCode:   &exitCode,
 	}
 	ps.JobID = "46"
 	ps.TaskID = "2"

@@ -14,6 +14,8 @@ var someCmd = []string{"", "x"}
 var someEnv = map[string]string{"a": "1", "b": "2"}
 var zero = int32(0)
 var nonzero = int32(12345)
+var zeroInt = 0
+var nonzeroInt = 12345
 var emptystr = ""
 var nonemptystr = "abcdef"
 var deadbeefID = "snap-id-deadbeef"
@@ -145,7 +147,6 @@ var tests = []struct {
 			State:     runner.UNKNOWN,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -166,7 +167,6 @@ var tests = []struct {
 			State:     runner.PENDING,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -187,7 +187,6 @@ var tests = []struct {
 			State:     runner.RUNNING,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -201,13 +200,14 @@ var tests = []struct {
 			OutUri:   nil,
 			ErrUri:   nil,
 			Error:    nil,
-			ExitCode: nil},
+			ExitCode: &zero,
+		},
 		runner.RunStatus{
 			RunID:     "",
 			State:     runner.COMPLETE,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
+			ExitCode:  &zeroInt,
 			Error:     "",
 		},
 	},
@@ -229,7 +229,6 @@ var tests = []struct {
 			State:      runner.COMPLETE,
 			StdoutRef:  "",
 			StderrRef:  "",
-			ExitCode:   0,
 			Error:      "",
 			SnapshotID: deadbeefID,
 		},
@@ -251,7 +250,6 @@ var tests = []struct {
 			State:     runner.FAILED,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -272,7 +270,6 @@ var tests = []struct {
 			State:     runner.ABORTED,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -293,7 +290,6 @@ var tests = []struct {
 			State:     runner.TIMEDOUT,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -313,7 +309,6 @@ var tests = []struct {
 			State:     runner.BADREQUEST,
 			StdoutRef: "",
 			StderrRef: "",
-			ExitCode:  0,
 			Error:     "",
 		},
 	},
@@ -334,7 +329,7 @@ var tests = []struct {
 			State:     runner.BADREQUEST,
 			StdoutRef: nonemptystr,
 			StderrRef: nonemptystr,
-			ExitCode:  int(nonzero),
+			ExitCode:  &nonzeroInt,
 			Error:     nonemptystr,
 		},
 	},
@@ -363,7 +358,8 @@ var tests = []struct {
 					OutUri:   &nonemptystr,
 					ErrUri:   &nonemptystr,
 					Error:    &nonemptystr,
-					ExitCode: &nonzero},
+					ExitCode: &nonzero,
+				},
 			},
 		},
 		WorkerStatus{
@@ -373,7 +369,7 @@ var tests = []struct {
 					State:     runner.PENDING,
 					StdoutRef: nonemptystr,
 					StderrRef: nonemptystr,
-					ExitCode:  int(nonzero),
+					ExitCode:  &nonzeroInt,
 					Error:     nonemptystr,
 				},
 			},
