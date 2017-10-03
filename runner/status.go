@@ -67,8 +67,8 @@ func (p RunState) String() string {
 type RunStatus struct {
 	RunID RunID
 
-	State    RunState
-	ExitCode *int
+	State RunState
+
 	tags.LogTags
 	// References to stdout and stderr, not their text
 	// Runner impls shall provide valid refs for all States (but optionally may not for UNKNOWN/BADREQUEST).
@@ -77,6 +77,7 @@ type RunStatus struct {
 
 	// Only valid if State == COMPLETE
 	SnapshotID string
+	ExitCode   *int
 
 	// Only valid if State == (FAILED || BADREQUEST)
 	Error string
