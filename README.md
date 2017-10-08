@@ -87,8 +87,9 @@ brew uninstall protobuf
 
 ### grpcio for python
 ```sh
-pip install grpcio-tools
+pip install grpcio grpcio-tools
 ```
+(If grpcio* is already installed you should probably update it by including '--upgrade' to the above pip command)
 
 ### docopt for python
 ```sh

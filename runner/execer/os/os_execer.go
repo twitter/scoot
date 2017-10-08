@@ -51,27 +51,49 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	}
 
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
-
-	cmd.Stdout, cmd.Stderr, cmd.Dir = command.Stdout, command.Stderr, command.Dir
-	// Make sure to get the best possible Writer, so if possible os/exec can connect
-	// the command's stdout/stderr directly to a file, instead of having to go through
-	// our delegation
-	if stdoutW, ok := cmd.Stdout.(WriterDelegater); ok {
-		cmd.Stdout = stdoutW.WriterDelegate()
-	}
-	if stderrW, ok := cmd.Stderr.(WriterDelegater); ok {
-		cmd.Stderr = stderrW.WriterDelegate()
-	}
+	cmd.Dir = command.Dir
 
 	// Sets pgid of all child processes to cmd's pid
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
+	// Make sure to get the best possible Writer, so if possible os/exec can connect
+	// the command's stdout/stderr directly to a file, instead of having to go through
+	// our delegation
+	if stdoutW, ok := command.Stdout.(WriterDelegater); ok {
+		command.Stdout = stdoutW.WriterDelegate()
+	}
+	if stderrW, ok := cmd.Stderr.(WriterDelegater); ok {
+		command.Stderr = stderrW.WriterDelegate()
+	}
+
+	// Use pipes due to possible hang in process.Wait().
+	// See: https://github.com/noxiouz/stout/commit/42cc533a0bece540f2424faff2a960876b21ffd2
+	stdErrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	stdOutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		io.Copy(command.Stderr, stdErrPipe)
+	}()
+	go func() {
+		defer wg.Done()
+		io.Copy(command.Stdout, stdOutPipe)
+	}()
+
+	// Async start of the command.
 	err = cmd.Start()
 	if err != nil {
 		return nil, err
 	}
 
-	proc := &osProcess{cmd: cmd, LogTags: command.LogTags}
+	proc := &osProcess{cmd: cmd, wg: &wg, LogTags: command.LogTags}
 	if e.memCap > 0 {
 		go e.monitorMem(proc)
 	}
@@ -80,6 +102,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 
 type osProcess struct {
 	cmd    *exec.Cmd
+	wg     *sync.WaitGroup
 	result *execer.ProcessStatus
 	mutex  sync.Mutex
 	tags.LogTags
@@ -233,8 +256,10 @@ if the command fails and we cannot get the exit code from the command, return FA
 that prevented getting the exit code.
 */
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
+	defer p.wg.Wait()
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()

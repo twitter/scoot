@@ -106,12 +106,12 @@ func TestAbort(t *testing.T) {
 }
 
 func TestMemCap(t *testing.T) {
-	// Command to increase memory by 10MB every .1s until we hit 50MB after .5s.
-	// Test that limiting the memory to 25MB causes the command to abort.
-	str := `import time; exec("x=[]\nfor i in range(5):\n x.append(' ' * 10*1024*1024)\n time.sleep(.1)")`
+	// Command to increase memory by 1MB every .1s until we hit 50MB after 5s.
+	// Test that limiting the memory to 10MB causes the command to abort.
+	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
 	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
 	tmp, _ := temp.TempDirDefault()
-	e := os_execer.NewBoundedExecer(execer.Memory(25*1024*1024), stats.NilStatsReceiver())
+	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	r := NewSingleRunner(e, snapshots.MakeNoopFiler(tmp.Dir), nil, NewNullOutputCreator(), tmp, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
@@ -122,7 +122,7 @@ func TestMemCap(t *testing.T) {
 		States:  runner.MaskForState(runner.FAILED),
 	}
 	// Travis may be slow, wait a super long time? This may also be necessary due to slow debug output from os_execer? TBD.
-	if runs, _, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
+	if runs, _, err := r.Query(query, runner.Wait{Timeout: 10 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
 		status, _, err := r.StatusAll()
