@@ -256,7 +256,8 @@ if the command fails and we cannot get the exit code from the command, return FA
 that prevented getting the exit code.
 */
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
-	defer p.wg.Wait()
+	// Wait for the output goroutines to finish then wait on the process itself to release resources.
+	p.wg.Wait()
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
 
