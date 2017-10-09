@@ -14,7 +14,7 @@ import (
 const noJob = ""
 const noTask = ""
 const defaultMaxLostDuration = time.Minute
-const defaultMaxFlakyDuration = time.Minute
+const defaultMaxFlakyDuration = 15 * time.Minute
 
 var nilTime = time.Time{}
 
