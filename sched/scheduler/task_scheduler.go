@@ -104,7 +104,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 
 	// Assign each job the minimum number of nodes until free nodes, and killable nodes if allowed, are exhausted.
 	// Priority3 jobs consume all free idle+killable nodes and starve jobs of a lower priority
-	// Priority2 jobs consume all remaining idle+killable nodes up to a limit, then give lower priority jobs a chance.
+	// Priority2 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority1 jobs.
 	// Priority1 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority0 jobs.
 	// Priority0 jobs consume all remaining idle nodes up to a limit.
 	//
@@ -114,9 +114,9 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	tagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
-	// Only priority=3 and priority=2 jobs can kill other tasks (note, killable tasks are double counted here).
+	// Only priority=3 jobs can kill other tasks (note, killable tasks are double counted here).
 	nk := numKillableTasks
-	numKillableCounter := []int{0, 0, (nk[0] + nk[1]), (nk[0] + nk[1] + nk[2])}
+	numKillableCounter := []int{0, 0, 0, (nk[0] + nk[1] + nk[2])}
 	// An array indexed by priority. The value is a list of jobs, each with a list of tasks yet to be scheduled.
 	// 'Optional' means tasks are associated with jobs that are already running with some minimum node quota.
 	// 'Required' means tasks are associated with jobs that haven't yet reach a minimum node quota.
@@ -172,17 +172,20 @@ Loop:
 			}
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
+			// (the schedulable count is the minimum number of nodes appropriate for the current set of tasks).
 			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor(len(cs.nodes), p))
 			numSchedulable := 0
+			numDesiredUnmet := 0
 			if p == sched.P3 {
 				// Priority=3 jobs always get the maximum number of available nodes, as needed, and in fifo order.
 				numSchedulable = min(len(unsched), numAvailNodes)
 			} else {
-				// Get the lesser of the number of unscheduled tasks and number of available nodes.
-				// Further, get the lesser of that and the healthy task load.
-				numSchedulable = min(len(unsched), numAvailNodes, numScaledTasks)
+				// For this group of tasks we want the lesser of: the number remaining, or a number based on load.
+				numDesired := min(len(unsched), numScaledTasks)
 				// The number of tasks we can schedule is reduced by the number of tasks we're already running.
-				numSchedulable = max(0, numSchedulable-numRunning)
+				// Further the number we'd like and the number we'll actually schedule are restricted by numAvailNodes.
+				numDesiredUnmet = max(0, numDesired-numRunning-numAvailNodes)
+				numSchedulable = min(numAvailNodes, max(0, numDesired-numRunning))
 			}
 
 			if numSchedulable > 0 {
@@ -204,34 +207,27 @@ Loop:
 						"numScaledTasks": numScaledTasks,
 						"numRunning":     numRunning,
 						"tag":            job.Job.Def.Tag,
-					}).Debug("Schedulable tasks")
+					}).Debug("Schedulable tasks dbg")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
 				numFromFree := min(numFree, numSchedulable)
 				numFromKill := max(0, numSchedulable-numFromFree)
 				// Deduct from the number of free nodes - this value gets used after we exit this loop.
 				numFree -= numFromFree
-				// If there weren't enough free nodes, grab more from the appropriate pool of killable nodes.
+				// If there weren't enough free nodes, and this job is P3, grab more from the appropriate pool of killable nodes.
 				// Note that numSchedulable should not exceed numAvailNodes so we don't do any checking for that.
 				if numFromKill > 0 && p == sched.P3 {
-					// For priority=3, deduct from the p3 counter and update the p2 counter to account for it.
-					numFromP2 := numFromKill - numKillableCounter[sched.P3]
+					// For priority=3, deduct from the p3 counter that tracks how many killable nodes are available to p3 jobs.
 					numKillableCounter[sched.P3] -= min(numKillableCounter[sched.P3], numFromKill)
-					numKillableCounter[sched.P2] -= max(0, numFromP2)
-				} else if numFromKill > 0 && p == sched.P2 {
-					// For priority=2, deduct from the p2 counter (and the p1 and p0 counters aren't used).
-					numKillableCounter[sched.P2] -= numFromKill
 				}
-
-				// We are unable to assign more nodes at this priority.
-				// Append an array containing all unscheduled tasks for this requestor/tag combination.
-				//
-				// We have not met the minimum quota, append to the 'required' array.
-				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:])
-			} else {
-				// We have met the minimum quota, append to the 'optional' array.
-				remainingOptional[p] = append(remainingOptional[p], unsched[numSchedulable:])
 			}
+
+			// To both required and optional, append an array containing unscheduled tasks for this requestor/tag combination.
+			//
+			if numDesiredUnmet > 0 {
+				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:numSchedulable+numDesiredUnmet])
+			}
+			remainingOptional[p] = append(remainingOptional[p], unsched[numSchedulable+numDesiredUnmet:])
 		}
 	}
 

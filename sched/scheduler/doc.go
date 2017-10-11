@@ -3,10 +3,10 @@ package scheduler provides StatefulScheduler which distributes tasks to a cluste
 
 * Concepts *
 JobPriority:
-  0 Default, queue new runs until all higher priority jobs are satisfied
-  1 Run ahead of priority=0, but otherwise treated the same as priority=0
-  2 Run ahead of priority<=1, killing youngest lower priority tasks if no nodes are free (up to MinRunningNodesForGivenJob)
-  3 Run ahead of priority<=2, acquiring as many nodes as possible, killing youngest lower priority tasks if no nodes are free
+  0 Default, these jobs will receive node quota only when P1,2,3 jobs have satisfied their minimum node quota.
+  1 These jobs will receive node quota only when P2,3 jobs have satisfied their minimum node quota.
+  2 These jobs will receive node quota only when P3 jobs have satisfied their minimum node quota.
+  3 Run ahead of P0,1,2, acquiring as many nodes as possible, killing youngest lower priority tasks if no nodes are free
 Note: Lower priority jobs are given a chance once MinRunningNodesForGivenJob for higher priority jobs is satisfied.
       However, priority 3 jobs are greedy and have no minimum number of nodes whereupon they defer to lower priorities.
 
@@ -34,12 +34,8 @@ Group new job requests with existing jobs sharing the same RequestTag
 Add remaining unmatched requests to the jobs queue but limit number of jobs per Requestor
 
 For Job in Jobs.Priority3,
- Select NumAssignedNodes=min(Job.NumRemainingTasks, NumFreeNodes + NumKillableNodes w/ level<3)
-For Job in Jobs.Priority2:
- Select NumAssignedNodes=min(Job.NumRemainingTasks, MinRunningNodesForGivenJob, NumFreeNodes + NumKillableNodes w/ level<2)
-For Job in Jobs.Priority1:
- Select NumAssignedNodes=min(Job.NumRemainingTasks, MinRunningNodesForGivenJob, NumFreeNodes)
-For Job in Jobs.Priority0:
+ Select NumAssignedNodes=min(Job.NumRemainingTasks, NumFreeNodes + NumKillableNodes from P0,1,2 jobs)
+For Job in Jobs.Priority2 + Jobs.Priority1 + Jobs.Priority0:
  Select NumAssignedNodes=min(Job.NumRemainingTasks, MinRunningNodesForGivenJob, NumFreeNodes)
 
 Select Node Preference:
@@ -47,8 +43,6 @@ Select Node Preference:
    Free nodes with the same SnapshotID as the given task.
    Free nodes not related to any current job.
    Any free node.
-   If priority >= 2: busy node with smallest run duration from priority0 tasks.
-   If priority >= 2: busy node with smallest run duration from priority1 tasks.
-   If priority >= 3: busy node with smallest run duration from priority2 tasks.
+   If Priority3: busy node with smallest run duration from P0 tasks first, then P1, then P2.
 */
 package scheduler

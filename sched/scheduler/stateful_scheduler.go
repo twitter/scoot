@@ -56,7 +56,8 @@ const DefaultMaxJobsPerRequestor = 100
 const DefaultSoftMaxSchedulableTasks = 1000
 
 // Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
-var NodeScaleAdjustment = 1.0
+// Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
+var NodeScaleAdjustment = .75
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
