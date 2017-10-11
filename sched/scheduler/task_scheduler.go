@@ -114,7 +114,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	tagsSeen := map[string]map[string]bool{}
 	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
-	// Only priority=3 and priority=2 jobs can kill other tasks (note, killable tasks are double counted here).
+	// Only priority=3 jobs can kill other tasks (note, killable tasks are double counted here).
 	nk := numKillableTasks
 	numKillableCounter := []int{0, 0, 0, (nk[0] + nk[1] + nk[2])}
 	// An array indexed by priority. The value is a list of jobs, each with a list of tasks yet to be scheduled.
