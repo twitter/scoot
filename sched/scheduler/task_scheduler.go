@@ -227,7 +227,9 @@ Loop:
 			if numDesiredUnmet > 0 {
 				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:numSchedulable+numDesiredUnmet])
 			}
-			remainingOptional[p] = append(remainingOptional[p], unsched[numSchedulable+numDesiredUnmet:])
+			if numSchedulable+numDesiredUnmet < len(unsched) {
+				remainingOptional[p] = append(remainingOptional[p], unsched[numSchedulable+numDesiredUnmet:])
+			}
 		}
 	}
 
