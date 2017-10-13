@@ -92,7 +92,7 @@ const (
 	// Run asap, ahead of priority=0, consuming nodes as they become available if no nodes are free
 	P1
 
-	// Run asap with at least MinRunningNodesForGivenJob, killing youngest lower priority tasks if no nodes are free
+	// Run asap, ahead of priority=1, consuming nodes as they become available if no nodes are free
 	P2
 
 	// Run immediately trying to acquire as many nodes as required, killing all tasks with lower priority that
