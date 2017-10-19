@@ -462,10 +462,10 @@ checkLoop:
 								}).Info("Overriding job priority to match previous requestor/tag priority")
 						}
 					}
-				} else if checkJobMsg.jobDef.Priority > sched.P1 {
-					// Priorities greater than 1 are disabled in job_state.go.
+				} else if checkJobMsg.jobDef.Priority > sched.P2 {
+					// Priorities greater than 2 are disabled in job_state.go.
 					jd := checkJobMsg.jobDef
-					log.Infof("Overriding job priority %d to respect max priority of 1 (higher priority is untested and disabled)"+
+					log.Infof("Overriding job priority %d to respect max priority of 2 (higher priority is untested and disabled)"+
 						"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
 						jd.Priority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
 				}
