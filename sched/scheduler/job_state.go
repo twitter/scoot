@@ -61,7 +61,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 	}
 
 	// Job Priorities higher than 2 are currently disabled as per stateful_scheduler.go (excepting InsertionPriority).
-	job.Def.Priority = sched.Priority(min(int(sched.P2), int(job.Def.Priority)))
+	job.Def.Priority = sched.Priority(min(int(MaxPriority), int(job.Def.Priority)))
 
 	for _, taskDef := range job.Def.Tasks {
 		duration := taskDurations[taskDef.TaskID].duration // This is safe since the map value is not a pointer.
