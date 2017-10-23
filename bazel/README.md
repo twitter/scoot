@@ -6,13 +6,13 @@ The Bazel API Design Document can be found at: https://docs.google.com/document/
 
 ### Running/testing the API:
 * The Scheduler, by default, will initialize and serve the API over gRPC on the default port.
-* A (very limited) test binary (binaries/execapi) can be built to send client requests against the Scheduler running the API.
+* A (very limited) test binary (binaries/bazelapi) can be built to send client requests against the Scheduler running the API.
 
-Build/install the scheduler and execapi, then run the scheduler and in a separate terminal, the execapi binary:
+Build/install the scheduler and bazelapi, then run the scheduler and in a separate terminal, the bazelapi binary:
 ```sh
-go install github.com/twitter/scoot/binaries/scheduler github.com/twitter/scoot/binaries/execapi
+go install github.com/twitter/scoot/binaries/scheduler github.com/twitter/scoot/binaries/bazelapi
 ./scheduler
-./execapi
+./bazelapi
 ```
 
-*execapi is currently intended as a development tool and not a production client binary*
+*bazelapi is currently intended as a development tool and not a production client binary*

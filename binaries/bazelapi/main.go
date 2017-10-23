@@ -13,7 +13,7 @@ import (
 	"github.com/twitter/scoot/scootapi"
 )
 
-// CLI tool for making client requests to the gRPC remote execution API
+// CLI tool for making client requests to the Bazel gRPC remote execution API
 // Currently supports making a hardcoded Execute request, and prints the response
 // The server address and log level are configurable
 
