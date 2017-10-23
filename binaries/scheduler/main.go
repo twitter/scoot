@@ -10,6 +10,8 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel/execution"
+	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/binaries/scheduler/config"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -17,7 +19,6 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
-	remexec "github.com/twitter/scoot/remexec/server"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/server"
 )
@@ -26,7 +27,6 @@ func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	// Set Flags Needed by this Server
-	// TODO: add support for in-memory workers doing real work with gitdb.
 	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server")
 	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "Bind address for http server")
 	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
@@ -63,8 +63,8 @@ func main() {
 			return net.Listen("tcp", *grpcAddr)
 		},
 
-		func(l net.Listener) remexec.GRPCServer {
-			return remexec.NewExecutionServer(l)
+		func(l net.Listener) bazel.GRPCServer {
+			return execution.NewExecutionServer(l)
 		},
 
 		func() (*temp.TempDir, error) {

@@ -4,16 +4,17 @@ import (
 	"net"
 	"time"
 
+	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/twitter/scoot/bazel/execution"
+	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/ice"
-	remexec "github.com/twitter/scoot/remexec/server"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
@@ -24,13 +25,13 @@ import (
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
-	grpc   remexec.GRPCServer
+	grpc   bazel.GRPCServer
 }
 
 func makeServers(
 	thrift thrift.TServer,
 	http *endpoints.TwitterServer,
-	grpc remexec.GRPCServer) servers {
+	grpc bazel.GRPCServer) servers {
 	return servers{thrift, http, grpc}
 }
 
@@ -76,7 +77,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultSched_HTTP), s, nil)
 		},
 
-		func(t thrift.TServer, h *endpoints.TwitterServer, g remexec.GRPCServer) servers {
+		func(t thrift.TServer, h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
 			return makeServers(t, h, g)
 		},
 
@@ -92,8 +93,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
 		},
 
-		func(l net.Listener) remexec.GRPCServer {
-			return remexec.NewExecutionServer(l)
+		func(l net.Listener) bazel.GRPCServer {
+			return execution.NewExecutionServer(l)
 		},
 	)
 

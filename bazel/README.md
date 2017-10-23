@@ -1,4 +1,4 @@
-# Remote Execution for Scoot
+# Bazel Remote Execution for Scoot
 
 This contains initial server support for the Bazel gRPC Remote Execution API.
 
@@ -11,8 +11,8 @@ The Bazel API Design Document can be found at: https://docs.google.com/document/
 Build/install the scheduler and execapi, then run the scheduler and in a separate terminal, the execapi binary:
 ```sh
 go install github.com/twitter/scoot/binaries/scheduler github.com/twitter/scoot/binaries/execapi
-scheduler
-execapi
+./scheduler
+./execapi
 ```
 
 *execapi is currently intended as a development tool and not a production client binary*

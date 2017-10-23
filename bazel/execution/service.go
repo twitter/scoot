@@ -1,29 +1,21 @@
-// Remote Execution API gRPC server
-// Contains limited implementation of the Execute API interface, as well
-// as a wrapping interface for the gRPC server to work seamlessly with
-// Scoot ice/magicbag semantics.
-// This is a stub API and may be heavily modified or moved.
-package server
+// Bazel Remote Execution API gRPC server
+// Contains limited implementation of the Execution API interface
+package execution
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"net"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
-	google_longrunning "google.golang.org/genproto/googleapis/longrunning"
+	googlelongrunning "google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
-)
 
-// gRPC server interface encapsulating gRPC operations and execution server,
-// intended to reduce gRPC listener and registration boilerplate.
-type GRPCServer interface {
-	Serve() error
-}
+	scootproto "github.com/twitter/scoot/common/proto"
+)
 
 // Implements GRPCServer and remoteexecution.ExecutionServer interfaces
 type executionServer struct {
@@ -38,19 +30,26 @@ func NewExecutionServer(l net.Listener) *executionServer {
 	return &g
 }
 
+func (s *executionServer) Serve() error {
+	log.Info("Serving GRPC Execution API on: ", s.listener.Addr())
+	return s.server.Serve(s.listener)
+}
+
+// Execution APIs
+
 // Stub of Execute API - most fields omitted, but returns a valid hardcoded response.
 // Takes an ExecuteRequest and forms an ExecuteResponse that is returned as part of a
 // google LongRunning Operation message.
-func (s *executionServer) Execute(ctx context.Context, req *remoteexecution.ExecuteRequest) (*google_longrunning.Operation, error) {
+func (s *executionServer) Execute(
+	ctx context.Context,
+	req *remoteexecution.ExecuteRequest) (*googlelongrunning.Operation, error) {
 	// Get digest of request Action from wire format only, for inclusion in response metadata.
-	// TODO convert this to library function
-	actionBytes, err := proto.Marshal(req.Action)
+	actionSha, actionLen, err := scootproto.GetSha256(req.Action)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to marshal ExecuteRequest Action for digest: %v", err)
+		return nil, err
 	}
-	actionSha := fmt.Sprintf("%x", sha256.Sum256(actionBytes))
 
-	op := google_longrunning.Operation{}
+	op := googlelongrunning.Operation{}
 
 	// Generate a UUID as a stub job identifier
 	id, _ := uuid.NewV4()
@@ -59,7 +58,7 @@ func (s *executionServer) Execute(ctx context.Context, req *remoteexecution.Exec
 
 	eom := remoteexecution.ExecuteOperationMetadata{}
 	eom.Stage = remoteexecution.ExecuteOperationMetadata_COMPLETED
-	eom.ActionDigest = &remoteexecution.Digest{Hash: actionSha, SizeBytes: int64(len(actionBytes))}
+	eom.ActionDigest = &remoteexecution.Digest{Hash: actionSha, SizeBytes: actionLen}
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
 	eomAsPBAny, err := ptypes.MarshalAny(&eom)
@@ -81,10 +80,6 @@ func (s *executionServer) Execute(ctx context.Context, req *remoteexecution.Exec
 	}
 
 	// Include the response message in the longrunning operation message
-	op.Result = &google_longrunning.Operation_Response{Response: resAsPBAny}
+	op.Result = &googlelongrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
-}
-
-func (s *executionServer) Serve() error {
-	return s.server.Serve(s.listener)
 }
