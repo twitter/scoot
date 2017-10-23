@@ -55,6 +55,9 @@ const DefaultMaxJobsPerRequestor = 100
 // A reasonable maximum number of tasks we'd expect to queue.
 const DefaultSoftMaxSchedulableTasks = 1000
 
+// The max job priority we respect (higher priority is untested and disabled)
+const MaxPriority = sched.P2
+
 // Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
 // Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
 var NodeScaleAdjustment = .75
@@ -462,12 +465,12 @@ checkLoop:
 								}).Info("Overriding job priority to match previous requestor/tag priority")
 						}
 					}
-				} else if checkJobMsg.jobDef.Priority > sched.P1 {
-					// Priorities greater than 1 are disabled in job_state.go.
+				} else if checkJobMsg.jobDef.Priority > MaxPriority {
+					// Priorities greater than 2 are disabled in job_state.go.
 					jd := checkJobMsg.jobDef
-					log.Infof("Overriding job priority %d to respect max priority of 1 (higher priority is untested and disabled)"+
+					log.Infof("Overriding job priority %d to respect max priority of %d (higher priority is untested and disabled)"+
 						"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
-						jd.Priority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
+						jd.Priority, MaxPriority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
 				}
 			}
 			checkJobMsg.resultCh <- err
