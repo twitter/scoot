@@ -9,8 +9,6 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// TODO unit tests
-
 // GetProtoSha256 returns the SHA-256 digest of the wire format of any
 // protobuf message and the length in bytes of the message, or an error.
 func GetSha256(pb proto.Message) (string, int64, error) {

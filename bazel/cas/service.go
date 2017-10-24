@@ -39,7 +39,7 @@ func (s *casServer) Serve() error {
 func (s *casServer) FindMissingBlobs(
 	ctx context.Context,
 	req *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
-	log.Infof("Received CAS FindMissingBlobs request: %s\n", req)
+	log.Infof("Received CAS FindMissingBlobs request: %s", req)
 	res := remoteexecution.FindMissingBlobsResponse{}
 	// Return all requested blobs as missing
 	res.MissingBlobDigests = make([]*remoteexecution.Digest, len(req.BlobDigests), len(req.BlobDigests))
@@ -66,7 +66,7 @@ func (s *casServer) GetTree(
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
 func (s *casServer) Read(req *googlebytestream.ReadRequest, ser googlebytestream.ByteStream_ReadServer) error {
-	log.Infof("Received CAS Read request: %s\n", req)
+	log.Infof("Received CAS Read request: %s", req)
 	// Real implementation: fetch resource from backend and call Send(Data []byte) until finished
 	return nil
 }
@@ -84,7 +84,7 @@ func (s *casServer) Write(googlebytestream.ByteStream_WriteServer) error {
 func (s *casServer) QueryWriteStatus(
 	ctx context.Context,
 	req *googlebytestream.QueryWriteStatusRequest) (*googlebytestream.QueryWriteStatusResponse, error) {
-	log.Infof("Received CAS QueryWriteStatus request: %s\n", req)
+	log.Infof("Received CAS QueryWriteStatus request: %s", req)
 	// Placeholder - response indicates size 0 resource in completed state
 	res := googlebytestream.QueryWriteStatusResponse{CommittedSize: 0, Complete: true}
 	return &res, nil
