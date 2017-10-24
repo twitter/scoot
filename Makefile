@@ -63,7 +63,6 @@ test-unit:
 
 test-integration:
 	# Runs all tests including integration and property tests
-	# We don't currently have any integration tests, but we're leaving this so we can add more.
 	# Only invoked manually so we don't need to modify output.
 	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
