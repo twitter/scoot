@@ -61,7 +61,7 @@ func (s *casServer) GetTree(
 	return nil, status.Error(codes.Unimplemented, "This API is marked as deprecated in the Bazel API definition")
 }
 
-// ByteStream APIs
+// CAS - ByteStream APIs
 
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
