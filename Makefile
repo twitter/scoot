@@ -52,25 +52,24 @@ vet:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
+test-unit-property-integration:
+	# Runs all tests including integration and property tests
+	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+
 test-unit-property:
 	# Runs only unit tests and property tests
-	go test -race -timeout 120s -tags=property_test $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
 test-unit:
 	# Runs only unit tests
-	# Only invoked manually so we don't need to modify output.
+	# Only invoked manually so we don't need to modify output
 	go test -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
-
-test-integration:
-	# Runs all tests including integration and property tests
-	# Only invoked manually so we don't need to modify output.
-	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 
 testonly: test-unit-property
 
-test: test-unit-property coverage
+test: test-unit-property-integration coverage
 
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
