@@ -1,5 +1,7 @@
 // +build integration
 
+// Package tests_test exists to exercise basic command line scootapi and scoot-snapshot-db
+// functionality against a local cluster of workers, apiservers, and a scheduler.
 package tests_test
 
 import (
@@ -33,11 +35,11 @@ func TestRunSimpleJob(t *testing.T) {
 	}
 	log.SetLevel(level)
 
-	log.Infof("Creating scoot client")
+	log.Info("Creating scoot client")
 	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)
 
 	// Initialize Local Cluster
-	log.Infof("Creating test cluster")
+	log.Info("Creating test cluster")
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		t.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
@@ -72,7 +74,6 @@ func TestRunSimpleJob(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			log.Infof("jsonStatusBytes: %v", string(jsonStatusBytes))
 			if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
 				t.Fatal(err)
 			}
