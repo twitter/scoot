@@ -45,8 +45,8 @@ go run ./binaries/scootapi/main.go run_smoke_test
 ## Scoot Integration Tests
 Scoot has a few  tests that exercise varying levels of common usages and workflows.
 
-### Smoketest
-Invokes a scootapi client directly to run jobs against a local cluster and waits for the originally
+### Smoketest/Swarmtest
+Invokes a scootapi client directly to run jobs against a local cluster and waits for the 
 scheduled jobs to complete.
 (.scootapi/client/smoke_test_cmd.go)
 ### Recoverytest
