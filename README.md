@@ -48,15 +48,20 @@ Scoot has a few  tests that exercise varying levels of common usages and workflo
 ### Smoketest/Swarmtest
 Invokes a scootapi client directly to run jobs against a local cluster and waits for the 
 scheduled jobs to complete.
-(.scootapi/client/smoke_test_cmd.go)
+
+(./scootapi/client/smoke_test_cmd.go)
+
 ### Recoverytest
 Invokes a scootapi client directly to run jobs against a local cluster, kills the cluster, 
 attempts to spin up a new one, and waits for the originally scheduled jobs to complete.
+
 (./binaries/recoverytest/main.go)
+
 ### Integration
 Invokes a scootapi and scoot-snapshot-db client via CLI to run a job against a local cluster 
 and waits for the job to complete
-(/tests/integration_test.go)
+
+(./tests/integration_test.go)
 
 ## Scoot Thrift Code
 (open source scoot code is in workspace/github.com/twitter/scoot)

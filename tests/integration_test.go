@@ -120,7 +120,7 @@ func getGopath() (gopath string, err error) {
 	if gopath == "" {
 		err = fmt.Errorf("GOPATH not set")
 	}
-	return gopath, err
+	return strings.Split(gopath, ":")[0], err
 }
 
 func installBinary(name string) {
