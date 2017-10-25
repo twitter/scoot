@@ -3,8 +3,6 @@ package workerapi
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
@@ -43,7 +41,6 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 }
 
 func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
-	log.Info("ThriftRunCommandToDomain %v", thrift)
 	argv := make([]string, 0)
 	env := make(map[string]string)
 	timeout := time.Duration(0)
