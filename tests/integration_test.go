@@ -1,6 +1,6 @@
 // +build integration
 
-package tests
+package tests_test
 
 import (
 	"encoding/json"
@@ -40,7 +40,7 @@ func TestRunSimpleJob(t *testing.T) {
 	log.Infof("Creating test cluster")
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
-		log.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
+		t.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
 	}
 	defer cluster1Cmds.Kill()
 
@@ -50,13 +50,13 @@ func TestRunSimpleJob(t *testing.T) {
 
 	snapshotBytes, err := createSnapshot()
 	if err != nil {
-		log.Fatalf("Error creating snapshotID: %v", err)
+		t.Fatalf("Error creating snapshotID: %v", err)
 	}
 	snapshotID := strings.TrimSpace(string(snapshotBytes))
 	timeout := time.After(10 * time.Second)
 	jobBytes, err := runJob(snapshotID)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	jobID := strings.TrimSpace(string(jobBytes))
 
@@ -66,15 +66,15 @@ func TestRunSimpleJob(t *testing.T) {
 	for status.Status != scoot.Status_COMPLETED {
 		select {
 		case <-timeout:
-			log.Fatal("Timed out while waiting for job to complete")
+			t.Fatal("Timed out while waiting for job to complete")
 		default:
 			jsonStatusBytes, err = getStatus(jobID)
 			if err != nil {
-				log.Fatal(err)
+				t.Fatal(err)
 			}
 			log.Infof("jsonStatusBytes: %v", string(jsonStatusBytes))
 			if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
-				log.Fatal(err)
+				t.Fatal(err)
 			}
 			log.Infof("Status: %v", status)
 			if status.Status == scoot.Status_COMPLETED {
@@ -83,7 +83,6 @@ func TestRunSimpleJob(t *testing.T) {
 			time.Sleep(1 * time.Second)
 		}
 	}
-	return
 }
 
 func installBinaries() {
