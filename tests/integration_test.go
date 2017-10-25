@@ -5,6 +5,7 @@ package tests
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -52,29 +53,37 @@ func TestRunSimpleJob(t *testing.T) {
 		log.Fatalf("Error creating snapshotID: %v", err)
 	}
 	snapshotID := strings.TrimSpace(string(snapshotBytes))
+	timeout := time.After(10 * time.Second)
 	jobBytes, err := runJob(snapshotID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	jobID := string(jobBytes)
+	jobID := strings.TrimSpace(string(jobBytes))
 
-	tries := 0
 	var jsonStatusBytes []byte
 	status := scoot.JobStatus{}
-	for tries < 10 && status.Status != scoot.Status_COMPLETED {
-		jsonStatusBytes, err = getStatus(jobID)
-		if err != nil {
-			log.Fatal(err)
+
+	for status.Status != scoot.Status_COMPLETED {
+		select {
+		case <-timeout:
+			log.Fatal("Timed out while waiting for job to complete")
+		default:
+			jsonStatusBytes, err = getStatus(jobID)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Infof("jsonStatusBytes: %v", string(jsonStatusBytes))
+			if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
+				log.Fatal(err)
+			}
+			log.Infof("Status: %v", status)
+			if status.Status == scoot.Status_COMPLETED {
+				break
+			}
+			time.Sleep(1 * time.Second)
 		}
-		if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
-			log.Fatal(err)
-		}
-		if status.Status == scoot.Status_COMPLETED {
-			break
-		}
-		time.Sleep(3 * time.Second)
-		tries += 1
 	}
+	return
 }
 
 func installBinaries() {
@@ -82,32 +91,39 @@ func installBinaries() {
 	installBinary("scoot-snapshot-db")
 }
 
-func installBinary(name string) {
-	cmd := exec.Command("go", "install", "./binaries/"+name)
-	cmd.Run()
-}
-
 func createSnapshot() ([]byte, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		log.Fatal("GOPATH not set")
+	gopath, err := getGopath()
+	if err != nil {
+		return nil, err
 	}
-
 	return exec.Command(gopath+"/bin/scoot-snapshot-db", "create", "ingest_dir", "--dir", ".").Output()
 }
 
 func runJob(snapshotID string) ([]byte, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		log.Fatal("GOPATH not set")
+	gopath, err := getGopath()
+	if err != nil {
+		return nil, err
 	}
 	return exec.Command(gopath+"/bin/scootapi", "run_job", "sleep", "1", "--snapshot_id", snapshotID).Output()
 }
 
 func getStatus(jobID string) ([]byte, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		log.Fatal("GOPATH not set")
+	gopath, err := getGopath()
+	if err != nil {
+		return nil, err
 	}
 	return exec.Command(gopath+"/bin/scootapi", "get_job_status", jobID, "--json").Output()
+}
+
+func getGopath() (gopath string, err error) {
+	gopath = os.Getenv("GOPATH")
+	if gopath == "" {
+		err = fmt.Errorf("GOPATH not set")
+	}
+	return gopath, err
+}
+
+func installBinary(name string) {
+	cmd := exec.Command("go", "install", "./binaries/"+name)
+	cmd.Run()
 }
