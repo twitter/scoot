@@ -1,5 +1,4 @@
 // Library for common gRPC protobuf-related tools.
-
 package proto
 
 import (

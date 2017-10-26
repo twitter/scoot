@@ -60,10 +60,10 @@ func TestExecuteStub(t *testing.T) {
 	execRes := remoteexecution.ExecuteResponse{}
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
-		t.Errorf("Failed to unmarhal metadata from any: %v", err)
+		t.Errorf("Failed to unmarshal metadata from any: %v", err)
 	}
 	err = ptypes.UnmarshalAny(execResAny, &execRes)
 	if err != nil {
-		t.Errorf("Failed to unmarhal response from any: %v", err)
+		t.Errorf("Failed to unmarshal response from any: %v", err)
 	}
 }
