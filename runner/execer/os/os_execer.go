@@ -195,6 +195,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"taskID":      p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 
+				// Debug output with timeout since it seems CombinedOutput() sometimes fails to return.
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 				ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
@@ -277,6 +278,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	// Debug output with timeout since it seems CombinedOutput() sometimes fails to return.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	ps, errDbg := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 	log.WithFields(
