@@ -202,6 +202,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"pid":    pid,
 						"ps":     string(ps),
 						"err":    err,
+						"errCtx": ctx.Err(),
 						"tag":    p.Tag,
 						"jobID":  p.JobID,
 						"taskID": p.TaskID,
@@ -286,6 +287,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 			"taskID": p.TaskID,
 			"ps":     string(ps),
 			"err":    errDbg,
+			"errCtx": ctx.Err(),
 		}).Debugf("Current ps for pid %d", pid)
 	cancel()
 
