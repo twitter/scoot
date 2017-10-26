@@ -1,6 +1,7 @@
 package os
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -193,7 +194,9 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"jobID":       p.JobID,
 						"taskID":      p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
-				ps, err := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 				log.WithFields(
 					log.Fields{
 						"pid":    pid,
@@ -203,6 +206,8 @@ func (e *osExecer) monitorMem(p *osProcess) {
 						"jobID":  p.JobID,
 						"taskID": p.TaskID,
 					}).Debugf("ps after increasing mem_cap utilization for pid %d", pid)
+				cancel()
+
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -260,10 +265,19 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	p.wg.Wait()
 	pid := p.cmd.Process.Pid
 	err := p.cmd.Wait()
+	log.WithFields(
+		log.Fields{
+			"pid":    pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+		}).Infof("Finished waiting for process")
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	ps, _ := exec.Command("ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 	log.WithFields(
 		log.Fields{
 			"pid":    pid,
@@ -271,7 +285,9 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 			"jobID":  p.JobID,
 			"taskID": p.TaskID,
 			"ps":     string(ps),
+			"err":    err,
 		}).Debugf("Current ps for pid %d", pid)
+	cancel()
 
 	if p.result != nil {
 		return *p.result
