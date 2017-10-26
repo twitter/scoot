@@ -447,31 +447,6 @@ checkLoop:
 					}
 					seenTasks[t.TaskID] = true
 				}
-				if _, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; ok && err == nil {
-					// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
-					// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
-					for _, js := range s.requestorMap[checkJobMsg.jobDef.Requestor] {
-						if js.Job.Def.Tag == checkJobMsg.jobDef.Tag &&
-							js.Job.Def.Basis != checkJobMsg.jobDef.Basis &&
-							js.Job.Def.Priority != checkJobMsg.jobDef.Priority {
-							m := checkJobMsg
-							log.WithFields(
-								log.Fields{
-									"requestor": m.jobDef.Requestor,
-									"tag":       m.jobDef.Tag,
-									"basis":     m.jobDef.Basis,
-									"priority":  m.jobDef.Priority,
-									"numTasks":  len(m.jobDef.Tasks),
-								}).Info("Overriding job priority to match previous requestor/tag priority")
-						}
-					}
-				} else if checkJobMsg.jobDef.Priority > MaxPriority {
-					// Priorities greater than 2 are disabled in job_state.go.
-					jd := checkJobMsg.jobDef
-					log.Infof("Overriding job priority %d to respect max priority of %d (higher priority is untested and disabled)"+
-						"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
-						jd.Priority, MaxPriority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
-				}
 			}
 			checkJobMsg.resultCh <- err
 		default:
@@ -486,6 +461,36 @@ addLoop:
 		select {
 		case newJobMsg := <-s.addJobCh:
 			receivedJob = true
+
+			if _, ok := s.requestorMap[newJobMsg.job.Def.Requestor]; ok {
+				// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
+				// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
+				for _, js := range s.requestorMap[newJobMsg.job.Def.Requestor] {
+					if js.Job.Def.Tag == newJobMsg.job.Def.Tag &&
+						js.Job.Def.Basis != newJobMsg.job.Def.Basis &&
+						js.Job.Def.Priority != newJobMsg.job.Def.Priority {
+						m := newJobMsg
+						log.WithFields(
+							log.Fields{
+								"requestor": m.job.Def.Requestor,
+								"tag":       m.job.Def.Tag,
+								"basis":     m.job.Def.Basis,
+								"priority":  m.job.Def.Priority,
+								"numTasks":  len(m.job.Def.Tasks),
+							}).Info("Overriding job priority to match previous requestor/tag priority")
+						newJobMsg.job.Def.Priority = js.Job.Def.Priority
+						break
+					}
+				}
+			} else if newJobMsg.job.Def.Priority > MaxPriority {
+				// Priorities greater than 2 are disabled in job_state.go.
+				jd := newJobMsg.job.Def
+				log.Infof("Overriding job priority %d to respect max priority of %d (higher priority is untested and disabled)"+
+					"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+					jd.Priority, MaxPriority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
+				newJobMsg.job.Def.Priority = MaxPriority
+			}
+
 			js := newJobState(newJobMsg.job, newJobMsg.saga, s.taskDurations)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 

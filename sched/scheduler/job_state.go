@@ -11,14 +11,13 @@ import (
 // Contains all the information for a job in progress
 // Note: Only Job, Saga, and Tasks are provided during scheduler recovery. Anything else must be initialized separately.
 type jobState struct {
-	Job               *sched.Job
-	Saga              *saga.Saga     //saga associated with this job
-	Tasks             []*taskState   //ordered list of taskState
-	EndingSaga        bool           //denotes whether an EndSagaMsg is in progress or not
-	TasksCompleted    int            //number of tasks that've been marked completed so far.
-	TasksRunning      int            //number of tasks that've been scheduled or started.
-	JobKilled         bool           //indicates the job was killed
-	InsertionPriority sched.Priority //used to decide on prepend/append to related jobs. FIXME: this should be a bool.
+	Job            *sched.Job
+	Saga           *saga.Saga   //saga associated with this job
+	Tasks          []*taskState //ordered list of taskState
+	EndingSaga     bool         //denotes whether an EndSagaMsg is in progress or not
+	TasksCompleted int          //number of tasks that've been marked completed so far.
+	TasksRunning   int          //number of tasks that've been scheduled or started.
+	JobKilled      bool         //indicates the job was killed
 }
 
 // Contains all the information for a specified task
@@ -50,18 +49,14 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
 func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]averageDuration) *jobState {
 	j := &jobState{
-		Job:               job,
-		Saga:              saga,
-		Tasks:             make([]*taskState, 0),
-		EndingSaga:        false,
-		TasksCompleted:    0,
-		TasksRunning:      0,
-		JobKilled:         false,
-		InsertionPriority: job.Def.Priority, // Shoehorn in priority to determine insertion behavior in task_scheduler.go
+		Job:            job,
+		Saga:           saga,
+		Tasks:          make([]*taskState, 0),
+		EndingSaga:     false,
+		TasksCompleted: 0,
+		TasksRunning:   0,
+		JobKilled:      false,
 	}
-
-	// Job Priorities higher than 2 are currently disabled as per stateful_scheduler.go (excepting InsertionPriority).
-	job.Def.Priority = sched.Priority(min(int(MaxPriority), int(job.Def.Priority)))
 
 	for _, taskDef := range job.Def.Tasks {
 		duration := taskDurations[taskDef.TaskID].duration // This is safe since the map value is not a pointer.
