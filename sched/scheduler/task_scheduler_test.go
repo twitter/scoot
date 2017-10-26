@@ -165,19 +165,19 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	if len(assignments) != 5 {
 		t.Errorf("Expected all five tasks to be assigned, got %v", len(assignments))
 	}
-	if assignments[0].task.JobId != "job1" || assignments[0].task.TaskId != "task1" {
+	if assignments[0].task.JobId != "job3" || assignments[0].task.TaskId != "task1" {
 		t.Errorf("Expected 0:job1.task1, got: %v", spew.Sdump(assignments[0]))
 	}
-	if assignments[1].task.JobId != "job1" || assignments[1].task.TaskId != "task2" {
+	if assignments[1].task.JobId != "job3" || assignments[1].task.TaskId != "task2" {
 		t.Errorf("Expected 1:job1.task2, got: %v", spew.Sdump(assignments[1]))
 	}
-	if assignments[2].task.JobId != "job3" || assignments[2].task.TaskId != "task1" {
+	if assignments[2].task.JobId != "job1" || assignments[2].task.TaskId != "task1" {
 		t.Errorf("Expected 2:job3.task1, got: %v", spew.Sdump(assignments[2]))
 	}
 	if assignments[3].task.JobId != "job2" || assignments[3].task.TaskId != "task1" {
 		t.Errorf("Expected 3:job2.task1, got: %v", spew.Sdump(assignments[3]))
 	}
-	if assignments[4].task.JobId != "job3" || assignments[4].task.TaskId != "task2" {
+	if assignments[4].task.JobId != "job1" || assignments[4].task.TaskId != "task2" {
 		t.Errorf("Expected 4:job3.task2, got: %v", spew.Sdump(assignments[4]))
 	}
 }

@@ -155,11 +155,9 @@ Loop:
 					numTasks += len(j.Tasks)
 					numCompleted += j.TasksCompleted
 					numRunning += j.TasksRunning
-					if j.InsertionPriority > p {
-						unsched = append(j.getUnScheduledTasks(), unsched...)
-					} else {
-						unsched = append(unsched, j.getUnScheduledTasks()...)
-					}
+					// Prepend tasks to handle the likely desire for immediate retries for failed tasks in a previous job.
+					// Hardcoded for now as this is the way scheduler is currently invoked by customers.
+					unsched = append(j.getUnScheduledTasks(), unsched...)
 					// Stop checking for unscheduled tasks if they exceed available nodes (we'll cap it below).
 					if len(unsched) >= numAvailNodes {
 						break

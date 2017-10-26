@@ -212,6 +212,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"err":    err,
 				}).Info("Retrying run()")
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
 			time.Sleep(r.runnerRetryInterval)
