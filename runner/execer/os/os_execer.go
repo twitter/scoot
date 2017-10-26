@@ -277,7 +277,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	defer p.mutex.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+	ps, errDbg := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 	log.WithFields(
 		log.Fields{
 			"pid":    pid,
@@ -285,7 +285,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 			"jobID":  p.JobID,
 			"taskID": p.TaskID,
 			"ps":     string(ps),
-			"err":    err,
+			"err":    errDbg,
 		}).Debugf("Current ps for pid %d", pid)
 	cancel()
 
