@@ -9,8 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel/cas"
-	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
@@ -95,9 +93,6 @@ func main() {
 		},
 		func() (net.Listener, error) {
 			return net.Listen("tcp", *grpcAddr)
-		},
-		func(l net.Listener) bazel.GRPCServer {
-			return cas.NewCASServer(l)
 		},
 	)
 	bundlestore.RunServer(bag, schema, configText)

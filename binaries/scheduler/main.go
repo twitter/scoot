@@ -10,8 +10,6 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel/execution"
-	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/binaries/scheduler/config"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -61,10 +59,6 @@ func main() {
 
 		func() (net.Listener, error) {
 			return net.Listen("tcp", *grpcAddr)
-		},
-
-		func(l net.Listener) bazel.GRPCServer {
-			return execution.NewExecutionServer(l)
 		},
 
 		func() (*temp.TempDir, error) {
