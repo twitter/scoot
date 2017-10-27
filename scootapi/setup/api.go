@@ -74,14 +74,20 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 
 	addrs := []string{}
 	for i := 0; i < s.apiCfg.Count; i++ {
-		port := scootapi.ApiBundlestorePorts + i
-		httpAddr := fmt.Sprintf("localhost:%d", port)
-		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-log_level", s.apiCfg.LogLevel.String())
+		// grpc port not used, but each instance needs a separate port
+		httpPort := scootapi.ApiBundlestorePorts + i
+		grpcPort := scootapi.ApiBundlestoreGRPCPorts + i
+		httpAddr := fmt.Sprintf("localhost:%d", httpPort)
+		grpcAddr := fmt.Sprintf("localhost:%d", grpcPort)
+		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-grpc_addr", grpcAddr, "-log_level", s.apiCfg.LogLevel.String())
 		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
 		}
-		if err := WaitForPort(port); err != nil {
+		if err := WaitForPort(httpPort); err != nil {
+			return nil, err
+		}
+		if err := WaitForPort(grpcPort); err != nil {
 			return nil, err
 		}
 		addrs = append(addrs, httpAddr)

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/snapshot/bundlestore"
@@ -26,6 +26,7 @@ func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
+	grpcAddr := flag.String("grpc_addr", scootapi.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes.")
@@ -53,7 +54,7 @@ func main() {
 		endpoint string
 	}
 
-	bag := ice.NewMagicBag()
+	bag := bundlestore.Defaults()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(gitdb.Module())
 	bag.InstallModule(temp.Module())
@@ -90,8 +91,11 @@ func main() {
 		func(sh *StoreAndHandler) bundlestore.Store {
 			return sh.store
 		},
+		func() (net.Listener, error) {
+			return net.Listen("tcp", *grpcAddr)
+		},
 	)
-	endpoints.RunServer(bag, schema, configText)
+	bundlestore.RunServer(bag, schema, configText)
 }
 
 func createCluster() *cluster.Cluster {

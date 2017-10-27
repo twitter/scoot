@@ -17,7 +17,6 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
-	remexec "github.com/twitter/scoot/remexec/server"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/server"
 )
@@ -26,7 +25,6 @@ func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	// Set Flags Needed by this Server
-	// TODO: add support for in-memory workers doing real work with gitdb.
 	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server")
 	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "Bind address for http server")
 	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
@@ -61,10 +59,6 @@ func main() {
 
 		func() (net.Listener, error) {
 			return net.Listen("tcp", *grpcAddr)
-		},
-
-		func(l net.Listener) remexec.GRPCServer {
-			return remexec.NewExecutionServer(l)
 		},
 
 		func() (*temp.TempDir, error) {
