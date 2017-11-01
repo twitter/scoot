@@ -39,20 +39,22 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	}
 	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
-	if config == nil {
-		config = &SchedulerConfig{
-			SoftMaxSchedulableTasks: DefaultSoftMaxSchedulableTasks,
-		}
-	}
-
 	// Exit if there are no unscheduled tasks.
+	totalOutstandingTasks := 0
 	totalUnschedTasks := 0
 	for _, j := range jobs {
+		totalOutstandingTasks += (len(j.Tasks) - j.TasksCompleted)
 		totalUnschedTasks += (len(j.Tasks) - j.TasksCompleted - j.TasksRunning)
 	}
 	if totalUnschedTasks == 0 {
 		return nil, nil
 	}
+
+	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
+	if config == nil {
+		config = &SchedulerConfig{}
+	}
+	config.SoftMaxSchedulableTasks = max(config.SoftMaxSchedulableTasks, totalOutstandingTasks, len(cs.nodes))
 
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
 	clusterSnapshotIds := []string{}

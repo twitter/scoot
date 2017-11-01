@@ -37,7 +37,6 @@ func init() {
 
 // Provide defaults for config settings that should never be uninitialized/zero.
 // These are reasonable defaults for a small cluster of around a couple dozen nodes.
-// FIXME(jschiller): overwrite SoftMaxSchedulableTasks at runtime if peak load is higher.
 
 // Nothing should run forever by default, use this timeout as a fallback.
 const DefaultDefaultTaskTimeout = 30 * time.Minute
@@ -52,8 +51,8 @@ const DefaultMaxRequestors = 10
 // Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
 const DefaultMaxJobsPerRequestor = 100
 
-// A reasonable maximum number of tasks we'd expect to queue.
-const DefaultSoftMaxSchedulableTasks = 1000
+// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
+const DefaultSoftMaxSchedulableTasks = 1
 
 // The max job priority we respect (higher priority is untested and disabled)
 const MaxPriority = sched.P2
