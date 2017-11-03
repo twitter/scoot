@@ -6,6 +6,7 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/grpchelpers"
 	"golang.org/x/net/context"
 	googlebytestream "google.golang.org/genproto/googleapis/bytestream"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
@@ -22,7 +23,7 @@ type casServer struct {
 
 // Creates a new GRPCServer (CASServer, ByteStreamServer) based on a listener, and preregisters the service
 func NewCASServer(l net.Listener) *casServer {
-	g := casServer{listener: l, server: grpc.NewServer()}
+	g := casServer{listener: l, server: grpchelpers.NewServer()}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &casServer{})
 	googlebytestream.RegisterByteStreamServer(g.server, &casServer{})
 	return &g
