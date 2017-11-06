@@ -276,10 +276,20 @@ const (
 	SchedJobRequestsCounter = "schedJobRequestsCounter"
 
 	/*
+		the number of jobs with tasks running.  Only reported by requestor
+	*/
+	SchedNumRunningJobsGauge = "schedNumRunningJobsGauge"
+
+	/*
 		the number of running tasks.  Collected at the end of each time through the
 		scheduler's job handling loop.
 	*/
 	SchedNumRunningTasksGauge = "schedNumRunningTasksGauge"
+
+	/*
+		the number of tasks waiting to start. (Only reported by requestor)
+	 */
+	SchedNumWaitingTasksGauge = "schedNumWaitingTasksGauge"
 
 	/*
 		the number of active tasks that stopped because they were preempted by the scheduler
