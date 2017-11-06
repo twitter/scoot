@@ -51,6 +51,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	}
 
 	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
+	// Setting the max to num healthy nodes means that each job can be fully scheduled.
 	if config == nil {
 		config = &SchedulerConfig{}
 	}
