@@ -84,7 +84,7 @@ func configConfigGo() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1506614988, 0)}
+	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1507646702, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
