@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/grpchelpers"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	googlelongrunning "google.golang.org/genproto/googleapis/longrunning"
@@ -25,7 +26,7 @@ type executionServer struct {
 
 // Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
 func NewExecutionServer(l net.Listener) *executionServer {
-	g := executionServer{listener: l, server: grpc.NewServer()}
+	g := executionServer{listener: l, server: grpchelpers.NewServer()}
 	remoteexecution.RegisterExecutionServer(g.server, &executionServer{})
 	return &g
 }
