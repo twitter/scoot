@@ -1,4 +1,4 @@
-// Package level comment
+// TODO Package level comment
 package store
 
 import (
@@ -47,6 +47,7 @@ type Store interface {
 	StoreWrite
 }
 
+// TODO
 type CommonStuff struct {
 	Store  Store
 	TTLCfg *TTLConfig
