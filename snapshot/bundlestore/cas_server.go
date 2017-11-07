@@ -1,29 +1,44 @@
 // Bazel Remote Execution API gRPC server
 // Contains limited implementation of the ContentAddressableStore API interface
-package cas
+package bundlestore
 
 import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/grpchelpers"
 	"golang.org/x/net/context"
 	googlebytestream "google.golang.org/genproto/googleapis/bytestream"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/twitter/scoot/common/grpchelpers"
+	//"github.com/twitter/scoot/common/stats"
 )
 
 // Implements GRPCServer and remoteexecution.ContentAddressableStoreServer interfaces
 type casServer struct {
 	listener net.Listener
 	server   *grpc.Server
+
+	//store  Store
+	//ttlCfg *TTLConfig
+	//stat   stats.StatsReceiver
+	stuff *CommonStuff
 }
 
 // Creates a new GRPCServer (CASServer, ByteStreamServer) based on a listener, and preregisters the service
-func NewCASServer(l net.Listener) *casServer {
-	g := casServer{listener: l, server: grpchelpers.NewServer()}
+//func NewCASServer(l net.Listener, s Store, ttl *TTLConfig, stat stats.StatsReceiver) *casServer {
+func NewCASServer(l net.Listener, stuffz *CommonStuff) *casServer {
+	g := casServer{
+		listener: l,
+		server:   grpchelpers.NewServer(),
+		//store:    s,
+		//ttlCfg:   ttl,
+		//stat:     stat,
+		stuff: stuffz,
+	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &casServer{})
 	googlebytestream.RegisterByteStreamServer(g.server, &casServer{})
 	return &g
@@ -68,7 +83,7 @@ func (s *casServer) GetTree(
 // Implements googleapis bytestream Read
 func (s *casServer) Read(req *googlebytestream.ReadRequest, ser googlebytestream.ByteStream_ReadServer) error {
 	log.Infof("Received CAS Read request: %s", req)
-	// Real implementation: fetch resource from backend and call Send(Data []byte) until finished
+	// TODO Real implementation: fetch resource from backend and call Send(Data []byte) until finished
 	return nil
 }
 

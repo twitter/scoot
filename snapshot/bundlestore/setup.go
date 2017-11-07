@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel/cas"
 	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/config/jsonconfig"
@@ -63,8 +62,8 @@ func Defaults() *ice.MagicBag {
 			return net.Listen("tcp", scootapi.DefaultApiBundlestore_GRPC)
 		},
 
-		func(l net.Listener) bazel.GRPCServer {
-			return cas.NewCASServer(l)
+		func(s *Server) bazel.GRPCServer {
+			return s.casServer
 		},
 	)
 	return bag

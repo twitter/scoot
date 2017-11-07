@@ -9,12 +9,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/grpchelpers"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	googlelongrunning "google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 
+	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 )
 
