@@ -1,6 +1,6 @@
 // Bazel Remote Execution API gRPC server
 // Contains limited implementation of the ContentAddressableStore API interface
-package bundlestore
+package cas
 
 import (
 	"net"
@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/common/grpchelpers"
-	//"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 // Implements GRPCServer and remoteexecution.ContentAddressableStoreServer interfaces
@@ -22,15 +22,12 @@ type casServer struct {
 	listener net.Listener
 	server   *grpc.Server
 
-	//store  Store
-	//ttlCfg *TTLConfig
-	//stat   stats.StatsReceiver
-	stuff *CommonStuff
+	stuff *store.CommonStuff
 }
 
 // Creates a new GRPCServer (CASServer, ByteStreamServer) based on a listener, and preregisters the service
 //func NewCASServer(l net.Listener, s Store, ttl *TTLConfig, stat stats.StatsReceiver) *casServer {
-func NewCASServer(l net.Listener, stuffz *CommonStuff) *casServer {
+func NewCASServer(l net.Listener, stuffz *store.CommonStuff) *casServer {
 	g := casServer{
 		listener: l,
 		server:   grpchelpers.NewServer(),

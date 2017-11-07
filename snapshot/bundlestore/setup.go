@@ -12,6 +12,7 @@ import (
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 type servers struct {
@@ -32,7 +33,7 @@ func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*FileStore, error) {
 	return MakeFileStoreInTemp(tmp)
 }
 
-func DefaultStore(store *FileStore) Store {
+func DefaultStore(store *FileStore) store.Store {
 	return store
 }
 

@@ -1,4 +1,4 @@
-package bundlestore
+package cas
 
 import (
 	"testing"

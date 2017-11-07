@@ -1,8 +1,11 @@
-package bundlestore
+// Package level comment
+package store
 
 import (
 	"io"
 	"time"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 var DefaultTTL time.Duration = time.Hour * 24 * 180 //180 days. If zero, no ttl will be applied by default.
@@ -42,4 +45,10 @@ type StoreWrite interface {
 type Store interface {
 	StoreRead
 	StoreWrite
+}
+
+type CommonStuff struct {
+	Store  Store
+	TTLCfg *TTLConfig
+	Stat   stats.StatsReceiver
 }

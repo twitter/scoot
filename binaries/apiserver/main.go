@@ -20,6 +20,7 @@ import (
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 func main() {
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	type StoreAndHandler struct {
-		store    bundlestore.Store
+		store    store.Store
 		handler  http.Handler
 		endpoint string
 	}
@@ -88,7 +89,7 @@ func main() {
 			}
 			return &StoreAndHandler{store, handler, cfg.Endpoint + cfg.Name + "/"}, nil
 		},
-		func(sh *StoreAndHandler) bundlestore.Store {
+		func(sh *StoreAndHandler) store.Store {
 			return sh.store
 		},
 		func() (net.Listener, error) {

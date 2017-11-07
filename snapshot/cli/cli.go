@@ -48,9 +48,9 @@ import (
 
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 type DBInjector interface {
@@ -204,7 +204,7 @@ func (c *createGitBundleCommand) register() *cobra.Command {
 	// See https://git-scm.com/docs/git-bundle for basis, ref usage
 	cmd.Flags().StringVar(&c.basis, "basis", "", "Basis for bundle")
 	cmd.Flags().StringVar(&c.ref, "ref", "master", "Reference to be packaged")
-	cmd.Flags().DurationVar(&c.ttld, "ttl", bundlestore.DefaultTTL, "Stored bundle TTL (duration from now)")
+	cmd.Flags().DurationVar(&c.ttld, "ttl", store.DefaultTTL, "Stored bundle TTL (duration from now)")
 	cmd.Flags().StringVar(&c.outputType, "output", "location", fmt.Sprintf("Output type, one of: %q", outputTypes))
 	return cmd
 }
@@ -285,7 +285,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return err
 	}
 
-	ttlP := &bundlestore.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: bundlestore.DefaultTTLKey}
+	ttlP := &store.TTLValue{TTL: time.Now().Add(c.ttld), TTLKey: store.DefaultTTLKey}
 	location, err := gdb.UploadFile(bundleFilename, ttlP)
 	if err != nil {
 		return err

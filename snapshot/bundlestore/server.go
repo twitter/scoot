@@ -8,49 +8,52 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel/cas"
+	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
-type CommonStuff struct {
-	store      Store
-	ttlCfg     *TTLConfig
-	stat       stats.StatsReceiver
-}
+// TODO
+// * Rename to StoreConfig
+// * A lot of cleanup
+// * impacted readme/doc
+// * actually hook-in cas
 
 type Server struct {
 	//store      Store
 	//ttlCfg     *TTLConfig
 	//stat       stats.StatsReceiver
-	stuff      *CommonStuff
+	stuff      *store.CommonStuff
 	httpServer *httpServer
-	casServer  *casServer
+	casServer  bazel.GRPCServer
 }
 
 // Make a new server that delegates to an underlying store.
 // TTL may be nil, in which case defaults are applied downstream.
 // TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
-func MakeServer(s Store, ttl *TTLConfig, stat stats.StatsReceiver, l net.Listener) *Server {
+func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, l net.Listener) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
 	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 
-	stuffz := CommonStuff{s, ttl, stat}
+	stuffz := &store.CommonStuff{Store: s, TTLCfg: ttl, Stat: scopedStat}
 
 	return &Server{
 		//store:      s,
 		//ttlCfg:     ttl,
 		//stat:       scopedStat,
-		stuff:      &stuffz,
+		stuff: stuffz,
 		//httpServer: MakeHTTPServer(s, ttl, stat),
-		httpServer: MakeHTTPServer(&stuffz),
+		httpServer: MakeHTTPServer(stuffz),
 		//casServer:  NewCASServer(l, s, ttl, stat),
-		casServer:  NewCASServer(l, &stuffz),
+		casServer: cas.NewCASServer(l, stuffz),
 	}
 }
 
 // Implements http.Handler interface
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//s.stat.Counter(stats.BundlestoreRequestCounter).Inc(1)
-	s.stuff.stat.Counter(stats.BundlestoreRequestCounter).Inc(1)
+	s.stuff.Stat.Counter(stats.BundlestoreRequestCounter).Inc(1)
 	switch req.Method {
 	case "POST":
 		s.httpServer.HandleUpload(w, req)
@@ -64,7 +67,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//s.stat.Counter(stats.BundlestoreRequestOkCounter).Inc(1)
-	s.stuff.stat.Counter(stats.BundlestoreRequestOkCounter).Inc(1)
+	s.stuff.Stat.Counter(stats.BundlestoreRequestOkCounter).Inc(1)
 }
 
 func CheckBundleName(name string) error {

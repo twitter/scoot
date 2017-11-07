@@ -8,8 +8,8 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 // SnapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
@@ -423,7 +423,7 @@ func (db *DB) IDForStreamCommitSHA(streamName string, sha string) snap.ID {
 
 type uploadFileReq struct {
 	filePath string
-	ttl      *bundlestore.TTLValue
+	ttl      *store.TTLValue
 	resultCh chan stringAndError
 }
 
@@ -433,7 +433,7 @@ func (r uploadFileReq) req() {}
 // Intended for HTTP-backed stores that implement bundlestore's TTL fields
 // Base of the filePath will be used as bundle name
 // Returns location of stored file
-func (db *DB) UploadFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
+func (db *DB) UploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
 		return "", db.err
 	}

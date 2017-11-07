@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 type FakeStore struct {
 	files map[string][]byte
-	ttl   *TTLValue
+	ttl   *store.TTLValue
 }
 
 func (f *FakeStore) Exists(name string) (bool, error) {
@@ -36,7 +37,7 @@ func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
 
 func (f *FakeStore) Root() string { return "" }
 
-func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (f *FakeStore) Write(name string, data io.Reader, ttl *store.TTLValue) error {
 	if (f.ttl == nil) != (ttl == nil) || (ttl != nil && (f.ttl.TTLKey != ttl.TTLKey || f.ttl.TTL.Sub(ttl.TTL) != 0)) {
 		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.ttl, ttl)
 	} else if data, err := ioutil.ReadAll(data); err != nil {
@@ -51,9 +52,9 @@ func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 
 func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
-	//now := time.Time{}.Add(time.Minute)
-	store := &FakeStore{files: map[string][]byte{}, ttl: nil}
-	DefaultTTL = 0
+	now := time.Time{}.Add(time.Minute)
+	fakeStore := &FakeStore{files: map[string][]byte{}, ttl: nil}
+	store.DefaultTTL = 0
 
 	listener, _ := net.Listen("tcp", "localhost:0")
 	defer listener.Close()
@@ -62,7 +63,7 @@ func TestServer(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 	stats.StatReportIntvl = 20 * time.Millisecond
-	server := MakeServer(store, nil, statsReceiver, nil)
+	server := MakeServer(fakeStore, nil, statsReceiver, nil)
 	mux := http.NewServeMux()
 	mux.Handle("/bundle/", server)
 	go func() {
@@ -84,14 +85,12 @@ func TestServer(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	if !reflect.DeepEqual(store.files[bundle1ID], []byte("baz_data")) {
+	if !reflect.DeepEqual(fakeStore.files[bundle1ID], []byte("baz_data")) {
 		t.Fatalf("Failed to post data")
 	}
 
 	time.Sleep(2*stats.StatReportIntvl + (10 * time.Millisecond))
-	// TODO stats and http server are broken now
-	// CommonStuff didn't do anything.
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreServerStartedGauge):    {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadCounter):         {Checker: stats.Int64EqTest, Value: 1},
@@ -103,7 +102,7 @@ func TestServer(t *testing.T) {
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter):    {Checker: stats.Int64EqTest, Value: nil},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Try to write data again - should trigger upload existing
 	if resp, err := client.Post(rootUri+bundle1ID, "text/plain", bytes.NewBuffer([]byte("baz_data"))); err != nil {
@@ -112,14 +111,14 @@ func TestServer(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadCounter):         {Checker: stats.Int64EqTest, Value: 2},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadOkCounter):       {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadExistingCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Try to read data.
 	if resp, err := client.Get(rootUri + bundle1ID); err != nil {
@@ -133,13 +132,13 @@ func TestServer(t *testing.T) {
 		}
 	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadCounter):   {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadOkCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Try to read non-existent data, expect NotFound.
 	if resp, err := client.Get(rootUri + "bs-0000000000000000000000000000000000000000.bundle"); err != nil {
@@ -151,14 +150,14 @@ func TestServer(t *testing.T) {
 		}
 	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadCounter):    {Checker: stats.Int64EqTest, Value: 2},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadOkCounter):  {Checker: stats.Int64EqTest, Value: 1},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	//
 	// Repeat with HttpStore as the client.
@@ -166,81 +165,82 @@ func TestServer(t *testing.T) {
 
 	// Try to write data.
 	// We send a new TTL and reconfigure the server to transform the original ttl key to a new one.
-	/*store.ttl = &TTLValue{now.Add(time.Hour), "NEW_TTL"}
-	server.ttlCfg = &TTLConfig{0, "NEW_TTL"}
-	clientTTL := &TTLValue{now.Add(time.Hour), DefaultTTLKey}
+	fakeStore.ttl = &store.TTLValue{TTL: now.Add(time.Hour), TTLKey: "NEW_TTL"}
+	//server.ttlCfg = &TTLConfig{0, "NEW_TTL"}
+	server.stuff.TTLCfg = &store.TTLConfig{TTL: 0, TTLKey: "NEW_TTL"}
+	clientTTL := &store.TTLValue{TTL: now.Add(time.Hour), TTLKey: store.DefaultTTLKey}
 	hs := MakeHTTPStore(rootUri)
 	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
 	if err := hs.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {
 		t.Fatalf(err.Error())
-	}*/
+	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadCounter):         {Checker: stats.Int64EqTest, Value: 3},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadOkCounter):       {Checker: stats.Int64EqTest, Value: 2},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadExistingCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Check if the write succeeded.
-	/*if ok, err := hs.Exists(bundle2ID); err != nil {
+	if ok, err := hs.Exists(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if !ok {
 		t.Fatalf("Expected data to exist.")
-	}*/
+	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadCounter):    {Checker: stats.Int64EqTest, Value: 3},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadOkCounter):  {Checker: stats.Int64EqTest, Value: 2},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Try to read data.
-	/*if reader, err := hs.OpenForRead(bundle2ID); err != nil {
+	if reader, err := hs.OpenForRead(bundle2ID); err != nil {
 		t.Fatalf(err.Error())
 	} else if data, err := ioutil.ReadAll(reader); err != nil {
 		t.Fatalf(err.Error())
 	} else if !reflect.DeepEqual(data, []byte("bar_data")) {
 		t.Fatalf("Failed to get matching data: " + string(data))
-	}/*
+	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadCounter):    {Checker: stats.Int64EqTest, Value: 4},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadOkCounter):  {Checker: stats.Int64EqTest, Value: 3},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter): {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Check for non-existent data.
-	/*if ok, err := hs.Exists("bs-0000000000000000000000000000000000000000.bundle"); err != nil {
+	if ok, err := hs.Exists("bs-0000000000000000000000000000000000000000.bundle"); err != nil {
 		t.Fatalf(err.Error())
 	} else if ok {
 		t.Fatalf("Expected data to not exist.")
-	}*/
+	}
 
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadCounter):    {Checker: stats.Int64EqTest, Value: 5},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadOkCounter):  {Checker: stats.Int64EqTest, Value: 3},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter): {Checker: stats.Int64EqTest, Value: 2},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 
 	// Check for invalid name error
-	/*if _, err := hs.Exists("foo"); err == nil {
+	if _, err := hs.Exists("foo"); err == nil {
 		t.Fatalf("Expected invalid input err.")
-	}/*
+	}
 
 	// check the stats
-	/*if !stats.StatsOk("", statsRegistry, t,
+	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadCounter):         {Checker: stats.Int64EqTest, Value: 3},
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreUploadOkCounter):       {Checker: stats.Int64EqTest, Value: 2},
@@ -251,7 +251,7 @@ func TestServer(t *testing.T) {
 			fmt.Sprintf("bundlestoreServer/%s", stats.BundlestoreDownloadErrCounter):    {Checker: stats.Int64EqTest, Value: 3},
 		}) {
 		t.Fatal("stats check did not pass.")
-	}*/
+	}
 }
 
 type fakeServer struct {

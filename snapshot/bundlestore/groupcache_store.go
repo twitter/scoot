@@ -12,6 +12,7 @@ import (
 	"github.com/twitter/groupcache"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 //TODO: we should consider modifying google groupcache lib further to:
@@ -36,7 +37,7 @@ type GroupcacheConfig struct {
 }
 
 // Add in-memory caching to the given store.
-func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.StatsReceiver) (Store, http.Handler, error) {
+func MakeGroupcacheStore(underlying store.Store, cfg *GroupcacheConfig, stat stats.StatsReceiver) (store.Store, http.Handler, error) {
 	stat = stat.Scope("bundlestoreCache")
 	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, "", stats.DefaultStartupGaugeSpikeLen)
 
@@ -119,7 +120,7 @@ func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
 }
 
 type groupcacheStore struct {
-	underlying Store
+	underlying store.Store
 	cache      *groupcache.Group
 	stat       stats.StatsReceiver
 }
@@ -147,7 +148,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *groupcacheStore) Write(name string, data io.Reader, ttl *store.TTLValue) error {
 	log.Info("Write() populating cache: ", name)
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)

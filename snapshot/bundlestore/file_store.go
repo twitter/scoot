@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 // Create a fixed dir in tmp.
@@ -49,7 +50,7 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *FileStore) Write(name string, data io.Reader, ttl *store.TTLValue) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}
