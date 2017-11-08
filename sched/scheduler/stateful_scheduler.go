@@ -142,6 +142,8 @@ type statefulScheduler struct {
 	requestorMap   map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
 	taskDurations  map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
 
+	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
+
 	// stats
 	stat stats.StatsReceiver
 }
@@ -257,6 +259,7 @@ func NewStatefulScheduler(
 		inProgressJobs: make([]*jobState, 0),
 		requestorMap:   make(map[string][]*jobState),
 		taskDurations:  make(map[string]averageDuration),
+		requestorsCounts: make(map[string]map[string]int),
 		stat:           stat,
 	}
 
@@ -441,13 +444,22 @@ func (s *statefulScheduler) step() {
 func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
 	jobsWaitingToStart := 0
-	requestorsCounts := make(map[string]map[string]int)
+
+	// reset current counts to 0
+	for _, counts := range s.requestorsCounts {
+		counts["jobsRuning"] = 0
+		counts["jobsWaitingToStart"] = 0
+		counts["numRunningTasks"] = 0
+		counts["numWaitingTasks"] = 0
+	}
+
+	// get job and task counts by requestor, and overall jobs stats
 	for _, job := range s.inProgressJobs {
 		requestor := job.Job.Def.Requestor
-		if _, ok := requestorsCounts[requestor]; !ok {
+		if _, ok := s.requestorsCounts[requestor]; !ok {
 			// first time we've seen this requestor, initialize its map entry
 			counts := make(map[string]int)
-			requestorsCounts[job.Job.Def.Requestor] = counts
+			s.requestorsCounts[job.Job.Def.Requestor] = counts
 			counts["jobsWaitingToStart"] = 0
 			counts["jobsRuning"] = 0
 			counts["numRunningTasks"] = 0
@@ -457,21 +469,18 @@ func (s *statefulScheduler) updateStats() {
 		remainingTasks += (len(job.Tasks) - job.TasksCompleted)
 		if job.TasksCompleted+job.TasksRunning == 0 {
 			jobsWaitingToStart += 1
-			requestorsCounts[requestor]["jobsWaitingToStart"]++
-		} else {
-			requestorsCounts[requestor]["jobsRuning"]++
+			s.requestorsCounts[requestor]["jobsWaitingToStart"]++
+			s.requestorsCounts[requestor]["numWaitingTasks"] += len(job.Tasks)
+		} else if job.getJobStatus() == sched.InProgress {
+			s.requestorsCounts[requestor]["jobsRuning"]++
+			s.requestorsCounts[requestor]["numRunningTasks"] += job.TasksRunning
+			s.requestorsCounts[requestor]["numWaitingTasks"] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
 
-		for _, taskState := range job.Tasks {
-			if taskState.Status == sched.InProgress {
-				requestorsCounts[requestor]["numRunningTasks"]++
-			} else if taskState.Status == sched.NotStarted {
-				requestorsCounts[requestor]["numWaitingTasks"]++
-			}
-		}
 	}
 
-	for requestor, counts := range requestorsCounts {
+	// publish the requestor stats
+	for requestor, counts := range s.requestorsCounts {
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
 			counts["jobsRuning"]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor)).Update(int64(
@@ -480,7 +489,15 @@ func (s *statefulScheduler) updateStats() {
 			counts["numRunningTasks"]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor)).Update(int64(
 			counts["numWaitingTasks"]))
+
+		// if there is no current activity for this requestor, remove it from the map
+		if counts["jobsRuning"] == 0 && counts["jobsWaitingToStart"] == 0 && counts["numRunningTasks"] == 0 &&
+			counts["numWaitingTasks"] == 0 {
+				delete(s.requestorsCounts, requestor)
+		}
 	}
+
+	// publish the rest of the stats
 	s.stat.Gauge(stats.SchedAcceptedJobsGauge).Update(int64(len(s.inProgressJobs)))
 	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(jobsWaitingToStart))
 	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remainingTasks))

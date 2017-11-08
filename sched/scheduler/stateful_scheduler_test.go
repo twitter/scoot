@@ -539,37 +539,6 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 	}
 }
 
-func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator()
-	s, _, statsRegistry := initializeServices(sc, false)
-
-	// create a series of p0 through p2 tasks and run one scheduling iteration
-	jobId1, _, _ := putJobInScheduler(3, s, "complete 0", "p0Requestor", sched.P0)
-	s.addJobs()
-	jobId2, _, _ := putJobInScheduler(4, s, "complete 0", "p1Requestor", sched.P1)
-	s.addJobs()
-	jobId3, _, _ := putJobInScheduler(1, s, "complete 0", "p2Requestor", sched.P2)
-	s.step()
-	// verify that all tasks in job2 and job 3 ran and 1 task from job3 ran and 2 are waiting
-	ok := verifyJobStatus("step1: verify job1 still running", jobId1, sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.InProgress, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("step1: verify job2 still running", jobId2, sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.InProgress, sched.NotStarted, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("step1: verify job3 still running", jobId3, sched.InProgress,
-		[]sched.Status{sched.InProgress}, s, t)
-
-	// check the gauges
-	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 1, "jobsWaitingToStart": 0,
-			"numRunningTasks": 2, "numWaitingTasks": 1}, s, t, statsRegistry)
-	ok = ok && checkGauges("p1Requestor", map[string]int{"jobRunning": 1, "jobsWaitingToStart": 0,
-			"numRunningTasks": 2, "numWaitingTasks": 2}, s, t, statsRegistry)
-	ok = ok && checkGauges("p2Requestor", map[string]int{"jobRunning": 1, "jobsWaitingToStart": 0,
-		"numRunningTasks": 1, "numWaitingTasks": 0}, s, t, statsRegistry)
-	if !ok {
-		t.Fatal("failed first requestor gauges test")
-	}
-
-}
 
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
 	t *testing.T, statsRegistry stats.StatsRegistry) bool {
