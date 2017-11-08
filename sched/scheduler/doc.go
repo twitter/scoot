@@ -12,7 +12,7 @@ Note: Lower priority jobs are given a chance once MinNodesForGivenJob for higher
 
 SoftMaxSchedulableTasks:
   This limit helps determine nodes per job (see NodeScaleFactor) but doesn’t actually result in scheduler backpressure.
-  The max is determined dynamically, using the greater of number of healthy nodes and max outstanding tasks thus far.
+  The max is determined dynamically, using the greater of number of healthy nodes and number of outstanding tasks.
   If the max is equal to healthy nodes, that means each job can be fully scheduled, with partial scheduling otherwise.
 
 NumHealthyNodes:

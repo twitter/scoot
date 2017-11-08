@@ -160,6 +160,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 	}
+	NodeScaleAdjustment = []float32{1, 1, 1, 1} // Setting this global value explicitly for test consistency.
 
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 5 {
@@ -293,6 +294,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
 	}
+	NodeScaleAdjustment = []float32{.05, .2, .75, 1} // Setting this global value explicitly for test consistency.
 
 	// Check for all 10 P3 tasks
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
@@ -311,12 +313,11 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 
 	// Check for 5 P2, 3 P1, and 2 P0 tasks
-	NodeScaleAdjustment = 0 //Reset this global setting to simplify testing here.
 	assignments, _ = getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 10 {
 		t.Fatalf("Expected ten tasks to be assigned, got %v", len(assignments))
 	}
-	expected := []string{"P2", "P2", "P1", "P1", "P0", "P0", "P2", "P2", "P2", "P1"}
+	expected := []string{"P2", "P2", "P1", "P0", "P2", "P2", "P2", "P2", "P2", "P1"}
 	for i, assignment := range assignments {
 		if !strings.HasSuffix(assignment.task.TaskId, expected[i]) {
 			t.Fatalf("Idx=%d, expected %s task, got %v", i, expected[i], spew.Sdump(assignment))
