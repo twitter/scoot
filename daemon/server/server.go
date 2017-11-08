@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/twitter/scoot/common/grpchelpers"
 	"github.com/twitter/scoot/daemon/protocol"
 	"github.com/twitter/scoot/runner"
 	"golang.org/x/net/context"
@@ -17,7 +18,7 @@ import (
 func NewServer(handler *Handler) (Server, error) {
 	s := &daemonServer{
 		handler:    handler,
-		grpcServer: grpc.NewServer(),
+		grpcServer: grpchelpers.NewServer(),
 	}
 	protocol.RegisterScootDaemonServer(s.grpcServer, s)
 	return s, nil

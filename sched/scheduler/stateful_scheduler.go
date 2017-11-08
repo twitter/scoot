@@ -37,7 +37,6 @@ func init() {
 
 // Provide defaults for config settings that should never be uninitialized/zero.
 // These are reasonable defaults for a small cluster of around a couple dozen nodes.
-// FIXME(jschiller): overwrite SoftMaxSchedulableTasks at runtime if peak load is higher.
 
 // Nothing should run forever by default, use this timeout as a fallback.
 const DefaultDefaultTaskTimeout = 30 * time.Minute
@@ -52,15 +51,15 @@ const DefaultMaxRequestors = 10
 // Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
 const DefaultMaxJobsPerRequestor = 100
 
-// A reasonable maximum number of tasks we'd expect to queue.
-const DefaultSoftMaxSchedulableTasks = 1000
+// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
+const DefaultSoftMaxSchedulableTasks = 1
 
 // The max job priority we respect (higher priority is untested and disabled)
 const MaxPriority = sched.P2
 
-// Increase the NodeScaleFactor by a percentage defined by 1 + (Priority * NodeScaleAdjustment)
+// Decrease the NodeScaleFactor by taking the percentage defined by NodeScaleAdjust[Priority].
 // Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
-var NodeScaleAdjustment = .75
+var NodeScaleAdjustment = []float32{.05, .2, .75, 1}
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -96,11 +95,10 @@ type SchedulerConfig struct {
 }
 
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
-// We account for priority by increasing the scale factor by an appropriate percentage.
-//  ex: p=0:scale*=1, p=1:scale*=1.5, p=2:scale*=2
+// We account for priority by decreasing the scale factor by an appropriate percentage.
 func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p sched.Priority) float32 {
 	sf := float32(numNodes) / float32(s.SoftMaxSchedulableTasks)
-	return sf * (1 + (float32(p) * float32(NodeScaleAdjustment)))
+	return sf * NodeScaleAdjustment[p]
 }
 
 // Used to keep a running average of duration for a specific task.
@@ -700,7 +698,8 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 // figures out which tasks to schedule next and on which worker and then runs them
 func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
-	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, s.config, s.stat)
+	// Pass nil config so taskScheduler can determine the most appropriate values itself.
+	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, nil, s.stat)
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
 	}
