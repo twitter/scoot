@@ -5,24 +5,27 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/sched"
 )
 
 func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
+	origLevel := log.GetLevel()
+	log.SetLevel(log.ErrorLevel)
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a series of p0 through p2 tasks and run one scheduling iteration
 	phase1Profiles := []map[string]string{
-		{"numTasks": "5", "requestor": "p0Requestor", "priority" : "0"},
-		{"numTasks": "3", "requestor": "p1Requestor", "priority" : "1"},
-		{"numTasks": "1", "requestor": "p2Requestor", "priority" : "2"},
-		}
+		{"numTasks": "5", "requestor": "p0Requestor", "priority": "0"},
+		{"numTasks": "3", "requestor": "p1Requestor", "priority": "1"},
+		{"numTasks": "1", "requestor": "p2Requestor", "priority": "2"},
+	}
 	jobIds := addRequestorTestJobsToScheduler(phase1Profiles, s)
-	s.step() // start the first set of tasks
+	s.step()                          // start the first set of tasks
 	time.Sleep(50 * time.Millisecond) // let task threads run to complete
-	s.step() // get first set of completed tasks and start next set
+	s.step()                          // get first set of completed tasks and start next set
 	// verify that all tasks in job1 and job 3 ran and 1 task from job2 ran and 2 are waiting
 	ok := verifyJobStatus("phase1: verify job0 still running", jobIds[0], sched.InProgress,
 		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
@@ -43,19 +46,19 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	phase2Profiles := []map[string]string{
-		{"numTasks": "6", "requestor": "p0Requestor", "priority" : "0"},
-		{"numTasks": "4", "requestor": "p1Requestor", "priority" : "1"},
-		{"numTasks": "2", "requestor": "p2Requestor", "priority" : "2"},
-		{"numTasks": "6", "requestor": "p0Requestor", "priority" : "0"},
-		{"numTasks": "2", "requestor": "p0Requestor", "priority" : "0"},
-		{"numTasks": "1", "requestor": "p0Requestor", "priority" : "0"},
-		{"numTasks": "1", "requestor": "p0Requestor", "priority" : "0"},
+		{"numTasks": "6", "requestor": "p0Requestor", "priority": "0"},
+		{"numTasks": "4", "requestor": "p1Requestor", "priority": "1"},
+		{"numTasks": "2", "requestor": "p2Requestor", "priority": "2"},
+		{"numTasks": "6", "requestor": "p0Requestor", "priority": "0"},
+		{"numTasks": "2", "requestor": "p0Requestor", "priority": "0"},
+		{"numTasks": "1", "requestor": "p0Requestor", "priority": "0"},
+		{"numTasks": "1", "requestor": "p0Requestor", "priority": "0"},
 	}
 
 	j := addRequestorTestJobsToScheduler(phase2Profiles, s)
 	jobIds = append(jobIds, j[:]...)
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase2: verify job3 still running", jobIds[3], sched.InProgress,
 		[]sched.Status{sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
@@ -67,11 +70,11 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 		[]sched.Status{sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase2: verify job7 waiting to start", jobIds[7], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted},  s, t)
+		[]sched.Status{sched.InProgress, sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase2: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.NotStarted,}, s, t)
+		[]sched.Status{sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase2: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.NotStarted,}, s, t)
+		[]sched.Status{sched.NotStarted}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 3, "jobsWaitingToStart": 2,
@@ -85,7 +88,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase3: verify job3 still running", jobIds[3], sched.InProgress,
 		[]sched.Status{sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
@@ -97,11 +100,11 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 		[]sched.Status{sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase3: verify job7 waiting to start", jobIds[7], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress},  s, t)
+		[]sched.Status{sched.Completed, sched.InProgress}, s, t)
 	ok = ok && verifyJobStatus("phase3: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.NotStarted,}, s, t)
+		[]sched.Status{sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase3: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.NotStarted,}, s, t)
+		[]sched.Status{sched.NotStarted}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 3, "jobsWaitingToStart": 2,
@@ -115,7 +118,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase4: verify job3 still running", jobIds[3], sched.InProgress,
 		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
@@ -127,11 +130,11 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted,
 			sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase4: verify job7 waiting to start", jobIds[7], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed},  s, t)
+		[]sched.Status{sched.Completed, sched.Completed}, s, t)
 	ok = ok && verifyJobStatus("phase4: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.InProgress,}, s, t)
+		[]sched.Status{sched.InProgress}, s, t)
 	ok = ok && verifyJobStatus("phase4: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.InProgress,}, s, t)
+		[]sched.Status{sched.InProgress}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 4, "jobsWaitingToStart": 0,
@@ -145,7 +148,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase5: verify job3 still running", jobIds[3], sched.InProgress,
 		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.InProgress, sched.InProgress,
 			sched.NotStarted}, s, t)
@@ -155,9 +158,9 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.InProgress, sched.InProgress,
 			sched.NotStarted}, s, t)
 	ok = ok && verifyJobStatus("phase5: verify job8 waiting to start", jobIds[8], sched.Completed,
-		[]sched.Status{sched.Completed,}, s, t)
+		[]sched.Status{sched.Completed}, s, t)
 	ok = ok && verifyJobStatus("phase5: verify job9 waiting to start", jobIds[9], sched.Completed,
-		[]sched.Status{sched.Completed,}, s, t)
+		[]sched.Status{sched.Completed}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 2, "jobsWaitingToStart": 0,
@@ -171,7 +174,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase6: verify job3 still running", jobIds[3], sched.InProgress,
 		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
 			sched.InProgress}, s, t)
@@ -193,7 +196,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
-	s.step() // start the next set of tasks
+	s.step()                          // start the next set of tasks
 	ok = verifyJobStatus("phase7: verify job3 still running", jobIds[3], sched.Completed,
 		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
 			sched.Completed}, s, t)
@@ -216,6 +219,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 		t.Fatal("scheduler's requestor count map was not emptied!")
 	}
 
+	log.SetLevel(origLevel)
 }
 
 func addRequestorTestJobsToScheduler(jobProfiles []map[string]string, s *statefulScheduler) []string {
@@ -225,11 +229,10 @@ func addRequestorTestJobsToScheduler(jobProfiles []map[string]string, s *statefu
 		numTasks, _ := strconv.Atoi(jobProfile["numTasks"])
 		priority, _ := strconv.Atoi(jobProfile["priority"])
 		jobId, _, _ := putJobInScheduler(numTasks, s, "complete 0", jobProfile["requestor"],
-		sched.Priority(priority))
+			sched.Priority(priority))
 		s.addJobs()
 		jobIds = append(jobIds, jobId)
 	}
 
 	return jobIds
 }
-

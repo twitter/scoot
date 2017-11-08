@@ -539,20 +539,15 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 	}
 }
 
-
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
 	t *testing.T, statsRegistry stats.StatsRegistry) bool {
 	// check the gauges
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
-			fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge,requestor ):
-			{Checker: stats.Int64EqTest, Value: expectedCounts["jobRunning"]},
-			fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge,requestor ):
-			{Checker: stats.Int64EqTest, Value: expectedCounts["jobsWaitingToStart"]},
-			fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge,requestor ):
-			{Checker: stats.Int64EqTest, Value: expectedCounts["numRunningTasks"]},
-			fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge,requestor ):
-			{Checker: stats.Int64EqTest, Value: expectedCounts["numWaitingTasks"]},
+			fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor):  {Checker: stats.Int64EqTest, Value: expectedCounts["jobRunning"]},
+			fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor):     {Checker: stats.Int64EqTest, Value: expectedCounts["jobsWaitingToStart"]},
+			fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numRunningTasks"]},
+			fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numWaitingTasks"]},
 		}) {
 		return false
 	}
@@ -643,7 +638,6 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
 	return jobId, taskIds, err
 }
 
-
 func verifyJobStatus(tag string, jobId string, expectedJobStatus sched.Status, expectedTaskStatus []sched.Status,
 	s *statefulScheduler, t *testing.T) bool {
 
@@ -691,5 +685,3 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 	}, nil
 
 }
-
-

@@ -288,7 +288,7 @@ const (
 
 	/*
 		the number of tasks waiting to start. (Only reported by requestor)
-	 */
+	*/
 	SchedNumWaitingTasksGauge = "schedNumWaitingTasksGauge"
 
 	/*

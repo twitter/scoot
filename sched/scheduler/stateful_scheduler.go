@@ -135,10 +135,10 @@ type statefulScheduler struct {
 
 	// Scheduler State
 	clusterState   *clusterState
-	inProgressJobs []*jobState                // ordered list (by jobId) of jobs being scheduled.  Note: it might be
-	  										  // no tasks have started yet.
-	requestorMap   map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
-	taskDurations  map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
+	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
+	// no tasks have started yet.
+	requestorMap  map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
+	taskDurations map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
@@ -253,12 +253,12 @@ func NewStatefulScheduler(
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
-		inProgressJobs: make([]*jobState, 0),
-		requestorMap:   make(map[string][]*jobState),
-		taskDurations:  make(map[string]averageDuration),
+		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
+		inProgressJobs:   make([]*jobState, 0),
+		requestorMap:     make(map[string][]*jobState),
+		taskDurations:    make(map[string]averageDuration),
 		requestorsCounts: make(map[string]map[string]int),
-		stat:           stat,
+		stat:             stat,
 	}
 
 	if !config.DebugMode {
@@ -292,18 +292,18 @@ type jobAddedMsg struct {
 /*
 	validate the job request. If the job passes validation, the job's tasks are queued for processing as
 	per the task scheduling algorithm and an id for the job is returned, otherwise the error message is returned.
- */
+*/
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
 	/*
-	Put the job request and a callback channel on the check job channel.  Wait for the
-	scheduling thread to pick up the request from the check job channel, verify that it
-	can handle the request and return either nil or an error on the callback channel.
+		Put the job request and a callback channel on the check job channel.  Wait for the
+		scheduling thread to pick up the request from the check job channel, verify that it
+		can handle the request and return either nil or an error on the callback channel.
 
-	If no error is found, generate an id for the job, start a saga for the job and add the
-	job to the add job channel.
+		If no error is found, generate an id for the job, start a saga for the job and add the
+		job to the add job channel.
 
-	 Return either the error message or job id to the caller.
-	 */
+		 Return either the error message or job id to the caller.
+	*/
 	defer s.stat.Latency(stats.SchedJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
 	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)         // TODO errata metric - remove if unused
 	log.WithFields(
@@ -438,7 +438,7 @@ func (s *statefulScheduler) step() {
  * . number of tasks running
  * . number of tasks waiting
  * . number of jobs running or waiting to start
-*/
+ */
 func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
 	jobsWaitingToStart := 0
@@ -491,7 +491,7 @@ func (s *statefulScheduler) updateStats() {
 		// if there is no current activity for this requestor, remove it from the map
 		if counts["jobsRuning"] == 0 && counts["jobsWaitingToStart"] == 0 && counts["numRunningTasks"] == 0 &&
 			counts["numWaitingTasks"] == 0 {
-				delete(s.requestorsCounts, requestor)
+			delete(s.requestorsCounts, requestor)
 		}
 	}
 
