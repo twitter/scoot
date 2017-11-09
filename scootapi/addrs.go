@@ -14,5 +14,3 @@ const DefaultApiBundlestore_GRPC string = "localhost:9098"
 const WorkerPorts = 10100
 const ApiBundlestorePorts = 11100
 const ApiBundlestoreGRPCPorts = 12100
-
-const BundlestoreEnvVar = "BUNDLESTORE_STORE_DIR"

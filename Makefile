@@ -76,14 +76,14 @@ swarmtest:
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	go install ./binaries/...
-	setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
+	$(GOPATH)/bin/setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
 	go install ./binaries/...
-	recoverytest &>/dev/null
+	$(GOPATH)/bin/recoverytest &>/dev/null
 
 clean-mockgen:
 	rm */*_mock.go

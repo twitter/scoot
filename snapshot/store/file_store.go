@@ -1,4 +1,4 @@
-package bundlestore
+package store
 
 import (
 	"errors"
@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/snapshot/store"
 )
 
 // Create a fixed dir in tmp.
@@ -24,6 +23,7 @@ func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
 }
 
 func MakeFileStore(dir string) (*FileStore, error) {
+	log.Infof("Making new FileStore at dir: %s", dir)
 	return &FileStore{dir}, nil
 }
 
@@ -50,7 +50,7 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader, ttl *store.TTLValue) error {
+func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}

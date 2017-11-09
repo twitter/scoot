@@ -90,9 +90,9 @@ func main() {
 		func(tmp *temp.TempDir) (store.Store, error) {
 			if *storeHandle != "" {
 				if strings.HasPrefix(*storeHandle, "/") {
-					return bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
 				} else {
-					return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
+					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
 			}
 			storeAddr := ""
@@ -106,10 +106,10 @@ func main() {
 				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
-				return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
+				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
-			return bundlestore.MakeFileStoreInTemp(tmp)
+			return store.MakeFileStoreInTemp(tmp)
 		},
 	)
 

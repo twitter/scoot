@@ -1,4 +1,5 @@
-// TODO Package level comment
+// This package defines the Store interfaces for reading and writing bundles
+// (or any artifact data) to some underlying system.
 package store
 
 import (
@@ -47,8 +48,8 @@ type Store interface {
 	StoreWrite
 }
 
-// TODO
-type CommonStuff struct {
+// Encapsulating struct for instances of Stores and accompanying configurations
+type StoreConfig struct {
 	Store  Store
 	TTLCfg *TTLConfig
 	Stat   stats.StatsReceiver

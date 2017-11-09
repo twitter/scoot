@@ -41,7 +41,7 @@ func (s *TwitterServer) Serve() error {
 	for path, handler := range s.Handlers {
 		mux.Handle(path, handler)
 	}
-	log.Info("Serving http & stats on", s.Addr)
+	log.Info("Serving http & stats on: ", s.Addr)
 	server := &http.Server{
 		Addr:    s.Addr,
 		Handler: mux,

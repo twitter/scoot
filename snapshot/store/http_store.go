@@ -1,4 +1,4 @@
-package bundlestore
+package store
 
 import (
 	"errors"
@@ -11,8 +11,6 @@ import (
 
 	"github.com/sethgrid/pester"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/twitter/scoot/snapshot/store"
 )
 
 const DefaultHttpTries = 7 // ~2min total of trying with exponential backoff (0 and 1 both mean 1 try total)
@@ -27,14 +25,15 @@ func MakePesterClient() *pester.Client {
 	return client
 }
 
-func MakeHTTPStore(rootURI string) store.Store {
+func MakeHTTPStore(rootURI string) Store {
 	return MakeCustomHTTPStore(rootURI, MakePesterClient())
 }
 
-func MakeCustomHTTPStore(rootURI string, client Client) store.Store {
+func MakeCustomHTTPStore(rootURI string, client Client) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
+	log.Infof("Making new HTTP Store with root URI: %s", rootURI)
 	return &httpStore{rootURI, client}
 }
 
@@ -103,7 +102,7 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *httpStore) Write(name string, data io.Reader, ttl *store.TTLValue) error {
+func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	if strings.Contains(name, "/") {
 		log.Infof("Write error: %s '/' not allowed", name)
 		return errors.New("'/' not allowed in name when writing bundles.")
@@ -118,7 +117,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *store.TTLValue) erro
 		}
 		req.Header.Set("Content-Type", "text/plain")
 		if ttl == nil {
-			ttl = &store.TTLValue{TTL: time.Now().Add(store.DefaultTTL), TTLKey: store.DefaultTTLKey}
+			ttl = &TTLValue{TTL: time.Now().Add(DefaultTTL), TTLKey: DefaultTTLKey}
 		}
 		if ttl.TTLKey != "" {
 			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(time.RFC1123)}

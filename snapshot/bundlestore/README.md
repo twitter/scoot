@@ -17,6 +17,20 @@ For now names look like 'bs-<sha>.bundle'.
 Server makes a store accessible via http and doesn't do much else at this time. Future work
 includes ex: bundle validation, and generating better bundles with a different basis.
 
-The use case for server is motivated by snapshot/git/gitdb/*. which needs to upload/download
+The use case for server is motivated by snapshot/git/gitdb. which needs to upload/download
 bundles from persistent storage and does so by contacting this [off-box] server via httpStore.
 Note that the server in turn may use httpStore internally to talk to, for instance, a SAN.
+
+### Server API
+
+#### GET
+Example:
+```sh
+curl -X GET -o local-output.bundle http://localhost:9094/bundle/bs-0000000000000000000000000000000000000000.bundle
+```
+
+#### POST
+Example:
+```sh
+curl -X POST --data-binary "@/abspath/local-input.bundle" http://localhost:9094/bundle/bs-0000000000000000000000000000000000000000.bundle
+```

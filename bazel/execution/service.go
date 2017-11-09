@@ -25,7 +25,7 @@ type executionServer struct {
 }
 
 // Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
-func NewExecutionServer(l net.Listener) *executionServer {
+func MakeExecutionServer(l net.Listener) *executionServer {
 	g := executionServer{listener: l, server: grpchelpers.NewServer()}
 	remoteexecution.RegisterExecutionServer(g.server, &executionServer{})
 	return &g

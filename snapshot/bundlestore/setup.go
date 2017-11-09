@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	bazel "github.com/twitter/scoot/bazel/server"
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
@@ -25,15 +25,15 @@ func makeServers(h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
 }
 
 // Make a File Store based on the environment, or in temp if unset
-func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*FileStore, error) {
+func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*store.FileStore, error) {
 	// if we're running as part of a swarm test, we want to share the store with other processes
-	if d := os.Getenv(scootapi.BundlestoreEnvVar); d != "" {
-		return MakeFileStore(d)
+	if d := os.Getenv(BundlestoreDirEnvVar); d != "" {
+		return store.MakeFileStore(d)
 	}
-	return MakeFileStoreInTemp(tmp)
+	return store.MakeFileStoreInTemp(tmp)
 }
 
-func DefaultStore(store *FileStore) store.Store {
+func DefaultStore(store *store.FileStore) store.Store {
 	return store
 }
 

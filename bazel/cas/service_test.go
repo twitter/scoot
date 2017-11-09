@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"bytes"
 	"testing"
 
 	"golang.org/x/net/context"
@@ -9,25 +10,41 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 func TestFindMissingBlobsStub(t *testing.T) {
-	s := casServer{}
+	fakeStore := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: fakeStore}}
+
+	// Create 2 digests, write 1 to Store, check both for missing, expect other 1 back
+	dExists := &remoteexecution.Digest{Hash: "abc123", SizeBytes: 1}
+	dMissing := &remoteexecution.Digest{Hash: "efg456", SizeBytes: 9}
+	digests := []*remoteexecution.Digest{dExists, dMissing}
+	expected := []*remoteexecution.Digest{dMissing}
+
+	resourceName := bazel.DigestStoreName(dExists)
+	err := fakeStore.Write(resourceName, bytes.NewReader([]byte("")), nil)
+	if err != nil {
+		t.Fatalf("Failed to write into fakeStore: %v", err)
+	}
+
 	ctx := context.Background()
-	digests := []*remoteexecution.Digest{&remoteexecution.Digest{Hash: "abc123", SizeBytes: 1}}
 	req := remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
 
 	res, err := s.FindMissingBlobs(ctx, &req)
 	if err != nil {
-		t.Errorf("Error response from FindMissingBlobs: %v", err)
+		t.Fatalf("Error response from FindMissingBlobs: %v", err)
 	}
 
-	if len(digests) != len(res.MissingBlobDigests) {
-		t.Errorf("Length of missing blobs mismatch, expected %d got %d", len(digests), len(res.MissingBlobDigests))
+	if len(expected) != len(res.MissingBlobDigests) {
+		t.Fatalf("Length of missing blobs mismatch, expected %d got %d", len(expected), len(res.MissingBlobDigests))
 	}
 	for i, d := range res.MissingBlobDigests {
-		if digests[i] != d {
-			t.Errorf("Non match iterating through missing digests, expected %s got: %s", digests[i], d)
+		if expected[i] != d {
+			t.Errorf("Non-match iterating through missing digests, expected %s got: %s", expected[i], d)
 		}
 	}
 }
@@ -39,11 +56,11 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 
 	_, err := s.BatchUpdateBlobs(ctx, &req)
 	if err == nil {
-		t.Errorf("Non-error response from BatchUpdateBlobs")
+		t.Fatalf("Non-error response from BatchUpdateBlobs")
 	}
 	st, ok := status.FromError(err)
 	if !ok {
-		t.Errorf("Not ok reading grpc status from error")
+		t.Fatalf("Not ok reading grpc status from error")
 	}
 	if st.Code() != codes.Unimplemented {
 		t.Errorf("Expected status code %d, got: %d", codes.Unimplemented, st.Code())
@@ -57,11 +74,11 @@ func TestGetTreeStub(t *testing.T) {
 
 	_, err := s.GetTree(ctx, &req)
 	if err == nil {
-		t.Errorf("Non-error response from GetTree")
+		t.Fatalf("Non-error response from GetTree")
 	}
 	st, ok := status.FromError(err)
 	if !ok {
-		t.Errorf("Not ok reading grpc status from error")
+		t.Fatalf("Not ok reading grpc status from error")
 	}
 	if st.Code() != codes.Unimplemented {
 		t.Errorf("Expected status code %d, got: %d", codes.Unimplemented, st.Code())
@@ -96,7 +113,7 @@ func TestQueryWriteStatusStub(t *testing.T) {
 
 	res, err := s.QueryWriteStatus(ctx, &req)
 	if err != nil {
-		t.Errorf("Error response from QueryWriteStatus: %v", err)
+		t.Fatalf("Error response from QueryWriteStatus: %v", err)
 	}
 
 	if !res.Complete {

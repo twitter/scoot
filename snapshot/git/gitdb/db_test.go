@@ -15,8 +15,8 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 var fixture *dbFixture
@@ -406,7 +406,7 @@ func TestBundlestore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := bundlestore.MakeFileStore(tmp.Dir)
+	store, err := store.MakeFileStore(tmp.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
