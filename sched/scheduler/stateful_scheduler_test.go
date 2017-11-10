@@ -377,7 +377,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
-	jobId, taskIds, _ := putJobInScheduler(1, s, true)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", sched.P0)
 	s.step() // get the first job in the queue
 	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
 		s.step()
@@ -400,7 +400,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
-	putJobInScheduler(1, s, true)
+	putJobInScheduler(1, s, "pause", "", sched.P0)
 
 	respCh := sendKillRequest("badJobId", s)
 
@@ -417,7 +417,7 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, true)
-	jobId, taskIds, _ := putJobInScheduler(1, s, false)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", sched.P0)
 	s.step() // get the job in the queue
 
 	//advance scheduler until the task completes
@@ -459,7 +459,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
-	jobId1, _, _ := putJobInScheduler(5, s, true)
+	jobId1, _, _ := putJobInScheduler(5, s, "pause", "", sched.P0)
 	s.step()
 	for !allTasksInState("job1", jobId1, s, sched.InProgress) {
 		s.step()
@@ -477,7 +477,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	}
 
 	// put a job with 3 tasks in the queue - all tasks should be in NotStarted state
-	jobId2, _, _ := putJobInScheduler(3, s, true)
+	jobId2, _, _ := putJobInScheduler(3, s, "pause", "", sched.P0)
 	s.step()
 	verifyJobStatus("verify put job2 in scheduler", jobId2, sched.InProgress,
 		[]sched.Status{sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
@@ -539,6 +539,22 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 	}
 }
 
+func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
+	t *testing.T, statsRegistry stats.StatsRegistry) bool {
+	// check the gauges
+	if !stats.StatsOk("", statsRegistry, t,
+		map[string]stats.Rule{
+			fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor):  {Checker: stats.Int64EqTest, Value: expectedCounts["jobRunning"]},
+			fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor):     {Checker: stats.Int64EqTest, Value: expectedCounts["jobsWaitingToStart"]},
+			fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numRunningTasks"]},
+			fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numWaitingTasks"]},
+		}) {
+		return false
+	}
+
+	return true
+}
+
 func allTasksInState(jobName string, jobId string, s *statefulScheduler, status sched.Status) bool {
 	for _, task := range s.getJob(jobId).Tasks {
 		if task.Status != status {
@@ -579,7 +595,7 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 	if useDefaultDeps {
 		deps = getDefaultSchedDeps()
 	} else {
-		deps, exs = getDepsWithPausingWorker()
+		deps, exs = getDepsWithSimWorker()
 	}
 
 	deps.sc = sc
@@ -588,17 +604,21 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 
 // create a job definition containing numTasks tasks and put it in the scheduler.
 // usingPausingExecer is true, each task will contain the command "pause"
-func putJobInScheduler(numTasks int, s *statefulScheduler, usingPausingExecer bool) (string, []string, error) {
+func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
+	requestor string, priority sched.Priority) (string, []string, error) {
+	// create the job and run it to completion
 	// create the job and run it to completion
 	jobDef := sched.GenJobDef(numTasks)
+	jobDef.Requestor = requestor
+	jobDef.Priority = priority
 
 	var taskIds []string
 
-	if usingPausingExecer {
+	if command != "" {
 		//change command to pause.
 		for i, _ := range jobDef.Tasks {
 			// set the command to pause
-			jobDef.Tasks[i].Argv = []string{"pause"}
+			jobDef.Tasks[i].Argv = []string{command}
 		}
 	}
 
@@ -608,6 +628,8 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, usingPausingExecer bo
 
 	// put the job on the jobs channel
 	go func() {
+		// simulate checking the job and returning no error, so ScheduleJob() will put the job definition
+		// immediately on the addJobCh
 		checkJobMsg := <-s.checkJobCh
 		checkJobMsg.resultCh <- nil
 	}()
@@ -639,7 +661,7 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus sched.Status, e
 
 }
 
-func getDepsWithPausingWorker() (*schedulerDeps, []*execers.SimExecer) {
+func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 
 	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
