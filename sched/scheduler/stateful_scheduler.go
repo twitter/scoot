@@ -79,7 +79,6 @@ var NodeScaleAdjustment = []float32{.05, .2, .75, 1}
 //     how long to sleep between runner req retries.
 // ReadyFnBackoff -
 //     how long to wait between runner status queries to determine [init] status.
-
 type SchedulerConfig struct {
 	MaxRetriesPerTask       int
 	DebugMode               bool
@@ -427,28 +426,30 @@ func (s *statefulScheduler) step() {
 	s.updateStats()
 }
 
-/*
- * update the stats monitoring values:
- * number of job requests running or waiting to start
- * number of jobs waiting to start
- * number of tasks currently running
- * total number of waiting or running tasks
- *
- * for each unique requestor count:
- * . number of tasks running
- * . number of tasks waiting
- * . number of jobs running or waiting to start
- */
+//update the stats monitoring values:
+//number of job requests running or waiting to start
+//number of jobs waiting to start
+//number of tasks currently running
+//total number of waiting or running tasks
+//
+//for each unique requestor count:
+//. number of tasks running
+//. number of tasks waiting
+//. number of jobs running or waiting to start
 func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
 	jobsWaitingToStart := 0
 
 	// reset current counts to 0
+	jobsRunnningKey := "jobsRunning"
+	jobsWaitingToStartKey := "jobsWaitingToStart"
+	numRunningTasksKey := "numRunningTasks"
+	numWaitingTasksKey := "numWaitingTasks"
 	for _, counts := range s.requestorsCounts {
-		counts["jobsRuning"] = 0
-		counts["jobsWaitingToStart"] = 0
-		counts["numRunningTasks"] = 0
-		counts["numWaitingTasks"] = 0
+		counts[jobsRunnningKey] = 0
+		counts[jobsWaitingToStartKey] = 0
+		counts[numRunningTasksKey] = 0
+		counts[numWaitingTasksKey] = 0
 	}
 
 	// get job and task counts by requestor, and overall jobs stats
@@ -458,21 +459,21 @@ func (s *statefulScheduler) updateStats() {
 			// first time we've seen this requestor, initialize its map entry
 			counts := make(map[string]int)
 			s.requestorsCounts[job.Job.Def.Requestor] = counts
-			counts["jobsWaitingToStart"] = 0
-			counts["jobsRuning"] = 0
-			counts["numRunningTasks"] = 0
-			counts["numWaitingTasks"] = 0
+			counts[jobsWaitingToStartKey] = 0
+			counts[jobsRunnningKey] = 0
+			counts[numRunningTasksKey] = 0
+			counts[numWaitingTasksKey] = 0
 		}
 
 		remainingTasks += (len(job.Tasks) - job.TasksCompleted)
 		if job.TasksCompleted+job.TasksRunning == 0 {
 			jobsWaitingToStart += 1
-			s.requestorsCounts[requestor]["jobsWaitingToStart"]++
-			s.requestorsCounts[requestor]["numWaitingTasks"] += len(job.Tasks)
+			s.requestorsCounts[requestor][jobsWaitingToStartKey]++
+			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks)
 		} else if job.getJobStatus() == sched.InProgress {
-			s.requestorsCounts[requestor]["jobsRuning"]++
-			s.requestorsCounts[requestor]["numRunningTasks"] += job.TasksRunning
-			s.requestorsCounts[requestor]["numWaitingTasks"] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
+			s.requestorsCounts[requestor][jobsRunnningKey]++
+			s.requestorsCounts[requestor][numRunningTasksKey] += job.TasksRunning
+			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
 
 	}
@@ -480,17 +481,17 @@ func (s *statefulScheduler) updateStats() {
 	// publish the requestor stats
 	for requestor, counts := range s.requestorsCounts {
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
-			counts["jobsRuning"]))
+			counts[jobsRunnningKey]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor)).Update(int64(
-			counts["jobsWaitingToStart"]))
+			counts[jobsWaitingToStartKey]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor)).Update(int64(
-			counts["numRunningTasks"]))
+			counts[numRunningTasksKey]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor)).Update(int64(
-			counts["numWaitingTasks"]))
+			counts[numWaitingTasksKey]))
 
 		// if there is no current activity for this requestor, remove it from the map
-		if counts["jobsRuning"] == 0 && counts["jobsWaitingToStart"] == 0 && counts["numRunningTasks"] == 0 &&
-			counts["numWaitingTasks"] == 0 {
+		if counts[jobsRunnningKey] == 0 && counts[jobsWaitingToStartKey] == 0 && counts[numRunningTasksKey] == 0 &&
+			counts[numWaitingTasksKey] == 0 {
 			delete(s.requestorsCounts, requestor)
 		}
 	}
@@ -899,10 +900,8 @@ func (s *statefulScheduler) scheduleTasks() {
 	}
 }
 
-/*
-Put the kill request on channel that is processed by the main
-scheduler loop, and wait for the response
-*/
+//Put the kill request on channel that is processed by the main
+//scheduler loop, and wait for the response
 func (s *statefulScheduler) KillJob(jobID string) error {
 
 	log.WithFields(
