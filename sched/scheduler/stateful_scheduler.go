@@ -441,12 +441,12 @@ func (s *statefulScheduler) updateStats() {
 	jobsWaitingToStart := 0
 
 	// reset current counts to 0
-	jobsRunnningKey := "jobsRunning"
+	jobsRunningKey := "jobsRunning"
 	jobsWaitingToStartKey := "jobsWaitingToStart"
 	numRunningTasksKey := "numRunningTasks"
 	numWaitingTasksKey := "numWaitingTasks"
 	for _, counts := range s.requestorsCounts {
-		counts[jobsRunnningKey] = 0
+		counts[jobsRunningKey] = 0
 		counts[jobsWaitingToStartKey] = 0
 		counts[numRunningTasksKey] = 0
 		counts[numWaitingTasksKey] = 0
@@ -460,7 +460,7 @@ func (s *statefulScheduler) updateStats() {
 			counts := make(map[string]int)
 			s.requestorsCounts[job.Job.Def.Requestor] = counts
 			counts[jobsWaitingToStartKey] = 0
-			counts[jobsRunnningKey] = 0
+			counts[jobsRunningKey] = 0
 			counts[numRunningTasksKey] = 0
 			counts[numWaitingTasksKey] = 0
 		}
@@ -471,7 +471,7 @@ func (s *statefulScheduler) updateStats() {
 			s.requestorsCounts[requestor][jobsWaitingToStartKey]++
 			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks)
 		} else if job.getJobStatus() == sched.InProgress {
-			s.requestorsCounts[requestor][jobsRunnningKey]++
+			s.requestorsCounts[requestor][jobsRunningKey]++
 			s.requestorsCounts[requestor][numRunningTasksKey] += job.TasksRunning
 			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
@@ -481,7 +481,7 @@ func (s *statefulScheduler) updateStats() {
 	// publish the requestor stats
 	for requestor, counts := range s.requestorsCounts {
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
-			counts[jobsRunnningKey]))
+			counts[jobsRunningKey]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor)).Update(int64(
 			counts[jobsWaitingToStartKey]))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor)).Update(int64(
@@ -490,7 +490,7 @@ func (s *statefulScheduler) updateStats() {
 			counts[numWaitingTasksKey]))
 
 		// if there is no current activity for this requestor, remove it from the map
-		if counts[jobsRunnningKey] == 0 && counts[jobsWaitingToStartKey] == 0 && counts[numRunningTasksKey] == 0 &&
+		if counts[jobsRunningKey] == 0 && counts[jobsWaitingToStartKey] == 0 && counts[numRunningTasksKey] == 0 &&
 			counts[numWaitingTasksKey] == 0 {
 			delete(s.requestorsCounts, requestor)
 		}
