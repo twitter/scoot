@@ -91,7 +91,7 @@ func (s *casServer) GetTree(
 // Implements googleapis bytestream Read
 func (s *casServer) Read(req *googlebytestream.ReadRequest, ser googlebytestream.ByteStream_ReadServer) error {
 	log.Infof("Received CAS Read request: %s", req)
-	// Real implementation: fetch resource from backend and call Send(Data []byte) until finished
+	// TODO Real implementation: fetch resource from backend and call Send(Data []byte) until finished
 	return nil
 }
 
@@ -100,7 +100,7 @@ func (s *casServer) Read(req *googlebytestream.ReadRequest, ser googlebytestream
 // Implements googleapis bytestream Write
 func (s *casServer) Write(googlebytestream.ByteStream_WriteServer) error {
 	log.Info("Received CAS Write request")
-	// Real implementation: stream from client with Recv(), finish with SendAndClose
+	// TODO Real implementation: stream from client with Recv(), finish with SendAndClose
 	return nil
 }
 
@@ -109,7 +109,7 @@ func (s *casServer) QueryWriteStatus(
 	ctx context.Context,
 	req *googlebytestream.QueryWriteStatusRequest) (*googlebytestream.QueryWriteStatusResponse, error) {
 	log.Infof("Received CAS QueryWriteStatus request: %s", req)
-	// Placeholder - response indicates size 0 resource in completed state
+	// TODO Placeholder - response indicates size 0 resource in completed state
 	res := googlebytestream.QueryWriteStatusResponse{CommittedSize: 0, Complete: true}
 	return &res, nil
 }
