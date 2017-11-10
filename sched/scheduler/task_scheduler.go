@@ -39,19 +39,23 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	}
 	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
-	if config == nil {
-		config = &SchedulerConfig{
-			SoftMaxSchedulableTasks: DefaultSoftMaxSchedulableTasks,
-		}
-	}
-
 	// Exit if there are no unscheduled tasks.
+	totalOutstandingTasks := 0
 	totalUnschedTasks := 0
 	for _, j := range jobs {
+		totalOutstandingTasks += (len(j.Tasks) - j.TasksCompleted)
 		totalUnschedTasks += (len(j.Tasks) - j.TasksCompleted - j.TasksRunning)
 	}
 	if totalUnschedTasks == 0 {
 		return nil, nil
+	}
+
+	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
+	// Setting the max to num healthy nodes means that each job can be fully scheduled.
+	// (This gets used in config.GetNodeScaleFactor())
+	cfg := SchedulerConfig{SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes))}
+	if config != nil {
+		cfg = *config
 	}
 
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
@@ -171,7 +175,7 @@ Loop:
 
 			// How many of the requested tasks can we assign based on the max healthy task load for our cluster.
 			// (the schedulable count is the minimum number of nodes appropriate for the current set of tasks).
-			numScaledTasks := ceil(float32(numTasks) * config.GetNodeScaleFactor(len(cs.nodes), p))
+			numScaledTasks := ceil(float32(numTasks) * cfg.GetNodeScaleFactor(len(cs.nodes), p))
 			numSchedulable := 0
 			numDesiredUnmet := 0
 			if p == sched.P3 {
@@ -221,7 +225,7 @@ Loop:
 			}
 
 			// To both required and optional, append an array containing unscheduled tasks for this requestor/tag combination.
-			//
+			//FIXME(jschiller): splitting required and optional may not make sense anymore, consider consolidating.
 			if numDesiredUnmet > 0 {
 				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:numSchedulable+numDesiredUnmet])
 			}
@@ -233,11 +237,10 @@ Loop:
 
 	// If there are still free nodes, priority=3 jobs have been satisfied already.
 	// Distribute a minimum of 75% free to priority=2, 20% to priority=1 and 5% to priority=0
-	// TODO(jschiller) percentages should be configurable.
 LoopRemaining:
 	// First, loop using the above percentages, and next, distribute remaining free nodes to the highest priority tasks.
 	// Do this twice, once for 'required' tasks and again for 'optional' tasks.
-	for i, pq := range [][]float32{[]float32{.05, .2, .75}, []float32{1, 1, 1}, []float32{.05, .2, .75}, []float32{1, 1, 1}} {
+	for i, pq := range [][]float32{NodeScaleAdjustment, []float32{1, 1, 1}, NodeScaleAdjustment, []float32{1, 1, 1}} {
 		remaining := &remainingRequired
 		if i > 1 {
 			remaining = &remainingOptional
@@ -288,7 +291,7 @@ LoopRemaining:
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
 	// - A node from the next killable task candidate.
 	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
-	if len(assignments) == len(tasks) {
+	if len(assignments) == totalUnschedTasks {
 		log.WithFields(
 			log.Fields{
 				"numTasks": len(tasks),
@@ -299,7 +302,7 @@ LoopRemaining:
 		log.WithFields(
 			log.Fields{
 				"numAssignments": len(assignments),
-				"numTasks":       len(tasks),
+				"numTasks":       totalUnschedTasks,
 				"tag":            tasks[0].Def.Tag,
 				"jobID":          tasks[0].Def.JobID,
 			}).Info("Unable to schedule all tasks")

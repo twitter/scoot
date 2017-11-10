@@ -7,21 +7,23 @@ JobPriority:
   1 These jobs will receive node quota only when P2,3 jobs have satisfied their minimum node quota.
   2 These jobs will receive node quota only when P3 jobs have satisfied their minimum node quota.
   3 Run ahead of P0,1,2, acquiring as many nodes as possible, killing youngest lower priority tasks if no nodes are free
-Note: Lower priority jobs are given a chance once MinRunningNodesForGivenJob for higher priority jobs is satisfied.
+Note: Lower priority jobs are given a chance once MinNodesForGivenJob for higher priority jobs is satisfied.
       However, priority 3 jobs are greedy and have no minimum number of nodes whereupon they defer to lower priorities.
 
 SoftMaxSchedulableTasks:
-  This limit helps determine nodes per job but doesn’t actually result in scheduler backpressure.
+  This limit helps determine nodes per job (see NodeScaleFactor) but doesn’t actually result in scheduler backpressure.
+  The max is determined dynamically, using the greater of number of healthy nodes and number of outstanding tasks.
+  If the max is equal to healthy nodes, that means each job can be fully scheduled, with partial scheduling otherwise.
 
-NumRunningNodes:
+NumHealthyNodes:
   The total number of nodes in the cluster which are capable of running a task, even if currently busy.
 
 NodeScaleFactor:
   Used to calculate how many tasks a job can run without adversely affecting other jobs.
   We account for job priority by increasing the scale factor by an appropriate percentage.
-  = (NumRunningNodes / SoftMaxSchedulableTasks) * (1 + Job.Priority * SomeMultiplier)
+  = (NumHealthyNodes / SoftMaxSchedulableTasks) * (1 + Job.Priority * SomeMultiplier)
 
-MinRunningNodesForGivenJob:
+MinNodesForGivenJob:
   = ceil(min(NumFreeNodes, Job.NumRequestedTasks * NodeScaleFactor, Job.NumRemainingTasks))
 
 MaxJobsPerRequestor,  MaxRequestors:
@@ -36,7 +38,7 @@ Add remaining unmatched requests to the jobs queue but limit number of jobs per 
 For Job in Jobs.Priority3,
  Select NumAssignedNodes=min(Job.NumRemainingTasks, NumFreeNodes + NumKillableNodes from P0,1,2 jobs)
 For Job in Jobs.Priority2 + Jobs.Priority1 + Jobs.Priority0:
- Select NumAssignedNodes=min(Job.NumRemainingTasks, MinRunningNodesForGivenJob, NumFreeNodes)
+ Select NumAssignedNodes=min(Job.NumRemainingTasks, MinNodesForGivenJob, NumFreeNodes)
 
 Select Node Preference:
    Free nodes with the same SnapshotID as the given task, where the last ran task is different.

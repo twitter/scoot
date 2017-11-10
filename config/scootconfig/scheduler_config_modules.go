@@ -30,15 +30,14 @@ const DefaultReadyFnBackoff = 5 * time.Second
 //
 // See scheduler.SchedulerConfig for comments on the remaining fields.
 type StatefulSchedulerConfig struct {
-	Type                    string
-	MaxRetriesPerTask       int
-	DebugMode               bool
-	RecoverJobsOnStartup    bool
-	DefaultTaskTimeout      string
-	TaskTimeoutOverhead     string
-	MaxRequestors           int
-	MaxJobsPerRequestor     int
-	SoftMaxSchedulableTasks int
+	Type                 string
+	MaxRetriesPerTask    int
+	DebugMode            bool
+	RecoverJobsOnStartup bool
+	DefaultTaskTimeout   string
+	TaskTimeoutOverhead  string
+	MaxRequestors        int
+	MaxJobsPerRequestor  int
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -63,16 +62,15 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 	}
 
 	return scheduler.SchedulerConfig{
-		MaxRetriesPerTask:       c.MaxRetriesPerTask,
-		DebugMode:               c.DebugMode,
-		RecoverJobsOnStartup:    c.RecoverJobsOnStartup,
-		DefaultTaskTimeout:      dtt,
-		TaskTimeoutOverhead:     tto,
-		RunnerRetryTimeout:      DefaultRunnerRetryTimeout,
-		RunnerRetryInterval:     DefaultRunnerRetryInterval,
-		ReadyFnBackoff:          DefaultReadyFnBackoff,
-		MaxRequestors:           c.MaxRequestors,
-		MaxJobsPerRequestor:     c.MaxJobsPerRequestor,
-		SoftMaxSchedulableTasks: c.SoftMaxSchedulableTasks,
+		MaxRetriesPerTask:    c.MaxRetriesPerTask,
+		DebugMode:            c.DebugMode,
+		RecoverJobsOnStartup: c.RecoverJobsOnStartup,
+		DefaultTaskTimeout:   dtt,
+		TaskTimeoutOverhead:  tto,
+		RunnerRetryTimeout:   DefaultRunnerRetryTimeout,
+		RunnerRetryInterval:  DefaultRunnerRetryInterval,
+		ReadyFnBackoff:       DefaultReadyFnBackoff,
+		MaxRequestors:        c.MaxRequestors,
+		MaxJobsPerRequestor:  c.MaxJobsPerRequestor,
 	}, nil
 }
