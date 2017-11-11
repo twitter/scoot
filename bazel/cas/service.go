@@ -4,11 +4,12 @@ package cas
 
 import (
 	"fmt"
+	"io"
 	"net"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	googlebytestream "google.golang.org/genproto/googleapis/bytestream"
+	"google.golang.org/genproto/googleapis/bytestream"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,8 +35,17 @@ func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
 		storeConfig: cfg,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &casServer{})
-	googlebytestream.RegisterByteStreamServer(g.server, &casServer{})
+	bytestream.RegisterByteStreamServer(g.server, &casServer{})
 	return &g
+}
+
+func (s *casServer) IsInitialized() bool {
+	if s == nil {
+		return false
+	} else if s.storeConfig == nil {
+		return false
+	}
+	return true
 }
 
 func (s *casServer) Serve() error {
@@ -51,17 +61,21 @@ func (s *casServer) FindMissingBlobs(
 	req *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
 	log.Infof("Received CAS FindMissingBlobs request: %s", req)
 
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
 	// req.InstanceName currently ignored
 	res := remoteexecution.FindMissingBlobsResponse{}
 	if s.storeConfig == nil {
 		return nil, status.Error(codes.Internal, "Internal Store not initialized")
 	}
 
-	for _, digest := range req.BlobDigests {
+	for _, digest := range req.GetBlobDigests() {
 		storeName := bazel.DigestStoreName(digest)
 		exists, err := s.storeConfig.Store.Exists(storeName)
 		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to check existence of %s: %v", storeName, err))
+			return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
 		}
 		if !exists {
 			res.MissingBlobDigests = append(res.MissingBlobDigests, digest)
@@ -89,17 +103,66 @@ func (s *casServer) GetTree(
 
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
-func (s *casServer) Read(req *googlebytestream.ReadRequest, ser googlebytestream.ByteStream_ReadServer) error {
+func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_ReadServer) error {
 	log.Infof("Received CAS Read request: %s", req)
-	// TODO Real implementation: fetch resource from backend and call Send(Data []byte) until finished
+
+	if !s.IsInitialized() {
+		return status.Error(codes.Internal, "Server not initialized")
+	}
+
+	resource, err := bazel.ParseResource(req.GetResourceName())
+	if err != nil {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
+	}
+
+	if req.GetReadOffset() < 0 || req.GetReadOffset() >= resource.Digest.GetSizeBytes() {
+		return status.Error(codes.OutOfRange, fmt.Sprintf("Invalid read offset %d for size %d", req.GetReadOffset(), resource.Digest.GetSizeBytes()))
+	}
+	if req.GetReadLimit() < 0 {
+		return status.Error(codes.InvalidArgument, "Read limit < 0 invalid")
+	}
+
+	storeName := bazel.DigestStoreName(resource.Digest)
+
+	// TODO register with casServer inflight request tracker?
+	log.Infof("Opening store resource for reading: %s", storeName)
+	r, err := s.storeConfig.Store.OpenForRead(storeName)
+	if err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("Store failed opening resource for read: %s: %v", storeName, err))
+	}
+	defer r.Close()
+
+	res := &bytestream.ReadResponse{}
+	p := make([]byte, bazel.MaxCASBufferSize)
+	for {
+		_, err := r.Read(p)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return status.Error(codes.Internal, fmt.Sprintf("Store failed reading from %s: %v", storeName, err))
+		}
+
+		res.Data = p
+		err = ser.Send(res)
+		if err != nil {
+			return status.Error(codes.Internal, fmt.Sprintf("Failed to send ReadResponse: %v", err))
+		}
+		res.Reset()
+	}
+
 	return nil
 }
 
 // Writes data into bundlestore from a client via grpc streaming. Clients can use this API
 // to determine the progress of data being committed and to resume writes after interruptions.
 // Implements googleapis bytestream Write
-func (s *casServer) Write(googlebytestream.ByteStream_WriteServer) error {
+func (s *casServer) Write(bytestream.ByteStream_WriteServer) error {
 	log.Info("Received CAS Write request")
+
+	if !s.IsInitialized() {
+		return status.Error(codes.Internal, "Server not initialized")
+	}
+
 	// TODO Real implementation: stream from client with Recv(), finish with SendAndClose
 	return nil
 }
@@ -107,9 +170,14 @@ func (s *casServer) Write(googlebytestream.ByteStream_WriteServer) error {
 // QueryWriteStatus gives status information about a Write operation in progress
 func (s *casServer) QueryWriteStatus(
 	ctx context.Context,
-	req *googlebytestream.QueryWriteStatusRequest) (*googlebytestream.QueryWriteStatusResponse, error) {
+	req *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
 	log.Infof("Received CAS QueryWriteStatus request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
 	// TODO Placeholder - response indicates size 0 resource in completed state
-	res := googlebytestream.QueryWriteStatusResponse{CommittedSize: 0, Complete: true}
+	res := bytestream.QueryWriteStatusResponse{CommittedSize: 0, Complete: true}
 	return &res, nil
 }

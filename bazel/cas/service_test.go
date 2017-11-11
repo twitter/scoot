@@ -16,8 +16,8 @@ import (
 )
 
 func TestFindMissingBlobsStub(t *testing.T) {
-	fakeStore := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: fakeStore}}
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
 
 	// Create 2 digests, write 1 to Store, check both for missing, expect other 1 back
 	dExists := &remoteexecution.Digest{Hash: "abc123", SizeBytes: 1}
@@ -26,9 +26,9 @@ func TestFindMissingBlobsStub(t *testing.T) {
 	expected := []*remoteexecution.Digest{dMissing}
 
 	resourceName := bazel.DigestStoreName(dExists)
-	err := fakeStore.Write(resourceName, bytes.NewReader([]byte("")), nil)
+	err := f.Write(resourceName, bytes.NewReader([]byte("")), nil)
 	if err != nil {
-		t.Fatalf("Failed to write into fakeStore: %v", err)
+		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
 
 	ctx := context.Background()
@@ -67,7 +67,7 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 	}
 }
 
-func TestGetTreeStub(t *testing.T) {
+func TestGetTree(t *testing.T) {
 	s := casServer{}
 	ctx := context.Background()
 	req := remoteexecution.GetTreeRequest{}
@@ -85,19 +85,32 @@ func TestGetTreeStub(t *testing.T) {
 	}
 }
 
-func TestReadStub(t *testing.T) {
-	s := casServer{}
-	req := googlebytestream.ReadRequest{}
+// TODO more real tests (data read is the same, different offset/limit tests, exceed max buffer, negative tests)
+func TestRead(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	// Write a resource to underlying store
+	d := &remoteexecution.Digest{Hash: "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", SizeBytes: 1}
+	resourceName := bazel.DigestStoreName(d)
+	err := f.Write(resourceName, bytes.NewReader([]byte("")), nil)
+	if err != nil {
+		t.Fatalf("Failed to write into FakeStore: %v", err)
+	}
+
+	req := googlebytestream.ReadRequest{ResourceName: "blobs/01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b/1", ReadOffset: 0, ReadLimit: 0}
 	n := nilReadServer{}
 
-	err := s.Read(&req, &n)
+	err = s.Read(&req, &n)
 	if err != nil {
 		t.Errorf("Error response from Read: %v", err)
 	}
 }
 
 func TestWriteStub(t *testing.T) {
-	s := casServer{}
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
 	n := nilWriteServer{}
 
 	err := s.Write(&n)
@@ -107,7 +120,9 @@ func TestWriteStub(t *testing.T) {
 }
 
 func TestQueryWriteStatusStub(t *testing.T) {
-	s := casServer{}
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
 	ctx := context.Background()
 	req := googlebytestream.QueryWriteStatusRequest{}
 
