@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// TODO reorg / location?
 const (
 	// Instance-related constants
 	DefaultInstanceName = ""
@@ -12,10 +13,9 @@ const (
 	StorePrePostFix = "blob"
 
 	// Resource naming constants
-	ResourceTypeStr = "blobs"
-
-	// Buffer 16MiB
-	MaxCASBufferSize = 16777216
+	ResourceTypeStr   = "blobs"
+	ResourceActionStr = "uploads"
 )
 
-var ResourceFormatStr string = fmt.Sprintf("[<instance-name>/]%s/<hash>/<size>[/filename]", ResourceTypeStr)
+var ResourceReadFormatStr string = fmt.Sprintf("[<instance-name>/]%s/<hash>/<size>[/filename]", ResourceTypeStr)
+var ResourceWriteFormatStr string = fmt.Sprintf("[<instance-name>/]%s/<uuid>/%s/<hash>/<size>[/filename]", ResourceActionStr, ResourceTypeStr)

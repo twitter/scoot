@@ -3,8 +3,10 @@
 package cas
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -110,7 +112,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		return status.Error(codes.Internal, "Server not initialized")
 	}
 
-	resource, err := bazel.ParseResource(req.GetResourceName())
+	resource, err := bazel.ParseReadResource(req.GetResourceName())
 	if err != nil {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 	}
@@ -133,51 +135,110 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	defer r.Close()
 
 	res := &bytestream.ReadResponse{}
-	p := make([]byte, bazel.MaxCASBufferSize)
-	for {
-		_, err := r.Read(p)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return status.Error(codes.Internal, fmt.Sprintf("Store failed reading from %s: %v", storeName, err))
-		}
+	c := resource.Digest.GetSizeBytes() - req.GetReadOffset()
 
-		res.Data = p
-		err = ser.Send(res)
+	if req.GetReadOffset() > 0 {
+		_, err = io.CopyN(ioutil.Discard, r, req.GetReadOffset())
 		if err != nil {
-			return status.Error(codes.Internal, fmt.Sprintf("Failed to send ReadResponse: %v", err))
+			return status.Error(codes.Internal, "Failed to read until offset")
 		}
-		res.Reset()
+		c = c - req.GetReadOffset()
+	}
+	if req.GetReadLimit() > 0 && req.GetReadLimit() < c {
+		c = req.GetReadLimit()
 	}
 
+	p := make([]byte, 0, c)
+	for {
+		n, err := r.Read(p[:cap(p)])
+		p = p[:n]
+
+		if n > 0 {
+			res.Data = p
+			err = ser.Send(res)
+			if err != nil {
+				return status.Error(codes.Internal, fmt.Sprintf("Failed to send ReadResponse: %v", err))
+			}
+			res.Reset()
+		}
+
+		if err == nil {
+			continue
+		} else if err == io.EOF {
+			break
+		} else {
+			return status.Error(codes.Internal, fmt.Sprintf("Failed to read from Store: %v", err))
+		}
+	}
 	return nil
 }
 
 // Writes data into bundlestore from a client via grpc streaming. Clients can use this API
 // to determine the progress of data being committed and to resume writes after interruptions.
 // Implements googleapis bytestream Write
-func (s *casServer) Write(bytestream.ByteStream_WriteServer) error {
+func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	log.Info("Received CAS Write request")
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
 
-	// TODO Real implementation: stream from client with Recv(), finish with SendAndClose
+	// TODO register with casServer inflight request tracker?
+	// TODO if data Exists, terminate immediately with size of existing data
+	// 	above is also true if multiple clients upload in parallel (first Exist check won't match, but could start after)
+
+	var p []byte
+	var buff *bytes.Buffer
+	var resource *bazel.Resource = nil
+	resourceName := ""
+	var err error
+
+	for {
+		wr, err := ser.Recv()
+		if err != nil {
+			return status.Error(codes.Internal, fmt.Sprintf("Failed to Recv: %v", err))
+		}
+
+		if resource == nil {
+			resourceName = wr.GetResourceName()
+
+			resource, err = bazel.ParseWriteResource(resourceName)
+			if err != nil {
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
+			}
+			p = make([]byte, 0, resource.Digest.GetSizeBytes())
+			buff = bytes.NewBuffer(p)
+		}
+
+		if wr.GetResourceName() != "" && resourceName != wr.GetResourceName() {
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
+		}
+
+		buff.Write(wr.GetData())
+
+		if wr.GetFinishWrite() {
+			break
+		}
+	}
+
+	storeName := bazel.DigestStoreName(resource.Digest)
+	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
+	err = s.storeConfig.Store.Write(storeName, buff, ttl)
+	if err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
+	}
+
+	res := &bytestream.WriteResponse{CommittedSize: int64(len(p))}
+	err = ser.SendAndClose(res)
+	if err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
+	}
+
 	return nil
 }
 
 // QueryWriteStatus gives status information about a Write operation in progress
 func (s *casServer) QueryWriteStatus(
-	ctx context.Context,
-	req *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
-	log.Infof("Received CAS QueryWriteStatus request: %s", req)
-
-	if !s.IsInitialized() {
-		return nil, status.Error(codes.Internal, "Server not initialized")
-	}
-
-	// TODO Placeholder - response indicates size 0 resource in completed state
-	res := bytestream.QueryWriteStatusResponse{CommittedSize: 0, Complete: true}
-	return &res, nil
+	context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
 }

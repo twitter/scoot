@@ -23,6 +23,14 @@ type TTLConfig struct {
 	TTLKey string
 }
 
+// Gets a TTLValue based on Now given a TTLConfig, or nil
+func GetTTLValue(c *TTLConfig) *TTLValue {
+	if c != nil {
+		return &TTLValue{TTL: time.Now().Add(c.TTL), TTLKey: c.TTLKey}
+	}
+	return nil
+}
+
 // Read-only operations on store, limited for now to a couple essential functions.
 type StoreRead interface {
 	// Check if the bundle exists. Not guaranteed to be any cheaper than actually reading the bundle.
