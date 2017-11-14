@@ -1,7 +1,5 @@
 # Bazel Remote Execution for Scoot
 
-# TODO ### - THIS BRANCH WILL BREAK CLOSED SOURCE
-
 This contains initial server support for the Bazel gRPC Remote Execution API.
 This consists of two distinct concepts, the Execution API and ContentAddressableStore (CAS) API.
 
@@ -10,7 +8,7 @@ The Bazel API Design Document can be found at: https://docs.google.com/document/
 ### Components:
 * cas/ contains CAS API server implementation
 * execution/ contains Execution API server implementation
-* server/ contains gRPC server abstractions
+* ./ (bazel) contains general Bazel constants, utils, and a gRPC server abstraction
 
 ### Running/testing the API:
 * Scheduler will initialize and serve the Execution API over gRPC on the default port.
@@ -22,16 +20,12 @@ go install github.com/twitter/scoot/binaries/scheduler github.com/twitter/scoot/
 ./apiserver
 ```
 
-## GRPC CLI
+## GRPC CLI Client
 Testing the gRPC APIs can be done with the grpc_cli tool, which can be used as a client for any gRPC server.
 This has to be built and installed from the grpc repo. See:
 https://github.com/grpc/grpc/blob/master/doc/command_line_tool.md
 
 #### Twitter MacBook installation pointers
-In general, the grpc install instructions work, but dependency installation via brew might not seem to work.
+In general, the grpc install instructions are accurate, but dependency installation via brew might not work.
 Use a global, non-MDE copy of brew to install dependencies such as gflags, as MDE brew install will not make
 these libraries accessible when trying to compile and link the grpc binaries.
-
-
-## fs_util
-

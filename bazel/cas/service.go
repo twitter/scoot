@@ -66,12 +66,7 @@ func (s *casServer) FindMissingBlobs(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-
-	// req.InstanceName currently ignored
 	res := remoteexecution.FindMissingBlobsResponse{}
-	if s.storeConfig == nil {
-		return nil, status.Error(codes.Internal, "Internal Store not initialized")
-	}
 
 	for _, digest := range req.GetBlobDigests() {
 		storeName := bazel.DigestStoreName(digest)
@@ -112,11 +107,13 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		return status.Error(codes.Internal, "Server not initialized")
 	}
 
-	resource, err := bazel.ParseReadResource(req.GetResourceName())
+	// Parse resource name per Bazel API specification
+	resource, err := ParseReadResource(req.GetResourceName())
 	if err != nil {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 	}
 
+	// Input validation per API spec
 	if req.GetReadOffset() < 0 || req.GetReadOffset() >= resource.Digest.GetSizeBytes() {
 		return status.Error(codes.OutOfRange, fmt.Sprintf("Invalid read offset %d for size %d", req.GetReadOffset(), resource.Digest.GetSizeBytes()))
 	}
@@ -124,9 +121,9 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		return status.Error(codes.InvalidArgument, "Read limit < 0 invalid")
 	}
 
+	// Map digest to underlying store name
 	storeName := bazel.DigestStoreName(resource.Digest)
 
-	// TODO register with casServer inflight request tracker?
 	log.Infof("Opening store resource for reading: %s", storeName)
 	r, err := s.storeConfig.Store.OpenForRead(storeName)
 	if err != nil {
@@ -137,6 +134,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	res := &bytestream.ReadResponse{}
 	c := resource.Digest.GetSizeBytes() - req.GetReadOffset()
 
+	// If ReadOffset was specified, discard bytes prior to it
 	if req.GetReadOffset() > 0 {
 		_, err = io.CopyN(ioutil.Discard, r, req.GetReadOffset())
 		if err != nil {
@@ -144,10 +142,12 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		}
 		c = c - req.GetReadOffset()
 	}
+	// Set a capacity based on ReadLimit or content size
 	if req.GetReadLimit() > 0 && req.GetReadLimit() < c {
 		c = req.GetReadLimit()
 	}
 
+	// Read data in chunks and stream to client
 	p := make([]byte, 0, c)
 	for {
 		n, err := r.Read(p[:cap(p)])
@@ -173,9 +173,11 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	return nil
 }
 
-// Writes data into bundlestore from a client via grpc streaming. Clients can use this API
-// to determine the progress of data being committed and to resume writes after interruptions.
+// Writes data into bundlestore from a client via grpc streaming.
 // Implements googleapis bytestream Write
+// TODO store.Stores do not support partial Writes, and neither does our implementation.
+// We can support partial Write by keeping buffers for inflight requests in the casServer.
+// When the entire Write is buffered, we can Write to the Store and return a response with the result.
 func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	log.Info("Received CAS Write request")
 
@@ -183,45 +185,49 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
 
-	// TODO register with casServer inflight request tracker?
-	// TODO if data Exists, terminate immediately with size of existing data
-	// 	above is also true if multiple clients upload in parallel (first Exist check won't match, but could start after)
-
 	var p []byte
 	var buff *bytes.Buffer
-	var resource *bazel.Resource = nil
-	resourceName := ""
+	var resource *Resource = nil
+	resourceName, storeName := "", ""
 	var err error
 
+	// As indicated above, not supporting partial/resumable Writes for now.
+	// Reads in a stream of data from the client, and proceeds when we've gotten it all.
 	for {
 		wr, err := ser.Recv()
 		if err != nil {
 			return status.Error(codes.Internal, fmt.Sprintf("Failed to Recv: %v", err))
 		}
 
+		// Set up resource on initial WriteRequest. Initialize read buffer based on Digest size
 		if resource == nil {
 			resourceName = wr.GetResourceName()
 
-			resource, err = bazel.ParseWriteResource(resourceName)
+			resource, err = ParseWriteResource(resourceName)
 			if err != nil {
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
 			p = make([]byte, 0, resource.Digest.GetSizeBytes())
 			buff = bytes.NewBuffer(p)
+
+			// TODO if data Exists, terminate immediately with size of existing data (Store is immutable)
 		}
 
+		// Validate subsequent WriteRequest fields
 		if wr.GetResourceName() != "" && resourceName != wr.GetResourceName() {
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
 		}
 
 		buff.Write(wr.GetData())
 
+		// Per API, client indicates all data has been sent
 		if wr.GetFinishWrite() {
 			break
 		}
 	}
 
-	storeName := bazel.DigestStoreName(resource.Digest)
+	// Write to underlying Store
+	storeName = bazel.DigestStoreName(resource.Digest)
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
 	err = s.storeConfig.Store.Write(storeName, buff, ttl)
 	if err != nil {
@@ -238,6 +244,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 }
 
 // QueryWriteStatus gives status information about a Write operation in progress
+// TODO unsupported, may be added later for V1
 func (s *casServer) QueryWriteStatus(
 	context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")

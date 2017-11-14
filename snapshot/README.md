@@ -25,3 +25,11 @@ Key objects (not exhaustive, see code or godoc for more):
     * _RepoIniter_ - interface for controlling (possibly expensive) Git repo initialization
     * _Checkouter_ - a Git-specific snapshot checkouter implementation
   * _package gitdb_ - implementation of DB interface that stores local Snapshots in a git ODB
+
+## Snapshot Stores and Servers
+
+### Store
+snapshot/store contains Snapshot storage interfaces and implementations.
+
+### Bundlestore
+snapshot/bundlestore contains a server for storing and retrieving Snapshots from a store.

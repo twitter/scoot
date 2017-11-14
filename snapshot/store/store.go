@@ -1,5 +1,5 @@
 // This package defines the Store interfaces for reading and writing bundles
-// (or any artifact data) to some underlying system.
+// (or any artifact data) to some underlying system, and Store implementations.
 package store
 
 import (
