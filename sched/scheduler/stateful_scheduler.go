@@ -79,7 +79,6 @@ var NodeScaleAdjustment = []float32{.05, .2, .75, 1}
 //     how long to sleep between runner req retries.
 // ReadyFnBackoff -
 //     how long to wait between runner status queries to determine [init] status.
-
 type SchedulerConfig struct {
 	MaxRetriesPerTask       int
 	DebugMode               bool
@@ -135,9 +134,12 @@ type statefulScheduler struct {
 
 	// Scheduler State
 	clusterState   *clusterState
-	inProgressJobs []*jobState                // ordered list of inprogress jobId to job.
-	requestorMap   map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
-	taskDurations  map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
+	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
+	// no tasks have started yet.
+	requestorMap  map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
+	taskDurations map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
+
+	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
 	// stats
 	stat stats.StatsReceiver
@@ -250,11 +252,12 @@ func NewStatefulScheduler(
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 
-		clusterState:   newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
-		inProgressJobs: make([]*jobState, 0),
-		requestorMap:   make(map[string][]*jobState),
-		taskDurations:  make(map[string]averageDuration),
-		stat:           stat,
+		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
+		inProgressJobs:   make([]*jobState, 0),
+		requestorMap:     make(map[string][]*jobState),
+		taskDurations:    make(map[string]averageDuration),
+		requestorsCounts: make(map[string]map[string]int),
+		stat:             stat,
 	}
 
 	if !config.DebugMode {
@@ -285,7 +288,21 @@ type jobAddedMsg struct {
 	saga *saga.Saga
 }
 
+/*
+	validate the job request. If the job passes validation, the job's tasks are queued for processing as
+	per the task scheduling algorithm and an id for the job is returned, otherwise the error message is returned.
+*/
 func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
+	/*
+		Put the job request and a callback channel on the check job channel.  Wait for the
+		scheduling thread to pick up the request from the check job channel, verify that it
+		can handle the request and return either nil or an error on the callback channel.
+
+		If no error is found, generate an id for the job, start a saga for the job and add the
+		job to the add job channel.
+
+		 Return either the error message or job id to the caller.
+	*/
 	defer s.stat.Latency(stats.SchedJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
 	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)         // TODO errata metric - remove if unused
 	log.WithFields(
@@ -378,7 +395,7 @@ func generateJobId() string {
 	}
 }
 
-// run the scheduler loop indefinitely
+// run the scheduler loop indefinitely in its own thread.
 // we are not putting any logic other than looping in this method so unit tests can verify
 // behavior by controlling calls to step() below
 func (s *statefulScheduler) loop() {
@@ -406,25 +423,102 @@ func (s *statefulScheduler) step() {
 	s.killJobs()
 	s.scheduleTasks()
 
-	remaining := 0
-	waitingToStart := 0
+	s.updateStats()
+}
+
+//update the stats monitoring values:
+//number of job requests running or waiting to start
+//number of jobs waiting to start
+//number of tasks currently running
+//total number of waiting or running tasks
+//
+//for each unique requestor count:
+//. number of tasks running
+//. number of tasks waiting
+//. number of jobs running or waiting to start
+func (s *statefulScheduler) updateStats() {
+	remainingTasks := 0
+	jobsWaitingToStart := 0
+
+	// reset current counts to 0
+	jobsRunningKey := "jobsRunning"
+	jobsWaitingToStartKey := "jobsWaitingToStart"
+	numRunningTasksKey := "numRunningTasks"
+	numWaitingTasksKey := "numWaitingTasks"
+	for _, counts := range s.requestorsCounts {
+		counts[jobsRunningKey] = 0
+		counts[jobsWaitingToStartKey] = 0
+		counts[numRunningTasksKey] = 0
+		counts[numWaitingTasksKey] = 0
+	}
+
+	// get job and task counts by requestor, and overall jobs stats
 	for _, job := range s.inProgressJobs {
-		remaining += (len(job.Tasks) - job.TasksCompleted)
+		requestor := job.Job.Def.Requestor
+		if _, ok := s.requestorsCounts[requestor]; !ok {
+			// first time we've seen this requestor, initialize its map entry
+			counts := make(map[string]int)
+			s.requestorsCounts[job.Job.Def.Requestor] = counts
+			counts[jobsWaitingToStartKey] = 0
+			counts[jobsRunningKey] = 0
+			counts[numRunningTasksKey] = 0
+			counts[numWaitingTasksKey] = 0
+		}
+
+		remainingTasks += (len(job.Tasks) - job.TasksCompleted)
 		if job.TasksCompleted+job.TasksRunning == 0 {
-			waitingToStart += 1
+			jobsWaitingToStart += 1
+			s.requestorsCounts[requestor][jobsWaitingToStartKey]++
+			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks)
+		} else if job.getJobStatus() == sched.InProgress {
+			s.requestorsCounts[requestor][jobsRunningKey]++
+			s.requestorsCounts[requestor][numRunningTasksKey] += job.TasksRunning
+			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
+		}
+
+	}
+
+	// publish the requestor stats
+	for requestor, counts := range s.requestorsCounts {
+		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
+			counts[jobsRunningKey]))
+		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor)).Update(int64(
+			counts[jobsWaitingToStartKey]))
+		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor)).Update(int64(
+			counts[numRunningTasksKey]))
+		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor)).Update(int64(
+			counts[numWaitingTasksKey]))
+
+		// if there is no current activity for this requestor, remove it from the map
+		if counts[jobsRunningKey] == 0 && counts[jobsWaitingToStartKey] == 0 && counts[numRunningTasksKey] == 0 &&
+			counts[numWaitingTasksKey] == 0 {
+			delete(s.requestorsCounts, requestor)
 		}
 	}
+
+	// publish the rest of the stats
 	s.stat.Gauge(stats.SchedAcceptedJobsGauge).Update(int64(len(s.inProgressJobs)))
-	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(waitingToStart))
-	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remaining))
+	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(jobsWaitingToStart))
+	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remainingTasks))
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 }
 
-// Checks if any new jobs have been scheduled since the last loop and adds
-// them to the scheduler state
+// Checks if any new jobs have been requested since the last loop and adds
+// them to the jobs the scheduler is handling
 // TODO(jschiller): kill current jobs which share the same Requestor and Basis as these new jobs.
 // TODO(jschiller): kill current tasks that share the same Requestor and Tag as these new tasks.
 func (s *statefulScheduler) addJobs() {
+	// For all new job requests (on the check job channel) that have come in since the last iteration of the step() loop,
+	// verify the job request: it doesn't exceed the requestor's limits or number of requestors, has a valid priority and
+	// doesn't duplicate tasks in another new job request.
+	//
+	// If the job fails the validation, put an error on the job's callback channel, otherwise put nil on the job's callback
+	// channel.
+	//
+	// after all new job requests have been verified, get all jobs that were put in the add job channel since the last
+	// pass through step() and add them to the inProgress list, order the tasks in the job by descending duration and
+	// add the job to the requestor map
+	//
 checkLoop:
 	for {
 		select {
@@ -806,10 +900,8 @@ func (s *statefulScheduler) scheduleTasks() {
 	}
 }
 
-/*
-Put the kill request on channel that is processed by the main
-scheduler loop, and wait for the response
-*/
+//Put the kill request on channel that is processed by the main
+//scheduler loop, and wait for the response
 func (s *statefulScheduler) KillJob(jobID string) error {
 
 	log.WithFields(
