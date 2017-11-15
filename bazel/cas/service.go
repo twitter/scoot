@@ -36,8 +36,8 @@ func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
 		server:      grpchelpers.NewServer(),
 		storeConfig: cfg,
 	}
-	remoteexecution.RegisterContentAddressableStorageServer(g.server, &casServer{})
-	bytestream.RegisterByteStreamServer(g.server, &casServer{})
+	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
+	bytestream.RegisterByteStreamServer(g.server, &g)
 	return &g
 }
 
