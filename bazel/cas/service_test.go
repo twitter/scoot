@@ -87,7 +87,7 @@ func TestRead(t *testing.T) {
 	if bytes.Compare(b, testData1[offset:]) != 0 {
 		t.Fatalf("Data read from fake server did not match - expected: %s, got: %s", testData1[offset:], b)
 	}
-	sends := int((testSize1 - offset) / limit + (testSize1 - offset) % limit)
+	sends := int((testSize1-offset)/limit + (testSize1-offset)%limit)
 	if r.sendCount != sends {
 		t.Fatalf("Fake server Send() count mismatch - expected %d times based on - data len: %d ReadOffset: %d ReadLimit %d. got: %d", sends, testSize1, offset, limit, r.sendCount)
 	}
@@ -221,9 +221,9 @@ func TestGetTree(t *testing.T) {
 // Read server that fakes sending data to a client.
 // 	sendCount - tracks times the server invokes Send for verification
 // Implements bytestream.ByteStream_ReadServer interface
-type fakeReadServer struct{
-	buffer     *bytes.Buffer
-    sendCount  int
+type fakeReadServer struct {
+	buffer    *bytes.Buffer
+	sendCount int
 	grpc.ServerStream
 }
 
@@ -245,7 +245,7 @@ func (s *fakeReadServer) reset() {
 }
 
 // Write server that fakes receiving specified data from a client.
-// One instance will fake-write one piece of data identified by Digest(hash, size), 
+// One instance will fake-write one piece of data identified by Digest(hash, size),
 // []byte data. Chunks supports Recv'ing data in chunks to exercise the CAS server.
 //	recvCount - tracks times the server invokes Recv for verification
 //	committedSize - tracks the total data len Recv'd by the server for verification
@@ -263,10 +263,10 @@ type fakeWriteServer struct {
 func makeFakeWriteServer(hash string, size int64, data []byte, chunks int) *fakeWriteServer {
 	uid, _ := uuid.NewV4()
 	return &fakeWriteServer{
-		resourceName: fmt.Sprintf("uploads/%s/blobs/%s/%d", uid, hash, size),
-		data:         data,
-		recvChunks: chunks,
-		offset: 0,
+		resourceName:  fmt.Sprintf("uploads/%s/blobs/%s/%d", uid, hash, size),
+		data:          data,
+		recvChunks:    chunks,
+		offset:        0,
 		committedSize: 0,
 	}
 }
@@ -279,18 +279,18 @@ func (s *fakeWriteServer) SendAndClose(res *bytestream.WriteResponse) error {
 func (s *fakeWriteServer) Recv() (*bytestream.WriteRequest, error) {
 	// Format a WriteRequest based on the chunks requested and the offset of what has been recvd
 	recvLen := int64(len(s.data) / s.recvChunks)
-	if s.recvCount + 1 >= s.recvChunks {
+	if s.recvCount+1 >= s.recvChunks {
 		recvLen = int64(len(s.data)) - s.offset
 	}
 	finished := false
-	if recvLen + s.offset >= int64(len(s.data)) {
+	if recvLen+s.offset >= int64(len(s.data)) {
 		finished = true
 	}
 	r := &bytestream.WriteRequest{
 		ResourceName: s.resourceName,
 		WriteOffset:  0,
 		FinishWrite:  finished,
-		Data:         s.data[s.offset:s.offset+recvLen],
+		Data:         s.data[s.offset : s.offset+recvLen],
 	}
 	s.offset = s.offset + recvLen
 	s.recvCount++
