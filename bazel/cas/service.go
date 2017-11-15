@@ -70,11 +70,9 @@ func (s *casServer) FindMissingBlobs(
 
 	for _, digest := range req.GetBlobDigests() {
 		storeName := bazel.DigestStoreName(digest)
-		exists, err := s.storeConfig.Store.Exists(storeName)
-		if err != nil {
+		if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
-		}
-		if !exists {
+		} else if !exists {
 			res.MissingBlobDigests = append(res.MissingBlobDigests, digest)
 		}
 	}
@@ -186,7 +184,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	}
 
 	var p []byte
-	var buff *bytes.Buffer
+	var buffer *bytes.Buffer
 	var resource *Resource = nil
 	resourceName, storeName := "", ""
 	var err error
@@ -208,17 +206,33 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
 			p = make([]byte, 0, resource.Digest.GetSizeBytes())
-			buff = bytes.NewBuffer(p)
+			buffer = bytes.NewBuffer(p)
 
-			// TODO if data Exists, terminate immediately with size of existing data (Store is immutable)
+			// If data Exists, terminate immediately with size of existing data (Store is immutable)
+			// Note that Store does not support `stat`, so we trust client-provided size to avoid reading the data
+			storeName = bazel.DigestStoreName(resource.Digest)
+			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
+				status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
+			} else if exists {
+				log.Infof("Resource exists in store: %s using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
+				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
+				err = ser.SendAndClose(res)
+				if err != nil {
+					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
+				}
+				return nil
+			}
 		}
 
 		// Validate subsequent WriteRequest fields
 		if wr.GetResourceName() != "" && resourceName != wr.GetResourceName() {
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
 		}
+		if wr.GetWriteOffset() > 0 {
+			return status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
+		}
 
-		buff.Write(wr.GetData())
+		buffer.Write(wr.GetData())
 
 		// Per API, client indicates all data has been sent
 		if wr.GetFinishWrite() {
@@ -226,15 +240,20 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 		}
 	}
 
+	// Get committed length and verify - Digest size can be arbitrarily set by the client, but is a trusted value after insertion
+	committed := int64(buffer.Len())
+	if committed != resource.Digest.GetSizeBytes() {
+		return status.Error(codes.Internal, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
+	}
+
 	// Write to underlying Store
-	storeName = bazel.DigestStoreName(resource.Digest)
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
-	err = s.storeConfig.Store.Write(storeName, buff, ttl)
+	err = s.storeConfig.Store.Write(storeName, buffer, ttl)
 	if err != nil {
 		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
 	}
 
-	res := &bytestream.WriteResponse{CommittedSize: int64(len(p))}
+	res := &bytestream.WriteResponse{CommittedSize: committed}
 	err = ser.SendAndClose(res)
 	if err != nil {
 		return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))

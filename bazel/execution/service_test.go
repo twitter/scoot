@@ -64,6 +64,6 @@ func TestExecuteStub(t *testing.T) {
 	}
 	err = ptypes.UnmarshalAny(execResAny, &execRes)
 	if err != nil {
-		t.Errorf("Failed to unmarshal response from any: %v", err)
+		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
 }

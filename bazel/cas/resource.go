@@ -1,7 +1,6 @@
 package cas
 
-// Resource utils for Bazel. Resources refer to how content is read or written to the CAS.
-// TODO tests
+// Resource utils for Bazel. Resources refer to how content is read or written to the CAS
 
 import (
 	"fmt"
@@ -18,7 +17,11 @@ import (
 type Resource struct {
 	Instance string
 	Digest   *remoteexecution.Digest
-	WriterID uuid.UUID
+	UUID     uuid.UUID
+}
+
+func (r *Resource) String() string {
+	return fmt.Sprintf("Instance: %s, Digest: %s, UUID: %s", r.Instance, r.Digest, r.UUID)
 }
 
 // Parses a name string from the Read API into a Resource for bazel artifacts.
@@ -42,7 +45,7 @@ func ParseReadResource(name string) (*Resource, error) {
 		return nil, resourceError("resource type not found", name, ResourceReadFormatStr)
 	}
 
-	return ParseResource(name, instance, "", hash, sizeStr, ResourceReadFormatStr)
+	return ParseResource(instance, "", hash, sizeStr, name, ResourceReadFormatStr)
 }
 
 // Parses a name string from the Write API into a Resource for bazel artifacts.
@@ -74,11 +77,11 @@ func ParseWriteResource(name string) (*Resource, error) {
 	hash = rest[2]
 	sizeStr = rest[3]
 
-	return ParseResource(name, instance, id, hash, sizeStr, ResourceWriteFormatStr)
+	return ParseResource(instance, id, hash, sizeStr, name, ResourceWriteFormatStr)
 }
 
 // Underlying Resource parser from separated URI components
-func ParseResource(name, instance, id, hash, sizeStr, format string) (*Resource, error) {
+func ParseResource(instance, id, hash, sizeStr, name, format string) (*Resource, error) {
 	var uid uuid.UUID
 	if id != "" {
 		u, err := uuid.ParseHex(id)
@@ -97,7 +100,7 @@ func ParseResource(name, instance, id, hash, sizeStr, format string) (*Resource,
 		return nil, resourceError("digest hash/size invalid", name, format)
 	}
 
-	return &Resource{Instance: instance, Digest: &remoteexecution.Digest{Hash: hash, SizeBytes: size}, WriterID: uid}, nil
+	return &Resource{Instance: instance, Digest: &remoteexecution.Digest{Hash: hash, SizeBytes: size}, UUID: uid}, nil
 }
 
 // helper for descriptive resource error messages
