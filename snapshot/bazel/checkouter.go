@@ -1,4 +1,4 @@
-package bzfiler
+package bazel
 
 import (
 	"github.com/twitter/scoot/snapshot"
@@ -27,22 +27,20 @@ import (
 // 	Release() error
 // }
 
-func (*BzFiler) Checkout(id string) (snapshot.Checkout, error) {
-	return BzCheckout{}, nil
+func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
+	co, err := bf.checkouter.Checkout(id)
+	return co, err
 }
 
-func (*BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
-	return BzCheckout{}, nil
+func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+	co, err := bf.checkouter.CheckoutAt(id, dir)
+	return co, err
 }
 
-func (BzCheckout) Path() string {
-	return ""
+func (bc *bzCheckouter) Checkout(id string) (snapshot.Checkout, error) {
+	return &bzCheckout{}, nil
 }
 
-func (BzCheckout) ID() string {
-	return ""
-}
-
-func (BzCheckout) Release() error {
-	return nil
+func (bc *bzCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+	return &bzCheckout{}, nil
 }

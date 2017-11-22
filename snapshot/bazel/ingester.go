@@ -1,4 +1,4 @@
-package bzfiler
+package bazel
 
 // // Ingester creates a Snapshot from a path in the local filesystem.
 // type Ingester interface {
@@ -11,10 +11,20 @@ package bzfiler
 // 	IngestMap(srcToDest map[string]string) (id string, err error)
 // }
 
-func (*BzFiler) Ingest(path string) (string, error) {
+func (bf *bzFiler) Ingest(path string) (string, error) {
+	id, err := bf.ingester.Ingest(path)
+	return id, err
+}
+
+func (bf *bzFiler) IngestMap(srcToDest map[string]string) (string, error) {
+	id, err := bf.ingester.IngestMap(srcToDest)
+	return id, err
+}
+
+func (bi *bzIngester) Ingest(path string) (string, error) {
 	return "", nil
 }
 
-func (*BzFiler) IngestMap(srcToDest map[string]string) (string, error) {
+func (bi *bzIngester) IngestMap(srcToDest map[string]string) (string, error) {
 	return "", nil
 }
