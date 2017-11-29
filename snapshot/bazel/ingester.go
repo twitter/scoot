@@ -1,30 +1,36 @@
 package bazel
 
-// // Ingester creates a Snapshot from a path in the local filesystem.
-// type Ingester interface {
-// 	// Takes an absolute path on the local filesystem.
-// 	// The contents of path will be stored in a snapshot which may then be checked out by id.
-// 	Ingest(path string) (id string, err error)
+import (
+	"os"
 
-// 	// Takes a mapping of source paths to be copied into corresponding destination directories.
-// 	// Source paths are absolute, and destination directories are relative to Checkout root.
-// 	IngestMap(srcToDest map[string]string) (id string, err error)
-// }
+	log "github.com/sirupsen/logrus"
+)
 
 func (bf *bzFiler) Ingest(path string) (string, error) {
-	id, err := bf.ingester.Ingest(path)
-	return id, err
+	var fileType string
+	stat, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if stat.IsDir() {
+		fileType = "directory"
+	} else {
+		fileType = "file"
+	}
+	output, err := bf.RunCmd([]string{fileType, "save", path})
+	if err != nil {
+		log.WithFields(
+			log.Fields{
+				"err":    err,
+				"output": string(output),
+				"path":   path,
+			}).Errorf("Error saving directory %v", path)
+		return "", err
+	}
+	id := string(output)
+	return id, nil
 }
 
 func (bf *bzFiler) IngestMap(srcToDest map[string]string) (string, error) {
-	id, err := bf.ingester.IngestMap(srcToDest)
-	return id, err
-}
-
-func (bi *bzIngester) Ingest(path string) (string, error) {
-	return "", nil
-}
-
-func (bi *bzIngester) IngestMap(srcToDest map[string]string) (string, error) {
-	return "", nil
+	panic("not implemented")
 }

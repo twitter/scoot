@@ -1,42 +1,24 @@
 package bazel
 
 import (
+	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 	"os/exec"
 )
 
 func MakeBzFiler() *bzFiler {
 	return &bzFiler{
-		checkouter: MakeBzCheckouter(),
-		ingester:   MakeBzIngester(),
-		updater:    snapshots.MakeNoopUpdater(),
+		updater: snapshots.MakeNoopUpdater(),
 	}
 }
 
+// Satisfies snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater
 type bzFiler struct {
-	checkouter *bzCheckouter
-	ingester   *bzIngester
-	updater    *snapshots.NoopUpdater
+	// we use existing noopUpdater for snapshot.Updater
+	updater snapshot.Updater
 }
 
-func (bf *bzFiler) runFsUtilCmd(args []string) error {
+func (bf *bzFiler) RunCmd(args []string) ([]byte, error) {
 	cmd := exec.Command("fs_util", args...)
-	return cmd.Run()
-}
-
-type bzCheckouter struct{}
-
-type bzIngester struct{}
-
-// type bzUpdater doesn't exist, we use existing noopUpdater
-
-// Satisfies snapshot.Checkout interface
-type bzCheckout struct{}
-
-func MakeBzCheckouter() *bzCheckouter {
-	return &bzCheckouter{}
-}
-
-func MakeBzIngester() *bzIngester {
-	return &bzIngester{}
+	return cmd.Output()
 }
