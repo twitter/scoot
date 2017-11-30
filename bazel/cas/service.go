@@ -138,7 +138,6 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		if err != nil {
 			return status.Error(codes.Internal, "Failed to read until offset")
 		}
-		c = c - req.GetReadOffset()
 	}
 	// Set a capacity based on ReadLimit or content size
 	if req.GetReadLimit() > 0 && req.GetReadLimit() < c {
