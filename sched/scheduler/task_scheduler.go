@@ -186,6 +186,7 @@ Loop:
 				numDesired := min(len(unsched), numScaledTasks)
 				// The number of tasks we can schedule is reduced by the number of tasks we're already running.
 				// Further the number we'd like and the number we'll actually schedule are restricted by numAvailNodes.
+				// If numDesiredUnmet==0 then any remaining outstanding tasks are low priority and appended to remainingOptional
 				numDesiredUnmet = max(0, numDesired-numRunning-numAvailNodes)
 				numSchedulable = min(numAvailNodes, max(0, numDesired-numRunning))
 			}
@@ -203,12 +204,13 @@ Loop:
 					}).Info("Schedulable tasks")
 				log.WithFields(
 					log.Fields{
-						"jobID":          job.Job.Id,
-						"unsched":        len(unsched),
-						"numAvailNodes":  numAvailNodes,
-						"numScaledTasks": numScaledTasks,
-						"numRunning":     numRunning,
-						"tag":            job.Job.Def.Tag,
+						"jobID":           job.Job.Id,
+						"unsched":         len(unsched),
+						"numAvailNodes":   numAvailNodes,
+						"numScaledTasks":  numScaledTasks,
+						"numDesiredUnmet": numDesiredUnmet,
+						"numRunning":      numRunning,
+						"tag":             job.Job.Def.Tag,
 					}).Debug("Schedulable tasks dbg")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
 				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
@@ -225,7 +227,6 @@ Loop:
 			}
 
 			// To both required and optional, append an array containing unscheduled tasks for this requestor/tag combination.
-			//FIXME(jschiller): splitting required and optional may not make sense anymore, consider consolidating.
 			if numDesiredUnmet > 0 {
 				remainingRequired[p] = append(remainingRequired[p], unsched[numSchedulable:numSchedulable+numDesiredUnmet])
 			}
@@ -237,12 +238,13 @@ Loop:
 
 	// If there are still free nodes, priority=3 jobs have been satisfied already.
 	// Distribute a minimum of 75% free to priority=2, 20% to priority=1 and 5% to priority=0
+	numFreeBasis := numFree
 LoopRemaining:
 	// First, loop using the above percentages, and next, distribute remaining free nodes to the highest priority tasks.
-	// Do this twice, once for 'required' tasks and again for 'optional' tasks.
-	for i, pq := range [][]float32{NodeScaleAdjustment, []float32{1, 1, 1}, NodeScaleAdjustment, []float32{1, 1, 1}} {
+	// Do the above loops twice, once to exhaust 'required' tasks and again to exhaust 'optional' tasks.
+	for j, quota := range [][]float32{NodeScaleAdjustment, []float32{1, 1, 1}, NodeScaleAdjustment, []float32{1, 1, 1}} {
 		remaining := &remainingRequired
-		if i > 1 {
+		if j > 1 {
 			remaining = &remainingOptional
 		}
 		for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
@@ -252,7 +254,7 @@ LoopRemaining:
 			// The remaining tasks, bucketed by job, for a given priority.
 			taskLists := &(*remaining)[p]
 			// Distribute the allowed number of free nodes evenly across the bucketed jobs for a given priority.
-			nodeQuota := ceil((float32(numFree) * pq[p]) / float32(len(*taskLists)))
+			nodeQuota := ceil((float32(numFreeBasis) * quota[p]) / float32(len(*taskLists)))
 			for i := 0; i < len(*taskLists); i++ {
 				taskList := &(*taskLists)[i]
 				// Noting that we use ceil() above, we may use less quota than assigned if it's unavailable or unneeded.
