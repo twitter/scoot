@@ -59,7 +59,7 @@ func Defaults() *ice.MagicBag {
 			return makeServers(h, g)
 		},
 
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", scootapi.DefaultApiBundlestore_GRPC)
 		},
 

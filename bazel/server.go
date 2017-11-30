@@ -1,6 +1,10 @@
 // Bazel Remote Execution API gRPC
 package bazel
 
+import (
+	"net"
+)
+
 // Wrapping interface for gRPC servers to work seamlessly with magicbag semantics
 
 // gRPC server interface encapsulating gRPC operations and execution server,
@@ -8,3 +12,6 @@ package bazel
 type GRPCServer interface {
 	Serve() error
 }
+
+// Type alias for clarity in use for certain listeners
+type GRPCListener net.Listener
