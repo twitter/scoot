@@ -71,12 +71,14 @@ func (s *casServer) FindMissingBlobs(
 	for _, digest := range req.GetBlobDigests() {
 		storeName := bazel.DigestStoreName(digest)
 		if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
+			log.Errorf("Error checking existence: %v", err)
 			return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
 		} else if !exists {
 			res.MissingBlobDigests = append(res.MissingBlobDigests, digest)
 		}
 	}
 
+	log.Infof("Returning missing blob digests: %s", res.MissingBlobDigests)
 	return &res, nil
 }
 
@@ -108,14 +110,17 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	// Parse resource name per Bazel API specification
 	resource, err := ParseReadResource(req.GetResourceName())
 	if err != nil {
+		log.Errorf("Failed to parse resource name: %v", err)
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 	}
 
 	// Input validation per API spec
 	if req.GetReadOffset() < 0 || req.GetReadOffset() >= resource.Digest.GetSizeBytes() {
+		log.Error("Invalid read offset")
 		return status.Error(codes.OutOfRange, fmt.Sprintf("Invalid read offset %d for size %d", req.GetReadOffset(), resource.Digest.GetSizeBytes()))
 	}
 	if req.GetReadLimit() < 0 {
+		log.Error("Invalid read limit")
 		return status.Error(codes.InvalidArgument, "Read limit < 0 invalid")
 	}
 
@@ -125,6 +130,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	log.Infof("Opening store resource for reading: %s", storeName)
 	r, err := s.storeConfig.Store.OpenForRead(storeName)
 	if err != nil {
+		log.Errorf("Failed to OpenForRead: %v", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Store failed opening resource for read: %s: %v", storeName, err))
 	}
 	defer r.Close()
@@ -136,6 +142,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	if req.GetReadOffset() > 0 {
 		_, err = io.CopyN(ioutil.Discard, r, req.GetReadOffset())
 		if err != nil {
+			log.Errorf("Failed reading until offset: %v", err)
 			return status.Error(codes.Internal, "Failed to read until offset")
 		}
 	}
@@ -154,6 +161,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 			res.Data = p
 			err = ser.Send(res)
 			if err != nil {
+				log.Errorf("Failed to Send(): %v", err)
 				return status.Error(codes.Internal, fmt.Sprintf("Failed to send ReadResponse: %v", err))
 			}
 			res.Reset()
@@ -164,9 +172,11 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		} else if err == io.EOF {
 			break
 		} else {
+			log.Errorf("Failed to read from Store: %v", err)
 			return status.Error(codes.Internal, fmt.Sprintf("Failed to read from Store: %v", err))
 		}
 	}
+	log.Info("Finished sending data for Read")
 	return nil
 }
 
@@ -193,6 +203,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	for {
 		wr, err := ser.Recv()
 		if err != nil {
+			log.Errorf("Failed to Recv(): %v", err)
 			return status.Error(codes.Internal, fmt.Sprintf("Failed to Recv: %v", err))
 		}
 
@@ -202,8 +213,11 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 			resource, err = ParseWriteResource(resourceName)
 			if err != nil {
+				log.Errorf("Error parsing resource: %v", err)
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
+			log.Infof("Using resource name: %s", resourceName)
+
 			p = make([]byte, 0, resource.Digest.GetSizeBytes())
 			buffer = bytes.NewBuffer(p)
 
@@ -211,12 +225,14 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			// Note that Store does not support `stat`, so we trust client-provided size to avoid reading the data
 			storeName = bazel.DigestStoreName(resource.Digest)
 			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
-				status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
+				log.Errorf("Error checking existence: %v", err)
+				return status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
 			} else if exists {
-				log.Infof("Resource exists in store: %s using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
+				log.Infof("Resource exists in store: %s. Using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
 				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
 				err = ser.SendAndClose(res)
 				if err != nil {
+					log.Errorf("Error during SendAndClose(): %v", err)
 					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
 				}
 				return nil
@@ -225,9 +241,11 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 		// Validate subsequent WriteRequest fields
 		if wr.GetResourceName() != "" && resourceName != wr.GetResourceName() {
+			log.Errorf("Invalid resource name in subsequent request: %s", wr.GetResourceName())
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
 		}
 		if wr.GetWriteOffset() > 0 {
+			log.Error("Invalid write offset")
 			return status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
 		}
 
@@ -242,6 +260,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	// Get committed length and verify - Digest size can be arbitrarily set by the client, but is a trusted value after insertion
 	committed := int64(buffer.Len())
 	if committed != resource.Digest.GetSizeBytes() {
+		log.Errorf("Data length/digest mismatch: %d/%d", committed, resource.Digest.GetSizeBytes())
 		return status.Error(codes.Internal, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
 	}
 
@@ -249,15 +268,18 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
 	err = s.storeConfig.Store.Write(storeName, buffer, ttl)
 	if err != nil {
+		log.Errorf("Store failed to Write: %v", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
 	}
 
 	res := &bytestream.WriteResponse{CommittedSize: committed}
 	err = ser.SendAndClose(res)
 	if err != nil {
+		log.Errorf("Error during SendAndClose(): %v", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
 	}
 
+	log.Info("Finished handling Write request")
 	return nil
 }
 
