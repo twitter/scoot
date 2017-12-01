@@ -9,14 +9,17 @@ import (
 )
 
 // Validate Digest hash and size components assuming SHA256
+// Size -1 indicates unknown size to support certain size-less operations
+//	* this is a deviation from the public API
 func IsValidDigest(hash string, size int64) bool {
-	return len(hash) == 64 && size >= 0
+	return len(hash) == 64 && size >= -1
 }
 
 // Translate a Bazel Digest into a unique resource name for use in a bundleStore
+// Only use hash in store name, size is dropped
 func DigestStoreName(digest *remoteexecution.Digest) string {
 	if digest != nil {
-		return fmt.Sprintf("%s-%s-%d.%s", StorePrePostFix, digest.GetHash(), digest.GetSizeBytes(), StorePrePostFix)
+		return fmt.Sprintf("%s-%s.%s", StorePrePostFix, digest.GetHash(), StorePrePostFix)
 	}
 	return ""
 }

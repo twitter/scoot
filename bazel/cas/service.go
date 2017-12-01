@@ -115,9 +115,9 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	}
 
 	// Input validation per API spec
-	if req.GetReadOffset() < 0 || req.GetReadOffset() >= resource.Digest.GetSizeBytes() {
+	if req.GetReadOffset() < 0 {
 		log.Error("Invalid read offset")
-		return status.Error(codes.OutOfRange, fmt.Sprintf("Invalid read offset %d for size %d", req.GetReadOffset(), resource.Digest.GetSizeBytes()))
+		return status.Error(codes.OutOfRange, fmt.Sprintf("Invalid read offset %d", req.GetReadOffset()))
 	}
 	if req.GetReadLimit() < 0 {
 		log.Error("Invalid read limit")
@@ -136,7 +136,8 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	defer r.Close()
 
 	res := &bytestream.ReadResponse{}
-	c := resource.Digest.GetSizeBytes() - req.GetReadOffset()
+	c := int64(DefaultReadCapacity)
+	length := int64(0)
 
 	// If ReadOffset was specified, discard bytes prior to it
 	if req.GetReadOffset() > 0 {
@@ -156,6 +157,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	for {
 		n, err := r.Read(p[:cap(p)])
 		p = p[:n]
+		length += int64(n)
 
 		if n > 0 {
 			res.Data = p
@@ -176,7 +178,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 			return status.Error(codes.Internal, fmt.Sprintf("Failed to read from Store: %v", err))
 		}
 	}
-	log.Info("Finished sending data for Read")
+	log.Infof("Finished sending data for Read from %s with len %d", storeName, length)
 	return nil
 }
 

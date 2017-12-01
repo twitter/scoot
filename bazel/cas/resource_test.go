@@ -22,7 +22,7 @@ func TestResourceComponents(t *testing.T) {
 	}
 
 	hash = "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
-	sizeStr = "-1"
+	sizeStr = "-2"
 	if _, err := ParseResource("", id, hash, sizeStr, "", ""); err == nil {
 		t.Fatalf("Expected failure to parse invalid size: %s", sizeStr)
 	}
