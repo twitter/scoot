@@ -18,8 +18,8 @@ func TestValidDigest(t *testing.T) {
 		t.Fatalf("hash/size %s/0 should be valid", hash)
 	}
 
-	if IsValidDigest(hash, -1) {
-		t.Fatalf("hash/size %s/-1 should be invalid", hash)
+	if IsValidDigest(hash, -2) {
+		t.Fatalf("hash/size %s/-2 should be invalid", hash)
 	}
 }
 
@@ -34,7 +34,7 @@ func TestDigestStoreName(t *testing.T) {
 	var size int64 = 123
 	d = &remoteexecution.Digest{Hash: hash, SizeBytes: size}
 
-	expected := fmt.Sprintf("%s-%s-%d.%s", StorePrePostFix, hash, size, StorePrePostFix)
+	expected := fmt.Sprintf("%s-%s.%s", StorePrePostFix, hash, StorePrePostFix)
 	if n := DigestStoreName(d); n != expected {
 		t.Fatalf("Wront digest store name, expected: %s, got: %s", expected, n)
 	}
