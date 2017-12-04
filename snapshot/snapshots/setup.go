@@ -2,7 +2,7 @@ package snapshots
 
 import (
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 // Module returns a module to allow serving Snapshots as an http.Handler
@@ -16,8 +16,8 @@ type module struct{}
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		NewViewServer,
-		func() *bundlestore.TTLConfig {
-			return &bundlestore.TTLConfig{TTL: bundlestore.DefaultTTL, TTLKey: bundlestore.DefaultTTLKey}
+		func() *store.TTLConfig {
+			return &store.TTLConfig{TTL: store.DefaultTTL, TTLKey: store.DefaultTTLKey}
 		},
 	)
 }

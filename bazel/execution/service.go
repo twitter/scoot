@@ -9,12 +9,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/grpchelpers"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
-	googlelongrunning "google.golang.org/genproto/googleapis/longrunning"
+	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 
+	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 )
 
@@ -25,9 +25,9 @@ type executionServer struct {
 }
 
 // Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
-func NewExecutionServer(l net.Listener) *executionServer {
+func MakeExecutionServer(l net.Listener) *executionServer {
 	g := executionServer{listener: l, server: grpchelpers.NewServer()}
-	remoteexecution.RegisterExecutionServer(g.server, &executionServer{})
+	remoteexecution.RegisterExecutionServer(g.server, &g)
 	return &g
 }
 
@@ -43,14 +43,14 @@ func (s *executionServer) Serve() error {
 // google LongRunning Operation message.
 func (s *executionServer) Execute(
 	ctx context.Context,
-	req *remoteexecution.ExecuteRequest) (*googlelongrunning.Operation, error) {
+	req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
 	// Get digest of request Action from wire format only, for inclusion in response metadata.
-	actionSha, actionLen, err := scootproto.GetSha256(req.Action)
+	actionSha, actionLen, err := scootproto.GetSha256(req.GetAction())
 	if err != nil {
 		return nil, err
 	}
 
-	op := googlelongrunning.Operation{}
+	op := longrunning.Operation{}
 
 	// Generate a UUID as a stub job identifier
 	id, _ := uuid.NewV4()
@@ -81,6 +81,6 @@ func (s *executionServer) Execute(
 	}
 
 	// Include the response message in the longrunning operation message
-	op.Result = &googlelongrunning.Operation_Response{Response: resAsPBAny}
+	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
 }

@@ -1,4 +1,4 @@
-package bundlestore
+package store
 
 import (
 	"bytes"

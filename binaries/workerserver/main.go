@@ -27,6 +27,7 @@ import (
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 	"github.com/twitter/scoot/workerapi/server"
 )
 
@@ -86,12 +87,12 @@ func main() {
 			return execer.Memory(*memCapFlag)
 		},
 		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
-		func(tmp *temp.TempDir) (bundlestore.Store, error) {
+		func(tmp *temp.TempDir) (store.Store, error) {
 			if *storeHandle != "" {
 				if strings.HasPrefix(*storeHandle, "/") {
-					return bundlestore.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
 				} else {
-					return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
+					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
 			}
 			storeAddr := ""
@@ -105,10 +106,10 @@ func main() {
 				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
-				return bundlestore.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
+				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
-			return bundlestore.MakeFileStoreInTemp(tmp)
+			return store.MakeFileStoreInTemp(tmp)
 		},
 	)
 

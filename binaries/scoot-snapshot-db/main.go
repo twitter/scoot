@@ -14,10 +14,10 @@ import (
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/cli"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 var dbTempDir string = ""
@@ -86,7 +86,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 		return nil, err
 	}
 
-	store := bundlestore.MakeHTTPStore(url)
+	store := store.MakeHTTPStore(url)
 	return gitdb.MakeDBFromRepo(
 			dataRepo, nil, tempDir, nil, nil,
 			&gitdb.BundlestoreConfig{Store: store},

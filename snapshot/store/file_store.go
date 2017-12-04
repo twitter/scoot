@@ -1,4 +1,4 @@
-package bundlestore
+package store
 
 import (
 	"errors"
@@ -23,6 +23,7 @@ func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
 }
 
 func MakeFileStore(dir string) (*FileStore, error) {
+	log.Infof("Making new FileStore at dir: %s", dir)
 	return &FileStore{dir}, nil
 }
 

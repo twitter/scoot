@@ -7,8 +7,8 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution"
-	bazel "github.com/twitter/scoot/bazel/server"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"
@@ -89,12 +89,12 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
 		},
 
-		func(l net.Listener) bazel.GRPCServer {
-			return execution.NewExecutionServer(l)
+		func(l bazel.GRPCListener) bazel.GRPCServer {
+			return execution.MakeExecutionServer(l)
 		},
 	)
 

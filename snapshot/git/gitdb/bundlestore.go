@@ -12,12 +12,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 // BundlestoreConfig defines how to talk to Bundlestore
 type BundlestoreConfig struct {
-	Store bundlestore.Store
+	Store store.Store
 }
 
 type bundlestoreBackend struct {
@@ -273,7 +273,7 @@ func makeBundleName(key string) string {
 	return fmt.Sprintf("bs-%s.bundle", key)
 }
 
-func (b *bundlestoreBackend) uploadFile(filePath string, ttl *bundlestore.TTLValue) (string, error) {
+func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return "", err

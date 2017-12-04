@@ -1,4 +1,4 @@
-package bundlestore
+package store
 
 import (
 	"errors"
@@ -33,6 +33,7 @@ func MakeCustomHTTPStore(rootURI string, client Client) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
+	log.Infof("Making new HTTP Store with root URI: %s", rootURI)
 	return &httpStore{rootURI, client}
 }
 
@@ -116,7 +117,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 		}
 		req.Header.Set("Content-Type", "text/plain")
 		if ttl == nil {
-			ttl = &TTLValue{time.Now().Add(DefaultTTL), DefaultTTLKey}
+			ttl = &TTLValue{TTL: time.Now().Add(DefaultTTL), TTLKey: DefaultTTLKey}
 		}
 		if ttl.TTLKey != "" {
 			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(time.RFC1123)}

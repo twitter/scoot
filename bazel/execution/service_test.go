@@ -18,12 +18,12 @@ func TestExecuteStub(t *testing.T) {
 	cmd := remoteexecution.Command{Arguments: []string{"/bin/true"}}
 	cmdSha, cmdLen, err := scootproto.GetSha256(&cmd)
 	if err != nil {
-		t.Errorf("Failed to get sha: %v", err)
+		t.Fatalf("Failed to get sha: %v", err)
 	}
 	dir := remoteexecution.Directory{}
 	dirSha, dirLen, err := scootproto.GetSha256(&dir)
 	if err != nil {
-		t.Errorf("Failed to get sha: %v", err)
+		t.Fatalf("Failed to get sha: %v", err)
 	}
 
 	a := remoteexecution.Action{
@@ -40,30 +40,30 @@ func TestExecuteStub(t *testing.T) {
 
 	res, err := s.Execute(ctx, &req)
 	if err != nil {
-		t.Errorf("Non-nil error from Execute: %v", err)
+		t.Fatalf("Non-nil error from Execute: %v", err)
 	}
 
 	done := res.GetDone()
 	if !done {
-		t.Error("Expected response to be done")
+		t.Fatal("Expected response to be done")
 	}
 	metadataAny := res.GetMetadata()
 	if metadataAny == nil {
-		t.Errorf("Nil metadata from operation: %s", res)
+		t.Fatalf("Nil metadata from operation: %s", res)
 	}
 	execResAny := res.GetResponse()
 	if execResAny == nil {
-		t.Errorf("Nil response from operation: %s", res)
+		t.Fatalf("Nil response from operation: %s", res)
 	}
 
 	metadata := remoteexecution.ExecuteOperationMetadata{}
 	execRes := remoteexecution.ExecuteResponse{}
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
-		t.Errorf("Failed to unmarshal metadata from any: %v", err)
+		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
 	}
 	err = ptypes.UnmarshalAny(execResAny, &execRes)
 	if err != nil {
-		t.Errorf("Failed to unmarshal response from any: %v", err)
+		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
 }

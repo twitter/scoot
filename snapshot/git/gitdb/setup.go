@@ -6,8 +6,8 @@ import (
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 type module struct{}
@@ -26,7 +26,7 @@ func (m module) Install(b *ice.MagicBag) {
 		func() RepoUpdater {
 			return &NoopRepoUpdater{}
 		},
-		func(store bundlestore.Store) *BundlestoreConfig {
+		func(store store.Store) *BundlestoreConfig {
 			return &BundlestoreConfig{Store: store}
 		},
 		func() *StreamConfig {

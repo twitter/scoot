@@ -1,8 +1,12 @@
-package bundlestore
+// This package defines the Store interfaces for reading and writing bundles
+// (or any artifact data) to some underlying system, and Store implementations.
+package store
 
 import (
 	"io"
 	"time"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 var DefaultTTL time.Duration = time.Hour * 24 * 180 //180 days. If zero, no ttl will be applied by default.
@@ -17,6 +21,14 @@ type TTLValue struct {
 type TTLConfig struct {
 	TTL    time.Duration
 	TTLKey string
+}
+
+// Gets a TTLValue based on Now given a TTLConfig, or nil
+func GetTTLValue(c *TTLConfig) *TTLValue {
+	if c != nil {
+		return &TTLValue{TTL: time.Now().Add(c.TTL), TTLKey: c.TTLKey}
+	}
+	return nil
 }
 
 // Read-only operations on store, limited for now to a couple essential functions.
@@ -42,4 +54,11 @@ type StoreWrite interface {
 type Store interface {
 	StoreRead
 	StoreWrite
+}
+
+// Encapsulating struct for instances of Stores and accompanying configurations
+type StoreConfig struct {
+	Store  Store
+	TTLCfg *TTLConfig
+	Stat   stats.StatsReceiver
 }

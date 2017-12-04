@@ -2,9 +2,7 @@ package bundlestore
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -13,47 +11,16 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/snapshot/store"
 )
-
-type FakeStore struct {
-	files map[string][]byte
-	ttl   *TTLValue
-}
-
-func (f *FakeStore) Exists(name string) (bool, error) {
-	if _, ok := f.files[name]; !ok {
-		return false, nil
-	}
-	return true, nil
-}
-
-func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
-	if ok, _ := f.Exists(name); !ok {
-		return nil, errors.New("Doesn't exist :" + name)
-	}
-	return ioutil.NopCloser(bytes.NewBuffer(f.files[name])), nil
-}
-
-func (f *FakeStore) Root() string { return "" }
-
-func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
-	if (f.ttl == nil) != (ttl == nil) || (ttl != nil && (f.ttl.TTLKey != ttl.TTLKey || f.ttl.TTL.Sub(ttl.TTL) != 0)) {
-		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.ttl, ttl)
-	} else if data, err := ioutil.ReadAll(data); err != nil {
-		return err
-	} else {
-		f.files[name] = data
-		return nil
-	}
-}
 
 //TODO: an end-end test that uses a real store and real bundles.
 
 func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
 	now := time.Time{}.Add(time.Minute)
-	store := &FakeStore{files: map[string][]byte{}, ttl: nil}
-	DefaultTTL = 0
+	fakeStore := &store.FakeStore{Files: map[string][]byte{}, TTL: nil}
+	store.DefaultTTL = 0
 
 	listener, _ := net.Listen("tcp", "localhost:0")
 	defer listener.Close()
@@ -62,7 +29,7 @@ func TestServer(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 	stats.StatReportIntvl = 20 * time.Millisecond
-	server := MakeServer(store, nil, statsReceiver)
+	server := MakeServer(fakeStore, nil, statsReceiver, nil)
 	mux := http.NewServeMux()
 	mux.Handle("/bundle/", server)
 	go func() {
@@ -84,7 +51,7 @@ func TestServer(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	if !reflect.DeepEqual(store.files[bundle1ID], []byte("baz_data")) {
+	if !reflect.DeepEqual(fakeStore.Files[bundle1ID], []byte("baz_data")) {
 		t.Fatalf("Failed to post data")
 	}
 
@@ -164,10 +131,10 @@ func TestServer(t *testing.T) {
 
 	// Try to write data.
 	// We send a new TTL and reconfigure the server to transform the original ttl key to a new one.
-	store.ttl = &TTLValue{now.Add(time.Hour), "NEW_TTL"}
-	server.ttlCfg = &TTLConfig{0, "NEW_TTL"}
-	clientTTL := &TTLValue{now.Add(time.Hour), DefaultTTLKey}
-	hs := MakeHTTPStore(rootUri)
+	fakeStore.TTL = &store.TTLValue{TTL: now.Add(time.Hour), TTLKey: "NEW_TTL"}
+	server.storeConfig.TTLCfg = &store.TTLConfig{TTL: 0, TTLKey: "NEW_TTL"}
+	clientTTL := &store.TTLValue{TTL: now.Add(time.Hour), TTLKey: store.DefaultTTLKey}
+	hs := store.MakeHTTPStore(rootUri)
 	bundle2ID := "bs-0000000000000000000000000000000000000002.bundle"
 	if err := hs.Write(bundle2ID, bytes.NewBuffer([]byte("bar_data")), clientTTL); err != nil {
 		t.Fatalf(err.Error())
@@ -250,7 +217,6 @@ func TestServer(t *testing.T) {
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
-
 }
 
 type fakeServer struct {
@@ -282,10 +248,10 @@ func TestRetry(t *testing.T) {
 	now := time.Now()
 	server.times = []time.Time{}
 	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable}
-	client := MakePesterClient()
+	client := store.MakePesterClient()
 	client.Backoff = func(_ int) time.Duration { return 500 * time.Millisecond }
 	client.MaxRetries = 3
-	hs := MakeCustomHTTPStore(rootUri, client)
+	hs := store.MakeCustomHTTPStore(rootUri, client)
 
 	if _, err := hs.OpenForRead(""); err == nil {
 		t.Fatalf("Expected err, got nil")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/snapshot/bundlestore"
 )
 
 const DefaultApiServerCount int = 3
@@ -80,7 +81,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		httpAddr := fmt.Sprintf("localhost:%d", httpPort)
 		grpcAddr := fmt.Sprintf("localhost:%d", grpcPort)
 		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-grpc_addr", grpcAddr, "-log_level", s.apiCfg.LogLevel.String())
-		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", scootapi.BundlestoreEnvVar, bundlestoreStoreDir.Dir))
+		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", bundlestore.BundlestoreDirEnvVar, bundlestoreStoreDir.Dir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
 		}

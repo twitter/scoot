@@ -10,6 +10,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/binaries/scheduler/config"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -57,7 +58,7 @@ func main() {
 			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, nil)
 		},
 
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", *grpcAddr)
 		},
 

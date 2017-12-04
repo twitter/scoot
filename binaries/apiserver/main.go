@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
@@ -20,6 +21,7 @@ import (
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 func main() {
@@ -49,7 +51,7 @@ func main() {
 	}
 
 	type StoreAndHandler struct {
-		store    bundlestore.Store
+		store    store.Store
 		handler  http.Handler
 		endpoint string
 	}
@@ -74,24 +76,24 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *bundlestore.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
-			cfg := &bundlestore.GroupcacheConfig{
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, tmp *temp.TempDir) (*StoreAndHandler, error) {
+			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
 				Cluster:      createCluster(),
 			}
-			store, handler, err := bundlestore.MakeGroupcacheStore(fileStore, cfg, stat)
+			store, handler, err := store.MakeGroupcacheStore(fileStore, cfg, stat)
 			if err != nil {
 				return nil, err
 			}
 			return &StoreAndHandler{store, handler, cfg.Endpoint + cfg.Name + "/"}, nil
 		},
-		func(sh *StoreAndHandler) bundlestore.Store {
+		func(sh *StoreAndHandler) store.Store {
 			return sh.store
 		},
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", *grpcAddr)
 		},
 	)

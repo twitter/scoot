@@ -6,13 +6,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel/cas"
-	bazel "github.com/twitter/scoot/bazel/server"
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/snapshot/store"
 )
 
 type servers struct {
@@ -25,15 +25,15 @@ func makeServers(h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
 }
 
 // Make a File Store based on the environment, or in temp if unset
-func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*FileStore, error) {
+func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*store.FileStore, error) {
 	// if we're running as part of a swarm test, we want to share the store with other processes
-	if d := os.Getenv(scootapi.BundlestoreEnvVar); d != "" {
-		return MakeFileStore(d)
+	if d := os.Getenv(BundlestoreDirEnvVar); d != "" {
+		return store.MakeFileStore(d)
 	}
-	return MakeFileStoreInTemp(tmp)
+	return store.MakeFileStoreInTemp(tmp)
 }
 
-func DefaultStore(store *FileStore) Store {
+func DefaultStore(store *store.FileStore) store.Store {
 	return store
 }
 
@@ -59,12 +59,12 @@ func Defaults() *ice.MagicBag {
 			return makeServers(h, g)
 		},
 
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", scootapi.DefaultApiBundlestore_GRPC)
 		},
 
-		func(l net.Listener) bazel.GRPCServer {
-			return cas.NewCASServer(l)
+		func(s *Server) bazel.GRPCServer {
+			return s.casServer
 		},
 	)
 	return bag
