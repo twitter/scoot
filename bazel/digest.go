@@ -19,7 +19,7 @@ func IsValidDigest(hash string, size int64) bool {
 // Only use hash in store name, size is dropped
 func DigestStoreName(digest *remoteexecution.Digest) string {
 	if digest != nil {
-		return fmt.Sprintf("%s-%s.%s", StorePrePostFix, digest.GetHash(), StorePrePostFix)
+		return fmt.Sprintf("%s-%s.%s", StorePrefix, digest.GetHash(), StorePrefix)
 	}
 	return ""
 }

@@ -34,7 +34,7 @@ func TestDigestStoreName(t *testing.T) {
 	var size int64 = 123
 	d = &remoteexecution.Digest{Hash: hash, SizeBytes: size}
 
-	expected := fmt.Sprintf("%s-%s.%s", StorePrePostFix, hash, StorePrePostFix)
+	expected := fmt.Sprintf("%s-%s.%s", StorePrefix, hash, StorePrefix)
 	if n := DigestStoreName(d); n != expected {
 		t.Fatalf("Wront digest store name, expected: %s, got: %s", expected, n)
 	}
