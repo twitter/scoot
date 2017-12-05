@@ -1,6 +1,8 @@
 package bazel
 
 import (
+	"os"
+
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
 
@@ -15,10 +17,9 @@ func (bc *bzCheckout) Path() string {
 }
 
 func (bc *bzCheckout) ID() string {
-	return bc.Hash
+	return bc.GetHash()
 }
 
 func (bc *bzCheckout) Release() error {
-	// NOT YET IMPLEMENTED
-	return nil
+	return os.Remove(bc.dir)
 }

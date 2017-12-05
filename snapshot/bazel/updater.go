@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// Default updater is a no-op
 func (bf *bzFiler) Update() error {
 	return bf.updater.Update()
 }

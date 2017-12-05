@@ -9,27 +9,36 @@ import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 )
 
-const defaultDir = "/tmp/scoot-bazel-snapshot-dir"
-
-// We expect bazel IDs to be of format bz-<sha256>-<sizeBytes>
 func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
-	return bf.CheckoutAt(id, defaultDir)
+	tempDir, err := temp.TempDirDefault()
+	if err != nil {
+		return nil, err
+	}
+	return bf.CheckoutAt(id, tempDir.Dir)
 }
 
 func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+	// We expect bazel IDs to be of format bz-<sha256>-<sizeBytes>
 	s := strings.Split(id, "-")
+	if len(s) < 3 {
+		return nil, fmt.Errorf("%s %s", invalidIdMsg, id)
+	}
+
 	sha, sizeString := s[1], s[2]
 	size, err := strconv.ParseInt(sizeString, 10, 64)
 	if err != nil {
 		return nil, err
 	}
+
 	if !bazel.IsValidDigest(sha, size) {
 		return nil, fmt.Errorf("Error: Invalid digest. SHA: %v, size: %d", sha, size)
 	}
-	output, err := bf.RunCmd([]string{"directory", "materialize", sha, dir})
+
+	output, err := bf.RunCmd([]string{directory, "materialize", sha, dir})
 	if err != nil {
 		log.WithFields(
 			log.Fields{
@@ -37,10 +46,11 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 				"output": string(output),
 				"sha":    sha,
 				"dir":    dir,
-			}).Error("Failed to materialize directory")
-		log.Error(string(output))
+			}).Error("Failed to materialize %s", directory)
 		return nil, err
 	}
+
+	log.Info(string(output))
 	co := &bzCheckout{
 		dir,
 		remoteexecution.Digest{

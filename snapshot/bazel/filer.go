@@ -6,19 +6,20 @@ import (
 	"os/exec"
 )
 
-func MakeBzFiler() *bzFiler {
+func MakeDefaultBzFiler() *bzFiler {
 	return &bzFiler{
+		command: "fs_util",
 		updater: snapshots.MakeNoopUpdater(),
 	}
 }
 
 // Satisfies snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater
 type bzFiler struct {
-	// we use existing noopUpdater for snapshot.Updater
+	command string
 	updater snapshot.Updater
 }
 
 func (bf *bzFiler) RunCmd(args []string) ([]byte, error) {
-	cmd := exec.Command("fs_util", args...)
+	cmd := exec.Command(bf.command, args...)
 	return cmd.Output()
 }
