@@ -70,7 +70,7 @@ func TestRead(t *testing.T) {
 
 	// Make a ReadRequest that exercises read limits and offsets
 	offset, limit := int64(2), int64(2)
-	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/%d", testHash1, testSize1), ReadOffset: offset, ReadLimit: limit}
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", testHash1), ReadOffset: offset, ReadLimit: limit}
 	r := makeFakeReadServer()
 
 	// Make actual Read request

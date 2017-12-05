@@ -5,5 +5,5 @@ const (
 	DefaultInstanceName = ""
 
 	// Bazel Resource storage-related constants
-	StorePrePostFix = "blob"
+	StorePrefix = "blob"
 )

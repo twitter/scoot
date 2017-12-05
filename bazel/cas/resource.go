@@ -13,7 +13,10 @@ import (
 	"github.com/twitter/scoot/bazel"
 )
 
-// Keep track of a Resource, identified primarily by a Digest.
+// Keep track of a Resource specified by a client.
+// Instance - optional parameter identifying a server instance
+// Digest - Bazel Digest identifier
+// UUID - client identifier attached to write requests
 type Resource struct {
 	Instance string
 	Digest   *remoteexecution.Digest

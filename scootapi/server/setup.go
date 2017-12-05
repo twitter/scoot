@@ -89,11 +89,11 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
 		},
 
-		func(l net.Listener) bazel.GRPCServer {
+		func(l bazel.GRPCListener) bazel.GRPCServer {
 			return execution.MakeExecutionServer(l)
 		},
 	)

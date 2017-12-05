@@ -4,6 +4,7 @@ GOVERSION := $(shell go version)
 BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/twitter/scoot"
+FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
 
 SHELL := /bin/bash -o pipefail
 
@@ -76,14 +77,18 @@ swarmtest:
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	go install ./binaries/...
-	$(GOPATH)/bin/setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
 recoverytest:
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
 	go install ./binaries/...
+<<<<<<< HEAD
 	$(GOPATH)/bin/recoverytest &>/dev/null
+=======
+	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
+>>>>>>> origin
 
 clean-mockgen:
 	rm */*_mock.go

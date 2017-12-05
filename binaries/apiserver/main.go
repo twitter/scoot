@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
@@ -92,7 +93,7 @@ func main() {
 		func(sh *StoreAndHandler) store.Store {
 			return sh.store
 		},
-		func() (net.Listener, error) {
+		func() (bazel.GRPCListener, error) {
 			return net.Listen("tcp", *grpcAddr)
 		},
 	)
