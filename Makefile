@@ -84,11 +84,7 @@ recoverytest:
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
 	go install ./binaries/...
-<<<<<<< HEAD
-	$(GOPATH)/bin/recoverytest &>/dev/null
-=======
 	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
->>>>>>> origin
 
 clean-mockgen:
 	rm */*_mock.go

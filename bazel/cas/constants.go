@@ -8,6 +8,7 @@ const (
 	// Resource naming constants
 	ResourceNameType   = "blobs"
 	ResourceNameAction = "uploads"
+
 	// Default buffer sizes
 	DefaultReadCapacity = 1024 * 1024
 )
