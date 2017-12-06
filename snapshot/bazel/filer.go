@@ -34,7 +34,7 @@ type bzFiler struct {
 
 func (bf *bzFiler) RunCmd(args []string) ([]byte, error) {
 	if bf.localStorePath != "" {
-		args = append(args, "--local_store_path", bf.localStorePath)
+		args = append(args, "--local-store-path", bf.localStorePath)
 	}
 	cmd := exec.Command(bf.command, args...)
 	return cmd.Output()
