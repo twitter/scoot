@@ -78,7 +78,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
-	// if we are checking out a snapsot, start the timer outside of go routine
+	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
 	if cmd.SnapshotID != "" {
 		downloadTimer = inv.stat.Latency(stats.WorkerDownloadLatency_ms).Time()
@@ -185,6 +185,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:    cmd.Argv,
+		EnvVars: cmd.EnvVars,
 		Dir:     co.Path(),
 		Stdout:  stdout,
 		Stderr:  stderr,
