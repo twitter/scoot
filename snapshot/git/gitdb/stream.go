@@ -27,6 +27,7 @@ type StreamConfig struct {
 
 const streamIDText = "stream"
 const streamIDFmt = "%s-%s-%s-%s"
+const streamNameShaSuffix = ":sha"
 
 type streamBackend struct {
 	cfg  *StreamConfig
