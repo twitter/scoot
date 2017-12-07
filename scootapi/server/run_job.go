@@ -49,6 +49,10 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 			return result, fmt.Errorf("nil command")
 		}
 		task.Command.Argv = t.Command.Argv
+		task.Command.EnvVars = make(map[string]string)
+		for k, v := range t.Command.EnvVars {
+			task.Command.EnvVars[k] = v
+		}
 		if t.SnapshotId != nil {
 			task.SnapshotID = *t.SnapshotId
 		}

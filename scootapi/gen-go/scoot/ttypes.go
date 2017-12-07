@@ -1013,8 +1013,10 @@ func (p *RunStatus) String() string {
 
 // Attributes:
 //  - Argv
+//  - EnvVars
 type Command struct {
-	Argv []string `thrift:"argv,1" json:"argv"`
+	Argv    []string          `thrift:"argv,1" json:"argv"`
+	EnvVars map[string]string `thrift:"envVars,2" json:"envVars,omitempty"`
 }
 
 func NewCommand() *Command {
@@ -1024,6 +1026,16 @@ func NewCommand() *Command {
 func (p *Command) GetArgv() []string {
 	return p.Argv
 }
+
+var Command_EnvVars_DEFAULT map[string]string
+
+func (p *Command) GetEnvVars() map[string]string {
+	return p.EnvVars
+}
+func (p *Command) IsSetEnvVars() bool {
+	return p.EnvVars != nil
+}
+
 func (p *Command) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -1040,6 +1052,10 @@ func (p *Command) Read(iprot thrift.TProtocol) error {
 		switch fieldId {
 		case 1:
 			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1079,11 +1095,42 @@ func (p *Command) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *Command) readField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]string, size)
+	p.EnvVars = tMap
+	for i := 0; i < size; i++ {
+		var _key1 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key1 = v
+		}
+		var _val2 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_val2 = v
+		}
+		p.EnvVars[_key1] = _val2
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
 func (p *Command) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("Command"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1112,6 +1159,32 @@ func (p *Command) writeField1(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:argv: ", p), err)
+	}
+	return err
+}
+
+func (p *Command) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnvVars() {
+		if err := oprot.WriteFieldBegin("envVars", thrift.MAP, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:envVars: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.EnvVars)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.EnvVars {
+			if err := oprot.WriteString(string(k)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+			if err := oprot.WriteString(string(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:envVars: ", p), err)
+		}
 	}
 	return err
 }
@@ -1559,11 +1632,11 @@ func (p *JobDefinition) readField1(iprot thrift.TProtocol) error {
 	tSlice := make([]*TaskDefinition, 0, size)
 	p.Tasks = tSlice
 	for i := 0; i < size; i++ {
-		_elem1 := &TaskDefinition{}
-		if err := _elem1.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem1), err)
+		_elem3 := &TaskDefinition{}
+		if err := _elem3.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
 		}
-		p.Tasks = append(p.Tasks, _elem1)
+		p.Tasks = append(p.Tasks, _elem3)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -2028,20 +2101,20 @@ func (p *JobStatus) readField3(iprot thrift.TProtocol) error {
 	tMap := make(map[string]Status, size)
 	p.TaskStatus = tMap
 	for i := 0; i < size; i++ {
-		var _key2 string
+		var _key4 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key2 = v
+			_key4 = v
 		}
-		var _val3 Status
+		var _val5 Status
 		if v, err := iprot.ReadI32(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
 			temp := Status(v)
-			_val3 = temp
+			_val5 = temp
 		}
-		p.TaskStatus[_key2] = _val3
+		p.TaskStatus[_key4] = _val5
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -2057,17 +2130,17 @@ func (p *JobStatus) readField4(iprot thrift.TProtocol) error {
 	tMap := make(map[string]*RunStatus, size)
 	p.TaskData = tMap
 	for i := 0; i < size; i++ {
-		var _key4 string
+		var _key6 string
 		if v, err := iprot.ReadString(); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key4 = v
+			_key6 = v
 		}
-		_val5 := &RunStatus{}
-		if err := _val5.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val5), err)
+		_val7 := &RunStatus{}
+		if err := _val7.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val7), err)
 		}
-		p.TaskData[_key4] = _val5
+		p.TaskData[_key6] = _val7
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)

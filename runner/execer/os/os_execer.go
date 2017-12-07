@@ -54,6 +54,12 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
 	cmd.Dir = command.Dir
 
+	// Use the parent environment plus whatever additional env vars are provided.
+	cmd.Env = os.Environ()
+	for k, v := range command.EnvVars {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+
 	// Sets pgid of all child processes to cmd's pid
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 

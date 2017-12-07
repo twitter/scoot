@@ -15,12 +15,12 @@ import (
 type Memory uint64
 
 type Command struct {
-	Argv   []string
-	Dir    string
-	Stdout io.Writer
-	Stderr io.Writer
+	Argv    []string
+	EnvVars map[string]string
+	Dir     string
+	Stdout  io.Writer
+	Stderr  io.Writer
 	tags.LogTags
-	// TODO(dbentley): environment variables?
 }
 
 type ProcessState int
