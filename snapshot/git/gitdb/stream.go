@@ -14,7 +14,8 @@ import (
 type StreamConfig struct {
 	// Name (used in IDs (so it should be short)
 	// e.g. sm for a Stream following Source (repo)'s Master (branch)
-	// We support the form "sm:sha", meaning we want a sha not included in the sm refspec.
+	//      name may include a ref string that'll override the refspec configured for 'sm'
+	//      the full id might look like "stream-gc-sm:<branch>-<sha>" for a given branch and sha
 	Name string
 
 	// Remote to fetch from (e.g. https://github.com/twitter/scoot)
@@ -38,10 +39,12 @@ func (b *streamBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []stri
 		return nil, errors.New("Stream backend not initialized.")
 	}
 
-	if len(extraParts) != 2 {
+	if len(extraParts) < 2 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 extraParts in stream id: %s", id)
 	}
-	streamName, sha := extraParts[0], extraParts[1]
+	// The last token is the sha, anything before that is a stream name that may include '-'.
+	streamName := strings.Join(extraParts[0:len(extraParts)-1], "-")
+	sha := extraParts[len(extraParts)-1]
 
 	if err := validSha(sha); err != nil {
 		return nil, err
@@ -76,7 +79,7 @@ func (s *streamSnapshot) Download(db *DB) error {
 		return fmt.Errorf("cannot download snapshot %s: no streams configured", s.ID())
 	}
 
-	if err := db.stream.updateStream(s.streamName, s.sha, db); err != nil {
+	if err := db.stream.updateStream(s.streamName, db); err != nil {
 		return err
 	}
 
@@ -86,16 +89,16 @@ func (s *streamSnapshot) Download(db *DB) error {
 // updateStream updates the named stream
 // the stream name is used to make sure we're operating on the right remote/refspec
 // the sha is optionally used to override refspec for remote with a specific sha request
-func (b *streamBackend) updateStream(name string, sha string, db *DB) error {
+func (b *streamBackend) updateStream(name string, db *DB) error {
 	b.stat.Counter(stats.GitStreamUpdateFetches).Inc(1)
 
 	args := []string{"fetch", b.cfg.Remote}
-	if strings.HasSuffix(name, streamNameShaSuffix) {
-		args = append(args, sha)
-		name = strings.Replace(name, streamNameShaSuffix, "", 1)
-	}
-	if name != b.cfg.Name {
+	if !strings.HasPrefix(name, b.cfg.Name) {
 		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
+	}
+	if strings.HasPrefix(name, b.cfg.Name+":") {
+		// If the stream name includes a ref then fetch will override the default refspec
+		args = append(args, strings.Replace(name, b.cfg.Name+":", "", 1))
 	}
 	_, err := db.dataRepo.Run(args...)
 	return err

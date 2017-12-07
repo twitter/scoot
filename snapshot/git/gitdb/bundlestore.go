@@ -229,7 +229,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// large (say, a half hour) that it's reasonable to assume its easy to get.
 	// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
 	// update our stream.
-	if err := db.stream.updateStream(s.streamName, s.SHA(), db); err != nil {
+	if err := db.stream.updateStream(s.streamName, db); err != nil {
 		log.Infof("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
 		return err
 	}
