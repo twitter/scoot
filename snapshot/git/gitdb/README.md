@@ -22,12 +22,12 @@ E.g.:
   * backend: local
   * kind: GitCommitSnapshot
   *sha: 3cf4f8cf84976621c3ca9f19dff114842b4e5db7
-* stream-swh-sm-3cf4f8cf84976621c3ca9f19dff114842b4e5db7
+* stream-gc-sm-3cf4f8cf84976621c3ca9f19dff114842b4e5db7
   * backend: stream
   * kind: GitCommitSnapshot
   * stream name: source_master
   *sha: 3cf4f8cf84976621c3ca9f19dff114842b4e5db7
-* bs-s-sm-530c6daad567a0765c10064e1c7fc4fa486a2638-d1f58ef31066244fc8590bfb6940b4060b1baab1
+* bs-fs-sm-530c6daad567a0765c10064e1c7fc4fa486a2638-d1f58ef31066244fc8590bfb6940b4060b1baab1
   * backend: Bundlestore
   * kind: FSSnapshot
   * stream name: source_master
