@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/os/temp"
 )
@@ -148,13 +146,11 @@ func TestBzIngesterValidIngestDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-
-	id, err := noopBf.Ingest(tmp.Dir)
+	fn := func(s string) error { return nil }
+	_, err = noopBf.IngestAndValidate(tmp.Dir, validator(fn))
 	if err != nil {
 		t.Fatalf("Error ingesting dir %v. Err: %v", tmp.Dir, err)
 	}
-	log.Info(id) //DELETE
-	// add check on id
 
 	err = os.Remove(tmp.Dir)
 	if err != nil {
@@ -172,13 +168,11 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temp file. %v", err)
 	}
-
-	id, err := noopBf.Ingest(tmpFile.Name())
+	fn := func(s string) error { return nil }
+	_, err = noopBf.IngestAndValidate(tmpFile.Name(), validator(fn))
 	if err != nil {
 		t.Fatalf("Error ingesting file %v. Err: %v", tmpFile.Name(), err)
 	}
-	log.Info(id) //DELETE
-	// add check on id
 
 	err = os.Remove(tmpFile.Name())
 	if err != nil {

@@ -4,6 +4,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (bf *bzFiler) IngestAndValidate(path string, validate validator) (string, error) {
+	id, err := bf.Ingest(path)
+	if err != nil {
+		return "", err
+	}
+	err = validate(id)
+	if err != nil {
+		return "", err
+	}
+	return id, err
+}
+
 func (bf *bzFiler) Ingest(path string) (string, error) {
 	fileType, err := getFileType(path)
 	if err != nil {

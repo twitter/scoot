@@ -78,10 +78,4 @@ func generateId(sha string, size int64) string {
 	return fmt.Sprintf("%s-%s-%d", bzSnapshotIdPrefix, sha, size)
 }
 
-func validSha(sha string) error {
-	if len(sha) != 40 {
-		return fmt.Errorf("sha not 40 characters: %s", sha)
-	}
-	// TODO(dbentley): check that it's hexadecimal?
-	return nil
-}
+type validator func(string) error
