@@ -35,18 +35,17 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 	}
 
 	if !bazel.IsValidDigest(sha, size) {
-		return nil, fmt.Errorf("Error: Invalid digest. SHA: %v, size: %d", sha, size)
+		return nil, fmt.Errorf("Error: Invalid digest. SHA: %s, size: %d", sha, size)
 	}
 
-	output, err := bf.RunCmd([]string{directory, "materialize", sha, dir})
+	output, err := bf.RunCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, dir})
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"error":  err,
-				"output": string(output),
-				"sha":    sha,
-				"dir":    dir,
-			}).Error("Failed to materialize %s", directory)
+				"error": err,
+				"sha":   sha,
+				"dir":   dir,
+			}).Error("Failed to materialize %s", id)
 		return nil, err
 	}
 

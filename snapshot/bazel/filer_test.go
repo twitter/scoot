@@ -1,10 +1,11 @@
 package bazel
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/os/temp"
@@ -18,7 +19,7 @@ func TestValidBzCheckout(t *testing.T) {
 	bc := &bzCheckout{}
 	bc.Hash = "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
 	bc.SizeBytes = int64(10)
-	if !bazel.IsValidDigest(bc.ID(), bc.GetSizeBytes()) {
+	if !bazel.IsValidDigest(bc.GetHash(), bc.GetSizeBytes()) {
 		t.Fatalf("Expected valid hash and size")
 	}
 }
@@ -54,14 +55,15 @@ func TestBzCheckouterInvalidCheckout(t *testing.T) {
 }
 
 func TestBzCheckouterValidCheckout(t *testing.T) {
-	expectedSha := "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
-	expectedSize := int64(5)
-	snap, err := noopBf.Checkout(fmt.Sprintf("bz-%v-%v", expectedSha, expectedSize))
+	sha := "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+	size := int64(5)
+	id := generateId(sha, size)
+	snap, err := noopBf.Checkout(id)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
 	}
-	if snap.ID() != expectedSha {
-		t.Fatalf("Expected snapshot ID to be %v, was %v", expectedSha, snap.ID())
+	if snap.ID() != id {
+		t.Fatalf("Expected snapshot ID to be %v, was %v", id, snap.ID())
 	}
 }
 
@@ -77,18 +79,19 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 }
 
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
-	expectedSha := "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
-	expectedSize := int64(5)
+	sha := "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+	size := int64(5)
+	id := generateId(sha, size)
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-	snap, err := noopBf.CheckoutAt(fmt.Sprintf("bz-%v-%v", expectedSha, expectedSize), tempDir.Dir)
+	snap, err := noopBf.CheckoutAt(id, tempDir.Dir)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
 	}
-	if snap.ID() != expectedSha {
-		t.Fatalf("Expected snapshot ID to be %v, was %v", expectedSha, snap.ID())
+	if snap.ID() != id {
+		t.Fatalf("Expected snapshot ID to be %v, was %v", id, snap.ID())
 	}
 }
 
@@ -100,9 +103,9 @@ func TestBzIngesterGetFileTypeDir(t *testing.T) {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 
-	fileType, err := noopBf.getFileType(tmp.Dir)
-	if err != nil || fileType != directory {
-		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", directory, fileType, err)
+	fileType, err := getFileType(tmp.Dir)
+	if err != nil || fileType != fsUtilCmdDirectory {
+		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", fsUtilCmdDirectory, fileType, err)
 	}
 
 	err = os.Remove(tmp.Dir)
@@ -122,9 +125,9 @@ func TestBzIngesterGetFileTypeFile(t *testing.T) {
 		t.Fatalf("Error creating temp file. %v", err)
 	}
 
-	fileType, err := noopBf.getFileType(tmpFile.Name())
-	if err != nil || fileType != file {
-		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", file, fileType, err)
+	fileType, err := getFileType(tmpFile.Name())
+	if err != nil || fileType != fsUtilCmdFile {
+		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", fsUtilCmdFile, fileType, err)
 	}
 
 	err = os.Remove(tmpFile.Name())
@@ -134,7 +137,7 @@ func TestBzIngesterGetFileTypeFile(t *testing.T) {
 }
 
 func TestBzIngesterGetFileTypeInvalid(t *testing.T) {
-	_, err := noopBf.getFileType("some made up file or directory")
+	_, err := getFileType("some made up file or directory")
 	if err == nil || !strings.Contains(err.Error(), noSuchFileOrDirMsg) {
 		t.Fatalf("Expected error to contain %s, was %v", noSuchFileOrDirMsg, err)
 	}
@@ -146,10 +149,12 @@ func TestBzIngesterValidIngestDir(t *testing.T) {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 
-	_, err = noopBf.Ingest(tmp.Dir)
+	id, err := noopBf.Ingest(tmp.Dir)
 	if err != nil {
 		t.Fatalf("Error ingesting dir %v. Err: %v", tmp.Dir, err)
 	}
+	log.Info(id) //DELETE
+	// add check on id
 
 	err = os.Remove(tmp.Dir)
 	if err != nil {
@@ -168,10 +173,12 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 		t.Fatalf("Error creating temp file. %v", err)
 	}
 
-	_, err = noopBf.Ingest(tmpFile.Name())
+	id, err := noopBf.Ingest(tmpFile.Name())
 	if err != nil {
 		t.Fatalf("Error ingesting file %v. Err: %v", tmpFile.Name(), err)
 	}
+	log.Info(id) //DELETE
+	// add check on id
 
 	err = os.Remove(tmpFile.Name())
 	if err != nil {

@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"fmt"
 	"os"
 
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
@@ -17,7 +18,7 @@ func (bc *bzCheckout) Path() string {
 }
 
 func (bc *bzCheckout) ID() string {
-	return bc.GetHash()
+	return fmt.Sprintf("bz-%s-%d", bc.GetHash(), bc.GetSizeBytes())
 }
 
 func (bc *bzCheckout) Release() error {

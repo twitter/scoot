@@ -5,6 +5,9 @@ const (
 	invalidFileTypeMsg = "Error getting fileType of path"
 	noSuchFileOrDirMsg = "no such file or directory"
 
-	directory = "directory"
-	file      = "file"
+	bzSnapshotIdPrefix = "bz"
+
+	fsUtilCmdMaterialize = "materialize"
+	fsUtilCmdDirectory   = "directory"
+	fsUtilCmdFile        = "file"
 )
