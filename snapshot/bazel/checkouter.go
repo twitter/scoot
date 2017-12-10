@@ -38,7 +38,7 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 		return nil, fmt.Errorf("Error: Invalid digest. SHA: %s, size: %d", sha, size)
 	}
 
-	output, err := bf.RunCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, dir})
+	_, err = bf.command.materialize(sha, dir)
 	if err != nil {
 		log.WithFields(
 			log.Fields{
@@ -49,7 +49,6 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 		return nil, err
 	}
 
-	log.Info(string(output))
 	co := &bzCheckout{
 		dir,
 		remoteexecution.Digest{

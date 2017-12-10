@@ -8,6 +8,7 @@ const (
 	bzSnapshotIdPrefix = "bz"
 
 	fsUtilCmdMaterialize = "materialize"
+	fsUtilCmdSave        = "save"
 	fsUtilCmdDirectory   = "directory"
 	fsUtilCmdFile        = "file"
 )

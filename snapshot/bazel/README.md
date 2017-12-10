@@ -11,4 +11,5 @@ Bazel Remote Execution snapshots use Snapshot IDs of format bz-<sha256>-<sizeByt
   * Checks out a Bazel Digest as a snapshot & sets up local filesystem
   * Ingests directory or file and stores it as a snapshot
   * noop Updates
+* bzCheckout satisfies the snapshot.Checkout interface
 

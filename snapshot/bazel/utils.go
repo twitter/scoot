@@ -22,9 +22,9 @@ func getFileType(path string) (string, error) {
 
 	switch mode := stat.Mode(); {
 	case mode.IsDir():
-		fileType = "directory"
+		fileType = fsUtilCmdDirectory
 	case mode.IsRegular():
-		fileType = "file"
+		fileType = fsUtilCmdFile
 	default:
 		return "", fmt.Errorf("%s %s", invalidFileTypeMsg, path)
 	}
@@ -46,6 +46,10 @@ func validateID(id string) error {
 	return nil
 }
 
+func validateIDBytes(output []byte) error {
+	return validateID(string(output))
+}
+
 func getSha(id string) (string, error) {
 	s, err := splitId(id)
 	if err != nil {
@@ -59,7 +63,7 @@ func getSize(id string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	size, err := strconv.ParseInt(s[1], 10, 64)
+	size, err := strconv.ParseInt(s[2], 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -77,5 +81,3 @@ func splitId(id string) ([]string, error) {
 func generateId(sha string, size int64) string {
 	return fmt.Sprintf("%s-%s-%d", bzSnapshotIdPrefix, sha, size)
 }
-
-type validator func(string) error
