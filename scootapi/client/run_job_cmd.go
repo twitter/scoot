@@ -47,6 +47,7 @@ type CLIJobDef struct {
 
 type TaskDef struct {
 	Args       []string
+	EnvVars    map[string]string
 	SnapshotID string
 	TimeoutMs  int32
 	TaskID     string
@@ -104,6 +105,10 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 			taskDef := scoot.NewTaskDefinition()
 			taskDef.Command = scoot.NewCommand()
 			taskDef.Command.Argv = jt.Args
+			taskDef.Command.EnvVars = make(map[string]string)
+			for k, v := range jt.EnvVars {
+				taskDef.Command.EnvVars[k] = v
+			}
 			taskDef.SnapshotId = &jt.SnapshotID
 			taskDef.TaskId = &jt.TaskID
 			jobDef.Tasks = append(jobDef.Tasks, taskDef)

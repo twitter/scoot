@@ -44,6 +44,7 @@ struct RunStatus {
 
 struct Command {
   1: list<string> argv
+  2: optional map<string, string> envVars
 }
 
 struct TaskDefinition {

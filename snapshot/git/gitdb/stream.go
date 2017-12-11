@@ -3,20 +3,19 @@ package gitdb
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/twitter/scoot/common/stats"
 	snap "github.com/twitter/scoot/snapshot"
 )
 
 // A Stream is a sequence of GitCommitSnapshots that updates.
-// Right now, the backend is a git refspec that can be fetched from a Git remote.
-// In a v2, we'd rather not talk to a git server at all (because fetch can be confusingly slow).
-// in that case, a stream would need to be a mutable and consistent pointer to a GitCommitSnapshot.
-// Instead of using an immutable key-value store for (large) bundles, we'd back streams with
-// a small, mutable key-value store that points to the large, immutable key-value store for Snapshots.
+// The backend is a git refspec that can be fetched from a Git remote.
 type StreamConfig struct {
 	// Name (used in IDs (so it should be short)
 	// e.g. sm for a Stream following Source (repo)'s Master (branch)
+	//      name may include a ref string that'll override the refspec configured for 'sm'
+	//      the full id might look like "stream-gc-sm:<branch>-<sha>" for a given branch and sha
 	Name string
 
 	// Remote to fetch from (e.g. https://github.com/twitter/scoot)
@@ -28,6 +27,7 @@ type StreamConfig struct {
 
 const streamIDText = "stream"
 const streamIDFmt = "%s-%s-%s-%s"
+const streamNameShaSuffix = ":sha"
 
 type streamBackend struct {
 	cfg  *StreamConfig
@@ -39,10 +39,12 @@ func (b *streamBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []stri
 		return nil, errors.New("Stream backend not initialized.")
 	}
 
-	if len(extraParts) != 2 {
+	if len(extraParts) < 2 {
 		return nil, fmt.Errorf("cannot parse snapshot ID: expected 4 extraParts in stream id: %s", id)
 	}
-	streamName, sha := extraParts[0], extraParts[1]
+	// The last token is the sha, anything before that is a stream name that may include '-'.
+	streamName := strings.Join(extraParts[0:len(extraParts)-1], "-")
+	sha := extraParts[len(extraParts)-1]
 
 	if err := validSha(sha); err != nil {
 		return nil, err
@@ -85,13 +87,19 @@ func (s *streamSnapshot) Download(db *DB) error {
 }
 
 // updateStream updates the named stream
+// the stream name is used to make sure we're operating on the right remote/refspec
+// the sha is optionally used to override refspec for remote with a specific sha request
 func (b *streamBackend) updateStream(name string, db *DB) error {
-	if name != b.cfg.Name {
-		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
-	}
-
 	b.stat.Counter(stats.GitStreamUpdateFetches).Inc(1)
 
-	_, err := db.dataRepo.Run("fetch", b.cfg.Remote)
+	args := []string{"fetch", b.cfg.Remote}
+	if !strings.HasPrefix(name, b.cfg.Name) {
+		return fmt.Errorf("cannot update stream %s: does not match stream %s", name, db.stream.cfg.Name)
+	}
+	if strings.HasPrefix(name, b.cfg.Name+":") {
+		// If the stream name includes a ref then fetch will override the default refspec
+		args = append(args, strings.Replace(name, b.cfg.Name+":", "", 1))
+	}
+	_, err := db.dataRepo.Run(args...)
 	return err
 }
