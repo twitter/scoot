@@ -7,9 +7,7 @@ import (
 
 func MakeDefaultBzFiler() *bzFiler {
 	return &bzFiler{
-		command: bzCommand{
-			command: "fs_util",
-		},
+		command: bzCommand{},
 		updater: snapshots.MakeNoopUpdater(),
 	}
 }
@@ -17,7 +15,6 @@ func MakeDefaultBzFiler() *bzFiler {
 func MakeBzFilerWithLocalStore(localStorePath string) *bzFiler {
 	return &bzFiler{
 		command: bzCommand{
-			command:        "fs_util",
 			localStorePath: localStorePath,
 		},
 		updater: snapshots.MakeNoopUpdater(),

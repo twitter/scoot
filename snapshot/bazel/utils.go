@@ -31,6 +31,7 @@ func getFileType(path string) (string, error) {
 	return fileType, err
 }
 
+// Checks that ID is well formed
 func validateID(id string) error {
 	sha, err := getSha(id)
 	if err != nil {
@@ -46,6 +47,7 @@ func validateID(id string) error {
 	return nil
 }
 
+// Checks that bytes of ID is well formed
 func validateIDBytes(output []byte) error {
 	return validateID(string(output))
 }

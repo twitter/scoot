@@ -11,7 +11,7 @@ import (
 )
 
 var noopBf = bzFiler{
-	command: noopBzCommand{},
+	command: noopBzRunner{},
 }
 
 const (
@@ -141,9 +141,7 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
 	bf := bzFiler{
-		command: bzCommand{
-			command: "echo",
-		},
+		command: bzCommand{},
 	}
 	_, err := bf.Ingest("some made up directory")
 	if err == nil || !strings.Contains(err.Error(), noSuchFileOrDirMsg) {

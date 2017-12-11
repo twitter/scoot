@@ -5,12 +5,11 @@ import (
 )
 
 type bzRunner interface {
-	save(path string) ([]byte, error)
-	materialize(sha string, dir string) ([]byte, error)
+	save(path string) ([]byte, error)                   // Called by bzFiler.Ingest
+	materialize(sha string, dir string) ([]byte, error) // Called by bzFiler.Checkout and CheckoutAt
 }
 
 type bzCommand struct {
-	command        string
 	localStorePath string
 	// Not yet implemented:
 	// bypassLocalStore bool
@@ -18,6 +17,7 @@ type bzCommand struct {
 	// serverAddress    string
 }
 
+// Saves the file/dir specified by path using the fsUtilCmd & validates the id format
 func (bc bzCommand) save(path string) ([]byte, error) {
 	fileType, err := getFileType(path)
 	if err != nil {
@@ -37,20 +37,22 @@ func (bc bzCommand) save(path string) ([]byte, error) {
 	return output, nil
 }
 
+// Materializes the digest identified by sha in dir using the fsUtilCmd
 func (bc bzCommand) materialize(sha string, dir string) ([]byte, error) {
 	return bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, dir})
 }
 
+// Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	if bc.localStorePath != "" {
 		args = append(args, "--local-store-path", bc.localStorePath)
 	}
-	cmd := exec.Command(bc.command, args...)
+	cmd := exec.Command(fsUtilCmd, args...)
 	return cmd.Output()
 }
 
-type noopBzCommand struct{}
+// Noop bzRunner for stub testing
+type noopBzRunner struct{}
 
-func (bc noopBzCommand) save(path string) ([]byte, error) { return nil, nil }
-
-func (bc noopBzCommand) materialize(sha string, dir string) ([]byte, error) { return nil, nil }
+func (bc noopBzRunner) save(path string) ([]byte, error)                   { return nil, nil }
+func (bc noopBzRunner) materialize(sha string, dir string) ([]byte, error) { return nil, nil }
