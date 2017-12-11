@@ -268,4 +268,20 @@ func TestSplitIdInvalid(t *testing.T) {
 	}
 }
 
+func TestValidateFsUtilSaveOutput(t *testing.T) {
+	s := fmt.Sprintf("%s %d", defaultSha, int64(32))
+	err := validateFsUtilSaveOutput([]byte(s))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateFsUtilSaveOutputInvalid(t *testing.T) {
+	s := fmt.Sprintf("%s %d %s", defaultSha, int64(32), "extraVal")
+	err := validateFsUtilSaveOutput([]byte(s))
+	if err == nil || !strings.Contains(err.Error(), invalidSaveOutputMsg) {
+		t.Fatal("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)
+	}
+}
+
 // TODO: integration tests with CAS once we have fs_util binary

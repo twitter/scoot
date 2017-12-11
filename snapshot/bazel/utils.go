@@ -47,9 +47,23 @@ func validateID(id string) error {
 	return nil
 }
 
-// Checks that bytes of ID is well formed
-func validateIDBytes(output []byte) error {
-	return validateID(string(output))
+// Checks that command line output from fs_util save is well formed
+func validateFsUtilSaveOutput(output []byte) error {
+	s, err := splitFsUtilSaveOutput(output)
+	if err != nil {
+		return err
+	}
+	sha, size := s[0], s[1]
+	id := fmt.Sprintf("%s-%s-%s", bzSnapshotIdPrefix, sha, size)
+	return validateID(id)
+}
+
+func splitFsUtilSaveOutput(output []byte) ([]string, error) {
+	s := strings.Split(string(output), " ")
+	if len(s) != 2 {
+		return nil, fmt.Errorf("Error: %s. Expected <sha> <size>, received %v", invalidSaveOutputMsg, string(output))
+	}
+	return s, nil
 }
 
 func getSha(id string) (string, error) {

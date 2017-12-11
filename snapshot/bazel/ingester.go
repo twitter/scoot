@@ -5,7 +5,7 @@ import (
 )
 
 func (bf *bzFiler) Ingest(path string) (string, error) {
-	output, err := bf.command.save(path)
+	id, err := bf.command.save(path)
 	if err != nil {
 		log.WithFields(
 			log.Fields{
@@ -15,7 +15,7 @@ func (bf *bzFiler) Ingest(path string) (string, error) {
 		return "", err
 	}
 
-	return string(output), nil
+	return id, nil
 }
 
 func (bf *bzFiler) IngestMap(srcToDest map[string]string) (string, error) {

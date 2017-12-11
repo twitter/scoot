@@ -26,7 +26,7 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 		return nil, err
 	}
 
-	_, err = bf.command.materialize(sha, dir)
+	err = bf.command.materialize(sha, dir)
 	if err != nil {
 		log.WithFields(
 			log.Fields{
