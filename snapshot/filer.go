@@ -3,6 +3,8 @@ package snapshot
 import (
 	"os/exec"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // A Snapshot is a low-level interface offering per-file access to data in a Snapshot.
@@ -98,7 +100,8 @@ func (dba *dbAdapter) Ingest(path string) (id string, err error) {
 }
 
 func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (id string, err error) {
-	panic("not implemented")
+	log.Error("Not implemented")
+	return "", nil
 }
 
 func (dba *dbAdapter) Update() error {
