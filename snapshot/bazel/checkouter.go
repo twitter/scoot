@@ -33,7 +33,7 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 				"error": err,
 				"sha":   sha,
 				"dir":   dir,
-			}).Error("Failed to materialize %s", id)
+			}).Errorf("Failed to materialize %s", id)
 		return nil, err
 	}
 

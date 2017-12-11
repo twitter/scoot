@@ -280,7 +280,7 @@ func TestValidateFsUtilSaveOutputInvalid(t *testing.T) {
 	s := fmt.Sprintf("%s %d %s", defaultSha, int64(32), "extraVal")
 	err := validateFsUtilSaveOutput([]byte(s))
 	if err == nil || !strings.Contains(err.Error(), invalidSaveOutputMsg) {
-		t.Fatal("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)
+		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)
 	}
 }
 
