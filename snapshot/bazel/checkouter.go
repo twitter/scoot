@@ -17,14 +17,14 @@ func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
 }
 
 func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
-	err := validateID(id)
+	sha, err := getSha(id)
 	if err != nil {
 		return nil, err
 	}
-
-	sha, _ := getSha(id)
-	size, _ := getSize(id)
-	// getSha and getSize are called by validateID, no need to check error here
+	size, err := getSize(id)
+	if err != nil {
+		return nil, err
+	}
 
 	_, err = bf.command.materialize(sha, dir)
 	if err != nil {
