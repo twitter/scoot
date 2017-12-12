@@ -7,22 +7,25 @@ import (
 	"testing"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var noopBf = bzFiler{
 	command: noopBzRunner{},
 }
 
-const (
-	defaultSha = "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
-)
-
 // Checkout tests
+
+func init() {
+	log.AddHook(hooks.NewContextHook())
+}
 
 func TestValidBzCheckout(t *testing.T) {
 	bc := &bzCheckout{}
-	bc.Hash = defaultSha
+	bc.Hash = emptySha
 	bc.SizeBytes = int64(10)
 	if !bazel.IsValidDigest(bc.GetHash(), bc.GetSizeBytes()) {
 		t.Fatalf("Expected valid hash and size")
@@ -62,7 +65,7 @@ func TestBzCheckouterInvalidCheckout(t *testing.T) {
 
 func TestBzCheckouterValidCheckout(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	snap, err := noopBf.Checkout(id)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
@@ -85,7 +88,7 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
@@ -140,9 +143,7 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 }
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
-	bf := bzFiler{
-		command: bzCommand{},
-	}
+	bf := MakeBzFiler()
 	_, err := bf.Ingest("some made up directory")
 	if err == nil || !strings.Contains(err.Error(), noSuchFileOrDirMsg) {
 		t.Fatalf("Expected error to contain %s, was %v", noSuchFileOrDirMsg, err)
@@ -199,7 +200,7 @@ func TestGetFileTypeInvalid(t *testing.T) {
 
 func TestValidateIdValid(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	err := validateID(id)
 	if err != nil {
 		t.Fatal(err)
@@ -214,7 +215,7 @@ func TestValidateIdInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
-	err = validateID(fmt.Sprintf("bs-%s-%d", defaultSha, size))
+	err = validateID(fmt.Sprintf("bs-%s-%d", emptySha, size))
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
@@ -222,19 +223,19 @@ func TestValidateIdInvalid(t *testing.T) {
 
 func TestGetSha(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	result, err := getSha(id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result != defaultSha {
-		t.Fatalf("Expected %s, got %s", defaultSha, result)
+	if result != emptySha {
+		t.Fatalf("Expected %s, got %s", emptySha, result)
 	}
 }
 
 func TestGetSize(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	result, err := getSize(id)
 	if err != nil {
 		t.Fatal(err)
@@ -246,12 +247,12 @@ func TestGetSize(t *testing.T) {
 
 func TestSplitIdValid(t *testing.T) {
 	size := int64(5)
-	id := generateId(defaultSha, size)
+	id := generateId(emptySha, size)
 	result, err := splitId(id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := []string{bzSnapshotIdPrefix, defaultSha, "5"}
+	expected := []string{bzSnapshotIdPrefix, emptySha, "5"}
 	for idx, _ := range result {
 		if result[idx] != expected[idx] {
 			t.Fatalf("Expected %v, received %v", expected, result)
@@ -261,7 +262,7 @@ func TestSplitIdValid(t *testing.T) {
 
 func TestSplitIdInvalid(t *testing.T) {
 	size := int64(5)
-	id := fmt.Sprintf("bs-%s-%d", defaultSha, size)
+	id := fmt.Sprintf("bs-%s-%d", emptySha, size)
 	_, err := splitId(id)
 	if err == nil || !strings.Contains(err.Error(), invalidIdMsg) {
 		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidIdMsg, err)
@@ -269,7 +270,7 @@ func TestSplitIdInvalid(t *testing.T) {
 }
 
 func TestValidateFsUtilSaveOutput(t *testing.T) {
-	s := fmt.Sprintf("%s %d", defaultSha, int64(32))
+	s := fmt.Sprintf("\n\t%s %d\n", emptySha, int64(32))
 	err := validateFsUtilSaveOutput([]byte(s))
 	if err != nil {
 		t.Fatal(err)
@@ -277,7 +278,7 @@ func TestValidateFsUtilSaveOutput(t *testing.T) {
 }
 
 func TestValidateFsUtilSaveOutputInvalid(t *testing.T) {
-	s := fmt.Sprintf("%s %d %s", defaultSha, int64(32), "extraVal")
+	s := fmt.Sprintf("%s %d %s", emptySha, int64(32), "extraVal")
 	err := validateFsUtilSaveOutput([]byte(s))
 	if err == nil || !strings.Contains(err.Error(), invalidSaveOutputMsg) {
 		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)

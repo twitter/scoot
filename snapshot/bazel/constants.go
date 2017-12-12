@@ -13,4 +13,8 @@ const (
 	fsUtilCmdSave        = "save"
 	fsUtilCmdDirectory   = "directory"
 	fsUtilCmdFile        = "file"
+
+	emptySha  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	emptySize = int64(0)
+	emptyID   = bzSnapshotIdPrefix + "-" + emptySha + "-" + "0"
 )
