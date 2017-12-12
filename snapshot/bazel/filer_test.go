@@ -284,5 +284,3 @@ func TestValidateFsUtilSaveOutputInvalid(t *testing.T) {
 		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)
 	}
 }
-
-// TODO: integration tests with CAS once we have fs_util binary

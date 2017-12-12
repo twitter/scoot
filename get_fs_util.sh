@@ -15,7 +15,7 @@ get_fs_util() {
 
 		Linux)
 			echo 'Linux'
-			local url="https://binaries.pantsbuild.org/bin/fs_util/mac/10.13/$pants_release.dev$fs_util_release/fs_util"
+			local url="https://binaries.pantsbuild.org/bin/fs_util/linux/x86_64/$pants_release.dev$fs_util_release/fs_util"
 			;;
 
 		*)

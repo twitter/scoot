@@ -12,8 +12,8 @@ func MakeBzFiler() *bzFiler {
 	}
 }
 
-// Options are a variadic list of functions that take a *bzCommand as an arg
-// and modify *bCommand's fields, e.g.
+// Options is a variadic list of functions that take a *bzCommand as an arg
+// and modify its fields, e.g.
 // localStorePath := func(bc *bzCommand) {
 //     bc.localStorePath = "/path/to/local/store"
 // }
