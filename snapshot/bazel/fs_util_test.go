@@ -1,7 +1,6 @@
 package bazel
 
 import (
-	"fmt"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -14,44 +13,27 @@ func init() {
 	log.AddHook(hooks.NewContextHook())
 }
 
-func makeTestingFiler(tmpDir *temp.TempDir) *bzFiler {
-	localStorePath := func(bc *bzCommand) {
-		bc.localStorePath = tmpDir.Dir
+func makeTestingFiler() *bzFiler {
+	localStore, err := temp.TempDirDefault()
+	if err != nil {
+		log.Fatal(err)
 	}
-	root := func(bc *bzCommand) {
-		bc.root = tmpDir.Dir
+	localStorePathFn := func(bc *bzCommand) {
+		bc.localStorePath = localStore.Dir
 	}
-	bf := MakeBzFilerWithOptions(localStorePath, root)
+	bf := MakeBzFilerWithOptions(localStorePathFn)
 	return bf
 }
 
-func TestSaveEmptyDir(t *testing.T) {
-	tmpDir, err := temp.TempDirDefault()
-	if err != nil {
-		t.Fatal(err)
-	}
-	bf := makeTestingFiler(tmpDir)
-	id, err := bf.Ingest(".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedID := fmt.Sprintf("%s-%s-%d", bzSnapshotIdPrefix, emptySha, int64(0))
-	if id != expectedID {
-		t.Fatalf("Expected id to be %s, was %s", id, expectedID)
-	}
-}
+// directory save tests
 
-func TestSaveEmptyFile(t *testing.T) {
-	tmpDir, err := temp.TempDirDefault()
+func TestSaveEmptyDir(t *testing.T) {
+	root, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := tmpDir.TempFile("empty")
-	if err != nil {
-		t.Fatal(err)
-	}
-	bf := makeTestingFiler(tmpDir)
-	id, err := bf.Ingest(f.Name())
+	bf := makeTestingFiler()
+	id, err := bf.Ingest(root.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,8 +42,13 @@ func TestSaveEmptyFile(t *testing.T) {
 	}
 }
 
-func TestSaveFile(t *testing.T) {
-	tmpDir, err := temp.TempDirDefault()
+func TestSaveDir(t *testing.T) {
+	root, err := temp.TempDirDefault()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpDirName := "tmp"
+	tmpDir, err := root.FixedDir(tmpDirName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,12 +60,119 @@ func TestSaveFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bf := makeTestingFiler(tmpDir)
+	bf := makeTestingFiler()
+	id, err := bf.Ingest(root.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id == emptyID {
+		t.Fatalf("Expected id to not be %s, was %s", emptyID, id)
+	}
+	size, err := getSize(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size <= emptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
+	}
+	sha, err := getSha(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sha == emptySha {
+		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
+	}
+}
+
+// file save tests
+
+func TestSaveEmptyFile(t *testing.T) {
+	root, err := temp.TempDirDefault()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := root.TempFile("empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bf := makeTestingFiler()
+	id, err := bf.Ingest(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != emptyID {
+		t.Fatalf("Expected id to be %s, was %s", id, emptyID)
+	}
+}
+
+func TestSaveFile(t *testing.T) {
+	root, err := temp.TempDirDefault()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := root.TempFile("nonempty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.WriteString("some words\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bf := makeTestingFiler()
 	id, err := bf.Ingest(f.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", id, emptyID)
+	}
+	size, err := getSize(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size <= emptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
+	}
+	sha, err := getSha(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sha == emptySha {
+		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
+	}
+}
+
+// directory materialize tests
+func TestMaterializeDir(t *testing.T) {
+	root, err := temp.TempDirDefault()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpDirName := "tmp"
+	tmpDir, err := root.FixedDir(tmpDirName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := tmpDir.TempFile("nonempty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.WriteString("some words\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bf := makeTestingFiler()
+	id, err := bf.Ingest(root.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newTemp, err := temp.TempDirDefault()
+	if err != nil {
+		t.Fatal(newTemp)
+	}
+	co, err := bf.Checkout(id)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

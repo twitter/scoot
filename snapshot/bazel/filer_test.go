@@ -17,11 +17,11 @@ var noopBf = bzFiler{
 	command: noopBzRunner{},
 }
 
-// Checkout tests
-
 func init() {
 	log.AddHook(hooks.NewContextHook())
 }
+
+// Checkout tests
 
 func TestValidBzCheckout(t *testing.T) {
 	bc := &bzCheckout{}

@@ -16,7 +16,6 @@ type bzRunner interface {
 
 type bzCommand struct {
 	localStorePath string
-	root           string
 	serverAddr     string
 	// Not yet implemented:
 	// bypassLocalStore
@@ -29,10 +28,15 @@ func (bc bzCommand) save(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	args := []string{fileType, fsUtilCmdSave, path}
+	args := []string{fileType, fsUtilCmdSave}
+
+	// directory save requires root path
 	if fileType == fsUtilCmdDirectory {
-		args = append(args, "--root", bc.root)
+		args = append(args, fsUtilCmdRoot, path, fsUtilCmdGlobWildCard)
+	} else {
+		args = append(args, path)
 	}
+
 	output, err := bc.runCmd(args)
 	if err != nil {
 		return "", err
@@ -67,10 +71,10 @@ func (bc bzCommand) materialize(sha string, dir string) error {
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	if bc.serverAddr != "" {
-		args = append([]string{"--server-address", bc.serverAddr}, args...)
+		args = append([]string{fsUtilCmdServerAddr, bc.serverAddr}, args...)
 	}
 	if bc.localStorePath != "" {
-		args = append([]string{"--local-store-path", bc.localStorePath}, args...)
+		args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
 	}
 	// We expect fs_util binary to be located at $GOPATH/bin, due to get_fs_util.sh
 	gopath, ok := os.LookupEnv("GOPATH")

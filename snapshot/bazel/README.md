@@ -12,4 +12,10 @@ Bazel Remote Execution snapshots use Snapshot IDs of format bz-<sha256>-<sizeByt
   * Ingests directory or file and stores it as a snapshot
   * noop Updates
 * bzCheckout satisfies the snapshot.Checkout interface
-
+* bzCommand runs fs_util tool as an exec.Cmd with relevant options / flags / args
+  * Possible arguments and expected output
+    * file cat [digest] -> <bytes>
+    * file save [path] -> <sha> <size>
+    * directory save [path] --root [root] [globs]... -> <sha> <size>
+    * directory cat-proto --format={binary,test} -> <sha>
+    * cat [digest] -> <bytes>
