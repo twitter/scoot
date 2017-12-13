@@ -171,7 +171,7 @@ func TestMaterializeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(newTemp)
 	}
-	co, err := bf.Checkout(id)
+	_, err = bf.Checkout(id)
 	if err != nil {
 		t.Fatal(err)
 	}
