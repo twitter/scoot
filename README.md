@@ -88,7 +88,7 @@ python -m grpc.tools.protoc -I. --python_out=./python/scoot --grpc_python_out=./
 
 # Installation Instructions
 ## Install 3rd party tools:
-###Thrift (version >= 0.9.3)
+### Thrift (version >= 0.9.3)
 macOS:
 ```sh
 brew install thrift
