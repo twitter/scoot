@@ -19,9 +19,9 @@ func runJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.
 		return nil, err
 	}
 
-	err = validateJob(jobDef)
+	err = sched.ValidateJob(jobDef)
 	if err != nil {
-		return nil, err
+		return nil, NewInvalidJobRequest(err.Error())
 	}
 
 	id, err := scheduler.ScheduleJob(jobDef)
@@ -86,20 +86,4 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 	}
 
 	return result, nil
-}
-
-// Validate a job, returning an *InvalidJobRequest if invalid.
-func validateJob(job sched.JobDefinition) error {
-	if len(job.Tasks) == 0 {
-		return NewInvalidJobRequest("invalid job. Must have at least 1 task; was empty")
-	}
-	for _, task := range job.Tasks {
-		if task.TaskID == "" {
-			return NewInvalidJobRequest("invalid task id \"\".")
-		}
-		if len(task.Command.Argv) == 0 {
-			return NewInvalidJobRequest("invalid task.Command.Argv. Must have at least one argument; was empty")
-		}
-	}
-	return nil
 }

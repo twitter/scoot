@@ -3,16 +3,23 @@ package execution
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/sched/scheduler"
 )
 
 // Determine that Execute can accept a well-formed request and returns a well-formed response
 func TestExecuteStub(t *testing.T) {
-	s := executionServer{}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	sc := scheduler.NewMockScheduler(mockCtrl)
+	sc.EXPECT().ScheduleJob(gomock.Any()).Return("testJobID", nil)
+
+	s := executionServer{scheduler: sc}
 	ctx := context.Background()
 
 	cmd := remoteexecution.Command{Arguments: []string{"/bin/true"}}
