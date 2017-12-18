@@ -1,8 +1,7 @@
 #!/bin/bash
 # Pulls in fs_util tool for use in remote exec ingestion, checkout, and CAS ops
 
-pants_release="1.4.0"
-fs_util_release="23"
+pants_release="1.4.0.dev23"
 
 get_fs_util() {
 
@@ -10,16 +9,16 @@ get_fs_util() {
 
 		Darwin)
 			echo 'Darwin'
-			local url="https://binaries.pantsbuild.org/bin/fs_util/mac/10.13/$pants_release.dev$fs_util_release/fs_util"
+			local url="https://binaries.pantsbuild.org/bin/fs_util/mac/10.13/$pants_release/fs_util"
 			;;
 
 		Linux)
 			echo 'Linux'
-			local url="https://binaries.pantsbuild.org/bin/fs_util/linux/x86_64/$pants_release.dev$fs_util_release/fs_util"
+			local url="https://binaries.pantsbuild.org/bin/fs_util/linux/x86_64/$pants_release/fs_util"
 			;;
 
 		*)
-			echo "Expected Darwin or Linux output from uname, received $arch"
+			echo "Expected Darwin or Linux output from uname, received $(uname -s)"
 			;;
 
 	esac

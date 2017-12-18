@@ -15,7 +15,7 @@ func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bf.CheckoutAt(id, path.Join(tempDir.Dir, fsUtilCmdMaterialize))
+	return bf.CheckoutAt(id, path.Join(tempDir.Dir, snapshotDirName))
 }
 
 func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
@@ -45,6 +45,7 @@ func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 
 	co := &bzCheckout{
 		dir,
+		bf.keepCheckouts,
 		remoteexecution.Digest{
 			Hash:      sha,
 			SizeBytes: size,

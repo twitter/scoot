@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"os/exec"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -32,13 +33,20 @@ func TestSaveEmptyDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bf := makeTestingFiler()
-	id, err := bf.Ingest(root.Dir)
+	tmpDirPrefix := "tmp"
+	tmpDir, err := root.TempDir(tmpDirPrefix)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	bf := makeTestingFiler()
+	id, err := bf.Ingest(tmpDir.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if id != emptyID {
-		t.Fatalf("Expected id to be %s, was %s", id, emptyID)
+		t.Fatalf("Expected id to be %s, was %s", emptyID, id)
 	}
 }
 
@@ -47,8 +55,8 @@ func TestSaveDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpDirName := "tmp"
-	tmpDir, err := root.FixedDir(tmpDirName)
+	tmpDirPrefix := "tmp"
+	tmpDir, err := root.TempDir(tmpDirPrefix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,11 +68,14 @@ func TestSaveDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	bf := makeTestingFiler()
-	id, err := bf.Ingest(root.Dir)
+	id, err := bf.Ingest(tmpDir.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// TODO: check for actual ID
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", emptyID, id)
 	}
@@ -95,11 +106,13 @@ func TestSaveEmptyFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	bf := makeTestingFiler()
 	id, err := bf.Ingest(f.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if id != emptyID {
 		t.Fatalf("Expected id to be %s, was %s", id, emptyID)
 	}
@@ -118,11 +131,14 @@ func TestSaveFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	bf := makeTestingFiler()
 	id, err := bf.Ingest(f.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// TODO: check for actual ID
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", id, emptyID)
 	}
@@ -140,16 +156,18 @@ func TestSaveFile(t *testing.T) {
 	if sha == emptySha {
 		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
 	}
+
 }
 
-// directory materialize tests
+// directory materialize test
+
 func TestMaterializeDir(t *testing.T) {
 	root, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpDirName := "tmp"
-	tmpDir, err := root.FixedDir(tmpDirName)
+	tmpDirPrefix := "tmp"
+	tmpDir, err := root.TempDir(tmpDirPrefix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,17 +179,21 @@ func TestMaterializeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	bf := makeTestingFiler()
-	id, err := bf.Ingest(root.Dir)
+	id, err := bf.Ingest(tmpDir.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	newTemp, err := temp.TempDirDefault()
+	co, err := bf.Checkout(id)
 	if err != nil {
-		t.Fatal(newTemp)
+		t.Fatal(err)
 	}
-	_, err = bf.Checkout(id)
+	output, err := exec.Command("diff", "-r", co.Path(), root.Dir).Output()
+	if string(output) != "" {
+		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir.Dir, string(output))
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

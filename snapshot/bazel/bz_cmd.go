@@ -1,12 +1,14 @@
 package bazel
 
 import (
-	"fmt"
-	"os"
 	"os/exec"
+	filepath "path"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common"
 )
 
 type bzRunner interface {
@@ -18,11 +20,30 @@ type bzCommand struct {
 	localStorePath string
 	serverAddr     string
 	// Not yet implemented:
-	// bypassLocalStore
-	// skipServer
+	// bypassLocalStore bool
+	// skipServer bool
+}
+
+func MakeBzCommand() bzCommand {
+	return bzCommand{}
+}
+
+// Options is a variadic list of functions that take a *bzCommand as an arg
+// and modify its fields, e.g.
+// localStorePath := func(bc *bzCommand) {
+//     bc.localStorePath = "/path/to/local/store"
+// }
+func MakeBzCommandWithOptions(options ...func(*bzCommand)) bzCommand {
+	bc := bzCommand{}
+	for _, opt := range options {
+		opt(&bc)
+	}
+	return bc
 }
 
 // Saves the file/dir specified by path using the fsUtilCmd & validates the id format
+// Note: if there are any "irregular" files in path or path's parent dir (root) - e.g. *.sock
+// files, etc. - fs_util will fail to expand globs.
 func (bc bzCommand) save(path string) (string, error) {
 	fileType, err := getFileType(path)
 	if err != nil {
@@ -32,10 +53,13 @@ func (bc bzCommand) save(path string) (string, error) {
 
 	// directory save requires root path
 	if fileType == fsUtilCmdDirectory {
-		args = append(args, fsUtilCmdRoot, path, fsUtilCmdGlobWildCard)
+		base := filepath.Base(path)
+		root := strings.TrimSuffix(path, base)
+		args = append(args, fsUtilCmdRoot, root, filepath.Join(base, fsUtilCmdGlobWildCard))
 	} else {
 		args = append(args, path)
 	}
+	log.Info(args)
 
 	output, err := bc.runCmd(args)
 	if err != nil {
@@ -77,13 +101,11 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 		args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
 	}
 	// We expect fs_util binary to be located at $GOPATH/bin, due to get_fs_util.sh
-	gopath, ok := os.LookupEnv("GOPATH")
-	if !ok {
-		return nil, fmt.Errorf("Error: GOPATH not found in env")
+	gp, err := common.GetFirstGopath()
+	if err != nil {
+		return nil, err
 	}
-	// log.Error(fmt.Sprintf("%s/bin/%s", gopath, fsUtilCmd))
-	log.Info(args)
-	return exec.Command(fmt.Sprintf("%s/bin/%s", gopath, fsUtilCmd), args...).Output()
+	return exec.Command(filepath.Join(gp, "bin", fsUtilCmd), args...).Output()
 }
 
 // Noop bzRunner for stub testing

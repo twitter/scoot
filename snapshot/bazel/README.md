@@ -15,5 +15,5 @@ Bazel Remote Execution snapshots use Snapshot IDs of format bz-<sha256>-<sizeByt
 * bzCommand runs fs_util tool as an exec.Cmd with relevant options / flags / args
   * Possible arguments and expected output
     * file save [path] -> <sha> <size>
-    * directory save --root [root] \*\* -> <sha> <size>
+    * directory save --root [root] \[dir] -> <sha> <size>
     * directory materialize <sha> <path>
