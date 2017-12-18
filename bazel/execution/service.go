@@ -132,6 +132,9 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (result sched.JobDefini
 	}
 
 	// This creates a hardcoded job for now
+	// TODO Extract relevant task fields from ExecuteRequest, including timeouts,
+	// dir snapshot, command snapshot IDs, and other metadata.
+	// TODO Task runs without a snapshot as CAS-based snapshots are not yet integrated into workers
 	result.Tasks = []sched.TaskDefinition{}
 	var task sched.TaskDefinition
 	task.TaskID = fmt.Sprintf("ExecuteRequest_%d", time.Now().Unix())
