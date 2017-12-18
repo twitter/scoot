@@ -59,7 +59,8 @@ func validateFsUtilSaveOutput(output []byte) error {
 }
 
 func splitFsUtilSaveOutput(output []byte) ([]string, error) {
-	s := strings.Split(string(output), " ")
+	t := strings.TrimSpace(string(output))
+	s := strings.Split(t, " ")
 	if len(s) != 2 {
 		return nil, fmt.Errorf("Error: %s. Expected <sha> <size>, received %v", invalidSaveOutputMsg, string(output))
 	}

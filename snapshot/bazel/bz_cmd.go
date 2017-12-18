@@ -2,7 +2,13 @@ package bazel
 
 import (
 	"os/exec"
+	filepath "path"
 	"strconv"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common"
 )
 
 type bzRunner interface {
@@ -12,20 +18,50 @@ type bzRunner interface {
 
 type bzCommand struct {
 	localStorePath string
+	serverAddr     string
 	// Not yet implemented:
 	// bypassLocalStore bool
-	// skipServer       bool
-	// serverAddress    string
+	// skipServer bool
+}
+
+func MakeBzCommand() bzCommand {
+	return bzCommand{}
+}
+
+// Options is a variadic list of functions that take a *bzCommand as an arg
+// and modify its fields, e.g.
+// localStorePath := func(bc *bzCommand) {
+//     bc.localStorePath = "/path/to/local/store"
+// }
+func MakeBzCommandWithOptions(options ...func(*bzCommand)) bzCommand {
+	bc := bzCommand{}
+	for _, opt := range options {
+		opt(&bc)
+	}
+	return bc
 }
 
 // Saves the file/dir specified by path using the fsUtilCmd & validates the id format
+// Note: if there are any "irregular" files in path or path's parent dir (root) - e.g. *.sock
+// files, etc. - fs_util will fail to expand globs.
 func (bc bzCommand) save(path string) (string, error) {
 	fileType, err := getFileType(path)
 	if err != nil {
 		return "", err
 	}
+	args := []string{fileType, fsUtilCmdSave}
 
-	output, err := bc.runCmd([]string{fileType, fsUtilCmdSave, path})
+	// directory save requires root path
+	if fileType == fsUtilCmdDirectory {
+		base := filepath.Base(path)
+		root := strings.TrimSuffix(path, base)
+		args = append(args, fsUtilCmdRoot, root, filepath.Join(base, fsUtilCmdGlobWildCard))
+	} else {
+		args = append(args, path)
+	}
+	log.Info(args)
+
+	output, err := bc.runCmd(args)
 	if err != nil {
 		return "", err
 	}
@@ -58,11 +94,18 @@ func (bc bzCommand) materialize(sha string, dir string) error {
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, error) {
-	if bc.localStorePath != "" {
-		args = append(args, "--local-store-path", bc.localStorePath)
+	if bc.serverAddr != "" {
+		args = append([]string{fsUtilCmdServerAddr, bc.serverAddr}, args...)
 	}
-	cmd := exec.Command(fsUtilCmd, args...)
-	return cmd.Output()
+	if bc.localStorePath != "" {
+		args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
+	}
+	// We expect fs_util binary to be located at $GOPATH/bin, due to get_fs_util.sh
+	gp, err := common.GetFirstGopath()
+	if err != nil {
+		return nil, err
+	}
+	return exec.Command(filepath.Join(gp, "bin", fsUtilCmd), args...).Output()
 }
 
 // Noop bzRunner for stub testing

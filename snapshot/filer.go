@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"fmt"
 	"os/exec"
 	"time"
 
@@ -99,9 +100,10 @@ func (dba *dbAdapter) Ingest(path string) (id string, err error) {
 	}
 }
 
-func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (id string, err error) {
-	log.Error("Not implemented")
-	return "", nil
+func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (string, error) {
+	errMsg := "Not implemented"
+	log.Error(errMsg)
+	return "", fmt.Errorf(errMsg)
 }
 
 func (dba *dbAdapter) Update() error {
