@@ -47,6 +47,10 @@ generate:
 format:
 	go fmt $$(go list ./... | grep -v /vendor/)
 
+fs_util:
+	# Fetches fs_util tool from pantsbuild binaries
+	sh get_fs_util.sh
+
 vet:
 	go vet $$(go list ./... | grep -v /vendor/)
 
@@ -99,7 +103,7 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies recoverytest swarmtest test clean-data
+travis: dependencies fs_util recoverytest swarmtest test clean-data
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift

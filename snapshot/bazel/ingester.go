@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,6 +20,7 @@ func (bf *bzFiler) Ingest(path string) (string, error) {
 }
 
 func (bf *bzFiler) IngestMap(srcToDest map[string]string) (string, error) {
-	log.Error("Not implemented")
-	return "", nil
+	errMsg := "Not implemented"
+	log.Error(errMsg)
+	return "", fmt.Errorf(errMsg)
 }

@@ -8,7 +8,8 @@ import (
 
 // Satisfies snapshot.Checkout
 type bzCheckout struct {
-	dir string
+	dir           string
+	keepOnRelease bool
 	remoteexecution.Digest
 }
 
@@ -21,5 +22,8 @@ func (bc *bzCheckout) ID() string {
 }
 
 func (bc *bzCheckout) Release() error {
-	return os.Remove(bc.dir)
+	if bc.keepOnRelease {
+		return nil
+	}
+	return os.Remove(bc.Path())
 }

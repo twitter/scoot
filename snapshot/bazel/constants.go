@@ -7,10 +7,19 @@ const (
 	invalidSaveOutputMsg = "invalid output format"
 
 	bzSnapshotIdPrefix = "bz"
+	snapshotDirName    = "snapshot"
 
-	fsUtilCmd            = "fs_util"
-	fsUtilCmdMaterialize = "materialize"
-	fsUtilCmdSave        = "save"
-	fsUtilCmdDirectory   = "directory"
-	fsUtilCmdFile        = "file"
+	fsUtilCmd             = "fs_util"
+	fsUtilCmdMaterialize  = "materialize"
+	fsUtilCmdSave         = "save"
+	fsUtilCmdDirectory    = "directory"
+	fsUtilCmdFile         = "file"
+	fsUtilCmdRoot         = "--root"
+	fsUtilCmdLocalStore   = "--local-store-path"
+	fsUtilCmdServerAddr   = "--server-address"
+	fsUtilCmdGlobWildCard = "*"
+
+	emptySha  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	emptySize = int64(0)
+	emptyID   = bzSnapshotIdPrefix + "-" + emptySha + "-" + "0"
 )
