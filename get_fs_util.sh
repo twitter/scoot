@@ -23,8 +23,9 @@ get_fs_util() {
 
 	esac
 
-	wget "$url" -P "$GOPATH/bin/"
-	chmod +x "$GOPATH/bin/fs_util"
+	firstgopath=${GOPATH%%:*}
+	wget "$url" -P "$firstgopath/bin/"
+	chmod +x "$firstgopath/bin/fs_util"
 }
 
 get_fs_util
