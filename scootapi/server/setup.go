@@ -93,8 +93,8 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
 		},
 
-		func(l bazel.GRPCListener) bazel.GRPCServer {
-			return execution.MakeExecutionServer(l)
+		func(l bazel.GRPCListener, s scheduler.Scheduler) bazel.GRPCServer {
+			return execution.MakeExecutionServer(l, s)
 		},
 	)
 

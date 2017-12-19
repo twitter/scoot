@@ -2,6 +2,7 @@
 package sched
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/twitter/scoot/common/log/tags"
@@ -193,4 +194,20 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 
 	return &thriftJob, nil
 
+}
+
+// Validate a job, returning an *InvalidJobRequest if invalid.
+func ValidateJob(job JobDefinition) error {
+	if len(job.Tasks) == 0 {
+		return fmt.Errorf("invalid job. Must have at least 1 task; was empty")
+	}
+	for _, task := range job.Tasks {
+		if task.TaskID == "" {
+			return fmt.Errorf("invalid task id \"\".")
+		}
+		if len(task.Command.Argv) == 0 {
+			return fmt.Errorf("invalid task.Command.Argv. Must have at least one argument; was empty")
+		}
+	}
+	return nil
 }

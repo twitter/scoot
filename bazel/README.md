@@ -31,7 +31,12 @@ Use a global, non-MDE copy of brew to install dependencies such as gflags, as MD
 these libraries accessible when trying to compile and link the grpc binaries.
 
 ### Usage Example
+#### CAS - Apiserver
 This is a brief example of using a locally running default apiserver for a CAS Write and Read request using grpc_cli:
+
+```sh
+apiserver
+```
 
 ```sh
 [...]$ grpc_cli call localhost:9098 google.bytestream.ByteStream.Write "resource_name: 'uploads/123e4567-e89b-12d3-a456-426655440000/blobs/ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa67856f242/7', write_offset: 0, finish_write: true, data: 'abc1234'"
@@ -47,6 +52,30 @@ committed_size: 7
 [...]$ grpc_cli call localhost:9098 google.bytestream.ByteStream.Read "resource_name: 'blobs/ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa67856f242/7', read_offset: 0, read_limit: 0"
 connecting to localhost:9098
 data: "abc1234"
+
+Rpc succeeded with OK status
+```
+
+#### Execution - Scheduler
+This is a brief example of using a locally running default scheduler for an Execute request using grpc_cli:
+
+```sh
+scheduler
+```
+
+```sh
+[...]$ grpc_cli call localhost:9099 google.devtools.remoteexecution.v1test.Execution.Execute "action: {command_digest: {hash: 'abc123', size_bytes: 0}, input_root_digest: {hash: 'def456', size_bytes: 0}}"
+connecting to localhost:9099
+name: "operations/737a1171-dea7-47c6-4585-f3f7d4f0245e"
+metadata {
+  type_url: "type.googleapis.com/google.devtools.remoteexecution.v1test.ExecuteOperationMetadata"
+  value: "\010\004\022D\n@522578c80d054569075825ebc82573d7d9c429178d3ecf7a9e276b115fa7837f\020\024"
+}
+done: true
+response {
+  type_url: "type.googleapis.com/google.devtools.remoteexecution.v1test.ExecuteResponse"
+  value: "\n\000"
+}
 
 Rpc succeeded with OK status
 ```
