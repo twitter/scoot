@@ -11,7 +11,6 @@
 # To Generate files run from this (github.com/twitter/scoot/sched) directory
 #     1. thrift --gen go:package_prefix=github.com/twitter/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift
 
-
 struct Command {
   1: required list<string> argv
   2: optional map<string, string> envVars
@@ -22,6 +21,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command
   2: optional string taskId
+  3: optional BazelExecuteRequest bazelRequest
 }
 
 struct JobDefinition {
@@ -36,4 +36,33 @@ struct JobDefinition {
 struct Job {
   1: required string id
   2: required JobDefinition jobDefinition
+}
+
+# Structures for storing Bazel request fields in
+# Tasks started from Bazel Execute Requests
+
+struct BazelDigest {
+  1: required string hash
+  2: required i64 sizeBytes
+}
+
+struct BazelProperty {
+  1: required string name
+  2: required string value
+}
+
+struct BazelAction {
+  1: required BazelDigest commandDigest
+  2: required BazelDigest inputDigest
+  3: optional list<string> outputFiles
+  4: optional list<string> outputDirs
+  5: optional list<BazelProperty> platformProperties
+  6: optional i64 timeoutMs
+  7: optional bool noCache
+}
+
+struct BazelExecuteRequest {
+  1: required BazelAction action
+  2: optional string instanceName
+  3: optional bool skipCache
 }

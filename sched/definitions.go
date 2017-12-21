@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
@@ -54,6 +55,7 @@ type JobDefinition struct {
 // Task is one task to run
 type TaskDefinition struct {
 	runner.Command
+	ExecuteRequest *request.ExecuteRequest
 }
 
 // Status for Job & Tasks
@@ -131,7 +133,10 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 					Tag:    thriftJobDef.GetTag(),
 				},
 			}
-			domainTasks = append(domainTasks, TaskDefinition{command})
+
+			er := request.SchedMakeDomainFromThrift(task.BazelRequest)
+
+			domainTasks = append(domainTasks, TaskDefinition{command, er})
 		}
 
 		jobType = thriftJobDef.GetJobType()
@@ -171,9 +176,10 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			Timeout:    &to,
 			SnapshotId: domainTask.SnapshotID,
 		}
-
 		taskId := domainTask.TaskID
-		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId}
+		execReq := request.SchedMakeThriftFromDomain(domainTask.ExecuteRequest)
+
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId, BazelRequest: execReq}
 		thriftTasks = append(thriftTasks, &thriftTask)
 	}
 

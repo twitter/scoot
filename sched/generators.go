@@ -113,7 +113,7 @@ func GenRandomTask(rng *rand.Rand, tag string) TaskDefinition {
 		},
 	}
 
-	return TaskDefinition{cmd}
+	return TaskDefinition{cmd, nil}
 }
 
 // Randomly generates an Id that is valid for

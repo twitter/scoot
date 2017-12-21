@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched"
@@ -46,7 +47,7 @@ func (s *executionServer) IsInitialized() bool {
 }
 
 func (s *executionServer) Serve() error {
-	log.Info("Serving GRPC Execution API on: ", s.listener.Addr())
+	log.Infof("Serving GRPC Execution API on: %s", s.listener.Addr())
 	return s.server.Serve(s.listener)
 }
 
@@ -89,7 +90,7 @@ func (s *executionServer) Execute(
 		log.Errorf("Failed to schedule Scoot job: %s", err)
 		return nil, err
 	}
-	log.Info("Scheduled execute request as Scoot job: %s", id)
+	log.Infof("Scheduled execute request as Scoot job: %s", id)
 
 	op := longrunning.Operation{}
 	op.Name = fmt.Sprintf("operations/%s", id)
@@ -134,12 +135,14 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (result sched.JobDefini
 	// This creates a hardcoded job for now
 	// TODO Extract relevant task fields from ExecuteRequest, including timeouts,
 	// dir snapshot, command snapshot IDs, and other metadata.
+	// (This is where Scoot-Job-specific fields get set from matching ExecReq fields)
 	// TODO Task runs without a snapshot as CAS-based snapshots are not yet integrated into workers
 	result.Tasks = []sched.TaskDefinition{}
 	var task sched.TaskDefinition
 	task.TaskID = fmt.Sprintf("ExecuteRequest_%d", time.Now().Unix())
 	task.Command.Argv = []string{"sleep", "10"}
 	task.Command.EnvVars = make(map[string]string)
+	task.ExecuteRequest = &request.ExecuteRequest{Request: *req}
 	result.Tasks = append(result.Tasks, task)
 
 	return result, nil

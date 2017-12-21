@@ -3,6 +3,7 @@ package proto
 import (
 	"testing"
 
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/empty"
 )
 
@@ -19,6 +20,19 @@ func TestGetSha256(t *testing.T) {
 		t.Fatalf("Expected known sha for nil/empty data %s, got: %s", nilDataSha, s)
 	}
 	if l != 0 {
-		t.Errorf("Expected zero length data, got: %d", l)
+		t.Fatalf("Expected zero length data, got: %d", l)
+	}
+}
+
+func TestMsDuration(t *testing.T) {
+	d := duration.Duration{Seconds: 3, Nanos: 5000004}
+	ms := GetMsFromDuration(&d)
+	if ms != 3005 {
+		t.Fatalf("Expected 3005, got: %dms", ms)
+	}
+
+	d = GetDurationFromMs(ms)
+	if d.GetSeconds() != 3 || d.GetNanos() != 5000000 {
+		t.Fatalf("Expected 3s 5000000ns, got: %ds %dns", d.GetSeconds(), d.GetNanos())
 	}
 }
