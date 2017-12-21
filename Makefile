@@ -57,7 +57,7 @@ vet:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
-test-unit-property-integration:
+test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
 	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 

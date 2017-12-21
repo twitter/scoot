@@ -18,6 +18,8 @@ type jobState struct {
 	TasksCompleted int          //number of tasks that've been marked completed so far.
 	TasksRunning   int          //number of tasks that've been scheduled or started.
 	JobKilled      bool         //indicates the job was killed
+	TimeCreated    time.Time    //when was this job first created
+	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
 }
 
 // Contains all the information for a specified task
@@ -56,6 +58,8 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 		TasksCompleted: 0,
 		TasksRunning:   0,
 		JobKilled:      false,
+		TimeCreated:    time.Now(),
+		TimeMarker:     time.Now(),
 	}
 
 	for _, taskDef := range job.Def.Tasks {
