@@ -54,6 +54,9 @@ const DefaultMaxJobsPerRequestor = 100
 // Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
 const DefaultSoftMaxSchedulableTasks = 1
 
+//
+const LongJobDuration = 4 * time.Hour
+
 // The max job priority we respect (higher priority is untested and disabled)
 const MaxPriority = sched.P2
 
@@ -476,6 +479,19 @@ func (s *statefulScheduler) updateStats() {
 			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
 
+		if time.Now().Sub(job.TimeMarker) > LongJobDuration {
+			log.WithFields(
+				log.Fields{
+					"requestor":      job.Job.Def.Requestor,
+					"tag":            job.Job.Def.Tag,
+					"basis":          job.Job.Def.Basis,
+					"priority":       job.Job.Def.Priority,
+					"numTasks":       len(job.Tasks),
+					"tasksRunning":   job.TasksRunning,
+					"tasksCompleted": job.TasksCompleted,
+					"runTime":        time.Now().Sub(job.TimeCreated),
+				}).Info("Long-running job")
+		}
 	}
 
 	// publish the requestor stats

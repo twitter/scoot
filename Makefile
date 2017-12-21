@@ -61,11 +61,11 @@ test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
 	go test -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
-test-unit-property: fs_util
+test-unit-property:
 	# Runs only unit tests and property tests
 	go test -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
-test-unit: fs_util
+test-unit:
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output
 	go test -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
