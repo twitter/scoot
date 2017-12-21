@@ -184,7 +184,8 @@ func (db *DB) UpdateInterval() time.Duration {
 	return db.updater.UpdateInterval()
 }
 
-// loop loops serving requests serially
+// loop loops serving requests serially, blocking only if there are multiple checkout requests.
+// only one checkout is allowed at a time in the underlying repo, everything else should be ok if concurrent
 func (db *DB) loop(initer RepoIniter) {
 	if db.init(initer); db.err != nil {
 		// we couldn't create our repo, so all operations will fail before
@@ -192,6 +193,21 @@ func (db *DB) loop(initer RepoIniter) {
 		return
 	}
 
+	// Handle checkout logic separately and block until each request completes
+	checkoutCh := make(chan interface{})
+	go func() {
+		for req := range checkoutCh {
+			switch req := req.(type) {
+			case checkoutReq:
+				path, err := db.checkout(req.id)
+				req.resultCh <- stringAndError{str: path, err: err}
+			case releaseCheckoutReq:
+				req.resultCh <- db.releaseCheckout(req.path)
+			}
+		}
+	}()
+
+	// Handle all request types
 	for db.reqCh != nil {
 		req, ok := <-db.reqCh
 		if !ok {
@@ -200,55 +216,70 @@ func (db *DB) loop(initer RepoIniter) {
 		}
 		switch req := req.(type) {
 		case ingestReq:
-			s, err := db.ingestDir(req.dir)
-			if err == nil && db.autoUpload != nil {
-				s, err = db.autoUpload.upload(s, db)
-			}
-			if err != nil {
-				req.resultCh <- idAndError{err: err}
-			} else {
-				req.resultCh <- idAndError{id: s.ID()}
-			}
+			go func() {
+				s, err := db.ingestDir(req.dir)
+				if err == nil && db.autoUpload != nil {
+					s, err = db.autoUpload.upload(s, db)
+				}
+				if err != nil {
+					req.resultCh <- idAndError{err: err}
+				} else {
+					req.resultCh <- idAndError{id: s.ID()}
+				}
+			}()
 		case ingestGitCommitReq:
-			s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
-			if err == nil && db.autoUpload != nil {
-				s, err = db.autoUpload.upload(s, db)
-			}
-			if err != nil {
-				req.resultCh <- idAndError{err: err}
-			} else {
-				req.resultCh <- idAndError{id: s.ID()}
-			}
+			go func() {
+				s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
+				if err == nil && db.autoUpload != nil {
+					s, err = db.autoUpload.upload(s, db)
+				}
+				if err != nil {
+					req.resultCh <- idAndError{err: err}
+				} else {
+					req.resultCh <- idAndError{id: s.ID()}
+				}
+			}()
 		case ingestGitWorkingDirReq:
-			s, err := db.ingestGitWorkingDir(req.ingestRepo)
-			if err == nil && db.autoUpload != nil {
-				s, err = db.autoUpload.upload(s, db)
-			}
-			if err != nil {
-				req.resultCh <- idAndError{err: err}
-			} else {
-				req.resultCh <- idAndError{id: s.ID()}
-			}
+			go func() {
+				s, err := db.ingestGitWorkingDir(req.ingestRepo)
+				if err == nil && db.autoUpload != nil {
+					s, err = db.autoUpload.upload(s, db)
+				}
+				if err != nil {
+					req.resultCh <- idAndError{err: err}
+				} else {
+					req.resultCh <- idAndError{id: s.ID()}
+				}
+			}()
 		case uploadFileReq:
-			s, err := db.bundles.uploadFile(req.filePath, req.ttl)
-			req.resultCh <- stringAndError{str: s, err: err}
+			go func() {
+				s, err := db.bundles.uploadFile(req.filePath, req.ttl)
+				req.resultCh <- stringAndError{str: s, err: err}
+			}()
 		case readFileAllReq:
-			data, err := db.readFileAll(req.id, req.path)
-			req.resultCh <- stringAndError{str: data, err: err}
-		case checkoutReq:
-			path, err := db.checkout(req.id)
-			req.resultCh <- stringAndError{str: path, err: err}
-		case releaseCheckoutReq:
-			req.resultCh <- db.releaseCheckout(req.path)
+			go func() {
+				data, err := db.readFileAll(req.id, req.path)
+				req.resultCh <- stringAndError{str: data, err: err}
+			}()
+		case checkoutReq, releaseCheckoutReq:
+			go func() {
+				checkoutCh <- req
+			}()
 		case exportGitCommitReq:
-			sha, err := db.exportGitCommit(req.id, req.exportRepo)
-			req.resultCh <- stringAndError{str: sha, err: err}
+			go func() {
+				sha, err := db.exportGitCommit(req.id, req.exportRepo)
+				req.resultCh <- stringAndError{str: sha, err: err}
+			}()
 		case updateRepoReq:
-			req.resultCh <- db.updateRepo()
+			go func() {
+				req.resultCh <- db.updateRepo()
+			}()
 		default:
 			panic(fmt.Errorf("unknown reqtype: %T %v", req, req))
 		}
 	}
+
+	close(checkoutCh)
 }
 
 // Request entry points and request/result type defs
