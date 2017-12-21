@@ -480,6 +480,7 @@ func (s *statefulScheduler) updateStats() {
 		}
 
 		if time.Now().Sub(job.TimeMarker) > LongJobDuration {
+			job.TimeMarker = time.Now()
 			log.WithFields(
 				log.Fields{
 					"requestor":      job.Job.Def.Requestor,
