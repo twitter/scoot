@@ -108,7 +108,7 @@ func TestGetOperationStub(t *testing.T) {
 	}
 
 	metadata := remoteexecution.ExecuteOperationMetadata{}
-	getOpRes := getOperationResponse{}
+	getOpRes := remoteexecution.ExecuteResponse{}
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal metadata from any: %v", err)

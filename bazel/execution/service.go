@@ -107,6 +107,7 @@ func (s *executionServer) Execute(
 	}
 	op.Metadata = eomAsPBAny
 
+	// TODO move boilerplate response struct generation into a common utility function
 	res := remoteexecution.ExecuteResponse{}
 	ar := remoteexecution.ActionResult{}
 	ar.ExitCode = 0
@@ -155,7 +156,7 @@ func (s *executionServer) GetOperation(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	// TODO get job identified by req.Name's status
+	// TODO get status of job identified by req.Name
 
 	op := longrunning.Operation{}
 	op.Name = req.Name
@@ -172,7 +173,8 @@ func (s *executionServer) GetOperation(
 	}
 	op.Metadata = eomAsPBAny
 
-	res := getOperationResponse{}
+	// TODO move boilerplate response struct generation into a common utility function
+	res := remoteexecution.ExecuteResponse{}
 	ar := remoteexecution.ActionResult{}
 	ar.ExitCode = 0
 	res.Result = &ar
@@ -189,8 +191,4 @@ func (s *executionServer) GetOperation(
 	// Include the response message in the longrunning operation message
 	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
-}
-
-type getOperationResponse struct {
-	remoteexecution.ExecuteResponse
 }
