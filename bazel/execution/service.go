@@ -107,6 +107,7 @@ func (s *executionServer) Execute(
 	}
 	op.Metadata = eomAsPBAny
 
+	// TODO move boilerplate response struct generation into a common utility function
 	res := remoteexecution.ExecuteResponse{}
 	ar := remoteexecution.ActionResult{}
 	ar.ExitCode = 0
@@ -143,4 +144,51 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (result sched.JobDefini
 	result.Tasks = append(result.Tasks, task)
 
 	return result, nil
+}
+
+// Stub of GetOperation API - most fields omitted but returns a valid hardcoded response.
+func (s *executionServer) GetOperation(
+	ctx context.Context,
+	req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
+	log.Infof("Received GetOperation request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
+	// TODO get status of job identified by req.Name
+
+	op := longrunning.Operation{}
+	op.Name = req.Name
+	op.Done = true
+
+	eom := remoteexecution.ExecuteOperationMetadata{}
+	eom.Stage = remoteexecution.ExecuteOperationMetadata_COMPLETED
+
+	// Marshal ExecuteActionMetadata to protobuf.Any format
+	eomAsPBAny, err := ptypes.MarshalAny(&eom)
+	if err != nil {
+		log.Errorf("Failed to marshal ExecuteOperationMetadata: %s", err)
+		return nil, fmt.Errorf("Failed to marshal ExecuteOperationMetadata as ptypes/any.Any: %s", err)
+	}
+	op.Metadata = eomAsPBAny
+
+	// TODO move boilerplate response struct generation into a common utility function
+	res := remoteexecution.ExecuteResponse{}
+	ar := remoteexecution.ActionResult{}
+	ar.ExitCode = 0
+	res.Result = &ar
+	res.CachedResult = false
+
+	// Marshal ExecuteResponse to protobuf.Any format
+	resAsPBAny, err := ptypes.MarshalAny(&res)
+	if err != nil {
+		log.Errorf("Failed to marshal GetOperationResponse: %s", err)
+		return nil, fmt.Errorf("Failed to marshal GetOperationResponse as ptypes/any.Any: %s", err)
+	}
+
+	log.Info("GetOperationRequest completed successfully")
+	// Include the response message in the longrunning operation message
+	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
+	return &op, nil
 }

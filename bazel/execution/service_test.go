@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	"google.golang.org/genproto/googleapis/longrunning"
 
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched/scheduler"
@@ -73,4 +74,48 @@ func TestExecuteStub(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
+}
+
+// Determine that GetOperation can accept a well-formed request and returns a well-formed response
+func TestGetOperationStub(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	sc := scheduler.NewMockScheduler(mockCtrl)
+
+	s := executionServer{scheduler: sc}
+	ctx := context.Background()
+
+	req := longrunning.GetOperationRequest{
+		Name: "testJobID",
+	}
+
+	res, err := s.GetOperation(ctx, &req)
+	if err != nil {
+		t.Fatalf("Non-nil error from GetOperation: %v", err)
+	}
+
+	done := res.GetDone()
+	if !done {
+		t.Fatal("Expected response to be done")
+	}
+	metadataAny := res.GetMetadata()
+	if metadataAny == nil {
+		t.Fatalf("Nil metadata from operation: %s", res)
+	}
+	getOpResAny := res.GetResponse()
+	if getOpResAny == nil {
+		t.Fatalf("Nil response from operation: %s", res)
+	}
+
+	metadata := remoteexecution.ExecuteOperationMetadata{}
+	getOpRes := remoteexecution.ExecuteResponse{}
+	err = ptypes.UnmarshalAny(metadataAny, &metadata)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
+	}
+	err = ptypes.UnmarshalAny(getOpResAny, &getOpRes)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal response from any: %v", err)
+	}
+
 }
