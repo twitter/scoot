@@ -135,7 +135,6 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 		return result, fmt.Errorf("Nil execute request")
 	}
 
-	// TODO test make thrift
 	// TODO refactor the snapshot/bazel/ stuff.... sigh
 	// TODO a test that verifies all this shit is set up correctly
 	result.Priority = sched.P0
