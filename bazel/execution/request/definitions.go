@@ -6,8 +6,8 @@ package request
 import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
+	"github.com/twitter/scoot/bazel/execution/request/gen-go/request"
 	scootproto "github.com/twitter/scoot/common/proto"
-	"github.com/twitter/scoot/sched/gen-go/schedthrift"
 )
 
 // This type gives us a single reference point for passing Execute Requests and
@@ -16,8 +16,9 @@ type ExecuteRequest struct {
 	Request remoteexecution.ExecuteRequest
 }
 
-// Transform schedthrift Bazel ExecuteRequest data into a domain object
-func SchedMakeDomainFromThrift(thriftRequest *schedthrift.BazelExecuteRequest) *ExecuteRequest {
+// TODO rename sched???
+// Transform request Bazel ExecuteRequest data into a domain object
+func SchedMakeDomainFromThrift(thriftRequest *request.BazelExecuteRequest) *ExecuteRequest {
 	if thriftRequest == nil {
 		return nil
 	}
@@ -28,7 +29,7 @@ func SchedMakeDomainFromThrift(thriftRequest *schedthrift.BazelExecuteRequest) *
 	return &ExecuteRequest{Request: er}
 }
 
-func schedMakeActionFromThrift(thriftAction *schedthrift.BazelAction) *remoteexecution.Action {
+func schedMakeActionFromThrift(thriftAction *request.BazelAction) *remoteexecution.Action {
 	if thriftAction == nil {
 		return nil
 	}
@@ -44,14 +45,14 @@ func schedMakeActionFromThrift(thriftAction *schedthrift.BazelAction) *remoteexe
 	}
 }
 
-func schedMakeDigestFromThrift(thriftDigest *schedthrift.BazelDigest) *remoteexecution.Digest {
+func schedMakeDigestFromThrift(thriftDigest *request.BazelDigest) *remoteexecution.Digest {
 	if thriftDigest == nil {
 		return nil
 	}
 	return &remoteexecution.Digest{Hash: thriftDigest.GetHash(), SizeBytes: thriftDigest.GetSizeBytes()}
 }
 
-func schedMakePlatformFromThrift(thriftProperties []*schedthrift.BazelProperty) *remoteexecution.Platform {
+func schedMakePlatformFromThrift(thriftProperties []*request.BazelProperty) *remoteexecution.Platform {
 	platform := &remoteexecution.Platform{}
 	platform.Properties = make([]*remoteexecution.Platform_Property, len(thriftProperties))
 	for _, prop := range thriftProperties {
@@ -64,24 +65,24 @@ func schedMakePlatformFromThrift(thriftProperties []*schedthrift.BazelProperty) 
 	return platform
 }
 
-// Transforms domain ExecuteRequest object into schedthrift representation
-func SchedMakeThriftFromDomain(executeRequest *ExecuteRequest) *schedthrift.BazelExecuteRequest {
+// Transforms domain ExecuteRequest object into request representation
+func SchedMakeThriftFromDomain(executeRequest *ExecuteRequest) *request.BazelExecuteRequest {
 	if executeRequest == nil {
 		return nil
 	}
-	return &schedthrift.BazelExecuteRequest{
+	return &request.BazelExecuteRequest{
 		InstanceName: &executeRequest.Request.InstanceName,
 		SkipCache:    &executeRequest.Request.SkipCacheLookup,
 		Action:       schedMakeActionThriftFromDomain(executeRequest.Request.GetAction()),
 	}
 }
 
-func schedMakeActionThriftFromDomain(action *remoteexecution.Action) *schedthrift.BazelAction {
+func schedMakeActionThriftFromDomain(action *remoteexecution.Action) *request.BazelAction {
 	if action == nil {
 		return nil
 	}
 	t := scootproto.GetMsFromDuration(action.GetTimeout())
-	return &schedthrift.BazelAction{
+	return &request.BazelAction{
 		CommandDigest:      schedMakeDigestThriftFromDomain(action.GetCommandDigest()),
 		InputDigest:        schedMakeDigestThriftFromDomain(action.GetInputRootDigest()),
 		OutputFiles:        action.GetOutputFiles(),
@@ -92,26 +93,24 @@ func schedMakeActionThriftFromDomain(action *remoteexecution.Action) *schedthrif
 	}
 }
 
-func schedMakeDigestThriftFromDomain(digest *remoteexecution.Digest) *schedthrift.BazelDigest {
+func schedMakeDigestThriftFromDomain(digest *remoteexecution.Digest) *request.BazelDigest {
 	if digest == nil {
 		return nil
 	}
-	return &schedthrift.BazelDigest{Hash: digest.GetHash(), SizeBytes: digest.GetSizeBytes()}
+	return &request.BazelDigest{Hash: digest.GetHash(), SizeBytes: digest.GetSizeBytes()}
 }
 
-func schedMakePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*schedthrift.BazelProperty {
+func schedMakePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*request.BazelProperty {
 	if platform == nil {
-		return make([]*schedthrift.BazelProperty, 0)
+		return make([]*request.BazelProperty, 0)
 	}
-	props := make([]*schedthrift.BazelProperty, len(platform.GetProperties()))
+	props := make([]*request.BazelProperty, len(platform.GetProperties()))
 	for _, p := range platform.GetProperties() {
 		if p == nil {
 			continue
 		}
-		bp := &schedthrift.BazelProperty{Name: p.GetName(), Value: p.GetValue()}
+		bp := &request.BazelProperty{Name: p.GetName(), Value: p.GetValue()}
 		props = append(props, bp)
 	}
 	return props
 }
-
-// WorkerAPI functions

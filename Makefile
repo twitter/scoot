@@ -105,6 +105,7 @@ fullbuild: dependencies generate test
 
 travis: dependencies fs_util recoverytest swarmtest test clean-data
 
+# TODO update - not gonna work
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
 	cd workerapi && thrift --gen go:package_prefix=github.com/twitter/scoot/workerapi/gen-go/,package=worker,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..

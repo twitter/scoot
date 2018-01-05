@@ -3,6 +3,7 @@ package workerapi
 import (
 	"time"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
@@ -69,6 +70,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.Tag != nil {
 		tag = *thrift.Tag
 	}
+	er := request.SchedMakeDomainFromThrift(thrift.BazelRequest)
 	return &runner.Command{
 		Argv:       argv,
 		EnvVars:    env,
@@ -79,6 +81,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 			TaskID: taskID,
 			Tag:    tag,
 		},
+		ExecuteRequest: er,
 	}
 }
 
@@ -96,6 +99,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TaskId = &taskID
 	tag := domain.Tag
 	thrift.Tag = &tag
+	execReq := request.SchedMakeThriftFromDomain(domain.ExecuteRequest)
+	thrift.BazelRequest = execReq
 	return thrift
 }
 

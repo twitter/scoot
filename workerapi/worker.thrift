@@ -1,3 +1,11 @@
+# To Generate files run from this (github.com/twitter/scoot/workerapi) directory
+# (note that package_prefix must be set to the correct prefix of the included definition)
+#     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
+#     2. XXX Edit workerapi/gen-go/worker/worker-remote/worker-remote.go and the import statement for 'worker' to have the correct prefix
+#     This must be done manually every time this thrift code is generated, as thrift cannot automatically add the correct prefixes
+
+include "request.thrift"
+
 enum Status {
   UNKNOWN = 0      # Reserved.
   PENDING = 1      # Run scheduled but not yet started.
@@ -38,6 +46,7 @@ struct RunCommand {
   5: optional string jobId
   6: optional string taskId
   7: optional string tag
+  8: optional request.BazelExecuteRequest bazelRequest
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.
