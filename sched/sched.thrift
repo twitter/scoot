@@ -2,14 +2,9 @@
 # We use this structure rather than scootapi's JobDefinition (in scoot.thrift)
 # so that we can add data to the log and not impact the client API.
 
-# We should use go generate to run:
-# For now to Install Thrift:
-#     1. Install Thrift manually `brew install thrift` ensure version is greater that 0.9.3
-#     2. go get github.com/apache/thrift/lib/go/thrift
+# See github.com/twitter/scoot/README.md for local Thrift prerequisites
 #
-
-# To Generate files run from this (github.com/twitter/scoot/sched) directory
-# (note that package_prefix must be set to the correct prefix of the included definition)
+# To Generate files run from this (github.com/twitter/scoot/sched/) directory:
 #     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift
 
 include "request.thrift"

@@ -15,7 +15,7 @@ import (
 // Translation between local domain objects and thrift objects:
 //
 
-//TODO: test workerStatus.
+// TODO: test workerStatus.
 type WorkerStatus struct {
 	Runs        []runner.RunStatus
 	Initialized bool
@@ -70,7 +70,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.Tag != nil {
 		tag = *thrift.Tag
 	}
-	er := request.SchedMakeDomainFromThrift(thrift.BazelRequest)
+	er := request.MakeDomainFromThrift(thrift.BazelRequest)
 	return &runner.Command{
 		Argv:       argv,
 		EnvVars:    env,
@@ -99,7 +99,7 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TaskId = &taskID
 	tag := domain.Tag
 	thrift.Tag = &tag
-	execReq := request.SchedMakeThriftFromDomain(domain.ExecuteRequest)
+	execReq := request.MakeThriftFromDomain(domain.ExecuteRequest)
 	thrift.BazelRequest = execReq
 	return thrift
 }

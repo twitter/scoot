@@ -55,7 +55,6 @@ type JobDefinition struct {
 // Task is one task to run
 type TaskDefinition struct {
 	runner.Command
-	ExecuteRequest *request.ExecuteRequest
 }
 
 // Status for Job & Tasks
@@ -121,6 +120,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJobDef != nil {
 		for _, task := range thriftJobDef.GetTasks() {
 			cmd := task.GetCommand()
+			execReq := request.MakeDomainFromThrift(task.BazelRequest)
 
 			command := runner.Command{
 				Argv:       cmd.GetArgv(),
@@ -132,11 +132,10 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 					TaskID: task.GetTaskId(),
 					Tag:    thriftJobDef.GetTag(),
 				},
+				ExecuteRequest: execReq,
 			}
 
-			er := request.SchedMakeDomainFromThrift(task.BazelRequest)
-
-			domainTasks = append(domainTasks, TaskDefinition{command, er})
+			domainTasks = append(domainTasks, TaskDefinition{command})
 		}
 
 		jobType = thriftJobDef.GetJobType()
@@ -177,7 +176,7 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			SnapshotId: domainTask.SnapshotID,
 		}
 		taskId := domainTask.TaskID
-		execReq := request.SchedMakeThriftFromDomain(domainTask.ExecuteRequest)
+		execReq := request.MakeThriftFromDomain(domainTask.ExecuteRequest)
 
 		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId, BazelRequest: execReq}
 		thriftTasks = append(thriftTasks, &thriftTask)
@@ -199,7 +198,6 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 	}
 
 	return &thriftJob, nil
-
 }
 
 // Validate a job, returning an *InvalidJobRequest if invalid.

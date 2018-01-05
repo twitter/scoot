@@ -1,8 +1,12 @@
-# To Generate files run from this (github.com/twitter/scoot/workerapi) directory
-# (note that package_prefix must be set to the correct prefix of the included definition)
+# Worker server Thrift API interface definition
+
+# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+# 
+# To Generate files run from this (github.com/twitter/scoot/workerapi/) directory:
 #     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
-#     2. XXX Edit workerapi/gen-go/worker/worker-remote/worker-remote.go and the import statement for 'worker' to have the correct prefix
-#     This must be done manually every time this thrift code is generated, as thrift cannot automatically add the correct prefixes
+#     2. XXX rm -rf gen-go/worker/worker-remote/
+#     The above is removed due to thrift being unable to distinguish between local and included package prefixes.
+#     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 
 include "request.thrift"
 

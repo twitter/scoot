@@ -65,6 +65,10 @@ func (c Command) String() string {
 		}
 	}
 
+	if c.ExecuteRequest != nil {
+		s += fmt.Sprintf("  ExecuteRequest=%s", c.ExecuteRequest)
+	}
+
 	return s
 }
 

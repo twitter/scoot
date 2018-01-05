@@ -756,10 +756,11 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.clusterState.taskScheduled(nodeSt.node.Id(), jobID, taskID, taskDef.SnapshotID)
 		log.WithFields(
 			log.Fields{
-				"jobID":  jobID,
-				"taskID": taskID,
-				"node":   nodeSt.node,
-				"tag":    tag,
+				"jobID":   jobID,
+				"taskID":  taskID,
+				"node":    nodeSt.node,
+				"tag":     tag,
+				"taskDef": taskDef,
 			}).Info("Task scheduled")
 
 		tRunner := &taskRunner{

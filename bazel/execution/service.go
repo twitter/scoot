@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
@@ -73,7 +74,7 @@ func (s *executionServer) Execute(
 	}
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
-	job, err := execReqToScoot(req)
+	job, err := execReqToScoot(req, actionSha)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
 		return nil, err
@@ -128,24 +129,33 @@ func (s *executionServer) Execute(
 	return &op, nil
 }
 
-func execReqToScoot(req *remoteexecution.ExecuteRequest) (result sched.JobDefinition, err error) {
+// Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
+func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (result sched.JobDefinition, err error) {
 	if req == nil {
 		return result, fmt.Errorf("Nil execute request")
 	}
 
-	// This creates a hardcoded job for now
-	// TODO Extract relevant task fields from ExecuteRequest, including timeouts,
-	// dir snapshot, command snapshot IDs, and other metadata.
-	// (This is where Scoot-Job-specific fields get set from matching ExecReq fields)
-	// TODO Task runs without a snapshot as CAS-based snapshots are not yet integrated into workers
+	// TODO test make thrift
+	// TODO refactor the snapshot/bazel/ stuff.... sigh
+	// TODO a test that verifies all this shit is set up correctly
+	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
-	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("ExecuteRequest_%d", time.Now().Unix())
-	task.Command.Argv = []string{"sleep", "10"}
-	task.Command.EnvVars = make(map[string]string)
-	task.ExecuteRequest = &request.ExecuteRequest{Request: *req}
-	result.Tasks = append(result.Tasks, task)
 
+	d, err := time.ParseDuration(fmt.Sprintf("%dms", scootproto.GetMsFromDuration(req.GetAction().GetTimeout())))
+	if err != nil {
+		log.Errorf("Failed to parse Timeout from Action: %s", err)
+		return result, err
+	}
+
+	var task sched.TaskDefinition
+	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
+	task.Command.Argv = []string{"sleep", "10"} // used as a safe placeholder
+	task.Command.EnvVars = make(map[string]string)
+	task.Command.Timeout = d
+	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
+	task.Command.ExecuteRequest = &request.ExecuteRequest{Request: *req}
+
+	result.Tasks = append(result.Tasks, task)
 	return result, nil
 }
 
