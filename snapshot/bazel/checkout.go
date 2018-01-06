@@ -4,6 +4,8 @@ import (
 	"os"
 
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+
+	"github.com/twitter/scoot/bazel"
 )
 
 // Satisfies snapshot.Checkout
@@ -18,7 +20,7 @@ func (bc *bzCheckout) Path() string {
 }
 
 func (bc *bzCheckout) ID() string {
-	return generateId(bc.GetHash(), bc.GetSizeBytes())
+	return bazel.SnapshotID(bc.GetHash(), bc.GetSizeBytes())
 }
 
 func (bc *bzCheckout) Release() error {

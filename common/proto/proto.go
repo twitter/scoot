@@ -27,6 +27,6 @@ func GetMsFromDuration(d *duration.Duration) int64 {
 	return d.GetSeconds()*1000 + int64(d.GetNanos()/1000000)
 }
 
-func GetDurationFromMs(ms int64) duration.Duration {
-	return duration.Duration{Seconds: int64(ms / 1000), Nanos: int32((ms % 1000) * 1000000)}
+func GetDurationFromMs(ms int64) *duration.Duration {
+	return &duration.Duration{Seconds: int64(ms / 1000), Nanos: int32((ms % 1000) * 1000000)}
 }

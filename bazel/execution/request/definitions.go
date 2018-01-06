@@ -39,14 +39,13 @@ func makeActionFromThrift(thriftAction *requestthrift.BazelAction) *remoteexecut
 	if thriftAction == nil {
 		return nil
 	}
-	d := scootproto.GetDurationFromMs(thriftAction.GetTimeoutMs())
 	return &remoteexecution.Action{
 		OutputFiles:       thriftAction.GetOutputFiles(),
 		OutputDirectories: thriftAction.GetOutputDirs(),
 		DoNotCache:        thriftAction.GetNoCache(),
 		CommandDigest:     makeDigestFromThrift(thriftAction.GetCommandDigest()),
 		InputRootDigest:   makeDigestFromThrift(thriftAction.GetInputDigest()),
-		Timeout:           &d,
+		Timeout:           scootproto.GetDurationFromMs(thriftAction.GetTimeoutMs()),
 		Platform:          makePlatformFromThrift(thriftAction.GetPlatformProperties()),
 	}
 }
@@ -60,7 +59,7 @@ func makeDigestFromThrift(thriftDigest *requestthrift.BazelDigest) *remoteexecut
 
 func makePlatformFromThrift(thriftProperties []*requestthrift.BazelProperty) *remoteexecution.Platform {
 	platform := &remoteexecution.Platform{}
-	platform.Properties = make([]*remoteexecution.Platform_Property, len(thriftProperties))
+	platform.Properties = make([]*remoteexecution.Platform_Property, 0, len(thriftProperties))
 	for _, prop := range thriftProperties {
 		if prop == nil {
 			continue
@@ -110,7 +109,7 @@ func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*reque
 	if platform == nil {
 		return make([]*requestthrift.BazelProperty, 0)
 	}
-	props := make([]*requestthrift.BazelProperty, len(platform.GetProperties()))
+	props := make([]*requestthrift.BazelProperty, 0, len(platform.GetProperties()))
 	for _, p := range platform.GetProperties() {
 		if p == nil {
 			continue

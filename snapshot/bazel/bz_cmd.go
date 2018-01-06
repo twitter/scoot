@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common"
 )
 
@@ -81,7 +82,7 @@ func (bc bzCommand) save(path string) (string, error) {
 		return "", err
 	}
 
-	id := generateId(s[0], size)
+	id := bazel.SnapshotID(s[0], size)
 	return id, nil
 }
 

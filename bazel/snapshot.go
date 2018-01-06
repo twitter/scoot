@@ -10,17 +10,47 @@ import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
 
-// generate - from Digest??
-func getSha(id string) (string, error) {
-	s, err := splitId(id)
+// Generate a SnapshotID based on digest sha and size
+func SnapshotID(sha string, size int64) string {
+	return fmt.Sprintf("%s-%s-%d", SnapshotIDPrefix, sha, size)
+}
+
+// Generate a SnapshotID directly from a Digest
+func DigestSnapshotID(d *remoteexecution.Digest) string {
+	if d == nil {
+		return ""
+	}
+	return SnapshotID(d.GetHash(), d.GetSizeBytes())
+}
+
+// Checks that ID is well formed
+func ValidateID(id string) error {
+	sha, err := GetSha(id)
+	if err != nil {
+		return err
+	}
+	size, err := GetSize(id)
+	if err != nil {
+		return err
+	}
+	if !IsValidDigest(sha, size) {
+		return fmt.Errorf("Error: Invalid digest. SHA: %s, size: %d", sha, size)
+	}
+	return nil
+}
+
+// Get sha portion from valid bazel SnapshotID
+func GetSha(id string) (string, error) {
+	s, err := SplitID(id)
 	if err != nil {
 		return "", err
 	}
 	return s[1], nil
 }
 
-func getSize(id string) (int64, error) {
-	s, err := splitId(id)
+// Get size portion from valid bazel SnapshotID
+func GetSize(id string) (int64, error) {
+	s, err := SplitID(id)
 	if err != nil {
 		return 0, err
 	}
@@ -31,21 +61,11 @@ func getSize(id string) (int64, error) {
 	return size, nil
 }
 
-func splitId(id string) ([]string, error) {
+// Split valid bazel SnapshotID into prefix, sha and size components as strings
+func SplitID(id string) ([]string, error) {
 	s := strings.Split(id, "-")
 	if len(s) < 3 || s[0] != SnapshotIDPrefix {
 		return nil, fmt.Errorf("%s %s", InvalidIDMsg, id)
 	}
 	return s, nil
-}
-
-func SnapshotID(sha string, size int64) string {
-	return fmt.Sprintf("%s-%s-%d", SnapshotIDPrefix, sha, size)
-}
-
-func DigestSnapshotID(d *remoteexecution.Digest) string {
-	if d == nil {
-		return ""
-	}
-	return SnapshotID(d.GetHash(), d.GetSizeBytes())
 }
