@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 )
@@ -81,14 +82,14 @@ func TestSaveDir(t *testing.T) {
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", emptyID, id)
 	}
-	size, err := getSize(id)
+	size, err := bazel.GetSize(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if size <= emptySize {
 		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
 	}
-	sha, err := getSha(id)
+	sha, err := bazel.GetSha(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,14 +145,14 @@ func TestSaveFile(t *testing.T) {
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", id, emptyID)
 	}
-	size, err := getSize(id)
+	size, err := bazel.GetSize(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if size <= emptySize {
 		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
 	}
-	sha, err := getSha(id)
+	sha, err := bazel.GetSha(id)
 	if err != nil {
 		t.Fatal(err)
 	}
