@@ -91,7 +91,10 @@ func (s *executionServer) Execute(
 		log.Errorf("Failed to schedule Scoot job: %s", err)
 		return nil, err
 	}
-	log.Infof("Scheduled execute request as Scoot job: %s", id)
+	log.WithFields(
+		log.Fields{
+			"jobID": id,
+		}).Info("Scheduled execute request as Scoot job")
 
 	op := longrunning.Operation{}
 	op.Name = fmt.Sprintf("operations/%s", id)
@@ -144,9 +147,13 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 		return result, err
 	}
 
+	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
+	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
+	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker
+	// which is required to support CAS interactions.
 	var task sched.TaskDefinition
 	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
-	task.Command.Argv = []string{"sleep", "10"} // used as a safe placeholder - worker will retrieve Command
+	task.Command.Argv = []string{"sleep", "10"} // used as a safe placeholder
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.Timeout = d
 	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
