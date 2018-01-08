@@ -2,6 +2,7 @@ package bazel
 
 import (
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 

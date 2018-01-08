@@ -16,6 +16,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched"
@@ -46,7 +48,7 @@ func (s *executionServer) IsInitialized() bool {
 }
 
 func (s *executionServer) Serve() error {
-	log.Info("Serving GRPC Execution API on: ", s.listener.Addr())
+	log.Infof("Serving GRPC Execution API on: %s", s.listener.Addr())
 	return s.server.Serve(s.listener)
 }
 
@@ -72,7 +74,7 @@ func (s *executionServer) Execute(
 	}
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
-	job, err := execReqToScoot(req)
+	job, err := execReqToScoot(req, actionSha)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
 		return nil, err
@@ -89,7 +91,10 @@ func (s *executionServer) Execute(
 		log.Errorf("Failed to schedule Scoot job: %s", err)
 		return nil, err
 	}
-	log.Info("Scheduled execute request as Scoot job: %s", id)
+	log.WithFields(
+		log.Fields{
+			"jobID": id,
+		}).Info("Scheduled execute request as Scoot job")
 
 	op := longrunning.Operation{}
 	op.Name = fmt.Sprintf("operations/%s", id)
@@ -127,22 +132,34 @@ func (s *executionServer) Execute(
 	return &op, nil
 }
 
-func execReqToScoot(req *remoteexecution.ExecuteRequest) (result sched.JobDefinition, err error) {
+// Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
+func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (result sched.JobDefinition, err error) {
 	if req == nil {
 		return result, fmt.Errorf("Nil execute request")
 	}
 
-	// This creates a hardcoded job for now
-	// TODO Extract relevant task fields from ExecuteRequest, including timeouts,
-	// dir snapshot, command snapshot IDs, and other metadata.
-	// TODO Task runs without a snapshot as CAS-based snapshots are not yet integrated into workers
+	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
-	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("ExecuteRequest_%d", time.Now().Unix())
-	task.Command.Argv = []string{"sleep", "10"}
-	task.Command.EnvVars = make(map[string]string)
-	result.Tasks = append(result.Tasks, task)
 
+	d, err := time.ParseDuration(fmt.Sprintf("%dms", scootproto.GetMsFromDuration(req.GetAction().GetTimeout())))
+	if err != nil {
+		log.Errorf("Failed to parse Timeout from Action: %s", err)
+		return result, err
+	}
+
+	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
+	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
+	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker
+	// which is required to support CAS interactions.
+	var task sched.TaskDefinition
+	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
+	task.Command.Argv = []string{"sleep", "10"} // used as a safe placeholder
+	task.Command.EnvVars = make(map[string]string)
+	task.Command.Timeout = d
+	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
+	task.Command.ExecuteRequest = &request.ExecuteRequest{Request: *req}
+
+	result.Tasks = append(result.Tasks, task)
 	return result, nil
 }
 

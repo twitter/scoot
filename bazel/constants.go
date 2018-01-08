@@ -1,9 +1,13 @@
 package bazel
 
 const (
-	// Bazel Instance-related constants
+	// Instance-related constants
 	DefaultInstanceName = ""
 
-	// Bazel Resource storage-related constants
+	// Resource storage-related constants
 	StorePrefix = "blob"
+
+	// Snapshot-related constants
+	SnapshotIDPrefix = "bz"
+	InvalidIDMsg     = "Expected ID to be of format bz-<sha256>-<sizeBytes>, was"
 )

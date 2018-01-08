@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/sched/gen-go/schedthrift"
+	schedthrift "github.com/twitter/scoot/sched/gen-go/sched"
 )
 
 // Job is the job Scoot can schedule
@@ -119,6 +120,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJobDef != nil {
 		for _, task := range thriftJobDef.GetTasks() {
 			cmd := task.GetCommand()
+			execReq := request.MakeDomainFromThrift(task.BazelRequest)
 
 			command := runner.Command{
 				Argv:       cmd.GetArgv(),
@@ -130,7 +132,9 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 					TaskID: task.GetTaskId(),
 					Tag:    thriftJobDef.GetTag(),
 				},
+				ExecuteRequest: execReq,
 			}
+
 			domainTasks = append(domainTasks, TaskDefinition{command})
 		}
 
@@ -171,9 +175,10 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			Timeout:    &to,
 			SnapshotId: domainTask.SnapshotID,
 		}
-
 		taskId := domainTask.TaskID
-		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId}
+		execReq := request.MakeThriftFromDomain(domainTask.ExecuteRequest)
+
+		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId, BazelRequest: execReq}
 		thriftTasks = append(thriftTasks, &thriftTask)
 	}
 
@@ -193,7 +198,6 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 	}
 
 	return &thriftJob, nil
-
 }
 
 // Validate a job, returning an *InvalidJobRequest if invalid.

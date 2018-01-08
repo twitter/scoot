@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/log/tags"
 )
 
@@ -43,6 +44,9 @@ type Command struct {
 
 	// Runner is given JobID, TaskID, and Tag to help trace tasks throughout their lifecycle
 	tags.LogTags
+
+	// Bazel ExecuteRequest data for tasks initiated from the Bazel API
+	ExecuteRequest *request.ExecuteRequest
 }
 
 func (c Command) String() string {
@@ -59,6 +63,10 @@ func (c Command) String() string {
 		for k, v := range c.EnvVars {
 			s += fmt.Sprintf("  %s=%s", k, v)
 		}
+	}
+
+	if c.ExecuteRequest != nil {
+		s += fmt.Sprintf("  ExecuteRequest=%s", c.ExecuteRequest)
 	}
 
 	return s

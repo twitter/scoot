@@ -107,21 +107,26 @@ travis: dependencies fs_util recoverytest swarmtest test clean-data
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
-	cd workerapi && thrift --gen go:package_prefix=github.com/twitter/scoot/workerapi/gen-go/,package=worker,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
+	cd workerapi && thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
+	rm -rf workerapi/gen-go/worker/worker-remote/
 
 thrift-sched-go:
-	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from job_def.thrift
-	cd sched && thrift --gen go:package_prefix=github.com/twitter/scoot/sched/gen-go/,package=schedthrift,thrift_import=github.com/apache/thrift/lib/go/thrift job_def.thrift && cd ..
+	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
+	cd sched && thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
 	cd scootapi && thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 
+thrift-bazel-go:
+	# Create generated code in github.com/twitter/scoot/bazel/execution/request/gen-go/... from request.thrift
+	cd bazel/execution/request && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift request.thrift && cd ../../..
+
 thrift-scoot-java:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
 	cd scootapi && thrift --gen java:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 
-thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go
+thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 
 thrift-java: thrift-scoot-java
 

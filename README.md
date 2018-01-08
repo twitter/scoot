@@ -64,13 +64,11 @@ and waits for the job to complete
 (./tests/integration_test.go)
 
 ## Scoot Thrift Code
-(open source scoot code is in workspace/github.com/twitter/scoot)
+__Thrift Prerequisites__
+Install the Thrift tool and golang thrift repository locally using the following section.
 
 __Generating thrift files (scootapi used as an example)__
-* To Generate files run from scoot's scootapi directory:
-```sh
-thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
-```
+See documentation in thrift definition files for specific generation instructions, or `make thrift`.
 
 ## Scoot Protobuf Code
 __Generating go protobuf files (for local Scoot Daemon)__

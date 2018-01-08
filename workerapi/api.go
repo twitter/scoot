@@ -3,6 +3,7 @@ package workerapi
 import (
 	"time"
 
+	"github.com/twitter/scoot/bazel/execution/request"
 	"github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
@@ -14,7 +15,7 @@ import (
 // Translation between local domain objects and thrift objects:
 //
 
-//TODO: test workerStatus.
+// TODO: test workerStatus.
 type WorkerStatus struct {
 	Runs        []runner.RunStatus
 	Initialized bool
@@ -69,6 +70,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.Tag != nil {
 		tag = *thrift.Tag
 	}
+	er := request.MakeDomainFromThrift(thrift.BazelRequest)
 	return &runner.Command{
 		Argv:       argv,
 		EnvVars:    env,
@@ -79,6 +81,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 			TaskID: taskID,
 			Tag:    tag,
 		},
+		ExecuteRequest: er,
 	}
 }
 
@@ -96,6 +99,8 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TaskId = &taskID
 	tag := domain.Tag
 	thrift.Tag = &tag
+	execReq := request.MakeThriftFromDomain(domain.ExecuteRequest)
+	thrift.BazelRequest = execReq
 	return thrift
 }
 

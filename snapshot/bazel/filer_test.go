@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var noopBf = bzFiler{
@@ -58,14 +58,14 @@ func TestReleaseBzCheckout(t *testing.T) {
 
 func TestBzCheckouterInvalidCheckout(t *testing.T) {
 	_, err := noopBf.Checkout("this can't be right either")
-	if err == nil || !strings.Contains(err.Error(), invalidIdMsg) {
+	if err == nil || !strings.Contains(err.Error(), bazel.InvalidIDMsg) {
 		t.Fatalf("Expected checkout to be invalid due to ID")
 	}
 }
 
 func TestBzCheckouterValidCheckout(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
+	id := bazel.SnapshotID(emptySha, size)
 	snap, err := noopBf.Checkout(id)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
@@ -81,14 +81,14 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 	_, err = noopBf.CheckoutAt("this definitely isn't right", tempDir.Dir)
-	if err == nil || !strings.Contains(err.Error(), invalidIdMsg) {
+	if err == nil || !strings.Contains(err.Error(), bazel.InvalidIDMsg) {
 		t.Fatalf("Expected checkout to be invalid due to ID")
 	}
 }
 
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
+	id := bazel.SnapshotID(emptySha, size)
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
@@ -200,8 +200,8 @@ func TestGetFileTypeInvalid(t *testing.T) {
 
 func TestValidateIdValid(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
-	err := validateID(id)
+	id := bazel.SnapshotID(emptySha, size)
+	err := bazel.ValidateID(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,12 +210,12 @@ func TestValidateIdValid(t *testing.T) {
 func TestValidateIdInvalid(t *testing.T) {
 	sha := "this/is/totally/wrong"
 	size := int64(5)
-	id := generateId(sha, size)
-	err := validateID(id)
+	id := bazel.SnapshotID(sha, size)
+	err := bazel.ValidateID(id)
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
-	err = validateID(fmt.Sprintf("bs-%s-%d", emptySha, size))
+	err = bazel.ValidateID(fmt.Sprintf("bs-%s-%d", emptySha, size))
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
@@ -223,8 +223,8 @@ func TestValidateIdInvalid(t *testing.T) {
 
 func TestGetSha(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
-	result, err := getSha(id)
+	id := bazel.SnapshotID(emptySha, size)
+	result, err := bazel.GetSha(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,8 +235,8 @@ func TestGetSha(t *testing.T) {
 
 func TestGetSize(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
-	result, err := getSize(id)
+	id := bazel.SnapshotID(emptySha, size)
+	result, err := bazel.GetSize(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,12 +247,12 @@ func TestGetSize(t *testing.T) {
 
 func TestSplitIdValid(t *testing.T) {
 	size := int64(5)
-	id := generateId(emptySha, size)
-	result, err := splitId(id)
+	id := bazel.SnapshotID(emptySha, size)
+	result, err := bazel.SplitID(id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := []string{bzSnapshotIdPrefix, emptySha, "5"}
+	expected := []string{bazel.SnapshotIDPrefix, emptySha, "5"}
 	for idx, _ := range result {
 		if result[idx] != expected[idx] {
 			t.Fatalf("Expected %v, received %v", expected, result)
@@ -263,9 +263,9 @@ func TestSplitIdValid(t *testing.T) {
 func TestSplitIdInvalid(t *testing.T) {
 	size := int64(5)
 	id := fmt.Sprintf("bs-%s-%d", emptySha, size)
-	_, err := splitId(id)
-	if err == nil || !strings.Contains(err.Error(), invalidIdMsg) {
-		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidIdMsg, err)
+	_, err := bazel.SplitID(id)
+	if err == nil || !strings.Contains(err.Error(), bazel.InvalidIDMsg) {
+		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", bazel.InvalidIDMsg, err)
 	}
 }
 

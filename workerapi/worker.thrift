@@ -1,3 +1,15 @@
+# Worker server Thrift API interface definition
+
+# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+# 
+# To Generate files run from this (github.com/twitter/scoot/workerapi/) directory:
+#     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
+#     2. XXX rm -rf gen-go/worker/worker-remote/
+#     The above is removed due to thrift being unable to distinguish between local and included package prefixes.
+#     We optimize for the golang library code and remove a main-package client the thrift tool generates.
+
+include "request.thrift"
+
 enum Status {
   UNKNOWN = 0      # Reserved.
   PENDING = 1      # Run scheduled but not yet started.
@@ -38,6 +50,7 @@ struct RunCommand {
   5: optional string jobId
   6: optional string taskId
   7: optional string tag
+  8: optional request.BazelExecuteRequest bazelRequest
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.

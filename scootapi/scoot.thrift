@@ -1,3 +1,10 @@
+# Scoot main server/client API interface definition
+
+# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+#
+# To Generate files, run from this (github.com/twitter/scoot/scootapi/) directory:
+#     1. thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
+
 exception InvalidRequest {
   1: optional string message
 }

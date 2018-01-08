@@ -1,9 +1,10 @@
 package sched
 
 import (
-	"github.com/twitter/scoot/common/thrifthelpers"
-	"github.com/twitter/scoot/sched/gen-go/schedthrift"
 	"testing"
+
+	"github.com/twitter/scoot/common/thrifthelpers"
+	schedthrift "github.com/twitter/scoot/sched/gen-go/sched"
 )
 
 func Test_DeserializeJob_BadData(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/twitter/scoot/bazel/execution/request/gen-go/request"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -14,6 +15,7 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
+var _ = request.GoUnusedProtection__
 var GoUnusedProtection__ int
 
 type Status int64
@@ -798,14 +800,16 @@ func (p *WorkerStatus) String() string {
 //  - JobId
 //  - TaskId
 //  - Tag
+//  - BazelRequest
 type RunCommand struct {
-	Argv       []string          `thrift:"argv,1,required" json:"argv"`
-	Env        map[string]string `thrift:"env,2" json:"env,omitempty"`
-	SnapshotId *string           `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
-	TimeoutMs  *int32            `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
-	JobId      *string           `thrift:"jobId,5" json:"jobId,omitempty"`
-	TaskId     *string           `thrift:"taskId,6" json:"taskId,omitempty"`
-	Tag        *string           `thrift:"tag,7" json:"tag,omitempty"`
+	Argv         []string                     `thrift:"argv,1,required" json:"argv"`
+	Env          map[string]string            `thrift:"env,2" json:"env,omitempty"`
+	SnapshotId   *string                      `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
+	TimeoutMs    *int32                       `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
+	JobId        *string                      `thrift:"jobId,5" json:"jobId,omitempty"`
+	TaskId       *string                      `thrift:"taskId,6" json:"taskId,omitempty"`
+	Tag          *string                      `thrift:"tag,7" json:"tag,omitempty"`
+	BazelRequest *request.BazelExecuteRequest `thrift:"bazelRequest,8" json:"bazelRequest,omitempty"`
 }
 
 func NewRunCommand() *RunCommand {
@@ -866,6 +870,15 @@ func (p *RunCommand) GetTag() string {
 	}
 	return *p.Tag
 }
+
+var RunCommand_BazelRequest_DEFAULT *request.BazelExecuteRequest
+
+func (p *RunCommand) GetBazelRequest() *request.BazelExecuteRequest {
+	if !p.IsSetBazelRequest() {
+		return RunCommand_BazelRequest_DEFAULT
+	}
+	return p.BazelRequest
+}
 func (p *RunCommand) IsSetEnv() bool {
 	return p.Env != nil
 }
@@ -888,6 +901,10 @@ func (p *RunCommand) IsSetTaskId() bool {
 
 func (p *RunCommand) IsSetTag() bool {
 	return p.Tag != nil
+}
+
+func (p *RunCommand) IsSetBazelRequest() bool {
+	return p.BazelRequest != nil
 }
 
 func (p *RunCommand) Read(iprot thrift.TProtocol) error {
@@ -933,6 +950,10 @@ func (p *RunCommand) Read(iprot thrift.TProtocol) error {
 			}
 		case 7:
 			if err := p.readField7(iprot); err != nil {
+				return err
+			}
+		case 8:
+			if err := p.readField8(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1048,6 +1069,14 @@ func (p *RunCommand) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *RunCommand) readField8(iprot thrift.TProtocol) error {
+	p.BazelRequest = &request.BazelExecuteRequest{}
+	if err := p.BazelRequest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
+	}
+	return nil
+}
+
 func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunCommand"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1071,6 +1100,9 @@ func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField7(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField8(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1199,6 +1231,21 @@ func (p *RunCommand) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:tag: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RunCommand) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBazelRequest() {
+		if err := oprot.WriteFieldBegin("bazelRequest", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:bazelRequest: ", p), err)
+		}
+		if err := p.BazelRequest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BazelRequest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:bazelRequest: ", p), err)
 		}
 	}
 	return err
