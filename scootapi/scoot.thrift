@@ -5,6 +5,8 @@
 # To Generate files, run from this (github.com/twitter/scoot/scootapi/) directory:
 #     1. thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
 
+include "request.thrift"
+
 exception InvalidRequest {
   1: optional string message
 }
@@ -46,6 +48,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
+  11: optional request.BazelActionResult bazelResult
 }
 
 

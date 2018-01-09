@@ -18,6 +18,21 @@ struct BazelProperty {
   2: required string value
 }
 
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
+struct BazelOutputFile {
+  1: optional string path
+  2: required BazelDigest digest
+  3: optional binary content
+  4: optional bool isExecutable
+}
+
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputDirectory
+struct BazelOutputDirectory {
+  1: optional string path
+  2: required BazelDigest digest
+  3: required BazelDigest treeDigest
+}
+
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Action
 struct BazelAction {
   1: required BazelDigest commandDigest
@@ -34,4 +49,15 @@ struct BazelExecuteRequest {
   1: required BazelAction action
   2: optional string instanceName
   3: optional bool skipCache
+}
+
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult
+struct BazelActionResult {
+  1: optional list<BazelOutputFile> outputFiles
+  2: optional list<BazelOutputDirectory> outputDirectories
+  3: optional i32 exitCode
+  4: optional binary stdoutRaw
+  5: required BazelDigest stdoutDigest
+  6: optional binary stderrRaw
+  7: required BazelDigest stderrDigest
 }

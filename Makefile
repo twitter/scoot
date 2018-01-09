@@ -116,7 +116,7 @@ thrift-sched-go:
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
+	cd scootapi && thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 
 thrift-bazel-go:
 	# Create generated code in github.com/twitter/scoot/bazel/execution/request/gen-go/... from request.thrift
@@ -124,7 +124,7 @@ thrift-bazel-go:
 
 thrift-scoot-java:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && thrift --gen java:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
+	cd scootapi && thrift -I ../bazel/execution/request/ --gen java:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 
 thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 

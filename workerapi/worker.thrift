@@ -33,6 +33,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
+  11: optional request.BazelActionResult bazelResult
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.
