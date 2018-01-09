@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/execution/request/gen-go/request"
+	"github.com/twitter/scoot/bazel/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -15,7 +15,7 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
-var _ = request.GoUnusedProtection__
+var _ = bazel.GoUnusedProtection__
 var GoUnusedProtection__ int
 
 // Attributes:
@@ -300,9 +300,9 @@ func (p *Command) String() string {
 //  - TaskId
 //  - BazelRequest
 type TaskDefinition struct {
-	Command      *Command                     `thrift:"command,1,required" json:"command"`
-	TaskId       *string                      `thrift:"taskId,2" json:"taskId,omitempty"`
-	BazelRequest *request.BazelExecuteRequest `thrift:"bazelRequest,3" json:"bazelRequest,omitempty"`
+	Command      *Command                   `thrift:"command,1,required" json:"command"`
+	TaskId       *string                    `thrift:"taskId,2" json:"taskId,omitempty"`
+	BazelRequest *bazel.BazelExecuteRequest `thrift:"bazelRequest,3" json:"bazelRequest,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -327,9 +327,9 @@ func (p *TaskDefinition) GetTaskId() string {
 	return *p.TaskId
 }
 
-var TaskDefinition_BazelRequest_DEFAULT *request.BazelExecuteRequest
+var TaskDefinition_BazelRequest_DEFAULT *bazel.BazelExecuteRequest
 
-func (p *TaskDefinition) GetBazelRequest() *request.BazelExecuteRequest {
+func (p *TaskDefinition) GetBazelRequest() *bazel.BazelExecuteRequest {
 	if !p.IsSetBazelRequest() {
 		return TaskDefinition_BazelRequest_DEFAULT
 	}
@@ -412,7 +412,7 @@ func (p *TaskDefinition) readField2(iprot thrift.TProtocol) error {
 }
 
 func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
-	p.BazelRequest = &request.BazelExecuteRequest{}
+	p.BazelRequest = &bazel.BazelExecuteRequest{}
 	if err := p.BazelRequest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
 	}

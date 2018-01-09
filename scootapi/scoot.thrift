@@ -3,9 +3,9 @@
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 #
 # To Generate files, run from this (github.com/twitter/scoot/scootapi/) directory:
-#     1. thrift --gen go:package_prefix=github.com/twitter/scoot/scootapi/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
+#     1. thrift -I ../bazel/ --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
 
-include "request.thrift"
+include "bazel.thrift"
 
 exception InvalidRequest {
   1: optional string message
@@ -48,7 +48,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
-  11: optional request.BazelActionResult bazelResult
+  11: optional bazel.BazelActionResult bazelResult
 }
 
 
