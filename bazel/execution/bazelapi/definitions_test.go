@@ -103,6 +103,6 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		result.Result.OutputDirectories[0].TreeDigest.SizeBytes != ar.Result.OutputDirectories[0].TreeDigest.SizeBytes ||
 		result.Result.ExitCode != ar.Result.ExitCode ||
 		result.String() != ar.String() {
-		t.Fatal("Unexpected output from result\ngot:      %v\nexpected: %v", result, ar)
+		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result, ar)
 	}
 }
