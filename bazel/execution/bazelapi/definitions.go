@@ -39,10 +39,11 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 	if thriftRequest == nil {
 		return nil
 	}
-	er := remoteexecution.ExecuteRequest{}
-	er.InstanceName = thriftRequest.GetInstanceName()
-	er.SkipCacheLookup = thriftRequest.GetSkipCache()
-	er.Action = makeActionFromThrift(thriftRequest.GetAction())
+	er := remoteexecution.ExecuteRequest{
+		InstanceName:    thriftRequest.GetInstanceName(),
+		SkipCacheLookup: thriftRequest.GetSkipCache(),
+		Action:          makeActionFromThrift(thriftRequest.GetAction()),
+	}
 	return &ExecuteRequest{Request: er}
 }
 
@@ -63,15 +64,15 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 	if thriftResult == nil {
 		return nil
 	}
-	ar := remoteexecution.ActionResult{}
-	ar.StdoutDigest = makeDigestFromThrift(thriftResult.GetStdoutDigest())
-	ar.StderrDigest = makeDigestFromThrift(thriftResult.GetStderrDigest())
-	ar.StdoutRaw = thriftResult.GetStdoutRaw()
-	ar.StderrRaw = thriftResult.GetStderrRaw()
-	ar.OutputFiles = makeOutputFilesFromThrift(thriftResult.GetOutputFiles())
-	ar.OutputDirectories = makeOutputDirsFromThrift(thriftResult.GetOutputDirectories())
-	ar.ExitCode = thriftResult.GetExitCode()
-
+	ar := remoteexecution.ActionResult{
+		StdoutDigest:      makeDigestFromThrift(thriftResult.GetStdoutDigest()),
+		StderrDigest:      makeDigestFromThrift(thriftResult.GetStderrDigest()),
+		StdoutRaw:         thriftResult.GetStdoutRaw(),
+		StderrRaw:         thriftResult.GetStderrRaw(),
+		OutputFiles:       makeOutputFilesFromThrift(thriftResult.GetOutputFiles()),
+		OutputDirectories: makeOutputDirsFromThrift(thriftResult.GetOutputDirectories()),
+		ExitCode:          thriftResult.GetExitCode(),
+	}
 	return &ActionResult{Result: ar}
 }
 
@@ -91,7 +92,7 @@ func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.A
 	}
 }
 
-// From thrift to domain translations
+// Unexported "from thrift to domain" translations
 func makeActionFromThrift(thriftAction *bazelthrift.Action) *remoteexecution.Action {
 	if thriftAction == nil {
 		return nil
@@ -165,8 +166,7 @@ func makePlatformFromThrift(thriftProperties []*bazelthrift.Property) *remoteexe
 	return platform
 }
 
-// From domain to thrift translations
-
+// Unexported "from domain to thrift" translations
 func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Action {
 	if action == nil {
 		return nil

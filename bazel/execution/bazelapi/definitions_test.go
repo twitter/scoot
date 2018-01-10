@@ -88,7 +88,21 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		t.Fatal("Unexpected nil domain result")
 	}
 
-	if result.String() != ar.String() {
+	if result.Result.StdoutDigest.Hash != ar.Result.StdoutDigest.Hash ||
+		result.Result.StdoutDigest.SizeBytes != ar.Result.StdoutDigest.SizeBytes ||
+		result.Result.StderrDigest.Hash != ar.Result.StderrDigest.Hash ||
+		result.Result.StderrDigest.SizeBytes != ar.Result.StderrDigest.SizeBytes ||
+		string(result.Result.StdoutRaw) != string(ar.Result.StdoutRaw) ||
+		string(result.Result.StderrRaw) != string(ar.Result.StderrRaw) ||
+		result.Result.OutputFiles[0].Digest.Hash != ar.Result.OutputFiles[0].Digest.Hash ||
+		result.Result.OutputFiles[0].Digest.SizeBytes != ar.Result.OutputFiles[0].Digest.SizeBytes ||
+		result.Result.OutputFiles[0].Path != ar.Result.OutputFiles[0].Path ||
+		string(result.Result.OutputFiles[0].Content) != string(ar.Result.OutputFiles[0].Content) ||
+		result.Result.OutputFiles[0].IsExecutable != ar.Result.OutputFiles[0].IsExecutable ||
+		result.Result.OutputDirectories[0].TreeDigest.Hash != ar.Result.OutputDirectories[0].TreeDigest.Hash ||
+		result.Result.OutputDirectories[0].TreeDigest.SizeBytes != ar.Result.OutputDirectories[0].TreeDigest.SizeBytes ||
+		result.Result.ExitCode != ar.Result.ExitCode ||
+		result.String() != ar.String() {
 		t.Fatal("Unexpected output from result\ngot:      %v\nexpected: %v", result, ar)
 	}
 }
