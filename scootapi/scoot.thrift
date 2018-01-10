@@ -48,7 +48,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
-  11: optional bazel.BazelActionResult bazelResult
+  11: optional bazel.ActionResult bazelResult
 }
 
 

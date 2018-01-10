@@ -68,7 +68,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
   public String jobId; // optional
   public String taskId; // optional
   public String tag; // optional
-  public BazelActionResult bazelResult; // optional
+  public ActionResult bazelResult; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -190,7 +190,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
     tmpMap.put(_Fields.TAG, new org.apache.thrift.meta_data.FieldMetaData("tag", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.BAZEL_RESULT, new org.apache.thrift.meta_data.FieldMetaData("bazelResult", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, BazelActionResult.class)));
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, ActionResult.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(RunStatus.class, metaDataMap);
   }
@@ -241,7 +241,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
       this.tag = other.tag;
     }
     if (other.isSetBazelResult()) {
-      this.bazelResult = new BazelActionResult(other.bazelResult);
+      this.bazelResult = new ActionResult(other.bazelResult);
     }
   }
 
@@ -512,11 +512,11 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
     }
   }
 
-  public BazelActionResult getBazelResult() {
+  public ActionResult getBazelResult() {
     return this.bazelResult;
   }
 
-  public RunStatus setBazelResult(BazelActionResult bazelResult) {
+  public RunStatus setBazelResult(ActionResult bazelResult) {
     this.bazelResult = bazelResult;
     return this;
   }
@@ -622,7 +622,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
       if (value == null) {
         unsetBazelResult();
       } else {
-        setBazelResult((BazelActionResult)value);
+        setBazelResult((ActionResult)value);
       }
       break;
 
@@ -1253,7 +1253,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
             break;
           case 11: // BAZEL_RESULT
             if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.bazelResult = new BazelActionResult();
+              struct.bazelResult = new ActionResult();
               struct.bazelResult.read(iprot);
               struct.setBazelResultIsSet(true);
             } else { 
@@ -1464,7 +1464,7 @@ public class RunStatus implements org.apache.thrift.TBase<RunStatus, RunStatus._
         struct.setTagIsSet(true);
       }
       if (incoming.get(8)) {
-        struct.bazelResult = new BazelActionResult();
+        struct.bazelResult = new ActionResult();
         struct.bazelResult.read(iprot);
         struct.setBazelResultIsSet(true);
       }

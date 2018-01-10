@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/gen-go/bazel"
+	"github.com/twitter/scoot/bazel/execution/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -300,9 +300,9 @@ func (p *Command) String() string {
 //  - TaskId
 //  - BazelRequest
 type TaskDefinition struct {
-	Command      *Command                   `thrift:"command,1,required" json:"command"`
-	TaskId       *string                    `thrift:"taskId,2" json:"taskId,omitempty"`
-	BazelRequest *bazel.BazelExecuteRequest `thrift:"bazelRequest,3" json:"bazelRequest,omitempty"`
+	Command      *Command              `thrift:"command,1,required" json:"command"`
+	TaskId       *string               `thrift:"taskId,2" json:"taskId,omitempty"`
+	BazelRequest *bazel.ExecuteRequest `thrift:"bazelRequest,3" json:"bazelRequest,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -327,9 +327,9 @@ func (p *TaskDefinition) GetTaskId() string {
 	return *p.TaskId
 }
 
-var TaskDefinition_BazelRequest_DEFAULT *bazel.BazelExecuteRequest
+var TaskDefinition_BazelRequest_DEFAULT *bazel.ExecuteRequest
 
-func (p *TaskDefinition) GetBazelRequest() *bazel.BazelExecuteRequest {
+func (p *TaskDefinition) GetBazelRequest() *bazel.ExecuteRequest {
 	if !p.IsSetBazelRequest() {
 		return TaskDefinition_BazelRequest_DEFAULT
 	}
@@ -412,7 +412,7 @@ func (p *TaskDefinition) readField2(iprot thrift.TProtocol) error {
 }
 
 func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
-	p.BazelRequest = &bazel.BazelExecuteRequest{}
+	p.BazelRequest = &bazel.ExecuteRequest{}
 	if err := p.BazelRequest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
 	}

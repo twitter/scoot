@@ -3,7 +3,7 @@ package runner
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/bazel/gen-go/bazel"
+	"github.com/twitter/scoot/bazel/execution/gen-go/bazel"
 	"github.com/twitter/scoot/common/log/tags"
 )
 
@@ -82,7 +82,7 @@ type RunStatus struct {
 	Error string
 
 	tags.LogTags
-	BazelResult bazel.BazelActionResult_
+	BazelResult *bazel.ActionResult_
 }
 
 func (p RunStatus) String() string {
@@ -96,7 +96,7 @@ func (p RunStatus) String() string {
 		s += fmt.Sprintf(" # Error: %s", p.Error)
 	}
 	s += fmt.Sprintf(" # Stdout: %s # Stderr: %s", p.StdoutRef, p.StderrRef)
-	s += fmt.Sprintf(" # BazelResult: %+v", p.BazelResult)
+	// TODO: determine how a RunStatus with an embedded BazelActionResult should look
 
 	return s
 }

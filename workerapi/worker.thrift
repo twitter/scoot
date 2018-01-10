@@ -33,7 +33,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
-  11: optional bazel.BazelActionResult bazelResult
+  11: optional bazel.ActionResult bazelResult
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.
@@ -51,7 +51,7 @@ struct RunCommand {
   5: optional string jobId
   6: optional string taskId
   7: optional string tag
-  8: optional bazel.BazelExecuteRequest bazelRequest
+  8: optional bazel.ExecuteRequest bazelRequest
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.

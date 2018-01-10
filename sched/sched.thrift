@@ -19,7 +19,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command
   2: optional string taskId
-  3: optional bazel.BazelExecuteRequest bazelRequest
+  3: optional bazel.ExecuteRequest bazelRequest
 }
 
 struct JobDefinition {

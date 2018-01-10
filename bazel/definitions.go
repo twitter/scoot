@@ -6,7 +6,7 @@ package bazel
 import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
-	bazelthrift "github.com/twitter/scoot/bazel/gen-go/bazel"
+	bazelthrift "github.com/twitter/scoot/bazel/execution/gen-go/bazel"
 	scootproto "github.com/twitter/scoot/common/proto"
 )
 
@@ -24,7 +24,7 @@ func (e *ExecuteRequest) String() string {
 }
 
 // Transform request Bazel ExecuteRequest data into a domain object
-func MakeDomainFromThrift(thriftRequest *bazelthrift.BazelExecuteRequest) *ExecuteRequest {
+func MakeDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *ExecuteRequest {
 	if thriftRequest == nil {
 		return nil
 	}
@@ -35,7 +35,7 @@ func MakeDomainFromThrift(thriftRequest *bazelthrift.BazelExecuteRequest) *Execu
 	return &ExecuteRequest{Request: er}
 }
 
-func makeActionFromThrift(thriftAction *bazelthrift.BazelAction) *remoteexecution.Action {
+func makeActionFromThrift(thriftAction *bazelthrift.Action) *remoteexecution.Action {
 	if thriftAction == nil {
 		return nil
 	}
@@ -50,14 +50,14 @@ func makeActionFromThrift(thriftAction *bazelthrift.BazelAction) *remoteexecutio
 	}
 }
 
-func makeDigestFromThrift(thriftDigest *bazelthrift.BazelDigest) *remoteexecution.Digest {
+func makeDigestFromThrift(thriftDigest *bazelthrift.Digest) *remoteexecution.Digest {
 	if thriftDigest == nil {
 		return nil
 	}
 	return &remoteexecution.Digest{Hash: thriftDigest.GetHash(), SizeBytes: thriftDigest.GetSizeBytes()}
 }
 
-func makePlatformFromThrift(thriftProperties []*bazelthrift.BazelProperty) *remoteexecution.Platform {
+func makePlatformFromThrift(thriftProperties []*bazelthrift.Property) *remoteexecution.Platform {
 	platform := &remoteexecution.Platform{}
 	platform.Properties = make([]*remoteexecution.Platform_Property, 0, len(thriftProperties))
 	for _, prop := range thriftProperties {
@@ -71,23 +71,23 @@ func makePlatformFromThrift(thriftProperties []*bazelthrift.BazelProperty) *remo
 }
 
 // Transforms domain ExecuteRequest object into request representation
-func MakeThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.BazelExecuteRequest {
+func MakeThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.ExecuteRequest {
 	if executeRequest == nil {
 		return nil
 	}
-	return &bazelthrift.BazelExecuteRequest{
+	return &bazelthrift.ExecuteRequest{
 		InstanceName: &executeRequest.Request.InstanceName,
 		SkipCache:    &executeRequest.Request.SkipCacheLookup,
 		Action:       makeActionThriftFromDomain(executeRequest.Request.GetAction()),
 	}
 }
 
-func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.BazelAction {
+func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Action {
 	if action == nil {
 		return nil
 	}
 	t := scootproto.GetMsFromDuration(action.GetTimeout())
-	return &bazelthrift.BazelAction{
+	return &bazelthrift.Action{
 		CommandDigest:      makeDigestThriftFromDomain(action.GetCommandDigest()),
 		InputDigest:        makeDigestThriftFromDomain(action.GetInputRootDigest()),
 		OutputFiles:        action.GetOutputFiles(),
@@ -98,23 +98,23 @@ func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Baz
 	}
 }
 
-func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.BazelDigest {
+func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.Digest {
 	if digest == nil {
 		return nil
 	}
-	return &bazelthrift.BazelDigest{Hash: digest.GetHash(), SizeBytes: digest.GetSizeBytes()}
+	return &bazelthrift.Digest{Hash: digest.GetHash(), SizeBytes: digest.GetSizeBytes()}
 }
 
-func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*bazelthrift.BazelProperty {
+func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*bazelthrift.Property {
 	if platform == nil {
-		return make([]*bazelthrift.BazelProperty, 0)
+		return make([]*bazelthrift.Property, 0)
 	}
-	props := make([]*bazelthrift.BazelProperty, 0, len(platform.GetProperties()))
+	props := make([]*bazelthrift.Property, 0, len(platform.GetProperties()))
 	for _, p := range platform.GetProperties() {
 		if p == nil {
 			continue
 		}
-		bp := &bazelthrift.BazelProperty{Name: p.GetName(), Value: p.GetValue()}
+		bp := &bazelthrift.Property{Name: p.GetName(), Value: p.GetValue()}
 		props = append(props, bp)
 	}
 	return props

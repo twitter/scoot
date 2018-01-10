@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/gen-go/bazel"
+	"github.com/twitter/scoot/bazel/execution/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -103,17 +103,17 @@ func (p *Status) UnmarshalText(text []byte) error {
 //  - Tag
 //  - BazelResult_
 type RunStatus struct {
-	Status       Status                    `thrift:"status,1,required" json:"status"`
-	RunId        string                    `thrift:"runId,2,required" json:"runId"`
-	OutUri       *string                   `thrift:"outUri,3" json:"outUri,omitempty"`
-	ErrUri       *string                   `thrift:"errUri,4" json:"errUri,omitempty"`
-	Error        *string                   `thrift:"error,5" json:"error,omitempty"`
-	ExitCode     *int32                    `thrift:"exitCode,6" json:"exitCode,omitempty"`
-	SnapshotId   *string                   `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
-	JobId        *string                   `thrift:"jobId,8" json:"jobId,omitempty"`
-	TaskId       *string                   `thrift:"taskId,9" json:"taskId,omitempty"`
-	Tag          *string                   `thrift:"tag,10" json:"tag,omitempty"`
-	BazelResult_ *bazel.BazelActionResult_ `thrift:"bazelResult,11" json:"bazelResult,omitempty"`
+	Status       Status               `thrift:"status,1,required" json:"status"`
+	RunId        string               `thrift:"runId,2,required" json:"runId"`
+	OutUri       *string              `thrift:"outUri,3" json:"outUri,omitempty"`
+	ErrUri       *string              `thrift:"errUri,4" json:"errUri,omitempty"`
+	Error        *string              `thrift:"error,5" json:"error,omitempty"`
+	ExitCode     *int32               `thrift:"exitCode,6" json:"exitCode,omitempty"`
+	SnapshotId   *string              `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
+	JobId        *string              `thrift:"jobId,8" json:"jobId,omitempty"`
+	TaskId       *string              `thrift:"taskId,9" json:"taskId,omitempty"`
+	Tag          *string              `thrift:"tag,10" json:"tag,omitempty"`
+	BazelResult_ *bazel.ActionResult_ `thrift:"bazelResult,11" json:"bazelResult,omitempty"`
 }
 
 func NewRunStatus() *RunStatus {
@@ -200,9 +200,9 @@ func (p *RunStatus) GetTag() string {
 	return *p.Tag
 }
 
-var RunStatus_BazelResult__DEFAULT *bazel.BazelActionResult_
+var RunStatus_BazelResult__DEFAULT *bazel.ActionResult_
 
-func (p *RunStatus) GetBazelResult_() *bazel.BazelActionResult_ {
+func (p *RunStatus) GetBazelResult_() *bazel.ActionResult_ {
 	if !p.IsSetBazelResult_() {
 		return RunStatus_BazelResult__DEFAULT
 	}
@@ -420,7 +420,7 @@ func (p *RunStatus) readField10(iprot thrift.TProtocol) error {
 }
 
 func (p *RunStatus) readField11(iprot thrift.TProtocol) error {
-	p.BazelResult_ = &bazel.BazelActionResult_{}
+	p.BazelResult_ = &bazel.ActionResult_{}
 	if err := p.BazelResult_.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelResult_), err)
 	}
@@ -847,14 +847,14 @@ func (p *WorkerStatus) String() string {
 //  - Tag
 //  - BazelRequest
 type RunCommand struct {
-	Argv         []string                   `thrift:"argv,1,required" json:"argv"`
-	Env          map[string]string          `thrift:"env,2" json:"env,omitempty"`
-	SnapshotId   *string                    `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
-	TimeoutMs    *int32                     `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
-	JobId        *string                    `thrift:"jobId,5" json:"jobId,omitempty"`
-	TaskId       *string                    `thrift:"taskId,6" json:"taskId,omitempty"`
-	Tag          *string                    `thrift:"tag,7" json:"tag,omitempty"`
-	BazelRequest *bazel.BazelExecuteRequest `thrift:"bazelRequest,8" json:"bazelRequest,omitempty"`
+	Argv         []string              `thrift:"argv,1,required" json:"argv"`
+	Env          map[string]string     `thrift:"env,2" json:"env,omitempty"`
+	SnapshotId   *string               `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
+	TimeoutMs    *int32                `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
+	JobId        *string               `thrift:"jobId,5" json:"jobId,omitempty"`
+	TaskId       *string               `thrift:"taskId,6" json:"taskId,omitempty"`
+	Tag          *string               `thrift:"tag,7" json:"tag,omitempty"`
+	BazelRequest *bazel.ExecuteRequest `thrift:"bazelRequest,8" json:"bazelRequest,omitempty"`
 }
 
 func NewRunCommand() *RunCommand {
@@ -916,9 +916,9 @@ func (p *RunCommand) GetTag() string {
 	return *p.Tag
 }
 
-var RunCommand_BazelRequest_DEFAULT *bazel.BazelExecuteRequest
+var RunCommand_BazelRequest_DEFAULT *bazel.ExecuteRequest
 
-func (p *RunCommand) GetBazelRequest() *bazel.BazelExecuteRequest {
+func (p *RunCommand) GetBazelRequest() *bazel.ExecuteRequest {
 	if !p.IsSetBazelRequest() {
 		return RunCommand_BazelRequest_DEFAULT
 	}
@@ -1115,7 +1115,7 @@ func (p *RunCommand) readField7(iprot thrift.TProtocol) error {
 }
 
 func (p *RunCommand) readField8(iprot thrift.TProtocol) error {
-	p.BazelRequest = &bazel.BazelExecuteRequest{}
+	p.BazelRequest = &bazel.ExecuteRequest{}
 	if err := p.BazelRequest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
 	}

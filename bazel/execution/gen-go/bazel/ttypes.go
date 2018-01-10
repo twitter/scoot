@@ -19,23 +19,23 @@ var GoUnusedProtection__ int
 // Attributes:
 //  - Hash
 //  - SizeBytes
-type BazelDigest struct {
+type Digest struct {
 	Hash      string `thrift:"hash,1,required" json:"hash"`
 	SizeBytes int64  `thrift:"sizeBytes,2,required" json:"sizeBytes"`
 }
 
-func NewBazelDigest() *BazelDigest {
-	return &BazelDigest{}
+func NewDigest() *Digest {
+	return &Digest{}
 }
 
-func (p *BazelDigest) GetHash() string {
+func (p *Digest) GetHash() string {
 	return p.Hash
 }
 
-func (p *BazelDigest) GetSizeBytes() int64 {
+func (p *Digest) GetSizeBytes() int64 {
 	return p.SizeBytes
 }
-func (p *BazelDigest) Read(iprot thrift.TProtocol) error {
+func (p *Digest) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -83,7 +83,7 @@ func (p *BazelDigest) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelDigest) readField1(iprot thrift.TProtocol) error {
+func (p *Digest) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
@@ -92,7 +92,7 @@ func (p *BazelDigest) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelDigest) readField2(iprot thrift.TProtocol) error {
+func (p *Digest) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
@@ -101,8 +101,8 @@ func (p *BazelDigest) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelDigest) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelDigest"); err != nil {
+func (p *Digest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Digest"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -120,7 +120,7 @@ func (p *BazelDigest) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelDigest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *Digest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("hash", thrift.STRING, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:hash: ", p), err)
 	}
@@ -133,7 +133,7 @@ func (p *BazelDigest) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelDigest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *Digest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("sizeBytes", thrift.I64, 2); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:sizeBytes: ", p), err)
 	}
@@ -146,33 +146,33 @@ func (p *BazelDigest) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelDigest) String() string {
+func (p *Digest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelDigest(%+v)", *p)
+	return fmt.Sprintf("Digest(%+v)", *p)
 }
 
 // Attributes:
 //  - Name
 //  - Value
-type BazelProperty struct {
+type Property struct {
 	Name  string `thrift:"name,1,required" json:"name"`
 	Value string `thrift:"value,2,required" json:"value"`
 }
 
-func NewBazelProperty() *BazelProperty {
-	return &BazelProperty{}
+func NewProperty() *Property {
+	return &Property{}
 }
 
-func (p *BazelProperty) GetName() string {
+func (p *Property) GetName() string {
 	return p.Name
 }
 
-func (p *BazelProperty) GetValue() string {
+func (p *Property) GetValue() string {
 	return p.Value
 }
-func (p *BazelProperty) Read(iprot thrift.TProtocol) error {
+func (p *Property) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -220,7 +220,7 @@ func (p *BazelProperty) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelProperty) readField1(iprot thrift.TProtocol) error {
+func (p *Property) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
@@ -229,7 +229,7 @@ func (p *BazelProperty) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelProperty) readField2(iprot thrift.TProtocol) error {
+func (p *Property) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
@@ -238,8 +238,8 @@ func (p *BazelProperty) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelProperty) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelProperty"); err != nil {
+func (p *Property) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Property"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -257,7 +257,7 @@ func (p *BazelProperty) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelProperty) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *Property) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:name: ", p), err)
 	}
@@ -270,7 +270,7 @@ func (p *BazelProperty) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelProperty) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *Property) writeField2(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:value: ", p), err)
 	}
@@ -283,11 +283,11 @@ func (p *BazelProperty) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelProperty) String() string {
+func (p *Property) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelProperty(%+v)", *p)
+	return fmt.Sprintf("Property(%+v)", *p)
 }
 
 // Attributes:
@@ -298,102 +298,102 @@ func (p *BazelProperty) String() string {
 //  - PlatformProperties
 //  - TimeoutMs
 //  - NoCache
-type BazelAction struct {
-	CommandDigest      *BazelDigest     `thrift:"commandDigest,1,required" json:"commandDigest"`
-	InputDigest        *BazelDigest     `thrift:"inputDigest,2,required" json:"inputDigest"`
-	OutputFiles        []string         `thrift:"outputFiles,3" json:"outputFiles,omitempty"`
-	OutputDirs         []string         `thrift:"outputDirs,4" json:"outputDirs,omitempty"`
-	PlatformProperties []*BazelProperty `thrift:"platformProperties,5" json:"platformProperties,omitempty"`
-	TimeoutMs          *int64           `thrift:"timeoutMs,6" json:"timeoutMs,omitempty"`
-	NoCache            *bool            `thrift:"noCache,7" json:"noCache,omitempty"`
+type Action struct {
+	CommandDigest      *Digest     `thrift:"commandDigest,1,required" json:"commandDigest"`
+	InputDigest        *Digest     `thrift:"inputDigest,2,required" json:"inputDigest"`
+	OutputFiles        []string    `thrift:"outputFiles,3" json:"outputFiles,omitempty"`
+	OutputDirs         []string    `thrift:"outputDirs,4" json:"outputDirs,omitempty"`
+	PlatformProperties []*Property `thrift:"platformProperties,5" json:"platformProperties,omitempty"`
+	TimeoutMs          *int64      `thrift:"timeoutMs,6" json:"timeoutMs,omitempty"`
+	NoCache            *bool       `thrift:"noCache,7" json:"noCache,omitempty"`
 }
 
-func NewBazelAction() *BazelAction {
-	return &BazelAction{}
+func NewAction() *Action {
+	return &Action{}
 }
 
-var BazelAction_CommandDigest_DEFAULT *BazelDigest
+var Action_CommandDigest_DEFAULT *Digest
 
-func (p *BazelAction) GetCommandDigest() *BazelDigest {
+func (p *Action) GetCommandDigest() *Digest {
 	if !p.IsSetCommandDigest() {
-		return BazelAction_CommandDigest_DEFAULT
+		return Action_CommandDigest_DEFAULT
 	}
 	return p.CommandDigest
 }
 
-var BazelAction_InputDigest_DEFAULT *BazelDigest
+var Action_InputDigest_DEFAULT *Digest
 
-func (p *BazelAction) GetInputDigest() *BazelDigest {
+func (p *Action) GetInputDigest() *Digest {
 	if !p.IsSetInputDigest() {
-		return BazelAction_InputDigest_DEFAULT
+		return Action_InputDigest_DEFAULT
 	}
 	return p.InputDigest
 }
 
-var BazelAction_OutputFiles_DEFAULT []string
+var Action_OutputFiles_DEFAULT []string
 
-func (p *BazelAction) GetOutputFiles() []string {
+func (p *Action) GetOutputFiles() []string {
 	return p.OutputFiles
 }
 
-var BazelAction_OutputDirs_DEFAULT []string
+var Action_OutputDirs_DEFAULT []string
 
-func (p *BazelAction) GetOutputDirs() []string {
+func (p *Action) GetOutputDirs() []string {
 	return p.OutputDirs
 }
 
-var BazelAction_PlatformProperties_DEFAULT []*BazelProperty
+var Action_PlatformProperties_DEFAULT []*Property
 
-func (p *BazelAction) GetPlatformProperties() []*BazelProperty {
+func (p *Action) GetPlatformProperties() []*Property {
 	return p.PlatformProperties
 }
 
-var BazelAction_TimeoutMs_DEFAULT int64
+var Action_TimeoutMs_DEFAULT int64
 
-func (p *BazelAction) GetTimeoutMs() int64 {
+func (p *Action) GetTimeoutMs() int64 {
 	if !p.IsSetTimeoutMs() {
-		return BazelAction_TimeoutMs_DEFAULT
+		return Action_TimeoutMs_DEFAULT
 	}
 	return *p.TimeoutMs
 }
 
-var BazelAction_NoCache_DEFAULT bool
+var Action_NoCache_DEFAULT bool
 
-func (p *BazelAction) GetNoCache() bool {
+func (p *Action) GetNoCache() bool {
 	if !p.IsSetNoCache() {
-		return BazelAction_NoCache_DEFAULT
+		return Action_NoCache_DEFAULT
 	}
 	return *p.NoCache
 }
-func (p *BazelAction) IsSetCommandDigest() bool {
+func (p *Action) IsSetCommandDigest() bool {
 	return p.CommandDigest != nil
 }
 
-func (p *BazelAction) IsSetInputDigest() bool {
+func (p *Action) IsSetInputDigest() bool {
 	return p.InputDigest != nil
 }
 
-func (p *BazelAction) IsSetOutputFiles() bool {
+func (p *Action) IsSetOutputFiles() bool {
 	return p.OutputFiles != nil
 }
 
-func (p *BazelAction) IsSetOutputDirs() bool {
+func (p *Action) IsSetOutputDirs() bool {
 	return p.OutputDirs != nil
 }
 
-func (p *BazelAction) IsSetPlatformProperties() bool {
+func (p *Action) IsSetPlatformProperties() bool {
 	return p.PlatformProperties != nil
 }
 
-func (p *BazelAction) IsSetTimeoutMs() bool {
+func (p *Action) IsSetTimeoutMs() bool {
 	return p.TimeoutMs != nil
 }
 
-func (p *BazelAction) IsSetNoCache() bool {
+func (p *Action) IsSetNoCache() bool {
 	return p.NoCache != nil
 }
 
-func (p *BazelAction) Read(iprot thrift.TProtocol) error {
+func (p *Action) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -461,23 +461,23 @@ func (p *BazelAction) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) readField1(iprot thrift.TProtocol) error {
-	p.CommandDigest = &BazelDigest{}
+func (p *Action) readField1(iprot thrift.TProtocol) error {
+	p.CommandDigest = &Digest{}
 	if err := p.CommandDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CommandDigest), err)
 	}
 	return nil
 }
 
-func (p *BazelAction) readField2(iprot thrift.TProtocol) error {
-	p.InputDigest = &BazelDigest{}
+func (p *Action) readField2(iprot thrift.TProtocol) error {
+	p.InputDigest = &Digest{}
 	if err := p.InputDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InputDigest), err)
 	}
 	return nil
 }
 
-func (p *BazelAction) readField3(iprot thrift.TProtocol) error {
+func (p *Action) readField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
@@ -499,7 +499,7 @@ func (p *BazelAction) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) readField4(iprot thrift.TProtocol) error {
+func (p *Action) readField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
@@ -521,15 +521,15 @@ func (p *BazelAction) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) readField5(iprot thrift.TProtocol) error {
+func (p *Action) readField5(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
 	}
-	tSlice := make([]*BazelProperty, 0, size)
+	tSlice := make([]*Property, 0, size)
 	p.PlatformProperties = tSlice
 	for i := 0; i < size; i++ {
-		_elem2 := &BazelProperty{}
+		_elem2 := &Property{}
 		if err := _elem2.Read(iprot); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem2), err)
 		}
@@ -541,7 +541,7 @@ func (p *BazelAction) readField5(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) readField6(iprot thrift.TProtocol) error {
+func (p *Action) readField6(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return thrift.PrependError("error reading field 6: ", err)
 	} else {
@@ -550,7 +550,7 @@ func (p *BazelAction) readField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) readField7(iprot thrift.TProtocol) error {
+func (p *Action) readField7(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
 		return thrift.PrependError("error reading field 7: ", err)
 	} else {
@@ -559,8 +559,8 @@ func (p *BazelAction) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelAction"); err != nil {
+func (p *Action) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Action"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -593,7 +593,7 @@ func (p *BazelAction) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelAction) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("commandDigest", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:commandDigest: ", p), err)
 	}
@@ -606,7 +606,7 @@ func (p *BazelAction) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField2(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("inputDigest", thrift.STRUCT, 2); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:inputDigest: ", p), err)
 	}
@@ -619,7 +619,7 @@ func (p *BazelAction) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputFiles() {
 		if err := oprot.WriteFieldBegin("outputFiles", thrift.LIST, 3); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:outputFiles: ", p), err)
@@ -642,7 +642,7 @@ func (p *BazelAction) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputDirs() {
 		if err := oprot.WriteFieldBegin("outputDirs", thrift.LIST, 4); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:outputDirs: ", p), err)
@@ -665,7 +665,7 @@ func (p *BazelAction) writeField4(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformProperties() {
 		if err := oprot.WriteFieldBegin("platformProperties", thrift.LIST, 5); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:platformProperties: ", p), err)
@@ -688,7 +688,7 @@ func (p *BazelAction) writeField5(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTimeoutMs() {
 		if err := oprot.WriteFieldBegin("timeoutMs", thrift.I64, 6); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:timeoutMs: ", p), err)
@@ -703,7 +703,7 @@ func (p *BazelAction) writeField6(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *Action) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNoCache() {
 		if err := oprot.WriteFieldBegin("noCache", thrift.BOOL, 7); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:noCache: ", p), err)
@@ -718,66 +718,66 @@ func (p *BazelAction) writeField7(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelAction) String() string {
+func (p *Action) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelAction(%+v)", *p)
+	return fmt.Sprintf("Action(%+v)", *p)
 }
 
 // Attributes:
 //  - Action
 //  - InstanceName
 //  - SkipCache
-type BazelExecuteRequest struct {
-	Action       *BazelAction `thrift:"action,1,required" json:"action"`
-	InstanceName *string      `thrift:"instanceName,2" json:"instanceName,omitempty"`
-	SkipCache    *bool        `thrift:"skipCache,3" json:"skipCache,omitempty"`
+type ExecuteRequest struct {
+	Action       *Action `thrift:"action,1,required" json:"action"`
+	InstanceName *string `thrift:"instanceName,2" json:"instanceName,omitempty"`
+	SkipCache    *bool   `thrift:"skipCache,3" json:"skipCache,omitempty"`
 }
 
-func NewBazelExecuteRequest() *BazelExecuteRequest {
-	return &BazelExecuteRequest{}
+func NewExecuteRequest() *ExecuteRequest {
+	return &ExecuteRequest{}
 }
 
-var BazelExecuteRequest_Action_DEFAULT *BazelAction
+var ExecuteRequest_Action_DEFAULT *Action
 
-func (p *BazelExecuteRequest) GetAction() *BazelAction {
+func (p *ExecuteRequest) GetAction() *Action {
 	if !p.IsSetAction() {
-		return BazelExecuteRequest_Action_DEFAULT
+		return ExecuteRequest_Action_DEFAULT
 	}
 	return p.Action
 }
 
-var BazelExecuteRequest_InstanceName_DEFAULT string
+var ExecuteRequest_InstanceName_DEFAULT string
 
-func (p *BazelExecuteRequest) GetInstanceName() string {
+func (p *ExecuteRequest) GetInstanceName() string {
 	if !p.IsSetInstanceName() {
-		return BazelExecuteRequest_InstanceName_DEFAULT
+		return ExecuteRequest_InstanceName_DEFAULT
 	}
 	return *p.InstanceName
 }
 
-var BazelExecuteRequest_SkipCache_DEFAULT bool
+var ExecuteRequest_SkipCache_DEFAULT bool
 
-func (p *BazelExecuteRequest) GetSkipCache() bool {
+func (p *ExecuteRequest) GetSkipCache() bool {
 	if !p.IsSetSkipCache() {
-		return BazelExecuteRequest_SkipCache_DEFAULT
+		return ExecuteRequest_SkipCache_DEFAULT
 	}
 	return *p.SkipCache
 }
-func (p *BazelExecuteRequest) IsSetAction() bool {
+func (p *ExecuteRequest) IsSetAction() bool {
 	return p.Action != nil
 }
 
-func (p *BazelExecuteRequest) IsSetInstanceName() bool {
+func (p *ExecuteRequest) IsSetInstanceName() bool {
 	return p.InstanceName != nil
 }
 
-func (p *BazelExecuteRequest) IsSetSkipCache() bool {
+func (p *ExecuteRequest) IsSetSkipCache() bool {
 	return p.SkipCache != nil
 }
 
-func (p *BazelExecuteRequest) Read(iprot thrift.TProtocol) error {
+func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -824,15 +824,15 @@ func (p *BazelExecuteRequest) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelExecuteRequest) readField1(iprot thrift.TProtocol) error {
-	p.Action = &BazelAction{}
+func (p *ExecuteRequest) readField1(iprot thrift.TProtocol) error {
+	p.Action = &Action{}
 	if err := p.Action.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Action), err)
 	}
 	return nil
 }
 
-func (p *BazelExecuteRequest) readField2(iprot thrift.TProtocol) error {
+func (p *ExecuteRequest) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
@@ -841,7 +841,7 @@ func (p *BazelExecuteRequest) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelExecuteRequest) readField3(iprot thrift.TProtocol) error {
+func (p *ExecuteRequest) readField3(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
@@ -850,8 +850,8 @@ func (p *BazelExecuteRequest) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelExecuteRequest) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelExecuteRequest"); err != nil {
+func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ExecuteRequest"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -872,7 +872,7 @@ func (p *BazelExecuteRequest) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelExecuteRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ExecuteRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("action", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:action: ", p), err)
 	}
@@ -885,7 +885,7 @@ func (p *BazelExecuteRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelExecuteRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ExecuteRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetInstanceName() {
 		if err := oprot.WriteFieldBegin("instanceName", thrift.STRING, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:instanceName: ", p), err)
@@ -900,7 +900,7 @@ func (p *BazelExecuteRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelExecuteRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ExecuteRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSkipCache() {
 		if err := oprot.WriteFieldBegin("skipCache", thrift.BOOL, 3); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:skipCache: ", p), err)
@@ -915,11 +915,11 @@ func (p *BazelExecuteRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelExecuteRequest) String() string {
+func (p *ExecuteRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelExecuteRequest(%+v)", *p)
+	return fmt.Sprintf("ExecuteRequest(%+v)", *p)
 }
 
 // Attributes:
@@ -927,66 +927,66 @@ func (p *BazelExecuteRequest) String() string {
 //  - Path
 //  - Content
 //  - IsExecutable
-type BazelOutputFile struct {
-	Digest       *BazelDigest `thrift:"digest,1,required" json:"digest"`
-	Path         *string      `thrift:"path,2" json:"path,omitempty"`
-	Content      []byte       `thrift:"content,3" json:"content,omitempty"`
-	IsExecutable *bool        `thrift:"isExecutable,4" json:"isExecutable,omitempty"`
+type OutputFile struct {
+	Digest       *Digest `thrift:"digest,1,required" json:"digest"`
+	Path         *string `thrift:"path,2" json:"path,omitempty"`
+	Content      []byte  `thrift:"content,3" json:"content,omitempty"`
+	IsExecutable *bool   `thrift:"isExecutable,4" json:"isExecutable,omitempty"`
 }
 
-func NewBazelOutputFile() *BazelOutputFile {
-	return &BazelOutputFile{}
+func NewOutputFile() *OutputFile {
+	return &OutputFile{}
 }
 
-var BazelOutputFile_Digest_DEFAULT *BazelDigest
+var OutputFile_Digest_DEFAULT *Digest
 
-func (p *BazelOutputFile) GetDigest() *BazelDigest {
+func (p *OutputFile) GetDigest() *Digest {
 	if !p.IsSetDigest() {
-		return BazelOutputFile_Digest_DEFAULT
+		return OutputFile_Digest_DEFAULT
 	}
 	return p.Digest
 }
 
-var BazelOutputFile_Path_DEFAULT string
+var OutputFile_Path_DEFAULT string
 
-func (p *BazelOutputFile) GetPath() string {
+func (p *OutputFile) GetPath() string {
 	if !p.IsSetPath() {
-		return BazelOutputFile_Path_DEFAULT
+		return OutputFile_Path_DEFAULT
 	}
 	return *p.Path
 }
 
-var BazelOutputFile_Content_DEFAULT []byte
+var OutputFile_Content_DEFAULT []byte
 
-func (p *BazelOutputFile) GetContent() []byte {
+func (p *OutputFile) GetContent() []byte {
 	return p.Content
 }
 
-var BazelOutputFile_IsExecutable_DEFAULT bool
+var OutputFile_IsExecutable_DEFAULT bool
 
-func (p *BazelOutputFile) GetIsExecutable() bool {
+func (p *OutputFile) GetIsExecutable() bool {
 	if !p.IsSetIsExecutable() {
-		return BazelOutputFile_IsExecutable_DEFAULT
+		return OutputFile_IsExecutable_DEFAULT
 	}
 	return *p.IsExecutable
 }
-func (p *BazelOutputFile) IsSetDigest() bool {
+func (p *OutputFile) IsSetDigest() bool {
 	return p.Digest != nil
 }
 
-func (p *BazelOutputFile) IsSetPath() bool {
+func (p *OutputFile) IsSetPath() bool {
 	return p.Path != nil
 }
 
-func (p *BazelOutputFile) IsSetContent() bool {
+func (p *OutputFile) IsSetContent() bool {
 	return p.Content != nil
 }
 
-func (p *BazelOutputFile) IsSetIsExecutable() bool {
+func (p *OutputFile) IsSetIsExecutable() bool {
 	return p.IsExecutable != nil
 }
 
-func (p *BazelOutputFile) Read(iprot thrift.TProtocol) error {
+func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -1037,15 +1037,15 @@ func (p *BazelOutputFile) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputFile) readField1(iprot thrift.TProtocol) error {
-	p.Digest = &BazelDigest{}
+func (p *OutputFile) readField1(iprot thrift.TProtocol) error {
+	p.Digest = &Digest{}
 	if err := p.Digest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Digest), err)
 	}
 	return nil
 }
 
-func (p *BazelOutputFile) readField2(iprot thrift.TProtocol) error {
+func (p *OutputFile) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
@@ -1054,7 +1054,7 @@ func (p *BazelOutputFile) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputFile) readField3(iprot thrift.TProtocol) error {
+func (p *OutputFile) readField3(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBinary(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
@@ -1063,7 +1063,7 @@ func (p *BazelOutputFile) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputFile) readField4(iprot thrift.TProtocol) error {
+func (p *OutputFile) readField4(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
 		return thrift.PrependError("error reading field 4: ", err)
 	} else {
@@ -1072,8 +1072,8 @@ func (p *BazelOutputFile) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputFile) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelOutputFile"); err != nil {
+func (p *OutputFile) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("OutputFile"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -1097,7 +1097,7 @@ func (p *BazelOutputFile) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputFile) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *OutputFile) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("digest", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:digest: ", p), err)
 	}
@@ -1110,7 +1110,7 @@ func (p *BazelOutputFile) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputFile) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *OutputFile) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPath() {
 		if err := oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:path: ", p), err)
@@ -1125,7 +1125,7 @@ func (p *BazelOutputFile) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputFile) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *OutputFile) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetContent() {
 		if err := oprot.WriteFieldBegin("content", thrift.STRING, 3); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:content: ", p), err)
@@ -1140,7 +1140,7 @@ func (p *BazelOutputFile) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputFile) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *OutputFile) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIsExecutable() {
 		if err := oprot.WriteFieldBegin("isExecutable", thrift.BOOL, 4); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:isExecutable: ", p), err)
@@ -1155,51 +1155,51 @@ func (p *BazelOutputFile) writeField4(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputFile) String() string {
+func (p *OutputFile) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelOutputFile(%+v)", *p)
+	return fmt.Sprintf("OutputFile(%+v)", *p)
 }
 
 // Attributes:
 //  - TreeDigest
 //  - Path
-type BazelOutputDirectory struct {
-	TreeDigest *BazelDigest `thrift:"treeDigest,1,required" json:"treeDigest"`
-	Path       *string      `thrift:"path,2" json:"path,omitempty"`
+type OutputDirectory struct {
+	TreeDigest *Digest `thrift:"treeDigest,1,required" json:"treeDigest"`
+	Path       *string `thrift:"path,2" json:"path,omitempty"`
 }
 
-func NewBazelOutputDirectory() *BazelOutputDirectory {
-	return &BazelOutputDirectory{}
+func NewOutputDirectory() *OutputDirectory {
+	return &OutputDirectory{}
 }
 
-var BazelOutputDirectory_TreeDigest_DEFAULT *BazelDigest
+var OutputDirectory_TreeDigest_DEFAULT *Digest
 
-func (p *BazelOutputDirectory) GetTreeDigest() *BazelDigest {
+func (p *OutputDirectory) GetTreeDigest() *Digest {
 	if !p.IsSetTreeDigest() {
-		return BazelOutputDirectory_TreeDigest_DEFAULT
+		return OutputDirectory_TreeDigest_DEFAULT
 	}
 	return p.TreeDigest
 }
 
-var BazelOutputDirectory_Path_DEFAULT string
+var OutputDirectory_Path_DEFAULT string
 
-func (p *BazelOutputDirectory) GetPath() string {
+func (p *OutputDirectory) GetPath() string {
 	if !p.IsSetPath() {
-		return BazelOutputDirectory_Path_DEFAULT
+		return OutputDirectory_Path_DEFAULT
 	}
 	return *p.Path
 }
-func (p *BazelOutputDirectory) IsSetTreeDigest() bool {
+func (p *OutputDirectory) IsSetTreeDigest() bool {
 	return p.TreeDigest != nil
 }
 
-func (p *BazelOutputDirectory) IsSetPath() bool {
+func (p *OutputDirectory) IsSetPath() bool {
 	return p.Path != nil
 }
 
-func (p *BazelOutputDirectory) Read(iprot thrift.TProtocol) error {
+func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -1242,15 +1242,15 @@ func (p *BazelOutputDirectory) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputDirectory) readField1(iprot thrift.TProtocol) error {
-	p.TreeDigest = &BazelDigest{}
+func (p *OutputDirectory) readField1(iprot thrift.TProtocol) error {
+	p.TreeDigest = &Digest{}
 	if err := p.TreeDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TreeDigest), err)
 	}
 	return nil
 }
 
-func (p *BazelOutputDirectory) readField2(iprot thrift.TProtocol) error {
+func (p *OutputDirectory) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
@@ -1259,8 +1259,8 @@ func (p *BazelOutputDirectory) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputDirectory) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelOutputDirectory"); err != nil {
+func (p *OutputDirectory) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("OutputDirectory"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -1278,7 +1278,7 @@ func (p *BazelOutputDirectory) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelOutputDirectory) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *OutputDirectory) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("treeDigest", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:treeDigest: ", p), err)
 	}
@@ -1291,7 +1291,7 @@ func (p *BazelOutputDirectory) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputDirectory) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *OutputDirectory) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPath() {
 		if err := oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:path: ", p), err)
@@ -1306,11 +1306,11 @@ func (p *BazelOutputDirectory) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelOutputDirectory) String() string {
+func (p *OutputDirectory) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelOutputDirectory(%+v)", *p)
+	return fmt.Sprintf("OutputDirectory(%+v)", *p)
 }
 
 // Attributes:
@@ -1321,99 +1321,99 @@ func (p *BazelOutputDirectory) String() string {
 //  - OutputFiles
 //  - OutputDirectories
 //  - ExitCode
-type BazelActionResult_ struct {
-	StdoutDigest      *BazelDigest            `thrift:"stdoutDigest,1,required" json:"stdoutDigest"`
-	StderrDigest      *BazelDigest            `thrift:"stderrDigest,2,required" json:"stderrDigest"`
-	StdoutRaw         []byte                  `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
-	StderrRaw         []byte                  `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
-	OutputFiles       []*BazelOutputFile      `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
-	OutputDirectories []*BazelOutputDirectory `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
-	ExitCode          *int32                  `thrift:"exitCode,7" json:"exitCode,omitempty"`
+type ActionResult_ struct {
+	StdoutDigest      *Digest            `thrift:"stdoutDigest,1,required" json:"stdoutDigest"`
+	StderrDigest      *Digest            `thrift:"stderrDigest,2,required" json:"stderrDigest"`
+	StdoutRaw         []byte             `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
+	StderrRaw         []byte             `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
+	OutputFiles       []*OutputFile      `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
+	OutputDirectories []*OutputDirectory `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
+	ExitCode          *int32             `thrift:"exitCode,7" json:"exitCode,omitempty"`
 }
 
-func NewBazelActionResult_() *BazelActionResult_ {
-	return &BazelActionResult_{}
+func NewActionResult_() *ActionResult_ {
+	return &ActionResult_{}
 }
 
-var BazelActionResult__StdoutDigest_DEFAULT *BazelDigest
+var ActionResult__StdoutDigest_DEFAULT *Digest
 
-func (p *BazelActionResult_) GetStdoutDigest() *BazelDigest {
+func (p *ActionResult_) GetStdoutDigest() *Digest {
 	if !p.IsSetStdoutDigest() {
-		return BazelActionResult__StdoutDigest_DEFAULT
+		return ActionResult__StdoutDigest_DEFAULT
 	}
 	return p.StdoutDigest
 }
 
-var BazelActionResult__StderrDigest_DEFAULT *BazelDigest
+var ActionResult__StderrDigest_DEFAULT *Digest
 
-func (p *BazelActionResult_) GetStderrDigest() *BazelDigest {
+func (p *ActionResult_) GetStderrDigest() *Digest {
 	if !p.IsSetStderrDigest() {
-		return BazelActionResult__StderrDigest_DEFAULT
+		return ActionResult__StderrDigest_DEFAULT
 	}
 	return p.StderrDigest
 }
 
-var BazelActionResult__StdoutRaw_DEFAULT []byte
+var ActionResult__StdoutRaw_DEFAULT []byte
 
-func (p *BazelActionResult_) GetStdoutRaw() []byte {
+func (p *ActionResult_) GetStdoutRaw() []byte {
 	return p.StdoutRaw
 }
 
-var BazelActionResult__StderrRaw_DEFAULT []byte
+var ActionResult__StderrRaw_DEFAULT []byte
 
-func (p *BazelActionResult_) GetStderrRaw() []byte {
+func (p *ActionResult_) GetStderrRaw() []byte {
 	return p.StderrRaw
 }
 
-var BazelActionResult__OutputFiles_DEFAULT []*BazelOutputFile
+var ActionResult__OutputFiles_DEFAULT []*OutputFile
 
-func (p *BazelActionResult_) GetOutputFiles() []*BazelOutputFile {
+func (p *ActionResult_) GetOutputFiles() []*OutputFile {
 	return p.OutputFiles
 }
 
-var BazelActionResult__OutputDirectories_DEFAULT []*BazelOutputDirectory
+var ActionResult__OutputDirectories_DEFAULT []*OutputDirectory
 
-func (p *BazelActionResult_) GetOutputDirectories() []*BazelOutputDirectory {
+func (p *ActionResult_) GetOutputDirectories() []*OutputDirectory {
 	return p.OutputDirectories
 }
 
-var BazelActionResult__ExitCode_DEFAULT int32
+var ActionResult__ExitCode_DEFAULT int32
 
-func (p *BazelActionResult_) GetExitCode() int32 {
+func (p *ActionResult_) GetExitCode() int32 {
 	if !p.IsSetExitCode() {
-		return BazelActionResult__ExitCode_DEFAULT
+		return ActionResult__ExitCode_DEFAULT
 	}
 	return *p.ExitCode
 }
-func (p *BazelActionResult_) IsSetStdoutDigest() bool {
+func (p *ActionResult_) IsSetStdoutDigest() bool {
 	return p.StdoutDigest != nil
 }
 
-func (p *BazelActionResult_) IsSetStderrDigest() bool {
+func (p *ActionResult_) IsSetStderrDigest() bool {
 	return p.StderrDigest != nil
 }
 
-func (p *BazelActionResult_) IsSetStdoutRaw() bool {
+func (p *ActionResult_) IsSetStdoutRaw() bool {
 	return p.StdoutRaw != nil
 }
 
-func (p *BazelActionResult_) IsSetStderrRaw() bool {
+func (p *ActionResult_) IsSetStderrRaw() bool {
 	return p.StderrRaw != nil
 }
 
-func (p *BazelActionResult_) IsSetOutputFiles() bool {
+func (p *ActionResult_) IsSetOutputFiles() bool {
 	return p.OutputFiles != nil
 }
 
-func (p *BazelActionResult_) IsSetOutputDirectories() bool {
+func (p *ActionResult_) IsSetOutputDirectories() bool {
 	return p.OutputDirectories != nil
 }
 
-func (p *BazelActionResult_) IsSetExitCode() bool {
+func (p *ActionResult_) IsSetExitCode() bool {
 	return p.ExitCode != nil
 }
 
-func (p *BazelActionResult_) Read(iprot thrift.TProtocol) error {
+func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -1481,23 +1481,23 @@ func (p *BazelActionResult_) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) readField1(iprot thrift.TProtocol) error {
-	p.StdoutDigest = &BazelDigest{}
+func (p *ActionResult_) readField1(iprot thrift.TProtocol) error {
+	p.StdoutDigest = &Digest{}
 	if err := p.StdoutDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StdoutDigest), err)
 	}
 	return nil
 }
 
-func (p *BazelActionResult_) readField2(iprot thrift.TProtocol) error {
-	p.StderrDigest = &BazelDigest{}
+func (p *ActionResult_) readField2(iprot thrift.TProtocol) error {
+	p.StderrDigest = &Digest{}
 	if err := p.StderrDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StderrDigest), err)
 	}
 	return nil
 }
 
-func (p *BazelActionResult_) readField3(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField3(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBinary(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
@@ -1506,7 +1506,7 @@ func (p *BazelActionResult_) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) readField4(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField4(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBinary(); err != nil {
 		return thrift.PrependError("error reading field 4: ", err)
 	} else {
@@ -1515,15 +1515,15 @@ func (p *BazelActionResult_) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) readField5(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField5(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
 	}
-	tSlice := make([]*BazelOutputFile, 0, size)
+	tSlice := make([]*OutputFile, 0, size)
 	p.OutputFiles = tSlice
 	for i := 0; i < size; i++ {
-		_elem3 := &BazelOutputFile{}
+		_elem3 := &OutputFile{}
 		if err := _elem3.Read(iprot); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
 		}
@@ -1535,15 +1535,15 @@ func (p *BazelActionResult_) readField5(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) readField6(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField6(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return thrift.PrependError("error reading list begin: ", err)
 	}
-	tSlice := make([]*BazelOutputDirectory, 0, size)
+	tSlice := make([]*OutputDirectory, 0, size)
 	p.OutputDirectories = tSlice
 	for i := 0; i < size; i++ {
-		_elem4 := &BazelOutputDirectory{}
+		_elem4 := &OutputDirectory{}
 		if err := _elem4.Read(iprot); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem4), err)
 		}
@@ -1555,7 +1555,7 @@ func (p *BazelActionResult_) readField6(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) readField7(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField7(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
 		return thrift.PrependError("error reading field 7: ", err)
 	} else {
@@ -1564,8 +1564,8 @@ func (p *BazelActionResult_) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("BazelActionResult"); err != nil {
+func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ActionResult"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -1598,7 +1598,7 @@ func (p *BazelActionResult_) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *BazelActionResult_) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("stdoutDigest", thrift.STRUCT, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:stdoutDigest: ", p), err)
 	}
@@ -1611,7 +1611,7 @@ func (p *BazelActionResult_) writeField1(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("stderrDigest", thrift.STRUCT, 2); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:stderrDigest: ", p), err)
 	}
@@ -1624,7 +1624,7 @@ func (p *BazelActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStdoutRaw() {
 		if err := oprot.WriteFieldBegin("stdoutRaw", thrift.STRING, 3); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:stdoutRaw: ", p), err)
@@ -1639,7 +1639,7 @@ func (p *BazelActionResult_) writeField3(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStderrRaw() {
 		if err := oprot.WriteFieldBegin("stderrRaw", thrift.STRING, 4); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:stderrRaw: ", p), err)
@@ -1654,7 +1654,7 @@ func (p *BazelActionResult_) writeField4(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputFiles() {
 		if err := oprot.WriteFieldBegin("outputFiles", thrift.LIST, 5); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:outputFiles: ", p), err)
@@ -1677,7 +1677,7 @@ func (p *BazelActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputDirectories() {
 		if err := oprot.WriteFieldBegin("outputDirectories", thrift.LIST, 6); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:outputDirectories: ", p), err)
@@ -1700,7 +1700,7 @@ func (p *BazelActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExitCode() {
 		if err := oprot.WriteFieldBegin("exitCode", thrift.I32, 7); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:exitCode: ", p), err)
@@ -1715,9 +1715,9 @@ func (p *BazelActionResult_) writeField7(oprot thrift.TProtocol) (err error) {
 	return err
 }
 
-func (p *BazelActionResult_) String() string {
+func (p *ActionResult_) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("BazelActionResult_(%+v)", *p)
+	return fmt.Sprintf("ActionResult_(%+v)", *p)
 }
