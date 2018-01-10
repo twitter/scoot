@@ -3,8 +3,10 @@
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 #
 # To Generate files, run from this (github.com/twitter/scoot/scootapi/) directory:
-#     1. thrift -I ../bazel/ --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
-
+#     1. thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,package=scoot,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift
+#     2. XXX rm -rf scootapi/gen-go/scoot/cloud_scoot-remote/
+#     The above is removed due to thrift being unable to distinguish between local and included package prefixes.
+#     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 include "bazel.thrift"
 
 exception InvalidRequest {

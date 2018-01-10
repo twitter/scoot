@@ -5,7 +5,7 @@
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 #
 # To Generate files run from this (github.com/twitter/scoot/sched/) directory:
-#     1. thrift -I ../bazel/ --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift
+#     1. thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift
 
 include "bazel.thrift"
 
