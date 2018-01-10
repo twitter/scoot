@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/execution/gen-go/bazel"
+	"github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)

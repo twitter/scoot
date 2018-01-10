@@ -1,4 +1,4 @@
-package bazel
+package bazelapi
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	scootproto "github.com/twitter/scoot/common/proto"
 )
 
-func TestDomainThriftDomain(t *testing.T) {
+func TestDomainThriftDomainExecReq(t *testing.T) {
 	er := &ExecuteRequest{
 		Request: remoteexecution.ExecuteRequest{
 			InstanceName:    "test",
@@ -29,12 +29,12 @@ func TestDomainThriftDomain(t *testing.T) {
 		},
 	}
 
-	tr := MakeThriftFromDomain(er)
+	tr := MakeExecReqThriftFromDomain(er)
 	if tr == nil {
 		t.Fatal("Unexpected nil thrift result")
 	}
 
-	result := MakeDomainFromThrift(tr)
+	result := MakeExecReqDomainFromThrift(tr)
 	if result == nil {
 		t.Fatal("Unexpected nil domain result")
 	}
@@ -47,7 +47,48 @@ func TestDomainThriftDomain(t *testing.T) {
 		result.Request.Action.OutputDirectories[0] != er.Request.Action.OutputDirectories[0] ||
 		result.Request.Action.Platform.Properties[0].Value != er.Request.Action.Platform.Properties[0].Value ||
 		scootproto.GetMsFromDuration(result.Request.Action.Timeout) != scootproto.GetMsFromDuration(er.Request.Action.Timeout) ||
-		result.Request.Action.DoNotCache != er.Request.Action.DoNotCache {
+		result.Request.Action.DoNotCache != er.Request.Action.DoNotCache ||
+		result.String() != er.String() {
 		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result, er)
+	}
+}
+
+func TestDomainThriftDomainActionRes(t *testing.T) {
+	ar := &ActionResult{
+		Result: remoteexecution.ActionResult{
+			StdoutDigest: &remoteexecution.Digest{Hash: "curry", SizeBytes: 30},
+			StderrDigest: &remoteexecution.Digest{Hash: "carr", SizeBytes: 4},
+			StdoutRaw:    []byte("durant"),
+			StderrRaw:    []byte("lynch"),
+			OutputFiles: []*remoteexecution.OutputFile{
+				&remoteexecution.OutputFile{
+					Digest:       &remoteexecution.Digest{Hash: "green", SizeBytes: 23},
+					Path:         "crabtree",
+					Content:      []byte("thompson"),
+					IsExecutable: true,
+				},
+			},
+			OutputDirectories: []*remoteexecution.OutputDirectory{
+				&remoteexecution.OutputDirectory{
+					TreeDigest: &remoteexecution.Digest{Hash: "cooper", SizeBytes: 89},
+					Path:       "iguodala",
+				},
+			},
+			ExitCode: 1,
+		},
+	}
+
+	tr := MakeActionResultThriftFromDomain(ar)
+	if tr == nil {
+		t.Fatal("Unexpected nil thrift result")
+	}
+
+	result := MakeActionResultDomainFromThrift(tr)
+	if result == nil {
+		t.Fatal("Unexpected nil domain result")
+	}
+
+	if result.String() != ar.String() {
+		t.Fatal("Unexpected output from result\ngot:      %v\nexpected: %v", result, ar)
 	}
 }
