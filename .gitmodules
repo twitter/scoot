@@ -340,7 +340,7 @@
 [submodule "vendor/google.golang.org/genproto"]
 	path = vendor/google.golang.org/genproto
 	url = https://github.com/google/go-genproto
-	branch = 1e559d0a00eef8a9a43151db4665280bd8dd5886
+	branch = a8101f21cf983e773d0c1133ebc5424792003214
 [submodule "vendor/gopkg.in/airbrake/gobrake.v2"]
 	path = vendor/gopkg.in/airbrake/gobrake.v2
 	url = https://gopkg.in/airbrake/gobrake.v2
