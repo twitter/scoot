@@ -1,10 +1,11 @@
-# Structures for storing Bazel request fields in
-# tasks started from Bazel Execute Requests
+# Structures for storing Bazel request fields in tasks started from
+# Bazel Execute Requests and job statuses (Action Results) polled by
+# Bazel Get Operation requests
 
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 # 
-# To Generate files, run from this (github.com/twitter/scoot/bazel/execution/request/) directory:
-#     1. thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift
+# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+#     $ make thrift-bazel-go
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Digest
 struct Digest {

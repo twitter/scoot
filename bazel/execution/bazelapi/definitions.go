@@ -1,6 +1,7 @@
-// Execution Request Definitions
+// Execution Request & Action Result Definitions
 // Domain structures for tracking ExecuteRequest info (use cases include Scheduler JobDefs and
-// Worker RunCommands), and conversions for internal thrift APIs.
+// Worker RunCommands), ActionResult info (used in Worker RunStatuses), and conversions for
+// internal thrift APIs.
 package bazelapi
 
 import (

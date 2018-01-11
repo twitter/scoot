@@ -82,7 +82,7 @@ type RunStatus struct {
 	Error string
 
 	tags.LogTags
-	BazelResult *bazelapi.ActionResult
+	ActionResult *bazelapi.ActionResult
 }
 
 func (p RunStatus) String() string {
@@ -96,7 +96,10 @@ func (p RunStatus) String() string {
 		s += fmt.Sprintf(" # Error: %s", p.Error)
 	}
 	s += fmt.Sprintf(" # Stdout: %s # Stderr: %s", p.StdoutRef, p.StderrRef)
-	// TODO: determine how a RunStatus with a non-nil BazelResult should look
+
+	if p.ActionResult != nil {
+		s += fmt.Sprintf("  ActionResult=%s", p.ActionResult)
+	}
 
 	return s
 }

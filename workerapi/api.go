@@ -149,7 +149,7 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.Tag != nil {
 		domain.Tag = *thrift.Tag
 	}
-	domain.BazelResult = bazelapi.MakeActionResultDomainFromThrift(thrift.BazelResult_)
+	domain.ActionResult = bazelapi.MakeActionResultDomainFromThrift(thrift.BazelResult_)
 	return domain
 }
 
@@ -183,7 +183,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.JobId = helpers.CopyStringToPointer(domain.JobID)
 	thrift.TaskId = helpers.CopyStringToPointer(domain.TaskID)
 	thrift.Tag = helpers.CopyStringToPointer(domain.Tag)
-	thrift.BazelResult_ = bazelapi.MakeActionResultThriftFromDomain(domain.BazelResult)
+	thrift.BazelResult_ = bazelapi.MakeActionResultThriftFromDomain(domain.ActionResult)
 	return thrift
 }
 
