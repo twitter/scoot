@@ -3,7 +3,7 @@ package workerapi
 import (
 	"time"
 
-	"github.com/twitter/scoot/bazel/execution/request"
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
@@ -70,7 +70,7 @@ func ThriftRunCommandToDomain(thrift *worker.RunCommand) *runner.Command {
 	if thrift.Tag != nil {
 		tag = *thrift.Tag
 	}
-	er := request.MakeDomainFromThrift(thrift.BazelRequest)
+	er := bazelapi.MakeExecReqDomainFromThrift(thrift.BazelRequest)
 	return &runner.Command{
 		Argv:       argv,
 		EnvVars:    env,
@@ -99,7 +99,7 @@ func DomainRunCommandToThrift(domain *runner.Command) *worker.RunCommand {
 	thrift.TaskId = &taskID
 	tag := domain.Tag
 	thrift.Tag = &tag
-	execReq := request.MakeThriftFromDomain(domain.ExecuteRequest)
+	execReq := bazelapi.MakeExecReqThriftFromDomain(domain.ExecuteRequest)
 	thrift.BazelRequest = execReq
 	return thrift
 }
@@ -149,6 +149,7 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 	if thrift.Tag != nil {
 		domain.Tag = *thrift.Tag
 	}
+	domain.ActionResult = bazelapi.MakeActionResultDomainFromThrift(thrift.BazelResult_)
 	return domain
 }
 
@@ -182,6 +183,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 	thrift.JobId = helpers.CopyStringToPointer(domain.JobID)
 	thrift.TaskId = helpers.CopyStringToPointer(domain.TaskID)
 	thrift.Tag = helpers.CopyStringToPointer(domain.Tag)
+	thrift.BazelResult_ = bazelapi.MakeActionResultThriftFromDomain(domain.ActionResult)
 	return thrift
 }
 

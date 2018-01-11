@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/twitter/scoot/bazel/execution/request"
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
@@ -120,7 +120,7 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJobDef != nil {
 		for _, task := range thriftJobDef.GetTasks() {
 			cmd := task.GetCommand()
-			execReq := request.MakeDomainFromThrift(task.BazelRequest)
+			execReq := bazelapi.MakeExecReqDomainFromThrift(task.BazelRequest)
 
 			command := runner.Command{
 				Argv:       cmd.GetArgv(),
@@ -176,7 +176,7 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 			SnapshotId: domainTask.SnapshotID,
 		}
 		taskId := domainTask.TaskID
-		execReq := request.MakeThriftFromDomain(domainTask.ExecuteRequest)
+		execReq := bazelapi.MakeExecReqThriftFromDomain(domainTask.ExecuteRequest)
 
 		thriftTask := schedthrift.TaskDefinition{Command: &cmd, TaskId: &taskId, BazelRequest: execReq}
 		thriftTasks = append(thriftTasks, &thriftTask)

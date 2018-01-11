@@ -2,13 +2,13 @@
 
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 # 
-# To Generate files run from this (github.com/twitter/scoot/workerapi/) directory:
-#     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift
-#     2. XXX rm -rf gen-go/worker/worker-remote/
-#     The above is removed due to thrift being unable to distinguish between local and included package prefixes.
+# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+#     $ make thrift-worker-go
+#     We remove workerapi/gen-go/worker/worker-remote/ due to thrift being unable to
+#     distinguish between local and included package prefixes.
 #     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 
-include "request.thrift"
+include "bazel.thrift"
 
 enum Status {
   UNKNOWN = 0      # Reserved.
@@ -33,6 +33,7 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
+  11: optional bazel.ActionResult bazelResult
 }
 
 // TODO: add useful load information when it comes time to have multiple runs.
@@ -50,7 +51,7 @@ struct RunCommand {
   5: optional string jobId
   6: optional string taskId
   7: optional string tag
-  8: optional request.BazelExecuteRequest bazelRequest
+  8: optional bazel.ExecuteRequest bazelRequest
 }
 
 //TODO: add a method to kill the worker if we can articulate unrecoverable issues.

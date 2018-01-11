@@ -123,13 +123,14 @@ func workerRunStatusToScootRunStatus(resultsFromSaga []byte) (*scoot.RunStatus, 
 	}
 
 	scootRunStatus := scoot.RunStatus{
-		RunId:      workerRunStatus.RunId,
-		Status:     status,
-		OutUri:     workerRunStatus.OutUri,
-		ErrUri:     workerRunStatus.ErrUri,
-		ExitCode:   workerRunStatus.ExitCode,
-		Error:      workerRunStatus.Error,
-		SnapshotId: workerRunStatus.SnapshotId,
+		RunId:        workerRunStatus.RunId,
+		Status:       status,
+		OutUri:       workerRunStatus.OutUri,
+		ErrUri:       workerRunStatus.ErrUri,
+		ExitCode:     workerRunStatus.ExitCode,
+		Error:        workerRunStatus.Error,
+		SnapshotId:   workerRunStatus.SnapshotId,
+		BazelResult_: workerRunStatus.BazelResult_,
 	}
 
 	return &scootRunStatus, nil

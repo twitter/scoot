@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 )
 
@@ -81,6 +82,7 @@ type RunStatus struct {
 	Error string
 
 	tags.LogTags
+	ActionResult *bazelapi.ActionResult
 }
 
 func (p RunStatus) String() string {
@@ -94,6 +96,10 @@ func (p RunStatus) String() string {
 		s += fmt.Sprintf(" # Error: %s", p.Error)
 	}
 	s += fmt.Sprintf(" # Stdout: %s # Stderr: %s", p.StdoutRef, p.StderrRef)
+
+	if p.ActionResult != nil {
+		s += fmt.Sprintf("  ActionResult=%s", p.ActionResult)
+	}
 
 	return s
 }

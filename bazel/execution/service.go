@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/execution/request"
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched"
@@ -157,7 +157,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.Timeout = d
 	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
-	task.Command.ExecuteRequest = &request.ExecuteRequest{Request: *req}
+	task.Command.ExecuteRequest = &bazelapi.ExecuteRequest{Request: *req}
 
 	result.Tasks = append(result.Tasks, task)
 	return result, nil
