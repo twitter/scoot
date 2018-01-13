@@ -13,8 +13,8 @@ import (
 )
 
 type bzRunner interface {
-	save(path string) (string, error)         // Called by bzFiler.Ingest
-	materialize(sha string, dir string) error // Called by bzFiler.Checkout and CheckoutAt
+	save(path string) (string, error)         // Called by BzFiler.Ingest
+	materialize(sha string, dir string) error // Called by BzFiler.Checkout and CheckoutAt
 }
 
 type bzCommand struct {

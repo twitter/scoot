@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (bf *bzFiler) Ingest(path string) (string, error) {
+func (bf *BzFiler) Ingest(path string) (string, error) {
 	id, err := bf.command.save(path)
 	if err != nil {
 		log.WithFields(
@@ -20,7 +20,7 @@ func (bf *bzFiler) Ingest(path string) (string, error) {
 	return id, nil
 }
 
-func (bf *bzFiler) IngestMap(srcToDest map[string]string) (string, error) {
+func (bf *BzFiler) IngestMap(srcToDest map[string]string) (string, error) {
 	errMsg := "Not implemented"
 	log.Error(errMsg)
 	return "", fmt.Errorf(errMsg)

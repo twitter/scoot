@@ -11,7 +11,7 @@ import (
 	"github.com/twitter/scoot/snapshot"
 )
 
-func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
+func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
 	tempDir, err := temp.TempDirDefault()
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (bf *bzFiler) Checkout(id string) (snapshot.Checkout, error) {
 	return bf.CheckoutAt(id, path.Join(tempDir.Dir, snapshotDirName))
 }
 
-func (bf *bzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
+func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
 	err := bazel.ValidateID(id)
 	if err != nil {
 		return nil, err

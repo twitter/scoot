@@ -5,8 +5,8 @@ import (
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func MakeBzFiler() *bzFiler {
-	return &bzFiler{
+func MakeBzFiler() *BzFiler {
+	return &BzFiler{
 		command: &bzCommand{},
 		updater: snapshots.MakeNoopUpdater(),
 	}
@@ -17,15 +17,15 @@ func MakeBzFiler() *bzFiler {
 // localStorePath := func(bc *bzCommand) {
 //     bc.localStorePath = "/path/to/local/store"
 // }
-func MakeBzFilerWithOptions(options ...func(*bzCommand)) *bzFiler {
-	return &bzFiler{
+func MakeBzFilerWithOptions(options ...func(*bzCommand)) *BzFiler {
+	return &BzFiler{
 		updater: snapshots.MakeNoopUpdater(),
 		command: MakeBzCommandWithOptions(options...),
 	}
 }
 
-func MakeBzFilerWithOptionsKeepCheckouts(options ...func(*bzCommand)) *bzFiler {
-	return &bzFiler{
+func MakeBzFilerWithOptionsKeepCheckouts(options ...func(*bzCommand)) *BzFiler {
+	return &BzFiler{
 		updater:       snapshots.MakeNoopUpdater(),
 		command:       MakeBzCommandWithOptions(options...),
 		keepCheckouts: true,
@@ -35,7 +35,7 @@ func MakeBzFilerWithOptionsKeepCheckouts(options ...func(*bzCommand)) *bzFiler {
 // Satisfies snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater
 // Default command is fs_util, a tool provided by github.com/pantsbuild/pants which
 // handles underlying implementation of bazel snapshot functionality
-type bzFiler struct {
+type BzFiler struct {
 	command       bzRunner
 	updater       snapshot.Updater
 	keepCheckouts bool

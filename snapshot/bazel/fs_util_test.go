@@ -17,7 +17,7 @@ func init() {
 	log.AddHook(hooks.NewContextHook())
 }
 
-func makeTestingFiler() *bzFiler {
+func makeTestingFiler() *BzFiler {
 	localStore, err := temp.TempDirDefault()
 	if err != nil {
 		log.Fatal(err)

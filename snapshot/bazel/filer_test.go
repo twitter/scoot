@@ -13,7 +13,7 @@ import (
 	"github.com/twitter/scoot/os/temp"
 )
 
-var noopBf = bzFiler{
+var noopBf = BzFiler{
 	command: noopBzRunner{},
 }
 

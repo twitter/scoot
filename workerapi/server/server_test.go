@@ -151,10 +151,15 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 		func(db snapshot.DB) snapshot.Filer {
 			return snapshot.NewDBAdapter(db)
 		},
-		runners.NewSingleRunner,
 		func() snapshot.InitDoneCh {
 			return initDoneCh
 		},
+		func(f snapshot.Filer, idc snapshot.InitDoneCh) runner.RunTypeMap {
+			filerMap := runner.MakeRunTypeMap()
+			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: f, IDC: idc}
+			return filerMap
+		},
+		runners.NewSingleRunner,
 		// don't have the fake db pause during any of the tests.  Use an externally
 		// visible channel if the tests need to control the duration of db operations
 		func() dbPauseCh {

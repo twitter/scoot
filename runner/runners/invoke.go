@@ -22,24 +22,22 @@ import (
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
+func NewInvoker(exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp, stat: stat}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat}
 }
-
-// TODO(dbentley): test this separately from the end-to-end runner tests
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec   execer.Execer
-	filer  snapshot.Filer
-	output runner.OutputCreator
-	tmp    *temp.TempDir
-	stat   stats.StatsReceiver
+	exec     execer.Execer
+	filerMap runner.RunTypeMap
+	output   runner.OutputCreator
+	tmp      *temp.TempDir
+	stat     stats.StatsReceiver
 }
 
 // Run runs cmd
@@ -85,6 +83,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
 
+	// TODO determine 'type' based on snapshot ID and fork into exec-based process if necessary
+	// (really just set fields, execer run should be the same, then change on output)
+	// Use just-added IsValidID snapshot filer function. have to run against Filer/InitDoneCh maps that runner svc gets
+	// Passed into runner setup.go -> NewDBA (runner.Service -> runner.Controller -> runner.Invoker -> runner.Filer)
 	go func() {
 		//FIXME(jschiller): allow aborts/timeouts to cancel the checkout process.
 		if cmd.SnapshotID == "" {
@@ -105,7 +107,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				checkoutCh <- nil
 			}
 		} else {
-			//NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
+			// NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
 			log.WithFields(
 				log.Fields{
 					"runID":      id,
@@ -115,7 +117,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					"snapshotID": cmd.SnapshotID,
 				}).Info("Checking out snapshotID")
 			var err error
-			co, err = inv.filer.Checkout(cmd.SnapshotID)
+			// TODO placeholder filers for compilation
+			co, err = inv.filerMap[runner.RunTypeScoot].Filer.Checkout(cmd.SnapshotID)
 			checkoutCh <- err
 		}
 	}()
@@ -292,7 +295,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 		ingestCh := make(chan interface{})
 		go func() {
-			snapshotID, err := inv.filer.Ingest(tmp.Dir)
+			// TODO placeholder for filers for compilation
+			snapshotID, err := inv.filerMap[runner.RunTypeScoot].Filer.Ingest(tmp.Dir)
 			if err != nil {
 				ingestCh <- err
 			} else {
@@ -314,8 +318,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			snapshotID = res.(string)
 		}
 
-		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
-		//Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
+		// TODO: stdout/stderr should configurably point to a bundlestore server addr.
+		// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 		status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if cmd.SnapshotID != "" {

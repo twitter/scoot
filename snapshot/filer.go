@@ -65,7 +65,6 @@ type Updater interface {
 	UpdateInterval() time.Duration
 }
 
-//TODO: this is temporary until we finalize snapshot.DB and gitDB.
 func NewDBAdapter(db DB) Filer {
 	return &dbAdapter{db: db}
 }

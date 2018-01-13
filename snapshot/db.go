@@ -10,6 +10,12 @@ type ID string
 // DB may require some form of initialization, in which case this chan should be provided by the db impl.
 type InitDoneCh <-chan error
 
+// Association of Filer and corresponding InitDoneCh, to support management of multiple Filers
+type FilerAndInitDoneCh struct {
+	Filer Filer
+	IDC   InitDoneCh
+}
+
 // Creator allows creating new Snapshots.
 type Creator interface {
 	// Ingest

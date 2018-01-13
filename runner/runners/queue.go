@@ -3,6 +3,7 @@ package runners
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -60,9 +61,9 @@ worker to finish initialization before accepting any run requests.
 If the queue is full when a command is received, an empty RunStatus and a queue full error will be returned.
 
 @param: exec - runs the command
-@param: filer - uses the UpdateInterval from filer to ????
-@param: idc - channel that ?filer? will use to report when its initialization is done.
-The init chan is optional and may be nil if the filer has no initializion step.
+@param: filerMap - mapping of runner.RunType's to filers and corresponding InitDoneCh's
+that are used by underlying Invokers. The Controller waits on all non-nil InitDoneCh's
+to complete successfully before serving requests.
 @param: idtCh - channel that queue uses to report (to handler) the time the initialization finished
 @param: output
 @param: tmp
@@ -70,7 +71,7 @@ The init chan is optional and may be nil if the filer has no initializion step.
 @param: stats - the stats receiver the queue will use when reporting its metrics
 */
 func NewQueueRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
+	exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
 
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -85,36 +86,58 @@ func NewQueueRunner(
 	}
 
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filer, output, tmp, stat)
+	inv := NewInvoker(exec, filerMap, output, tmp, stat)
 
 	controller := &QueueController{
 		statusManager: statusManager,
 		inv:           inv,
-		filer:         filer,
+		filerMap:      filerMap,
+		updateReq:     make(map[runner.RunType]bool),
 		capacity:      capacity,
 		reqCh:         make(chan interface{}),
 		updateCh:      make(chan interface{}),
-		cancelTimerCh: make(chan interface{}, 1),
+		cancelTimerCh: make(chan interface{}, len(filerMap)),
 	}
 	run := &Service{controller, statusManager, statusManager}
 
-	// QueueRunner will not serve requests if an idc is defined and returns an error
-	log.Info("Starting goroutine to check for snapshot init? ", (idc != nil))
-	var err error = nil
-	if idc != nil {
+	// QueueRunner waits on filers with InitDoneChannels defined to return,
+	// and will not serve requests if any return an error
+	var wg sync.WaitGroup
+	var initErr error = nil
+	wait := false
+
+	for t, f := range filerMap {
+		if f.IDC != nil {
+			log.Infof("Starting goroutine to wait on init for filer %v", t)
+			wg.Add(1)
+			wait = true
+
+			go func(rt runner.RunType, idc snapshot.InitDoneCh) {
+				err := <-idc
+				if err != nil {
+					initErr = err
+					log.Errorf("Init channel for filer %v returned error: %s", rt, err)
+				}
+				wg.Done()
+			}(t, f.IDC)
+		}
+	}
+
+	if wait {
+		// Wait for initialization to complete in a new goroutine to let this constructor return
 		go func() {
-			err = <-idc
-			if err != nil {
+			wg.Wait()
+			if initErr != nil {
 				stat.Counter(stats.WorkerDownloadInitFailure).Inc(1)
-				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: err})
+				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: initErr})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-				startUpdateTicker(filer.UpdateInterval(), controller.updateCh, controller.cancelTimerCh)
+				controller.startUpdateTickers()
 			}
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
-		startUpdateTicker(filer.UpdateInterval(), controller.updateCh, controller.cancelTimerCh)
+		controller.startUpdateTickers()
 	}
 
 	go controller.loop()
@@ -123,8 +146,8 @@ func NewQueueRunner(
 }
 
 func NewSingleRunner(
-	exec execer.Execer, filer snapshot.Filer, idc snapshot.InitDoneCh, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
-	return NewQueueRunner(exec, filer, idc, output, tmp, 0, stat)
+	exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
+	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).
@@ -132,7 +155,9 @@ func NewSingleRunner(
 // if a non-zero update interval is defined (updates and tasks cannot run concurrently)
 type QueueController struct {
 	inv           *Invoker
-	filer         snapshot.Filer
+	filerMap      runner.RunTypeMap
+	updateReq     map[runner.RunType]bool
+	updateLock    sync.Mutex
 	statusManager *StatusManager
 	capacity      int
 
@@ -149,24 +174,36 @@ type QueueController struct {
 	cancelTimerCh chan interface{}
 }
 
-// Start a goroutine that forwards update ticks to updateCh, so that we can skip if e.g. init failed
-func startUpdateTicker(d time.Duration, u chan<- interface{}, cancelCh <-chan interface{}) {
-	if d == snapshot.NoDuration || u == nil {
+// Start goroutines that trigger periodic filer updates after controller is initialized
+func (c *QueueController) startUpdateTickers() {
+	if c.updateCh == nil {
 		return
 	}
-	ticker := time.NewTicker(d)
-	go func() {
-	Loop:
-		for {
-			select {
-			case <-ticker.C:
-				u <- nil
-			case <-cancelCh:
-				ticker.Stop()
-				break Loop
-			}
+
+	for t, f := range c.filerMap {
+		d := f.Filer.UpdateInterval()
+		if d == snapshot.NoDuration {
+			continue
 		}
-	}()
+
+		go func(rt runner.RunType, td time.Duration) {
+			ticker := time.NewTicker(td)
+		Loop:
+			for {
+				select {
+				case <-ticker.C:
+					c.updateLock.Lock()
+					c.updateReq[rt] = true
+					c.updateLock.Unlock()
+
+					c.updateCh <- nil
+				case <-c.cancelTimerCh:
+					ticker.Stop()
+					break Loop
+				}
+			}
+		}(t, d)
+	}
 }
 
 // Run enqueues the command or rejects it, returning its status or an error.
@@ -276,14 +313,30 @@ func (c *QueueController) loop() {
 			updateRequested = false
 			updateDoneCh = make(chan interface{})
 			go func() {
-				if err := c.filer.Update(); err != nil {
-					fields := log.Fields{"err": err}
-					if c.runningCmd != nil {
-						fields["tag"] = c.runningCmd.Tag
-						fields["jobID"] = c.runningCmd.JobID
-						fields["taskID"] = c.runningCmd.TaskID
+				// Record filers by RunType that have requested updates
+				c.updateLock.Lock()
+				typesToUpdate := []runner.RunType{}
+				for t, u := range c.updateReq {
+					if u {
+						typesToUpdate = append(typesToUpdate, t)
+						c.updateReq[t] = false
 					}
-					log.WithFields(fields).Error("error running Filer Update")
+				}
+				c.updateLock.Unlock()
+
+				// Run all requested filer updates serially
+				for _, t := range typesToUpdate {
+					log.Infof("Running filer update for type %v", t)
+					if err := c.filerMap[t].Filer.Update(); err != nil {
+						fields := log.Fields{"err": err}
+						if c.runningCmd != nil {
+							fields["runType"] = t
+							fields["tag"] = c.runningCmd.Tag
+							fields["jobID"] = c.runningCmd.JobID
+							fields["taskID"] = c.runningCmd.TaskID
+						}
+						log.WithFields(fields).Error("Error running Filer Update")
+					}
 				}
 				updateDoneCh <- nil
 			}()
@@ -326,7 +379,9 @@ func (c *QueueController) loop() {
 			// Handle run and abort requests.
 			if !ok {
 				c.reqCh = nil
-				c.cancelTimerCh <- nil
+				for i := 0; i < len(c.filerMap); i++ {
+					c.cancelTimerCh <- nil
+				}
 				return
 			}
 			switch r := req.(type) {

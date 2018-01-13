@@ -24,6 +24,8 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
@@ -63,6 +65,7 @@ func main() {
 	bag.InstallModule(endpoints.Module())
 	bag.InstallModule(runners.Module())
 	bag.InstallModule(server.Module())
+	bag.InstallModule(bazel.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "workerserver" },
 		func() endpoints.Addr { return endpoints.Addr(*httpAddr) },
@@ -110,6 +113,15 @@ func main() {
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
 			return store.MakeFileStoreInTemp(tmp)
+		},
+		// Initialize map of Filers w/ init chans based on RunTypes
+		func(gitDB *gitdb.DB, bzFiler *bazel.BzFiler) runner.RunTypeMap {
+			gitFiler := snapshot.NewDBAdapter(gitDB)
+
+			var filerMap runner.RunTypeMap = runner.MakeRunTypeMap()
+			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: gitFiler, IDC: gitDB.InitDoneCh}
+			filerMap[runner.RunTypeBazel] = snapshot.FilerAndInitDoneCh{Filer: bzFiler, IDC: nil}
+			return filerMap
 		},
 	)
 
