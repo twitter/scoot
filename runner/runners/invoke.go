@@ -83,10 +83,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
 
-	// TODO determine 'type' based on snapshot ID and fork into exec-based process if necessary
-	// (really just set fields, execer run should be the same, then change on output)
-	// Use just-added IsValidID snapshot filer function. have to run against Filer/InitDoneCh maps that runner svc gets
-	// Passed into runner setup.go -> NewDBA (runner.Service -> runner.Controller -> runner.Invoker -> runner.Filer)
+	// TODO get RunType for this run based on <..method..> and do bazel processing if necessary
+	// (really just set fields, execer run should be the same, then change output creation)
+	// $method: test snapshotID matches bazel, else do scoot
 	go func() {
 		//FIXME(jschiller): allow aborts/timeouts to cancel the checkout process.
 		if cmd.SnapshotID == "" {
