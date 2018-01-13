@@ -4,10 +4,10 @@
 
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites
 #
-# To Generate files run from this (github.com/twitter/scoot/sched/) directory:
-#     1. thrift -I ../bazel/execution/request/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/request/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift
+# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+#     $ make thrift-sched-go
 
-include "request.thrift"
+include "bazel.thrift"
 
 struct Command {
   1: required list<string> argv
@@ -19,7 +19,7 @@ struct Command {
 struct TaskDefinition {
   1: required Command command
   2: optional string taskId
-  3: optional request.BazelExecuteRequest bazelRequest
+  3: optional bazel.ExecuteRequest bazelRequest
 }
 
 struct JobDefinition {

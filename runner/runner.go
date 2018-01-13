@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/twitter/scoot/bazel/execution/request"
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/snapshot"
 )
@@ -58,7 +58,7 @@ type Command struct {
 	tags.LogTags
 
 	// Bazel ExecuteRequest data for tasks initiated from the Bazel API
-	ExecuteRequest *request.ExecuteRequest
+	ExecuteRequest *bazelapi.ExecuteRequest
 }
 
 func (c Command) String() string {

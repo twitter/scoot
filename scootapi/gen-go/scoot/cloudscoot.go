@@ -7,12 +7,15 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
 var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
+
+var _ = bazel.GoUnusedProtection__
 
 type CloudScoot interface {
 	// Parameters:
