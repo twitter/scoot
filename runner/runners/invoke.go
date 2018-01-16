@@ -7,8 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
+	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
+	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
@@ -16,6 +20,7 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
+	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
@@ -76,6 +81,25 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
+	// Determine RunType from Command SnapshotID
+	// This invoker supports RunTypeScoot and RunTypeBazel
+	var runType runner.RunType
+	if err := bazel.ValidateID(cmd.SnapshotID); err == nil {
+		runType = runner.RunTypeBazel
+
+		// Bazel requests - fetch command argv/env from CAS
+		if err = fetchBazelCommand(inv.filerMap[runType].Filer, cmd); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+	} else {
+		runType = runner.RunTypeScoot
+	}
+	if _, ok := inv.filerMap[runType]; !ok {
+		return runner.FailedStatus(id, fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType),
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	}
+
 	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
 	if cmd.SnapshotID != "" {
@@ -83,9 +107,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
 
-	// TODO get RunType for this run based on <..method..> and do bazel processing if necessary
-	// (really just set fields, execer run should be the same, then change output creation)
-	// $method: test snapshotID matches bazel, else do scoot
 	go func() {
 		//FIXME(jschiller): allow aborts/timeouts to cancel the checkout process.
 		if cmd.SnapshotID == "" {
@@ -116,8 +137,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					"snapshotID": cmd.SnapshotID,
 				}).Info("Checking out snapshotID")
 			var err error
-			// TODO placeholder filers for compilation
-			co, err = inv.filerMap[runner.RunTypeScoot].Filer.Checkout(cmd.SnapshotID)
+			co, err = inv.filerMap[runType].Filer.Checkout(cmd.SnapshotID)
 			checkoutCh <- err
 		}
 	}()
@@ -294,8 +314,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 		ingestCh := make(chan interface{})
 		go func() {
-			// TODO placeholder for filers for compilation
-			snapshotID, err := inv.filerMap[runner.RunTypeScoot].Filer.Ingest(tmp.Dir)
+			snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp.Dir)
 			if err != nil {
 				ingestCh <- err
 			} else {
@@ -333,4 +352,38 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
+}
+
+// Get the Bazel Command from the embedded ExecuteRequest digest,
+// and populate the runner.Command's Argv and Env fields
+// TODO consider moving/functionalizing things here instead of all in invoke
+func fetchBazelCommand(f snapshot.Filer, cmd *runner.Command) error {
+	if cmd.ExecuteRequest == nil {
+		return fmt.Errorf("Command has no ExecuteRequest data")
+	}
+	digest := cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()
+
+	// Read command data from CAS refernced by filer
+	bzFiler, ok := f.(*bzsnapshot.BzFiler)
+	if !ok {
+		return fmt.Errorf("Filer could not be asserted as type BzFiler")
+	}
+	log.Infof("Fetching Bazel Command from BzFiler server %s", bzFiler.ServerAddr)
+
+	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.ServerAddr, digest)
+	if err != nil {
+		return err
+	}
+	bzCommand := &remoteexecution.Command{}
+	if err = proto.Unmarshal(bzCommandBytes, bzCommand); err != nil {
+		return fmt.Errorf("Failed to unmarshal bytes as remoteexecution.Command: %s", err)
+	}
+
+	// Update cmd's Argv and EnvVars (overwrite) from Command
+	cmd.Argv = bzCommand.GetArguments()
+	for _, envVar := range bzCommand.GetEnvironmentVariables() {
+		cmd.EnvVars[envVar.GetName()] = envVar.GetValue()
+	}
+
+	return nil
 }

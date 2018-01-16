@@ -89,13 +89,11 @@ func main() {
 		func() execer.Memory {
 			return execer.Memory(*memCapFlag)
 		},
-		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
-		func(tmp *temp.TempDir) (store.Store, error) {
+		// Set StoreAddr based on http storeHandle, fetching, or GetScootApiAddr
+		func() (store.StoreAddr, error) {
 			if *storeHandle != "" {
-				if strings.HasPrefix(*storeHandle, "/") {
-					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
-				} else {
-					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
+				if !strings.HasPrefix(*storeHandle, "/") {
+					return store.StoreAddr(*storeHandle), nil
 				}
 			}
 			storeAddr := ""
@@ -109,12 +107,29 @@ func main() {
 				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
-				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
+				return store.StoreAddr(storeAddr), nil
+			}
+			return "", err
+		},
+		// Use storeHandle/StoreAddr to create HTTPStore, or fallback to tmp file store.
+		func(tmp *temp.TempDir, sa store.StoreAddr) (store.Store, error) {
+			if *storeHandle != "" {
+				if strings.HasPrefix(*storeHandle, "/") {
+					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+				} else {
+					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
+				}
+			}
+			if sa != "" {
+				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(string(sa))), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
 			return store.MakeFileStoreInTemp(tmp)
 		},
 		// Initialize map of Filers w/ init chans based on RunTypes
+		func(a store.StoreAddr) *bazel.BzFiler {
+			return bazel.MakeBzFilerWithOptionsServerAddr(string(a))
+		},
 		func(gitDB *gitdb.DB, bzFiler *bazel.BzFiler) runner.RunTypeMap {
 			gitFiler := snapshot.NewDBAdapter(gitDB)
 

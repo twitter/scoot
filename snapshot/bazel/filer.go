@@ -32,6 +32,33 @@ func MakeBzFilerWithOptionsKeepCheckouts(options ...func(*bzCommand)) *BzFiler {
 	}
 }
 
+func MakeBzFilerWithOptionsServerAddr(addr string, options ...func(*bzCommand)) *BzFiler {
+	serverAddrFunc := func(bc *bzCommand) {
+		bc.serverAddr = addr
+	}
+	options = append(options, serverAddrFunc)
+
+	return &BzFiler{
+		updater:    snapshots.MakeNoopUpdater(),
+		command:    MakeBzCommandWithOptions(options...),
+		ServerAddr: addr,
+	}
+}
+
+func MakeBzFilerWithOptionsKeepCheckoutsServerAddr(addr string, options ...func(*bzCommand)) *BzFiler {
+	serverAddrFunc := func(bc *bzCommand) {
+		bc.serverAddr = addr
+	}
+	options = append(options, serverAddrFunc)
+
+	return &BzFiler{
+		updater:       snapshots.MakeNoopUpdater(),
+		command:       MakeBzCommandWithOptions(options...),
+		keepCheckouts: true,
+		ServerAddr:    addr,
+	}
+}
+
 // Satisfies snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater
 // Default command is fs_util, a tool provided by github.com/pantsbuild/pants which
 // handles underlying implementation of bazel snapshot functionality
@@ -41,4 +68,6 @@ type BzFiler struct {
 	keepCheckouts bool
 	// keepCheckouts exists for debuggability. Instead of removing checkouts on release,
 	// we can optionally keep them to inspect
+
+	ServerAddr string
 }

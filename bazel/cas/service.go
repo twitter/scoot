@@ -22,14 +22,14 @@ import (
 	"github.com/twitter/scoot/snapshot/store"
 )
 
-// Implements GRPCServer and remoteexecution.ContentAddressableStoreServer interfaces
+// Implements GRPCServer, remoteexecution.ContentAddressableStoreServer, bytestream.ByteStreamServer interfaces
 type casServer struct {
 	listener    net.Listener
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 }
 
-// Creates a new GRPCServer (CASServer, ByteStreamServer) based on a listener, and preregisters the service
+// Creates a new GRPCServer (CASServer/ByteStreamServer) based on a listener, and preregisters the service
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
 	g := casServer{
 		listener:    l,

@@ -27,6 +27,22 @@ func (r *Resource) String() string {
 	return fmt.Sprintf("Instance: %s, Digest: %s, UUID: %s", r.Instance, r.Digest, r.UUID)
 }
 
+// Return a valid read resource string based on individual components. Errors on invalid inputs
+func GetReadResourceName(instance, hash string, size int64, fname string) (string, error) {
+	rname := ""
+	if instance != "" {
+		rname += fmt.Sprintf("%s/", instance)
+	}
+	rname += fmt.Sprintf("%s/%s/%d", ResourceNameType, hash, size)
+	if fname != "" {
+		rname += fmt.Sprintf("/%s", fname)
+	}
+	if _, err := ParseReadResource(rname); err != nil {
+		return "", err
+	}
+	return rname, nil
+}
+
 // Parses a name string from the Read API into a Resource for bazel artifacts.
 // Valid read format: "[<instance>/]blobs/<hash>/<size>[/<filename>]"
 func ParseReadResource(name string) (*Resource, error) {
@@ -49,6 +65,22 @@ func ParseReadResource(name string) (*Resource, error) {
 	}
 
 	return ParseResource(instance, "", hash, sizeStr, name, ResourceReadFormatStr)
+}
+
+// Return a valid write resource string based on individual components. Errors on invalid inputs
+func GetWriteResourceName(instance, uuid, hash string, size int64, fname string) (string, error) {
+	wname := ""
+	if instance != "" {
+		wname += fmt.Sprintf("%s/", instance)
+	}
+	wname += fmt.Sprintf("%s/%s/%s/%s/%d", ResourceNameAction, uuid, ResourceNameType, hash, size)
+	if fname != "" {
+		wname += fmt.Sprintf("/%s", fname)
+	}
+	if _, err := ParseWriteResource(wname); err != nil {
+		return "", err
+	}
+	return wname, nil
 }
 
 // Parses a name string from the Write API into a Resource for bazel artifacts.
