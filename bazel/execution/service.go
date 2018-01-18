@@ -7,7 +7,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
@@ -70,26 +72,26 @@ func (s *executionServer) Execute(
 	actionSha, actionLen, err := scootproto.GetSha256(req.GetAction())
 	if err != nil {
 		log.Errorf("Failed to get digest of request action: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error serializing action: %s", err))
 	}
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
 	job, err := execReqToScoot(req, actionSha)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error converting request to internal definition: %s", err))
 	}
 
 	err = sched.ValidateJob(job)
 	if err != nil {
 		log.Errorf("Scoot Job generated from request invalid: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Internal job definition invalid: %s", err))
 	}
 
 	id, err := s.scheduler.ScheduleJob(job)
 	if err != nil {
 		log.Errorf("Failed to schedule Scoot job: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to schedule Scoot job: %s", err))
 	}
 	log.WithFields(
 		log.Fields{
@@ -100,30 +102,28 @@ func (s *executionServer) Execute(
 	op.Name = fmt.Sprintf("operations/%s", id)
 	op.Done = true
 
-	eom := remoteexecution.ExecuteOperationMetadata{}
-	eom.Stage = remoteexecution.ExecuteOperationMetadata_COMPLETED
-	eom.ActionDigest = &remoteexecution.Digest{Hash: actionSha, SizeBytes: actionLen}
+	eom := &remoteexecution.ExecuteOperationMetadata{
+		Stage:        remoteexecution.ExecuteOperationMetadata_COMPLETED,
+		ActionDigest: &remoteexecution.Digest{Hash: actionSha, SizeBytes: actionLen},
+	}
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
-	eomAsPBAny, err := ptypes.MarshalAny(&eom)
+	eomAsPBAny, err := marshalAny(eom)
 	if err != nil {
-		log.Errorf("Failed to marshal ExecuteOperationMetadata: %s", err)
-		return nil, fmt.Errorf("Failed to marshal ExecuteOperationMetadata as ptypes/any.Any: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	op.Metadata = eomAsPBAny
 
-	// TODO move boilerplate response struct generation into a common utility function
-	res := remoteexecution.ExecuteResponse{}
-	ar := remoteexecution.ActionResult{}
-	ar.ExitCode = 0
-	res.Result = &ar
-	res.CachedResult = false
-
 	// Marshal ExecuteResponse to protobuf.Any format
-	resAsPBAny, err := ptypes.MarshalAny(&res)
+	res := &remoteexecution.ExecuteResponse{
+		Result: &remoteexecution.ActionResult{
+			ExitCode: 0,
+		},
+		CachedResult: false,
+	}
+	resAsPBAny, err := marshalAny(res)
 	if err != nil {
-		log.Errorf("Failed to marshal ExecuteResponse: %s", err)
-		return nil, fmt.Errorf("Failed to marshal ExecuteResponse as ptypes/any.Any: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	log.Info("ExecuteRequest completed successfully")
@@ -134,11 +134,10 @@ func (s *executionServer) Execute(
 
 // Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
 func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (result sched.JobDefinition, err error) {
-	if req == nil {
-		return result, fmt.Errorf("Nil execute request")
+	if err := validateExecRequest(req); err != nil {
+		return result, err
 	}
 
-	// TODO validate inputs like input digests (in a function)
 	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
 
@@ -164,6 +163,21 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 	return result, nil
 }
 
+func validateExecRequest(req *remoteexecution.ExecuteRequest) error {
+	if req == nil {
+		return fmt.Errorf("Unexpected nil execute request")
+	}
+	cmdDigest := req.GetAction().GetCommandDigest()
+	inputDigest := req.GetAction().GetInputRootDigest()
+	if !bazel.IsValidDigest(cmdDigest.GetHash(), cmdDigest.GetSizeBytes()) {
+		return fmt.Errorf("Request action command digest is invalid")
+	}
+	if !bazel.IsValidDigest(inputDigest.GetHash(), inputDigest.GetSizeBytes()) {
+		return fmt.Errorf("Request action input root digest is invalid")
+	}
+	return nil
+}
+
 // Stub of GetOperation API - most fields omitted but returns a valid hardcoded response.
 func (s *executionServer) GetOperation(
 	ctx context.Context,
@@ -180,33 +194,42 @@ func (s *executionServer) GetOperation(
 	op.Name = req.Name
 	op.Done = true
 
-	eom := remoteexecution.ExecuteOperationMetadata{}
-	eom.Stage = remoteexecution.ExecuteOperationMetadata_COMPLETED
+	eom := &remoteexecution.ExecuteOperationMetadata{
+		Stage: remoteexecution.ExecuteOperationMetadata_COMPLETED,
+	}
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
-	eomAsPBAny, err := ptypes.MarshalAny(&eom)
+	eomAsPBAny, err := marshalAny(eom)
 	if err != nil {
-		log.Errorf("Failed to marshal ExecuteOperationMetadata: %s", err)
-		return nil, fmt.Errorf("Failed to marshal ExecuteOperationMetadata as ptypes/any.Any: %s", err)
+		return nil, err
 	}
 	op.Metadata = eomAsPBAny
 
-	// TODO move boilerplate response struct generation into a common utility function
-	res := remoteexecution.ExecuteResponse{}
-	ar := remoteexecution.ActionResult{}
-	ar.ExitCode = 0
-	res.Result = &ar
-	res.CachedResult = false
-
 	// Marshal ExecuteResponse to protobuf.Any format
-	resAsPBAny, err := ptypes.MarshalAny(&res)
+	res := &remoteexecution.ExecuteResponse{
+		Result: &remoteexecution.ActionResult{
+			ExitCode: 0,
+		},
+		CachedResult: false,
+	}
+
+	resAsPBAny, err := marshalAny(res)
 	if err != nil {
-		log.Errorf("Failed to marshal GetOperationResponse: %s", err)
-		return nil, fmt.Errorf("Failed to marshal GetOperationResponse as ptypes/any.Any: %s", err)
+		return nil, err
 	}
 
 	log.Info("GetOperationRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
+}
+
+func marshalAny(pb proto.Message) (*any.Any, error) {
+	pbAny, err := ptypes.MarshalAny(pb)
+	if err != nil {
+		s := fmt.Sprintf("Failed to marshal proto message %q as Any: %s", pb, err)
+		log.Error(s)
+		return nil, err
+	}
+	return pbAny, nil
 }

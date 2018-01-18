@@ -7,12 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
@@ -20,7 +17,6 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
-	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
@@ -354,38 +350,4 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
-}
-
-// Get the Bazel Command from the embedded ExecuteRequest digest,
-// and populate the runner.Command's Argv and Env fields
-// TODO consider moving/functionalizing things here instead of all in invoke
-func fetchBazelCommand(f snapshot.Filer, cmd *runner.Command) error {
-	if cmd.ExecuteRequest == nil {
-		return fmt.Errorf("Command has no ExecuteRequest data")
-	}
-	digest := cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()
-
-	// Read command data from CAS refernced by filer
-	bzFiler, ok := f.(*bzsnapshot.BzFiler)
-	if !ok {
-		return fmt.Errorf("Filer could not be asserted as type BzFiler")
-	}
-	log.Infof("Fetching Bazel Command from BzFiler server %s", bzFiler.ServerAddr)
-
-	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.ServerAddr, digest)
-	if err != nil {
-		return err
-	}
-	bzCommand := &remoteexecution.Command{}
-	if err = proto.Unmarshal(bzCommandBytes, bzCommand); err != nil {
-		return fmt.Errorf("Failed to unmarshal bytes as remoteexecution.Command: %s", err)
-	}
-
-	// Update cmd's Argv and EnvVars (overwrite) from Command
-	cmd.Argv = bzCommand.GetArguments()
-	for _, envVar := range bzCommand.GetEnvironmentVariables() {
-		cmd.EnvVars[envVar.GetName()] = envVar.GetValue()
-	}
-
-	return nil
 }
