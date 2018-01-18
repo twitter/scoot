@@ -62,6 +62,3 @@ type StoreConfig struct {
 	TTLCfg *TTLConfig
 	Stat   stats.StatsReceiver
 }
-
-// Type for passing configured or resolved store addresses through dependency injection
-type StoreAddr string

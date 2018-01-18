@@ -43,6 +43,10 @@ func GetReadResourceName(instance, hash string, size int64, fname string) (strin
 	return rname, nil
 }
 
+func GetDefaultReadResourceName(hash string, size int64) (string, error) {
+	return GetReadResourceName("", hash, size, "")
+}
+
 // Parses a name string from the Read API into a Resource for bazel artifacts.
 // Valid read format: "[<instance>/]blobs/<hash>/<size>[/<filename>]"
 func ParseReadResource(name string) (*Resource, error) {
@@ -81,6 +85,10 @@ func GetWriteResourceName(instance, uuid, hash string, size int64, fname string)
 		return "", err
 	}
 	return wname, nil
+}
+
+func GetDefaultWriteResourceName(uuid, hash string, size int64) (string, error) {
+	return GetWriteResourceName("", uuid, hash, size, "")
 }
 
 // Parses a name string from the Write API into a Resource for bazel artifacts.

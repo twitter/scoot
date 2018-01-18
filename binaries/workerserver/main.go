@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/twitter/scoot/binaries/workerserver/config"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
@@ -42,6 +42,7 @@ func main() {
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
 	storeHandle := flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
+	casAddr := flag.String("cas_addr", "", "'host:port' of a server supporting CAS API over GRPC")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
@@ -89,11 +90,13 @@ func main() {
 		func() execer.Memory {
 			return execer.Memory(*memCapFlag)
 		},
-		// Set StoreAddr based on http storeHandle, fetching, or GetScootApiAddr
-		func() (store.StoreAddr, error) {
+		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
+		func(tmp *temp.TempDir) (store.Store, error) {
 			if *storeHandle != "" {
-				if !strings.HasPrefix(*storeHandle, "/") {
-					return store.StoreAddr(*storeHandle), nil
+				if strings.HasPrefix(*storeHandle, "/") {
+					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+				} else {
+					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
 			}
 			storeAddr := ""
@@ -107,29 +110,26 @@ func main() {
 				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
-				return store.StoreAddr(storeAddr), nil
-			}
-			return "", err
-		},
-		// Use storeHandle/StoreAddr to create HTTPStore, or fallback to tmp file store.
-		func(tmp *temp.TempDir, sa store.StoreAddr) (store.Store, error) {
-			if *storeHandle != "" {
-				if strings.HasPrefix(*storeHandle, "/") {
-					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
-				} else {
-					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
-				}
-			}
-			if sa != "" {
-				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(string(sa))), nil
+				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
 			return store.MakeFileStoreInTemp(tmp)
 		},
-		// Initialize map of Filers w/ init chans based on RunTypes
-		func(a store.StoreAddr) *bazel.BzFiler {
-			return bazel.MakeBzFilerWithOptionsServerAddr(string(a))
+		func() *bazel.BzFiler {
+			addr := ""
+			if *casAddr != "" {
+				addr = *casAddr
+			} else {
+				nodes, _ := local.MakeFetcher("apiserver", "grpc_addr").Fetch()
+				if len(nodes) > 0 {
+					r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+					addr = string(nodes[r.Intn(len(nodes))].Id())
+					log.Info("No grpc cas servers specified, but successfully fetched apiserver addr: ", nodes, " --> ", addr)
+				}
+			}
+			return bazel.MakeBzFilerWithOptionsServerAddr(addr)
 		},
+		// Initialize map of Filers w/ init chans based on RunTypes
 		func(gitDB *gitdb.DB, bzFiler *bazel.BzFiler) runner.RunTypeMap {
 			gitFiler := snapshot.NewDBAdapter(gitDB)
 

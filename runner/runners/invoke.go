@@ -86,18 +86,20 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var runType runner.RunType
 	if err := bazel.ValidateID(cmd.SnapshotID); err == nil {
 		runType = runner.RunTypeBazel
-
-		// Bazel requests - fetch command argv/env from CAS
-		if err = fetchBazelCommand(inv.filerMap[runType].Filer, cmd); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
 	} else {
 		runType = runner.RunTypeScoot
 	}
 	if _, ok := inv.filerMap[runType]; !ok {
 		return runner.FailedStatus(id, fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	}
+
+	// Bazel requests - fetch command argv/env from CAS
+	if runType == runner.RunTypeBazel {
+		if err := fetchBazelCommand(inv.filerMap[runType].Filer, cmd); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
 	}
 
 	// if we are checking out a snapshot, start the timer outside of go routine

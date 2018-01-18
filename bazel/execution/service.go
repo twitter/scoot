@@ -138,6 +138,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 		return result, fmt.Errorf("Nil execute request")
 	}
 
+	// TODO validate inputs like input digests (in a function)
 	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
 
