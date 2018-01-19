@@ -10,6 +10,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common"
+	"github.com/twitter/scoot/common/dialer"
 )
 
 type bzRunner interface {
@@ -19,7 +20,10 @@ type bzRunner interface {
 
 type bzCommand struct {
 	localStorePath string
-	serverAddr     string
+	casResolver    dialer.Resolver
+	// Currently, uses resolver for each underlying runCmd. In the future, we may
+	// want to limit the number of calls to Resolve if these happen too frequently.
+	//
 	// Not yet implemented:
 	// bypassLocalStore bool
 	// skipServer bool
@@ -95,8 +99,12 @@ func (bc bzCommand) materialize(sha string, dir string) error {
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, error) {
-	if bc.serverAddr != "" {
-		args = append([]string{fsUtilCmdServerAddr, bc.serverAddr}, args...)
+	serverAddr, err := bc.casResolver.Resolve()
+	if err != nil {
+		return nil, err
+	}
+	if serverAddr != "" {
+		args = append([]string{fsUtilCmdServerAddr, serverAddr}, args...)
 	}
 	if bc.localStorePath != "" {
 		args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)

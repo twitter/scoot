@@ -25,7 +25,7 @@ func makeTestingFiler() *BzFiler {
 	localStorePathFn := func(bc *bzCommand) {
 		bc.localStorePath = localStore.Dir
 	}
-	bf := MakeBzFilerWithOptions(localStorePathFn)
+	bf := MakeBzFilerWithOptions(noopRes, localStorePathFn)
 	return bf
 }
 

@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 )
@@ -16,6 +17,7 @@ import (
 var noopBf = BzFiler{
 	command: noopBzRunner{},
 }
+var noopRes = dialer.NewConstantResolver("")
 
 func init() {
 	log.AddHook(hooks.NewContextHook())
@@ -143,7 +145,7 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 }
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
-	bf := MakeBzFiler()
+	bf := MakeBzFiler(noopRes)
 	_, err := bf.Ingest("some made up directory")
 	if err == nil || !strings.Contains(err.Error(), noSuchFileOrDirMsg) {
 		t.Fatalf("Expected error to contain %s, was %v", noSuchFileOrDirMsg, err)

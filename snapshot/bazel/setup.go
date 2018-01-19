@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/ice"
 )
 
@@ -13,7 +14,7 @@ func Module() ice.Module {
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
 		func() *BzFiler {
-			return MakeBzFilerWithOptions()
+			return MakeBzFiler(dialer.NewConstantResolver(""))
 		},
 	)
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/twitter/scoot/binaries/workerserver/config"
 	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/config/jsonconfig"
@@ -115,6 +116,7 @@ func main() {
 			log.Info("No stores specified or found, creating a tmp file store")
 			return store.MakeFileStoreInTemp(tmp)
 		},
+		// Create BzFiler to handle Bazel API requests
 		func() *bazel.BzFiler {
 			addr := ""
 			if *casAddr != "" {
@@ -127,9 +129,11 @@ func main() {
 					log.Info("No grpc cas servers specified, but successfully fetched apiserver addr: ", nodes, " --> ", addr)
 				}
 			}
-			return bazel.MakeBzFilerWithOptionsServerAddr(addr)
+			resolver := dialer.NewConstantResolver(addr)
+			return bazel.MakeBzFiler(resolver)
 		},
 		// Initialize map of Filers w/ init chans based on RunTypes
+		// GitDB is created from its ice module defaults and handles Scoot API requests
 		func(gitDB *gitdb.DB, bzFiler *bazel.BzFiler) runner.RunTypeMap {
 			gitFiler := snapshot.NewDBAdapter(gitDB)
 

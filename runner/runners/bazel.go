@@ -28,11 +28,15 @@ func fetchBazelCommand(f snapshot.Filer, cmd *runner.Command) error {
 	if !ok {
 		return fmt.Errorf("Filer could not be asserted as type BzFiler")
 	}
-	log.Infof("Fetching Bazel Command from BzFiler server %s", bzFiler.ServerAddr)
-
-	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.ServerAddr, digest)
+	casAddr, err := bzFiler.CASResolver.Resolve()
 	if err != nil {
-		log.Errorf("Error reading command data from CAS at %s: %s", bzFiler.ServerAddr, err)
+		return fmt.Errorf("Filer could not resolve a CAS server: %s", err)
+	}
+	log.Infof("Fetching Bazel Command data from CAS server %s", casAddr)
+
+	bzCommandBytes, err := cas.ByteStreamRead(casAddr, digest)
+	if err != nil {
+		log.Errorf("Error reading command data from CAS server %s: %s", casAddr, err)
 		return err
 	}
 	bzCommand := &remoteexecution.Command{}
