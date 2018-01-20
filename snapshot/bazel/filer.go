@@ -7,8 +7,9 @@ import (
 )
 
 func MakeBzFiler(r dialer.Resolver) *BzFiler {
+	options := []func(*bzCommand){func(bc *bzCommand) { bc.casResolver = r }}
 	return &BzFiler{
-		command:     &bzCommand{},
+		command:     MakeBzCommandWithOptions(options...),
 		updater:     snapshots.MakeNoopUpdater(),
 		CASResolver: r,
 	}
@@ -20,6 +21,7 @@ func MakeBzFiler(r dialer.Resolver) *BzFiler {
 //     bc.localStorePath = "/path/to/local/store"
 // }
 func MakeBzFilerWithOptions(r dialer.Resolver, options ...func(*bzCommand)) *BzFiler {
+	options = append(options, func(bc *bzCommand) { bc.casResolver = r })
 	return &BzFiler{
 		updater:     snapshots.MakeNoopUpdater(),
 		command:     MakeBzCommandWithOptions(options...),
@@ -28,6 +30,7 @@ func MakeBzFilerWithOptions(r dialer.Resolver, options ...func(*bzCommand)) *BzF
 }
 
 func MakeBzFilerWithOptionsKeepCheckouts(r dialer.Resolver, options ...func(*bzCommand)) *BzFiler {
+	options = append(options, func(bc *bzCommand) { bc.casResolver = r })
 	return &BzFiler{
 		updater:       snapshots.MakeNoopUpdater(),
 		command:       MakeBzCommandWithOptions(options...),

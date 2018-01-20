@@ -30,7 +30,9 @@ type bzCommand struct {
 }
 
 func MakeBzCommand() bzCommand {
-	return bzCommand{}
+	return bzCommand{
+		casResolver: dialer.NewConstantResolver(""),
+	}
 }
 
 // Options is a variadic list of functions that take a *bzCommand as an arg
