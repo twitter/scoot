@@ -7,7 +7,7 @@ import (
 )
 
 func (bf *BzFiler) Ingest(path string) (string, error) {
-	id, err := bf.command.save(path)
+	id, err := bf.runner.save(path)
 	if err != nil {
 		log.WithFields(
 			log.Fields{

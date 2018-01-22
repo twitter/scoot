@@ -13,11 +13,6 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 )
 
-type bzRunner interface {
-	save(path string) (string, error)         // Called by BzFiler.Ingest
-	materialize(sha string, dir string) error // Called by BzFiler.Checkout and CheckoutAt
-}
-
 type bzCommand struct {
 	localStorePath string
 	casResolver    dialer.Resolver
@@ -29,23 +24,11 @@ type bzCommand struct {
 	// skipServer bool
 }
 
-func MakeBzCommand() bzCommand {
+func makeBzCommand(storePath string, resolver dialer.Resolver) bzCommand {
 	return bzCommand{
-		casResolver: dialer.NewConstantResolver(""),
+		localStorePath: storePath,
+		casResolver:    resolver,
 	}
-}
-
-// Options is a variadic list of functions that take a *bzCommand as an arg
-// and modify its fields, e.g.
-// localStorePath := func(bc *bzCommand) {
-//     bc.localStorePath = "/path/to/local/store"
-// }
-func MakeBzCommandWithOptions(options ...func(*bzCommand)) bzCommand {
-	bc := bzCommand{}
-	for _, opt := range options {
-		opt(&bc)
-	}
-	return bc
 }
 
 // Saves the file/dir specified by path using the fsUtilCmd & validates the id format
@@ -105,17 +88,18 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if serverAddr != "" {
-		args = append([]string{fsUtilCmdServerAddr, serverAddr}, args...)
-	}
-	if bc.localStorePath != "" {
-		args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
-	}
 	// We expect fs_util binary to be located at $GOPATH/bin, due to get_fs_util.sh
 	gp, err := common.GetFirstGopath()
 	if err != nil {
 		return nil, err
 	}
+
+	// localStorePath required, add serverAddr if resolved
+	args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
+	if serverAddr != "" {
+		args = append([]string{fsUtilCmdServerAddr, serverAddr}, args...)
+	}
+
 	return exec.Command(filepath.Join(gp, "bin", fsUtilCmd), args...).Output()
 }
 

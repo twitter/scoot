@@ -7,16 +7,15 @@ import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 )
 
 func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
-	tempDir, err := temp.TempDirDefault()
+	tmp, err := bf.tmp.TempDir("checkout")
 	if err != nil {
 		return nil, err
 	}
-	return bf.CheckoutAt(id, path.Join(tempDir.Dir, snapshotDirName))
+	return bf.CheckoutAt(id, path.Join(tmp.Dir, snapshotDirName))
 }
 
 func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
@@ -33,14 +32,14 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 		return nil, err
 	}
 
-	err = bf.command.materialize(sha, dir)
+	err = bf.runner.materialize(sha, dir)
 	if err != nil {
 		log.WithFields(
 			log.Fields{
 				"error": err,
 				"sha":   sha,
 				"dir":   dir,
-			}).Errorf("Failed to materialize %s", id)
+			}).Errorf("Failed to Materialize %s", id)
 		return nil, err
 	}
 

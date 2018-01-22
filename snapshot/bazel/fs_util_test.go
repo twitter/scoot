@@ -10,29 +10,26 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
 )
+
+// uses test vars and setup/teardown defined un filer_test.go
 
 func init() {
 	log.AddHook(hooks.NewContextHook())
 }
 
 func makeTestingFiler() *BzFiler {
-	localStore, err := temp.TempDirDefault()
+	bf, err := MakeBzFiler(tmpTest, noopRes)
 	if err != nil {
 		log.Fatal(err)
 	}
-	localStorePathFn := func(bc *bzCommand) {
-		bc.localStorePath = localStore.Dir
-	}
-	bf := MakeBzFilerWithOptions(noopRes, localStorePathFn)
 	return bf
 }
 
 // directory save tests
 
 func TestSaveEmptyDir(t *testing.T) {
-	root, err := temp.TempDirDefault()
+	root, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +51,7 @@ func TestSaveEmptyDir(t *testing.T) {
 }
 
 func TestSaveDir(t *testing.T) {
-	root, err := temp.TempDirDefault()
+	root, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +98,7 @@ func TestSaveDir(t *testing.T) {
 // file save tests
 
 func TestSaveEmptyFile(t *testing.T) {
-	root, err := temp.TempDirDefault()
+	root, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +119,7 @@ func TestSaveEmptyFile(t *testing.T) {
 }
 
 func TestSaveFile(t *testing.T) {
-	root, err := temp.TempDirDefault()
+	root, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +162,7 @@ func TestSaveFile(t *testing.T) {
 // directory materialize test
 
 func TestMaterializeDir(t *testing.T) {
-	root, err := temp.TempDirDefault()
+	root, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatal(err)
 	}

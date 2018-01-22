@@ -75,8 +75,8 @@ func main() {
 		func() (*repo.Repository, error) {
 			return repo.NewRepository(*repoDir)
 		},
-		func(tmpDir *temp.TempDir) (runners.HttpOutputCreator, error) {
-			outDir, err := tmpDir.FixedDir("output")
+		func(tmp *temp.TempDir) (runners.HttpOutputCreator, error) {
+			outDir, err := tmp.FixedDir("output")
 			if err != nil {
 				return nil, err
 			}
@@ -117,7 +117,7 @@ func main() {
 			return store.MakeFileStoreInTemp(tmp)
 		},
 		// Create BzFiler to handle Bazel API requests
-		func() *bazel.BzFiler {
+		func(tmp *temp.TempDir) (*bazel.BzFiler, error) {
 			addr := ""
 			if *casAddr != "" {
 				addr = *casAddr
@@ -130,7 +130,7 @@ func main() {
 				}
 			}
 			resolver := dialer.NewConstantResolver(addr)
-			return bazel.MakeBzFiler(resolver)
+			return bazel.MakeBzFiler(tmp, resolver)
 		},
 		// Initialize map of Filers w/ init chans based on RunTypes
 		// GitDB is created from its ice module defaults and handles Scoot API requests

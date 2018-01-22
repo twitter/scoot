@@ -1,50 +1,48 @@
 package bazel
 
 import (
+	"fmt"
+
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func MakeBzFiler(r dialer.Resolver) *BzFiler {
-	options := []func(*bzCommand){func(bc *bzCommand) { bc.casResolver = r }}
-	return &BzFiler{
-		command:     MakeBzCommandWithOptions(options...),
-		updater:     snapshots.MakeNoopUpdater(),
-		CASResolver: r,
-	}
+func MakeBzFiler(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(tmp, r, false)
 }
 
-// Options is a variadic list of functions that take a *bzCommand as an arg
-// and modify its fields, e.g.
-// localStorePath := func(bc *bzCommand) {
-//     bc.localStorePath = "/path/to/local/store"
-// }
-func MakeBzFilerWithOptions(r dialer.Resolver, options ...func(*bzCommand)) *BzFiler {
-	options = append(options, func(bc *bzCommand) { bc.casResolver = r })
-	return &BzFiler{
-		updater:     snapshots.MakeNoopUpdater(),
-		command:     MakeBzCommandWithOptions(options...),
-		CASResolver: r,
-	}
+func MakeBzFilerKeepCheckouts(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(tmp, r, true)
 }
 
-func MakeBzFilerWithOptionsKeepCheckouts(r dialer.Resolver, options ...func(*bzCommand)) *BzFiler {
-	options = append(options, func(bc *bzCommand) { bc.casResolver = r })
-	return &BzFiler{
-		updater:       snapshots.MakeNoopUpdater(),
-		command:       MakeBzCommandWithOptions(options...),
-		keepCheckouts: true,
+func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, keep bool) (*BzFiler, error) {
+	if tmp == nil {
+		return nil, fmt.Errorf("TempDir must be provided to MakeBzFiler")
+	}
+	runnerDir, err := tmp.TempDir("bzrunner")
+	if err != nil {
+		return nil, err
+	}
+
+	bf := &BzFiler{
+		runner:        makeBzCommand(runnerDir.Dir, r),
+		tmp:           tmp,
+		keepCheckouts: keep,
 		CASResolver:   r,
+		updater:       snapshots.MakeNoopUpdater(),
 	}
+	return bf, nil
 }
 
-// Satisfies snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater
-// Default command is fs_util, a tool provided by github.com/pantsbuild/pants which
+// Implements Snapshot interface (snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater)
+// Default runner is fs_util, a tool provided by github.com/pantsbuild/pants which
 // handles underlying implementation of bazel snapshot functionality
 type BzFiler struct {
-	command       bzRunner
-	updater       snapshot.Updater
+	runner bzRunner
+	tmp    *temp.TempDir
+
 	keepCheckouts bool
 	// keepCheckouts exists for debuggability. Instead of removing checkouts on release,
 	// we can optionally keep them to inspect
@@ -57,4 +55,11 @@ type BzFiler struct {
 	// retry and backoff configuration, but we currently have to expose the resolver to
 	// an underlying tool that makes CAS requests on our behalf during Checkout and Ingest.
 	CASResolver dialer.Resolver
+	updater     snapshot.Updater
+}
+
+// Interface that specifies actions on directory structures for Bazel
+type bzRunner interface {
+	save(path string) (string, error)  // Save a directory glob, return a SnapshotID as string
+	materialize(sha, dir string) error // Unpack a tree from a sha into target directory
 }
