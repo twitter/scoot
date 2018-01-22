@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -88,11 +87,6 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// We expect fs_util binary to be located at $GOPATH/bin, due to get_fs_util.sh
-	gp, err := common.GetFirstGopath()
-	if err != nil {
-		return nil, err
-	}
 
 	// localStorePath required, add serverAddr if resolved
 	args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
@@ -100,7 +94,7 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 		args = append([]string{fsUtilCmdServerAddr, serverAddr}, args...)
 	}
 
-	return exec.Command(filepath.Join(gp, "bin", fsUtilCmd), args...).Output()
+	return exec.Command(fsUtilCmd, args...).Output()
 }
 
 // Noop bzRunner for stub testing

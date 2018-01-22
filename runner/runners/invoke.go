@@ -96,6 +96,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
+		log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
 	}
 
 	// if we are checking out a snapshot, start the timer outside of go routine

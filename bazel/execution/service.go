@@ -153,7 +153,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 	// which is required to support CAS interactions.
 	var task sched.TaskDefinition
 	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
-	task.Command.Argv = []string{"sleep", "10"} // used as a safe placeholder
+	task.Command.Argv = []string{"BZ_PLACEHOLDER"}
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.Timeout = d
 	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
