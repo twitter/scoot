@@ -803,9 +803,15 @@ func (s *statefulScheduler) scheduleTasks() {
 					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
 				}
 
-				// Tasks from the same job or related jobs will never preempt each other,
-				//  so we only need to check jobId to determine preemption.
-				if nodeSt.runningJob != jobID {
+				// If the jobID or taskID has changed, the assigned node has been preempted, simply return early.
+				// However, if nodeState has changed (i.e same node deleted then re-added), we must clean up before returning.
+				nodeStInstance, ok := s.clusterState.getNodeState(nodeSt.node.Id())
+				nodeStChanged := !ok || &nodeStInstance.readyCh != &nodeSt.readyCh
+				if nodeStChanged {
+					preempted := true
+					s.getJob(jobID).errorRunningTask(taskID, errors.New("Task failed: node hiccup"), preempted)
+				}
+				if nodeSt.runningJob != jobID || nodeSt.runningTask != taskID || nodeStChanged {
 					log.WithFields(
 						log.Fields{
 							"node":        nodeSt.node,
@@ -813,6 +819,7 @@ func (s *statefulScheduler) scheduleTasks() {
 							"taskID":      taskID,
 							"runningJob":  nodeSt.runningJob,
 							"runningTask": nodeSt.runningTask,
+							"nodeStOk":    !nodeStChanged,
 							"tag":         tag,
 						}).Info("Task preempted")
 					return
