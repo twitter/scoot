@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 )
 
-// uses test vars and setup/teardown defined un filer_test.go
+// uses test vars and setup/teardown defined in filer_test.go
 
 func init() {
 	log.AddHook(hooks.NewContextHook())
