@@ -44,7 +44,7 @@ func (hook contextHook) Levels() []logrus.Level {
 }
 
 func (hook contextHook) Fire(entry *logrus.Entry) error {
-	entry.Data["file:line"] = hook.findCaller()
+	entry.Data["sourceLine"] = hook.findCaller()
 	return nil
 }
 

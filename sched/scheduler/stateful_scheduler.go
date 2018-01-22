@@ -484,6 +484,7 @@ func (s *statefulScheduler) updateStats() {
 			log.WithFields(
 				log.Fields{
 					"requestor":      job.Job.Def.Requestor,
+					"jobId":          job.Job.Id,
 					"tag":            job.Job.Def.Tag,
 					"basis":          job.Job.Def.Basis,
 					"priority":       job.Job.Def.Priority,

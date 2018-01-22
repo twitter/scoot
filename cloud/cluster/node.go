@@ -11,14 +11,11 @@ type NodeId string
 type Node interface {
 	// A unique node identifier, like 'host:thriftPort'
 	Id() NodeId
+	String() string
 }
 
 type idNode struct {
 	id NodeId
-}
-
-func (n *idNode) String() string {
-	return string(n.id)
 }
 
 func NewIdNode(id string) Node {
@@ -36,6 +33,10 @@ func NewIdNodes(num int) []Node {
 // Implements interface Node.Id()
 func (n *idNode) Id() NodeId {
 	return n.id
+}
+
+func (n *idNode) String() string {
+	return fmt.Sprintf("%v", n.Id())
 }
 
 type NodeSorter []Node
