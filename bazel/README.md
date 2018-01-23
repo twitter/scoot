@@ -101,11 +101,11 @@ INFO[0000] Wrote to CAS successfully                     file:line="bzutil/main.
 ```
 
 ```sh
-grpc_cli call localhost:12100 google.bytestream.ByteStream.Write "resource_name: 'uploads/123e4567-e89b-12d3-a456-426655440000/blobs/e16f1596201850fd4a63680b27f603cb64e67176159be3d8ed78a4403fdb1700/1', write_offset: 0, finish_write: true, data: ' '"
+grpc_cli call localhost:12100 google.bytestream.ByteStream.Write "resource_name: 'uploads/123e4567-e89b-12d3-a456-426655440000/blobs/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855/0', write_offset: 0, finish_write: true, data: ''"
 ```
 
 ```sh
-grpc_cli call localhost:9099 google.devtools.remoteexecution.v1test.Execution.Execute "action: {command_digest: {hash: '1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29', size_bytes: 11}, input_root_digest: {hash: 'e16f1596201850fd4a63680b27f603cb64e67176159be3d8ed78a4403fdb1700', size_bytes: 1}}"
+grpc_cli call localhost:9099 google.devtools.remoteexecution.v1test.Execution.Execute "action: {command_digest: {hash: '1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29', size_bytes: 11}, input_root_digest: {hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', size_bytes: 0}}"
 ```
 
 ### GRPC through a proxy

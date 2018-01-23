@@ -32,7 +32,7 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 		return nil, err
 	}
 
-	err = bf.runner.materialize(sha, dir)
+	err = bf.tree.materialize(sha, dir)
 	if err != nil {
 		log.WithFields(
 			log.Fields{

@@ -26,6 +26,8 @@ import (
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
+	// TODO include optional directory that gets BzFiler.Ingest'ed, so we have a tool that easily satisfies prereqs
+
 	casAddr := flag.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	argv := flag.String("args", "", "space-separated command arguments, i.e. \"./run arg1 arg2\"")
 	env := flag.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")

@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"fmt"
 	"os/exec"
 	filepath "path"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 )
 
+// Implements snapshot/bazel/bzTree
 type bzCommand struct {
 	localStorePath string
 	casResolver    dialer.Resolver
@@ -52,6 +54,10 @@ func (bc bzCommand) save(path string) (string, error) {
 
 	output, err := bc.runCmd(args)
 	if err != nil {
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			return "", fmt.Errorf("Error: %s. Stderr: %s", err, exitError.Stderr)
+		}
 		return "", err
 	}
 
@@ -78,7 +84,14 @@ func (bc bzCommand) save(path string) (string, error) {
 func (bc bzCommand) materialize(sha string, dir string) error {
 	// we don't expect there to be any useful output
 	_, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, dir})
-	return err
+	if err != nil {
+		exitError, ok := err.(*exec.ExitError)
+		if ok {
+			return fmt.Errorf("Error: %s. Stderr: %s", err, exitError.Stderr)
+		}
+		return err
+	}
+	return nil
 }
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
@@ -97,8 +110,8 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	return exec.Command(fsUtilCmd, args...).Output()
 }
 
-// Noop bzRunner for stub testing
-type noopBzRunner struct{}
+// Noop bzTree for stub testing
+type noopBzTree struct{}
 
-func (bc noopBzRunner) save(path string) (string, error)         { return "", nil }
-func (bc noopBzRunner) materialize(sha string, dir string) error { return nil }
+func (bc noopBzTree) save(path string) (string, error)         { return "", nil }
+func (bc noopBzTree) materialize(sha string, dir string) error { return nil }
