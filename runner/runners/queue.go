@@ -96,7 +96,7 @@ func NewQueueRunner(
 		capacity:      capacity,
 		reqCh:         make(chan interface{}),
 		updateCh:      make(chan interface{}),
-		cancelTimerCh: make(chan interface{}, len(filerMap)),
+		cancelTimerCh: make(chan interface{}),
 	}
 	run := &Service{controller, statusManager, statusManager}
 
@@ -379,9 +379,7 @@ func (c *QueueController) loop() {
 			// Handle run and abort requests.
 			if !ok {
 				c.reqCh = nil
-				for i := 0; i < len(c.filerMap); i++ {
-					c.cancelTimerCh <- nil
-				}
+				close(c.cancelTimerCh)
 				return
 			}
 			switch r := req.(type) {
