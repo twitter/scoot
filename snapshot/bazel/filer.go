@@ -37,8 +37,9 @@ func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, keep bool) (*BzFiler, err
 }
 
 // Implements Snapshot interface (snapshot.Checkouter, snapshot.Ingester, and snapshot.Updater)
-// Default runner is fs_util, a tool provided by github.com/pantsbuild/pants which
-// handles underlying implementation of bazel snapshot functionality
+// Default runner is fs_util, a tool provided by pants at
+// https://github.com/pantsbuild/binaries/tree/gh-pages/build-support/bin/fs_util
+// which handles underlying implementation of bazel snapshot functionality
 type BzFiler struct {
 	runner bzRunner
 	tmp    *temp.TempDir

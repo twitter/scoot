@@ -1,10 +1,12 @@
 package main
 
-// Utility functions related to Bazel operations in Scoot.
-// Facilitates testing - not part of production deployment
+// Command line tool to enable testing for Bazel requests in Scoot
+// We use this for client-side operations Scoot does not implement,
+// and are difficult to reproduce using generic tools like grpc_cli.
+// Not part of production deployment
 //
 // Supports:
-// * Command insertion to a CAS
+// * remoteexecution.Command protobuf data structure insertion to a CAS
 
 import (
 	"flag"

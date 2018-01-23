@@ -17,6 +17,7 @@ import (
 // Instance - optional parameter identifying a server instance
 // Digest - Bazel Digest identifier
 // UUID - client identifier attached to write requests
+//	Unused by Scoot currently except for tracking/logging
 type Resource struct {
 	Instance string
 	Digest   *remoteexecution.Digest
@@ -27,7 +28,7 @@ func (r *Resource) String() string {
 	return fmt.Sprintf("Instance: %s, Digest: %s, UUID: %s", r.Instance, r.Digest, r.UUID)
 }
 
-// Return a valid read resource string based on individual components. Errors on invalid inputs
+// Return a valid read resource string based on individual components. Errors on invalid inputs.
 func GetReadResourceName(instance, hash string, size int64, fname string) (string, error) {
 	rname := ""
 	if instance != "" {
@@ -49,6 +50,7 @@ func GetDefaultReadResourceName(hash string, size int64) (string, error) {
 
 // Parses a name string from the Read API into a Resource for bazel artifacts.
 // Valid read format: "[<instance>/]blobs/<hash>/<size>[/<filename>]"
+// Scoot does not currently use/track the filename portion of resource names
 func ParseReadResource(name string) (*Resource, error) {
 	elems := strings.Split(name, "/")
 	if len(elems) < 3 {
@@ -93,6 +95,7 @@ func GetDefaultWriteResourceName(uuid, hash string, size int64) (string, error) 
 
 // Parses a name string from the Write API into a Resource for bazel artifacts.
 // Valid read format: "[<instance>/]uploads/<uuid>/blobs/<hash>/<size>[/<filename>]"
+// Scoot does not currently use/track the filename portion of resource names
 func ParseWriteResource(name string) (*Resource, error) {
 	elems := strings.Split(name, "/")
 	if len(elems) < 5 {

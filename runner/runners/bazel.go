@@ -11,23 +11,17 @@ import (
 
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/snapshot"
 	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 )
 
 // Get the Bazel Command from the embedded ExecuteRequest digest,
 // and populate the runner.Command's Argv and Env fields
-func fetchBazelCommand(f snapshot.Filer, cmd *runner.Command) error {
+func fetchBazelCommand(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) error {
 	if cmd.ExecuteRequest == nil {
 		return fmt.Errorf("Command has no ExecuteRequest data")
 	}
 	digest := cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()
 
-	// Read command data from CAS refernced by filer
-	bzFiler, ok := f.(*bzsnapshot.BzFiler)
-	if !ok {
-		return fmt.Errorf("Filer could not be asserted as type BzFiler")
-	}
 	casAddr, err := bzFiler.CASResolver.Resolve()
 	if err != nil {
 		return fmt.Errorf("Filer could not resolve a CAS server: %s", err)

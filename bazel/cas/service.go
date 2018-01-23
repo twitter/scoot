@@ -187,6 +187,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 // TODO store.Stores do not support partial Writes, and neither does our implementation.
 // We can support partial Write by keeping buffers for inflight requests in the casServer.
 // When the entire Write is buffered, we can Write to the Store and return a response with the result.
+// NOTE We also no not currently attempt any resolution between multiple client UUIDs writing the same resource
 func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	log.Info("Received CAS Write request")
 

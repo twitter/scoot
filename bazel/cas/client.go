@@ -14,7 +14,6 @@ import (
 // These are more straightforward than the server APIs - bytestream provides
 // the majority of the CAS Client implementation. We provide wrappers as
 // higher-level operations.
-// Scoot only supports CAS API over a network grpc interface (i.e. an apiserver)
 
 // Read data as bytes from a CAS. Takes address in "host:port" format and a bazel Digest to read.
 func ByteStreamRead(serverAddr string, digest *remoteexecution.Digest) ([]byte, error) {

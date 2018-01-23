@@ -17,6 +17,7 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
+	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
@@ -92,7 +93,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// Bazel requests - fetch command argv/env from CAS
 	if runType == runner.RunTypeBazel {
-		if err := fetchBazelCommand(inv.filerMap[runType].Filer, cmd); err != nil {
+		bzFiler, ok := inv.filerMap[runType].Filer.(*bzsnapshot.BzFiler)
+		if !ok {
+			return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+		if err := fetchBazelCommand(bzFiler, cmd); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
