@@ -9,16 +9,43 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 )
 
-var noopBf = bzFiler{
-	command: noopBzRunner{},
-}
+var noopBf *BzFiler
+var tmpTest *temp.TempDir
+var noopRes = dialer.NewConstantResolver("")
 
 func init() {
 	log.AddHook(hooks.NewContextHook())
+}
+
+func setup() (*temp.TempDir, *BzFiler) {
+	tmp, err := temp.TempDirDefault()
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+	bf := &BzFiler{
+		tree: noopBzTree{},
+		tmp:  tmp,
+	}
+	return tmp, bf
+}
+
+func teardown(tmp *temp.TempDir) {
+	if tmp != nil {
+		os.Remove(tmp.Dir)
+	}
+}
+
+func TestMain(m *testing.M) {
+	tmpTest, noopBf = setup()
+	rc := m.Run()
+	teardown(tmpTest)
+	os.Exit(rc)
 }
 
 // Checkout tests
@@ -42,7 +69,7 @@ func TestInvalidBzCheckout(t *testing.T) {
 }
 
 func TestReleaseBzCheckout(t *testing.T) {
-	tempDir, err := temp.TempDirDefault()
+	tempDir, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -76,7 +103,7 @@ func TestBzCheckouterValidCheckout(t *testing.T) {
 }
 
 func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
-	tempDir, err := temp.TempDirDefault()
+	tempDir, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -89,7 +116,7 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	size := int64(5)
 	id := bazel.SnapshotID(emptySha, size)
-	tempDir, err := temp.TempDirDefault()
+	tempDir, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -105,7 +132,7 @@ func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 // Ingester tests
 
 func TestBzIngesteValidIngestDir(t *testing.T) {
-	tmp, err := temp.TempDirDefault()
+	tmp, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -113,15 +140,10 @@ func TestBzIngesteValidIngestDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error ingesting dir %v. Err: %v", tmp.Dir, err)
 	}
-
-	err = os.Remove(tmp.Dir)
-	if err != nil {
-		t.Fatalf("Error removing %v: %v", tmp.Dir, err)
-	}
 }
 
 func TestBzIngesterValidIngestFile(t *testing.T) {
-	tmp, err := temp.TempDirDefault()
+	tmp, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -135,16 +157,19 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 		t.Fatalf("Error ingesting file %v. Err: %v", tmpFile.Name(), err)
 	}
 	// make sure id checks out
-
-	err = os.Remove(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Error removing %v: %v", tmpFile.Name(), err)
-	}
 }
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
-	bf := MakeBzFiler()
-	_, err := bf.Ingest("some made up directory")
+	tmp, err := tmpTest.TempDir("")
+	if err != nil {
+		t.Fatalf("Error creating temp dir. %v", err)
+	}
+	bf, err := MakeBzFiler(tmp, noopRes)
+	if err != nil {
+		t.Fatalf("Error creating BzFiler: %s", err)
+	}
+
+	_, err = bf.Ingest("some made up directory")
 	if err == nil || !strings.Contains(err.Error(), noSuchFileOrDirMsg) {
 		t.Fatalf("Expected error to contain %s, was %v", noSuchFileOrDirMsg, err)
 	}
@@ -153,7 +178,7 @@ func TestBzIngesterInvalidIngest(t *testing.T) {
 // Utils tests
 
 func TestGetFileTypeDir(t *testing.T) {
-	tmp, err := temp.TempDirDefault()
+	tmp, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -162,15 +187,10 @@ func TestGetFileTypeDir(t *testing.T) {
 	if err != nil || fileType != fsUtilCmdDirectory {
 		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", fsUtilCmdDirectory, fileType, err)
 	}
-
-	err = os.Remove(tmp.Dir)
-	if err != nil {
-		t.Fatalf("Error removing %v: %v", tmp.Dir, err)
-	}
 }
 
 func TestGetFileTypeFile(t *testing.T) {
-	tmp, err := temp.TempDirDefault()
+	tmp, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -183,11 +203,6 @@ func TestGetFileTypeFile(t *testing.T) {
 	fileType, err := getFileType(tmpFile.Name())
 	if err != nil || fileType != fsUtilCmdFile {
 		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", fsUtilCmdFile, fileType, err)
-	}
-
-	err = os.Remove(tmpFile.Name())
-	if err != nil {
-		t.Fatalf("Error removing %v: %v", tmpFile.Name(), err)
 	}
 }
 

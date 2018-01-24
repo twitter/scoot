@@ -20,6 +20,7 @@ import (
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/worker/workers"
+	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
@@ -266,7 +267,9 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
-		return runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
+		filerMap := runner.MakeRunTypeMap()
+		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+		return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -672,7 +675,9 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 		sc:        sagalogs.MakeInMemorySagaCoordinator(),
 		rf: func(n cluster.Node) runner.Service {
 			ex := execers.NewSimExecer()
-			runner := runners.NewSingleRunner(ex, snapshots.MakeInvalidFiler(), nil, runners.NewNullOutputCreator(), tmp, nil)
+			filerMap := runner.MakeRunTypeMap()
+			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil)
 			return runner
 		},
 		config: SchedulerConfig{

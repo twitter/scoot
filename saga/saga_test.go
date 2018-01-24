@@ -2,8 +2,9 @@ package saga
 
 import (
 	"errors"
-	"github.com/golang/mock/gomock"
 	"testing"
+
+	"github.com/golang/mock/gomock"
 )
 
 func TestEndSaga(t *testing.T) {

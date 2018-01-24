@@ -13,11 +13,23 @@ import (
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/snapshot"
 )
 
 const NoRunnersMsg = "No runners available."
 const RunnerBusyMsg = "Runner is busy"
 const LoggingErrMsg = "Error initializing logging."
+
+// RunTypes distinguish execution behavior for Commands.
+// Used only by the Runner and evaluated using SnapshotIDs.
+type RunType string
+
+const (
+	RunTypeScoot RunType = "Scoot"
+	RunTypeBazel RunType = "Bazel"
+)
+
+type RunTypeMap map[RunType]snapshot.FilerAndInitDoneCh
 
 // A command, execution environment, and timeout.
 type Command struct {
@@ -70,6 +82,10 @@ func (c Command) String() string {
 	}
 
 	return s
+}
+
+func MakeRunTypeMap() RunTypeMap {
+	return make(map[RunType]snapshot.FilerAndInitDoneCh)
 }
 
 // Service allows starting/abort'ing runs and checking on their status.

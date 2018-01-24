@@ -5,10 +5,10 @@ import (
 )
 
 // Default updater is a no-op
-func (bf *bzFiler) Update() error {
+func (bf *BzFiler) Update() error {
 	return bf.updater.Update()
 }
 
-func (bf *bzFiler) UpdateInterval() time.Duration {
+func (bf *BzFiler) UpdateInterval() time.Duration {
 	return bf.updater.UpdateInterval()
 }

@@ -72,8 +72,6 @@ test-unit:
 
 testlocal: generate test
 
-testonly: test-unit-property
-
 test: test-unit-property-integration coverage
 
 swarmtest:
