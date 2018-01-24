@@ -18,6 +18,10 @@ type idNode struct {
 	id NodeId
 }
 
+func (n *idNode) String() string {
+	return string(n.id)
+}
+
 func NewIdNode(id string) Node {
 	return &idNode{id: NodeId(id)}
 }
@@ -33,10 +37,6 @@ func NewIdNodes(num int) []Node {
 // Implements interface Node.Id()
 func (n *idNode) Id() NodeId {
 	return n.id
-}
-
-func (n *idNode) String() string {
-	return fmt.Sprintf("%v", n.Id())
 }
 
 type NodeSorter []Node
