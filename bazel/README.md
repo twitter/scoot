@@ -79,3 +79,39 @@ response {
 
 Rpc succeeded with OK status
 ```
+
+#### Remote Execution End-to-End Test Example
+This details how to run a Bazel Remote Execution request in Scoot from scratch.
+The worflow will be:
+1. Start up a scheduler, apiserver, and workerserver
+2. Upload the request Command (argv and env) to the apiserver via the CAS API
+3. Upload the request input directory to the apiserver via fs_util/CAS API
+4. Schedule the request on the scheduler via the Execution API
+5. _Work in progress_ Get results of the request from the scheduler via the Longrunning API
+
+```sh
+$GOPATH/bin/setup-cloud-scoot --strategy local.local
+```
+
+```sh
+bzutil -cas_addr="localhost:12100" -args="sleep 17"
+INFO[0000] Using argv: ["sleep" "17"]                    file:line="bzutil/main.go:44"
+INFO[0000] Wrote to CAS successfully                     file:line="bzutil/main.go:73"
+1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29 11
+```
+
+```sh
+grpc_cli call localhost:12100 google.bytestream.ByteStream.Write "resource_name: 'uploads/123e4567-e89b-12d3-a456-426655440000/blobs/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855/0', write_offset: 0, finish_write: true, data: ''"
+```
+
+```sh
+grpc_cli call localhost:9099 google.devtools.remoteexecution.v1test.Execution.Execute "action: {command_digest: {hash: '1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29', size_bytes: 11}, input_root_digest: {hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', size_bytes: 0}}"
+```
+
+### GRPC through a proxy
+If your GRPC-serving binaries are only accessible via a proxy, it is possible to redirect GRPC client commands via:
+
+```sh
+ssh <proxy-host> -L <local-proxy-port>:<service-host>:<service-port> -N &
+grpc_cli call localhost:<local-proxt-port> ...
+```
