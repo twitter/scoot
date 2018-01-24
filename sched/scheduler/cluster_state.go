@@ -226,8 +226,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			if ns, ok := c.suspendedNodes[update.Id]; ok {
 				if !ns.ready() {
 					// Adding a node that's already suspended as non-ready, leave it in that state until ready.
-					log.Infof("Suspended node re-added but still awaiting readiness check %v (%s)", update.Id,
-						ns.node.String())
+					log.Infof("Suspended node re-added but still awaiting readiness check %v (%s)", update.Id, ns)
 				} else if ns.timeLost != nilTime {
 					// This node was suspended as lost earlier, we can recover it now.
 					ns.timeLost = nilTime
@@ -250,7 +249,7 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
 					c.suspendedNodes[update.Id] = newNode
-					log.Infof("Added new suspended node: %v (%#v), %s", update.Id, update.Node.String(), c.status())
+					log.Infof("Added new suspended node: %v (%#v), %s", update.Id, update.Node, c.status())
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
