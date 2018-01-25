@@ -11,6 +11,7 @@ type NodeId string
 type Node interface {
 	// A unique node identifier, like 'host:thriftPort'
 	Id() NodeId
+	String() string
 }
 
 type idNode struct {
