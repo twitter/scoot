@@ -16,7 +16,7 @@ func SnapshotID(sha string, size int64) string {
 }
 
 // Generate a SnapshotID directly from a Digest
-func DigestSnapshotID(d *remoteexecution.Digest) string {
+func SnapshotIDFromDigest(d *remoteexecution.Digest) string {
 	if d == nil {
 		return ""
 	}
@@ -25,11 +25,7 @@ func DigestSnapshotID(d *remoteexecution.Digest) string {
 
 // Checks that ID is well formed
 func ValidateID(id string) error {
-	sha, err := GetSha(id)
-	if err != nil {
-		return err
-	}
-	size, err := GetSize(id)
+	sha, size, err := GetShaAndSize(id)
 	if err != nil {
 		return err
 	}
@@ -39,30 +35,30 @@ func ValidateID(id string) error {
 	return nil
 }
 
-// Get sha portion from valid bazel SnapshotID
-func GetSha(id string) (string, error) {
-	s, err := SplitID(id)
+// Get sha and size components from valid bazel SnapshotID
+func GetShaAndSize(id string) (string, int64, error) {
+	s, err := splitID(id)
 	if err != nil {
-		return "", err
-	}
-	return s[1], nil
-}
-
-// Get size portion from valid bazel SnapshotID
-func GetSize(id string) (int64, error) {
-	s, err := SplitID(id)
-	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
 	size, err := strconv.ParseInt(s[2], 10, 64)
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
-	return size, nil
+	return s[1], size, nil
+}
+
+// Get a remoteexecution Digest from SnapshotID
+func DigestFromSnapshotID(id string) (*remoteexecution.Digest, error) {
+	sha, size, err := GetShaAndSize(id)
+	if err != nil {
+		return nil, err
+	}
+	return &remoteexecution.Digest{Hash: sha, SizeBytes: size}, nil
 }
 
 // Split valid bazel SnapshotID into prefix, sha and size components as strings
-func SplitID(id string) ([]string, error) {
+func splitID(id string) ([]string, error) {
 	s := strings.Split(id, "-")
 	if len(s) < 3 || s[0] != SnapshotIDPrefix {
 		return nil, fmt.Errorf("%s %s", InvalidIDMsg, id)

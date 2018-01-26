@@ -58,7 +58,6 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 // Run will send updates the process is running to updateCh.
 // Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
 // Run will not return until the process is not running.
-// NOTE: kind of gnarly since our filer implementation (gitdb) currently mutates the same worktree on every op.
 func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
 	log.WithFields(
 		log.Fields{
@@ -78,6 +77,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
+	// TODO variable input behaviors based on runType
 	// Determine RunType from Command SnapshotID
 	// This invoker supports RunTypeScoot and RunTypeBazel
 	var runType runner.RunType
@@ -98,12 +98,17 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
+		if cmd.ExecuteRequest == nil {
+			return runner.FailedStatus(id, fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel"),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
 		if err := fetchBazelCommand(bzFiler, cmd); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
 		log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
 	}
+	// //////////////
 
 	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
@@ -113,9 +118,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 
 	go func() {
-		//FIXME(jschiller): allow aborts/timeouts to cancel the checkout process.
 		if cmd.SnapshotID == "" {
-			//TODO: we don't want this logic to live here, these decisions should be made at a higher level.
 			if len(cmd.Argv) > 0 && cmd.Argv[0] != execers.UseSimExecerArg {
 				log.WithFields(
 					log.Fields{
@@ -132,7 +135,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				checkoutCh <- nil
 			}
 		} else {
-			// NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
 			log.WithFields(
 				log.Fields{
 					"runID":      id,
@@ -271,85 +273,125 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"checkout": co.Path(),
 		}).Info("Run done")
 
+	// TODO variable output behaviors based on runType
 	switch st.State {
 	case execer.COMPLETE:
-		tmp, err := inv.tmp.TempDir("invoke")
-		if err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion dir: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
-		uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
-		inv.stat.Counter(stats.WorkerUploads).Inc(1)
-		defer func() {
-			os.RemoveAll(tmp.Dir)
-			uploadTimer.Stop()
-		}()
-		outPath := stdout.AsFile()
-		errPath := stderr.AsFile()
-		stdoutName := "STDOUT"
-		stderrName := "STDERR"
-		var writer *os.File
-		var reader *os.File
-		defer writer.Close()
-		defer reader.Close()
-
-		if writer, err = os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		} else if reader, err = os.Open(outPath); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
-
-		writer.Close()
-		reader.Close()
-		if writer, err = os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		} else if reader, err = os.Open(errPath); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		} else if _, err := io.Copy(writer, reader); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
-
-		ingestCh := make(chan interface{})
-		go func() {
-			snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp.Dir)
+		if runType == runner.RunTypeScoot {
+			tmp, err := inv.tmp.TempDir("invoke")
 			if err != nil {
-				ingestCh <- err
-			} else {
-				ingestCh <- snapshotID
-			}
-		}()
-
-		var snapshotID string
-		select {
-		case <-abortCh:
-			return runner.AbortStatus(id,
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		case res := <-ingestCh:
-			switch res.(type) {
-			case error:
-				return runner.FailedStatus(id, fmt.Errorf("error ingesting results: %v", res),
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion dir: %v", err),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
-			snapshotID = res.(string)
-		}
+			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
+			inv.stat.Counter(stats.WorkerUploads).Inc(1)
+			defer func() {
+				os.RemoveAll(tmp.Dir)
+				uploadTimer.Stop()
+			}()
+			outPath := stdout.AsFile()
+			errPath := stderr.AsFile()
+			stdoutName := "STDOUT"
+			stderrName := "STDERR"
+			var writer *os.File
+			var reader *os.File
+			defer writer.Close()
+			defer reader.Close()
 
-		// TODO: stdout/stderr should configurably point to a bundlestore server addr.
-		// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
-		status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
-			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if cmd.SnapshotID != "" {
-			status.StdoutRef = snapshotID + "/" + stdoutName
-			status.StderrRef = snapshotID + "/" + stderrName
+			if writer, err = os.Create(filepath.Join(tmp.Dir, stdoutName)); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			} else if reader, err = os.Open(outPath); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			} else if _, err := io.Copy(writer, reader); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdout: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+
+			writer.Close()
+			reader.Close()
+			if writer, err = os.Create(filepath.Join(tmp.Dir, stderrName)); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			} else if reader, err = os.Open(errPath); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			} else if _, err := io.Copy(writer, reader); err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+
+			ingestCh := make(chan interface{})
+			go func() {
+				snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp.Dir)
+				if err != nil {
+					ingestCh <- err
+				} else {
+					ingestCh <- snapshotID
+				}
+			}()
+
+			var snapshotID string
+			select {
+			case <-abortCh:
+				return runner.AbortStatus(id,
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			case res := <-ingestCh:
+				switch res.(type) {
+				case error:
+					return runner.FailedStatus(id, fmt.Errorf("error ingesting results: %v", res),
+						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+				}
+				snapshotID = res.(string)
+			}
+
+			// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
+			status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			if cmd.SnapshotID != "" {
+				status.StdoutRef = snapshotID + "/" + stdoutName
+				status.StderrRef = snapshotID + "/" + stderrName
+			}
+			return status
+		} else if runType == runner.RunTypeBazel {
+			// TODO ingestCh thing
+
+			bzFiler, ok := inv.filerMap[runType].Filer.(*bzsnapshot.BzFiler)
+			if !ok {
+				return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+
+			stdoutDigest, err := ingestFile(bzFiler, stdout.AsFile())
+			if err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("Error ingesting stdout to CAS: %s", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+			stderrDigest, err := ingestFile(bzFiler, stderr.AsFile())
+			if err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("Error ingesting stderr to CAS: %s", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+
+			outputFiles, err := ingestOutputFiles(bzFiler, cmd, co.Path())
+			if err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("Error ingesting OutputFiles: %s", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+			outputDirs, err := ingestOutputDirs(bzFiler, cmd, co.Path())
+			if err != nil {
+				return runner.FailedStatus(id, fmt.Errorf("Error ingesting OutputFiles: %s", err),
+					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			}
+
+			status := runner.CompleteStatus(id, "", st.ExitCode,
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			status.ActionResult = getActionResult(outputFiles, outputDirs, int32(st.ExitCode), stdoutDigest, stderrDigest)
+			return status
+		} else {
+			return runner.FailedStatus(id, fmt.Errorf("Can't process Completed status for RunType %s", runType),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
-		return status
 	case execer.FAILED:
 		return runner.FailedStatus(id, fmt.Errorf("error execing: %v", st.Error),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -357,4 +399,5 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
+	// //////////////////
 }
