@@ -196,10 +196,19 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 	defer stderr.Close()
 
+	stdlog, err := inv.output.Create(fmt.Sprintf("%s-stdlog", id))
+	if err != nil {
+		return runner.FailedStatus(id, fmt.Errorf("could not create combined stdout/stderr: %v", err),
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	}
+	defer stdlog.Close()
+
 	marker := "###########################################\n###########################################\n"
-	format := "%s\n\nDate: %v\nSelf: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
-	stdout.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stdout.URI(), cmd, marker)))
-	stderr.Write([]byte(fmt.Sprintf(format, marker, time.Now(), stderr.URI(), cmd, marker)))
+	format := "%s\n\nDate: %v\nOut: %s\tErr: %s\tOutErr: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
+	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
+	stdout.Write([]byte(header))
+	stderr.Write([]byte(header))
+	stdlog.Write([]byte(header))
 	log.WithFields(
 		log.Fields{
 			"runID":  id,
@@ -208,14 +217,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"taskID": cmd.TaskID,
 			"stdout": stdout.AsFile(),
 			"stderr": stderr.AsFile(),
+			"stdlog": stdlog.AsFile(),
 		}).Debug("Stdout/Stderr output")
 
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:    cmd.Argv,
 		EnvVars: cmd.EnvVars,
 		Dir:     co.Path(),
-		Stdout:  stdout,
-		Stderr:  stderr,
+		Stdout:  io.MultiWriter(stdout, stdlog),
+		Stderr:  io.MultiWriter(stderr, stdlog),
 		LogTags: cmd.LogTags,
 	})
 	if err != nil {
@@ -286,8 +296,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}()
 		outPath := stdout.AsFile()
 		errPath := stderr.AsFile()
+		logPath := stdlog.AsFile()
 		stdoutName := "STDOUT"
 		stderrName := "STDERR"
+		stdlogName := "STDLOG"
 		var writer *os.File
 		var reader *os.File
 		defer writer.Close()
@@ -314,6 +326,19 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		} else if _, err := io.Copy(writer, reader); err != nil {
 			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stderr: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+
+		writer.Close()
+		reader.Close()
+		if writer, err = os.Create(filepath.Join(tmp.Dir, stdlogName)); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdlog: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		} else if reader, err = os.Open(logPath); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdlog: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		} else if _, err := io.Copy(writer, reader); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("error staging ingestion for stdlog: %v", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
 
