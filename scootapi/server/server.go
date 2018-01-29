@@ -6,6 +6,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scootapi/server/api"
 )
 
 // Creates and returns a new server Handler, which combines the scheduler,
@@ -37,19 +38,19 @@ type Handler struct {
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency(stats.SchedServerRunJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
 	h.stat.Counter(stats.SchedServerRunJobCounter).Inc(1)                 // TODO errata metric - remove if unused
-	return runJob(h.scheduler, def, h.stat)
+	return api.RunJob(h.scheduler, def, h.stat)
 }
 
 // Implements GetStatus Cloud Scoot API
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobStatusLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobStatusCounter).Inc(1)
-	return GetJobStatus(jobId, h.sagaCoord)
+	return api.GetJobStatus(jobId, h.sagaCoord)
 }
 
 // Implements KillJob Cloud Scoot API
 func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobKillLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
-	return KillJob(jobId, h.scheduler, h.sagaCoord)
+	return api.KillJob(jobId, h.scheduler, h.sagaCoord)
 }

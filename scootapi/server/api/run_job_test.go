@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"errors"
@@ -33,7 +33,7 @@ func CreateSchedulerMock(t *testing.T) *scheduler.MockScheduler {
 func Test_RunJob_WithNoTasks(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
 
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
+	jobId, err := RunJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
 	if err == nil {
 		t.Errorf("expected error running Job with no command")
 	}
@@ -52,7 +52,7 @@ func Test_RunJob_InvalidTaskId(t *testing.T) {
 	jobDef := scoot.NewJobDefinition()
 	task := testhelpers.GenTask(testhelpers.NewRand(), "", "")
 	jobDef.Tasks = []*scoot.TaskDefinition{task}
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
+	jobId, err := RunJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
 
 	if !IsInvalidJobRequest(err) {
 		t.Errorf("expected error to be InvalidJobRequest not %v", reflect.TypeOf(err))
@@ -69,7 +69,7 @@ func Test_RunJob_NoCommand(t *testing.T) {
 	task := testhelpers.GenTask(testhelpers.NewRand(), "1", "")
 	task.Command.Argv = []string{}
 	jobDef.Tasks = []*scoot.TaskDefinition{task}
-	jobId, err := runJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
+	jobId, err := RunJob(CreateSchedulerMock(t), jobDef, stats.NilStatsReceiver())
 
 	if !IsInvalidJobRequest(err) {
 		t.Errorf("expected error to be InvalidJobRequest not %v", reflect.TypeOf(err))
@@ -86,7 +86,7 @@ func Test_RunJob_ValidJob(t *testing.T) {
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("testJobId", nil)
 
-	jobId, err := runJob(scheduler, jobDef, stats.NilStatsReceiver())
+	jobId, err := RunJob(scheduler, jobDef, stats.NilStatsReceiver())
 
 	if err != nil {
 		t.Errorf("expected job to be successfully scheduled.  Instead error returned: %v", err)
@@ -103,7 +103,7 @@ func Test_RunJob_SchedulerError(t *testing.T) {
 	scheduler := CreateSchedulerMock(t)
 	scheduler.EXPECT().ScheduleJob(gomock.Any()).Return("", errors.New("test error"))
 
-	jobId, err := runJob(scheduler, jobDef, stats.NilStatsReceiver())
+	jobId, err := RunJob(scheduler, jobDef, stats.NilStatsReceiver())
 
 	if err == nil {
 		t.Error("expected error when scheduler returns an error")

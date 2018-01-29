@@ -22,13 +22,17 @@ import (
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scootapi/server/api"
 )
 
 // Implements GRPCServer and remoteexecution.ExecutionServer interfaces
 type executionServer struct {
 	listener  net.Listener
+	sagaCoord saga.SagaCoordinator
 	server    *grpc.Server
 	scheduler scheduler.Scheduler
 }
@@ -60,7 +64,7 @@ func (s *executionServer) Serve() error {
 // Takes an ExecuteRequest and forms an ExecuteResponse that is returned as part of a
 // google LongRunning Operation message.
 func (s *executionServer) Execute(
-	ctx context.Context,
+	_ context.Context,
 	req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
 	log.Infof("Received Execute request: %s", req)
 
@@ -181,9 +185,10 @@ func validateExecRequest(req *remoteexecution.ExecuteRequest) error {
 	return nil
 }
 
-// Stub of GetOperation API - most fields omitted but returns a valid hardcoded response.
+// Takes a GetOperation request and forms an ExecuteResponse that is returned as part of a
+// google LongRunning Operation message
 func (s *executionServer) GetOperation(
-	ctx context.Context,
+	_ context.Context,
 	req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
 	log.Infof("Received GetOperation request: %s", req)
 
@@ -191,15 +196,41 @@ func (s *executionServer) GetOperation(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	// TODO get status of job identified by req.Name
+	// TODO(rcouto): This skips over the stats handler increment in github.com/twitter/scoot/scootapi/server/server.go
+	// Do we want to increment that counter? A different counter? Both?
+	js, err := api.GetJobStatus(req.Name, s.sagaCoord)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Received job status %s", js)
 
 	op := longrunning.Operation{}
-	op.Name = req.Name
+	op.Name = fmt.Sprintf("operations/%s", js.ID)
 	op.Done = true
 
-	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage: remoteexecution.ExecuteOperationMetadata_COMPLETED,
+	// There should only be one task per job, so runStatus/status is the
+	// first & last one we encounter when looping through js.TaskData/TaskStatus
+	var runStatus *scoot.RunStatus
+	for _, rs := range js.TaskData {
+		runStatus = rs
 	}
+	var status scoot.Status
+	for _, s := range js.TaskStatus {
+		status = s
+	}
+	if status != js.Status {
+		return nil, fmt.Errorf("Mismatch between task Status and job Status: %s vs %s", status, js.Status)
+	}
+	actionResult := bazelapi.MakeActionResultDomainFromThrift(runStatus.BazelResult_)
+
+	eom := &remoteexecution.ExecuteOperationMetadata{}
+	// TODO(rcouto): Add relevant metadata
+	// https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteOperationMetadata
+	// Possible fields:
+	// 		Stage            ExecuteOperationMetadata_Stage
+	// 		ActionDigest     *Digest
+	// 		StdoutStreamName string
+	// 		StderrStreamName string
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
 	eomAsPBAny, err := marshalAny(eom)
@@ -210,9 +241,7 @@ func (s *executionServer) GetOperation(
 
 	// Marshal ExecuteResponse to protobuf.Any format
 	res := &remoteexecution.ExecuteResponse{
-		Result: &remoteexecution.ActionResult{
-			ExitCode: 0,
-		},
+		Result:       &actionResult.Result,
 		CachedResult: false,
 	}
 

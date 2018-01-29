@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"github.com/twitter/scoot/common/thrifthelpers"
