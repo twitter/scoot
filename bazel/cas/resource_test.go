@@ -125,6 +125,17 @@ func TestParseWriteResource(t *testing.T) {
 	}
 }
 
+func TestGetAndParseResources(t *testing.T) {
+	_, err := GetReadResourceName("instance", "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", 1, "")
+	if err != nil {
+		t.Fatalf("Failed to generate valid read resource name")
+	}
+	_, err = GetWriteResourceName("instance", "6ba7b814-9dad-11d1-80b4-00c04fd430c8", "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b", 1, "fname")
+	if err != nil {
+		t.Fatalf("Failed to generate valid write resource name")
+	}
+}
+
 func resourceEq(r1 *Resource, r2 *Resource) bool {
 	if (r1 == nil) != (r2 == nil) {
 		return false

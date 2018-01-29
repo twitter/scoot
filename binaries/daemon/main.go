@@ -9,10 +9,12 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/daemon/server"
 	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	os_exec "github.com/twitter/scoot/runner/execer/os"
 	"github.com/twitter/scoot/runner/runners"
+	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
@@ -58,7 +60,9 @@ func main() {
 		log.Fatal("Cannot create OutputCreator: ", err)
 	}
 	filer := snapshots.MakeTempFiler(tempDir)
-	r := runners.NewQueueRunner(ex, filer, nil, outputCreator, tmp, *qLen, nil)
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: filer, IDC: nil}
+	r := runners.NewQueueRunner(ex, filerMap, outputCreator, tmp, *qLen, nil)
 	h := server.NewHandler(r, filer, 50*time.Millisecond)
 	s, err := server.NewServer(h)
 	if err != nil {

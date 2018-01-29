@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
@@ -16,30 +17,29 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
+	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filer snapshot.Filer, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
+func NewInvoker(exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filer: filer, output: output, tmp: tmp, stat: stat}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat}
 }
-
-// TODO(dbentley): test this separately from the end-to-end runner tests
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec   execer.Execer
-	filer  snapshot.Filer
-	output runner.OutputCreator
-	tmp    *temp.TempDir
-	stat   stats.StatsReceiver
+	exec     execer.Execer
+	filerMap runner.RunTypeMap
+	output   runner.OutputCreator
+	tmp      *temp.TempDir
+	stat     stats.StatsReceiver
 }
 
 // Run runs cmd
@@ -78,6 +78,33 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
+	// Determine RunType from Command SnapshotID
+	// This invoker supports RunTypeScoot and RunTypeBazel
+	var runType runner.RunType
+	if err := bazel.ValidateID(cmd.SnapshotID); err == nil {
+		runType = runner.RunTypeBazel
+	} else {
+		runType = runner.RunTypeScoot
+	}
+	if _, ok := inv.filerMap[runType]; !ok {
+		return runner.FailedStatus(id, fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType),
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	}
+
+	// Bazel requests - fetch command argv/env from CAS
+	if runType == runner.RunTypeBazel {
+		bzFiler, ok := inv.filerMap[runType].Filer.(*bzsnapshot.BzFiler)
+		if !ok {
+			return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+		if err := fetchBazelCommand(bzFiler, cmd); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+		log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
+	}
+
 	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
 	if cmd.SnapshotID != "" {
@@ -105,7 +132,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				checkoutCh <- nil
 			}
 		} else {
-			//NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
+			// NOTE: given the current gitdb impl, this checkout will block until the previous checkout is released.
 			log.WithFields(
 				log.Fields{
 					"runID":      id,
@@ -115,7 +142,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					"snapshotID": cmd.SnapshotID,
 				}).Info("Checking out snapshotID")
 			var err error
-			co, err = inv.filer.Checkout(cmd.SnapshotID)
+			co, err = inv.filerMap[runType].Filer.Checkout(cmd.SnapshotID)
 			checkoutCh <- err
 		}
 	}()
@@ -317,7 +344,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 		ingestCh := make(chan interface{})
 		go func() {
-			snapshotID, err := inv.filer.Ingest(tmp.Dir)
+			snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp.Dir)
 			if err != nil {
 				ingestCh <- err
 			} else {
@@ -339,8 +366,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			snapshotID = res.(string)
 		}
 
-		//TODO: stdout/stderr should configurably point to a bundlestore server addr.
-		//Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
+		// TODO: stdout/stderr should configurably point to a bundlestore server addr.
+		// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 		status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if cmd.SnapshotID != "" {
