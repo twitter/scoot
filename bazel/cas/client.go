@@ -8,6 +8,8 @@ import (
 	"google.golang.org/genproto/googleapis/bytestream"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc"
+
+	"github.com/twitter/scoot/common/dialer"
 )
 
 // CAS Client APIs
@@ -15,8 +17,13 @@ import (
 // the majority of the CAS Client implementation. We provide wrappers as
 // higher-level operations.
 
-// Read data as bytes from a CAS. Takes address in "host:port" format and a bazel Digest to read.
-func ByteStreamRead(serverAddr string, digest *remoteexecution.Digest) ([]byte, error) {
+// Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
+func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
 	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
@@ -67,8 +74,13 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 	return data, nil
 }
 
-// Write data as bytes to a CAS. Takes address in "host:port" format, a bazel Digest to read, and []byte data.
-func ByteStreamWrite(serverAddr string, digest *remoteexecution.Digest, data []byte) error {
+// Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
+func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
 	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)

@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
@@ -17,7 +18,6 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
-	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
@@ -77,7 +77,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
-	// TODO variable input behaviors based on runType
 	// Determine RunType from Command SnapshotID
 	// This invoker supports RunTypeScoot and RunTypeBazel
 	var runType runner.RunType
@@ -93,22 +92,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// Bazel requests - fetch command argv/env from CAS
 	if runType == runner.RunTypeBazel {
-		bzFiler, ok := inv.filerMap[runType].Filer.(*bzsnapshot.BzFiler)
-		if !ok {
-			return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
+		if err := preProcessBazel(inv.filerMap[runType].Filer, cmd); err != nil {
+			return runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
-		if cmd.ExecuteRequest == nil {
-			return runner.FailedStatus(id, fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel"),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
-		if err := fetchBazelCommand(bzFiler, cmd); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("Error retrieving Bazel command data: %v", err),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		}
-		log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
 	}
-	// //////////////
 
 	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
@@ -273,7 +261,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"checkout": co.Path(),
 		}).Info("Run done")
 
-	// TODO variable output behaviors based on runType
 	switch st.State {
 	case execer.COMPLETE:
 		if runType == runner.RunTypeScoot {
@@ -331,11 +318,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}()
 
+			// Meaningful to support Abort after execer has completed?
 			var snapshotID string
 			select {
 			case <-abortCh:
-				return runner.AbortStatus(id,
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			case res := <-ingestCh:
 				switch res.(type) {
 				case error:
@@ -354,41 +341,37 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 			return status
 		} else if runType == runner.RunTypeBazel {
-			// TODO ingestCh thing
+			// Process Bazel uploads of std* output and other data to CAS
+			ingestCh := make(chan interface{})
+			go func() {
+				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st)
+				if err != nil {
+					ingestCh <- err
+				} else {
+					ingestCh <- actionResult
+				}
+			}()
 
-			bzFiler, ok := inv.filerMap[runType].Filer.(*bzsnapshot.BzFiler)
-			if !ok {
-				return runner.FailedStatus(id, fmt.Errorf("Filer could not be asserted as type BzFiler"),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-
-			stdoutDigest, err := ingestFile(bzFiler, stdout.AsFile())
-			if err != nil {
-				return runner.FailedStatus(id, fmt.Errorf("Error ingesting stdout to CAS: %s", err),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-			stderrDigest, err := ingestFile(bzFiler, stderr.AsFile())
-			if err != nil {
-				return runner.FailedStatus(id, fmt.Errorf("Error ingesting stderr to CAS: %s", err),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-
-			outputFiles, err := ingestOutputFiles(bzFiler, cmd, co.Path())
-			if err != nil {
-				return runner.FailedStatus(id, fmt.Errorf("Error ingesting OutputFiles: %s", err),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-			outputDirs, err := ingestOutputDirs(bzFiler, cmd, co.Path())
-			if err != nil {
-				return runner.FailedStatus(id, fmt.Errorf("Error ingesting OutputFiles: %s", err),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			// Meaningful to support Abort after execer has completed?
+			var actionResult *bazelapi.ActionResult
+			select {
+			case <-abortCh:
+				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			case res := <-ingestCh:
+				switch res.(type) {
+				case error:
+					return runner.FailedStatus(id, fmt.Errorf("Error postprocessing Bazel command: %s", err),
+						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+				}
+				actionResult = res.(*bazelapi.ActionResult)
 			}
 
 			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			status.ActionResult = getActionResult(outputFiles, outputDirs, int32(st.ExitCode), stdoutDigest, stderrDigest)
+			status.ActionResult = actionResult
 			return status
 		} else {
+			// should never have an unknown RunType here
 			return runner.FailedStatus(id, fmt.Errorf("Can't process Completed status for RunType %s", runType),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
@@ -399,5 +382,4 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
-	// //////////////////
 }
