@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
@@ -27,7 +28,7 @@ import (
 func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
-		return fmt.Errorf("Filer could not be asserted as type BzFiler")
+		return fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
 	}
 	if cmd.ExecuteRequest == nil {
 		return fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel")
@@ -72,7 +73,7 @@ func postProcessBazel(filer snapshot.Filer,
 	st execer.ProcessStatus) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
-		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler")
+		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
 	}
 	log.Info("Processing Bazel outputs to CAS")
 
@@ -137,14 +138,14 @@ func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir s
 		info, err := os.Stat(absPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				log.Infof("Output file %s not present", absPath)
+				log.Infof("Output file %s not present, skipping ingestion", absPath)
 			} else {
 				return nil, fmt.Errorf("Error Statting output file %s: %s", absPath, err)
 			}
 			continue
 		}
 		if !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("Expected output file %s not a regular file", absPath)
+			return nil, fmt.Errorf("Expected output file %s is not a regular file", absPath)
 		}
 		// check executable bits
 		executable := (info.Mode() & 0111) > 0
@@ -177,14 +178,14 @@ func ingestOutputDirs(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir st
 		info, err := os.Stat(absPath)
 		if err != nil {
 			if os.IsNotExist(err) {
-				log.Infof("Output dir %s not present", absPath)
+				log.Infof("Output dir %s not present, skipping ingestion", absPath)
 			} else {
 				return nil, fmt.Errorf("Error Statting output dir %s: %s", absPath, err)
 			}
 			continue
 		}
 		if !info.Mode().IsDir() {
-			return nil, fmt.Errorf("Expected output dir %s not a directory", absPath)
+			return nil, fmt.Errorf("Expected output dir %s is not a directory", absPath)
 		}
 
 		digest, err := ingestPath(bzFiler, absPath)

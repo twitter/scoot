@@ -285,22 +285,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				os.RemoveAll(tmp.Dir)
 				uploadTimer.Stop()
 			}()
-			outPath := stdout.AsFile()
-			errPath := stderr.AsFile()
-			logPath := stdlog.AsFile()
+
 			stdoutName := "STDOUT"
 			stderrName := "STDERR"
 			stdlogName := "STDLOG"
-
-			if err = copyLogFile(tmp.Dir, stdoutName, outPath); err != nil {
-				return runner.FailedStatus(id, err,
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-			if err = copyLogFile(tmp.Dir, stderrName, errPath); err != nil {
-				return runner.FailedStatus(id, err,
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-			if err = copyLogFile(tmp.Dir, stdlogName, logPath); err != nil {
+			if err = stageLogFiles(tmp.Dir, stdoutName, stderrName, stdlogName, stdout, stderr, stdlog); err != nil {
 				return runner.FailedStatus(id, err,
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
@@ -379,6 +368,24 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
+}
+
+// stage output files to single directory for snapshot ingestion
+func stageLogFiles(tmpDir, stdoutName, stderrName, stdlogName string, stdout, stderr, stdlog runner.Output) error {
+	outPath := stdout.AsFile()
+	errPath := stderr.AsFile()
+	logPath := stdlog.AsFile()
+
+	if err := copyLogFile(tmpDir, stdoutName, outPath); err != nil {
+		return err
+	}
+	if err := copyLogFile(tmpDir, stderrName, errPath); err != nil {
+		return err
+	}
+	if err := copyLogFile(tmpDir, stdlogName, logPath); err != nil {
+		return err
+	}
+	return nil
 }
 
 func copyLogFile(tmpDir, logName, logPath string) error {
