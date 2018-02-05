@@ -62,7 +62,6 @@ func (n *nodeState) String() string {
 		spew.Sdump(n.node), n.runningJob, n.runningTask, n.snapshotId, n.timeLost, n.timeFlaky, (n.readyCh == nil))
 }
 
-
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
 // or it experienced connection related errors so we sideline it for a little while.
 func (ns *nodeState) suspended() bool {

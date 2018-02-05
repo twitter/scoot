@@ -23,11 +23,7 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 	if err != nil {
 		return nil, err
 	}
-	sha, err := bazel.GetSha(id)
-	if err != nil {
-		return nil, err
-	}
-	size, err := bazel.GetSize(id)
+	sha, size, err := bazel.GetShaAndSize(id)
 	if err != nil {
 		return nil, err
 	}
