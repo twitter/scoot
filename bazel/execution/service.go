@@ -238,14 +238,11 @@ func (s *executionServer) GetOperation(
 	}
 	actionResult := bazelapi.MakeActionResultDomainFromThrift(br)
 
-	eom := &remoteexecution.ExecuteOperationMetadata{}
-	// TODO(rcouto): Add relevant metadata
+	eom := &remoteexecution.ExecuteOperationMetadata{
+		Stage: bazelapi.RunStatusToExecuteOperationMetadata_Stage(runStatus),
+	}
+	// TODO(rcouto): Add relevant metadata to eom
 	// https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteOperationMetadata
-	// Possible fields:
-	// 		Stage            ExecuteOperationMetadata_Stage
-	// 		ActionDigest     *Digest
-	// 		StdoutStreamName string
-	// 		StderrStreamName string
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
 	eomAsPBAny, err := marshalAny(eom)

@@ -9,6 +9,7 @@ import (
 
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
 // These types give us single reference points for passing Execute Requests and Action Results,
@@ -247,4 +248,30 @@ func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*bazel
 		props = append(props, bp)
 	}
 	return props
+}
+
+func RunStatusToExecuteOperationMetadata_Stage(rs *scoot.RunStatus) remoteexecution.ExecuteOperationMetadata_Stage {
+	if rs == nil {
+		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
+	}
+	switch rs.Status {
+	case scoot.RunStatusState_UNKNOWN:
+		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
+	case scoot.RunStatusState_PENDING:
+		return remoteexecution.ExecuteOperationMetadata_QUEUED
+	case scoot.RunStatusState_RUNNING:
+		return remoteexecution.ExecuteOperationMetadata_EXECUTING
+	case scoot.RunStatusState_COMPLETE:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_FAILED:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_ABORTED:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_TIMEDOUT:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_BADREQUEST:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	default:
+		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
+	}
 }
