@@ -212,7 +212,9 @@ func (s *executionServer) GetOperation(
 	// There should only be one task per job, so runStatus/status is the
 	// first & last one we encounter when looping through js.TaskData/TaskStatus
 	if len(js.GetTaskData()) > 1 || len(js.GetTaskStatus()) > 1 {
-		return nil, fmt.Errorf("TaskData and/or TaskStatus of Bazel job status has len > 1. TaskData: %+v. TaskStatus: %+v")
+		return nil, fmt.Errorf(
+			"TaskData and/or TaskStatus of Bazel job status has len > 1. TaskData: %+v. TaskStatus: %+v",
+			js.GetTaskData(), js.GetTaskStatus())
 	}
 	var runStatus *scoot.RunStatus
 	for _, rs := range js.GetTaskData() {
