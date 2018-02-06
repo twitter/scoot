@@ -18,6 +18,7 @@ import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel/cas"
+	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/scootapi"
@@ -68,8 +69,9 @@ func main() {
 	}
 
 	// upload command to CAS
+	r := dialer.NewConstantResolver(*casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(*casAddr, digest, bytes)
+	err = cas.ByteStreamWrite(r, digest, bytes)
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}

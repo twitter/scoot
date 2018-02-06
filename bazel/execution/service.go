@@ -164,7 +164,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (resu
 	task.Command.Argv = []string{"BZ_PLACEHOLDER"}
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.Timeout = d
-	task.Command.SnapshotID = bazel.DigestSnapshotID(req.GetAction().GetInputRootDigest())
+	task.Command.SnapshotID = bazel.SnapshotIDFromDigest(req.GetAction().GetInputRootDigest())
 	task.Command.ExecuteRequest = &bazelapi.ExecuteRequest{Request: *req}
 
 	result.Tasks = append(result.Tasks, task)

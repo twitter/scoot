@@ -236,54 +236,6 @@ func TestValidateIdInvalid(t *testing.T) {
 	}
 }
 
-func TestGetSha(t *testing.T) {
-	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
-	result, err := bazel.GetSha(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result != emptySha {
-		t.Fatalf("Expected %s, got %s", emptySha, result)
-	}
-}
-
-func TestGetSize(t *testing.T) {
-	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
-	result, err := bazel.GetSize(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result != size {
-		t.Fatalf("Expected %d, got %d", size, result)
-	}
-}
-
-func TestSplitIdValid(t *testing.T) {
-	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
-	result, err := bazel.SplitID(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected := []string{bazel.SnapshotIDPrefix, emptySha, "5"}
-	for idx, _ := range result {
-		if result[idx] != expected[idx] {
-			t.Fatalf("Expected %v, received %v", expected, result)
-		}
-	}
-}
-
-func TestSplitIdInvalid(t *testing.T) {
-	size := int64(5)
-	id := fmt.Sprintf("bs-%s-%d", emptySha, size)
-	_, err := bazel.SplitID(id)
-	if err == nil || !strings.Contains(err.Error(), bazel.InvalidIDMsg) {
-		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", bazel.InvalidIDMsg, err)
-	}
-}
-
 func TestValidateFsUtilSaveOutput(t *testing.T) {
 	s := fmt.Sprintf("\n\t%s %d\n", emptySha, int64(32))
 	err := validateFsUtilSaveOutput([]byte(s))

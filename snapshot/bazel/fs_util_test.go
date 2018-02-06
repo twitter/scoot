@@ -79,19 +79,15 @@ func TestSaveDir(t *testing.T) {
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", emptyID, id)
 	}
-	size, err := bazel.GetSize(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size <= emptySize {
-		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
-	}
-	sha, err := bazel.GetSha(id)
+	sha, size, err := bazel.GetShaAndSize(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sha == emptySha {
 		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
+	}
+	if size <= emptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
 	}
 }
 
@@ -142,21 +138,16 @@ func TestSaveFile(t *testing.T) {
 	if id == emptyID {
 		t.Fatalf("Expected id to not be %s, was %s", id, emptyID)
 	}
-	size, err := bazel.GetSize(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if size <= emptySize {
-		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
-	}
-	sha, err := bazel.GetSha(id)
+	sha, size, err := bazel.GetShaAndSize(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sha == emptySha {
 		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
 	}
-
+	if size <= emptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
+	}
 }
 
 // directory materialize test
