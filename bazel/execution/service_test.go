@@ -10,6 +10,7 @@ import (
 	"google.golang.org/genproto/googleapis/longrunning"
 
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
 )
 
@@ -81,8 +82,14 @@ func TestGetOperationStub(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sc := scheduler.NewMockScheduler(mockCtrl)
+	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
+	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
+	mockSagaLog.EXPECT().GetMessages(gomock.Any()).Return([]saga.SagaMessage{}, nil)
 
-	s := executionServer{scheduler: sc}
+	s := executionServer{
+		scheduler: sc,
+		sagaCoord: sagaC,
+	}
 	ctx := context.Background()
 
 	req := longrunning.GetOperationRequest{

@@ -35,6 +35,14 @@ func (a *ActionResult) String() string {
 	return a.Result.String()
 }
 
+func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
+	if a == nil {
+		return &remoteexecution.ActionResult{}
+	}
+	res := a.Result
+	return &res
+}
+
 // Transform request Bazel ExecuteRequest data into a domain object
 func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *ExecuteRequest {
 	if thriftRequest == nil {

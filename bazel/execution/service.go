@@ -20,6 +20,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/saga"
@@ -210,18 +211,32 @@ func (s *executionServer) GetOperation(
 
 	// There should only be one task per job, so runStatus/status is the
 	// first & last one we encounter when looping through js.TaskData/TaskStatus
+	if len(js.GetTaskData()) > 1 || len(js.GetTaskStatus()) > 1 {
+		return nil, fmt.Errorf("TaskData and/or TaskStatus of Bazel job status has len > 1. TaskData: %+v. TaskStatus: %+v")
+	}
 	var runStatus *scoot.RunStatus
-	for _, rs := range js.TaskData {
+	for _, rs := range js.GetTaskData() {
+		// map from taskID to runStatus
 		runStatus = rs
 	}
-	var status scoot.Status
-	for _, s := range js.TaskStatus {
-		status = s
+
+	if len(js.GetTaskStatus()) > 0 {
+		var status scoot.Status
+		for _, s := range js.TaskStatus {
+			status = s
+		}
+		if status != js.Status {
+			return nil, fmt.Errorf("Mismatch between task Status and job Status: %s vs %s", status, js.Status)
+		}
 	}
-	if status != js.Status {
-		return nil, fmt.Errorf("Mismatch between task Status and job Status: %s vs %s", status, js.Status)
+
+	var br *bazelthrift.ActionResult_
+	if runStatus == nil {
+		br = scoot.RunStatus_BazelResult__DEFAULT
+	} else {
+		br = runStatus.GetBazelResult_()
 	}
-	actionResult := bazelapi.MakeActionResultDomainFromThrift(runStatus.BazelResult_)
+	actionResult := bazelapi.MakeActionResultDomainFromThrift(br)
 
 	eom := &remoteexecution.ExecuteOperationMetadata{}
 	// TODO(rcouto): Add relevant metadata
@@ -241,7 +256,7 @@ func (s *executionServer) GetOperation(
 
 	// Marshal ExecuteResponse to protobuf.Any format
 	res := &remoteexecution.ExecuteResponse{
-		Result:       &actionResult.Result,
+		Result:       actionResult.GetResult(),
 		CachedResult: false,
 	}
 
