@@ -170,7 +170,8 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snaps
 }
 
 // Update ClusterState to reflect that a task has finished running on
-// a particular node, whether successfully or unsuccessfully
+// a particular node, whether successfully or unsuccessfully.
+// If the node isn't found then the node was already suspended and deleted, just decrement numRunning.
 func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 	var ns *nodeState
 	var ok bool
