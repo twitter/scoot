@@ -21,7 +21,7 @@ const (
 	fsUtilCmdServerAddr   = "--server-address"
 	fsUtilCmdGlobWildCard = "**"
 
-	emptySha  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-	emptySize = int64(0)
-	emptyID   = bazel.SnapshotIDPrefix + "-" + emptySha + "-" + "0"
+	EmptySha  = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	EmptySize = int64(0)
+	emptyID   = bazel.SnapshotIDPrefix + "-" + EmptySha + "-" + "0"
 )

@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 
 func TestValidBzCheckout(t *testing.T) {
 	bc := &bzCheckout{}
-	bc.Hash = emptySha
+	bc.Hash = EmptySha
 	bc.SizeBytes = int64(10)
 	if !bazel.IsValidDigest(bc.GetHash(), bc.GetSizeBytes()) {
 		t.Fatalf("Expected valid hash and size")
@@ -92,7 +92,7 @@ func TestBzCheckouterInvalidCheckout(t *testing.T) {
 
 func TestBzCheckouterValidCheckout(t *testing.T) {
 	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
+	id := bazel.SnapshotID(EmptySha, size)
 	snap, err := noopBf.Checkout(id)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
@@ -115,7 +115,7 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
+	id := bazel.SnapshotID(EmptySha, size)
 	tempDir, err := tmpTest.TempDir("")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
@@ -215,7 +215,7 @@ func TestGetFileTypeInvalid(t *testing.T) {
 
 func TestValidateIdValid(t *testing.T) {
 	size := int64(5)
-	id := bazel.SnapshotID(emptySha, size)
+	id := bazel.SnapshotID(EmptySha, size)
 	err := bazel.ValidateID(id)
 	if err != nil {
 		t.Fatal(err)
@@ -230,14 +230,14 @@ func TestValidateIdInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
-	err = bazel.ValidateID(fmt.Sprintf("bs-%s-%d", emptySha, size))
+	err = bazel.ValidateID(fmt.Sprintf("bs-%s-%d", EmptySha, size))
 	if err == nil {
 		t.Fatalf("Expected id %s to be invalid", id)
 	}
 }
 
 func TestValidateFsUtilSaveOutput(t *testing.T) {
-	s := fmt.Sprintf("\n\t%s %d\n", emptySha, int64(32))
+	s := fmt.Sprintf("\n\t%s %d\n", EmptySha, int64(32))
 	err := validateFsUtilSaveOutput([]byte(s))
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +245,7 @@ func TestValidateFsUtilSaveOutput(t *testing.T) {
 }
 
 func TestValidateFsUtilSaveOutputInvalid(t *testing.T) {
-	s := fmt.Sprintf("%s %d %s", emptySha, int64(32), "extraVal")
+	s := fmt.Sprintf("%s %d %s", EmptySha, int64(32), "extraVal")
 	err := validateFsUtilSaveOutput([]byte(s))
 	if err == nil || !strings.Contains(err.Error(), invalidSaveOutputMsg) {
 		t.Fatalf("Expected error to contain \"%s\", received \"%v\"", invalidSaveOutputMsg, err)
