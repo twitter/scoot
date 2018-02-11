@@ -5,11 +5,7 @@ package execution
 import (
 	"fmt"
 	"net"
-	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
@@ -18,7 +14,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	"github.com/twitter/scoot/common/grpchelpers"
@@ -81,7 +76,7 @@ func (s *executionServer) Execute(
 	}
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
-	job, err := execReqToScoot(req, actionSha)
+	job, err := execReqToScoot(req, actionSha, actionLen)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Error converting request to internal definition: %s", err))
@@ -105,10 +100,9 @@ func (s *executionServer) Execute(
 
 	op := longrunning.Operation{}
 	op.Name = fmt.Sprintf("operations/%s", id)
-	op.Done = true
 
 	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage:        remoteexecution.ExecuteOperationMetadata_COMPLETED,
+		Stage:        remoteexecution.ExecuteOperationMetadata_QUEUED,
 		ActionDigest: &remoteexecution.Digest{Hash: actionSha, SizeBytes: actionLen},
 	}
 
@@ -120,12 +114,7 @@ func (s *executionServer) Execute(
 	op.Metadata = eomAsPBAny
 
 	// Marshal ExecuteResponse to protobuf.Any format
-	res := &remoteexecution.ExecuteResponse{
-		Result: &remoteexecution.ActionResult{
-			ExitCode: 0,
-		},
-		CachedResult: false,
-	}
+	res := &remoteexecution.ExecuteResponse{}
 	resAsPBAny, err := marshalAny(res)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -135,55 +124,6 @@ func (s *executionServer) Execute(
 	// Include the response message in the longrunning operation message
 	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
-}
-
-// Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
-func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string) (result sched.JobDefinition, err error) {
-	if err := validateExecRequest(req); err != nil {
-		return result, err
-	}
-
-	// NOTE fixed to lowest priority in early stages of Bazel support
-	// ExecuteRequests do not have priority values, but the Action portion
-	// contains Platform Properties which can be used to specify arbitary server-side behavior.
-	result.Priority = sched.P0
-	result.Tasks = []sched.TaskDefinition{}
-
-	d, err := time.ParseDuration(fmt.Sprintf("%dms", scootproto.GetMsFromDuration(req.GetAction().GetTimeout())))
-	if err != nil {
-		log.Errorf("Failed to parse Timeout from Action: %s", err)
-		return result, err
-	}
-
-	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
-	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
-	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker
-	// which is required to support CAS interactions.
-	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
-	task.Command.Argv = []string{"BZ_PLACEHOLDER"}
-	task.Command.EnvVars = make(map[string]string)
-	task.Command.Timeout = d
-	task.Command.SnapshotID = bazel.SnapshotIDFromDigest(req.GetAction().GetInputRootDigest())
-	task.Command.ExecuteRequest = &bazelapi.ExecuteRequest{Request: *req}
-
-	result.Tasks = append(result.Tasks, task)
-	return result, nil
-}
-
-func validateExecRequest(req *remoteexecution.ExecuteRequest) error {
-	if req == nil {
-		return fmt.Errorf("Unexpected nil execute request")
-	}
-	cmdDigest := req.GetAction().GetCommandDigest()
-	inputDigest := req.GetAction().GetInputRootDigest()
-	if !bazel.IsValidDigest(cmdDigest.GetHash(), cmdDigest.GetSizeBytes()) {
-		return fmt.Errorf("Request action command digest is invalid")
-	}
-	if !bazel.IsValidDigest(inputDigest.GetHash(), inputDigest.GetSizeBytes()) {
-		return fmt.Errorf("Request action input root digest is invalid")
-	}
-	return nil
 }
 
 // Takes a GetOperation request and forms an ExecuteResponse that is returned as part of a
@@ -197,39 +137,22 @@ func (s *executionServer) GetOperation(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	// TODO(rcouto): This skips over the stats handler increment in github.com/twitter/scoot/scootapi/server/server.go
-	// Do we want to increment that counter? A different counter? Both?
 	js, err := api.GetJobStatus(req.Name, s.sagaCoord)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error getting job status: %s", err))
 	}
 	log.Info("Received job status %s", js)
 
 	op := longrunning.Operation{}
 	op.Name = fmt.Sprintf("operations/%s", js.ID)
-	op.Done = true
 
-	// There should only be one task per job, so runStatus/status is the
-	// first & last one we encounter when looping through js.TaskData/TaskStatus
-	if len(js.GetTaskData()) > 1 || len(js.GetTaskStatus()) > 1 {
-		return nil, fmt.Errorf(
-			"TaskData and/or TaskStatus of Bazel job status has len > 1. TaskData: %+v. TaskStatus: %+v",
-			js.GetTaskData(), js.GetTaskStatus())
+	err = validateBzJobStatus(js)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	var runStatus *scoot.RunStatus
 	for _, rs := range js.GetTaskData() {
-		// map from taskID to runStatus
 		runStatus = rs
-	}
-
-	if len(js.GetTaskStatus()) > 0 {
-		var status scoot.Status
-		for _, s := range js.TaskStatus {
-			status = s
-		}
-		if status != js.Status {
-			return nil, fmt.Errorf("Mismatch between task Status and job Status: %s vs %s", status, js.Status)
-		}
 	}
 
 	var br *bazelthrift.ActionResult_
@@ -241,19 +164,19 @@ func (s *executionServer) GetOperation(
 	actionResult := bazelapi.MakeActionResultDomainFromThrift(br)
 
 	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage: bazelapi.RunStatusToExecuteOperationMetadata_Stage(runStatus),
+		Stage:        runStatusToExecuteOperationMetadata_Stage(runStatus),
+		ActionDigest: actionResult.GetActionDigest(),
 	}
-	// TODO(rcouto): Add relevant metadata to eom
-	// https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteOperationMetadata
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
 	eomAsPBAny, err := marshalAny(eom)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	op.Metadata = eomAsPBAny
 
 	// Marshal ExecuteResponse to protobuf.Any format
+	// TODO(determine if op.Done based on task status) & if it is, set ExecuteResponse.Status too (OK or failed)
 	res := &remoteexecution.ExecuteResponse{
 		Result:       actionResult.GetResult(),
 		CachedResult: false,
@@ -261,21 +184,11 @@ func (s *executionServer) GetOperation(
 
 	resAsPBAny, err := marshalAny(res)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	log.Info("GetOperationRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
 	return &op, nil
-}
-
-func marshalAny(pb proto.Message) (*any.Any, error) {
-	pbAny, err := ptypes.MarshalAny(pb)
-	if err != nil {
-		s := fmt.Sprintf("Failed to marshal proto message %q as Any: %s", pb, err)
-		log.Error(s)
-		return nil, err
-	}
-	return pbAny, nil
 }
