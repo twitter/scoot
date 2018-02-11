@@ -53,8 +53,8 @@ func TestExecuteStub(t *testing.T) {
 	}
 
 	done := res.GetDone()
-	if !done {
-		t.Fatal("Expected response to be done")
+	if done {
+		t.Fatal("Expected response to not be done")
 	}
 	metadataAny := res.GetMetadata()
 	if metadataAny == nil {
@@ -102,8 +102,8 @@ func TestGetOperationStub(t *testing.T) {
 	}
 
 	done := res.GetDone()
-	if !done {
-		t.Fatal("Expected response to be done")
+	if done {
+		t.Fatal("Expected response to not be done")
 	}
 	metadataAny := res.GetMetadata()
 	if metadataAny == nil {

@@ -16,13 +16,13 @@ import (
 // These types give us single reference points for passing Execute Requests and Action Results,
 // and leaves room for internal modifications if required
 type ExecuteRequest struct {
-	Request      remoteexecution.ExecuteRequest
-	ActionDigest remoteexecution.Digest
+	Request      *remoteexecution.ExecuteRequest
+	ActionDigest *remoteexecution.Digest
 }
 
 type ActionResult struct {
-	Result       remoteexecution.ActionResult
-	ActionDigest remoteexecution.Digest
+	Result       *remoteexecution.ActionResult
+	ActionDigest *remoteexecution.Digest
 }
 
 func (e *ExecuteRequest) String() string {
@@ -43,16 +43,14 @@ func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
 	if a == nil {
 		return &remoteexecution.ActionResult{}
 	}
-	r := a.Result
-	return &r
+	return a.Result
 }
 
 func (a *ActionResult) GetActionDigest() *remoteexecution.Digest {
 	if a == nil {
 		return &remoteexecution.Digest{}
 	}
-	ad := a.ActionDigest
-	return &ad
+	return a.ActionDigest
 }
 
 // Transform request Bazel ExecuteRequest data into a domain object
@@ -60,15 +58,14 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 	if thriftRequest == nil {
 		return nil
 	}
-	er := remoteexecution.ExecuteRequest{
+	er := &remoteexecution.ExecuteRequest{
 		InstanceName:    thriftRequest.GetInstanceName(),
 		SkipCacheLookup: thriftRequest.GetSkipCache(),
 		Action:          makeActionFromThrift(thriftRequest.GetAction()),
 	}
-	d := remoteexecution.Digest{} // TODO fill in hash/sizebytes
 	return &ExecuteRequest{
 		Request:      er,
-		ActionDigest: d,
+		ActionDigest: makeDigestFromThrift(thriftRequest.GetActionDigest()),
 	}
 }
 
@@ -89,7 +86,7 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 	if thriftResult == nil {
 		return nil
 	}
-	ar := remoteexecution.ActionResult{
+	ar := &remoteexecution.ActionResult{
 		StdoutDigest:      makeDigestFromThrift(thriftResult.GetStdoutDigest()),
 		StderrDigest:      makeDigestFromThrift(thriftResult.GetStderrDigest()),
 		StdoutRaw:         thriftResult.GetStdoutRaw(),
@@ -98,10 +95,9 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 		OutputDirectories: makeOutputDirsFromThrift(thriftResult.GetOutputDirectories()),
 		ExitCode:          thriftResult.GetExitCode(),
 	}
-	d := remoteexecution.Digest{} // TODO fill in hash/sizebytes
 	return &ActionResult{
 		Result:       ar,
-		ActionDigest: d,
+		ActionDigest: makeDigestFromThrift(thriftResult.GetActionDigest()),
 	}
 }
 

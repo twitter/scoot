@@ -31,10 +31,12 @@ struct Action {
 }
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteRequest
+# with added Digest field for passing around actionDigest
 struct ExecuteRequest {
   1: required Action action
-  2: optional string instanceName
-  3: optional bool skipCache
+  2: required Digest actionDigest
+  3: optional string instanceName
+  4: optional bool skipCache
 }
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
@@ -52,12 +54,14 @@ struct OutputDirectory {
 }
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult
+# with added Digest field for passing around actionDigest
 struct ActionResult {
   1: required Digest stdoutDigest
   2: required Digest stderrDigest
-  3: optional binary stdoutRaw
-  4: optional binary stderrRaw
-  5: optional list<OutputFile> outputFiles
-  6: optional list<OutputDirectory> outputDirectories
-  7: optional i32 exitCode
+  3: required Digest actionDigest
+  4: optional binary stdoutRaw
+  5: optional binary stderrRaw
+  6: optional list<OutputFile> outputFiles
+  7: optional list<OutputDirectory> outputDirectories
+  8: optional i32 exitCode
 }

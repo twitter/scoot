@@ -10,7 +10,7 @@ import (
 
 func TestDomainThriftDomainExecReq(t *testing.T) {
 	er := &ExecuteRequest{
-		Request: remoteexecution.ExecuteRequest{
+		Request: &remoteexecution.ExecuteRequest{
 			InstanceName:    "test",
 			SkipCacheLookup: true,
 			Action: &remoteexecution.Action{
@@ -55,7 +55,7 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 
 func TestDomainThriftDomainActionRes(t *testing.T) {
 	ar := &ActionResult{
-		Result: remoteexecution.ActionResult{
+		Result: &remoteexecution.ActionResult{
 			StdoutDigest: &remoteexecution.Digest{Hash: "curry", SizeBytes: 30},
 			StderrDigest: &remoteexecution.Digest{Hash: "carr", SizeBytes: 4},
 			StdoutRaw:    []byte("durant"),

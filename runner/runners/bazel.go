@@ -96,7 +96,7 @@ func postProcessBazel(filer snapshot.Filer,
 	}
 
 	return &bazelapi.ActionResult{
-		Result: remoteexecution.ActionResult{
+		Result: &remoteexecution.ActionResult{
 			OutputFiles:       outputFiles,
 			OutputDirectories: outputDirs,
 			ExitCode:          int32(st.ExitCode),

@@ -15,13 +15,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
-	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	"github.com/twitter/scoot/common/grpchelpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"github.com/twitter/scoot/scootapi/server/api"
 )
 
@@ -98,12 +96,12 @@ func (s *executionServer) Execute(
 			"jobID": id,
 		}).Info("Scheduled execute request as Scoot job")
 
-	op := longrunning.Operation{}
-	op.Name = fmt.Sprintf("operations/%s", id)
-
 	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage:        remoteexecution.ExecuteOperationMetadata_QUEUED,
-		ActionDigest: &remoteexecution.Digest{Hash: actionSha, SizeBytes: actionLen},
+		Stage: remoteexecution.ExecuteOperationMetadata_QUEUED,
+		ActionDigest: &remoteexecution.Digest{
+			Hash:      actionSha,
+			SizeBytes: actionLen,
+		},
 	}
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
@@ -111,7 +109,6 @@ func (s *executionServer) Execute(
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	op.Metadata = eomAsPBAny
 
 	// Marshal ExecuteResponse to protobuf.Any format
 	res := &remoteexecution.ExecuteResponse{}
@@ -122,7 +119,14 @@ func (s *executionServer) Execute(
 
 	log.Info("ExecuteRequest completed successfully")
 	// Include the response message in the longrunning operation message
-	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
+	op := longrunning.Operation{
+		Name:     fmt.Sprintf("operations/%s", id),
+		Metadata: eomAsPBAny,
+		Done:     false,
+		Result: &longrunning.Operation_Response{
+			Response: resAsPBAny,
+		},
+	}
 	return &op, nil
 }
 
@@ -143,28 +147,20 @@ func (s *executionServer) GetOperation(
 	}
 	log.Info("Received job status %s", js)
 
-	op := longrunning.Operation{}
-	op.Name = fmt.Sprintf("operations/%s", js.ID)
-
 	err = validateBzJobStatus(js)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	var runStatus *scoot.RunStatus
-	for _, rs := range js.GetTaskData() {
-		runStatus = rs
+
+	var rs runStatus
+	for _, rStatus := range js.GetTaskData() {
+		rs = runStatus{rStatus}
 	}
 
-	var br *bazelthrift.ActionResult_
-	if runStatus == nil {
-		br = scoot.RunStatus_BazelResult__DEFAULT
-	} else {
-		br = runStatus.GetBazelResult_()
-	}
-	actionResult := bazelapi.MakeActionResultDomainFromThrift(br)
+	actionResult := bazelapi.MakeActionResultDomainFromThrift(rs.GetBazelResult())
 
 	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage:        runStatusToExecuteOperationMetadata_Stage(runStatus),
+		Stage:        runStatusToExecuteOperationMetadata_Stage(rs),
 		ActionDigest: actionResult.GetActionDigest(),
 	}
 
@@ -173,15 +169,14 @@ func (s *executionServer) GetOperation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	op.Metadata = eomAsPBAny
 
 	// Marshal ExecuteResponse to protobuf.Any format
 	// TODO(determine if op.Done based on task status) & if it is, set ExecuteResponse.Status too (OK or failed)
 	res := &remoteexecution.ExecuteResponse{
 		Result:       actionResult.GetResult(),
 		CachedResult: false,
+		Status:       runStatusToGoogleRpcStatus(rs),
 	}
-
 	resAsPBAny, err := marshalAny(res)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -189,6 +184,13 @@ func (s *executionServer) GetOperation(
 
 	log.Info("GetOperationRequest completed successfully")
 	// Include the response message in the longrunning operation message
-	op.Result = &longrunning.Operation_Response{Response: resAsPBAny}
+	op := longrunning.Operation{
+		Name:     fmt.Sprintf("operations/%s", js.ID),
+		Metadata: eomAsPBAny,
+		Done:     runStatusToDoneBool(rs),
+		Result: &longrunning.Operation_Response{
+			Response: resAsPBAny,
+		},
+	}
 	return &op, nil
 }
