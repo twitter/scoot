@@ -10,7 +10,7 @@ import (
 	"github.com/twitter/scoot/snapshot/bazel"
 )
 
-var rs runStatus
+var rs *runStatus
 
 func TestValidateExecResponse(t *testing.T) {
 	req := &remoteexecution.ExecuteRequest{

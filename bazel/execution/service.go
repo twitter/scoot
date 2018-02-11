@@ -141,20 +141,9 @@ func (s *executionServer) GetOperation(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	js, err := api.GetJobStatus(req.Name, s.sagaCoord)
-	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error getting job status: %s", err))
-	}
-	log.Info("Received job status %s", js)
-
-	err = validateBzJobStatus(js)
+	rs, err := s.getRunStatusAndValidate(req.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var rs runStatus
-	for _, rStatus := range js.GetTaskData() {
-		rs = runStatus{rStatus}
 	}
 
 	actionResult := bazelapi.MakeActionResultDomainFromThrift(rs.GetBazelResult())
@@ -185,7 +174,7 @@ func (s *executionServer) GetOperation(
 	log.Info("GetOperationRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op := longrunning.Operation{
-		Name:     fmt.Sprintf("operations/%s", js.ID),
+		Name:     fmt.Sprintf("operations/%s", req.Name),
 		Metadata: eomAsPBAny,
 		Done:     runStatusToDoneBool(rs),
 		Result: &longrunning.Operation_Response{
@@ -193,4 +182,23 @@ func (s *executionServer) GetOperation(
 		},
 	}
 	return &op, nil
+}
+
+func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
+	js, err := api.GetJobStatus(jobID, s.sagaCoord)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error getting job status: %s", err))
+	}
+	log.Info("Received job status %s", js)
+
+	err = validateBzJobStatus(js)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var rs runStatus
+	for _, rStatus := range js.GetTaskData() {
+		rs = runStatus{rStatus}
+	}
+	return &rs, nil
 }
