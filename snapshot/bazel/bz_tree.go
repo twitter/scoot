@@ -81,9 +81,9 @@ func (bc bzCommand) save(path string) (string, error) {
 }
 
 // Materializes the digest identified by sha in dir using the fsUtilCmd
-func (bc bzCommand) materialize(sha string, dir string) error {
+func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 	// we don't expect there to be any useful output
-	_, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, dir})
+	_, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -113,5 +113,5 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 // Noop bzTree for stub testing
 type noopBzTree struct{}
 
-func (bc noopBzTree) save(path string) (string, error)         { return "", nil }
-func (bc noopBzTree) materialize(sha string, dir string) error { return nil }
+func (bc noopBzTree) save(path string) (string, error)                     { return "", nil }
+func (bc noopBzTree) materialize(sha string, size int64, dir string) error { return nil }

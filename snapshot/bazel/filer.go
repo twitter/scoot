@@ -61,6 +61,6 @@ type BzFiler struct {
 
 // Interface that specifies actions on directory tree structures for Bazel
 type bzTree interface {
-	save(path string) (string, error)  // Save a directory glob, return a SnapshotID as string
-	materialize(sha, dir string) error // Unpack a tree from a sha into target directory
+	save(path string) (string, error)                     // Save a directory glob, return a SnapshotID as string
+	materialize(sha string, size int64, dir string) error // Unpack a tree from a sha into target directory
 }
