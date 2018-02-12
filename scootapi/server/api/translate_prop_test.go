@@ -1,6 +1,6 @@
 // +build property_test
 
-package server
+package api
 
 import (
 	"reflect"

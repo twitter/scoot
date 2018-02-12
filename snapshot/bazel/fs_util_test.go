@@ -83,11 +83,11 @@ func TestSaveDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sha == emptySha {
-		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
+	if sha == EmptySha {
+		t.Fatalf("Expected sha to not be %s. ID: %s", EmptySha, id)
 	}
-	if size <= emptySize {
-		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
+	if size <= EmptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", EmptySize, id)
 	}
 }
 
@@ -142,11 +142,11 @@ func TestSaveFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sha == emptySha {
-		t.Fatalf("Expected sha to not be %s. ID: %s", emptySha, id)
+	if sha == EmptySha {
+		t.Fatalf("Expected sha to not be %s. ID: %s", EmptySha, id)
 	}
-	if size <= emptySize {
-		t.Fatalf("Expected size to be >%d, ID: %s", emptySize, id)
+	if size <= EmptySize {
+		t.Fatalf("Expected size to be >%d, ID: %s", EmptySize, id)
 	}
 }
 

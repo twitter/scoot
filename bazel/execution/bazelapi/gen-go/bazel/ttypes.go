@@ -729,10 +729,12 @@ func (p *Action) String() string {
 //  - Action
 //  - InstanceName
 //  - SkipCache
+//  - ActionDigest
 type ExecuteRequest struct {
 	Action       *Action `thrift:"action,1,required" json:"action"`
 	InstanceName *string `thrift:"instanceName,2" json:"instanceName,omitempty"`
 	SkipCache    *bool   `thrift:"skipCache,3" json:"skipCache,omitempty"`
+	ActionDigest *Digest `thrift:"actionDigest,4" json:"actionDigest,omitempty"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -765,6 +767,15 @@ func (p *ExecuteRequest) GetSkipCache() bool {
 	}
 	return *p.SkipCache
 }
+
+var ExecuteRequest_ActionDigest_DEFAULT *Digest
+
+func (p *ExecuteRequest) GetActionDigest() *Digest {
+	if !p.IsSetActionDigest() {
+		return ExecuteRequest_ActionDigest_DEFAULT
+	}
+	return p.ActionDigest
+}
 func (p *ExecuteRequest) IsSetAction() bool {
 	return p.Action != nil
 }
@@ -775,6 +786,10 @@ func (p *ExecuteRequest) IsSetInstanceName() bool {
 
 func (p *ExecuteRequest) IsSetSkipCache() bool {
 	return p.SkipCache != nil
+}
+
+func (p *ExecuteRequest) IsSetActionDigest() bool {
+	return p.ActionDigest != nil
 }
 
 func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
@@ -804,6 +819,10 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 			}
 		case 3:
 			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+		case 4:
+			if err := p.readField4(iprot); err != nil {
 				return err
 			}
 		default:
@@ -850,6 +869,14 @@ func (p *ExecuteRequest) readField3(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ExecuteRequest) readField4(iprot thrift.TProtocol) error {
+	p.ActionDigest = &Digest{}
+	if err := p.ActionDigest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ActionDigest), err)
+	}
+	return nil
+}
+
 func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ExecuteRequest"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -861,6 +888,9 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField4(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -910,6 +940,21 @@ func (p *ExecuteRequest) writeField3(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:skipCache: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecuteRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetActionDigest() {
+		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:actionDigest: ", p), err)
+		}
+		if err := p.ActionDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:actionDigest: ", p), err)
 		}
 	}
 	return err
@@ -1321,6 +1366,7 @@ func (p *OutputDirectory) String() string {
 //  - OutputFiles
 //  - OutputDirectories
 //  - ExitCode
+//  - ActionDigest
 type ActionResult_ struct {
 	StdoutDigest      *Digest            `thrift:"stdoutDigest,1,required" json:"stdoutDigest"`
 	StderrDigest      *Digest            `thrift:"stderrDigest,2,required" json:"stderrDigest"`
@@ -1329,6 +1375,7 @@ type ActionResult_ struct {
 	OutputFiles       []*OutputFile      `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
 	OutputDirectories []*OutputDirectory `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
 	ExitCode          *int32             `thrift:"exitCode,7" json:"exitCode,omitempty"`
+	ActionDigest      *Digest            `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
 }
 
 func NewActionResult_() *ActionResult_ {
@@ -1385,6 +1432,15 @@ func (p *ActionResult_) GetExitCode() int32 {
 	}
 	return *p.ExitCode
 }
+
+var ActionResult__ActionDigest_DEFAULT *Digest
+
+func (p *ActionResult_) GetActionDigest() *Digest {
+	if !p.IsSetActionDigest() {
+		return ActionResult__ActionDigest_DEFAULT
+	}
+	return p.ActionDigest
+}
 func (p *ActionResult_) IsSetStdoutDigest() bool {
 	return p.StdoutDigest != nil
 }
@@ -1411,6 +1467,10 @@ func (p *ActionResult_) IsSetOutputDirectories() bool {
 
 func (p *ActionResult_) IsSetExitCode() bool {
 	return p.ExitCode != nil
+}
+
+func (p *ActionResult_) IsSetActionDigest() bool {
+	return p.ActionDigest != nil
 }
 
 func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
@@ -1458,6 +1518,10 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 			}
 		case 7:
 			if err := p.readField7(iprot); err != nil {
+				return err
+			}
+		case 8:
+			if err := p.readField8(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1564,6 +1628,14 @@ func (p *ActionResult_) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ActionResult_) readField8(iprot thrift.TProtocol) error {
+	p.ActionDigest = &Digest{}
+	if err := p.ActionDigest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ActionDigest), err)
+	}
+	return nil
+}
+
 func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ActionResult"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1587,6 +1659,9 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField7(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField8(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1710,6 +1785,21 @@ func (p *ActionResult_) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:exitCode: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetActionDigest() {
+		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:actionDigest: ", p), err)
+		}
+		if err := p.ActionDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:actionDigest: ", p), err)
 		}
 	}
 	return err

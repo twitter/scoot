@@ -1,8 +1,6 @@
 package saga
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type SagaRecoveryType int
 

@@ -5,6 +5,7 @@ package scheduler
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	saga "github.com/twitter/scoot/saga"
 	sched "github.com/twitter/scoot/sched"
 )
 
@@ -48,4 +49,14 @@ func (_m *MockScheduler) KillJob(jobId string) error {
 
 func (_mr *_MockSchedulerRecorder) KillJob(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "KillJob", arg0)
+}
+
+func (_m *MockScheduler) GetSagaCoord() saga.SagaCoordinator {
+	ret := _m.ctrl.Call(_m, "GetSagaCoord")
+	ret0, _ := ret[0].(saga.SagaCoordinator)
+	return ret0
+}
+
+func (_mr *_MockSchedulerRecorder) GetSagaCoord() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetSagaCoord")
 }

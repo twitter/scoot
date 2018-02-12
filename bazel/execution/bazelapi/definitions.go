@@ -5,6 +5,8 @@
 package bazelapi
 
 import (
+	"fmt"
+
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
@@ -14,25 +16,41 @@ import (
 // These types give us single reference points for passing Execute Requests and Action Results,
 // and leaves room for internal modifications if required
 type ExecuteRequest struct {
-	Request remoteexecution.ExecuteRequest
+	Request      *remoteexecution.ExecuteRequest
+	ActionDigest *remoteexecution.Digest
 }
 
 type ActionResult struct {
-	Result remoteexecution.ActionResult
+	Result       *remoteexecution.ActionResult
+	ActionDigest *remoteexecution.Digest
 }
 
 func (e *ExecuteRequest) String() string {
 	if e == nil {
 		return ""
 	}
-	return e.Request.String()
+	return fmt.Sprintf("%s\n%s", e.Request, e.ActionDigest)
 }
 
 func (a *ActionResult) String() string {
 	if a == nil {
 		return ""
 	}
-	return a.Result.String()
+	return fmt.Sprintf("%s\n%s", a.Result, a.ActionDigest)
+}
+
+func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
+	if a == nil {
+		return &remoteexecution.ActionResult{}
+	}
+	return a.Result
+}
+
+func (a *ActionResult) GetActionDigest() *remoteexecution.Digest {
+	if a == nil {
+		return &remoteexecution.Digest{}
+	}
+	return a.ActionDigest
 }
 
 // Transform request Bazel ExecuteRequest data into a domain object
@@ -40,12 +58,15 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 	if thriftRequest == nil {
 		return nil
 	}
-	er := remoteexecution.ExecuteRequest{
+	er := &remoteexecution.ExecuteRequest{
 		InstanceName:    thriftRequest.GetInstanceName(),
 		SkipCacheLookup: thriftRequest.GetSkipCache(),
 		Action:          makeActionFromThrift(thriftRequest.GetAction()),
 	}
-	return &ExecuteRequest{Request: er}
+	return &ExecuteRequest{
+		Request:      er,
+		ActionDigest: makeDigestFromThrift(thriftRequest.GetActionDigest()),
+	}
 }
 
 // Transform domain ExecuteRequest object into request representation
@@ -65,7 +86,7 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 	if thriftResult == nil {
 		return nil
 	}
-	ar := remoteexecution.ActionResult{
+	ar := &remoteexecution.ActionResult{
 		StdoutDigest:      makeDigestFromThrift(thriftResult.GetStdoutDigest()),
 		StderrDigest:      makeDigestFromThrift(thriftResult.GetStderrDigest()),
 		StdoutRaw:         thriftResult.GetStdoutRaw(),
@@ -74,7 +95,10 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 		OutputDirectories: makeOutputDirsFromThrift(thriftResult.GetOutputDirectories()),
 		ExitCode:          thriftResult.GetExitCode(),
 	}
-	return &ActionResult{Result: ar}
+	return &ActionResult{
+		Result:       ar,
+		ActionDigest: makeDigestFromThrift(thriftResult.GetActionDigest()),
+	}
 }
 
 // Transform domain ActionResult object into thrift representation
