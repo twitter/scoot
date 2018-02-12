@@ -7,6 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
@@ -55,6 +57,7 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		fmt.Printf("%s\n", asJson) // must also go to stdout in case caller looking in stdout for the results
 	} else {
 		log.Info("Job Status:", status)
+		loghelpers.LogRunStatus(status)
 		fmt.Println("Job Status:", status) // must also go to stdout in case caller looking in stdout for the results
 	}
 

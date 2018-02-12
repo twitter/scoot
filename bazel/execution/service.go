@@ -17,6 +17,7 @@ import (
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/grpchelpers"
+	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
@@ -208,6 +209,7 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	loghelpers.LogRunStatus(js)
 
 	var rs runStatus
 	for _, rStatus := range js.GetTaskData() {
