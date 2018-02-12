@@ -201,13 +201,13 @@ func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOp
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
 	js, err := api.GetJobStatus(jobID, s.sagaCoord)
 	if err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error getting job status: %s", err))
+		return nil, err
 	}
 	log.Info("Received job status %s", js)
 
 	err = validateBzJobStatus(js)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 	loghelpers.LogRunStatus(js)
 
