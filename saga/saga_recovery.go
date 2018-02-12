@@ -1,10 +1,6 @@
 package saga
 
-import (
-	"fmt"
-
-	log "github.com/sirupsen/logrus"
-)
+import "fmt"
 
 type SagaRecoveryType int
 
