@@ -112,19 +112,16 @@ func TestValidateBzJobStatus(t *testing.T) {
 	js2 := &scoot.JobStatus{}
 	js2.TaskStatus = make(map[string]scoot.Status)
 	js2.TaskStatus["task1"] = scoot.Status_COMPLETED
-	js2.TaskStatus["task2"] = scoot.Status_IN_PROGRESS
-	err = validateBzJobStatus(js)
-	if err == nil {
-		t.Fatalf("Expected error, received %v", err)
+	err = validateBzJobStatus(js2)
+	if err != nil {
+		t.Fatalf("Expected no error, received %v", err)
 	}
 
 	js3 := &scoot.JobStatus{}
 	js3.TaskStatus = make(map[string]scoot.Status)
-	js3.TaskStatus["task1"] = scoot.Status_IN_PROGRESS
-	js3.Status = scoot.Status_COMPLETED
-	err = validateBzJobStatus(js)
-	if err == nil {
-		t.Fatalf("Expected error, received %v", err)
+	err = validateBzJobStatus(js3)
+	if err != nil {
+		t.Fatalf("Expected no error, received %v", err)
 	}
 }
 

@@ -93,15 +93,6 @@ func validateBzJobStatus(js *scoot.JobStatus) error {
 			js.GetTaskData(), js.GetTaskStatus())
 	}
 
-	if len(js.GetTaskStatus()) > 0 {
-		var ss scoot.Status
-		for _, s := range js.TaskStatus {
-			ss = s
-		}
-		if ss != js.Status {
-			return fmt.Errorf("Mismatch between task Status and job Status: %s vs %s", ss, js.Status)
-		}
-	}
 	return nil
 }
 

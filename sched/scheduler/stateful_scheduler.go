@@ -939,7 +939,10 @@ func (s *statefulScheduler) KillJob(jobID string) error {
 	s.killJobCh <- req
 
 	return <-req.responseCh
+}
 
+func (s *statefulScheduler) GetSagaCoord() saga.SagaCoordinator {
+	return s.sagaCoord
 }
 
 // process all requests verifying that the jobIds exist:  Send errors back

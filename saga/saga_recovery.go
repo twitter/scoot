@@ -2,6 +2,8 @@ package saga
 
 import (
 	"fmt"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type SagaRecoveryType int
@@ -27,6 +29,9 @@ const (
 func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
 
 	// Get Logged Messages For this Saga from the Log.
+	log.Infof("%+v", saga)
+	log.Infof("%+v", saga.log)
+	log.Info(sagaId)
 	msgs, err := saga.log.GetMessages(sagaId)
 	if err != nil {
 		return nil, err

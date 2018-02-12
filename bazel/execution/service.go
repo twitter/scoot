@@ -34,7 +34,7 @@ type executionServer struct {
 
 // Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
 func MakeExecutionServer(l net.Listener, s scheduler.Scheduler) *executionServer {
-	g := executionServer{listener: l, server: grpchelpers.NewServer(), scheduler: s}
+	g := executionServer{listener: l, server: grpchelpers.NewServer(), scheduler: s, sagaCoord: s.GetSagaCoord()}
 	remoteexecution.RegisterExecutionServer(g.server, &g)
 	longrunning.RegisterOperationsServer(g.server, &g)
 	return &g
@@ -122,7 +122,7 @@ func (s *executionServer) Execute(
 	log.Info("ExecuteRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op := longrunning.Operation{
-		Name:     fmt.Sprintf("operations/%s", id),
+		Name:     id,
 		Metadata: eomAsPBAny,
 		Done:     false,
 		Result: &longrunning.Operation_Response{
@@ -137,7 +137,7 @@ func (s *executionServer) Execute(
 func (s *executionServer) GetOperation(
 	_ context.Context,
 	req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
-	log.Infof("Received GetOperation request: %s", req)
+	log.Infof("Received GetOperation request: %v", req)
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -175,7 +175,7 @@ func (s *executionServer) GetOperation(
 	log.Info("GetOperationRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op := longrunning.Operation{
-		Name:     fmt.Sprintf("operations/%s", req.Name),
+		Name:     req.Name,
 		Metadata: eomAsPBAny,
 		Done:     runStatusToDoneBool(rs),
 		Result: &longrunning.Operation_Response{
