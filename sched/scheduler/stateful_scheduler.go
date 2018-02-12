@@ -803,15 +803,18 @@ func (s *statefulScheduler) scheduleTasks() {
 					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
 				}
 
-				// If the jobID or taskID has changed, the assigned node has been preempted, simply return early.
-				// However, if nodeState has changed (i.e same node deleted then re-added), we must clean up before returning.
-				nodeStInstance, ok := s.clusterState.getNodeState(nodeSt.node.Id())
+				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
+				// The job update is normal but we update the cluster with a dummy value which denotes abnormal cleanup.
+				// We need the dummy value so we don't clobber any new job assignments to that nodeId.
+				//
+				// If the jobID has changed (we also sanity check taskID), the assigned node has been preempted,
+				// and that should only happen when a higher priority P3 job commandeers it, which should be rare ideally.
+				// In this case, we simply return early since the replacement task already cleaned up this task.
+				nodeId := nodeSt.node.Id()
+				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
 				nodeStChanged := !ok || &nodeStInstance.readyCh != &nodeSt.readyCh
 				if nodeStChanged {
-					preempted := true
-					s.getJob(jobID).errorRunningTask(taskID, errors.New("Task failed: node hiccup"), preempted)
-				}
-				if nodeSt.runningJob != jobID || nodeSt.runningTask != taskID || nodeStChanged {
+					nodeId = nodeId + ":ERROR"
 					log.WithFields(
 						log.Fields{
 							"node":        nodeSt.node,
@@ -819,7 +822,16 @@ func (s *statefulScheduler) scheduleTasks() {
 							"taskID":      taskID,
 							"runningJob":  nodeSt.runningJob,
 							"runningTask": nodeSt.runningTask,
-							"nodeStOk":    !nodeStChanged,
+							"tag":         tag,
+						}).Info("Task *node* lost, cleaning up.")
+				} else if nodeSt.runningJob != jobID || nodeSt.runningTask != taskID {
+					log.WithFields(
+						log.Fields{
+							"node":        nodeSt.node,
+							"jobID":       jobID,
+							"taskID":      taskID,
+							"runningJob":  nodeSt.runningJob,
+							"runningTask": nodeSt.runningTask,
 							"tag":         tag,
 						}).Info("Task preempted")
 					return
@@ -895,7 +907,7 @@ func (s *statefulScheduler) scheduleTasks() {
 						"flaky":  flaky,
 						"tag":    tag,
 					}).Info("Freeing node, removed job.")
-				s.clusterState.taskCompleted(nodeSt.node.Id(), flaky)
+				s.clusterState.taskCompleted(nodeId, flaky)
 
 				total := 0
 				completed := 0
