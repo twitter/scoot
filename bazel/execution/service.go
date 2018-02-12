@@ -160,7 +160,6 @@ func (s *executionServer) GetOperation(
 	}
 
 	// Marshal ExecuteResponse to protobuf.Any format
-	// TODO(determine if op.Done based on task status) & if it is, set ExecuteResponse.Status too (OK or failed)
 	res := &remoteexecution.ExecuteResponse{
 		Result:       actionResult.GetResult(),
 		CachedResult: false,
