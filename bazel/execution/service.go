@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
@@ -23,7 +24,7 @@ import (
 	"github.com/twitter/scoot/scootapi/server/api"
 )
 
-// Implements GRPCServer and remoteexecution.ExecutionServer interfaces
+// Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces
 type executionServer struct {
 	listener  net.Listener
 	sagaCoord saga.SagaCoordinator
@@ -35,6 +36,7 @@ type executionServer struct {
 func MakeExecutionServer(l net.Listener, s scheduler.Scheduler) *executionServer {
 	g := executionServer{listener: l, server: grpchelpers.NewServer(), scheduler: s}
 	remoteexecution.RegisterExecutionServer(g.server, &g)
+	longrunning.RegisterOperationsServer(g.server, &g)
 	return &g
 }
 
@@ -181,6 +183,18 @@ func (s *executionServer) GetOperation(
 		},
 	}
 	return &op, nil
+}
+
+func (s *executionServer) ListOperations(context.Context, *longrunning.ListOperationsRequest) (*longrunning.ListOperationsResponse, error) {
+	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
+}
+
+func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOperationRequest) (*empty.Empty, error) {
+	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
+}
+
+func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOperationRequest) (*empty.Empty, error) {
+	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
 }
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
