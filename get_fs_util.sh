@@ -2,13 +2,13 @@
 # Pulls in fs_util tool for use in remote exec ingestion, checkout, and CAS ops
 set -e
 
-pants_release="1.4.0.dev23"
+pants_release="1.5.0.dev3%2B569f14c2"
 
 get_fs_util() {
 	case "$(uname -s)" in
 
 		Darwin)
-			local url="https://binaries.pantsbuild.org/bin/fs_util/mac/10.13/$pants_release/fs_util"
+			local url="https://binaries.pantsbuild.org/bin/fs_util/mac/10.10/$pants_release/fs_util"
 			echo "Fetching Darwin from $url"
 			;;
 
