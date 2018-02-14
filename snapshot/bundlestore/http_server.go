@@ -98,15 +98,14 @@ func (s *httpServer) HandleDownload(w http.ResponseWriter, req *http.Request) {
 		s.storeConfig.Stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
+	defer r.Close()
 	if _, err := io.Copy(w, r); err != nil {
 		log.Infof("Copy err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
-		http.Error(w, fmt.Sprintf("Error copying Bundle: %s", err), http.StatusInternalServerError)
 		s.storeConfig.Stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
 	if err := r.Close(); err != nil {
 		log.Infof("Close err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
-		http.Error(w, fmt.Sprintf("Error closing Bundle Data: %s", err), http.StatusInternalServerError)
 		s.storeConfig.Stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
 		return
 	}
