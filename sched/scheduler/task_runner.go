@@ -242,6 +242,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"err":    err,
 				}).Info("Retrying query")
 			time.Sleep(r.runnerRetryInterval)
 			elapsedRetryDuration += r.runnerRetryInterval
