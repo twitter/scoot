@@ -530,8 +530,6 @@ func (s *statefulScheduler) updateStats() {
 
 // Checks if any new jobs have been requested since the last loop and adds
 // them to the jobs the scheduler is handling
-// TODO(jschiller): kill current jobs which share the same Requestor and Basis as these new jobs.
-// TODO(jschiller): kill current tasks that share the same Requestor and Tag as these new tasks.
 func (s *statefulScheduler) addJobs() {
 	// For all new job requests (on the check job channel) that have come in since the last iteration of the step() loop,
 	// verify the job request: it doesn't exceed the requestor's limits or number of requestors, has a valid priority and
@@ -578,26 +576,33 @@ addLoop:
 		select {
 		case newJobMsg := <-s.addJobCh:
 			receivedJob = true
-
+			lf := log.Fields{
+				"jobID":     newJobMsg.job.Id,
+				"requestor": newJobMsg.job.Def.Requestor,
+				"jobType":   newJobMsg.job.Def.JobType,
+				"tag":       newJobMsg.job.Def.Tag,
+				"basis":     newJobMsg.job.Def.Basis,
+				"priority":  newJobMsg.job.Def.Priority,
+				"numTasks":  len(newJobMsg.job.Def.Tasks),
+			}
 			if _, ok := s.requestorMap[newJobMsg.job.Def.Requestor]; ok {
-				// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
-				// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
 				for _, js := range s.requestorMap[newJobMsg.job.Def.Requestor] {
+					// Kill any prior jobs that share the same requestor and non-empty basis string,
+					// but tag should be different so we don't kill the original jobs when doing retries.
+					if newJobMsg.job.Def.Basis != "" &&
+						js.Job.Def.Basis == newJobMsg.job.Def.Basis &&
+						js.Job.Def.Tag != newJobMsg.job.Def.Tag {
+						log.WithFields(lf).Infof("Matching basis, killing jobID=%s", js.Job.Id)
+						s.KillJob(js.Job.Id)
+					}
+
+					// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
+					// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
 					if js.Job.Def.Tag == newJobMsg.job.Def.Tag &&
 						js.Job.Def.Basis != newJobMsg.job.Def.Basis &&
 						js.Job.Def.Priority != newJobMsg.job.Def.Priority {
-						m := newJobMsg
-						log.WithFields(
-							log.Fields{
-								"requestor": m.job.Def.Requestor,
-								"jobType":   m.job.Def.JobType,
-								"tag":       m.job.Def.Tag,
-								"basis":     m.job.Def.Basis,
-								"priority":  m.job.Def.Priority,
-								"numTasks":  len(m.job.Def.Tasks),
-							}).Info("Overriding job priority to match previous requestor/tag priority")
+						log.WithFields(lf).Info("Overriding job priority to match previous requestor/tag priority")
 						newJobMsg.job.Def.Priority = js.Job.Def.Priority
-						break
 					}
 				}
 			} else if newJobMsg.job.Def.Priority > MaxPriority {
@@ -612,23 +617,13 @@ addLoop:
 			js := newJobState(newJobMsg.job, newJobMsg.saga, s.taskDurations)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 
-			// TODO(jschiller): associate related tasks, i.e. task retries that decorate the taskId?
 			sort.Sort(sort.Reverse(taskStatesByDuration(js.Tasks)))
-
 			req := newJobMsg.job.Def.Requestor
 			if _, ok := s.requestorMap[req]; !ok {
 				s.requestorMap[req] = []*jobState{}
 			}
 			s.requestorMap[req] = append(s.requestorMap[req], js)
-			log.WithFields(
-				log.Fields{
-					"jobID":     newJobMsg.job.Id,
-					"req":       req,
-					"numTasks":  len(newJobMsg.job.Def.Tasks),
-					"requestor": newJobMsg.job.Def.Requestor,
-					"jobType":   newJobMsg.job.Def.JobType,
-					"tag":       newJobMsg.job.Def.Tag,
-				}).Info("Created new job")
+			log.WithFields(lf).Info("Created new job")
 		default:
 			break addLoop
 		}
