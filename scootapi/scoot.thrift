@@ -34,7 +34,7 @@ enum RunStatusState {
   RUNNING = 2      # Run is happening.
   COMPLETE = 3     # Succeeded or failed yielding an exit code. Only state with an exit code.
   FAILED = 4       # Run mechanism failed in an expected way and is no longer running.
-  ABORTED = 5      # User requested that the run be killed.
+  ABORTED = 5      # User requested that the run be killed, or task preempted by Scheduler.
   TIMEDOUT = 6     # Run timed out and was killed.
   BADREQUEST = 7   # Request rejected due to unexpected failure.
 }

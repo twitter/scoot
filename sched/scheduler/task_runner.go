@@ -20,6 +20,11 @@ func emptyStatusError(jobId string, taskId string, err error) string {
 	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %s", jobId, taskId, err)
 }
 
+type abortReq struct {
+	endTask bool
+	err     string
+}
+
 type taskRunner struct {
 	saga   *saga.Saga
 	runner runner.Service
@@ -35,7 +40,7 @@ type taskRunner struct {
 	task   sched.TaskDefinition
 	nodeSt *nodeState
 
-	abortCh      chan bool        // Primary channel to check for aborts
+	abortCh      chan abortReq    // Primary channel to check for aborts
 	queryAbortCh chan interface{} // Secondary channel to pass to blocking query.
 
 	startTime time.Time
@@ -177,33 +182,35 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 
 	for {
 		// was a job kill request received before we could start the run?
-		if aborted, endTask := r.abortRequested(); aborted {
+		if aborted, req := r.abortRequested(); aborted {
 			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
+			st.Error = req.err
 			log.WithFields(
 				log.Fields{
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
 				}).Info("The run was aborted by the scheduler before it was sent to a worker")
-			return st, endTask, nil
+			return st, req.endTask, nil
 		}
 
 		// send the command to the worker
 		st, err = r.runner.Run(cmd)
 
 		// was a job kill request received while starting the run?
-		if aborted, endTask := r.abortRequested(); aborted {
+		if aborted, req := r.abortRequested(); aborted {
 			if err == nil { // we should have a status with runId, abort the run
 				r.runner.Abort(st.RunID)
 			}
 			st = runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
+			st.Error = req.err
 			log.WithFields(
 				log.Fields{
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
 				}).Info("Initial run attempts aborted by the scheduler")
-			return st, endTask, nil
+			return st, req.endTask, nil
 		}
 
 		if err != nil && elapsedRetryDuration+r.runnerRetryInterval < r.runnerRetryTimeout {
@@ -294,8 +301,10 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 	// an abort to the runner below
 	sts, _, err := r.runner.Query(q, w)
 
-	if aborted, endTask := r.abortRequested(); aborted {
-		return runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID}), endTask, nil
+	if aborted, req := r.abortRequested(); aborted {
+		st := runner.AbortStatus(id, tags.LogTags{JobID: r.JobID, TaskID: r.TaskID})
+		st.Error = req.err
+		return st, req.endTask, nil
 	}
 	if err != nil {
 		return runner.RunStatus{}, false, err
@@ -343,24 +352,24 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	return err
 }
 
-func (r *taskRunner) abortRequested() (aborted bool, endTask bool) {
+func (r *taskRunner) abortRequested() (aborted bool, req abortReq) {
 	select {
-	case endTask := <-r.abortCh:
+	case req := <-r.abortCh:
 		log.WithFields(
 			log.Fields{
 				"jobID":   r.JobID,
 				"taskID":  r.TaskID,
 				"node":    r.nodeSt.node,
-				"endTask": endTask,
+				"endTask": req.endTask,
 				"tag":     r.Tag,
 			}).Info("Abort requested")
-		return true, endTask
+		return true, req
 	default:
-		return false, false
+		return false, abortReq{}
 	}
 }
 
-func (r *taskRunner) Abort(endTask bool) {
-	r.abortCh <- endTask
+func (r *taskRunner) Abort(endTask bool, err string) {
+	r.abortCh <- abortReq{endTask, err}
 	r.queryAbortCh <- nil
 }
