@@ -133,6 +133,8 @@ func (s *executionServer) Execute(
 	return &op, nil
 }
 
+// Google LongRunning APIs
+
 // Takes a GetOperation request and forms an ExecuteResponse that is returned as part of a
 // google LongRunning Operation message
 func (s *executionServer) GetOperation(
@@ -187,16 +189,19 @@ func (s *executionServer) GetOperation(
 }
 
 func (s *executionServer) ListOperations(context.Context, *longrunning.ListOperationsRequest) (*longrunning.ListOperationsResponse, error) {
-	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
+	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
+// TODO hook up to Job Kill API
 func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOperationRequest) (*empty.Empty, error) {
-	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
+	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
 func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOperationRequest) (*empty.Empty, error) {
-	return nil, status.Error(codes.Internal, fmt.Sprint("Not implemented"))
+	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
+
+// internal functions
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
 	js, err := api.GetJobStatus(jobID, s.sagaCoord)

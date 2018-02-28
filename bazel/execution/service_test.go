@@ -124,5 +124,4 @@ func TestGetOperationStub(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
-
 }

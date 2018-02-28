@@ -79,3 +79,6 @@ func main() {
 	log.Info("Wrote to CAS successfully")
 	fmt.Printf("%s %d\n", hash, size)
 }
+
+// TODO support making a GetOperation request to an execution_server addr. (and operation name). Print stuff out.
+// Goal is to accurately debug results of GetOperation calls that grpc_cli just dumps as garbage
