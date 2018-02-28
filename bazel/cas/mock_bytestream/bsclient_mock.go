@@ -4,8 +4,8 @@
 package mock_bytestream
 
 import (
-	context "context"
 	gomock "github.com/golang/mock/gomock"
+	context "golang.org/x/net/context"
 	bytestream "google.golang.org/genproto/googleapis/bytestream"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
