@@ -3,11 +3,11 @@ package execution
 import (
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/genproto/googleapis/longrunning"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 
@@ -71,12 +71,41 @@ func ParseExecuteOperation(op *longrunning.Operation) (*remoteexecution.ExecuteO
 	return eom, nil, res, nil
 }
 
+// String conversion for human consumption of Operation's nested data
 func ExecuteOperationToStr(op *longrunning.Operation) string {
 	eom, st, res, err := ParseExecuteOperation(op)
 	if err != nil {
 		return ""
 	}
-	scs := spew.NewDefaultConfig()
-	scs.Indent = "\t"
-	return fmt.Sprintf("(*Operation.Name)(%s)\n(*Operation.Done)(%t)\n%s", op.GetName(), op.GetDone(), spew.Sdump(eom, st, res))
+	s := fmt.Sprintf("Operation: %s\n\tDone: %t\n", op.GetName(), op.GetDone())
+	s += fmt.Sprintf("\tMetadata:\n")
+	s += fmt.Sprintf("\t\tStage: %s\n", eom.GetStage())
+	s += fmt.Sprintf("\t\tActionDigest: %s\n", digestToStr(eom.GetActionDigest()))
+	s += fmt.Sprintf("\t\tStdout: %s\n", eom.GetStdoutStreamName())
+	s += fmt.Sprintf("\t\tStderr: %s\n", eom.GetStderrStreamName())
+	if st != nil {
+		s += fmt.Sprintf("\tStatus: %s\n", *st)
+	} else {
+		s += fmt.Sprintf("\tExecResponse:\n")
+		s += fmt.Sprintf("\t\tCached: %t\n", res.GetCachedResult())
+		if res.GetStatus() != nil {
+			s += fmt.Sprintf("\t\tStatus: %s\n", res.GetStatus())
+			s += fmt.Sprintf("\t\t\tCode: %s\n", google_rpc_code.Code_name[res.GetStatus().GetCode()])
+			s += fmt.Sprintf("\t\t\tMessage: %s\n", res.GetStatus().GetMessage())
+		}
+		s += fmt.Sprintf("\t\tActionResult:\n")
+		s += fmt.Sprintf("\t\t\tExitCode: %d\n", res.GetResult().GetExitCode())
+		s += fmt.Sprintf("\t\t\tOutputFiles: %s\n", res.GetResult().GetOutputFiles())
+		s += fmt.Sprintf("\t\t\tOutputDirectories: %s\n", res.GetResult().GetOutputDirectories())
+		s += fmt.Sprintf("\t\t\tStdoutDigest: %s\n", digestToStr(res.GetResult().GetStdoutDigest()))
+		s += fmt.Sprintf("\t\t\tStderrDigest: %s\n", digestToStr(res.GetResult().GetStderrDigest()))
+	}
+	return s
+}
+
+func digestToStr(d *remoteexecution.Digest) string {
+	if d == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", d.GetHash(), d.GetSizeBytes())
 }
