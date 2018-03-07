@@ -87,7 +87,7 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
-			return fmt.Errorf("Error: %s. Stderr: %s", err, exitError.Stderr)
+			return &CheckoutNotExistError{Err: fmt.Sprintf("Error: %s. Stderr: %s", err, exitError.Stderr)}
 		}
 		return err
 	}

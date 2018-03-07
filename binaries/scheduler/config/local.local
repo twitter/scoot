@@ -8,7 +8,7 @@
   },
   "SchedulerConfig": {
     "Type": "stateful",
-    "MaxRetriesPerTask" : 2,
+    "MaxRetriesPerTask" : 0,
     "DebugMode" : false,
     "RecoverJobsOnStartup" : true,
     "DefaultTaskTimeout" : "30m"

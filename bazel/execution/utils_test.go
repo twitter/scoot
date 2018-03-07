@@ -6,8 +6,8 @@ import (
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
-	"github.com/twitter/scoot/snapshot/bazel"
 )
 
 var rs *runStatus

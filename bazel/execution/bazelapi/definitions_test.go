@@ -3,7 +3,12 @@ package bazelapi
 import (
 	"testing"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	scootproto "github.com/twitter/scoot/common/proto"
 )
@@ -27,6 +32,7 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 				DoNotCache: true,
 			},
 		},
+		ActionDigest: &remoteexecution.Digest{},
 	}
 
 	tr := MakeExecReqThriftFromDomain(er)
@@ -54,6 +60,19 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 }
 
 func TestDomainThriftDomainActionRes(t *testing.T) {
+	pcf := &google_rpc_errdetails.PreconditionFailure{
+		Violations: []*google_rpc_errdetails.PreconditionFailure_Violation{
+			&google_rpc_errdetails.PreconditionFailure_Violation{
+				Type:    PreconditionMissing,
+				Subject: "blobs/abc123/99",
+			},
+		},
+	}
+	pcfAsAny, err := ptypes.MarshalAny(pcf)
+	if err != nil {
+		t.Fatalf("Failed to serialize PreconditionFailure as Any: %s", err)
+	}
+
 	ar := &ActionResult{
 		Result: &remoteexecution.ActionResult{
 			StdoutDigest: &remoteexecution.Digest{Hash: "curry", SizeBytes: 30},
@@ -76,6 +95,12 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 			},
 			ExitCode: 1,
 		},
+		ActionDigest: &remoteexecution.Digest{Hash: "bacon", SizeBytes: 420},
+		GRPCStatus: &google_rpc_status.Status{
+			Code:    int32(google_rpc_code.Code_OK),
+			Message: "okay",
+			Details: []*any.Any{pcfAsAny},
+		},
 	}
 
 	tr := MakeActionResultThriftFromDomain(ar)
@@ -88,6 +113,7 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		t.Fatal("Unexpected nil domain result")
 	}
 
+	// ActionResult
 	if result.Result.StdoutDigest.Hash != ar.Result.StdoutDigest.Hash ||
 		result.Result.StdoutDigest.SizeBytes != ar.Result.StdoutDigest.SizeBytes ||
 		result.Result.StderrDigest.Hash != ar.Result.StderrDigest.Hash ||
@@ -103,6 +129,29 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		result.Result.OutputDirectories[0].TreeDigest.SizeBytes != ar.Result.OutputDirectories[0].TreeDigest.SizeBytes ||
 		result.Result.ExitCode != ar.Result.ExitCode ||
 		result.String() != ar.String() {
-		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result, ar)
+		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result.Result, ar.Result)
+	}
+
+	// ActionDigest
+	if result.ActionDigest.Hash != ar.ActionDigest.Hash ||
+		result.ActionDigest.SizeBytes != result.ActionDigest.SizeBytes {
+		t.Fatalf("Unexpected output from action digest\ngot:      %v\nexpected: %v", result.ActionDigest, ar.ActionDigest)
+	}
+
+	// GRPCStatus
+	if result.GRPCStatus.Code != ar.GRPCStatus.Code ||
+		result.GRPCStatus.Message != ar.GRPCStatus.Message ||
+		len(result.GRPCStatus.Details) != len(ar.GRPCStatus.Details) {
+		t.Fatalf("Unexpected output from grpc status\ngot:      %v\nexpected: %v", result.GRPCStatus, ar.GRPCStatus)
+	}
+	resPcf := &google_rpc_errdetails.PreconditionFailure{}
+	err = ptypes.UnmarshalAny(result.GRPCStatus.Details[0], resPcf)
+	if err != nil {
+		t.Fatalf("Failed to deserialize thrift google rpc status as PreconditionFailure: %s", err)
+	}
+	if len(resPcf.Violations) != len(pcf.Violations) ||
+		resPcf.Violations[0].Type != pcf.Violations[0].Type ||
+		resPcf.Violations[0].Subject != pcf.Violations[0].Subject {
+		t.Fatalf("Unexpected output from grpc status precondition failure\ngot:      %v\nexpected: %v", resPcf, pcf)
 	}
 }

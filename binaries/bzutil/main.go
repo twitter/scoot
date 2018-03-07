@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution"
 	"github.com/twitter/scoot/common/dialer"
@@ -29,18 +30,20 @@ import (
 
 var uploadCmdStr string = "upload_command"
 var getOpCmdStr string = "get_operation"
-var supportedCommands map[string]bool = map[string]bool{uploadCmdStr: true, getOpCmdStr: true}
+var execCmdStr string = "execute"
+var supportedCommands map[string]bool = map[string]bool{uploadCmdStr: true, getOpCmdStr: true, execCmdStr: true}
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	// TODO additional commands
 	// - upload Directory (tbd)
-	// - run Execute (tbd)
+	// - download outputs, stdout/err
 
 	// Subcommands
 	uploadCommand := flag.NewFlagSet(uploadCmdStr, flag.ExitOnError)
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
+	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
 
 	// Upload Command flags
 	uploadAddr := uploadCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
@@ -51,6 +54,13 @@ func main() {
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
 
+	// Execute flags
+	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	execCmdDigest := execCommand.String("command", "", "Command digest as '<hash>/<size>'")
+	execRootDigest := execCommand.String("input_root", "", "Input root digest as '<hash>/<size>'")
+	execOutputFiles := execCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
+	execOutputDirs := execCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
+
 	if len(os.Args) < 2 {
 		printSupported()
 		os.Exit(1)
@@ -60,6 +70,8 @@ func main() {
 		uploadCommand.Parse(os.Args[2:])
 	case getOpCmdStr:
 		getCommand.Parse(os.Args[2:])
+	case execCmdStr:
+		execCommand.Parse(os.Args[2:])
 	default:
 		printSupported()
 		os.Exit(1)
@@ -75,6 +87,11 @@ func main() {
 			log.Fatalf("name required for %s", getOpCmdStr)
 		}
 		getOperation(*getAddr, *getName)
+	} else if execCommand.Parsed() {
+		if *execCmdDigest == "" || *execRootDigest == "" {
+			log.Fatalf("command and input_root required for %s", execCmdStr)
+		}
+		execute(*execAddr, *execCmdDigest, *execRootDigest, *execOutputFiles, *execOutputDirs)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -124,7 +141,41 @@ func uploadBzCommand(casAddr, argv, env string) {
 	}
 
 	log.Info("Wrote to CAS successfully")
-	fmt.Printf("%s %d\n", hash, size)
+	fmt.Printf("%s/%d\n", hash, size)
+}
+
+func execute(execAddr, commandDigestStr, inputRootDigestStr, outputFilesStr, outputDirsStr string) {
+	r := dialer.NewConstantResolver(execAddr)
+
+	commandDigest, err := bazel.DigestFromString(commandDigestStr)
+	if err != nil {
+		log.Fatalf("Error converting command to Digest: %s", err)
+	}
+	inputRootDigest, err := bazel.DigestFromString(inputRootDigestStr)
+	if err != nil {
+		log.Fatalf("Error converting input_root to Digest: %s", err)
+	}
+
+	outputFiles := []string{}
+	outputDirs := []string{}
+	for _, f := range strings.Split(outputFilesStr, ",") {
+		if f == "" {
+			continue
+		}
+		outputFiles = append(outputFiles, f)
+	}
+	for _, d := range strings.Split(outputDirsStr, ",") {
+		if d == "" {
+			continue
+		}
+		outputDirs = append(outputDirs, d)
+	}
+
+	operation, err := execution.Execute(r, commandDigest, inputRootDigest, outputFiles, outputDirs)
+	if err != nil {
+		log.Fatalf("Error making Execute request: %s", err)
+	}
+	log.Info(execution.ExecuteOperationToStr(operation))
 }
 
 func getOperation(execAddr, opName string) {

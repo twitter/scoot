@@ -69,6 +69,12 @@ func (s *casServer) FindMissingBlobs(
 	res := remoteexecution.FindMissingBlobsResponse{}
 
 	for _, digest := range req.GetBlobDigests() {
+		// We hardcode support for empty data in snapshot/filer/checkouter.go, so never report it as missing
+		// Empty SHA can be used to represent working with a plain, empty directory, but can cause problems in Stores
+		if digest.GetHash() == bazel.EmptySha && digest.GetSizeBytes() == bazel.EmptySize {
+			continue
+		}
+
 		storeName := bazel.DigestStoreName(digest)
 		if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
 			log.Errorf("Error checking existence: %v", err)
@@ -131,7 +137,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	r, err := s.storeConfig.Store.OpenForRead(storeName)
 	if err != nil {
 		log.Errorf("Failed to OpenForRead: %v", err)
-		return status.Error(codes.Internal, fmt.Sprintf("Store failed opening resource for read: %s: %v", storeName, err))
+		return status.Error(codes.NotFound, fmt.Sprintf("Failed opening resource %s for read, returning NotFound. Err: %v", storeName, err))
 	}
 	defer r.Close()
 

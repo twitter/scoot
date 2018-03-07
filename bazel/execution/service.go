@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/genproto/googleapis/longrunning"
+	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -77,10 +78,11 @@ func (s *executionServer) Execute(
 	}
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
+	// If we encounter an error here, assume it was due to an InvalidArgument
 	job, err := execReqToScoot(req, actionSha, actionLen)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error converting request to internal definition: %s", err))
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error converting request to internal definition: %s", err))
 	}
 
 	err = sched.ValidateJob(job)
@@ -113,22 +115,12 @@ func (s *executionServer) Execute(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// Marshal ExecuteResponse to protobuf.Any format
-	res := &remoteexecution.ExecuteResponse{}
-	resAsPBAny, err := marshalAny(res)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
 	log.Info("ExecuteRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op := longrunning.Operation{
 		Name:     id,
 		Metadata: eomAsPBAny,
 		Done:     false,
-		Result: &longrunning.Operation_Response{
-			Response: resAsPBAny,
-		},
 	}
 	return &op, nil
 }
@@ -136,7 +128,9 @@ func (s *executionServer) Execute(
 // Google LongRunning APIs
 
 // Takes a GetOperation request and forms an ExecuteResponse that is returned as part of a
-// google LongRunning Operation message
+// google LongRunning Operation message.
+// Note that the ActionDigest field in the ExecuteOperationMetadata is not always available for
+// tasks that have not completed.
 func (s *executionServer) GetOperation(
 	_ context.Context,
 	req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
@@ -164,27 +158,38 @@ func (s *executionServer) GetOperation(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// Marshal ExecuteResponse to protobuf.Any format
-	res := &remoteexecution.ExecuteResponse{
-		Result:       actionResult.GetResult(),
-		CachedResult: false,
-		Status:       runStatusToGoogleRpcStatus(rs),
-	}
-	resAsPBAny, err := marshalAny(res)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	log.Info("GetOperationRequest completed successfully")
-	// Include the response message in the longrunning operation message
+	isDone := runStatusToDoneBool(rs)
 	op := longrunning.Operation{
 		Name:     req.Name,
 		Metadata: eomAsPBAny,
 		Done:     runStatusToDoneBool(rs),
-		Result: &longrunning.Operation_Response{
-			Response: resAsPBAny,
-		},
 	}
+
+	// If done, create ExecuteResponse in protobuf.Any format and include in Operation.Result.
+	// If the run status' bazelapi.ActionResult contains a google rpc Status, return that
+	// in the Response, otherwuse convert the run status to a google rpc Status.
+	if isDone {
+		var grpcs *google_rpc_status.Status
+		if actionResult != nil && actionResult.GRPCStatus != nil {
+			grpcs = actionResult.GetGRPCStatus()
+		} else {
+			grpcs = runStatusToGoogleRpcStatus(rs)
+		}
+		res := &remoteexecution.ExecuteResponse{
+			Result:       actionResult.GetResult(),
+			CachedResult: false,
+			Status:       grpcs,
+		}
+		resAsPBAny, err := marshalAny(res)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		op.Result = &longrunning.Operation_Response{
+			Response: resAsPBAny,
+		}
+	}
+
+	log.Info("GetOperationRequest completed successfully")
 	return &op, nil
 }
 
@@ -201,7 +206,7 @@ func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOp
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
-// internal functions
+// Internal functions
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
 	js, err := api.GetJobStatus(jobID, s.sagaCoord)

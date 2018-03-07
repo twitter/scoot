@@ -60,20 +60,14 @@ func TestExecuteStub(t *testing.T) {
 	if metadataAny == nil {
 		t.Fatalf("Nil metadata from operation: %s", res)
 	}
-	execResAny := res.GetResponse()
-	if execResAny == nil {
-		t.Fatalf("Nil response from operation: %s", res)
+	if res.GetResponse() != nil {
+		t.Fatalf("Non-nil response for incomplete task from operation: %s", res)
 	}
 
 	metadata := remoteexecution.ExecuteOperationMetadata{}
-	execRes := remoteexecution.ExecuteResponse{}
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
-	}
-	err = ptypes.UnmarshalAny(execResAny, &execRes)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
 }
 
@@ -109,19 +103,13 @@ func TestGetOperationStub(t *testing.T) {
 	if metadataAny == nil {
 		t.Fatalf("Nil metadata from operation: %s", res)
 	}
-	getOpResAny := res.GetResponse()
-	if getOpResAny == nil {
-		t.Fatalf("Nil response from operation: %s", res)
+	if res.GetResponse() != nil {
+		t.Fatalf("Non-nil response for incomplete task from operation: %s", res)
 	}
 
 	metadata := remoteexecution.ExecuteOperationMetadata{}
-	getOpRes := remoteexecution.ExecuteResponse{}
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
-	}
-	err = ptypes.UnmarshalAny(getOpResAny, &getOpRes)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response from any: %v", err)
 	}
 }
