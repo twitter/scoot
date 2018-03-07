@@ -181,7 +181,7 @@ func TestMaterializeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := exec.Command("diff", "-r", co.Path(), root.Dir).Output()
+	output, err := exec.Command("diff", "-r", co.Path(), tmpDir.Dir).Output()
 	if string(output) != "" {
 		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir.Dir, string(output))
 	}

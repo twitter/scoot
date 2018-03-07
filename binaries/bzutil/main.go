@@ -47,7 +47,6 @@ func main() {
 
 	// Upload Command flags
 	uploadAddr := uploadCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
-	uploadArgv := uploadCommand.String("args", "", "space-separated command arguments, i.e. \"./run arg1 arg2\"")
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 
 	// Get Operation flags
@@ -78,10 +77,11 @@ func main() {
 	}
 
 	if uploadCommand.Parsed() {
-		if *uploadArgv == "" {
-			log.Fatalf("args required for %s", uploadCmdStr)
+		uploadArgv := uploadCommand.Args()
+		if len(uploadArgv) == 0 {
+			log.Fatalf("Argv required for %s - will interpret all non-flag arguments as Argv", uploadCmdStr)
 		}
-		uploadBzCommand(*uploadAddr, *uploadArgv, *uploadEnv)
+		uploadBzCommand(uploadArgv, *uploadAddr, *uploadEnv)
 	} else if getCommand.Parsed() {
 		if *getName == "" {
 			log.Fatalf("name required for %s", getOpCmdStr)
@@ -97,8 +97,7 @@ func main() {
 	}
 }
 
-func uploadBzCommand(casAddr, argv, env string) {
-	cmdArgs := strings.Split(argv, " ")
+func uploadBzCommand(cmdArgs []string, casAddr, env string) {
 	envMap := make(map[string]string)
 	for _, pair := range strings.Split(env, ",") {
 		if pair == "" {

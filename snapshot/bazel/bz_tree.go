@@ -3,9 +3,7 @@ package bazel
 import (
 	"fmt"
 	"os/exec"
-	filepath "path"
 	"strconv"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -44,9 +42,7 @@ func (bc bzCommand) save(path string) (string, error) {
 
 	// directory save requires root path
 	if fileType == fsUtilCmdDirectory {
-		base := filepath.Base(path)
-		root := strings.TrimSuffix(path, base)
-		args = append(args, fsUtilCmdRoot, root, filepath.Join(base, fsUtilCmdGlobWildCard))
+		args = append(args, fsUtilCmdRoot, path, fsUtilCmdGlobWildCard)
 	} else {
 		args = append(args, path)
 	}
