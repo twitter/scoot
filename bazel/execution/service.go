@@ -167,7 +167,7 @@ func (s *executionServer) GetOperation(
 
 	// If done, create ExecuteResponse in protobuf.Any format and include in Operation.Result.
 	// If the run status' bazelapi.ActionResult contains a google rpc Status, return that
-	// in the Response, otherwuse convert the run status to a google rpc Status.
+	// in the Response, otherwise convert the run status to a google rpc Status.
 	if isDone {
 		var grpcs *google_rpc_status.Status
 		if actionResult != nil && actionResult.GRPCStatus != nil {
