@@ -61,7 +61,7 @@ func (s *casServer) Serve() error {
 func (s *casServer) FindMissingBlobs(
 	ctx context.Context,
 	req *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
-	log.Infof("Received CAS FindMissingBlobs request: %s", req)
+	log.Debugf("Received CAS FindMissingBlobs request: %s", req)
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -107,7 +107,7 @@ func (s *casServer) GetTree(
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
 func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_ReadServer) error {
-	log.Infof("Received CAS Read request: %s", req)
+	log.Debugf("Received CAS Read request: %s", req)
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
@@ -201,7 +201,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 // When the entire Write is buffered, we can Write to the Store and return a response with the result.
 // NOTE We also no not currently attempt any resolution between multiple client UUIDs writing the same resource
 func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
-	log.Info("Received CAS Write request")
+	log.Debug("Received CAS Write request")
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
@@ -231,7 +231,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 				log.Errorf("Error parsing resource: %v", err)
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
-			log.Infof("Using resource name: %s", resourceName)
+			log.Debugf("Using resource name: %s", resourceName)
 
 			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
 			if resource.Digest.GetHash() == bazel.EmptySha {
@@ -305,7 +305,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 		return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
 	}
 
-	log.Info("Finished handling Write request")
+	log.Infof("Finished handling Write request for %s, %d bytes", storeName, committed)
 	return nil
 }
 

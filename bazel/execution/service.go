@@ -64,7 +64,7 @@ func (s *executionServer) Serve() error {
 func (s *executionServer) Execute(
 	_ context.Context,
 	req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
-	log.Infof("Received Execute request: %s", req)
+	log.Debugf("Received Execute request: %s", req)
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -115,7 +115,7 @@ func (s *executionServer) Execute(
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	log.Info("ExecuteRequest completed successfully")
+	log.Debug("ExecuteRequest completed successfully")
 	// Include the response message in the longrunning operation message
 	op := longrunning.Operation{
 		Name:     id,
@@ -134,7 +134,7 @@ func (s *executionServer) Execute(
 func (s *executionServer) GetOperation(
 	_ context.Context,
 	req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
-	log.Infof("Received GetOperation request: %v", req)
+	log.Debugf("Received GetOperation request: %v", req)
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -189,7 +189,7 @@ func (s *executionServer) GetOperation(
 		}
 	}
 
-	log.Info("GetOperationRequest completed successfully")
+	log.Debug("GetOperationRequest completed successfully")
 	return &op, nil
 }
 
@@ -213,7 +213,7 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Received job status %s", js)
+	log.Debugf("Received job status %s", js)
 
 	err = validateBzJobStatus(js)
 	if err != nil {
