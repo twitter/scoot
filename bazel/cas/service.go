@@ -71,7 +71,7 @@ func (s *casServer) FindMissingBlobs(
 	for _, digest := range req.GetBlobDigests() {
 		// We hardcode support for empty data in snapshot/filer/checkouter.go, so never report it as missing
 		// Empty SHA can be used to represent working with a plain, empty directory, but can cause problems in Stores
-		if digest.GetHash() == bazel.EmptySha && digest.GetSizeBytes() == bazel.EmptySize {
+		if digest.GetHash() == bazel.EmptySha {
 			continue
 		}
 
@@ -95,11 +95,11 @@ func (s *casServer) BatchUpdateBlobs(
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - update blobs independently")
 }
 
-// DEPRECATED - Included for protobuf generated code compatability/compilation
+// GetTree not supported in Scoot for V1
 func (s *casServer) GetTree(
 	ctx context.Context,
 	req *remoteexecution.GetTreeRequest) (*remoteexecution.GetTreeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "This API is marked as deprecated in the Bazel API definition")
+	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
 }
 
 // CAS - ByteStream APIs
@@ -133,11 +133,17 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	// Map digest to underlying store name
 	storeName := bazel.DigestStoreName(resource.Digest)
 
-	log.Infof("Opening store resource for reading: %s", storeName)
-	r, err := s.storeConfig.Store.OpenForRead(storeName)
-	if err != nil {
-		log.Errorf("Failed to OpenForRead: %v", err)
-		return status.Error(codes.NotFound, fmt.Sprintf("Failed opening resource %s for read, returning NotFound. Err: %v", storeName, err))
+	var r io.ReadCloser
+	// If client requested to read Empty data, fulfil the request with a blank interface to bypass the Store
+	if resource.Digest.GetHash() == bazel.EmptySha {
+		r = &nilReader{}
+	} else {
+		log.Infof("Opening store resource for reading: %s", storeName)
+		r, err = s.storeConfig.Store.OpenForRead(storeName)
+		if err != nil {
+			log.Errorf("Failed to OpenForRead: %v", err)
+			return status.Error(codes.NotFound, fmt.Sprintf("Failed opening resource %s for read, returning NotFound. Err: %v", storeName, err))
+		}
 	}
 	defer r.Close()
 
@@ -227,6 +233,17 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			}
 			log.Infof("Using resource name: %s", resourceName)
 
+			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
+			if resource.Digest.GetHash() == bazel.EmptySha {
+				res := &bytestream.WriteResponse{CommittedSize: bazel.EmptySize}
+				err := ser.SendAndClose(res)
+				if err != nil {
+					log.Errorf("Error during SendAndClose() for EmptySha: %s", err)
+					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose: %v", err))
+				}
+				return nil
+			}
+
 			p = make([]byte, 0, resource.Digest.GetSizeBytes())
 			buffer = bytes.NewBuffer(p)
 
@@ -241,7 +258,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
 				err = ser.SendAndClose(res)
 				if err != nil {
-					log.Errorf("Error during SendAndClose(): %v", err)
+					log.Errorf("Error during SendAndClose() for Existing: %v", err)
 					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
 				}
 				return nil
@@ -298,3 +315,9 @@ func (s *casServer) QueryWriteStatus(
 	context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
 }
+
+// Interface for reading Empty data in a normal way while bypassing the underlying store
+type nilReader struct{}
+
+func (n *nilReader) Read([]byte) (int, error) { return 0, io.EOF }
+func (n *nilReader) Close() error             { return nil }

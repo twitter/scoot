@@ -70,7 +70,7 @@ func TestRead(t *testing.T) {
 
 	// Make a ReadRequest that exercises read limits and offsets
 	offset, limit := int64(2), int64(2)
-	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", testHash1), ReadOffset: offset, ReadLimit: limit}
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/%d", testHash1, testSize1), ReadOffset: offset, ReadLimit: limit}
 	r := makeFakeReadServer()
 
 	// Make actual Read request
@@ -90,6 +90,33 @@ func TestRead(t *testing.T) {
 	sends := int((testSize1-offset)/limit + (testSize1-offset)%limit)
 	if r.sendCount != sends {
 		t.Fatalf("Fake server Send() count mismatch - expected %d times based on - data len: %d ReadOffset: %d ReadLimit %d. got: %d", sends, testSize1, offset, limit, r.sendCount)
+	}
+	r.reset()
+}
+
+func TestReadEmpty(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	// Note: don't actually write the underlying resource beforehand. We expect
+	// that reading an empty blob will bypass the underlying store
+
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", bazel.EmptySha), ReadOffset: int64(0), ReadLimit: int64(0)}
+	r := makeFakeReadServer()
+
+	// Make actual Read request
+	err := s.Read(req, r)
+	if err != nil {
+		t.Fatalf("Error response from Read: %v", err)
+	}
+
+	// Get data sent/captured by fake server, and compare with expected based on testdata, limit, and offset
+	b, err := ioutil.ReadAll(r.buffer)
+	if err != nil {
+		t.Fatalf("Error reading from fake server data: %v", err)
+	}
+	if bytes.Compare(b, []byte{}) != 0 {
+		t.Fatalf("Data read from fake server did not match - expected: %s, got: %s", []byte{}, b)
 	}
 	r.reset()
 }
@@ -128,6 +155,28 @@ func TestWrite(t *testing.T) {
 	if bytes.Compare(b, testData1) != 0 {
 		t.Fatalf("Data read from store did not match - expected: %s, got: %s", testData1, b)
 	}
+}
+
+func TestWriteEmpty(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	w := makeFakeWriteServer(bazel.EmptySha, bazel.EmptySize, []byte{}, 1)
+
+	// Make Write request with test data
+	err := s.Write(w)
+	if err != nil {
+		t.Fatalf("Error response from Write: %v", err)
+	}
+
+	// Verify that fake write server was invoked as expected
+	if w.committedSize != bazel.EmptySize {
+		t.Fatalf("Size committed to fake server did not match - expected: %d, got: %d", bazel.EmptySize, w.committedSize)
+	}
+	if w.recvCount != w.recvChunks {
+		t.Fatalf("Number of write chunks to fake server did not match - expected: %d, got: %d", w.recvChunks, w.recvCount)
+	}
+	// Don't verify - we reserve the right to not actually write to the underlying store in this scenario
 }
 
 func TestWriteExisting(t *testing.T) {

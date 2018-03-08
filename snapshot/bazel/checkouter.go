@@ -1,7 +1,6 @@
 package bazel
 
 import (
-	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -52,14 +51,6 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 			Hash:      sha,
 			SizeBytes: size,
 		},
-	}
-
-	// If EmptySha/EmptySize, create the requested dir and bypass, as this can cause problems with CAS
-	if sha == bazel.EmptySha && size == bazel.EmptySize {
-		if err = os.Mkdir(dir, 0777); err != nil {
-			return nil, err
-		}
-		return co, nil
 	}
 
 	err = bf.tree.materialize(sha, size, dir)
