@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
@@ -38,10 +39,9 @@ func TestFindMissingBlobsStub(t *testing.T) {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
 
-	ctx := context.Background()
 	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
 
-	res, err := s.FindMissingBlobs(ctx, req)
+	res, err := s.FindMissingBlobs(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Error response from FindMissingBlobs: %v", err)
 	}
@@ -213,10 +213,9 @@ func TestQueryWriteStatusStub(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
 
-	ctx := context.Background()
 	req := &bytestream.QueryWriteStatusRequest{}
 
-	_, err := s.QueryWriteStatus(ctx, req)
+	_, err := s.QueryWriteStatus(context.Background(), req)
 	if err == nil {
 		t.Fatal("Expected error response from QueryWriteStatus, got nil")
 	}
@@ -231,10 +230,9 @@ func TestQueryWriteStatusStub(t *testing.T) {
 
 func TestBatchUpdateBlobsStub(t *testing.T) {
 	s := casServer{}
-	ctx := context.Background()
 	req := &remoteexecution.BatchUpdateBlobsRequest{}
 
-	_, err := s.BatchUpdateBlobs(ctx, req)
+	_, err := s.BatchUpdateBlobs(context.Background(), req)
 	if err == nil {
 		t.Fatalf("Non-error response from BatchUpdateBlobs")
 	}
@@ -247,12 +245,11 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 	}
 }
 
-func TestGetTree(t *testing.T) {
+func TestGetTreeStub(t *testing.T) {
 	s := casServer{}
-	ctx := context.Background()
 	req := &remoteexecution.GetTreeRequest{}
 
-	_, err := s.GetTree(ctx, req)
+	_, err := s.GetTree(context.Background(), req)
 	if err == nil {
 		t.Fatalf("Non-error response from GetTree")
 	}
@@ -262,6 +259,42 @@ func TestGetTree(t *testing.T) {
 	}
 	if st.Code() != codes.Unimplemented {
 		t.Fatalf("Expected status code %d, got: %d", codes.Unimplemented, st.Code())
+	}
+}
+
+func TestGetActionResult(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	arAsBytes, err := getFakeActionResult()
+	if err != nil {
+		t.Fatalf("Error getting ActionResult: %s", err)
+	}
+
+	// Get ActionDigest and Write AR to underlying store
+	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	resourceName := bazel.DigestStoreName(ad)
+	err = f.Write(resourceName, bytes.NewReader(arAsBytes), nil)
+	if err != nil {
+		t.Fatalf("Failed to write into FakeStore: %v", err)
+	}
+
+	// Make GetActionResult request
+	req := &remoteexecution.GetActionResultRequest{ActionDigest: ad}
+
+	resAr, err := s.GetActionResult(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Error from GetActionResult: %v", err)
+	}
+
+	// Convert result to bytes and compare
+	resAsBytes, err := proto.Marshal(resAr)
+	if err != nil {
+		t.Fatalf("Error serializing result: %s", err)
+	}
+
+	if bytes.Compare(arAsBytes, resAsBytes) != 0 {
+		t.Fatal("Result not as expected after serialization")
 	}
 }
 
@@ -344,4 +377,25 @@ func (s *fakeWriteServer) Recv() (*bytestream.WriteRequest, error) {
 	s.offset = s.offset + recvLen
 	s.recvCount++
 	return r, nil
+}
+
+// Serialize an ActionResult for placement in a Store for use in ActionCache testing
+func getFakeActionResult() ([]byte, error) {
+	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	ar := &remoteexecution.ActionResult{
+		OutputFiles: []*remoteexecution.OutputFile{
+			&remoteexecution.OutputFile{Path: "/dir/file", Digest: d},
+		},
+		OutputDirectories: []*remoteexecution.OutputDirectory{
+			&remoteexecution.OutputDirectory{Path: "/dir", TreeDigest: d},
+		},
+		ExitCode:     int32(12),
+		StdoutDigest: d,
+		StderrDigest: d,
+	}
+	arAsBytes, err := proto.Marshal(ar)
+	if err != nil {
+		return nil, err
+	}
+	return arAsBytes, nil
 }
