@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 
+	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
@@ -22,14 +23,16 @@ import (
 	"github.com/twitter/scoot/snapshot/store"
 )
 
-// Implements GRPCServer, remoteexecution.ContentAddressableStoreServer, bytestream.ByteStreamServer interfaces
+// Implements GRPCServer, remoteexecution.ContentAddressableStoreServer,
+// remoteexecution.ActionCacheServer, bytestream.ByteStreamServer interfaces
 type casServer struct {
 	listener    net.Listener
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 }
 
-// Creates a new GRPCServer (CASServer/ByteStreamServer) based on a listener, and preregisters the service
+// Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
+// based on a listener, and preregisters the service
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
 	g := casServer{
 		listener:    l,
@@ -37,6 +40,7 @@ func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
 		storeConfig: cfg,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
+	remoteexecution.RegisterActionCacheServer(g.server, &g)
 	bytestream.RegisterByteStreamServer(g.server, &g)
 	return &g
 }
@@ -102,7 +106,7 @@ func (s *casServer) GetTree(
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
 }
 
-// CAS - ByteStream APIs
+// ByteStream APIs
 
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
@@ -196,7 +200,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 
 // Writes data into bundlestore from a client via grpc streaming.
 // Implements googleapis bytestream Write
-// TODO store.Stores do not support partial Writes, and neither does our implementation.
+// store.Stores do not support partial Writes, and neither does our implementation.
 // We can support partial Write by keeping buffers for inflight requests in the casServer.
 // When the entire Write is buffered, we can Write to the Store and return a response with the result.
 // NOTE We also no not currently attempt any resolution between multiple client UUIDs writing the same resource
@@ -311,11 +315,71 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 }
 
 // QueryWriteStatus gives status information about a Write operation in progress
-// TODO unsupported, may be added later for V1
+// Unsupported, may be added later for V1
 func (s *casServer) QueryWriteStatus(
 	context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
 }
+
+// ActionCache APIs
+
+// Retrieve a cached execution result. Results are keyed on ActionDigests of run commands.
+func (s *casServer) GetActionResult(ctx context.Context,
+	req *remoteexecution.GetActionResultRequest) (*remoteexecution.ActionResult, error) {
+	log.Debugf("Received GetActionResult request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
+	// Validate input digest
+	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid ActionDigest %s", req.GetActionDigest()))
+	}
+
+	// If nil digest was requested, that's odd - return nil action result
+	if req.GetActionDigest().GetHash() == bazel.EmptySha {
+		log.Info("GetActionResult - returning empty ActionResult from request for EmptySha ActionDigest")
+		return &remoteexecution.ActionResult{}, nil
+	}
+
+	// Attempt to read AR from Store. If we error on opening, assume the resource was not found
+	storeName := bazel.DigestStoreName(req.GetActionDigest())
+	log.Infof("Opening store resource for reading: %s", storeName)
+
+	r, err := s.storeConfig.Store.OpenForRead(storeName)
+	if err != nil {
+		log.Errorf("Failed to OpenForRead: %v", err)
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Failed opening %s for read, returning NotFound. Err: %v", storeName, err))
+	}
+	defer r.Close()
+
+	arAsBytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Errorf("Failed reading ActionResult from Store (resource %s): %s", storeName, err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error reading from %s: %s", storeName, err))
+	}
+
+	// Deserialize store data as AR
+	ar := &remoteexecution.ActionResult{}
+	if err := proto.Unmarshal(arAsBytes, ar); err != nil {
+		log.Errorf("Failed to deserialize bytes from %s as ActionResult: %s", storeName, err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error deserializing ActionResult: %s", err))
+	}
+
+	log.Infof("GetActionResult returning cached result: %s", ar)
+	return ar, nil
+}
+
+// Client-facing service for caching ActionResults. Support is optional per Bazel API,
+// as the server can still cache and retrieve results internally.
+// Currently not supported in Scoot
+func (s *casServer) UpdateActionResult(context.Context,
+	*remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
+	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
+}
+
+// Internal functions
 
 // Interface for reading Empty data in a normal way while bypassing the underlying store
 type nilReader struct{}
