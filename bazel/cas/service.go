@@ -235,6 +235,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
 			if resource.Digest.GetHash() == bazel.EmptySha {
+				log.Infof("Request to write empty sha - bypassing Store write and Closing")
 				res := &bytestream.WriteResponse{CommittedSize: bazel.EmptySize}
 				err := ser.SendAndClose(res)
 				if err != nil {
