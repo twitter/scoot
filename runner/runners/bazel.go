@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 
@@ -149,7 +148,6 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputFile, error) {
 	outputFiles := []*remoteexecution.OutputFile{}
 	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputFiles() {
-		relPath = path.Join("/", relPath)
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
@@ -189,7 +187,6 @@ func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir s
 func ingestOutputDirs(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputDirectory, error) {
 	outputDirs := []*remoteexecution.OutputDirectory{}
 	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputDirectories() {
-		relPath = path.Join("/", relPath)
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
