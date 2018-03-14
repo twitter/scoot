@@ -34,6 +34,8 @@ func (e *NotFoundError) Error() string {
 }
 
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
+// Returns bytes read or an error. If the requested resource was not found,
+// returns a NotFoundError
 func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {

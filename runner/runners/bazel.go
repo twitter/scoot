@@ -38,7 +38,10 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
 		return fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel")
 	}
 	if err := fetchBazelCommand(bzFiler, cmd); err != nil {
+		log.Errorf("Error fetching Bazel command: %v", err)
 		// NB: Important to return this error as-is
+		// Called function can return a particular error type if the read
+		// resource was not found, and we want to propagate this
 		return err
 	}
 	log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
@@ -54,6 +57,8 @@ func fetchBazelCommand(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) error {
 	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, digest)
 	if err != nil {
 		// NB: Important to return this error as-is
+		// CAS client function returns a particular error type if the read
+		// resource was not found, and we want to propagate this
 		log.Errorf("Error reading command data from CAS server: %s", err)
 		return err
 	}
@@ -87,26 +92,26 @@ func postProcessBazel(filer snapshot.Filer,
 	if err != nil {
 		errstr := fmt.Sprintf("Error ingesting stdout to CAS: %s", err)
 		log.Error(errstr)
-		return nil, fmt.Errorf("%s", errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 	stderrDigest, err := writeFileToCAS(bzFiler, stderr.AsFile())
 	if err != nil {
 		errstr := fmt.Sprintf("Error ingesting stderr to CAS: %s", err)
 		log.Error(errstr)
-		return nil, fmt.Errorf("%s", errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 
 	outputFiles, err := ingestOutputFiles(bzFiler, cmd, coDir)
 	if err != nil {
 		errstr := fmt.Sprintf("Error ingesting OutputFiles: %s", err)
 		log.Error(errstr)
-		return nil, fmt.Errorf("%s", errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 	outputDirs, err := ingestOutputDirs(bzFiler, cmd, coDir)
 	if err != nil {
 		errstr := fmt.Sprintf("Error ingesting OutputDirs: %s", err)
 		log.Error(errstr)
-		return nil, fmt.Errorf("%s", errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 
 	return &bazelapi.ActionResult{

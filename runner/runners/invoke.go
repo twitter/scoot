@@ -109,7 +109,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					log.Errorf("Error generating Failed Precondition status: %s", err)
 				} else {
 					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
-					return failedStatus
 				}
 			}
 			return failedStatus
@@ -189,7 +188,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 						log.Errorf("Error generating Failed Precondition status: %s", err)
 					} else {
 						failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
-						return failedStatus
 					}
 				}
 			}

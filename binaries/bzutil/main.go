@@ -40,26 +40,27 @@ func main() {
 	// - upload Directory (tbd)
 	// - download outputs, stdout/err
 
-	// Subcommands
-	uploadCommand := flag.NewFlagSet(uploadCmdStr, flag.ExitOnError)
-	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
-	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
+	// Subcommand flag definitions
 
-	// Upload Command flags
+	// Upload Command
+	uploadCommand := flag.NewFlagSet(uploadCmdStr, flag.ExitOnError)
 	uploadAddr := uploadCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 
-	// Get Operation flags
+	// Get Operation
+	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
 
-	// Execute flags
+	// Execute
+	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
 	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	execCmdDigest := execCommand.String("command", "", "Command digest as '<hash>/<size>'")
 	execRootDigest := execCommand.String("input_root", "", "Input root digest as '<hash>/<size>'")
 	execOutputFiles := execCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	execOutputDirs := execCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
 
+	// Parse input flags
 	if len(os.Args) < 2 {
 		printSupported()
 		os.Exit(1)
@@ -76,6 +77,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Run parsed subcommand
 	if uploadCommand.Parsed() {
 		uploadArgv := uploadCommand.Args()
 		if len(uploadArgv) == 0 {
