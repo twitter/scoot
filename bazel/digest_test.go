@@ -36,6 +36,14 @@ func TestDigestStoreName(t *testing.T) {
 
 	expected := fmt.Sprintf("%s-%s.%s", StorePrefix, hash, StorePrefix)
 	if n := DigestStoreName(d); n != expected {
-		t.Fatalf("Wront digest store name, expected: %s, got: %s", expected, n)
+		t.Fatalf("Wrong digest store name, expected: %s, got: %s", expected, n)
+	}
+}
+
+func TestDigestFromString(t *testing.T) {
+	s := "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b/123"
+	_, err := DigestFromString(s)
+	if err != nil {
+		t.Fatalf("Failed to create digest from string: %s", err)
 	}
 }

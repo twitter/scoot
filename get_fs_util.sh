@@ -2,7 +2,7 @@
 # Pulls in fs_util tool for use in remote exec ingestion, checkout, and CAS ops
 set -e
 
-pants_release="1.5.0.dev3%2B569f14c2"
+pants_release="1.5.0rc0%2Bb5c5b7ee"
 
 get_fs_util() {
 	case "$(uname -s)" in

@@ -8,8 +8,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
@@ -18,6 +20,7 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
+	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
@@ -93,8 +96,22 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	// Bazel requests - fetch command argv/env from CAS
 	if runType == runner.RunTypeBazel {
 		if err := preProcessBazel(inv.filerMap[runType].Filer, cmd); err != nil {
-			return runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
+			failedStatus := runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+
+			// If we encounter a cas NotFoundError, set a grpc status message in
+			// the failure run status that indicates missing data to client
+			if _, ok := err.(*cas.NotFoundError); ok {
+				log.Info("NotFound error for Command during Bazel preprocess - Setting grpc Status error")
+				errStatus, err := getFailedPreconditionStatus([]*remoteexecution.Digest{
+					cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()})
+				if err != nil {
+					log.Errorf("Error generating Failed Precondition status: %s", err)
+				} else {
+					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
+				}
+			}
+			return failedStatus
 		}
 	}
 
@@ -158,8 +175,23 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			downloadTimer.Stop()
 		}
 		if err != nil {
-			return runner.FailedStatus(id, err,
+			failedStatus := runner.FailedStatus(id, err,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+
+			// For Checkout errors from Bazel commands that indicate non-existance, we set a GRPC
+			// Status error indicating that the InputRoot data could not be found.
+			if runType == runner.RunTypeBazel {
+				if _, ok := err.(*bzsnapshot.CheckoutNotExistError); ok {
+					log.Info("Checkout for Bazel command returned CheckoutNotExistError - Setting grpc Status error")
+					errStatus, err := getCheckoutMissingStatus(cmd.SnapshotID)
+					if err != nil {
+						log.Errorf("Error generating Failed Precondition status: %s", err)
+					} else {
+						failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
+					}
+				}
+			}
+			return failedStatus
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
@@ -197,9 +229,13 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	marker := "###########################################\n###########################################\n"
 	format := "%s\n\nDate: %v\nOut: %s\tErr: %s\tOutErr: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
-	stdout.Write([]byte(header))
-	stderr.Write([]byte(header))
-	stdlog.Write([]byte(header))
+	// TODO Don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
+	// (via Invoker -> QueueRunner construction) or Command level (job requestor specifies in e.g. a PlatformProperty)
+	if runType != runner.RunTypeBazel {
+		stdout.Write([]byte(header))
+		stderr.Write([]byte(header))
+		stdlog.Write([]byte(header))
+	}
 	log.WithFields(
 		log.Fields{
 			"runID":  id,
@@ -347,7 +383,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			case res := <-ingestCh:
 				switch res.(type) {
 				case error:
-					return runner.FailedStatus(id, fmt.Errorf("Error postprocessing Bazel command: %s", err),
+					return runner.FailedStatus(id, fmt.Errorf("Error postprocessing Bazel command: %s", res),
 						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 				}
 				actionResult = res.(*bazelapi.ActionResult)

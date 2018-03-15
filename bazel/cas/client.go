@@ -8,6 +8,8 @@ import (
 	"google.golang.org/genproto/googleapis/bytestream"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/common/dialer"
 )
@@ -17,7 +19,23 @@ import (
 // the majority of the CAS Client implementation. We provide wrappers as
 // higher-level operations.
 
+// Type that indicates a CAS client operation found because the server returned a GRPC
+// NOT_FOUND error.
+type NotFoundError struct {
+	Err string
+}
+
+// Implements Error interface
+func (e *NotFoundError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return e.Err
+}
+
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
+// Returns bytes read or an error. If the requested resource was not found,
+// returns a NotFoundError
 func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -54,7 +72,7 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 
 	rc, err := bsc.Read(context.Background(), req)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to make Read request: %s", err)
+		return nil, fmt.Errorf("Failed to get ReadClient: %s", err)
 	}
 
 	// Recv from server until Limit reached
@@ -62,6 +80,12 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 	for bytesRead := int64(0); bytesRead < req.ReadLimit; {
 		res, err := rc.Recv()
 		if err != nil {
+			// If error is a grpc Status, check if it has a grpc NOT_FOUND code
+			if grpcStatus, ok := status.FromError(err); ok {
+				if grpcStatus.Code() == codes.NotFound {
+					return nil, &NotFoundError{Err: grpcStatus.Message()}
+				}
+			}
 			return nil, fmt.Errorf("Failed Recv'ing data from server: %s", err)
 		}
 		read := res.GetData()
