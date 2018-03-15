@@ -29,6 +29,8 @@ _testmain.go
 #Files
 .DS_Store
 coverage.txt
+dirlist.out
+profile.out
 *~
 
 # Vim (superior to emacs)
