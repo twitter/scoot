@@ -21,8 +21,14 @@ go install github.com/twitter/scoot/binaries/scheduler github.com/twitter/scoot/
 ```
 
 ## BZUtil CLI Client
-The preferred client for Scoot operations is binaries/bzutil, which implements GRPC client interfaces.
+The preferred client for Scoot operations is binaries/bzutil/main.go, which implements GRPC client interfaces.
 For more raw testing of service interfaces, the generic grpc_cli client can be used.
+
+## FS_UTIL Client
+We leverage the fs_util client binary which is managed by the https://github.com/pantsbuild/pants/ project. We
+coordinate to find suitable releases and specify them in the `get_fs_util.sh` script. The project Makefile will
+fetch the correct client and make it available where needed by Scoot.
+Binaries are fetched from https://binaries.pantsbuild.org
 
 ## GRPC CLI Client
 Testing the gRPC APIs can be done with the grpc_cli tool, which can be used as a client for any gRPC server.
