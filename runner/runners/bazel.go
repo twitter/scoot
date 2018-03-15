@@ -51,7 +51,7 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
 // Get the Bazel Command from the embedded ExecuteRequest digest,
 // and populate the runner.Command's Argv and Env fields
 func fetchBazelCommand(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) error {
-	digest := cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()
+	digest := cmd.ExecuteRequest.GetRequest().GetAction().GetCommandDigest()
 
 	log.Info("Fetching Bazel Command data from CAS server")
 	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, digest)
@@ -122,7 +122,7 @@ func postProcessBazel(filer snapshot.Filer,
 			StdoutDigest:      stdoutDigest,
 			StderrDigest:      stderrDigest,
 		},
-		ActionDigest: cmd.ExecuteRequest.ActionDigest,
+		ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
 	}, nil
 }
 
@@ -152,7 +152,7 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 // Files located are Ingested in to the CAS via the BzFiler
 func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputFile, error) {
 	outputFiles := []*remoteexecution.OutputFile{}
-	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputFiles() {
+	for _, relPath := range cmd.ExecuteRequest.GetRequest().GetAction().GetOutputFiles() {
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
@@ -191,7 +191,7 @@ func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir s
 // Directories located are Ingested in to the CAS via the BzFiler
 func ingestOutputDirs(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputDirectory, error) {
 	outputDirs := []*remoteexecution.OutputDirectory{}
-	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputDirectories() {
+	for _, relPath := range cmd.ExecuteRequest.GetRequest().GetAction().GetOutputDirectories() {
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
