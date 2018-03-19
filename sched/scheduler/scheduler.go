@@ -14,4 +14,8 @@ type Scheduler interface {
 	KillJob(jobId string) error
 
 	GetSagaCoord() saga.SagaCoordinator
+
+	OfflineWorker(id string) error
+
+	ReinstateWorker(id string) error
 }

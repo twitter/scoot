@@ -128,5 +128,13 @@ service CloudScoot {
   JobStatus KillJob(1: string jobId) throws (
     1: InvalidRequest ir
     2: ScootServerError err
-    )
+  )
+  void OfflineWorker(1: string id) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  void ReinstateWorker(1: string id) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
 }

@@ -31,6 +31,115 @@ func NewCloudScootClient(config CloudScootClientConfig) *CloudScootClient {
 	}
 }
 
+// RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
+//the specified job. If successful the JobId is returned if not an error.
+func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
+	err = c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	jobId, err := c.client.RunJob(jobDef)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return jobId, err
+}
+
+// GetStatus API. Returns the JobStatus of the specified JobId if successful,
+// otherwise an erorr.
+func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err error) {
+	err = c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	jobStatus, err := c.client.GetStatus(jobId)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return jobStatus, err
+}
+
+// Close any open Transport associated with this ScootClient
+func (c *CloudScootClient) Close() error {
+	if c.client != nil {
+		return c.closeConnection()
+	}
+
+	return nil
+}
+
+func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error) {
+	err = c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	jobStatus, err := c.client.KillJob(jobId)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return jobStatus, err
+}
+
+func (c *CloudScootClient) OfflineWorker(id string) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+	err = c.client.OfflineWorker(id)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
+}
+
+func (c *CloudScootClient) ReinstateWorker(id string) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+	err = c.client.ReinstateWorker(id)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
+}
+
+// helper method to check for a non-nil client / create one
+func (c *CloudScootClient) checkForClient() (err error) {
+	if c.client == nil {
+		c.client, err = createClient(c.addr, c.dialer)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // helper method to create a scoot.CloudScootClient
 func createClient(addr string, dialer dialer.Dialer) (*scoot.CloudScootClient, error) {
 	transport, protocolFactory, err := dialer.Dial(addr)
@@ -48,84 +157,4 @@ func (c *CloudScootClient) closeConnection() error {
 	c.client = nil
 
 	return err
-}
-
-// RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
-//the specified job. If successful the JobId is returned if not an error.
-func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
-	if c.client == nil {
-		c.client, err = createClient(c.addr, c.dialer)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	jobId, err := c.client.RunJob(jobDef)
-
-	// if an error occurred reset the connection, could be a broken pipe or other
-	// unrecoverable error.  reset connection so a new clean one gets created
-	// on the next request
-	if err != nil {
-		// this could cause an error when closing transport
-		// but we don't care do our best effort and move on
-		c.closeConnection()
-	}
-
-	return jobId, err
-}
-
-// GetStatus API. Returns the JobStatus of the specified JobId if successful,
-// otherwise an erorr.
-func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err error) {
-	if c.client == nil {
-		c.client, err = createClient(c.addr, c.dialer)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	jobStatus, err := c.client.GetStatus(jobId)
-
-	// if an error occurred reset the connection, could be a broken pipe or other
-	// unrecoverable error.  reset connection so a new clean one gets created
-	// on the next request
-	if err != nil {
-		// this could cause an error when closing transport
-		// but we don't care do our best effort and move on
-		c.closeConnection()
-	}
-
-	return jobStatus, err
-}
-
-// Close any open Transport associated with this ScootClient
-func (c *CloudScootClient) Close() error {
-	if c.client != nil {
-		return c.closeConnection()
-	}
-
-	return nil
-}
-
-func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error) {
-
-	if c.client == nil {
-		c.client, err = createClient(c.addr, c.dialer)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	jobStatus, err := c.client.KillJob(jobId)
-
-	// if an error occurred reset the connection, could be a broken pipe or other
-	// unrecoverable error.  reset connection so a new clean one gets created
-	// on the next request
-	if err != nil {
-		// this could cause an error when closing transport
-		// but we don't care do our best effort and move on
-		c.closeConnection()
-	}
-
-	return jobStatus, err
 }

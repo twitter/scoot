@@ -54,3 +54,13 @@ func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
 	return api.KillJob(jobId, h.scheduler, h.sagaCoord)
 }
+
+// Implements OfflineWorker Cloud Scoot API
+func (h *Handler) OfflineWorker(id string) error {
+	return api.OfflineWorker(id, h.scheduler)
+}
+
+// Implements ReinstateWorker Cloud Scoot API
+func (h *Handler) ReinstateWorker(id string) error {
+	return api.ReinstateWorker(id, h.scheduler)
+}

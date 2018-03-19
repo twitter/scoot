@@ -1016,6 +1016,24 @@ func (s *statefulScheduler) GetSagaCoord() saga.SagaCoordinator {
 	return s.sagaCoord
 }
 
+func (s *statefulScheduler) OfflineWorker(id string) error {
+	log.Info("Offlining worker %s", id)
+	n := cluster.NodeId(id)
+	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewRemove(n)}
+	return nil
+}
+
+func (s *statefulScheduler) ReinstateWorker(id string) error {
+	n := cluster.NodeId(id)
+	var ns *nodeState
+	if _, ok := s.clusterState.suspendedNodes[n]; !ok {
+		return fmt.Errorf("Node %s was not present in suspended nodes list. It can't be reinstated.", id)
+	}
+	log.Info("Reinstating worker %s", id)
+	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewAdd(ns.node)}
+	return nil
+}
+
 // process all requests verifying that the jobIds exist:  Send errors back
 // immediately on the request channel for jobId that don't exist, then
 // kill all the jobs with a valid ID

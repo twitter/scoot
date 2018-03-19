@@ -60,3 +60,23 @@ func (_m *MockScheduler) GetSagaCoord() saga.SagaCoordinator {
 func (_mr *_MockSchedulerRecorder) GetSagaCoord() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetSagaCoord")
 }
+
+func (_m *MockScheduler) OfflineWorker(id string) error {
+	ret := _m.ctrl.Call(_m, "OfflineWorker", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockSchedulerRecorder) OfflineWorker(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "OfflineWorker", arg0)
+}
+
+func (_m *MockScheduler) ReinstateWorker(id string) error {
+	ret := _m.ctrl.Call(_m, "ReinstateWorker", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockSchedulerRecorder) ReinstateWorker(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "ReinstateWorker", arg0)
+}
