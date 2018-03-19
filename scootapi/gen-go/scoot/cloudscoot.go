@@ -28,11 +28,11 @@ type CloudScoot interface {
 	//  - JobId
 	KillJob(jobId string) (r *JobStatus, err error)
 	// Parameters:
-	//  - ID
-	OfflineWorker(id string) (err error)
+	//  - Req
+	OfflineWorker(req *OfflineWorkerReq) (err error)
 	// Parameters:
-	//  - ID
-	ReinstateWorker(id string) (err error)
+	//  - Req
+	ReinstateWorker(req *ReinstateWorkerReq) (err error)
 }
 
 type CloudScootClient struct {
@@ -314,15 +314,15 @@ func (p *CloudScootClient) recvKillJob() (value *JobStatus, err error) {
 }
 
 // Parameters:
-//  - ID
-func (p *CloudScootClient) OfflineWorker(id string) (err error) {
-	if err = p.sendOfflineWorker(id); err != nil {
+//  - Req
+func (p *CloudScootClient) OfflineWorker(req *OfflineWorkerReq) (err error) {
+	if err = p.sendOfflineWorker(req); err != nil {
 		return
 	}
 	return p.recvOfflineWorker()
 }
 
-func (p *CloudScootClient) sendOfflineWorker(id string) (err error) {
+func (p *CloudScootClient) sendOfflineWorker(req *OfflineWorkerReq) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -333,7 +333,7 @@ func (p *CloudScootClient) sendOfflineWorker(id string) (err error) {
 		return
 	}
 	args := CloudScootOfflineWorkerArgs{
-		ID: id,
+		Req: req,
 	}
 	if err = args.Write(oprot); err != nil {
 		return
@@ -397,15 +397,15 @@ func (p *CloudScootClient) recvOfflineWorker() (err error) {
 }
 
 // Parameters:
-//  - ID
-func (p *CloudScootClient) ReinstateWorker(id string) (err error) {
-	if err = p.sendReinstateWorker(id); err != nil {
+//  - Req
+func (p *CloudScootClient) ReinstateWorker(req *ReinstateWorkerReq) (err error) {
+	if err = p.sendReinstateWorker(req); err != nil {
 		return
 	}
 	return p.recvReinstateWorker()
 }
 
-func (p *CloudScootClient) sendReinstateWorker(id string) (err error) {
+func (p *CloudScootClient) sendReinstateWorker(req *ReinstateWorkerReq) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -416,7 +416,7 @@ func (p *CloudScootClient) sendReinstateWorker(id string) (err error) {
 		return
 	}
 	args := CloudScootReinstateWorkerArgs{
-		ID: id,
+		Req: req,
 	}
 	if err = args.Write(oprot); err != nil {
 		return
@@ -711,7 +711,7 @@ func (p *cloudScootProcessorOfflineWorker) Process(seqId int32, iprot, oprot thr
 	iprot.ReadMessageEnd()
 	result := CloudScootOfflineWorkerResult{}
 	var err2 error
-	if err2 = p.handler.OfflineWorker(args.ID); err2 != nil {
+	if err2 = p.handler.OfflineWorker(args.Req); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
@@ -763,7 +763,7 @@ func (p *cloudScootProcessorReinstateWorker) Process(seqId int32, iprot, oprot t
 	iprot.ReadMessageEnd()
 	result := CloudScootReinstateWorkerResult{}
 	var err2 error
-	if err2 = p.handler.ReinstateWorker(args.ID); err2 != nil {
+	if err2 = p.handler.ReinstateWorker(args.Req); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
@@ -1653,18 +1653,27 @@ func (p *CloudScootKillJobResult) String() string {
 }
 
 // Attributes:
-//  - ID
+//  - Req
 type CloudScootOfflineWorkerArgs struct {
-	ID string `thrift:"id,1" json:"id"`
+	Req *OfflineWorkerReq `thrift:"req,1" json:"req"`
 }
 
 func NewCloudScootOfflineWorkerArgs() *CloudScootOfflineWorkerArgs {
 	return &CloudScootOfflineWorkerArgs{}
 }
 
-func (p *CloudScootOfflineWorkerArgs) GetID() string {
-	return p.ID
+var CloudScootOfflineWorkerArgs_Req_DEFAULT *OfflineWorkerReq
+
+func (p *CloudScootOfflineWorkerArgs) GetReq() *OfflineWorkerReq {
+	if !p.IsSetReq() {
+		return CloudScootOfflineWorkerArgs_Req_DEFAULT
+	}
+	return p.Req
 }
+func (p *CloudScootOfflineWorkerArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
 func (p *CloudScootOfflineWorkerArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -1699,10 +1708,9 @@ func (p *CloudScootOfflineWorkerArgs) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *CloudScootOfflineWorkerArgs) readField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.ID = v
+	p.Req = &OfflineWorkerReq{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
 	}
 	return nil
 }
@@ -1724,14 +1732,14 @@ func (p *CloudScootOfflineWorkerArgs) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *CloudScootOfflineWorkerArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:id: ", p), err)
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
 	}
-	if err := oprot.WriteString(string(p.ID)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.id (1) field write error: ", p), err)
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:id: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
 	}
 	return err
 }
@@ -1890,18 +1898,27 @@ func (p *CloudScootOfflineWorkerResult) String() string {
 }
 
 // Attributes:
-//  - ID
+//  - Req
 type CloudScootReinstateWorkerArgs struct {
-	ID string `thrift:"id,1" json:"id"`
+	Req *ReinstateWorkerReq `thrift:"req,1" json:"req"`
 }
 
 func NewCloudScootReinstateWorkerArgs() *CloudScootReinstateWorkerArgs {
 	return &CloudScootReinstateWorkerArgs{}
 }
 
-func (p *CloudScootReinstateWorkerArgs) GetID() string {
-	return p.ID
+var CloudScootReinstateWorkerArgs_Req_DEFAULT *ReinstateWorkerReq
+
+func (p *CloudScootReinstateWorkerArgs) GetReq() *ReinstateWorkerReq {
+	if !p.IsSetReq() {
+		return CloudScootReinstateWorkerArgs_Req_DEFAULT
+	}
+	return p.Req
 }
+func (p *CloudScootReinstateWorkerArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
 func (p *CloudScootReinstateWorkerArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -1936,10 +1953,9 @@ func (p *CloudScootReinstateWorkerArgs) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *CloudScootReinstateWorkerArgs) readField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.ID = v
+	p.Req = &ReinstateWorkerReq{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
 	}
 	return nil
 }
@@ -1961,14 +1977,14 @@ func (p *CloudScootReinstateWorkerArgs) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *CloudScootReinstateWorkerArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:id: ", p), err)
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
 	}
-	if err := oprot.WriteString(string(p.ID)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.id (1) field write error: ", p), err)
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:id: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
 	}
 	return err
 }

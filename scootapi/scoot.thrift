@@ -116,6 +116,16 @@ struct JobStatus {
   4: optional map<string, RunStatus> taskData
 }
 
+struct OfflineWorkerReq {
+  1: required string id
+  2: required string requestor
+}
+
+struct ReinstateWorkerReq {
+  1: required string id
+  2: required string requestor
+}
+
 service CloudScoot {
    JobId RunJob(1: JobDefinition job) throws (
     1: InvalidRequest ir
@@ -129,11 +139,11 @@ service CloudScoot {
     1: InvalidRequest ir
     2: ScootServerError err
   )
-  void OfflineWorker(1: string id) throws (
+  void OfflineWorker(1: OfflineWorkerReq req) throws (
     1: InvalidRequest ir
     2: ScootServerError err
   )
-  void ReinstateWorker(1: string id) throws (
+  void ReinstateWorker(1: ReinstateWorkerReq req) throws (
     1: InvalidRequest ir
     2: ScootServerError err
   )

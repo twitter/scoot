@@ -56,11 +56,11 @@ func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 }
 
 // Implements OfflineWorker Cloud Scoot API
-func (h *Handler) OfflineWorker(id string) error {
-	return api.OfflineWorker(id, h.scheduler)
+func (h *Handler) OfflineWorker(req *scoot.OfflineWorkerReq) error {
+	return api.OfflineWorker(req, h.scheduler)
 }
 
 // Implements ReinstateWorker Cloud Scoot API
-func (h *Handler) ReinstateWorker(id string) error {
-	return api.ReinstateWorker(id, h.scheduler)
+func (h *Handler) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
+	return api.ReinstateWorker(req, h.scheduler)
 }

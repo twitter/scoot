@@ -95,12 +95,12 @@ func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error)
 	return jobStatus, err
 }
 
-func (c *CloudScootClient) OfflineWorker(id string) error {
+func (c *CloudScootClient) OfflineWorker(req *scoot.OfflineWorkerReq) error {
 	err := c.checkForClient()
 	if err != nil {
 		return err
 	}
-	err = c.client.OfflineWorker(id)
+	err = c.client.OfflineWorker(req)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -112,12 +112,12 @@ func (c *CloudScootClient) OfflineWorker(id string) error {
 	return err
 }
 
-func (c *CloudScootClient) ReinstateWorker(id string) error {
+func (c *CloudScootClient) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
 	err := c.checkForClient()
 	if err != nil {
 		return err
 	}
-	err = c.client.ReinstateWorker(id)
+	err = c.client.ReinstateWorker(req)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request

@@ -15,7 +15,7 @@ type Scheduler interface {
 
 	GetSagaCoord() saga.SagaCoordinator
 
-	OfflineWorker(id string) error
+	OfflineWorker(req sched.OfflineWorkerReq) error
 
-	ReinstateWorker(id string) error
+	ReinstateWorker(req sched.ReinstateWorkerReq) error
 }

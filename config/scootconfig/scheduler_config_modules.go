@@ -22,7 +22,7 @@ const DefaultReadyFnBackoff = 5 * time.Second
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //                     marking it as completed.
 // DebugMode - if true, starts the scheduler up but does not start
-//             the update loop.  Instead the loop must be advanced manulaly
+//             the update loop.  Instead the loop must be advanced manually
 //             by calling step()
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
 //             from the sagalog, and restarts them.
@@ -38,6 +38,7 @@ type StatefulSchedulerConfig struct {
 	TaskTimeoutOverhead  string
 	MaxRequestors        int
 	MaxJobsPerRequestor  int
+	Admins               []string
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -72,5 +73,6 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 		ReadyFnBackoff:       DefaultReadyFnBackoff,
 		MaxRequestors:        c.MaxRequestors,
 		MaxJobsPerRequestor:  c.MaxJobsPerRequestor,
+		Admins:               c.Admins,
 	}, nil
 }
