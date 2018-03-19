@@ -33,7 +33,7 @@ func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 
 	id := args[0]
 
-	err := cl.scootClient.reinstateWorker(id)
+	err := cl.scootClient.ReinstateWorker(id)
 
 	if err != nil {
 		switch err := err.(type) {
