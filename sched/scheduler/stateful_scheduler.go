@@ -1023,7 +1023,7 @@ func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
 	}
 	log.Infof("Offlining worker %s", req.ID)
 	n := cluster.NodeId(req.ID)
-	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewRemove(n)}
+	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(n)}
 	return nil
 }
 
@@ -1032,13 +1032,13 @@ func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error 
 		return fmt.Errorf("Requestor %s unauthorized to reinstate worker", req.Requestor)
 	}
 	n := cluster.NodeId(req.ID)
-	if _, ok := s.clusterState.suspendedNodes[n]; !ok {
-		return fmt.Errorf("Node %s was not present in suspended nodes list. It can't be reinstated.", req.ID)
+	if ns, ok := s.clusterState.offlinedNodes[n]; !ok {
+		return fmt.Errorf("Node %s was not present in offlinedNodes. It can't be reinstated.", req.ID)
+	} else {
+		log.Infof("Reinstating worker %s", req.ID)
+		s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(ns.node)}
+		return nil
 	}
-	ns := s.clusterState.suspendedNodes[n]
-	log.Infof("Reinstating worker %s", req.ID)
-	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewAdd(ns.node)}
-	return nil
 }
 
 // process all requests verifying that the jobIds exist:  Send errors back
