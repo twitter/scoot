@@ -47,11 +47,11 @@ func (c *offlineWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []s
 		case *scoot.ScootServerError:
 			return fmt.Errorf("Scoot server error: %v", err.Error())
 		default:
-			return fmt.Errorf("Error getting status: %v", err.Error())
+			return fmt.Errorf("Error offlining worker: %v", err.Error())
 		}
 	}
 
-	log.Info("Worker %s offlined", id)
+	log.Infof("Worker %s offlined", id)
 
 	return nil
 }

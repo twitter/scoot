@@ -1,6 +1,7 @@
 package scootconfig
 
 import (
+	"strings"
 	"time"
 
 	"github.com/twitter/scoot/ice"
@@ -38,7 +39,7 @@ type StatefulSchedulerConfig struct {
 	TaskTimeoutOverhead  string
 	MaxRequestors        int
 	MaxJobsPerRequestor  int
-	Admins               []string
+	Admins               string
 }
 
 func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
@@ -61,6 +62,12 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 			return scheduler.SchedulerConfig{}, err
 		}
 	}
+	admins := []string{}
+	for _, admin := range strings.Split(c.Admins, ",") {
+		if admin != "" {
+			admins = append(admins, admin)
+		}
+	}
 
 	return scheduler.SchedulerConfig{
 		MaxRetriesPerTask:    c.MaxRetriesPerTask,
@@ -73,6 +80,6 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 		ReadyFnBackoff:       DefaultReadyFnBackoff,
 		MaxRequestors:        c.MaxRequestors,
 		MaxJobsPerRequestor:  c.MaxJobsPerRequestor,
-		Admins:               c.Admins,
+		Admins:               admins,
 	}, nil
 }

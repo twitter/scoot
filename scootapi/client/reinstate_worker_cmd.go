@@ -19,14 +19,14 @@ type reinstateWorkerCmd struct {
 func (c *reinstateWorkerCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "reinstate_worker",
-		Short: "reinstateWorker",
+		Short: "ReinstateWorker",
 	}
 	return r
 }
 
 func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Infof("Offlining Scoot Worker %s", args)
+	log.Infof("Reinstating Scoot Worker %s", args)
 
 	if len(args) == 0 {
 		return fmt.Errorf("A worker id must be provided in order to reinstate")
@@ -47,11 +47,11 @@ func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 		case *scoot.ScootServerError:
 			return fmt.Errorf("Scoot server error: %v", err.Error())
 		default:
-			return fmt.Errorf("Error getting status: %v", err.Error())
+			return fmt.Errorf("Error reinstating worker: %v", err.Error())
 		}
 	}
 
-	log.Info("Worker %s reinstated", id)
+	log.Infof("Worker %s reinstated", id)
 
 	return nil
 }

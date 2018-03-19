@@ -1021,7 +1021,7 @@ func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
 	if !stringInSlice(req.Requestor, s.config.Admins) {
 		return fmt.Errorf("Requestor %s unauthorized to offline worker", req.Requestor)
 	}
-	log.Info("Offlining worker %s", req.ID)
+	log.Infof("Offlining worker %s", req.ID)
 	n := cluster.NodeId(req.ID)
 	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewRemove(n)}
 	return nil
@@ -1032,11 +1032,11 @@ func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error 
 		return fmt.Errorf("Requestor %s unauthorized to reinstate worker", req.Requestor)
 	}
 	n := cluster.NodeId(req.ID)
-	var ns *nodeState
 	if _, ok := s.clusterState.suspendedNodes[n]; !ok {
 		return fmt.Errorf("Node %s was not present in suspended nodes list. It can't be reinstated.", req.ID)
 	}
-	log.Info("Reinstating worker %s", req.ID)
+	ns := s.clusterState.suspendedNodes[n]
+	log.Infof("Reinstating worker %s", req.ID)
 	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewAdd(ns.node)}
 	return nil
 }
