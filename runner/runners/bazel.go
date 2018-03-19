@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
@@ -34,7 +38,11 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
 		return fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel")
 	}
 	if err := fetchBazelCommand(bzFiler, cmd); err != nil {
-		return fmt.Errorf("Error retrieving Bazel command data: %v", err)
+		log.Errorf("Error fetching Bazel command: %v", err)
+		// NB: Important to return this error as-is
+		// Called function can return a particular error type if the read
+		// resource was not found, and we want to propagate this
+		return err
 	}
 	log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
 	return nil
@@ -43,11 +51,14 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
 // Get the Bazel Command from the embedded ExecuteRequest digest,
 // and populate the runner.Command's Argv and Env fields
 func fetchBazelCommand(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) error {
-	digest := cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()
+	digest := cmd.ExecuteRequest.GetRequest().GetAction().GetCommandDigest()
 
 	log.Info("Fetching Bazel Command data from CAS server")
 	bzCommandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, digest)
 	if err != nil {
+		// NB: Important to return this error as-is
+		// CAS client function returns a particular error type if the read
+		// resource was not found, and we want to propagate this
 		log.Errorf("Error reading command data from CAS server: %s", err)
 		return err
 	}
@@ -79,20 +90,28 @@ func postProcessBazel(filer snapshot.Filer,
 
 	stdoutDigest, err := writeFileToCAS(bzFiler, stdout.AsFile())
 	if err != nil {
-		return nil, fmt.Errorf("Error ingesting stdout to CAS: %s", err)
+		errstr := fmt.Sprintf("Error ingesting stdout to CAS: %s", err)
+		log.Error(errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 	stderrDigest, err := writeFileToCAS(bzFiler, stderr.AsFile())
 	if err != nil {
-		return nil, fmt.Errorf("Error ingesting stderr to CAS: %s", err)
+		errstr := fmt.Sprintf("Error ingesting stderr to CAS: %s", err)
+		log.Error(errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 
 	outputFiles, err := ingestOutputFiles(bzFiler, cmd, coDir)
 	if err != nil {
-		return nil, fmt.Errorf("Error ingesting OutputFiles: %s", err)
+		errstr := fmt.Sprintf("Error ingesting OutputFiles: %s", err)
+		log.Error(errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 	outputDirs, err := ingestOutputDirs(bzFiler, cmd, coDir)
 	if err != nil {
-		return nil, fmt.Errorf("Error ingesting OutputFiles: %s", err)
+		errstr := fmt.Sprintf("Error ingesting OutputDirs: %s", err)
+		log.Error(errstr)
+		return nil, fmt.Errorf(errstr)
 	}
 
 	return &bazelapi.ActionResult{
@@ -103,6 +122,7 @@ func postProcessBazel(filer snapshot.Filer,
 			StdoutDigest:      stdoutDigest,
 			StderrDigest:      stderrDigest,
 		},
+		ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
 	}, nil
 }
 
@@ -132,8 +152,7 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 // Files located are Ingested in to the CAS via the BzFiler
 func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputFile, error) {
 	outputFiles := []*remoteexecution.OutputFile{}
-	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputFiles() {
-		relPath = path.Join("/", relPath)
+	for _, relPath := range cmd.ExecuteRequest.GetRequest().GetAction().GetOutputFiles() {
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
@@ -172,8 +191,7 @@ func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir s
 // Directories located are Ingested in to the CAS via the BzFiler
 func ingestOutputDirs(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir string) ([]*remoteexecution.OutputDirectory, error) {
 	outputDirs := []*remoteexecution.OutputDirectory{}
-	for _, relPath := range cmd.ExecuteRequest.Request.GetAction().GetOutputDirectories() {
-		relPath = path.Join("/", relPath)
+	for _, relPath := range cmd.ExecuteRequest.GetRequest().GetAction().GetOutputDirectories() {
 		absPath := filepath.Join(coDir, relPath)
 		info, err := os.Stat(absPath)
 		if err != nil {
@@ -215,4 +233,39 @@ func ingestPath(bzFiler *bzsnapshot.BzFiler, absPath string) (*remoteexecution.D
 		return nil, fmt.Errorf("Error converting ingested snapshot ID %s to digest: %s", id, err)
 	}
 	return digest, nil
+}
+
+// Create a google RPC status "failed precondition" error with missing violation data for
+// a list of non-existing Digests per Bazel API
+func getFailedPreconditionStatus(notExist []*remoteexecution.Digest) (*google_rpc_status.Status, error) {
+	pcf := &google_rpc_errdetails.PreconditionFailure{
+		Violations: []*google_rpc_errdetails.PreconditionFailure_Violation{},
+	}
+
+	for _, ne := range notExist {
+		pcf.Violations = append(pcf.Violations, &google_rpc_errdetails.PreconditionFailure_Violation{
+			Type:    bazelapi.PreconditionMissing,
+			Subject: fmt.Sprintf("blobs/%s/%d", ne.GetHash(), ne.GetSizeBytes()),
+		})
+	}
+
+	pcfAsAny, err := ptypes.MarshalAny(pcf)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to serialize PreconditionFailure data: %s", err)
+	}
+
+	s := &google_rpc_status.Status{
+		Code:    int32(google_rpc_code.Code_FAILED_PRECONDITION),
+		Details: []*any.Any{pcfAsAny},
+	}
+	return s, nil
+}
+
+// Wrapper for returing precondition failure status from missing checkout/input root digest
+func getCheckoutMissingStatus(snapshotID string) (*google_rpc_status.Status, error) {
+	inputRoot, err := bazel.DigestFromSnapshotID(snapshotID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to convert SnapshotID %s to Digest: %s", snapshotID, err)
+	}
+	return getFailedPreconditionStatus([]*remoteexecution.Digest{inputRoot})
 }

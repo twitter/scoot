@@ -25,7 +25,7 @@
 [submodule "vendor/github.com/golang/mock"]
 	path = vendor/github.com/golang/mock
 	url = https://github.com/golang/mock
-	branch = bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
+	branch = 58cd061d09382b6011f84c1291ebe50ef2e25bab
 [submodule "vendor/github.com/leanovate/gopter"]
 	path = vendor/github.com/leanovate/gopter
 	url = https://github.com/leanovate/gopter

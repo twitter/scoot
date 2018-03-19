@@ -109,6 +109,7 @@ func (rs *runStatus) GetBazelResult() *bazelthrift.ActionResult_ {
 	return rs.GetBazelResult_()
 }
 
+// The Metadata Stage represents the high-level status about the task run
 func runStatusToExecuteOperationMetadata_Stage(rs *runStatus) remoteexecution.ExecuteOperationMetadata_Stage {
 	if rs == nil || rs.RunStatus == nil {
 		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
@@ -135,6 +136,9 @@ func runStatusToExecuteOperationMetadata_Stage(rs *runStatus) remoteexecution.Ex
 	}
 }
 
+// The Google RPC Status is used in the ExecuteResponse and is used primarily by the client to
+// determine the detailed state of a completed run. The resulting status codes are based on
+// guidelines defined in the Bazel API unless otherwise noted.
 func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 	if rs == nil || rs.RunStatus == nil {
 		return &google_rpc_status.Status{}
@@ -158,19 +162,22 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 		}
 	case scoot.RunStatusState_FAILED:
 		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
+			Code: int32(google_rpc_code.Code_INTERNAL),
 		}
+	// NOTE: The API does not indicate that ABORTED as an acceptable error, however
+	// given both the prevalence of Abort behavior in Scoot and the obviousness of the
+	// given status code, it is appropriate that we deviate slightly here.
 	case scoot.RunStatusState_ABORTED:
 		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
+			Code: int32(google_rpc_code.Code_ABORTED),
 		}
 	case scoot.RunStatusState_TIMEDOUT:
 		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
+			Code: int32(google_rpc_code.Code_DEADLINE_EXCEEDED),
 		}
 	case scoot.RunStatusState_BADREQUEST:
 		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
+			Code: int32(google_rpc_code.Code_INTERNAL),
 		}
 	default:
 		return &google_rpc_status.Status{

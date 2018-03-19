@@ -7,22 +7,31 @@ package bazelapi
 import (
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
+	log "github.com/sirupsen/logrus"
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	scootproto "github.com/twitter/scoot/common/proto"
 )
 
-// These types give us single reference points for passing Execute Requests and Action Results,
-// and leaves room for internal modifications if required
+const PreconditionMissing = "MISSING"
+
+// These types give us single reference points for passing Execute Requests and Action Results
+
+// Add ActionDigest so it's available throughout the Scoot stack without having to recompute
 type ExecuteRequest struct {
 	Request      *remoteexecution.ExecuteRequest
 	ActionDigest *remoteexecution.Digest
 }
 
+// Add ActionDigest again here so it's available when polling status - no ref to original request
+// Add GoogleAPIs RPC Status here so that we can propagate detailed error statuses from the runner upwards
 type ActionResult struct {
 	Result       *remoteexecution.ActionResult
 	ActionDigest *remoteexecution.Digest
+	GRPCStatus   *google_rpc_status.Status
 }
 
 func (e *ExecuteRequest) String() string {
@@ -36,7 +45,21 @@ func (a *ActionResult) String() string {
 	if a == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s\n%s", a.Result, a.ActionDigest)
+	return fmt.Sprintf("%s\n%s\n%s", a.Result, a.ActionDigest, a.GRPCStatus)
+}
+
+func (e *ExecuteRequest) GetRequest() *remoteexecution.ExecuteRequest {
+	if e == nil {
+		return &remoteexecution.ExecuteRequest{}
+	}
+	return e.Request
+}
+
+func (e *ExecuteRequest) GetActionDigest() *remoteexecution.Digest {
+	if e == nil {
+		return &remoteexecution.Digest{}
+	}
+	return e.ActionDigest
 }
 
 func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
@@ -51,6 +74,13 @@ func (a *ActionResult) GetActionDigest() *remoteexecution.Digest {
 		return &remoteexecution.Digest{}
 	}
 	return a.ActionDigest
+}
+
+func (a *ActionResult) GetGRPCStatus() *google_rpc_status.Status {
+	if a == nil {
+		return &google_rpc_status.Status{}
+	}
+	return a.GRPCStatus
 }
 
 // Transform request Bazel ExecuteRequest data into a domain object
@@ -71,6 +101,7 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 
 // Transform domain ExecuteRequest object into request representation
 func MakeExecReqThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.ExecuteRequest {
+	// Return nil if domain is nil is OK since this is a top-level data structure
 	if executeRequest == nil {
 		return nil
 	}
@@ -78,6 +109,7 @@ func MakeExecReqThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.Ex
 		InstanceName: &executeRequest.Request.InstanceName,
 		SkipCache:    &executeRequest.Request.SkipCacheLookup,
 		Action:       makeActionThriftFromDomain(executeRequest.Request.GetAction()),
+		ActionDigest: makeDigestThriftFromDomain(executeRequest.ActionDigest),
 	}
 }
 
@@ -98,22 +130,27 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 	return &ActionResult{
 		Result:       ar,
 		ActionDigest: makeDigestFromThrift(thriftResult.GetActionDigest()),
+		GRPCStatus:   makeGRPCStatusFromThrift(thriftResult.GetGRPCStatus()),
 	}
 }
 
 // Transform domain ActionResult object into thrift representation
 func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.ActionResult_ {
+	// Return nil if domain is nil is OK since this is a top-level data structure
 	if actionResult == nil {
 		return nil
 	}
+	var ec int32 = actionResult.Result.GetExitCode()
 	return &bazelthrift.ActionResult_{
-		StdoutDigest:      makeDigestThriftFromDomain(actionResult.Result.StdoutDigest),
-		StderrDigest:      makeDigestThriftFromDomain(actionResult.Result.StderrDigest),
-		StdoutRaw:         actionResult.Result.StdoutRaw,
-		StderrRaw:         actionResult.Result.StderrRaw,
-		OutputFiles:       makeOutputFilesThriftFromDomain(actionResult.Result.OutputFiles),
-		OutputDirectories: makeOutputDirsThriftFromDomain(actionResult.Result.OutputDirectories),
-		ExitCode:          &actionResult.Result.ExitCode,
+		StdoutDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStdoutDigest()),
+		StderrDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStderrDigest()),
+		StdoutRaw:         actionResult.Result.GetStdoutRaw(),
+		StderrRaw:         actionResult.Result.GetStderrRaw(),
+		OutputFiles:       makeOutputFilesThriftFromDomain(actionResult.Result.GetOutputFiles()),
+		OutputDirectories: makeOutputDirsThriftFromDomain(actionResult.Result.GetOutputDirectories()),
+		ExitCode:          &ec,
+		ActionDigest:      makeDigestThriftFromDomain(actionResult.ActionDigest),
+		GRPCStatus:        makeGRPCStatusThriftFromDomain(actionResult.GRPCStatus),
 	}
 }
 
@@ -191,10 +228,24 @@ func makePlatformFromThrift(thriftProperties []*bazelthrift.Property) *remoteexe
 	return platform
 }
 
+// returns nil and logs on error
+func makeGRPCStatusFromThrift(asBytes []byte) *google_rpc_status.Status {
+	if asBytes == nil {
+		return nil
+	}
+	status := &google_rpc_status.Status{}
+	err := proto.Unmarshal(asBytes, status)
+	if err != nil {
+		log.Errorf("Failed to deserialize thrift to google rpc status: %s", err)
+		return nil
+	}
+	return status
+}
+
 // Unexported "from domain to thrift" translations
 func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Action {
 	if action == nil {
-		return nil
+		return &bazelthrift.Action{}
 	}
 	t := scootproto.GetMsFromDuration(action.GetTimeout())
 	return &bazelthrift.Action{
@@ -210,9 +261,11 @@ func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Act
 
 func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.Digest {
 	if digest == nil {
-		return nil
+		return &bazelthrift.Digest{}
 	}
-	return &bazelthrift.Digest{Hash: digest.GetHash(), SizeBytes: digest.GetSizeBytes()}
+	var hash string = digest.GetHash()
+	var size int64 = digest.GetSizeBytes()
+	return &bazelthrift.Digest{Hash: &hash, SizeBytes: &size}
 }
 
 func makeOutputDirThriftFromDomain(outputDir *remoteexecution.OutputDirectory) *bazelthrift.OutputDirectory {
@@ -259,8 +312,23 @@ func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*bazel
 		if p == nil {
 			continue
 		}
-		bp := &bazelthrift.Property{Name: p.GetName(), Value: p.GetValue()}
+		var name string = p.GetName()
+		var value string = p.GetValue()
+		bp := &bazelthrift.Property{Name: &name, Value: &value}
 		props = append(props, bp)
 	}
 	return props
+}
+
+// returns nil and logs on error
+func makeGRPCStatusThriftFromDomain(status *google_rpc_status.Status) []byte {
+	if status == nil {
+		return nil
+	}
+	asBytes, err := proto.Marshal(status)
+	if err != nil {
+		log.Errorf("Failed to serialize google rpc status for thrift: %s", err)
+		return nil
+	}
+	return asBytes
 }

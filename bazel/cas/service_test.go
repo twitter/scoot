@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
@@ -38,10 +39,9 @@ func TestFindMissingBlobsStub(t *testing.T) {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
 
-	ctx := context.Background()
 	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
 
-	res, err := s.FindMissingBlobs(ctx, req)
+	res, err := s.FindMissingBlobs(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Error response from FindMissingBlobs: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestRead(t *testing.T) {
 
 	// Make a ReadRequest that exercises read limits and offsets
 	offset, limit := int64(2), int64(2)
-	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", testHash1), ReadOffset: offset, ReadLimit: limit}
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/%d", testHash1, testSize1), ReadOffset: offset, ReadLimit: limit}
 	r := makeFakeReadServer()
 
 	// Make actual Read request
@@ -90,6 +90,33 @@ func TestRead(t *testing.T) {
 	sends := int((testSize1-offset)/limit + (testSize1-offset)%limit)
 	if r.sendCount != sends {
 		t.Fatalf("Fake server Send() count mismatch - expected %d times based on - data len: %d ReadOffset: %d ReadLimit %d. got: %d", sends, testSize1, offset, limit, r.sendCount)
+	}
+	r.reset()
+}
+
+func TestReadEmpty(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	// Note: don't actually write the underlying resource beforehand. We expect
+	// that reading an empty blob will bypass the underlying store
+
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", bazel.EmptySha), ReadOffset: int64(0), ReadLimit: int64(0)}
+	r := makeFakeReadServer()
+
+	// Make actual Read request
+	err := s.Read(req, r)
+	if err != nil {
+		t.Fatalf("Error response from Read: %v", err)
+	}
+
+	// Get data sent/captured by fake server, and compare with expected based on testdata, limit, and offset
+	b, err := ioutil.ReadAll(r.buffer)
+	if err != nil {
+		t.Fatalf("Error reading from fake server data: %v", err)
+	}
+	if bytes.Compare(b, []byte{}) != 0 {
+		t.Fatalf("Data read from fake server did not match - expected: %s, got: %s", []byte{}, b)
 	}
 	r.reset()
 }
@@ -130,6 +157,28 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+func TestWriteEmpty(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	w := makeFakeWriteServer(bazel.EmptySha, bazel.EmptySize, []byte{}, 1)
+
+	// Make Write request with test data
+	err := s.Write(w)
+	if err != nil {
+		t.Fatalf("Error response from Write: %v", err)
+	}
+
+	// Verify that fake write server was invoked as expected
+	if w.committedSize != bazel.EmptySize {
+		t.Fatalf("Size committed to fake server did not match - expected: %d, got: %d", bazel.EmptySize, w.committedSize)
+	}
+	if w.recvCount != w.recvChunks {
+		t.Fatalf("Number of write chunks to fake server did not match - expected: %d, got: %d", w.recvChunks, w.recvCount)
+	}
+	// Don't verify - we reserve the right to not actually write to the underlying store in this scenario
+}
+
 func TestWriteExisting(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
@@ -164,10 +213,9 @@ func TestQueryWriteStatusStub(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
 
-	ctx := context.Background()
 	req := &bytestream.QueryWriteStatusRequest{}
 
-	_, err := s.QueryWriteStatus(ctx, req)
+	_, err := s.QueryWriteStatus(context.Background(), req)
 	if err == nil {
 		t.Fatal("Expected error response from QueryWriteStatus, got nil")
 	}
@@ -182,10 +230,9 @@ func TestQueryWriteStatusStub(t *testing.T) {
 
 func TestBatchUpdateBlobsStub(t *testing.T) {
 	s := casServer{}
-	ctx := context.Background()
 	req := &remoteexecution.BatchUpdateBlobsRequest{}
 
-	_, err := s.BatchUpdateBlobs(ctx, req)
+	_, err := s.BatchUpdateBlobs(context.Background(), req)
 	if err == nil {
 		t.Fatalf("Non-error response from BatchUpdateBlobs")
 	}
@@ -198,12 +245,11 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 	}
 }
 
-func TestGetTree(t *testing.T) {
+func TestGetTreeStub(t *testing.T) {
 	s := casServer{}
-	ctx := context.Background()
 	req := &remoteexecution.GetTreeRequest{}
 
-	_, err := s.GetTree(ctx, req)
+	_, err := s.GetTree(context.Background(), req)
 	if err == nil {
 		t.Fatalf("Non-error response from GetTree")
 	}
@@ -213,6 +259,42 @@ func TestGetTree(t *testing.T) {
 	}
 	if st.Code() != codes.Unimplemented {
 		t.Fatalf("Expected status code %d, got: %d", codes.Unimplemented, st.Code())
+	}
+}
+
+func TestGetActionResult(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	arAsBytes, err := getFakeActionResult()
+	if err != nil {
+		t.Fatalf("Error getting ActionResult: %s", err)
+	}
+
+	// Get ActionDigest and Write AR to underlying store
+	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	resourceName := bazel.DigestStoreName(ad)
+	err = f.Write(resourceName, bytes.NewReader(arAsBytes), nil)
+	if err != nil {
+		t.Fatalf("Failed to write into FakeStore: %v", err)
+	}
+
+	// Make GetActionResult request
+	req := &remoteexecution.GetActionResultRequest{ActionDigest: ad}
+
+	resAr, err := s.GetActionResult(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Error from GetActionResult: %v", err)
+	}
+
+	// Convert result to bytes and compare
+	resAsBytes, err := proto.Marshal(resAr)
+	if err != nil {
+		t.Fatalf("Error serializing result: %s", err)
+	}
+
+	if bytes.Compare(arAsBytes, resAsBytes) != 0 {
+		t.Fatal("Result not as expected after serialization")
 	}
 }
 
@@ -295,4 +377,25 @@ func (s *fakeWriteServer) Recv() (*bytestream.WriteRequest, error) {
 	s.offset = s.offset + recvLen
 	s.recvCount++
 	return r, nil
+}
+
+// Serialize an ActionResult for placement in a Store for use in ActionCache testing
+func getFakeActionResult() ([]byte, error) {
+	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	ar := &remoteexecution.ActionResult{
+		OutputFiles: []*remoteexecution.OutputFile{
+			&remoteexecution.OutputFile{Path: "/dir/file", Digest: d},
+		},
+		OutputDirectories: []*remoteexecution.OutputDirectory{
+			&remoteexecution.OutputDirectory{Path: "/dir", TreeDigest: d},
+		},
+		ExitCode:     int32(12),
+		StdoutDigest: d,
+		StderrDigest: d,
+	}
+	arAsBytes, err := proto.Marshal(ar)
+	if err != nil {
+		return nil, err
+	}
+	return arAsBytes, nil
 }
