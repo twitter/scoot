@@ -153,3 +153,70 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 
 	return nil
 }
+
+// Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
+func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remoteexecution.ActionResult, error) {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	req := &remoteexecution.GetActionResultRequest{ActionDigest: digest}
+
+	acc := remoteexecution.NewActionCacheClient(cc)
+	return getCacheFromClient(acc, req)
+}
+
+func getCacheFromClient(acc remoteexecution.ActionCacheClient,
+	req *remoteexecution.GetActionResultRequest) (*remoteexecution.ActionResult, error) {
+	if req == nil {
+		return nil, fmt.Errorf("Unexpected nil GetActionResultRequest in client")
+	}
+
+	ar, err := acc.GetActionResult(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to make GetActionResult request: %s", err)
+	}
+
+	return ar, nil
+}
+
+// Client function for UpdateActionResult requests. Takes a Resolver for ActionCache server and Digest/ActionResult to update.
+func UpdateCacheResult(r dialer.Resolver,
+	digest *remoteexecution.Digest, ar *remoteexecution.ActionResult) (*remoteexecution.ActionResult, error) {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	req := &remoteexecution.UpdateActionResultRequest{ActionDigest: digest, ActionResult: ar}
+
+	acc := remoteexecution.NewActionCacheClient(cc)
+	return updateCacheFromClient(acc, req)
+}
+
+func updateCacheFromClient(acc remoteexecution.ActionCacheClient,
+	req *remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
+	if req == nil {
+		return nil, fmt.Errorf("Unexpected nil UpdateActionResultRequest in client")
+	}
+
+	ar, err := acc.UpdateActionResult(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to make UpdateActionResult request: %s", err)
+	}
+
+	return ar, nil
+}

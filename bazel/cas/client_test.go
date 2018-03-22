@@ -17,8 +17,10 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
+	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
+	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
 )
 
 func TestClientRead(t *testing.T) {
@@ -60,5 +62,45 @@ func TestClientWrite(t *testing.T) {
 	err := writeFromClient(bsClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from client write: %s", err)
+	}
+}
+
+func TestActionCacheGet(t *testing.T) {
+	rc := int32(42)
+	req := &remoteexecution.GetActionResultRequest{ActionDigest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}}
+
+	mockCtrl := gomock.NewController(t)
+	accClientMock := mock_remoteexecution.NewMockActionCacheClient(mockCtrl)
+
+	accClientMock.EXPECT().GetActionResult(context.Background(), req).Return(&remoteexecution.ActionResult{ExitCode: rc}, nil)
+
+	ar, err := getCacheFromClient(accClientMock, req)
+	if err != nil {
+		t.Fatalf("Error from get cache: %s", err)
+	}
+
+	if ar.GetExitCode() != rc {
+		t.Fatalf("Unexpected result, got %d, want %d", ar.GetExitCode(), rc)
+	}
+}
+
+func TestActionCacheUpdate(t *testing.T) {
+	rc := int32(42)
+	ar := &remoteexecution.ActionResult{ExitCode: rc}
+	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	req := &remoteexecution.UpdateActionResultRequest{ActionDigest: ad, ActionResult: ar}
+
+	mockCtrl := gomock.NewController(t)
+	accClientMock := mock_remoteexecution.NewMockActionCacheClient(mockCtrl)
+
+	accClientMock.EXPECT().UpdateActionResult(context.Background(), req).Return(&remoteexecution.ActionResult{ExitCode: rc}, nil)
+
+	arRes, err := updateCacheFromClient(accClientMock, req)
+	if err != nil {
+		t.Fatalf("Error from get cache: %s", err)
+	}
+
+	if arRes.GetExitCode() != rc {
+		t.Fatalf("Unexpected result, got %d, want %d", arRes.GetExitCode(), rc)
 	}
 }
