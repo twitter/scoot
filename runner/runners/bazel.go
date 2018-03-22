@@ -48,13 +48,14 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.Actio
 			if _, ok := err.(*cas.NotFoundError); !ok {
 				log.Errorf("Failed to check for cached result, will execute: %s", err)
 			}
+		} else if ar != nil {
+			log.Info("Returning cached result for command")
+			return &bazelapi.ActionResult{
+				Result:       ar,
+				ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
+				Cached:       true,
+			}, nil
 		}
-
-		return &bazelapi.ActionResult{
-			Result:       ar,
-			ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
-			Cached:       true,
-		}, nil
 	}
 
 	if err := fetchBazelCommand(bzFiler, cmd); err != nil {
