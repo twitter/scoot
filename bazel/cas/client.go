@@ -187,7 +187,6 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 				return nil, &NotFoundError{Err: grpcStatus.Message()}
 			}
 		}
-		return nil, fmt.Errorf("Failed Recv'ing data from server: %s", err)
 		return nil, fmt.Errorf("Failed to make GetActionResult request: %s", err)
 	}
 
