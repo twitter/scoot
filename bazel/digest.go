@@ -4,6 +4,7 @@ package bazel
 
 import (
 	"fmt"
+	"strings"
 
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
@@ -22,4 +23,18 @@ func DigestStoreName(digest *remoteexecution.Digest) string {
 		return fmt.Sprintf("%s-%s.%s", StorePrefix, digest.GetHash(), StorePrefix)
 	}
 	return ""
+}
+
+// Create a Digest from a proprietary string format: "<hash>/<size>".
+// Returns a Digest if parsed and validated, or an error.
+func DigestFromString(s string) (*remoteexecution.Digest, error) {
+	parts := strings.Split(s, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid format, expected '<hash>/<size>'")
+	}
+	snap := fmt.Sprintf("%s-%s-%s", SnapshotIDPrefix, parts[0], parts[1])
+	if err := ValidateID(snap); err != nil {
+		return nil, err
+	}
+	return DigestFromSnapshotID(snap)
 }

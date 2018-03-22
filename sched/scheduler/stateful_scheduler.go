@@ -35,6 +35,18 @@ func init() {
 	}
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+// Clients will check for this string to differentiate between scoot and user initiated actions.
+const UserRequestedErrStr = "UserRequested"
+
 // Provide defaults for config settings that should never be uninitialized/zero.
 // These are reasonable defaults for a small cluster of around a couple dozen nodes.
 
@@ -139,8 +151,9 @@ type statefulScheduler struct {
 	clusterState   *clusterState
 	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
 	// no tasks have started yet.
-	requestorMap  map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
-	taskDurations map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
+	requestorMap     map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
+	requestorHistory map[string][]string        // map of join(requestor, basis) to new tags in the order received.
+	taskDurations    map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
@@ -258,6 +271,7 @@ func NewStatefulScheduler(
 		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
+		requestorHistory: make(map[string][]string),
 		taskDurations:    make(map[string]averageDuration),
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
@@ -311,6 +325,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	log.WithFields(
 		log.Fields{
 			"requestor": jobDef.Requestor,
+			"jobType":   jobDef.JobType,
 			"tag":       jobDef.Tag,
 			"basis":     jobDef.Basis,
 			"priority":  jobDef.Priority,
@@ -328,6 +343,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 			log.Fields{
 				"jobDef":    jobDef,
 				"requestor": jobDef.Requestor,
+				"jobType":   jobDef.JobType,
 				"tag":       jobDef.Tag,
 				"basis":     jobDef.Basis,
 				"priority":  jobDef.Priority,
@@ -350,6 +366,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 			log.Fields{
 				"jobDef":    jobDef,
 				"requestor": jobDef.Requestor,
+				"jobType":   jobDef.JobType,
 				"tag":       jobDef.Tag,
 				"basis":     jobDef.Basis,
 				"priority":  jobDef.Priority,
@@ -363,15 +380,18 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 	if err != nil {
 		log.WithFields(
 			log.Fields{
-				"jobDef": jobDef,
-				"err":    err,
-				"tag":    jobDef.Tag,
+				"jobDef":    jobDef,
+				"err":       err,
+				"requestor": jobDef.Requestor,
+				"jobType":   jobDef.JobType,
+				"tag":       jobDef.Tag,
 			}).Error("Failed to create saga for job request")
 		return "", err
 	}
 	log.WithFields(
 		log.Fields{
 			"requestor": jobDef.Requestor,
+			"jobType":   jobDef.JobType,
 			"tag":       jobDef.Tag,
 			"basis":     jobDef.Basis,
 			"priority":  jobDef.Priority,
@@ -484,6 +504,7 @@ func (s *statefulScheduler) updateStats() {
 			log.WithFields(
 				log.Fields{
 					"requestor":      job.Job.Def.Requestor,
+					"jobType":        job.Job.Def.JobType,
 					"jobId":          job.Job.Id,
 					"tag":            job.Job.Def.Tag,
 					"basis":          job.Job.Def.Basis,
@@ -523,8 +544,6 @@ func (s *statefulScheduler) updateStats() {
 
 // Checks if any new jobs have been requested since the last loop and adds
 // them to the jobs the scheduler is handling
-// TODO(jschiller): kill current jobs which share the same Requestor and Basis as these new jobs.
-// TODO(jschiller): kill current tasks that share the same Requestor and Tag as these new tasks.
 func (s *statefulScheduler) addJobs() {
 	// For all new job requests (on the check job channel) that have come in since the last iteration of the step() loop,
 	// verify the job request: it doesn't exceed the requestor's limits or number of requestors, has a valid priority and
@@ -549,6 +568,7 @@ checkLoop:
 			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P3 {
 				err = fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
 			} else {
+				// Check for duplicate task names
 				seenTasks := map[string]bool{}
 				for _, t := range checkJobMsg.jobDef.Tasks {
 					if _, ok := seenTasks[t.TaskID]; ok {
@@ -556,6 +576,20 @@ checkLoop:
 						break
 					}
 					seenTasks[t.TaskID] = true
+				}
+			}
+			if err == nil && checkJobMsg.jobDef.Basis != "" {
+				// Check if the given tag is expired for the given requestor & basis.
+				rb := checkJobMsg.jobDef.Requestor + checkJobMsg.jobDef.Basis
+				if stringInSlice(checkJobMsg.jobDef.Tag, s.requestorHistory[rb]) &&
+					s.requestorHistory[rb][len(s.requestorHistory[rb])-1] != checkJobMsg.jobDef.Tag {
+					err = fmt.Errorf("Expired tag=%s for basis=%s. Expected either tag=%s or new tag.",
+						checkJobMsg.jobDef.Tag, checkJobMsg.jobDef.Basis, s.requestorHistory[rb][len(s.requestorHistory[rb])-1])
+				} else {
+					if _, ok := s.requestorHistory[rb]; !ok {
+						s.requestorHistory[rb] = []string{}
+					}
+					s.requestorHistory[rb] = append(s.requestorHistory[rb], checkJobMsg.jobDef.Tag)
 				}
 			}
 			checkJobMsg.resultCh <- err
@@ -571,54 +605,55 @@ addLoop:
 		select {
 		case newJobMsg := <-s.addJobCh:
 			receivedJob = true
-
+			lf := log.Fields{
+				"jobID":     newJobMsg.job.Id,
+				"requestor": newJobMsg.job.Def.Requestor,
+				"jobType":   newJobMsg.job.Def.JobType,
+				"tag":       newJobMsg.job.Def.Tag,
+				"basis":     newJobMsg.job.Def.Basis,
+				"priority":  newJobMsg.job.Def.Priority,
+				"numTasks":  len(newJobMsg.job.Def.Tasks),
+			}
 			if _, ok := s.requestorMap[newJobMsg.job.Def.Requestor]; ok {
-				// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
-				// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
 				for _, js := range s.requestorMap[newJobMsg.job.Def.Requestor] {
+					// Kill any prior jobs that share the same requestor and non-empty basis string,
+					// but tag should be different so we don't kill the original jobs when doing retries for example.
+					// (retries share the same requestor, basis, and tag values).
+					if newJobMsg.job.Def.Basis != "" &&
+						js.Job.Def.Basis == newJobMsg.job.Def.Basis &&
+						js.Job.Def.Tag != newJobMsg.job.Def.Tag {
+						log.WithFields(lf).Infof("Matching basis, killing prevJobID=%s", js.Job.Id)
+						go s.KillJob(js.Job.Id) // we are in the main thread, this function must be called async.
+					}
+
+					// If we have an existing job with this requestor/tag combination, make sure we use its priority level.
+					// Not an error since we can consider priority to be a suggestion which we'll handle contextually.
 					if js.Job.Def.Tag == newJobMsg.job.Def.Tag &&
 						js.Job.Def.Basis != newJobMsg.job.Def.Basis &&
 						js.Job.Def.Priority != newJobMsg.job.Def.Priority {
-						m := newJobMsg
-						log.WithFields(
-							log.Fields{
-								"requestor": m.job.Def.Requestor,
-								"tag":       m.job.Def.Tag,
-								"basis":     m.job.Def.Basis,
-								"priority":  m.job.Def.Priority,
-								"numTasks":  len(m.job.Def.Tasks),
-							}).Info("Overriding job priority to match previous requestor/tag priority")
+						log.WithFields(lf).Info("Overriding job priority to match previous requestor/tag priority")
 						newJobMsg.job.Def.Priority = js.Job.Def.Priority
-						break
 					}
 				}
 			} else if newJobMsg.job.Def.Priority > MaxPriority {
 				// Priorities greater than 2 are disabled in job_state.go.
 				jd := newJobMsg.job.Def
 				log.Infof("Overriding job priority %d to respect max priority of %d (higher priority is untested and disabled)"+
-					"Requestor:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
-					jd.Priority, MaxPriority, jd.Requestor, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
+					"Requestor:%s, JobType:%s, Tag:%s, Basis:%s, Priority:%d, numTasks: %d",
+					jd.Priority, MaxPriority, jd.Requestor, jd.JobType, jd.Tag, jd.Basis, jd.Priority, len(jd.Tasks))
 				newJobMsg.job.Def.Priority = MaxPriority
 			}
 
 			js := newJobState(newJobMsg.job, newJobMsg.saga, s.taskDurations)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 
-			// TODO(jschiller): associate related tasks, i.e. task retries that decorate the taskId?
 			sort.Sort(sort.Reverse(taskStatesByDuration(js.Tasks)))
-
 			req := newJobMsg.job.Def.Requestor
 			if _, ok := s.requestorMap[req]; !ok {
 				s.requestorMap[req] = []*jobState{}
 			}
 			s.requestorMap[req] = append(s.requestorMap[req], js)
-			log.WithFields(
-				log.Fields{
-					"jobID":    newJobMsg.job.Id,
-					"req":      req,
-					"numTasks": len(newJobMsg.job.Def.Tasks),
-					"tag":      newJobMsg.job.Def.Tag,
-				}).Info("Created new job")
+			log.WithFields(lf).Info("Created new job")
 		default:
 			break addLoop
 		}
@@ -692,8 +727,10 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 					if err == nil {
 						log.WithFields(
 							log.Fields{
-								"jobID": j.Job.Id,
-								"tag":   j.Job.Def.Tag,
+								"jobID":     j.Job.Id,
+								"requestor": j.Job.Def.Requestor,
+								"jobType":   j.Job.Def.JobType,
+								"tag":       j.Job.Def.Tag,
 							}).Info("Job completed and logged")
 						// This job is fully processed remove from InProgressJobs
 						s.deleteJob(j.Job.Id)
@@ -704,9 +741,11 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						s.stat.Counter(stats.SchedRetriedEndSagaCounter).Inc(1) // TODO errata metric - remove if unused
 						log.WithFields(
 							log.Fields{
-								"jobID": j.Job.Id,
-								"err":   err,
-								"tag":   j.Job.Def.Tag,
+								"jobID":     j.Job.Id,
+								"err":       err,
+								"requestor": j.Job.Def.Requestor,
+								"jobType":   j.Job.Def.JobType,
+								"tag":       j.Job.Def.Tag,
 							}).Info("Job completed but failed to log")
 					}
 				})
@@ -728,6 +767,8 @@ func (s *statefulScheduler) scheduleTasks() {
 		nodeSt := ta.nodeSt
 		jobID := task.JobId
 		taskID := task.TaskId
+		requestor := s.getJob(jobID).Job.Def.Requestor
+		jobType := s.getJob(jobID).Job.Def.JobType
 		tag := s.getJob(jobID).Job.Def.Tag
 		taskDef := task.Def
 		taskDef.JobID = jobID
@@ -745,7 +786,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			endSagaTask := false
 			flaky := false
 			preempted := true
-			rt.TaskRunner.Abort(endSagaTask)
+			rt.TaskRunner.Abort(endSagaTask, "Preempted")
 			msg := fmt.Sprintf("jobId:%s taskId:%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobID, taskID)
 			log.Info(msg)
 			// Update jobState and clusterState here instead of in the async handler below.
@@ -757,11 +798,13 @@ func (s *statefulScheduler) scheduleTasks() {
 		s.clusterState.taskScheduled(nodeSt.node.Id(), jobID, taskID, taskDef.SnapshotID)
 		log.WithFields(
 			log.Fields{
-				"jobID":   jobID,
-				"taskID":  taskID,
-				"node":    nodeSt.node,
-				"tag":     tag,
-				"taskDef": taskDef,
+				"jobID":     jobID,
+				"taskID":    taskID,
+				"node":      nodeSt.node,
+				"requestor": requestor,
+				"jobType":   jobType,
+				"tag":       tag,
+				"taskDef":   taskDef,
 			}).Info("Task scheduled")
 
 		tRunner := &taskRunner{
@@ -784,7 +827,7 @@ func (s *statefulScheduler) scheduleTasks() {
 			task:   taskDef,
 			nodeSt: nodeSt,
 
-			abortCh:      make(chan bool, 1),
+			abortCh:      make(chan abortReq, 1),
 			queryAbortCh: make(chan interface{}, 1),
 
 			startTime: time.Now(),
@@ -822,6 +865,8 @@ func (s *statefulScheduler) scheduleTasks() {
 							"taskID":      taskID,
 							"runningJob":  nodeSt.runningJob,
 							"runningTask": nodeSt.runningTask,
+							"requestor":   requestor,
+							"jobType":     jobType,
 							"tag":         tag,
 						}).Info("Task *node* lost, cleaning up.")
 				} else if nodeSt.runningJob != jobID || nodeSt.runningTask != taskID {
@@ -832,6 +877,8 @@ func (s *statefulScheduler) scheduleTasks() {
 							"taskID":      taskID,
 							"runningJob":  nodeSt.runningJob,
 							"runningTask": nodeSt.runningTask,
+							"requestor":   requestor,
+							"jobType":     jobType,
 							"tag":         tag,
 						}).Info("Task preempted")
 					return
@@ -859,11 +906,13 @@ func (s *statefulScheduler) scheduleTasks() {
 					}
 					log.WithFields(
 						log.Fields{
-							"jobId":  jobID,
-							"taskId": taskID,
-							"err":    taskErr,
-							"cmd":    strings.Join(taskDef.Argv, " "),
-							"tag":    tag,
+							"jobId":     jobID,
+							"taskId":    taskID,
+							"err":       taskErr,
+							"cmd":       strings.Join(taskDef.Argv, " "),
+							"requestor": requestor,
+							"jobType":   jobType,
+							"tag":       tag,
 						}).Info(msg)
 
 					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
@@ -880,9 +929,11 @@ func (s *statefulScheduler) scheduleTasks() {
 							}
 							log.WithFields(
 								log.Fields{
-									"jobId":  jobID,
-									"taskId": taskID,
-									"tag":    tag,
+									"jobId":     jobID,
+									"taskId":    taskID,
+									"requestor": requestor,
+									"jobType":   jobType,
+									"tag":       tag,
 								}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
 						}()
 					}
@@ -890,10 +941,12 @@ func (s *statefulScheduler) scheduleTasks() {
 				if err == nil || aborted {
 					log.WithFields(
 						log.Fields{
-							"jobId":   jobID,
-							"taskId":  taskID,
-							"command": strings.Join(taskDef.Argv, " "),
-							"tag":     tag,
+							"jobId":     jobID,
+							"taskId":    taskID,
+							"command":   strings.Join(taskDef.Argv, " "),
+							"requestor": requestor,
+							"jobType":   jobType,
+							"tag":       tag,
 						}).Info("Ending task.")
 					jobState.taskCompleted(taskID, true)
 				}
@@ -901,11 +954,13 @@ func (s *statefulScheduler) scheduleTasks() {
 				// update cluster state that this node is now free and if we consider the runner to be flaky.
 				log.WithFields(
 					log.Fields{
-						"jobId":  jobID,
-						"taskId": taskID,
-						"node":   nodeSt.node,
-						"flaky":  flaky,
-						"tag":    tag,
+						"jobId":     jobID,
+						"taskId":    taskID,
+						"node":      nodeSt.node,
+						"flaky":     flaky,
+						"requestor": requestor,
+						"jobType":   jobType,
+						"tag":       tag,
 					}).Info("Freeing node, removed job.")
 				s.clusterState.taskCompleted(nodeId, flaky)
 
@@ -924,6 +979,8 @@ func (s *statefulScheduler) scheduleTasks() {
 						"completed": jobState.TasksCompleted,
 						"total":     len(jobState.Tasks),
 						"isdone":    jobState.TasksCompleted == len(jobState.Tasks),
+						"requestor": requestor,
+						"jobType":   jobType,
 						"tag":       tag,
 					}).Info()
 				log.WithFields(
@@ -932,6 +989,8 @@ func (s *statefulScheduler) scheduleTasks() {
 						"completed": completed,
 						"total":     total,
 						"alldone":   completed == total,
+						"requestor": requestor,
+						"jobType":   jobType,
 						"tag":       tag,
 					}).Info("Jobs task summary")
 			})
@@ -996,10 +1055,11 @@ func (s *statefulScheduler) killJobs() {
 		inProgress, notStarted := 0, 0
 		for _, task := range jobState.Tasks {
 			if task.Status == sched.InProgress {
-				task.TaskRunner.Abort(true)
+				task.TaskRunner.Abort(true, UserRequestedErrStr)
 				inProgress++
 			} else if task.Status == sched.NotStarted {
 				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
+				st.Error = UserRequestedErrStr
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
 				if err != nil {
 					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
@@ -1016,6 +1076,8 @@ func (s *statefulScheduler) killJobs() {
 				"jobID":           req.jobId,
 				"tasksNotStarted": notStarted,
 				"tasksInProgress": inProgress,
+				"requestor":       s.getJob(req.jobId).Job.Def.Requestor,
+				"jobType":         s.getJob(req.jobId).Job.Def.JobType,
 				"tag":             s.getJob(req.jobId).Job.Def.Tag,
 			}).Info("killJobs handler")
 

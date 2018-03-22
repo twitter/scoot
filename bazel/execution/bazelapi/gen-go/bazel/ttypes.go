@@ -20,28 +20,43 @@ var GoUnusedProtection__ int
 //  - Hash
 //  - SizeBytes
 type Digest struct {
-	Hash      string `thrift:"hash,1,required" json:"hash"`
-	SizeBytes int64  `thrift:"sizeBytes,2,required" json:"sizeBytes"`
+	Hash      *string `thrift:"hash,1" json:"hash,omitempty"`
+	SizeBytes *int64  `thrift:"sizeBytes,2" json:"sizeBytes,omitempty"`
 }
 
 func NewDigest() *Digest {
 	return &Digest{}
 }
 
+var Digest_Hash_DEFAULT string
+
 func (p *Digest) GetHash() string {
-	return p.Hash
+	if !p.IsSetHash() {
+		return Digest_Hash_DEFAULT
+	}
+	return *p.Hash
 }
 
+var Digest_SizeBytes_DEFAULT int64
+
 func (p *Digest) GetSizeBytes() int64 {
-	return p.SizeBytes
+	if !p.IsSetSizeBytes() {
+		return Digest_SizeBytes_DEFAULT
+	}
+	return *p.SizeBytes
 }
+func (p *Digest) IsSetHash() bool {
+	return p.Hash != nil
+}
+
+func (p *Digest) IsSetSizeBytes() bool {
+	return p.SizeBytes != nil
+}
+
 func (p *Digest) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
-
-	var issetHash bool = false
-	var issetSizeBytes bool = false
 
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
@@ -56,12 +71,10 @@ func (p *Digest) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetHash = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
 			}
-			issetSizeBytes = true
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -74,12 +87,6 @@ func (p *Digest) Read(iprot thrift.TProtocol) error {
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 	}
-	if !issetHash {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Hash is not set"))
-	}
-	if !issetSizeBytes {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field SizeBytes is not set"))
-	}
 	return nil
 }
 
@@ -87,7 +94,7 @@ func (p *Digest) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
-		p.Hash = v
+		p.Hash = &v
 	}
 	return nil
 }
@@ -96,7 +103,7 @@ func (p *Digest) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI64(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
-		p.SizeBytes = v
+		p.SizeBytes = &v
 	}
 	return nil
 }
@@ -121,27 +128,31 @@ func (p *Digest) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *Digest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("hash", thrift.STRING, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:hash: ", p), err)
-	}
-	if err := oprot.WriteString(string(p.Hash)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.hash (1) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:hash: ", p), err)
+	if p.IsSetHash() {
+		if err := oprot.WriteFieldBegin("hash", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:hash: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.Hash)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.hash (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:hash: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *Digest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("sizeBytes", thrift.I64, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:sizeBytes: ", p), err)
-	}
-	if err := oprot.WriteI64(int64(p.SizeBytes)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.sizeBytes (2) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:sizeBytes: ", p), err)
+	if p.IsSetSizeBytes() {
+		if err := oprot.WriteFieldBegin("sizeBytes", thrift.I64, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:sizeBytes: ", p), err)
+		}
+		if err := oprot.WriteI64(int64(*p.SizeBytes)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.sizeBytes (2) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:sizeBytes: ", p), err)
+		}
 	}
 	return err
 }
@@ -157,28 +168,43 @@ func (p *Digest) String() string {
 //  - Name
 //  - Value
 type Property struct {
-	Name  string `thrift:"name,1,required" json:"name"`
-	Value string `thrift:"value,2,required" json:"value"`
+	Name  *string `thrift:"name,1" json:"name,omitempty"`
+	Value *string `thrift:"value,2" json:"value,omitempty"`
 }
 
 func NewProperty() *Property {
 	return &Property{}
 }
 
+var Property_Name_DEFAULT string
+
 func (p *Property) GetName() string {
-	return p.Name
+	if !p.IsSetName() {
+		return Property_Name_DEFAULT
+	}
+	return *p.Name
 }
 
+var Property_Value_DEFAULT string
+
 func (p *Property) GetValue() string {
-	return p.Value
+	if !p.IsSetValue() {
+		return Property_Value_DEFAULT
+	}
+	return *p.Value
 }
+func (p *Property) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *Property) IsSetValue() bool {
+	return p.Value != nil
+}
+
 func (p *Property) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
-
-	var issetName bool = false
-	var issetValue bool = false
 
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
@@ -193,12 +219,10 @@ func (p *Property) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetName = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
 			}
-			issetValue = true
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -211,12 +235,6 @@ func (p *Property) Read(iprot thrift.TProtocol) error {
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 	}
-	if !issetName {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Name is not set"))
-	}
-	if !issetValue {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Value is not set"))
-	}
 	return nil
 }
 
@@ -224,7 +242,7 @@ func (p *Property) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
-		p.Name = v
+		p.Name = &v
 	}
 	return nil
 }
@@ -233,7 +251,7 @@ func (p *Property) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
 		return thrift.PrependError("error reading field 2: ", err)
 	} else {
-		p.Value = v
+		p.Value = &v
 	}
 	return nil
 }
@@ -258,27 +276,31 @@ func (p *Property) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *Property) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:name: ", p), err)
-	}
-	if err := oprot.WriteString(string(p.Name)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.name (1) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:name: ", p), err)
+	if p.IsSetName() {
+		if err := oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:name: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.Name)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.name (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:name: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *Property) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:value: ", p), err)
-	}
-	if err := oprot.WriteString(string(p.Value)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.value (2) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:value: ", p), err)
+	if p.IsSetValue() {
+		if err := oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:value: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.Value)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.value (2) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:value: ", p), err)
+		}
 	}
 	return err
 }
@@ -299,8 +321,8 @@ func (p *Property) String() string {
 //  - TimeoutMs
 //  - NoCache
 type Action struct {
-	CommandDigest      *Digest     `thrift:"commandDigest,1,required" json:"commandDigest"`
-	InputDigest        *Digest     `thrift:"inputDigest,2,required" json:"inputDigest"`
+	CommandDigest      *Digest     `thrift:"commandDigest,1" json:"commandDigest,omitempty"`
+	InputDigest        *Digest     `thrift:"inputDigest,2" json:"inputDigest,omitempty"`
 	OutputFiles        []string    `thrift:"outputFiles,3" json:"outputFiles,omitempty"`
 	OutputDirs         []string    `thrift:"outputDirs,4" json:"outputDirs,omitempty"`
 	PlatformProperties []*Property `thrift:"platformProperties,5" json:"platformProperties,omitempty"`
@@ -398,9 +420,6 @@ func (p *Action) Read(iprot thrift.TProtocol) error {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
 
-	var issetCommandDigest bool = false
-	var issetInputDigest bool = false
-
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
 		if err != nil {
@@ -414,12 +433,10 @@ func (p *Action) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetCommandDigest = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
 			}
-			issetInputDigest = true
 		case 3:
 			if err := p.readField3(iprot); err != nil {
 				return err
@@ -451,12 +468,6 @@ func (p *Action) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	if !issetCommandDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field CommandDigest is not set"))
-	}
-	if !issetInputDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field InputDigest is not set"))
 	}
 	return nil
 }
@@ -594,27 +605,31 @@ func (p *Action) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *Action) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("commandDigest", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:commandDigest: ", p), err)
-	}
-	if err := p.CommandDigest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CommandDigest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:commandDigest: ", p), err)
+	if p.IsSetCommandDigest() {
+		if err := oprot.WriteFieldBegin("commandDigest", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:commandDigest: ", p), err)
+		}
+		if err := p.CommandDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CommandDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:commandDigest: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *Action) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("inputDigest", thrift.STRUCT, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:inputDigest: ", p), err)
-	}
-	if err := p.InputDigest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InputDigest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:inputDigest: ", p), err)
+	if p.IsSetInputDigest() {
+		if err := oprot.WriteFieldBegin("inputDigest", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:inputDigest: ", p), err)
+		}
+		if err := p.InputDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InputDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:inputDigest: ", p), err)
+		}
 	}
 	return err
 }
@@ -731,7 +746,7 @@ func (p *Action) String() string {
 //  - SkipCache
 //  - ActionDigest
 type ExecuteRequest struct {
-	Action       *Action `thrift:"action,1,required" json:"action"`
+	Action       *Action `thrift:"action,1" json:"action,omitempty"`
 	InstanceName *string `thrift:"instanceName,2" json:"instanceName,omitempty"`
 	SkipCache    *bool   `thrift:"skipCache,3" json:"skipCache,omitempty"`
 	ActionDigest *Digest `thrift:"actionDigest,4" json:"actionDigest,omitempty"`
@@ -797,8 +812,6 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
 
-	var issetAction bool = false
-
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
 		if err != nil {
@@ -812,7 +825,6 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetAction = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
@@ -836,9 +848,6 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	if !issetAction {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Action is not set"))
 	}
 	return nil
 }
@@ -903,14 +912,16 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *ExecuteRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("action", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:action: ", p), err)
-	}
-	if err := p.Action.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Action), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:action: ", p), err)
+	if p.IsSetAction() {
+		if err := oprot.WriteFieldBegin("action", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:action: ", p), err)
+		}
+		if err := p.Action.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Action), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:action: ", p), err)
+		}
 	}
 	return err
 }
@@ -973,7 +984,7 @@ func (p *ExecuteRequest) String() string {
 //  - Content
 //  - IsExecutable
 type OutputFile struct {
-	Digest       *Digest `thrift:"digest,1,required" json:"digest"`
+	Digest       *Digest `thrift:"digest,1" json:"digest,omitempty"`
 	Path         *string `thrift:"path,2" json:"path,omitempty"`
 	Content      []byte  `thrift:"content,3" json:"content,omitempty"`
 	IsExecutable *bool   `thrift:"isExecutable,4" json:"isExecutable,omitempty"`
@@ -1036,8 +1047,6 @@ func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
 
-	var issetDigest bool = false
-
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
 		if err != nil {
@@ -1051,7 +1060,6 @@ func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetDigest = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
@@ -1075,9 +1083,6 @@ func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	if !issetDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Digest is not set"))
 	}
 	return nil
 }
@@ -1143,14 +1148,16 @@ func (p *OutputFile) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *OutputFile) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("digest", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:digest: ", p), err)
-	}
-	if err := p.Digest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Digest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:digest: ", p), err)
+	if p.IsSetDigest() {
+		if err := oprot.WriteFieldBegin("digest", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:digest: ", p), err)
+		}
+		if err := p.Digest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Digest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:digest: ", p), err)
+		}
 	}
 	return err
 }
@@ -1211,7 +1218,7 @@ func (p *OutputFile) String() string {
 //  - TreeDigest
 //  - Path
 type OutputDirectory struct {
-	TreeDigest *Digest `thrift:"treeDigest,1,required" json:"treeDigest"`
+	TreeDigest *Digest `thrift:"treeDigest,1" json:"treeDigest,omitempty"`
 	Path       *string `thrift:"path,2" json:"path,omitempty"`
 }
 
@@ -1249,8 +1256,6 @@ func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
 
-	var issetTreeDigest bool = false
-
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
 		if err != nil {
@@ -1264,7 +1269,6 @@ func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetTreeDigest = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
@@ -1280,9 +1284,6 @@ func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	if !issetTreeDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field TreeDigest is not set"))
 	}
 	return nil
 }
@@ -1324,14 +1325,16 @@ func (p *OutputDirectory) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *OutputDirectory) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("treeDigest", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:treeDigest: ", p), err)
-	}
-	if err := p.TreeDigest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TreeDigest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:treeDigest: ", p), err)
+	if p.IsSetTreeDigest() {
+		if err := oprot.WriteFieldBegin("treeDigest", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:treeDigest: ", p), err)
+		}
+		if err := p.TreeDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TreeDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:treeDigest: ", p), err)
+		}
 	}
 	return err
 }
@@ -1367,15 +1370,17 @@ func (p *OutputDirectory) String() string {
 //  - OutputDirectories
 //  - ExitCode
 //  - ActionDigest
+//  - GRPCStatus
 type ActionResult_ struct {
-	StdoutDigest      *Digest            `thrift:"stdoutDigest,1,required" json:"stdoutDigest"`
-	StderrDigest      *Digest            `thrift:"stderrDigest,2,required" json:"stderrDigest"`
+	StdoutDigest      *Digest            `thrift:"stdoutDigest,1" json:"stdoutDigest,omitempty"`
+	StderrDigest      *Digest            `thrift:"stderrDigest,2" json:"stderrDigest,omitempty"`
 	StdoutRaw         []byte             `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
 	StderrRaw         []byte             `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
 	OutputFiles       []*OutputFile      `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
 	OutputDirectories []*OutputDirectory `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
 	ExitCode          *int32             `thrift:"exitCode,7" json:"exitCode,omitempty"`
 	ActionDigest      *Digest            `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
+	GRPCStatus        []byte             `thrift:"GRPCStatus,9" json:"GRPCStatus,omitempty"`
 }
 
 func NewActionResult_() *ActionResult_ {
@@ -1441,6 +1446,12 @@ func (p *ActionResult_) GetActionDigest() *Digest {
 	}
 	return p.ActionDigest
 }
+
+var ActionResult__GRPCStatus_DEFAULT []byte
+
+func (p *ActionResult_) GetGRPCStatus() []byte {
+	return p.GRPCStatus
+}
 func (p *ActionResult_) IsSetStdoutDigest() bool {
 	return p.StdoutDigest != nil
 }
@@ -1473,13 +1484,14 @@ func (p *ActionResult_) IsSetActionDigest() bool {
 	return p.ActionDigest != nil
 }
 
+func (p *ActionResult_) IsSetGRPCStatus() bool {
+	return p.GRPCStatus != nil
+}
+
 func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
-
-	var issetStdoutDigest bool = false
-	var issetStderrDigest bool = false
 
 	for {
 		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
@@ -1494,12 +1506,10 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 			if err := p.readField1(iprot); err != nil {
 				return err
 			}
-			issetStdoutDigest = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
 			}
-			issetStderrDigest = true
 		case 3:
 			if err := p.readField3(iprot); err != nil {
 				return err
@@ -1524,6 +1534,10 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 			if err := p.readField8(iprot); err != nil {
 				return err
 			}
+		case 9:
+			if err := p.readField9(iprot); err != nil {
+				return err
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1535,12 +1549,6 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 	}
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	if !issetStdoutDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field StdoutDigest is not set"))
-	}
-	if !issetStderrDigest {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field StderrDigest is not set"))
 	}
 	return nil
 }
@@ -1636,6 +1644,15 @@ func (p *ActionResult_) readField8(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ActionResult_) readField9(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBinary(); err != nil {
+		return thrift.PrependError("error reading field 9: ", err)
+	} else {
+		p.GRPCStatus = v
+	}
+	return nil
+}
+
 func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ActionResult"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1664,6 +1681,9 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 	if err := p.writeField8(oprot); err != nil {
 		return err
 	}
+	if err := p.writeField9(oprot); err != nil {
+		return err
+	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
 	}
@@ -1674,27 +1694,31 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *ActionResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("stdoutDigest", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:stdoutDigest: ", p), err)
-	}
-	if err := p.StdoutDigest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StdoutDigest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:stdoutDigest: ", p), err)
+	if p.IsSetStdoutDigest() {
+		if err := oprot.WriteFieldBegin("stdoutDigest", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:stdoutDigest: ", p), err)
+		}
+		if err := p.StdoutDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StdoutDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:stdoutDigest: ", p), err)
+		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("stderrDigest", thrift.STRUCT, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:stderrDigest: ", p), err)
-	}
-	if err := p.StderrDigest.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StderrDigest), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:stderrDigest: ", p), err)
+	if p.IsSetStderrDigest() {
+		if err := oprot.WriteFieldBegin("stderrDigest", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:stderrDigest: ", p), err)
+		}
+		if err := p.StderrDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StderrDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:stderrDigest: ", p), err)
+		}
 	}
 	return err
 }
@@ -1800,6 +1824,21 @@ func (p *ActionResult_) writeField8(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:actionDigest: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGRPCStatus() {
+		if err := oprot.WriteFieldBegin("GRPCStatus", thrift.STRING, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:GRPCStatus: ", p), err)
+		}
+		if err := oprot.WriteBinary(p.GRPCStatus); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.GRPCStatus (9) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:GRPCStatus: ", p), err)
 		}
 	}
 	return err

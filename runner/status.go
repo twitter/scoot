@@ -78,7 +78,7 @@ type RunStatus struct {
 	SnapshotID string
 	ExitCode   int
 
-	// Only valid if State == (FAILED || BADREQUEST)
+	// Only valid if State == (FAILED || BADREQUEST || ABORTED)
 	Error string
 
 	tags.LogTags
