@@ -12,12 +12,7 @@ import (
 
 // ensures nodes can be added and removed
 func Test_ClusterState_UpdateCluster(t *testing.T) {
-
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
-	cl := makeTestCluster()
-	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
+	cs, cl, _ := setupTestCluster(nil)
 
 	if len(cs.nodes) != 0 {
 		t.Errorf("expected cluster size to be 0")
@@ -51,12 +46,7 @@ func Test_ClusterState_UpdateCluster(t *testing.T) {
 
 // ensures that removing an untracked node succeeds
 func Test_ClusterState_RemoveNotTrackedNode(t *testing.T) {
-
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
-	cl := makeTestCluster()
-	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
+	cs, cl, _ := setupTestCluster(nil)
 
 	cl.remove("node1")
 	cs.updateCluster()
@@ -67,11 +57,7 @@ func Test_ClusterState_RemoveNotTrackedNode(t *testing.T) {
 
 // ensures that adding a node more than once does not reset state
 func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
-	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
+	cs, cl, _ := setupTestCluster(nil, "node1")
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 
@@ -91,12 +77,125 @@ func Test_ClusterState_DuplicateNodeAdd(t *testing.T) {
 	}
 }
 
-func Test_ClusterState_TaskStarted(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+func Test_ClusterState_OfflineNode(t *testing.T) {
+	nodeID := "node1"
+	cs, _, _ := setupTestCluster(nil, nodeID)
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(cluster.NodeId(nodeID))}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; ok {
+		t.Errorf("Expected %s to be offlined", nodeID)
+	}
+	if len(cs.nodes) != 0 {
+		t.Errorf("Expected len(cs.nodes) to be 0, was %d", len(cs.nodes))
+	}
+}
 
-	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
+func Test_ClusterState_ReinstateNode(t *testing.T) {
+	nodeID := "node1"
+	cs, _, _ := setupTestCluster(nil, nodeID)
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+	node := cs.nodes[cluster.NodeId(nodeID)].node
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(cluster.NodeId(nodeID))}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; ok {
+		t.Errorf("Expected %s to be offlined", nodeID)
+	}
+	if len(cs.nodes) != 0 {
+		t.Errorf("Expected len(cs.nodes) to be 0, was %d", len(cs.nodes))
+	}
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(node)}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes after reinstatement", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+}
+
+func Test_ClusterState_OfflineNodeAlreadyOffline(t *testing.T) {
+	nodeID := "node1"
+	cs, _, _ := setupTestCluster(nil, nodeID)
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(cluster.NodeId(nodeID))}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; ok {
+		t.Errorf("Expected %s to be offlined", nodeID)
+	}
+	if len(cs.nodes) != 0 {
+		t.Errorf("Expected len(cs.nodes) to be 0, was %d", len(cs.nodes))
+	}
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(cluster.NodeId(nodeID))}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; ok {
+		t.Errorf("Expected %s to still be offlined", nodeID)
+	}
+	if len(cs.nodes) != 0 {
+		t.Errorf("Expected len(cs.nodes) to be 0, was %d", len(cs.nodes))
+	}
+}
+
+func Test_ClusterState_ReinstateNodeAlreadyReinstated(t *testing.T) {
+	nodeID := "node1"
+	cs, _, _ := setupTestCluster(nil, nodeID)
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+	node := cs.nodes[cluster.NodeId(nodeID)].node
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(cluster.NodeId(nodeID))}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; ok {
+		t.Errorf("Expected %s to be offlined", nodeID)
+	}
+	if len(cs.nodes) != 0 {
+		t.Errorf("Expected len(cs.nodes) to be 0, was %d", len(cs.nodes))
+	}
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(node)}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to be in cs.nodes after reinstatement", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to be 1, was %d", len(cs.nodes))
+	}
+
+	cs.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(node)}
+	cs.updateCluster()
+	if _, ok := cs.nodes[cluster.NodeId(nodeID)]; !ok {
+		t.Errorf("Expected %s to still be in cs.nodes after double reinstatement", nodeID)
+	}
+	if len(cs.nodes) != 1 {
+		t.Errorf("Expected len(cs.nodes) to still be 1, was %d", len(cs.nodes))
+	}
+}
+
+func Test_ClusterState_TaskStarted(t *testing.T) {
+	cs, _, _ := setupTestCluster(nil, "node1")
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
@@ -107,11 +206,7 @@ func Test_ClusterState_TaskStarted(t *testing.T) {
 }
 
 func Test_ClusterState_TaskCompleted(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
-	cl := makeTestCluster("node1")
-	cs := newClusterState(cl.nodes, cl.ch, nil, statsReceiver)
+	cs, _, _ := setupTestCluster(nil, "node1")
 
 	cs.taskScheduled("node1", "job1", "task1", "")
 	ns, _ := cs.getNodeState("node1")
@@ -125,9 +220,6 @@ func Test_ClusterState_TaskCompleted(t *testing.T) {
 
 // verify that idle and busy maps are populated correctly and that flaky/lost/init'd status are as well.
 func Test_ClusterState_NodeGroups(t *testing.T) {
-	statsRegistry := stats.NewFinagleStatsRegistry()
-	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
-
 	ready := map[string]chan interface{}{
 		"node1": make(chan interface{}), "node2": make(chan interface{}),
 		"node3": make(chan interface{}), "node4": make(chan interface{}),
@@ -143,8 +235,7 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	setReady := func(node string) {
 		close(ready[node])
 	}
-	cl := makeTestCluster("node1", "node2", "node3", "node4")
-	cs := newClusterState(cl.nodes, cl.ch, readyFn, statsReceiver)
+	cs, cl, statsRegistry := setupTestCluster(readyFn, "node1", "node2", "node3", "node4")
 
 	// Test that nodes are added in the suspended state.
 	if len(cs.nodes) != 0 || len(cs.suspendedNodes) != 4 {
@@ -345,6 +436,14 @@ func makeTestCluster(node ...string) *testCluster {
 	}
 	h.nodes = nodes
 	return h
+}
+
+func setupTestCluster(rfn ReadyFn, node ...string) (*clusterState, *testCluster, stats.StatsRegistry) {
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
+	cl := makeTestCluster(node...)
+	return newClusterState(cl.nodes, cl.ch, rfn, statsReceiver), cl, statsRegistry
 }
 
 func (h *testCluster) add(node string) {
