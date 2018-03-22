@@ -28,24 +28,44 @@ import (
 	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 )
 
-// Preliminary setup for handling Bazel commands - verify Filer and populate command
-func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) error {
+// Preliminary setup for handling Bazel commands - verify Filer and populate command.
+// Can return a bazelapi.ActionResult if a result was found already in the ActionCache
+func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
-		return fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
+		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
 	}
 	if cmd.ExecuteRequest == nil {
-		return fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel")
+		return nil, fmt.Errorf("Nil ExecuteRequest data in Command with RunType Bazel")
 	}
+
+	// Check for existing result in ActionCache
+	if !cmd.ExecuteRequest.GetRequest().GetSkipCacheLookup() {
+		log.Info("Checking for existing results for command in ActionCache")
+		ar, err := cas.GetCacheResult(bzFiler.CASResolver, cmd.ExecuteRequest.GetActionDigest())
+		if err != nil {
+			// Only treat as an error if we didn't get NotFoundError
+			if _, ok := err.(*cas.NotFoundError); !ok {
+				log.Errorf("Failed to check for cached result, will execute: %s", err)
+			}
+		}
+
+		return &bazelapi.ActionResult{
+			Result:       ar,
+			ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
+			Cached:       true,
+		}, nil
+	}
+
 	if err := fetchBazelCommand(bzFiler, cmd); err != nil {
 		log.Errorf("Error fetching Bazel command: %v", err)
 		// NB: Important to return this error as-is
 		// Called function can return a particular error type if the read
 		// resource was not found, and we want to propagate this
-		return err
+		return nil, err
 	}
 	log.Infof("Worker running with updated command arguments: %q", cmd.Argv)
-	return nil
+	return nil, nil
 }
 
 // Get the Bazel Command from the embedded ExecuteRequest digest,
@@ -114,15 +134,28 @@ func postProcessBazel(filer snapshot.Filer,
 		return nil, fmt.Errorf(errstr)
 	}
 
+	ar := &remoteexecution.ActionResult{
+		OutputFiles:       outputFiles,
+		OutputDirectories: outputDirs,
+		ExitCode:          int32(st.ExitCode),
+		StdoutDigest:      stdoutDigest,
+		StderrDigest:      stderrDigest,
+	}
+	ad := cmd.ExecuteRequest.GetActionDigest()
+
+	// Add result to ActionCache. Errors non-fatal
+	if !cmd.ExecuteRequest.GetRequest().GetAction().GetDoNotCache() {
+		log.Info("Updating results in ActionCache")
+		_, err = cas.UpdateCacheResult(bzFiler.CASResolver, ad, ar)
+		if err != nil {
+			log.Errorf("Error updating result to ActionCache: %s", err)
+		}
+	}
+
 	return &bazelapi.ActionResult{
-		Result: &remoteexecution.ActionResult{
-			OutputFiles:       outputFiles,
-			OutputDirectories: outputDirs,
-			ExitCode:          int32(st.ExitCode),
-			StdoutDigest:      stdoutDigest,
-			StderrDigest:      stderrDigest,
-		},
-		ActionDigest: cmd.ExecuteRequest.GetActionDigest(),
+		Result:       ar,
+		ActionDigest: ad,
+		Cached:       false,
 	}, nil
 }
 

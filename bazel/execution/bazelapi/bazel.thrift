@@ -56,6 +56,7 @@ struct OutputDirectory {
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult
 # Added Digest field for passing around actionDigest
 # Added GRPCStatus field for passing a googleapis rpc status value as protobuf-serialized bytes
+# Added cached field for signaling whether the result was retrieved from ActionCache and not executed
 struct ActionResult {
   1: optional Digest stdoutDigest
   2: optional Digest stderrDigest
@@ -66,4 +67,5 @@ struct ActionResult {
   7: optional i32 exitCode
   8: optional Digest actionDigest
   9: optional binary GRPCStatus
+  10: optional bool cached
 }

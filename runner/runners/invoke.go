@@ -94,8 +94,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 
 	// Bazel requests - fetch command argv/env from CAS
+	// We can also receive a cached result here, in which case we skip invocation
 	if runType == runner.RunTypeBazel {
-		if err := preProcessBazel(inv.filerMap[runType].Filer, cmd); err != nil {
+		cachedResult, err := preProcessBazel(inv.filerMap[runType].Filer, cmd)
+		if err != nil {
 			failedStatus := runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 
@@ -112,6 +114,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}
 			return failedStatus
+		}
+		if cachedResult != nil {
+			status := runner.CompleteStatus(id, "", 0,
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			status.ActionResult = cachedResult
+			return status
 		}
 	}
 
