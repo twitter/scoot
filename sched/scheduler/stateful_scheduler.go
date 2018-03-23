@@ -1018,7 +1018,7 @@ func (s *statefulScheduler) GetSagaCoord() saga.SagaCoordinator {
 }
 
 func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
-	if !stringInSlice(req.Requestor, s.config.Admins) {
+	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
 		return fmt.Errorf("Requestor %s unauthorized to offline worker", req.Requestor)
 	}
 	log.Infof("Offlining worker %s", req.ID)
@@ -1028,17 +1028,12 @@ func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
 }
 
 func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error {
-	if !stringInSlice(req.Requestor, s.config.Admins) {
+	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
 		return fmt.Errorf("Requestor %s unauthorized to reinstate worker", req.Requestor)
 	}
-	n := cluster.NodeId(req.ID)
-	if ns, ok := s.clusterState.offlinedNodes[n]; !ok {
-		return fmt.Errorf("Node %s was not present in offlinedNodes. It can't be reinstated.", req.ID)
-	} else {
-		log.Infof("Reinstating worker %s", req.ID)
-		s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(ns.node)}
-		return nil
-	}
+	log.Infof("Reinstating worker %s", req.ID)
+	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(ns.node)}
+	return nil
 }
 
 // process all requests verifying that the jobIds exist:  Send errors back
