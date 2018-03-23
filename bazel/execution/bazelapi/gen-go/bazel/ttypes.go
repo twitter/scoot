@@ -1371,6 +1371,7 @@ func (p *OutputDirectory) String() string {
 //  - ExitCode
 //  - ActionDigest
 //  - GRPCStatus
+//  - Cached
 type ActionResult_ struct {
 	StdoutDigest      *Digest            `thrift:"stdoutDigest,1" json:"stdoutDigest,omitempty"`
 	StderrDigest      *Digest            `thrift:"stderrDigest,2" json:"stderrDigest,omitempty"`
@@ -1381,6 +1382,7 @@ type ActionResult_ struct {
 	ExitCode          *int32             `thrift:"exitCode,7" json:"exitCode,omitempty"`
 	ActionDigest      *Digest            `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
 	GRPCStatus        []byte             `thrift:"GRPCStatus,9" json:"GRPCStatus,omitempty"`
+	Cached            *bool              `thrift:"cached,10" json:"cached,omitempty"`
 }
 
 func NewActionResult_() *ActionResult_ {
@@ -1452,6 +1454,15 @@ var ActionResult__GRPCStatus_DEFAULT []byte
 func (p *ActionResult_) GetGRPCStatus() []byte {
 	return p.GRPCStatus
 }
+
+var ActionResult__Cached_DEFAULT bool
+
+func (p *ActionResult_) GetCached() bool {
+	if !p.IsSetCached() {
+		return ActionResult__Cached_DEFAULT
+	}
+	return *p.Cached
+}
 func (p *ActionResult_) IsSetStdoutDigest() bool {
 	return p.StdoutDigest != nil
 }
@@ -1486,6 +1497,10 @@ func (p *ActionResult_) IsSetActionDigest() bool {
 
 func (p *ActionResult_) IsSetGRPCStatus() bool {
 	return p.GRPCStatus != nil
+}
+
+func (p *ActionResult_) IsSetCached() bool {
+	return p.Cached != nil
 }
 
 func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
@@ -1536,6 +1551,10 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 			}
 		case 9:
 			if err := p.readField9(iprot); err != nil {
+				return err
+			}
+		case 10:
+			if err := p.readField10(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1653,6 +1672,15 @@ func (p *ActionResult_) readField9(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ActionResult_) readField10(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 10: ", err)
+	} else {
+		p.Cached = &v
+	}
+	return nil
+}
+
 func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ActionResult"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1682,6 +1710,9 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField9(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField10(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1839,6 +1870,21 @@ func (p *ActionResult_) writeField9(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:GRPCStatus: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCached() {
+		if err := oprot.WriteFieldBegin("cached", thrift.BOOL, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cached: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.Cached)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.cached (10) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cached: ", p), err)
 		}
 	}
 	return err
