@@ -298,6 +298,40 @@ func TestGetActionResult(t *testing.T) {
 	}
 }
 
+func TestUpdateActionResult(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+
+	rc := int32(42)
+	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	ar := &remoteexecution.ActionResult{ExitCode: rc}
+	req := &remoteexecution.UpdateActionResultRequest{ActionDigest: ad, ActionResult: ar}
+
+	_, err := s.UpdateActionResult(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Error from UpdateActionResult: %v", err)
+	}
+
+	// Read from underlying store
+	resourceName := bazel.DigestStoreName(ad)
+	r, err := f.OpenForRead(resourceName)
+	if err != nil {
+		t.Fatalf("Failed to open expected resource for reading: %s: %v", resourceName, err)
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Error reading from fake store: %v", err)
+	}
+	resAr := &remoteexecution.ActionResult{}
+	if err = proto.Unmarshal(b, resAr); err != nil {
+		t.Fatalf("Error deserializing result: %s", err)
+	}
+
+	if resAr.GetExitCode() != rc {
+		t.Fatalf("Result not as expected, got: %d, want: %d", resAr.GetExitCode(), rc)
+	}
+}
+
 // Fake Read/Write Servers
 
 // Read server that fakes sending data to a client.

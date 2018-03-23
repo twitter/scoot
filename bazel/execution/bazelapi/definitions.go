@@ -32,6 +32,7 @@ type ActionResult struct {
 	Result       *remoteexecution.ActionResult
 	ActionDigest *remoteexecution.Digest
 	GRPCStatus   *google_rpc_status.Status
+	Cached       bool
 }
 
 func (e *ExecuteRequest) String() string {
@@ -83,6 +84,13 @@ func (a *ActionResult) GetGRPCStatus() *google_rpc_status.Status {
 	return a.GRPCStatus
 }
 
+func (a *ActionResult) GetCached() bool {
+	if a == nil {
+		return false
+	}
+	return a.Cached
+}
+
 // Transform request Bazel ExecuteRequest data into a domain object
 func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *ExecuteRequest {
 	if thriftRequest == nil {
@@ -131,6 +139,7 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 		Result:       ar,
 		ActionDigest: makeDigestFromThrift(thriftResult.GetActionDigest()),
 		GRPCStatus:   makeGRPCStatusFromThrift(thriftResult.GetGRPCStatus()),
+		Cached:       thriftResult.GetCached(),
 	}
 }
 
@@ -141,6 +150,7 @@ func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.A
 		return nil
 	}
 	var ec int32 = actionResult.Result.GetExitCode()
+	var cached bool = actionResult.GetCached()
 	return &bazelthrift.ActionResult_{
 		StdoutDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStdoutDigest()),
 		StderrDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStderrDigest()),
@@ -151,6 +161,7 @@ func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.A
 		ExitCode:          &ec,
 		ActionDigest:      makeDigestThriftFromDomain(actionResult.ActionDigest),
 		GRPCStatus:        makeGRPCStatusThriftFromDomain(actionResult.GRPCStatus),
+		Cached:            &cached,
 	}
 }
 

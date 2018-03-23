@@ -177,7 +177,7 @@ func (s *executionServer) GetOperation(
 		}
 		res := &remoteexecution.ExecuteResponse{
 			Result:       actionResult.GetResult(),
-			CachedResult: false,
+			CachedResult: actionResult.GetCached(),
 			Status:       grpcs,
 		}
 		resAsPBAny, err := marshalAny(res)

@@ -339,7 +339,7 @@ func (s *casServer) GetActionResult(ctx context.Context,
 
 	// If nil digest was requested, that's odd - return nil action result
 	if req.GetActionDigest().GetHash() == bazel.EmptySha {
-		log.Info("GetActionResult - returning empty ActionResult from request for EmptySha ActionDigest")
+		log.Debug("GetActionResult - returning empty ActionResult from request for EmptySha ActionDigest")
 		return &remoteexecution.ActionResult{}, nil
 	}
 
@@ -373,10 +373,46 @@ func (s *casServer) GetActionResult(ctx context.Context,
 
 // Client-facing service for caching ActionResults. Support is optional per Bazel API,
 // as the server can still cache and retrieve results internally.
-// Currently not supported in Scoot
-func (s *casServer) UpdateActionResult(context.Context,
-	*remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
-	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
+func (s *casServer) UpdateActionResult(ctx context.Context,
+	req *remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
+	log.Debugf("Received UpdateActionResult request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
+	// Validate input digest, ActionResult
+	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Invalid ActionDigest %s", req.GetActionDigest()))
+	}
+	if req.GetActionResult() == nil {
+		return nil, status.Error(codes.InvalidArgument, "ActionResult is nil")
+	}
+
+	// No-op if user requested to store nil action digest
+	if req.GetActionDigest().GetHash() == bazel.EmptySha {
+		log.Debug("UpdateActionResult - returning empty ActionResult from request to store with EmptySha digest")
+		return &remoteexecution.ActionResult{}, nil
+	}
+
+	// serialize the AR as bytes, then Store.Write.
+	asBytes, err := proto.Marshal(req.GetActionResult())
+	if err != nil {
+		log.Errorf("Failed to serialize ActionResult %s as bytes: %s", req.GetActionResult(), err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error serializing ActionResult: %s", err))
+	}
+
+	// Write to store
+	storeName := bazel.DigestStoreName(req.GetActionDigest())
+	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
+	err = s.storeConfig.Store.Write(storeName, bytes.NewReader(asBytes), ttl)
+	if err != nil {
+		log.Errorf("Store failed to Write: %v", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
+	}
+
+	log.Infof("UpdateActionResult wrote result to cache: %s", req.GetActionResult())
+	return req.GetActionResult(), nil
 }
 
 // Internal functions
