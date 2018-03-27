@@ -7,7 +7,7 @@ package execution
 //	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context"
 //	this seems to be a go version/mock incompatability
 //
-//  mockgen -source=/Users/dgassaway/workspace/src/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test/remote_execution.pb.go ExecutionClient > bazel/execution/mock_remoteexecution/execclient_mock.go
+//  mockgen -source=/Users/$(whoami)/workspace/src/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test/remote_execution.pb.go ExecutionClient > bazel/execution/mock_remoteexecution/execclient_mock.go
 // NOTE: in the generated file, add the following line to the import list:
 //	. "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 // this is due to a longstanding gomock bug the owners are sitting on: https://github.com/golang/mock/issues/77

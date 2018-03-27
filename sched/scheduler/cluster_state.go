@@ -28,6 +28,7 @@ type clusterState struct {
 	updateCh         chan []cluster.NodeUpdate
 	nodes            map[cluster.NodeId]*nodeState // All healthy nodes.
 	suspendedNodes   map[cluster.NodeId]*nodeState // All new, lost, or flaky nodes, disjoint from 'nodes'.
+	offlinedNodes    map[cluster.NodeId]*nodeState // All User initiated offline nodes. Disjoint from 'nodes' & 'suspendedNodes'
 	nodeGroups       map[string]*nodeGroup         // key is a snapshotId.
 	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
@@ -131,6 +132,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 		updateCh:         updateCh,
 		nodes:            make(map[cluster.NodeId]*nodeState),
 		suspendedNodes:   map[cluster.NodeId]*nodeState{},
+		offlinedNodes:    make(map[cluster.NodeId]*nodeState),
 		nodeGroups:       map[string]*nodeGroup{"": newNodeGroup()},
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
@@ -223,7 +225,16 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		switch update.UpdateType {
 
 		case cluster.NodeAdded:
-			if ns, ok := c.suspendedNodes[update.Id]; ok {
+			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
+			if update.UserInitiated {
+				log.Infof("Reinstating node %s", update.Id)
+				if ns, ok := c.offlinedNodes[update.Id]; ok {
+					c.nodes[update.Id] = ns
+					delete(c.offlinedNodes, update.Id)
+				} else {
+					log.Errorf("Unable to reinstate node %s, not present in offlinedNodes", update.Id)
+				}
+			} else if ns, ok := c.suspendedNodes[update.Id]; ok {
 				if !ns.ready() {
 					// Adding a node that's already suspended as non-ready, leave it in that state until ready.
 					log.Infof("Suspended node re-added but still awaiting readiness check %v (%s)", update.Id, ns)
@@ -260,7 +271,19 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			}
 
 		case cluster.NodeRemoved:
-			if ns, ok := c.suspendedNodes[update.Id]; ok {
+			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
+			if update.UserInitiated {
+				log.Infof("Offlining node %s", update.Id)
+				if ns, ok := c.nodes[update.Id]; ok {
+					c.offlinedNodes[update.Id] = ns
+					delete(c.nodes, update.Id)
+				} else if ns, ok := c.suspendedNodes[update.Id]; ok {
+					c.offlinedNodes[update.Id] = ns
+					delete(c.suspendedNodes, update.Id)
+				} else {
+					log.Errorf("Unable to offline node %s, not present in nodes or suspendedNodes", update.Id)
+				}
+			} else if ns, ok := c.suspendedNodes[update.Id]; ok {
 				// Node already suspended, make sure it's now marked as lost and not flaky (keep readiness status intact).
 				log.Infof("Already suspended node marked as removed: %v (was %s)", update.Id, ns)
 				ns.timeLost = time.Now()
