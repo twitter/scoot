@@ -3,7 +3,9 @@
 package server
 
 import (
+	"os/exec"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,12 +44,13 @@ type handler struct {
 	mu           sync.RWMutex
 	currentCmd   *runner.Command
 	currentRunID runner.RunID
+	isSSD        bool
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
 func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now()}
+	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), isSSD: isSSD()}
 	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	go h.stats()
 	return h
@@ -65,6 +68,12 @@ func (h *handler) stats() {
 		select {
 		case <-ticker.C:
 			h.mu.Lock()
+
+			d := int64(1)
+			if h.isSSD {
+				d = 0
+			}
+			h.stat.Gauge(stats.DiskDriveType).Update(d)
 
 			processes, svcStatus, err := h.run.StatusAll()
 			if err != nil {
@@ -214,4 +223,16 @@ func (h *handler) Erase(runId string) error {
 	log.Infof("Worker erasing runID: %s", runId)
 	h.run.Erase(runner.RunID(runId))
 	return nil
+}
+
+func isSSD() bool {
+	b, err := exec.Command("cat", "/sys/block/sda/queue/rotational").Output()
+	if err != nil {
+		log.Error("Couldn't determine if SSD")
+		return false
+	}
+	if strings.TrimSpace(string(b)) == "0" {
+		return true
+	}
+	return false
 }

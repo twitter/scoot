@@ -513,4 +513,9 @@ const (
 		The number of times a gitdb stream backend had to resort to a git fetch
 	*/
 	GitStreamUpdateFetches = "gitStreamUpdateFetches"
+
+	/*
+		The number contained in /sys/block/sda/queue/rotational. 0 corresponds to SSD, 1 to HDD
+	*/
+	DiskDriveType = "diskDriveType"
 )
