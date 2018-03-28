@@ -7,6 +7,7 @@ import (
 	"flag"
 	"math/rand"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -90,6 +91,19 @@ func main() {
 		},
 		func() execer.Memory {
 			return execer.Memory(*memCapFlag)
+		},
+		func() server.DriveTypeFunc {
+			// Note: this returns 1 (HDD) if there's an error running the cmd, the file doesn't exist, or if the file
+			// doesn't contain only "0"
+			// TODO: make this cmd configurable for use on different OS's (e.g. system_profiler SPSerialATADataType | grep SSD)
+			b, _ := exec.Command("cat", "/sys/block/sda/queue/rotational").Output()
+			f := func() int64 {
+				if strings.TrimSpace(string(b)) == "0" {
+					return 0
+				}
+				return int64(1)
+			}
+			return server.DriveTypeFunc(f)
 		},
 		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
 		func(tmp *temp.TempDir) (store.Store, error) {

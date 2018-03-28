@@ -513,4 +513,9 @@ const (
 		The number of times a gitdb stream backend had to resort to a git fetch
 	*/
 	GitStreamUpdateFetches = "gitStreamUpdateFetches"
+
+	/*
+		The storage drive type. 0 corresponds to SSD, 1 to HDD
+	*/
+	DriveType = "driveType"
 )
