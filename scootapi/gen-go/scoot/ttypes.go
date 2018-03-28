@@ -2304,3 +2304,277 @@ func (p *JobStatus) String() string {
 	}
 	return fmt.Sprintf("JobStatus(%+v)", *p)
 }
+
+// Attributes:
+//  - ID
+//  - Requestor
+type OfflineWorkerReq struct {
+	ID        string `thrift:"id,1,required" json:"id"`
+	Requestor string `thrift:"requestor,2,required" json:"requestor"`
+}
+
+func NewOfflineWorkerReq() *OfflineWorkerReq {
+	return &OfflineWorkerReq{}
+}
+
+func (p *OfflineWorkerReq) GetID() string {
+	return p.ID
+}
+
+func (p *OfflineWorkerReq) GetRequestor() string {
+	return p.Requestor
+}
+func (p *OfflineWorkerReq) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	var issetID bool = false
+	var issetRequestor bool = false
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+			issetID = true
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+			issetRequestor = true
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	if !issetID {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field ID is not set"))
+	}
+	if !issetRequestor {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Requestor is not set"))
+	}
+	return nil
+}
+
+func (p *OfflineWorkerReq) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.ID = v
+	}
+	return nil
+}
+
+func (p *OfflineWorkerReq) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Requestor = v
+	}
+	return nil
+}
+
+func (p *OfflineWorkerReq) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("OfflineWorkerReq"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *OfflineWorkerReq) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:id: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.ID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:id: ", p), err)
+	}
+	return err
+}
+
+func (p *OfflineWorkerReq) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("requestor", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:requestor: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Requestor)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.requestor (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:requestor: ", p), err)
+	}
+	return err
+}
+
+func (p *OfflineWorkerReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("OfflineWorkerReq(%+v)", *p)
+}
+
+// Attributes:
+//  - ID
+//  - Requestor
+type ReinstateWorkerReq struct {
+	ID        string `thrift:"id,1,required" json:"id"`
+	Requestor string `thrift:"requestor,2,required" json:"requestor"`
+}
+
+func NewReinstateWorkerReq() *ReinstateWorkerReq {
+	return &ReinstateWorkerReq{}
+}
+
+func (p *ReinstateWorkerReq) GetID() string {
+	return p.ID
+}
+
+func (p *ReinstateWorkerReq) GetRequestor() string {
+	return p.Requestor
+}
+func (p *ReinstateWorkerReq) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	var issetID bool = false
+	var issetRequestor bool = false
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+			issetID = true
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+			issetRequestor = true
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	if !issetID {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field ID is not set"))
+	}
+	if !issetRequestor {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Requestor is not set"))
+	}
+	return nil
+}
+
+func (p *ReinstateWorkerReq) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.ID = v
+	}
+	return nil
+}
+
+func (p *ReinstateWorkerReq) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Requestor = v
+	}
+	return nil
+}
+
+func (p *ReinstateWorkerReq) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ReinstateWorkerReq"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ReinstateWorkerReq) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:id: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.ID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:id: ", p), err)
+	}
+	return err
+}
+
+func (p *ReinstateWorkerReq) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("requestor", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:requestor: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Requestor)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.requestor (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:requestor: ", p), err)
+	}
+	return err
+}
+
+func (p *ReinstateWorkerReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReinstateWorkerReq(%+v)", *p)
+}

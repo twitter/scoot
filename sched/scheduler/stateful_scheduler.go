@@ -106,6 +106,7 @@ type SchedulerConfig struct {
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	SoftMaxSchedulableTasks int
+	Admins                  []string
 }
 
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
@@ -1014,6 +1015,33 @@ func (s *statefulScheduler) KillJob(jobID string) error {
 
 func (s *statefulScheduler) GetSagaCoord() saga.SagaCoordinator {
 	return s.sagaCoord
+}
+
+func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
+	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
+		return fmt.Errorf("Requestor %s unauthorized to offline worker", req.Requestor)
+	}
+	log.Infof("Offlining worker %s", req.ID)
+	n := cluster.NodeId(req.ID)
+	if _, ok := s.clusterState.nodes[n]; !ok {
+		return fmt.Errorf("Node %s was not present in nodes. It can't be offlined.", req.ID)
+	}
+	s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedRemove(n)}
+	return nil
+}
+
+func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error {
+	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
+		return fmt.Errorf("Requestor %s unauthorized to reinstate worker", req.Requestor)
+	}
+	n := cluster.NodeId(req.ID)
+	if ns, ok := s.clusterState.offlinedNodes[n]; !ok {
+		return fmt.Errorf("Node %s was not present in offlinedNodes. It can't be reinstated.", req.ID)
+	} else {
+		log.Infof("Reinstating worker %s", req.ID)
+		s.clusterState.updateCh <- []cluster.NodeUpdate{cluster.NewUserInitiatedAdd(ns.node)}
+		return nil
+	}
 }
 
 // process all requests verifying that the jobIds exist:  Send errors back

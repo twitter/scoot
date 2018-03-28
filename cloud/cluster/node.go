@@ -56,9 +56,10 @@ var _ Node = (*idNode)(nil)
 
 // NodeUpdate represents a change to the cluster
 type NodeUpdate struct {
-	UpdateType NodeUpdateType
-	Id         NodeId
-	Node       Node // Only set for adds
+	UpdateType    NodeUpdateType
+	Id            NodeId
+	Node          Node // Only set for adds
+	UserInitiated bool
 }
 
 func (u *NodeUpdate) String() string {
@@ -69,9 +70,9 @@ func (u *NodeUpdate) String() string {
 
 func NewAdd(node Node) NodeUpdate {
 	return NodeUpdate{
-		NodeAdded,
-		node.Id(),
-		node,
+		UpdateType: NodeAdded,
+		Id:         node.Id(),
+		Node:       node,
 	}
 }
 
@@ -80,4 +81,16 @@ func NewRemove(id NodeId) NodeUpdate {
 		UpdateType: NodeRemoved,
 		Id:         id,
 	}
+}
+
+func NewUserInitiatedAdd(node Node) NodeUpdate {
+	nu := NewAdd(node)
+	nu.UserInitiated = true
+	return nu
+}
+
+func NewUserInitiatedRemove(id NodeId) NodeUpdate {
+	nu := NewRemove(id)
+	nu.UserInitiated = true
+	return nu
 }

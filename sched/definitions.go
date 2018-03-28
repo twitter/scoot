@@ -57,6 +57,16 @@ type TaskDefinition struct {
 	runner.Command
 }
 
+type OfflineWorkerReq struct {
+	ID        string
+	Requestor string
+}
+
+type ReinstateWorkerReq struct {
+	ID        string
+	Requestor string
+}
+
 // Status for Job & Tasks
 type Status int
 
