@@ -515,7 +515,7 @@ const (
 	GitStreamUpdateFetches = "gitStreamUpdateFetches"
 
 	/*
-		The number contained in /sys/block/sda/queue/rotational. 0 corresponds to SSD, 1 to HDD
+		The storage drive type. 0 corresponds to SSD, 1 to HDD
 	*/
-	DiskDriveType = "diskDriveType"
+	DriveType = "driveType"
 )

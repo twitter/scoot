@@ -35,8 +35,8 @@ func MakeServer(
 // (avoid conflict with other injected integers)
 type StatsCollectInterval time.Duration
 
-// a func that inspects the disk this worker is running on and returns
-// an identifying int for disk drive type. It is assumed that
+// a func that inspects the machine this worker is running on and returns
+// an identifying int64 for its storage drive type. It is assumed that
 // 0 corresponds to an SSD & 1 to an HDD
 type DriveTypeFunc func() int64
 
@@ -47,13 +47,13 @@ type handler struct {
 	mu           sync.RWMutex
 	currentCmd   *runner.Command
 	currentRunID runner.RunID
-	ddt          int64
+	dt           int64
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, d DriveTypeFunc) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service, dtfunc DriveTypeFunc) worker.Worker {
 	scopedStat := stat.Scope("handler")
-	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), ddt: d()}
+	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), dt: dtfunc()}
 	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	go h.stats()
 	return h
@@ -72,7 +72,7 @@ func (h *handler) stats() {
 		case <-ticker.C:
 			h.mu.Lock()
 
-			h.stat.Gauge(stats.DiskDriveType).Update(h.ddt)
+			h.stat.Gauge(stats.DriveType).Update(h.dt)
 
 			processes, svcStatus, err := h.run.StatusAll()
 			if err != nil {

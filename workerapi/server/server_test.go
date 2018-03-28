@@ -138,6 +138,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 	simExecer = execers.NewSimExecer()
 	tmpDir, err := temp.TempDirDefault()
 	configText := "{}"
+	dtfunc := func() int64 { return 0 }
 
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
@@ -171,7 +172,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			return statsRec
 		},
 		func(stat stats.StatsReceiver, run runner.Service) worker.Worker {
-			return NewHandler(stat, run)
+			return NewHandler(stat, run, DriveTypeFunc(dtfunc))
 		},
 	)
 	if useErrorExec {

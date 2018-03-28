@@ -95,7 +95,7 @@ func main() {
 		func() server.DriveTypeFunc {
 			// Note: this returns 1 (HDD) if there's an error running the cmd, the file doesn't exist, or if the file
 			// doesn't contain only "0"
-			// TODO: make this cmd configurable for use on different OS's (e.g. grep system_profiler)
+			// TODO: make this cmd configurable for use on different OS's (e.g. system_profiler SPSerialATADataType | grep SSD)
 			b, _ := exec.Command("cat", "/sys/block/sda/queue/rotational").Output()
 			f := func() int64 {
 				if strings.TrimSpace(string(b)) == "0" {
