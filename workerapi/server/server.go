@@ -38,7 +38,7 @@ type StatsCollectInterval time.Duration
 // a func that inspects the disk this worker is running on and returns
 // an identifying int for disk drive type. It is assumed that
 // 0 corresponds to an SSD & 1 to an HDD
-type DiskDriveTypeFunc func() int64
+type DriveTypeFunc func() int64
 
 type handler struct {
 	stat         stats.StatsReceiver
@@ -51,7 +51,7 @@ type handler struct {
 }
 
 // Creates a new Handler which combines a runner.Service to do work and a StatsReceiver
-func NewHandler(stat stats.StatsReceiver, run runner.Service, d DiskDriveTypeFunc) worker.Worker {
+func NewHandler(stat stats.StatsReceiver, run runner.Service, d DriveTypeFunc) worker.Worker {
 	scopedStat := stat.Scope("handler")
 	h := &handler{stat: scopedStat, run: run, timeLastRpc: time.Now(), ddt: d()}
 	stats.ReportServerRestart(scopedStat, stats.WorkerServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
