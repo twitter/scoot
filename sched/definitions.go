@@ -106,10 +106,6 @@ const (
 
 	// Run asap, ahead of priority=1, consuming nodes as they become available if no nodes are free
 	P2
-
-	// Run immediately trying to acquire as many nodes as required, killing all tasks with lower priority that
-	// have been executing with duration < 10min or so
-	P3
 )
 
 // transforms a thrift Job into a scheduler Job

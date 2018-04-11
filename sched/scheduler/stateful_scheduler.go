@@ -566,8 +566,8 @@ checkLoop:
 				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)
 			} else if len(jobs) >= s.config.MaxJobsPerRequestor {
 				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxJobsPerRequestor)
-			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P3 {
-				err = fmt.Errorf("Invalid priority %d, must be between 0-3 inclusive", checkJobMsg.jobDef.Priority)
+			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P2 {
+				err = fmt.Errorf("Invalid priority %d, must be between 0-2 inclusive", checkJobMsg.jobDef.Priority)
 			} else {
 				// Check for duplicate task names
 				seenTasks := map[string]bool{}
@@ -780,21 +780,6 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
-		// This task is co-opting the node for some other running task, abort that task.
-		if ta.running != nil {
-			// Send the signal to abort whatever is currently running on the node we're about to co-opt.
-			rt := ta.running
-			endSagaTask := false
-			flaky := false
-			preempted := true
-			rt.TaskRunner.Abort(endSagaTask, "Preempted")
-			msg := fmt.Sprintf("jobId:%s taskId:%s Preempted by jobId:%s taskId:%s", rt.JobId, rt.TaskId, jobID, taskID)
-			log.Info(msg)
-			// Update jobState and clusterState here instead of in the async handler below.
-			s.getJob(rt.JobId).errorRunningTask(rt.TaskId, errors.New(msg), preempted)
-			s.clusterState.taskCompleted(nodeSt.node.Id(), flaky)
-		}
-
 		// Mark Task as Started in the cluster
 		s.clusterState.taskScheduled(nodeSt.node.Id(), jobID, taskID, taskDef.SnapshotID)
 		log.WithFields(
@@ -850,10 +835,6 @@ func (s *statefulScheduler) scheduleTasks() {
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
 				// The job update is normal but we update the cluster with a dummy value which denotes abnormal cleanup.
 				// We need the dummy value so we don't clobber any new job assignments to that nodeId.
-				//
-				// If the jobID has changed (we also sanity check taskID), the assigned node has been preempted,
-				// and that should only happen when a higher priority P3 job commandeers it, which should be rare ideally.
-				// In this case, we simply return early since the replacement task already cleaned up this task.
 				nodeId := nodeSt.node.Id()
 				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
 				nodeStChanged := !ok || &nodeStInstance.readyCh != &nodeSt.readyCh
@@ -870,23 +851,9 @@ func (s *statefulScheduler) scheduleTasks() {
 							"jobType":     jobType,
 							"tag":         tag,
 						}).Info("Task *node* lost, cleaning up.")
-				} else if nodeSt.runningJob != jobID || nodeSt.runningTask != taskID {
-					log.WithFields(
-						log.Fields{
-							"node":        nodeSt.node,
-							"jobID":       jobID,
-							"taskID":      taskID,
-							"runningJob":  nodeSt.runningJob,
-							"runningTask": nodeSt.runningTask,
-							"requestor":   requestor,
-							"jobType":     jobType,
-							"tag":         tag,
-						}).Info("Task preempted")
-					return
 				}
 
 				flaky := false
-				preempted := false
 				aborted := (err != nil && err.(*taskError).st.State == runner.ABORTED)
 				if err != nil {
 					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
@@ -902,7 +869,7 @@ func (s *statefulScheduler) scheduleTasks() {
 							msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.config.MaxRetriesPerTask)
 							err = nil
 						} else {
-							jobState.errorRunningTask(taskID, err, preempted)
+							jobState.errorRunningTask(taskID, err)
 						}
 					}
 					log.WithFields(
