@@ -160,7 +160,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{1, 1, 1, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float32{1, 1, 1} // Setting this global value explicitly for test consistency.
 
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 5 {
@@ -238,12 +238,23 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	if assignments[2].task.JobId != "job1" {
 		t.Errorf("Expected 2:job1, got: %v", spew.Sdump(assignments[2]))
 	}
+
+	// Complete first job and get remaining P0 scheduled
+	js[2].taskCompleted(assignments[0].task.TaskId, true)
+	assignments, _ = getTaskAssignments(cs, js[2:], req, nil, nil)
+
+	if len(assignments) != 1 {
+		t.Errorf("Expected additional assignment after previous completion, got: %d", len(assignments))
+	}
+	if assignments[0].task.JobId != "job4" {
+		t.Errorf("Expected 0:job4, got: %v", spew.Sdump(assignments[0]))
+	}
 }
 
 /*
 Set NodeScaleFactor=.2 (10 NumConfiguredNodes / 50 SoftMaxSchedulableTasks) to get the following scheduling.
 Add jobs: (10 P2 Tasks), (10 P1 Tasks), (10 P0 Tasks)
-With 10 nodes: assign nodes for 5 P2, 3 P1, and 2 P0 tasks
+With 10 nodes: assign nodes for 7 P2, 2 P1, and 1 P0 tasks
 */
 func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	makeJob := func(jobId string, prio sched.Priority) *sched.Job {
@@ -284,9 +295,9 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{.05, .2, .75, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
 
-	// Check for 5 P2, 3 P1, and 2 P0 tasks
+	// Check for 7 P2, 2 P1, and 1 P0 tasks
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != numNodes {
 		t.Fatalf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))

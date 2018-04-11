@@ -522,7 +522,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
-	NodeScaleAdjustment = []float32{.05, .2, .75, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
 	s := &SchedulerConfig{SoftMaxSchedulableTasks: 200}
 	numNodes := 21
 	numTasks := float32(1)
