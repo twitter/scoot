@@ -74,7 +74,7 @@ const MaxPriority = sched.P2
 
 // Decrease the NodeScaleFactor by taking the percentage defined by NodeScaleAdjust[Priority].
 // Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
-var NodeScaleAdjustment = []float32{.05, .2, .75}
+var NodeScaleAdjustment = []float32{.15, .3, .55}
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before

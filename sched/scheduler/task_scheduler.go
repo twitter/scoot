@@ -294,7 +294,7 @@ func assign(
 					"jobID":  task.JobId,
 					"taskID": task.TaskId,
 					"tag":    task.Def.Tag,
-				}).Info("Unable to assign, no free node for task")
+				}).Warn("Unable to assign, no free node for task")
 			continue
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
