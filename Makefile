@@ -88,6 +88,11 @@ recoverytest:
 	go install ./binaries/...
 	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
+integrationtest:
+	# Integration test with some overlap with other standalone tests, but utilizes client binaries
+	go install ./binaries/...
+	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
+
 clean-mockgen:
 	rm */*_mock.go
 
@@ -101,7 +106,7 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies fs_util recoverytest swarmtest test clean-data
+travis: dependencies fs_util recoverytest swarmtest integrationtest test clean-data
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
