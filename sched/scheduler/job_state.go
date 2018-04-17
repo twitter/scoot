@@ -141,12 +141,15 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 }
 
 // Update JobState to reflect that an error has occurred running this Task
-func (j *jobState) errorRunningTask(taskId string, err error) {
+func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = sched.NotStarted
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksRunning--
+	if preempted {
+		taskState.NumTimesTried--
+	}
 }
 
 // Returns the Current Job Status

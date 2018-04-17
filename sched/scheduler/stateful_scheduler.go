@@ -837,7 +837,11 @@ func (s *statefulScheduler) scheduleTasks() {
 				// We need the dummy value so we don't clobber any new job assignments to that nodeId.
 				nodeId := nodeSt.node.Id()
 				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
-				nodeStChanged := !ok || &nodeStInstance.readyCh != &nodeSt.readyCh
+				nodeAbsent := !ok
+				nodeReAdded := &nodeStInstance.readyCh != &nodeSt.readyCh
+				nodeStChanged := nodeAbsent || nodeReAdded
+				preempted := false
+
 				if nodeStChanged {
 					nodeId = nodeId + ":ERROR"
 					log.WithFields(
@@ -851,6 +855,9 @@ func (s *statefulScheduler) scheduleTasks() {
 							"jobType":     jobType,
 							"tag":         tag,
 						}).Info("Task *node* lost, cleaning up.")
+				}
+				if nodeReAdded {
+					preempted = true
 				}
 
 				flaky := false
@@ -869,7 +876,7 @@ func (s *statefulScheduler) scheduleTasks() {
 							msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.config.MaxRetriesPerTask)
 							err = nil
 						} else {
-							jobState.errorRunningTask(taskID, err)
+							jobState.errorRunningTask(taskID, err, preempted)
 						}
 					}
 					log.WithFields(
