@@ -3,12 +3,10 @@ package scheduler provides StatefulScheduler which distributes tasks to a cluste
 
 * Concepts *
 JobPriority:
-  0 Default, these jobs will receive node quota only when P1,2,3 jobs have satisfied their minimum node quota.
-  1 These jobs will receive node quota only when P2,3 jobs have satisfied their minimum node quota.
-  2 These jobs will receive node quota only when P3 jobs have satisfied their minimum node quota.
-  3 Run ahead of P0,1,2, acquiring as many nodes as possible, killing youngest lower priority tasks if no nodes are free
+  0 Default, these jobs will receive node quota only when P1,2 jobs have satisfied their minimum node quota.
+  1 These jobs will receive node quota only when P2 jobs have satisfied their minimum node quota.
+  2 These jobs get a baseline node quota first.
 Note: Lower priority jobs are given a chance once MinNodesForGivenJob for higher priority jobs is satisfied.
-      However, priority 3 jobs are greedy and have no minimum number of nodes whereupon they defer to lower priorities.
 
 SoftMaxSchedulableTasks:
   This limit helps determine nodes per job (see NodeScaleFactor) but doesn’t actually result in scheduler backpressure.
@@ -35,16 +33,10 @@ Schedule Loop:
 Group new job requests with existing jobs sharing the same RequestTag
 Add remaining unmatched requests to the jobs queue but limit number of jobs per Requestor
 
-For Job in Jobs.Priority3,
- Select NumAssignedNodes=min(Job.NumRemainingTasks, NumFreeNodes + NumKillableNodes from P0,1,2 jobs)
-For Job in Jobs.Priority2 + Jobs.Priority1 + Jobs.Priority0:
- Select NumAssignedNodes=min(Job.NumRemainingTasks, MinNodesForGivenJob, NumFreeNodes)
-
 Select Node Preference:
    Free nodes with the same SnapshotID as the given task, where the last ran task is different.
    Free nodes with the same SnapshotID as the given task.
    Free nodes not related to any current job.
    Any free node.
-   If Priority3: busy node with smallest run duration from P0 tasks first, then P1, then P2.
 */
 package scheduler

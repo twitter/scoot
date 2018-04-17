@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"math"
-	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -11,17 +10,9 @@ import (
 )
 
 type taskAssignment struct {
-	nodeSt  *nodeState
-	task    *taskState
-	running *taskState
+	nodeSt *nodeState
+	task   *taskState
 }
-
-type KillableTasks []*taskState
-
-// More recent tasks should come first in ascending sorts.
-func (k KillableTasks) Len() int           { return len(k) }
-func (k KillableTasks) Swap(i, j int)      { k[i], k[j] = k[j], k[i] }
-func (k KillableTasks) Less(i, j int) bool { return k[i].TimeStarted.After(k[j].TimeStarted) }
 
 // Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
@@ -73,65 +64,37 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	}
 
 	// Sort jobs by priority and count running tasks.
-	// TOOD(jschiller): don't kill tasks that will result in more than some threshold of work being discarded.
-	//
-	// An array indexed by priority. The value is the total number of running tasks for jobs of the given priority.
-	numKillableTasks := []int{0, 0, 0, 0}
 	// An array indexed by priority. The value is the subset of jobs in fifo order for the given priority.
-	priorityJobs := [][]*jobState{[]*jobState{}, []*jobState{}, []*jobState{}, []*jobState{}}
+	priorityJobs := [][]*jobState{[]*jobState{}, []*jobState{}, []*jobState{}}
 	for _, job := range jobs {
 		p := int(job.Job.Def.Priority)
-		numKillableTasks[p] += job.TasksRunning
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
 	stat.Gauge(stats.SchedPriority0JobsGauge).Update(int64(len(priorityJobs[sched.P0])))
 	stat.Gauge(stats.SchedPriority1JobsGauge).Update(int64(len(priorityJobs[sched.P1])))
 	stat.Gauge(stats.SchedPriority2JobsGauge).Update(int64(len(priorityJobs[sched.P2])))
-	stat.Gauge(stats.SchedPriority3JobsGauge).Update(int64(len(priorityJobs[sched.P3])))
 
-	// List killable tasks first by ascending priority and within that, by ascending execution duration.
-	//
-	// An array of in-progress *tasksState ordered by kill preference. Omits priority=3 since nothing should kill those tasks.
-	killableTasks := KillableTasks{}
-	for p := range []sched.Priority{sched.P0, sched.P1, sched.P2} {
-		ts := KillableTasks{}
-		for _, j := range priorityJobs[p] {
-			for _, t := range j.Tasks {
-				if t.Status == sched.InProgress {
-					ts = append(ts, t)
-				}
-			}
-		}
-		sort.Sort(ts)
-		killableTasks = append(killableTasks, ts...)
-	}
-
-	// Assign each job the minimum number of nodes until free nodes, and killable nodes if allowed, are exhausted.
-	// Priority3 jobs consume all free idle+killable nodes and starve jobs of a lower priority
+	// Assign each job the minimum number of nodes until free nodes are exhausted.
 	// Priority2 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority1 jobs.
 	// Priority1 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority0 jobs.
 	// Priority0 jobs consume all remaining idle nodes up to a limit.
 	//
 	var tasks []*taskState
-	// The number of healthy nodes we can assign before killing tasks on other nodes.
+	// The number of healthy nodes we can assign
 	numFree := cs.numFree()
 	// A map[requestor]map[tag]bool{} that makes sure we process all tags for a given requestor once as a batch.
 	tagsSeen := map[string]map[string]bool{}
-	// An array indexed by priority. The value is the number of tasks that a job of the given priority can kill.
-	// Only priority=3 jobs can kill other tasks (note, killable tasks are double counted here).
-	nk := numKillableTasks
-	numKillableCounter := []int{0, 0, 0, (nk[0] + nk[1] + nk[2])}
 	// An array indexed by priority. The value is a list of jobs, each with a list of tasks yet to be scheduled.
 	// 'Optional' means tasks are associated with jobs that are already running with some minimum node quota.
 	// 'Required' means tasks are associated with jobs that haven't yet reach a minimum node quota.
 	// This distinction makes sure we don't starve lower priority jobs in the second-pass 'remaining' loop.
-	remainingOptional := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
-	remainingRequired := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+	remainingOptional := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+	remainingRequired := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
 Loop:
-	for _, p := range []sched.Priority{sched.P3, sched.P2, sched.P1, sched.P0} {
+	for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
 		for _, job := range priorityJobs[p] {
-			// The number of available nodes for this priority is the remaining free nodes plus allowed killable nodes.
-			numAvailNodes := numFree + numKillableCounter[p]
+			// The number of available nodes for this priority is the remaining free nodes
+			numAvailNodes := numFree
 			if numAvailNodes == 0 {
 				break Loop
 			}
@@ -178,18 +141,14 @@ Loop:
 			numScaledTasks := ceil(float32(numTasks) * cfg.GetNodeScaleFactor(len(cs.nodes), p))
 			numSchedulable := 0
 			numDesiredUnmet := 0
-			if p == sched.P3 {
-				// Priority=3 jobs always get the maximum number of available nodes, as needed, and in fifo order.
-				numSchedulable = min(len(unsched), numAvailNodes)
-			} else {
-				// For this group of tasks we want the lesser of: the number remaining, or a number based on load.
-				numDesired := min(len(unsched), numScaledTasks)
-				// The number of tasks we can schedule is reduced by the number of tasks we're already running.
-				// Further the number we'd like and the number we'll actually schedule are restricted by numAvailNodes.
-				// If numDesiredUnmet==0 then any remaining outstanding tasks are low priority and appended to remainingOptional
-				numDesiredUnmet = max(0, numDesired-numRunning-numAvailNodes)
-				numSchedulable = min(numAvailNodes, max(0, numDesired-numRunning))
-			}
+
+			// For this group of tasks we want the lesser of: the number remaining, or a number based on load.
+			numDesired := min(len(unsched), numScaledTasks)
+			// The number of tasks we can schedule is reduced by the number of tasks we're already running.
+			// Further the number we'd like and the number we'll actually schedule are restricted by numAvailNodes.
+			// If numDesiredUnmet==0 then any remaining outstanding tasks are low priority and appended to remainingOptional
+			numDesiredUnmet = max(0, numDesired-numRunning-numAvailNodes)
+			numSchedulable = min(numAvailNodes, max(0, numDesired-numRunning))
 
 			if numSchedulable > 0 {
 				log.WithFields(
@@ -213,17 +172,10 @@ Loop:
 						"tag":             job.Job.Def.Tag,
 					}).Debug("Schedulable tasks dbg")
 				tasks = append(tasks, unsched[0:numSchedulable]...)
-				// Get the number of nodes we can take from the free node pool, and the number we must take from killable nodes.
+				// Get the number of nodes we can take from the free node pool
 				numFromFree := min(numFree, numSchedulable)
-				numFromKill := max(0, numSchedulable-numFromFree)
 				// Deduct from the number of free nodes - this value gets used after we exit this loop.
 				numFree -= numFromFree
-				// If there weren't enough free nodes, and this job is P3, grab more from the appropriate pool of killable nodes.
-				// Note that numSchedulable should not exceed numAvailNodes so we don't do any checking for that.
-				if numFromKill > 0 && p == sched.P3 {
-					// For priority=3, deduct from the p3 counter that tracks how many killable nodes are available to p3 jobs.
-					numKillableCounter[sched.P3] -= min(numKillableCounter[sched.P3], numFromKill)
-				}
 			}
 
 			// To both required and optional, append an array containing unscheduled tasks for this requestor/tag combination.
@@ -236,7 +188,6 @@ Loop:
 		}
 	}
 
-	// If there are still free nodes, priority=3 jobs have been satisfied already.
 	// Distribute a minimum of 75% free to priority=2, 20% to priority=1 and 5% to priority=0
 	numFreeBasis := numFree
 LoopRemaining:
@@ -291,8 +242,7 @@ LoopRemaining:
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
-	// - A node from the next killable task candidate.
-	assignments := assign(cs, tasks, killableTasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
+	assignments := assign(cs, tasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
 	if len(assignments) == totalUnschedTasks {
 		log.WithFields(
 			log.Fields{
@@ -317,7 +267,6 @@ LoopRemaining:
 func assign(
 	cs *clusterState,
 	tasks []*taskState,
-	killableTasks KillableTasks,
 	nodeGroups map[string]*nodeGroup,
 	snapIds []string,
 	stat stats.StatsReceiver,
@@ -325,7 +274,6 @@ func assign(
 	for _, task := range tasks {
 		var snapshotId string
 		var nodeSt *nodeState
-		var wasRunning *taskState
 	SnapshotsLoop:
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
@@ -339,26 +287,17 @@ func assign(
 				}
 			}
 		}
-		// Could not find any more free nodes, take one from killable nodes.
+		// Could not find any more free nodes
 		if nodeSt == nil {
-			wasRunning = killableTasks[0]
-			snapshotId = wasRunning.Def.SnapshotID
-			nodeSt = cs.nodes[wasRunning.TaskRunner.nodeSt.node.Id()]
-			killableTasks = killableTasks[1:]
-
-			stat.Counter(stats.SchedPreemptedTasksCounter).Inc(1)
 			log.WithFields(
 				log.Fields{
-					"jobID":            task.JobId,
-					"taskID":           task.TaskId,
-					"tag":              task.Def.Tag,
-					"node":             nodeSt.node,
-					"wasRunningJobID":  wasRunning.JobId,
-					"wasRunningTaskID": wasRunning.TaskId,
-					"wasRunningTag":    wasRunning.TaskRunner.Tag,
-				}).Info("Preempting node")
+					"jobID":  task.JobId,
+					"taskID": task.TaskId,
+					"tag":    task.Def.Tag,
+				}).Warn("Unable to assign, no free node for task")
+			continue
 		}
-		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task, running: wasRunning})
+		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
 		if _, ok := nodeGroups[snapshotId]; !ok {
 			nodeGroups[snapshotId] = newNodeGroup()
 		}
