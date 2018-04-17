@@ -1,8 +1,10 @@
-// +build integration
+package main
 
-// Package tests_test exists to exercise basic command line scootapi and scoot-snapshot-db
-// functionality against a local cluster of workers, apiservers, and a scheduler.
-package tests_test
+// scoot-integration creates a standalone integration testing binary.
+// This mimics end-to-end job running operations from a client's perspective,
+// by instantiating a cluster and using client tooling.
+// Should not be run inline with other unit/property/integration tests,
+// as spawned processes can cause deadlocks by e.g. colliding on known ports.
 
 import (
 	"encoding/json"
@@ -11,18 +13,17 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 	"github.com/twitter/scoot/tests/testhelpers"
-
-	log "github.com/sirupsen/logrus"
 )
 
-func TestRunSimpleJob(t *testing.T) {
+func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
@@ -42,7 +43,7 @@ func TestRunSimpleJob(t *testing.T) {
 	log.Info("Creating test cluster")
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
-		t.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
+		log.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
 	}
 	defer cluster1Cmds.Kill()
 
@@ -52,13 +53,13 @@ func TestRunSimpleJob(t *testing.T) {
 
 	snapshotBytes, err := createSnapshot()
 	if err != nil {
-		t.Fatalf("Error creating snapshotID: %v", err)
+		log.Fatalf("Error creating snapshotID: %v", err)
 	}
 	snapshotID := strings.TrimSpace(string(snapshotBytes))
 	timeout := time.After(10 * time.Second)
 	jobBytes, err := runJob(snapshotID)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 	jobID := strings.TrimSpace(string(jobBytes))
 
@@ -68,14 +69,14 @@ func TestRunSimpleJob(t *testing.T) {
 	for status.Status != scoot.Status_COMPLETED {
 		select {
 		case <-timeout:
-			t.Fatal("Timed out while waiting for job to complete")
+			log.Fatal("Timed out while waiting for job to complete")
 		default:
 			jsonStatusBytes, err = getStatus(jobID)
 			if err != nil {
-				t.Fatal(err)
+				log.Fatal(err)
 			}
 			if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
-				t.Fatal(err)
+				log.Fatal(err)
 			}
 			log.Infof("Status: %v", status)
 			if status.Status == scoot.Status_COMPLETED {
