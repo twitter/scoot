@@ -160,7 +160,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{1, 1, 1, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float32{1, 1, 1} // Setting this global value explicitly for test consistency.
 
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
 	if len(assignments) != 5 {
@@ -184,8 +184,8 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 }
 
 /*
-Add Job1.P0, Job2.P1 Job3.P2, Job4.P3, Job5.P0
-With 4 nodes, expect: scheduled Job4, Job3, Job2, Job1
+Add Job1.P0, Job2.P1 Job3.P2, Job4.P0
+With 3 nodes, expect: scheduled Job3, Job2, Job1
 */
 func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	makeJob := func(jobId string, prio sched.Priority) *sched.Job {
@@ -210,17 +210,14 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 			Tasks: makeTasks("job3"),
 		},
 		&jobState{
-			Job:   makeJob("job4", sched.P3),
+			Job:   makeJob("job4", sched.P0),
 			Tasks: makeTasks("job4"),
-		},
-		&jobState{
-			Job:   makeJob("job5", sched.P0),
-			Tasks: makeTasks("job5"),
 		},
 	}
 
+	numNodes := 3
 	nodes := []string{}
-	for i := 0; i < 4; i++ {
+	for i := 0; i < numNodes; i++ {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
@@ -229,28 +226,35 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	req := map[string][]*jobState{"": js}
 
 	assignments, _ := getTaskAssignments(cs, js, req, nil, nil)
-	if len(assignments) != 4 {
-		t.Errorf("Expected four tasks to be assigned, got %v", len(assignments))
+	if len(assignments) != numNodes {
+		t.Errorf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
+	}
+	if assignments[0].task.JobId != "job3" {
+		t.Errorf("Expected 0:job3: %v", spew.Sdump(assignments[0]))
+	}
+	if assignments[1].task.JobId != "job2" {
+		t.Errorf("Expected 1:job2, got: %v", spew.Sdump(assignments[1]))
+	}
+	if assignments[2].task.JobId != "job1" {
+		t.Errorf("Expected 2:job1, got: %v", spew.Sdump(assignments[2]))
+	}
+
+	// Complete first job and get remaining P0 scheduled
+	js[2].taskCompleted(assignments[0].task.TaskId, true)
+	assignments, _ = getTaskAssignments(cs, js[2:], req, nil, nil)
+
+	if len(assignments) != 1 {
+		t.Errorf("Expected additional assignment after previous completion, got: %d", len(assignments))
 	}
 	if assignments[0].task.JobId != "job4" {
-		t.Errorf("Expected 0:job4: %v", spew.Sdump(assignments[0]))
-	}
-	if assignments[1].task.JobId != "job3" {
-		t.Errorf("Expected 1:job3, got: %v", spew.Sdump(assignments[1]))
-	}
-	if assignments[2].task.JobId != "job2" {
-		t.Errorf("Expected 2:job2, got: %v", spew.Sdump(assignments[2]))
-	}
-	if assignments[3].task.JobId != "job1" {
-		t.Errorf("Expected 3:job1, got: %v", spew.Sdump(assignments[3]))
+		t.Errorf("Expected 0:job4, got: %v", spew.Sdump(assignments[0]))
 	}
 }
 
 /*
 Set NodeScaleFactor=.2 (10 NumConfiguredNodes / 50 SoftMaxSchedulableTasks) to get the following scheduling.
-Add jobs: (10 P3 Tasks), (10 P2 Tasks), (10 P1 Tasks), (10 P0 Tasks)
-With 10 nodes: assign all 10 to the p3 tasks.
-After finishing p3 tasks: assign nodes for 5 P2, 3 P1, and 2 P0 tasks
+Add jobs: (10 P2 Tasks), (10 P1 Tasks), (10 P0 Tasks)
+With 10 nodes: assign nodes for 7 P2, 2 P1, and 1 P0 tasks
 */
 func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	makeJob := func(jobId string, prio sched.Priority) *sched.Job {
@@ -277,14 +281,11 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 			Job:   makeJob("job3", sched.P2),
 			Tasks: makeTasks(10, "job3", sched.P2),
 		},
-		&jobState{
-			Job:   makeJob("job4", sched.P3),
-			Tasks: makeTasks(10, "job4", sched.P3),
-		},
 	}
 
+	numNodes := 10
 	nodes := []string{}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numNodes; i++ {
 		nodes = append(nodes, fmt.Sprintf("node%d", i))
 	}
 	testCluster := makeTestCluster(nodes...)
@@ -294,28 +295,12 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{.05, .2, .75, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
 
-	// Check for all 10 P3 tasks
+	// Check for 7 P2, 2 P1, and 1 P0 tasks
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
-	if len(assignments) != 10 {
-		t.Fatalf("Expected ten tasks to be assigned, got %v", len(assignments))
-	}
-	for _, assignment := range assignments {
-		if !strings.HasSuffix(assignment.task.TaskId, "_P3") {
-			t.Fatalf("Expected all P3 tasks, got %v", spew.Sdump(assignment))
-		}
-		for _, j := range js {
-			if j.Job.Id == assignment.task.JobId {
-				j.taskCompleted(assignment.task.TaskId, true)
-			}
-		}
-	}
-
-	// Check for 5 P2, 3 P1, and 2 P0 tasks
-	assignments, _ = getTaskAssignments(cs, js, req, config, nil)
-	if len(assignments) != 10 {
-		t.Fatalf("Expected ten tasks to be assigned, got %v", len(assignments))
+	if len(assignments) != numNodes {
+		t.Fatalf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
 	}
 	expected := []string{"P2", "P2", "P1", "P0", "P2", "P2", "P2", "P2", "P2", "P1"}
 	for i, assignment := range assignments {
@@ -323,11 +308,4 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 			t.Fatalf("Idx=%d, expected %s task, got %v", i, expected[i], spew.Sdump(assignment))
 		}
 	}
-
 }
-
-/*
-TODO: _PriorityKill
-Add jobs P2a, P1, P0, P2b, P3, P3
-3 nodes -> kill P0, P1, P2b in order
-*/
