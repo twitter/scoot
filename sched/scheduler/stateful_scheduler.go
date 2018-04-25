@@ -838,7 +838,10 @@ func (s *statefulScheduler) scheduleTasks() {
 				nodeId := nodeSt.node.Id()
 				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
 				nodeAbsent := !ok
-				nodeReAdded := &nodeStInstance.readyCh != &nodeSt.readyCh
+				nodeReAdded := false
+				if !nodeAbsent {
+					nodeReAdded = &nodeStInstance.readyCh != &nodeSt.readyCh
+				}
 				nodeStChanged := nodeAbsent || nodeReAdded
 				preempted := false
 
