@@ -840,7 +840,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				nodeAbsent := !ok
 				nodeReAdded := false
 				if !nodeAbsent {
-					nodeReAdded = &nodeStInstance.readyCh != &nodeSt.readyCh
+					nodeReAdded = (&nodeStInstance.readyCh != &nodeSt.readyCh)
 				}
 				nodeStChanged := nodeAbsent || nodeReAdded
 				preempted := false
