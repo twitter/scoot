@@ -1058,7 +1058,14 @@ func (s *statefulScheduler) killJobs() {
 	for _, req := range validKillRequests {
 		jobState := s.getJob(req.jobId)
 		inProgress, notStarted := 0, 0
+		logFields := log.Fields{
+			"jobID":     req.jobId,
+			"requestor": s.getJob(req.jobId).Job.Def.Requestor,
+			"jobType":   s.getJob(req.jobId).Job.Def.JobType,
+			"tag":       s.getJob(req.jobId).Job.Def.Tag,
+		}
 		for _, task := range jobState.Tasks {
+			logFields["taskID"] = task.TaskId
 			if task.Status == sched.InProgress {
 				task.TaskRunner.Abort(true, UserRequestedErrStr)
 				inProgress++
@@ -1069,22 +1076,22 @@ func (s *statefulScheduler) killJobs() {
 				if err != nil {
 					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
 				}
-				//TODO - is this the correct counter?
 				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
-				jobState.Saga.EndTask(task.TaskId, statusAsBytes)
+				if err := jobState.Saga.StartTask(task.TaskId, nil); err != nil {
+					logFields["err"] = err
+					log.WithFields(logFields).Info("killJobs saga.StartTask failure.")
+				}
+				if err := jobState.Saga.EndTask(task.TaskId, statusAsBytes); err != nil {
+					logFields["err"] = err
+					log.WithFields(logFields).Info("killJobs saga.EndTask failure.")
+				}
 				jobState.taskCompleted(task.TaskId, false)
 				notStarted++
 			}
 		}
-		log.WithFields(
-			log.Fields{
-				"jobID":           req.jobId,
-				"tasksNotStarted": notStarted,
-				"tasksInProgress": inProgress,
-				"requestor":       s.getJob(req.jobId).Job.Def.Requestor,
-				"jobType":         s.getJob(req.jobId).Job.Def.JobType,
-				"tag":             s.getJob(req.jobId).Job.Def.Tag,
-			}).Info("killJobs handler")
+		delete(logFields, "err")
+		delete(logFields, "taskID")
+		log.WithFields(logFields).Info("killJobs summary")
 
 		req.responseCh <- nil
 	}
