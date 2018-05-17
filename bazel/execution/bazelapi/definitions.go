@@ -272,7 +272,7 @@ func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Act
 
 func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.Digest {
 	if digest == nil {
-		return &bazelthrift.Digest{}
+		return nil
 	}
 	var hash string = digest.GetHash()
 	var size int64 = digest.GetSizeBytes()
