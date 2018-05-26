@@ -157,5 +157,5 @@ If your GRPC-serving binaries are only accessible via a proxy, it is possible to
 
 ```sh
 ssh <proxy-host> -L <local-proxy-port>:<service-host>:<service-port> -N &
-grpc_cli call localhost:<local-proxt-port> ...
+grpc_cli call localhost:<local-proxy-port> ...
 ```
