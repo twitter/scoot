@@ -31,6 +31,12 @@ bazel/remoteexecution/remote_execution.proto --go_out=plugins=grpc:bazel/remotee
 
 This should generate bazel/remoteexecution/remote_execution.pb.go
 
+#### Other Dependencies
+
+Depending on the proto changes, vendored libraries may need to be updated, e.g.:
+* github.com/golang/protobuf
+* google.golang.org/grpc
+
 ## Using the Fork
 
 Replace all instances of previous imports of the remoteexecution package:
