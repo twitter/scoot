@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -136,12 +137,27 @@ func postProcessBazel(filer snapshot.Filer,
 		return nil, fmt.Errorf(errstr)
 	}
 
+	// TODO placeholder metadata/timing data until invoker records timestamps
+	metadata := &remoteexecution.ExecutedActionMetadata{
+		Worker:                         "remexec-placeholder",
+		QueuedTimestamp:                nil,
+		WorkerStartTimestamp:           &timestamp.Timestamp{Seconds: 1},
+		WorkerCompletedTimestamp:       &timestamp.Timestamp{Seconds: 10},
+		InputFetchStartTimestamp:       &timestamp.Timestamp{Seconds: 2},
+		InputFetchCompletedTimestamp:   &timestamp.Timestamp{Seconds: 2, Nanos: 300000000},
+		ExecutionStartTimestamp:        &timestamp.Timestamp{Seconds: 3},
+		ExecutionCompletedTimestamp:    &timestamp.Timestamp{Seconds: 5, Nanos: 987654321},
+		OutputUploadStartTimestamp:     &timestamp.Timestamp{Seconds: 7, Nanos: 400000000},
+		OutputUploadCompletedTimestamp: &timestamp.Timestamp{Seconds: 9, Nanos: 150000000},
+	}
+
 	ar := &remoteexecution.ActionResult{
 		OutputFiles:       outputFiles,
 		OutputDirectories: outputDirs,
 		ExitCode:          int32(st.ExitCode),
 		StdoutDigest:      stdoutDigest,
 		StderrDigest:      stderrDigest,
+		ExecutionMetadata: metadata,
 	}
 	ad := cmd.ExecuteRequest.GetActionDigest()
 

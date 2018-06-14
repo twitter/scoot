@@ -2,6 +2,7 @@ package proto
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -61,5 +62,15 @@ func TestMsDuration(t *testing.T) {
 	}
 	if dp.GetSeconds() != 3 || dp.GetNanos() != 5000000 {
 		t.Fatalf("Expected 3s 5000000ns, got: %ds %dns", dp.GetSeconds(), dp.GetNanos())
+	}
+}
+
+func TestTimeTimestamps(t *testing.T) {
+	now := time.Now()
+	ts := GetTimestampFromTime(now)
+	t2 := GetTimeFromTimestamp(ts)
+
+	if !now.Equal(t2) {
+		t.Fatalf("Time converted from timestamp did not match, got: %v, expected: %v", t2, now)
 	}
 }
