@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 var size5 int64 = 5

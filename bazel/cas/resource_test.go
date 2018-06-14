@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 func TestResourceComponents(t *testing.T) {

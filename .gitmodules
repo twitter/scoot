@@ -17,11 +17,11 @@
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
-	branch = f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3
+	branch = 7a6a684ca69eb4cae85ad0a484f2e531598c047b
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
-	branch = 130e6b02ab059e7b717a096f397c5b60111cae74
+	branch = b4deda0973fb4c70b50d226b1af49f3da59f5265
 [submodule "vendor/github.com/golang/mock"]
 	path = vendor/github.com/golang/mock
 	url = https://github.com/golang/mock
