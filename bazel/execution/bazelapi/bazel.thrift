@@ -53,6 +53,26 @@ struct OutputDirectory {
   2: optional string path
 }
 
+# Modeled after https://godoc.org/github.com/golang/protobuf/ptypes/timestamp
+struct Timestamp {
+    1: optional i64 seconds
+    2: optional i32 nanos
+}
+
+# Prototype, modeled after bazel/remoteexecution/remote_execution.proto#ExecutedActionMetadata
+struct ExecutedActionMetadata {
+    1: optional string worker
+    2: optional Timestamp queuedTimestamp
+    3: optional Timestamp workerStartTimestamp
+    4: optional Timestamp workerCompletedTimestamp
+    5: optional Timestamp inputFetchStartTimestamp
+    6: optional Timestamp inputFetchCompletedTimestamp
+    7: optional Timestamp executionStartTimestamp
+    8: optional Timestamp executionCompletedTimestamp
+    9: optional Timestamp outputUploadStartTimestamp
+    10: optional Timestamp outputUploadCompletedTimestamp
+}
+
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult
 # Added Digest field for passing around actionDigest
 # Added GRPCStatus field for passing a googleapis rpc status value as protobuf-serialized bytes
@@ -68,4 +88,5 @@ struct ActionResult {
   8: optional Digest actionDigest
   9: optional binary GRPCStatus
   10: optional bool cached
+  11: optional ExecutedActionMetadata executionMetadata
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
@@ -134,6 +135,7 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 		OutputFiles:       makeOutputFilesFromThrift(thriftResult.GetOutputFiles()),
 		OutputDirectories: makeOutputDirsFromThrift(thriftResult.GetOutputDirectories()),
 		ExitCode:          thriftResult.GetExitCode(),
+		ExecutionMetadata: makeExecutionMetadataFromThrift(thriftResult.GetExecutionMetadata()),
 	}
 	return &ActionResult{
 		Result:       ar,
@@ -162,6 +164,7 @@ func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.A
 		ActionDigest:      makeDigestThriftFromDomain(actionResult.ActionDigest),
 		GRPCStatus:        makeGRPCStatusThriftFromDomain(actionResult.GRPCStatus),
 		Cached:            &cached,
+		ExecutionMetadata: makeExecutionMetadataThriftFromDomain(actionResult.Result.GetExecutionMetadata()),
 	}
 }
 
@@ -253,6 +256,31 @@ func makeGRPCStatusFromThrift(asBytes []byte) *google_rpc_status.Status {
 	return status
 }
 
+func makeTimestampFromThrift(ts *bazelthrift.Timestamp) *timestamp.Timestamp {
+	if ts == nil {
+		return nil
+	}
+	return &timestamp.Timestamp{Seconds: ts.GetSeconds(), Nanos: ts.GetNanos()}
+}
+
+func makeExecutionMetadataFromThrift(em *bazelthrift.ExecutedActionMetadata) *remoteexecution.ExecutedActionMetadata {
+	if em == nil {
+		return nil
+	}
+	return &remoteexecution.ExecutedActionMetadata{
+		Worker:                         em.GetWorker(),
+		QueuedTimestamp:                makeTimestampFromThrift(em.GetQueuedTimestamp()),
+		WorkerStartTimestamp:           makeTimestampFromThrift(em.GetWorkerStartTimestamp()),
+		WorkerCompletedTimestamp:       makeTimestampFromThrift(em.GetWorkerCompletedTimestamp()),
+		InputFetchStartTimestamp:       makeTimestampFromThrift(em.GetInputFetchStartTimestamp()),
+		InputFetchCompletedTimestamp:   makeTimestampFromThrift(em.GetInputFetchCompletedTimestamp()),
+		ExecutionStartTimestamp:        makeTimestampFromThrift(em.GetExecutionStartTimestamp()),
+		ExecutionCompletedTimestamp:    makeTimestampFromThrift(em.GetExecutionCompletedTimestamp()),
+		OutputUploadStartTimestamp:     makeTimestampFromThrift(em.GetOutputUploadStartTimestamp()),
+		OutputUploadCompletedTimestamp: makeTimestampFromThrift(em.GetOutputUploadCompletedTimestamp()),
+	}
+}
+
 // Unexported "from domain to thrift" translations
 func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Action {
 	if action == nil {
@@ -342,4 +370,32 @@ func makeGRPCStatusThriftFromDomain(status *google_rpc_status.Status) []byte {
 		return nil
 	}
 	return asBytes
+}
+
+func makeTimestampThriftFromDomain(ts *timestamp.Timestamp) *bazelthrift.Timestamp {
+	if ts == nil {
+		return nil
+	}
+	var seconds int64 = ts.GetSeconds()
+	var nanos int32 = ts.GetNanos()
+	return &bazelthrift.Timestamp{Seconds: &seconds, Nanos: &nanos}
+}
+
+func makeExecutionMetadataThriftFromDomain(em *remoteexecution.ExecutedActionMetadata) *bazelthrift.ExecutedActionMetadata {
+	if em == nil {
+		return nil
+	}
+	var worker string = em.GetWorker()
+	return &bazelthrift.ExecutedActionMetadata{
+		Worker:                         &worker,
+		QueuedTimestamp:                makeTimestampThriftFromDomain(em.GetQueuedTimestamp()),
+		WorkerStartTimestamp:           makeTimestampThriftFromDomain(em.GetWorkerStartTimestamp()),
+		WorkerCompletedTimestamp:       makeTimestampThriftFromDomain(em.GetWorkerCompletedTimestamp()),
+		InputFetchStartTimestamp:       makeTimestampThriftFromDomain(em.GetInputFetchStartTimestamp()),
+		InputFetchCompletedTimestamp:   makeTimestampThriftFromDomain(em.GetInputFetchCompletedTimestamp()),
+		ExecutionStartTimestamp:        makeTimestampThriftFromDomain(em.GetExecutionStartTimestamp()),
+		ExecutionCompletedTimestamp:    makeTimestampThriftFromDomain(em.GetExecutionCompletedTimestamp()),
+		OutputUploadStartTimestamp:     makeTimestampThriftFromDomain(em.GetOutputUploadStartTimestamp()),
+		OutputUploadCompletedTimestamp: makeTimestampThriftFromDomain(em.GetOutputUploadCompletedTimestamp()),
+	}
 }
