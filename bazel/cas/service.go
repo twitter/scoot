@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
@@ -296,7 +297,12 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	}
 
 	// Write to underlying Store
+	// TODO use CAS Default TTL setting until API supports cache priority settings
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
+	if ttl != nil {
+		ttl.TTL = time.Now().Add(DefaultTTL)
+	}
+
 	err = s.storeConfig.Store.Write(storeName, buffer, ttl)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
@@ -403,8 +409,13 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 	}
 
 	// Write to store
-	storeName := bazel.DigestStoreName(req.GetActionDigest())
+	// TODO use CAS Default TTL setting until API supports cache priority settings
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
+	if ttl != nil {
+		ttl.TTL = time.Now().Add(DefaultTTL)
+	}
+
+	storeName := bazel.DigestStoreName(req.GetActionDigest())
 	err = s.storeConfig.Store.Write(storeName, bytes.NewReader(asBytes), ttl)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
