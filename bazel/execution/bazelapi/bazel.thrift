@@ -7,6 +7,9 @@
 # To Generate files, run from top level (github.com/twitter/scoot) repo directory:
 #     $ make thrift-bazel-go
 
+# NOTE on Thrift IDL - Always define included data structures above the structures
+# that use them, as Thrift will generate undesirable code otherwise
+
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Digest
 struct Digest {
   1: optional string hash
