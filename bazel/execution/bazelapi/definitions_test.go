@@ -34,6 +34,9 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 			},
 		},
 		ActionDigest: &remoteexecution.Digest{},
+		ExecutionMetadata: &remoteexecution.ExecutedActionMetadata{
+			QueuedTimestamp: &timestamp.Timestamp{Nanos: 25},
+		},
 	}
 
 	tr := MakeExecReqThriftFromDomain(er)
@@ -55,7 +58,8 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 		result.Request.Action.Platform.Properties[0].Value != er.Request.Action.Platform.Properties[0].Value ||
 		scootproto.GetMsFromDuration(result.Request.Action.Timeout) != scootproto.GetMsFromDuration(er.Request.Action.Timeout) ||
 		result.Request.Action.DoNotCache != er.Request.Action.DoNotCache ||
-		result.String() != er.String() {
+		result.String() != er.String() ||
+		result.ExecutionMetadata.QueuedTimestamp.Nanos != er.ExecutionMetadata.QueuedTimestamp.Nanos {
 		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result, er)
 	}
 }

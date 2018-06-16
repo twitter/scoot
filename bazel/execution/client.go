@@ -134,7 +134,7 @@ func ExecuteOperationToStr(op *longrunning.Operation) string {
 			em := res.GetResult().GetExecutionMetadata()
 			s += fmt.Sprintf("\t\t\tExecutionMetadata:\n")
 			s += fmt.Sprintf("\t\t\t\tWorker: %s\n", em.GetWorker())
-			s += fmt.Sprintf("\t\t\t\tQueuedTimestamp: %s\n", em.GetQueuedTimestamp())
+			s = addLatencyToStr(s, "\t\t\t\t", "QueueLatency", em.GetQueuedTimestamp(), em.GetWorkerStartTimestamp())
 			s = addLatencyToStr(s, "\t\t\t\t", "WorkerTotal", em.GetWorkerStartTimestamp(), em.GetWorkerCompletedTimestamp())
 			s = addLatencyToStr(s, "\t\t\t\t", "InputFetch", em.GetInputFetchStartTimestamp(), em.GetInputFetchCompletedTimestamp())
 			s = addLatencyToStr(s, "\t\t\t\t", "Execution", em.GetExecutionStartTimestamp(), em.GetExecutionCompletedTimestamp())

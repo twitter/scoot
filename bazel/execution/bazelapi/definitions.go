@@ -22,9 +22,11 @@ const PreconditionMissing = "MISSING"
 // These types give us single reference points for passing Execute Requests and Action Results
 
 // Add ActionDigest so it's available throughout the Scoot stack without having to recompute
+// Add ExecutionMetadata so metadata added in the scheduling phase is passed through to worker
 type ExecuteRequest struct {
-	Request      *remoteexecution.ExecuteRequest
-	ActionDigest *remoteexecution.Digest
+	Request           *remoteexecution.ExecuteRequest
+	ActionDigest      *remoteexecution.Digest
+	ExecutionMetadata *remoteexecution.ExecutedActionMetadata
 }
 
 // Add ActionDigest again here so it's available when polling status - no ref to original request
@@ -62,6 +64,13 @@ func (e *ExecuteRequest) GetActionDigest() *remoteexecution.Digest {
 		return &remoteexecution.Digest{}
 	}
 	return e.ActionDigest
+}
+
+func (e *ExecuteRequest) GetExecutionMetadata() *remoteexecution.ExecutedActionMetadata {
+	if e == nil {
+		return &remoteexecution.ExecutedActionMetadata{}
+	}
+	return e.ExecutionMetadata
 }
 
 func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
@@ -103,8 +112,9 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 		Action:          makeActionFromThrift(thriftRequest.GetAction()),
 	}
 	return &ExecuteRequest{
-		Request:      er,
-		ActionDigest: makeDigestFromThrift(thriftRequest.GetActionDigest()),
+		Request:           er,
+		ActionDigest:      makeDigestFromThrift(thriftRequest.GetActionDigest()),
+		ExecutionMetadata: makeExecutionMetadataFromThrift(thriftRequest.GetExecutionMetadata()),
 	}
 }
 
@@ -115,10 +125,11 @@ func MakeExecReqThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.Ex
 		return nil
 	}
 	return &bazelthrift.ExecuteRequest{
-		InstanceName: &executeRequest.Request.InstanceName,
-		SkipCache:    &executeRequest.Request.SkipCacheLookup,
-		Action:       makeActionThriftFromDomain(executeRequest.Request.GetAction()),
-		ActionDigest: makeDigestThriftFromDomain(executeRequest.ActionDigest),
+		InstanceName:      &executeRequest.Request.InstanceName,
+		SkipCache:         &executeRequest.Request.SkipCacheLookup,
+		Action:            makeActionThriftFromDomain(executeRequest.Request.GetAction()),
+		ActionDigest:      makeDigestThriftFromDomain(executeRequest.ActionDigest),
+		ExecutionMetadata: makeExecutionMetadataThriftFromDomain(executeRequest.ExecutionMetadata),
 	}
 }
 

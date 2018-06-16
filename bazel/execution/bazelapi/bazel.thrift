@@ -30,29 +30,6 @@ struct Action {
   7: optional bool noCache
 }
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteRequest
-# with added Digest field for passing around actionDigest
-struct ExecuteRequest {
-  1: optional Action action
-  2: optional string instanceName
-  3: optional bool skipCache
-  4: optional Digest actionDigest
-}
-
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
-struct OutputFile {
-  1: optional Digest digest
-  2: optional string path
-  3: optional binary content
-  4: optional bool isExecutable
-}
-
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputDirectory
-struct OutputDirectory {
-  1: optional Digest treeDigest
-  2: optional string path
-}
-
 # Modeled after https://godoc.org/github.com/golang/protobuf/ptypes/timestamp
 struct Timestamp {
     1: optional i64 seconds
@@ -71,6 +48,31 @@ struct ExecutedActionMetadata {
     8: optional Timestamp executionCompletedTimestamp
     9: optional Timestamp outputUploadStartTimestamp
     10: optional Timestamp outputUploadCompletedTimestamp
+}
+
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteRequest
+# Added Digest field for passing around actionDigest
+# Added ExecutionMetadata field so worker has access to scheduling timestamp data
+struct ExecuteRequest {
+  1: optional Action action
+  2: optional string instanceName
+  3: optional bool skipCache
+  4: optional Digest actionDigest
+  5: optional ExecutedActionMetadata executionMetadata
+}
+
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
+struct OutputFile {
+  1: optional Digest digest
+  2: optional string path
+  3: optional binary content
+  4: optional bool isExecutable
+}
+
+# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputDirectory
+struct OutputDirectory {
+  1: optional Digest treeDigest
+  2: optional string path
 }
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult

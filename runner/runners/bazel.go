@@ -9,11 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -23,6 +23,7 @@ import (
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
@@ -104,7 +105,8 @@ func postProcessBazel(filer snapshot.Filer,
 	cmd *runner.Command,
 	coDir string,
 	stdout, stderr runner.Output,
-	st execer.ProcessStatus) (*bazelapi.ActionResult, error) {
+	st execer.ProcessStatus,
+	rts runTimes) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
 		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
@@ -137,18 +139,22 @@ func postProcessBazel(filer snapshot.Filer,
 		return nil, fmt.Errorf(errstr)
 	}
 
-	// TODO placeholder metadata/timing data until invoker records timestamps
+	rts.outputEnd = time.Now()
+	rts.invokeEnd = rts.outputEnd
+
+	// Update ExecutionMetadata with invoker runTimes data and existing queued time
+	// TODO Invoker should contain some metadata about the worker it lives on
 	metadata := &remoteexecution.ExecutedActionMetadata{
-		Worker:                         "remexec-placeholder",
-		QueuedTimestamp:                nil,
-		WorkerStartTimestamp:           &timestamp.Timestamp{Seconds: 1},
-		WorkerCompletedTimestamp:       &timestamp.Timestamp{Seconds: 10},
-		InputFetchStartTimestamp:       &timestamp.Timestamp{Seconds: 2},
-		InputFetchCompletedTimestamp:   &timestamp.Timestamp{Seconds: 2, Nanos: 300000000},
-		ExecutionStartTimestamp:        &timestamp.Timestamp{Seconds: 3},
-		ExecutionCompletedTimestamp:    &timestamp.Timestamp{Seconds: 5, Nanos: 987654321},
-		OutputUploadStartTimestamp:     &timestamp.Timestamp{Seconds: 7, Nanos: 400000000},
-		OutputUploadCompletedTimestamp: &timestamp.Timestamp{Seconds: 9, Nanos: 150000000},
+		Worker:                         "bazel-worker",
+		QueuedTimestamp:                cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp(),
+		WorkerStartTimestamp:           scootproto.GetTimestampFromTime(rts.invokeStart),
+		WorkerCompletedTimestamp:       scootproto.GetTimestampFromTime(rts.invokeEnd),
+		InputFetchStartTimestamp:       scootproto.GetTimestampFromTime(rts.checkoutStart),
+		InputFetchCompletedTimestamp:   scootproto.GetTimestampFromTime(rts.checkoutEnd),
+		ExecutionStartTimestamp:        scootproto.GetTimestampFromTime(rts.execStart),
+		ExecutionCompletedTimestamp:    scootproto.GetTimestampFromTime(rts.execEnd),
+		OutputUploadStartTimestamp:     scootproto.GetTimestampFromTime(rts.outputStart),
+		OutputUploadCompletedTimestamp: scootproto.GetTimestampFromTime(rts.outputEnd),
 	}
 
 	ar := &remoteexecution.ActionResult{

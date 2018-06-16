@@ -77,6 +77,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}()
 	start := time.Now()
 
+	// Records various stages of the run
+	// TODO opporunity for consolidation with existing timers and metrics as part of larger refactor
+	var rts runTimes
+	rts.invokeStart = start
+
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
@@ -129,6 +134,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		downloadTimer = inv.stat.Latency(stats.WorkerDownloadLatency_ms).Time()
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
+	rts.checkoutStart = time.Now()
 
 	go func() {
 		if cmd.SnapshotID == "" {
@@ -203,6 +209,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
+		rts.checkoutEnd = time.Now()
 	}
 	log.WithFields(
 		log.Fields{
@@ -255,6 +262,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"stdlog": stdlog.AsFile(),
 		}).Debug("Stdout/Stderr output")
 
+	rts.execStart = time.Now() // candidate for availability via Execer
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:    cmd.Argv,
 		EnvVars: cmd.EnvVars,
@@ -318,6 +326,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	switch st.State {
 	case execer.COMPLETE:
+		rts.execEnd = time.Now()
+		rts.outputStart = rts.execEnd
 		if runType == runner.RunTypeScoot {
 			tmp, err := inv.tmp.TempDir("invoke")
 			if err != nil {
@@ -362,6 +372,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 				snapshotID = res.(string)
 			}
+			rts.outputEnd = time.Now()
+			rts.invokeEnd = rts.outputEnd
 
 			// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 			status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
@@ -375,7 +387,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			// Process Bazel uploads of std* output and other data to CAS
 			ingestCh := make(chan interface{})
 			go func() {
-				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st)
+				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st, rts)
 				if err != nil {
 					ingestCh <- err
 				} else {
@@ -447,4 +459,17 @@ func copyLogFile(tmpDir, logName, logPath string) error {
 		return fmt.Errorf("error staging ingestion for stdout: %v", err)
 	}
 	return nil
+}
+
+// Tracking timestamps for stages of an invoker run.
+// Values are only set with non-zero Time when stage has completed successfully.
+type runTimes struct {
+	invokeStart   time.Time
+	invokeEnd     time.Time
+	checkoutStart time.Time
+	checkoutEnd   time.Time
+	execStart     time.Time
+	execEnd       time.Time
+	outputStart   time.Time
+	outputEnd     time.Time
 }
