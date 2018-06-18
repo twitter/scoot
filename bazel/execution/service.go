@@ -20,6 +20,7 @@ import (
 	"github.com/twitter/scoot/common/grpchelpers"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
@@ -32,11 +33,18 @@ type executionServer struct {
 	sagaCoord saga.SagaCoordinator
 	server    *grpc.Server
 	scheduler scheduler.Scheduler
+	stat      stats.StatsReceiver
 }
 
 // Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
-func MakeExecutionServer(l net.Listener, s scheduler.Scheduler) *executionServer {
-	g := executionServer{listener: l, server: grpchelpers.NewServer(), scheduler: s, sagaCoord: s.GetSagaCoord()}
+func MakeExecutionServer(l net.Listener, s scheduler.Scheduler, stat stats.StatsReceiver) *executionServer {
+	g := executionServer{
+		listener:  l,
+		sagaCoord: s.GetSagaCoord(),
+		server:    grpchelpers.NewServer(),
+		scheduler: s,
+		stat:      stat,
+	}
 	remoteexecution.RegisterExecutionServer(g.server, &g)
 	longrunning.RegisterOperationsServer(g.server, &g)
 	return &g
@@ -69,6 +77,8 @@ func (s *executionServer) Execute(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzExecRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzExecRequestLatency_ms).Time().Stop()
 
 	// Get digest of request Action from wire format only, for inclusion in response metadata.
 	actionSha, actionLen, err := scootproto.GetSha256(req.GetAction())
@@ -139,6 +149,8 @@ func (s *executionServer) GetOperation(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzGetOpRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzGetOpRequestLatency_ms).Time().Stop()
 
 	rs, err := s.getRunStatusAndValidate(req.Name)
 	if err != nil {

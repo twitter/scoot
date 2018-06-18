@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -25,7 +26,7 @@ var testData1 []byte = []byte("abc1234")
 
 func TestFindMissingBlobsStub(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// Create 2 digests, write 1 to Store, check both for missing, expect other 1 back
 	dExists := &remoteexecution.Digest{Hash: "abc123", SizeBytes: 1}
@@ -58,7 +59,7 @@ func TestFindMissingBlobsStub(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// Write a resource to underlying store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -96,7 +97,7 @@ func TestRead(t *testing.T) {
 
 func TestReadEmpty(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// Note: don't actually write the underlying resource beforehand. We expect
 	// that reading an empty blob will bypass the underlying store
@@ -123,7 +124,7 @@ func TestReadEmpty(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	w := makeFakeWriteServer(testHash1, testSize1, testData1, 3)
 
@@ -159,7 +160,7 @@ func TestWrite(t *testing.T) {
 
 func TestWriteEmpty(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	w := makeFakeWriteServer(bazel.EmptySha, bazel.EmptySize, []byte{}, 1)
 
@@ -181,7 +182,7 @@ func TestWriteEmpty(t *testing.T) {
 
 func TestWriteExisting(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// Pre-write data directly to underlying Store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -211,7 +212,7 @@ func TestWriteExisting(t *testing.T) {
 
 func TestQueryWriteStatusStub(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	req := &bytestream.QueryWriteStatusRequest{}
 
@@ -229,7 +230,7 @@ func TestQueryWriteStatusStub(t *testing.T) {
 }
 
 func TestBatchUpdateBlobsStub(t *testing.T) {
-	s := casServer{}
+	s := casServer{stat: stats.NilStatsReceiver()}
 	req := &remoteexecution.BatchUpdateBlobsRequest{}
 
 	_, err := s.BatchUpdateBlobs(context.Background(), req)
@@ -246,7 +247,7 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 }
 
 func TestGetTreeStub(t *testing.T) {
-	s := casServer{}
+	s := casServer{stat: stats.NilStatsReceiver()}
 	req := &remoteexecution.GetTreeRequest{}
 
 	_, err := s.GetTree(context.Background(), req)
@@ -264,7 +265,7 @@ func TestGetTreeStub(t *testing.T) {
 
 func TestGetActionResult(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	arAsBytes, err := getFakeActionResult()
 	if err != nil {
@@ -300,7 +301,7 @@ func TestGetActionResult(t *testing.T) {
 
 func TestUpdateActionResult(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	rc := int32(42)
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
