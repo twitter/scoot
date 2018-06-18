@@ -80,7 +80,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	// Records various stages of the run
 	// TODO opporunity for consolidation with existing timers and metrics as part of larger refactor
 	var rts runTimes
-	rts.invokeStart = start
+	rts.invokeStart = stamp()
 
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
@@ -134,7 +134,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		downloadTimer = inv.stat.Latency(stats.WorkerDownloadLatency_ms).Time()
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
-	rts.checkoutStart = time.Now()
+	rts.checkoutStart = stamp()
 
 	go func() {
 		if cmd.SnapshotID == "" {
@@ -209,7 +209,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
-		rts.checkoutEnd = time.Now()
+		rts.checkoutEnd = stamp()
 	}
 	log.WithFields(
 		log.Fields{
@@ -262,7 +262,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"stdlog": stdlog.AsFile(),
 		}).Debug("Stdout/Stderr output")
 
-	rts.execStart = time.Now() // candidate for availability via Execer
+	rts.execStart = stamp() // candidate for availability via Execer
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:    cmd.Argv,
 		EnvVars: cmd.EnvVars,
@@ -326,8 +326,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	switch st.State {
 	case execer.COMPLETE:
-		rts.execEnd = time.Now()
-		rts.outputStart = rts.execEnd
+		rts.execEnd = stamp()
+		rts.outputStart = stamp()
 		if runType == runner.RunTypeScoot {
 			tmp, err := inv.tmp.TempDir("invoke")
 			if err != nil {
@@ -372,8 +372,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 				snapshotID = res.(string)
 			}
-			rts.outputEnd = time.Now()
-			rts.invokeEnd = rts.outputEnd
+			rts.outputEnd = stamp()
+			rts.invokeEnd = stamp()
 
 			// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
 			status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
@@ -472,4 +472,11 @@ type runTimes struct {
 	execEnd       time.Time
 	outputStart   time.Time
 	outputEnd     time.Time
+}
+
+// Wrapper around time values to encourage "stamp()" usage so it's harder to lose track of runTimes fields.
+// Longer term, we should refactor the Invoker so the checkout/exec/upload phases are
+// separated from the implementation logic, which will allow these to be recorded clearly
+func stamp() time.Time {
+	return time.Now()
 }

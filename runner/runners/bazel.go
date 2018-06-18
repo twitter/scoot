@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -139,8 +138,8 @@ func postProcessBazel(filer snapshot.Filer,
 		return nil, fmt.Errorf(errstr)
 	}
 
-	rts.outputEnd = time.Now()
-	rts.invokeEnd = rts.outputEnd
+	rts.outputEnd = stamp()
+	rts.invokeEnd = stamp()
 
 	// Update ExecutionMetadata with invoker runTimes data and existing queued time
 	// TODO Invoker should contain some metadata about the worker it lives on

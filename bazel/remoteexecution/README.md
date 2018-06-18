@@ -42,7 +42,7 @@ Depending on the proto changes, vendored libraries may need to be updated, e.g.:
 Replace all instances of previous imports of the remoteexecution package:
 ```go
 import (
-    remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
+    remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
 ```
 
