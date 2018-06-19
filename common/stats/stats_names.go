@@ -513,4 +513,79 @@ const (
 		The number of times a gitdb stream backend had to resort to a git fetch
 	*/
 	GitStreamUpdateFetches = "gitStreamUpdateFetches"
+
+	/****************************** Bazel Metrics **********************************************/
+
+	/****************************** Execution Service ******************************************/
+	/*
+		Number of Execute requests received
+	*/
+	BzExecRequestCounter = "bzExecRequestCounter"
+
+	/*
+		Amount of time the server takes to process an Execute request
+	*/
+	BzExecRequestLatency_ms = "bzExecRequestLatency_ms"
+
+	/*
+		Number of GetOperation requests received
+	*/
+	BzGetOpRequestCounter = "bzExecRequestCounter"
+
+	/*
+		Amount of time the server takes to process a GetOperation request
+	*/
+	BzGetOpRequestLatency_ms = "bzExecRequestLatency_ms"
+
+	/****************************** CAS Service ******************************************/
+	/*
+		Number of FindMissingBlobs requests received
+	*/
+	BzFindBlobsRequestCounter = "bzFindBlobsRequestCounter"
+
+	/*
+		Amount of time the server takes to process a FindMissingBlobs request
+	*/
+	BzFindBlobsRequestLatency_ms = "bzFindBlobsRequestLatency_ms"
+
+	/*
+		Number of CAS Read requests received
+	*/
+	BzReadRequestCounter = "bzReadRequestCounter"
+
+	/*
+		Amount of time the server takes to process a CAS Read request
+	*/
+	BzReadRequestLatency_ms = "bzReadRequestLatency_ms"
+
+	/*
+		Number of CAS Write requests received
+	*/
+	BzWriteRequestCounter = "bzWriteRequestCounter"
+
+	/*
+		Amount of time the server takes to process a CAS Write request
+	*/
+	BzWriteRequestLatency_ms = "bzWriteRequestLatency_ms"
+
+	/****************************** ActionCache Service ****************************************/
+	/*
+		Number of GetActionResult requests received
+	*/
+	BzGetActionRequestCounter = "bzGetActionRequestCounter"
+
+	/*
+		Amount of time the server takes to process a GetActionResult request
+	*/
+	BzGetActionRequestLatency_ms = "bzGetActionRequestLatency_ms"
+
+	/*
+		Number of UpdateActionResult requests received
+	*/
+	BzUpdateActionRequestCounter = "bzUpdateActionRequestCounter"
+
+	/*
+		Amount of time the server takes to process a UpdateActionResult request
+	*/
+	BzUpdateActionRequestLatency_ms = "bzUpdateActionRequestLatency_ms"
 )
