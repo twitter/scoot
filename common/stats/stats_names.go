@@ -530,12 +530,12 @@ const (
 	/*
 		Number of GetOperation requests received
 	*/
-	BzGetOpRequestCounter = "bzExecRequestCounter"
+	BzGetOpRequestCounter = "bzGetOpRequestCounter"
 
 	/*
 		Amount of time the server takes to process a GetOperation request
 	*/
-	BzGetOpRequestLatency_ms = "bzExecRequestLatency_ms"
+	BzGetOpRequestLatency_ms = "bzGetOpRequestLatency_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
