@@ -21,6 +21,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/grpchelpers"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -30,15 +31,17 @@ type casServer struct {
 	listener    net.Listener
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
+	stat        stats.StatsReceiver
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
 // based on a listener, and preregisters the service
-func MakeCASServer(l net.Listener, cfg *store.StoreConfig) *casServer {
+func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
 	g := casServer{
 		listener:    l,
 		server:      grpchelpers.NewServer(),
 		storeConfig: cfg,
+		stat:        stat,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
@@ -71,6 +74,9 @@ func (s *casServer) FindMissingBlobs(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzFindBlobsRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzFindBlobsRequestLatency_ms).Time().Stop()
+
 	res := remoteexecution.FindMissingBlobsResponse{}
 
 	for _, digest := range req.GetBlobDigests() {
@@ -117,6 +123,8 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzReadRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzReadRequestLatency_ms).Time().Stop()
 
 	// Parse resource name per Bazel API specification
 	resource, err := ParseReadResource(req.GetResourceName())
@@ -211,6 +219,8 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzWriteRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzWriteRequestLatency_ms).Time().Stop()
 
 	var p []byte
 	var buffer *bytes.Buffer
@@ -337,6 +347,8 @@ func (s *casServer) GetActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzGetActionRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzGetActionRequestLatency_ms).Time().Stop()
 
 	// Validate input digest
 	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {
@@ -386,6 +398,8 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	s.stat.Counter(stats.BzUpdateActionRequestCounter).Inc(1)
+	defer s.stat.Latency(stats.BzUpdateActionRequestLatency_ms).Time().Stop()
 
 	// Validate input digest, ActionResult
 	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {

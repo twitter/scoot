@@ -10,6 +10,7 @@ import (
 	"google.golang.org/genproto/googleapis/longrunning"
 
 	scootproto "github.com/twitter/scoot/common/proto"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
 )
@@ -21,7 +22,7 @@ func TestExecuteStub(t *testing.T) {
 	sc := scheduler.NewMockScheduler(mockCtrl)
 	sc.EXPECT().ScheduleJob(gomock.Any()).Return("testJobID", nil)
 
-	s := executionServer{scheduler: sc}
+	s := executionServer{scheduler: sc, stat: stats.NilStatsReceiver()}
 	ctx := context.Background()
 
 	cmd := remoteexecution.Command{Arguments: []string{"/bin/true"}}
@@ -81,6 +82,7 @@ func TestGetOperationStub(t *testing.T) {
 	s := executionServer{
 		scheduler: sc,
 		sagaCoord: sagaC,
+		stat:      stats.NilStatsReceiver(),
 	}
 	ctx := context.Background()
 

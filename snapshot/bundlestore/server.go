@@ -38,7 +38,7 @@ func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, l
 	return &Server{
 		storeConfig: cfg,
 		httpServer:  MakeHTTPServer(cfg),
-		casServer:   cas.MakeCASServer(l, cfg),
+		casServer:   cas.MakeCASServer(l, cfg, stat),
 	}
 }
 
