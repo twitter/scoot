@@ -8,9 +8,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

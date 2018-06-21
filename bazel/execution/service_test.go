@@ -5,8 +5,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/genproto/googleapis/longrunning"
 
 	scootproto "github.com/twitter/scoot/common/proto"
@@ -41,11 +41,9 @@ func TestExecuteStub(t *testing.T) {
 		InputRootDigest: &remoteexecution.Digest{Hash: dirSha, SizeBytes: dirLen},
 	}
 	req := remoteexecution.ExecuteRequest{
-		Action:              &a,
-		InstanceName:        "test",
-		SkipCacheLookup:     true,
-		TotalInputFileCount: 0,
-		TotalInputFileBytes: 0,
+		Action:          &a,
+		InstanceName:    "test",
+		SkipCacheLookup: true,
 	}
 
 	res, err := s.Execute(ctx, &req)

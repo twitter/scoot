@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 // Generate a SnapshotID based on digest sha and size

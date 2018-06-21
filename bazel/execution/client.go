@@ -2,15 +2,18 @@ package execution
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/genproto/googleapis/longrunning"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
 
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/common/proto"
 )
 
 // Google Longrunning client APIs
@@ -127,6 +130,16 @@ func ExecuteOperationToStr(op *longrunning.Operation) string {
 		s += fmt.Sprintf("\t\t\tOutputDirectories: %s\n", res.GetResult().GetOutputDirectories())
 		s += fmt.Sprintf("\t\t\tStdoutDigest: %s\n", digestToStr(res.GetResult().GetStdoutDigest()))
 		s += fmt.Sprintf("\t\t\tStderrDigest: %s\n", digestToStr(res.GetResult().GetStderrDigest()))
+		if res.GetResult().GetExecutionMetadata() != nil {
+			em := res.GetResult().GetExecutionMetadata()
+			s += fmt.Sprintf("\t\t\tExecutionMetadata:\n")
+			s += fmt.Sprintf("\t\t\t\tWorker: %s\n", em.GetWorker())
+			s = addLatencyToStr(s, "\t\t\t\t", "QueueLatency", em.GetQueuedTimestamp(), em.GetWorkerStartTimestamp())
+			s = addLatencyToStr(s, "\t\t\t\t", "WorkerTotal", em.GetWorkerStartTimestamp(), em.GetWorkerCompletedTimestamp())
+			s = addLatencyToStr(s, "\t\t\t\t", "InputFetch", em.GetInputFetchStartTimestamp(), em.GetInputFetchCompletedTimestamp())
+			s = addLatencyToStr(s, "\t\t\t\t", "Execution", em.GetExecutionStartTimestamp(), em.GetExecutionCompletedTimestamp())
+			s = addLatencyToStr(s, "\t\t\t\t", "OutputUpload", em.GetOutputUploadStartTimestamp(), em.GetOutputUploadCompletedTimestamp())
+		}
 	}
 	return s
 }
@@ -136,4 +149,15 @@ func digestToStr(d *remoteexecution.Digest) string {
 		return ""
 	}
 	return fmt.Sprintf("%s/%d", d.GetHash(), d.GetSizeBytes())
+}
+
+func addLatencyToStr(inputStr, indent, label string, startTs, endTs *timestamp.Timestamp) string {
+	if startTs == nil || endTs == nil {
+		return inputStr
+	}
+	startTime, endTime := proto.GetTimeFromTimestamp(startTs), proto.GetTimeFromTimestamp(endTs)
+	duration := endTime.Sub(startTime)
+	ms := duration.Nanoseconds() / int64(time.Millisecond)
+	inputStr += fmt.Sprintf("%s%s: %dms\n", indent, label, ms)
+	return inputStr
 }

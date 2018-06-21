@@ -4,9 +4,11 @@ package proto
 import (
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 // GetProtoSha256 returns the SHA-256 digest of the wire format of any
@@ -29,4 +31,19 @@ func GetMsFromDuration(d *duration.Duration) int64 {
 
 func GetDurationFromMs(ms int64) *duration.Duration {
 	return &duration.Duration{Seconds: int64(ms / 1000), Nanos: int32((ms % 1000) * 1000000)}
+}
+
+func GetTimestampFromTime(t time.Time) *timestamp.Timestamp {
+	nanos := t.UnixNano()
+	return &timestamp.Timestamp{
+		Seconds: nanos / int64(time.Second),
+		Nanos:   int32(nanos % int64(time.Second)),
+	}
+}
+
+func GetTimeFromTimestamp(ts *timestamp.Timestamp) time.Time {
+	if ts == nil {
+		return time.Time{}
+	}
+	return time.Unix(ts.Seconds, int64(ts.Nanos))
 }

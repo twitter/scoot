@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 
 	"github.com/twitter/scoot/bazel"
 )

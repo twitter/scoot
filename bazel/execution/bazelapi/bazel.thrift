@@ -7,6 +7,9 @@
 # To Generate files, run from top level (github.com/twitter/scoot) repo directory:
 #     $ make thrift-bazel-go
 
+# NOTE on Thrift IDL - Always define included data structures above the structures
+# that use them, as Thrift will generate undesirable code otherwise
+
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Digest
 struct Digest {
   1: optional string hash
@@ -30,13 +33,35 @@ struct Action {
   7: optional bool noCache
 }
 
+# Modeled after https://godoc.org/github.com/golang/protobuf/ptypes/timestamp
+struct Timestamp {
+    1: optional i64 seconds
+    2: optional i32 nanos
+}
+
+# Prototype, modeled after bazel/remoteexecution/remote_execution.proto#ExecutedActionMetadata
+struct ExecutedActionMetadata {
+    1: optional string worker
+    2: optional Timestamp queuedTimestamp
+    3: optional Timestamp workerStartTimestamp
+    4: optional Timestamp workerCompletedTimestamp
+    5: optional Timestamp inputFetchStartTimestamp
+    6: optional Timestamp inputFetchCompletedTimestamp
+    7: optional Timestamp executionStartTimestamp
+    8: optional Timestamp executionCompletedTimestamp
+    9: optional Timestamp outputUploadStartTimestamp
+    10: optional Timestamp outputUploadCompletedTimestamp
+}
+
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteRequest
-# with added Digest field for passing around actionDigest
+# Added Digest field for passing around actionDigest
+# Added ExecutionMetadata field so worker has access to scheduling timestamp data
 struct ExecuteRequest {
   1: optional Action action
   2: optional string instanceName
   3: optional bool skipCache
   4: optional Digest actionDigest
+  5: optional ExecutedActionMetadata executionMetadata
 }
 
 # Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
@@ -68,4 +93,5 @@ struct ActionResult {
   8: optional Digest actionDigest
   9: optional binary GRPCStatus
   10: optional bool cached
+  11: optional ExecutedActionMetadata executionMetadata
 }

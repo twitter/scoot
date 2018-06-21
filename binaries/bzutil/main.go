@@ -17,7 +17,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"

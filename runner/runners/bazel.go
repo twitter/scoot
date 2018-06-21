@@ -14,7 +14,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
@@ -22,6 +22,7 @@ import (
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
@@ -103,7 +104,8 @@ func postProcessBazel(filer snapshot.Filer,
 	cmd *runner.Command,
 	coDir string,
 	stdout, stderr runner.Output,
-	st execer.ProcessStatus) (*bazelapi.ActionResult, error) {
+	st execer.ProcessStatus,
+	rts runTimes) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
 		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
@@ -136,12 +138,31 @@ func postProcessBazel(filer snapshot.Filer,
 		return nil, fmt.Errorf(errstr)
 	}
 
+	rts.outputEnd = stamp()
+	rts.invokeEnd = stamp()
+
+	// Update ExecutionMetadata with invoker runTimes data and existing queued time
+	// TODO Invoker should contain some metadata about the worker it lives on
+	metadata := &remoteexecution.ExecutedActionMetadata{
+		Worker:                         "bazel-worker",
+		QueuedTimestamp:                cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp(),
+		WorkerStartTimestamp:           scootproto.GetTimestampFromTime(rts.invokeStart),
+		WorkerCompletedTimestamp:       scootproto.GetTimestampFromTime(rts.invokeEnd),
+		InputFetchStartTimestamp:       scootproto.GetTimestampFromTime(rts.checkoutStart),
+		InputFetchCompletedTimestamp:   scootproto.GetTimestampFromTime(rts.checkoutEnd),
+		ExecutionStartTimestamp:        scootproto.GetTimestampFromTime(rts.execStart),
+		ExecutionCompletedTimestamp:    scootproto.GetTimestampFromTime(rts.execEnd),
+		OutputUploadStartTimestamp:     scootproto.GetTimestampFromTime(rts.outputStart),
+		OutputUploadCompletedTimestamp: scootproto.GetTimestampFromTime(rts.outputEnd),
+	}
+
 	ar := &remoteexecution.ActionResult{
 		OutputFiles:       outputFiles,
 		OutputDirectories: outputDirs,
 		ExitCode:          int32(st.ExitCode),
 		StdoutDigest:      stdoutDigest,
 		StderrDigest:      stderrDigest,
+		ExecutionMetadata: metadata,
 	}
 	ad := cmd.ExecuteRequest.GetActionDigest()
 

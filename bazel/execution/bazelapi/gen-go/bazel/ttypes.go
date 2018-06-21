@@ -741,15 +741,672 @@ func (p *Action) String() string {
 }
 
 // Attributes:
+//  - Seconds
+//  - Nanos
+type Timestamp struct {
+	Seconds *int64 `thrift:"seconds,1" json:"seconds,omitempty"`
+	Nanos   *int32 `thrift:"nanos,2" json:"nanos,omitempty"`
+}
+
+func NewTimestamp() *Timestamp {
+	return &Timestamp{}
+}
+
+var Timestamp_Seconds_DEFAULT int64
+
+func (p *Timestamp) GetSeconds() int64 {
+	if !p.IsSetSeconds() {
+		return Timestamp_Seconds_DEFAULT
+	}
+	return *p.Seconds
+}
+
+var Timestamp_Nanos_DEFAULT int32
+
+func (p *Timestamp) GetNanos() int32 {
+	if !p.IsSetNanos() {
+		return Timestamp_Nanos_DEFAULT
+	}
+	return *p.Nanos
+}
+func (p *Timestamp) IsSetSeconds() bool {
+	return p.Seconds != nil
+}
+
+func (p *Timestamp) IsSetNanos() bool {
+	return p.Nanos != nil
+}
+
+func (p *Timestamp) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *Timestamp) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Seconds = &v
+	}
+	return nil
+}
+
+func (p *Timestamp) readField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.Nanos = &v
+	}
+	return nil
+}
+
+func (p *Timestamp) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Timestamp"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *Timestamp) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSeconds() {
+		if err := oprot.WriteFieldBegin("seconds", thrift.I64, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:seconds: ", p), err)
+		}
+		if err := oprot.WriteI64(int64(*p.Seconds)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.seconds (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:seconds: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *Timestamp) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNanos() {
+		if err := oprot.WriteFieldBegin("nanos", thrift.I32, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:nanos: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Nanos)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.nanos (2) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:nanos: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *Timestamp) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Timestamp(%+v)", *p)
+}
+
+// Attributes:
+//  - Worker
+//  - QueuedTimestamp
+//  - WorkerStartTimestamp
+//  - WorkerCompletedTimestamp
+//  - InputFetchStartTimestamp
+//  - InputFetchCompletedTimestamp
+//  - ExecutionStartTimestamp
+//  - ExecutionCompletedTimestamp
+//  - OutputUploadStartTimestamp
+//  - OutputUploadCompletedTimestamp
+type ExecutedActionMetadata struct {
+	Worker                         *string    `thrift:"worker,1" json:"worker,omitempty"`
+	QueuedTimestamp                *Timestamp `thrift:"queuedTimestamp,2" json:"queuedTimestamp,omitempty"`
+	WorkerStartTimestamp           *Timestamp `thrift:"workerStartTimestamp,3" json:"workerStartTimestamp,omitempty"`
+	WorkerCompletedTimestamp       *Timestamp `thrift:"workerCompletedTimestamp,4" json:"workerCompletedTimestamp,omitempty"`
+	InputFetchStartTimestamp       *Timestamp `thrift:"inputFetchStartTimestamp,5" json:"inputFetchStartTimestamp,omitempty"`
+	InputFetchCompletedTimestamp   *Timestamp `thrift:"inputFetchCompletedTimestamp,6" json:"inputFetchCompletedTimestamp,omitempty"`
+	ExecutionStartTimestamp        *Timestamp `thrift:"executionStartTimestamp,7" json:"executionStartTimestamp,omitempty"`
+	ExecutionCompletedTimestamp    *Timestamp `thrift:"executionCompletedTimestamp,8" json:"executionCompletedTimestamp,omitempty"`
+	OutputUploadStartTimestamp     *Timestamp `thrift:"outputUploadStartTimestamp,9" json:"outputUploadStartTimestamp,omitempty"`
+	OutputUploadCompletedTimestamp *Timestamp `thrift:"outputUploadCompletedTimestamp,10" json:"outputUploadCompletedTimestamp,omitempty"`
+}
+
+func NewExecutedActionMetadata() *ExecutedActionMetadata {
+	return &ExecutedActionMetadata{}
+}
+
+var ExecutedActionMetadata_Worker_DEFAULT string
+
+func (p *ExecutedActionMetadata) GetWorker() string {
+	if !p.IsSetWorker() {
+		return ExecutedActionMetadata_Worker_DEFAULT
+	}
+	return *p.Worker
+}
+
+var ExecutedActionMetadata_QueuedTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetQueuedTimestamp() *Timestamp {
+	if !p.IsSetQueuedTimestamp() {
+		return ExecutedActionMetadata_QueuedTimestamp_DEFAULT
+	}
+	return p.QueuedTimestamp
+}
+
+var ExecutedActionMetadata_WorkerStartTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetWorkerStartTimestamp() *Timestamp {
+	if !p.IsSetWorkerStartTimestamp() {
+		return ExecutedActionMetadata_WorkerStartTimestamp_DEFAULT
+	}
+	return p.WorkerStartTimestamp
+}
+
+var ExecutedActionMetadata_WorkerCompletedTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetWorkerCompletedTimestamp() *Timestamp {
+	if !p.IsSetWorkerCompletedTimestamp() {
+		return ExecutedActionMetadata_WorkerCompletedTimestamp_DEFAULT
+	}
+	return p.WorkerCompletedTimestamp
+}
+
+var ExecutedActionMetadata_InputFetchStartTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetInputFetchStartTimestamp() *Timestamp {
+	if !p.IsSetInputFetchStartTimestamp() {
+		return ExecutedActionMetadata_InputFetchStartTimestamp_DEFAULT
+	}
+	return p.InputFetchStartTimestamp
+}
+
+var ExecutedActionMetadata_InputFetchCompletedTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetInputFetchCompletedTimestamp() *Timestamp {
+	if !p.IsSetInputFetchCompletedTimestamp() {
+		return ExecutedActionMetadata_InputFetchCompletedTimestamp_DEFAULT
+	}
+	return p.InputFetchCompletedTimestamp
+}
+
+var ExecutedActionMetadata_ExecutionStartTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetExecutionStartTimestamp() *Timestamp {
+	if !p.IsSetExecutionStartTimestamp() {
+		return ExecutedActionMetadata_ExecutionStartTimestamp_DEFAULT
+	}
+	return p.ExecutionStartTimestamp
+}
+
+var ExecutedActionMetadata_ExecutionCompletedTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetExecutionCompletedTimestamp() *Timestamp {
+	if !p.IsSetExecutionCompletedTimestamp() {
+		return ExecutedActionMetadata_ExecutionCompletedTimestamp_DEFAULT
+	}
+	return p.ExecutionCompletedTimestamp
+}
+
+var ExecutedActionMetadata_OutputUploadStartTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetOutputUploadStartTimestamp() *Timestamp {
+	if !p.IsSetOutputUploadStartTimestamp() {
+		return ExecutedActionMetadata_OutputUploadStartTimestamp_DEFAULT
+	}
+	return p.OutputUploadStartTimestamp
+}
+
+var ExecutedActionMetadata_OutputUploadCompletedTimestamp_DEFAULT *Timestamp
+
+func (p *ExecutedActionMetadata) GetOutputUploadCompletedTimestamp() *Timestamp {
+	if !p.IsSetOutputUploadCompletedTimestamp() {
+		return ExecutedActionMetadata_OutputUploadCompletedTimestamp_DEFAULT
+	}
+	return p.OutputUploadCompletedTimestamp
+}
+func (p *ExecutedActionMetadata) IsSetWorker() bool {
+	return p.Worker != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetQueuedTimestamp() bool {
+	return p.QueuedTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetWorkerStartTimestamp() bool {
+	return p.WorkerStartTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetWorkerCompletedTimestamp() bool {
+	return p.WorkerCompletedTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetInputFetchStartTimestamp() bool {
+	return p.InputFetchStartTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetInputFetchCompletedTimestamp() bool {
+	return p.InputFetchCompletedTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetExecutionStartTimestamp() bool {
+	return p.ExecutionStartTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetExecutionCompletedTimestamp() bool {
+	return p.ExecutionCompletedTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetOutputUploadStartTimestamp() bool {
+	return p.OutputUploadStartTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) IsSetOutputUploadCompletedTimestamp() bool {
+	return p.OutputUploadCompletedTimestamp != nil
+}
+
+func (p *ExecutedActionMetadata) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		case 3:
+			if err := p.readField3(iprot); err != nil {
+				return err
+			}
+		case 4:
+			if err := p.readField4(iprot); err != nil {
+				return err
+			}
+		case 5:
+			if err := p.readField5(iprot); err != nil {
+				return err
+			}
+		case 6:
+			if err := p.readField6(iprot); err != nil {
+				return err
+			}
+		case 7:
+			if err := p.readField7(iprot); err != nil {
+				return err
+			}
+		case 8:
+			if err := p.readField8(iprot); err != nil {
+				return err
+			}
+		case 9:
+			if err := p.readField9(iprot); err != nil {
+				return err
+			}
+		case 10:
+			if err := p.readField10(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Worker = &v
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField2(iprot thrift.TProtocol) error {
+	p.QueuedTimestamp = &Timestamp{}
+	if err := p.QueuedTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.QueuedTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField3(iprot thrift.TProtocol) error {
+	p.WorkerStartTimestamp = &Timestamp{}
+	if err := p.WorkerStartTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkerStartTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField4(iprot thrift.TProtocol) error {
+	p.WorkerCompletedTimestamp = &Timestamp{}
+	if err := p.WorkerCompletedTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkerCompletedTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField5(iprot thrift.TProtocol) error {
+	p.InputFetchStartTimestamp = &Timestamp{}
+	if err := p.InputFetchStartTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InputFetchStartTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField6(iprot thrift.TProtocol) error {
+	p.InputFetchCompletedTimestamp = &Timestamp{}
+	if err := p.InputFetchCompletedTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InputFetchCompletedTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField7(iprot thrift.TProtocol) error {
+	p.ExecutionStartTimestamp = &Timestamp{}
+	if err := p.ExecutionStartTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionStartTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField8(iprot thrift.TProtocol) error {
+	p.ExecutionCompletedTimestamp = &Timestamp{}
+	if err := p.ExecutionCompletedTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionCompletedTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField9(iprot thrift.TProtocol) error {
+	p.OutputUploadStartTimestamp = &Timestamp{}
+	if err := p.OutputUploadStartTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.OutputUploadStartTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) readField10(iprot thrift.TProtocol) error {
+	p.OutputUploadCompletedTimestamp = &Timestamp{}
+	if err := p.OutputUploadCompletedTimestamp.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.OutputUploadCompletedTimestamp), err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ExecutedActionMetadata"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField4(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField5(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField6(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField7(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField8(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField9(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField10(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ExecutedActionMetadata) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorker() {
+		if err := oprot.WriteFieldBegin("worker", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:worker: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.Worker)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.worker (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:worker: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueuedTimestamp() {
+		if err := oprot.WriteFieldBegin("queuedTimestamp", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:queuedTimestamp: ", p), err)
+		}
+		if err := p.QueuedTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.QueuedTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:queuedTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkerStartTimestamp() {
+		if err := oprot.WriteFieldBegin("workerStartTimestamp", thrift.STRUCT, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:workerStartTimestamp: ", p), err)
+		}
+		if err := p.WorkerStartTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkerStartTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:workerStartTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkerCompletedTimestamp() {
+		if err := oprot.WriteFieldBegin("workerCompletedTimestamp", thrift.STRUCT, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:workerCompletedTimestamp: ", p), err)
+		}
+		if err := p.WorkerCompletedTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkerCompletedTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:workerCompletedTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputFetchStartTimestamp() {
+		if err := oprot.WriteFieldBegin("inputFetchStartTimestamp", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:inputFetchStartTimestamp: ", p), err)
+		}
+		if err := p.InputFetchStartTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InputFetchStartTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:inputFetchStartTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputFetchCompletedTimestamp() {
+		if err := oprot.WriteFieldBegin("inputFetchCompletedTimestamp", thrift.STRUCT, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:inputFetchCompletedTimestamp: ", p), err)
+		}
+		if err := p.InputFetchCompletedTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InputFetchCompletedTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:inputFetchCompletedTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecutionStartTimestamp() {
+		if err := oprot.WriteFieldBegin("executionStartTimestamp", thrift.STRUCT, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:executionStartTimestamp: ", p), err)
+		}
+		if err := p.ExecutionStartTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionStartTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:executionStartTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecutionCompletedTimestamp() {
+		if err := oprot.WriteFieldBegin("executionCompletedTimestamp", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:executionCompletedTimestamp: ", p), err)
+		}
+		if err := p.ExecutionCompletedTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionCompletedTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:executionCompletedTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutputUploadStartTimestamp() {
+		if err := oprot.WriteFieldBegin("outputUploadStartTimestamp", thrift.STRUCT, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:outputUploadStartTimestamp: ", p), err)
+		}
+		if err := p.OutputUploadStartTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.OutputUploadStartTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:outputUploadStartTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutputUploadCompletedTimestamp() {
+		if err := oprot.WriteFieldBegin("outputUploadCompletedTimestamp", thrift.STRUCT, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:outputUploadCompletedTimestamp: ", p), err)
+		}
+		if err := p.OutputUploadCompletedTimestamp.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.OutputUploadCompletedTimestamp), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:outputUploadCompletedTimestamp: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutedActionMetadata) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExecutedActionMetadata(%+v)", *p)
+}
+
+// Attributes:
 //  - Action
 //  - InstanceName
 //  - SkipCache
 //  - ActionDigest
+//  - ExecutionMetadata
 type ExecuteRequest struct {
-	Action       *Action `thrift:"action,1" json:"action,omitempty"`
-	InstanceName *string `thrift:"instanceName,2" json:"instanceName,omitempty"`
-	SkipCache    *bool   `thrift:"skipCache,3" json:"skipCache,omitempty"`
-	ActionDigest *Digest `thrift:"actionDigest,4" json:"actionDigest,omitempty"`
+	Action            *Action                 `thrift:"action,1" json:"action,omitempty"`
+	InstanceName      *string                 `thrift:"instanceName,2" json:"instanceName,omitempty"`
+	SkipCache         *bool                   `thrift:"skipCache,3" json:"skipCache,omitempty"`
+	ActionDigest      *Digest                 `thrift:"actionDigest,4" json:"actionDigest,omitempty"`
+	ExecutionMetadata *ExecutedActionMetadata `thrift:"executionMetadata,5" json:"executionMetadata,omitempty"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -791,6 +1448,15 @@ func (p *ExecuteRequest) GetActionDigest() *Digest {
 	}
 	return p.ActionDigest
 }
+
+var ExecuteRequest_ExecutionMetadata_DEFAULT *ExecutedActionMetadata
+
+func (p *ExecuteRequest) GetExecutionMetadata() *ExecutedActionMetadata {
+	if !p.IsSetExecutionMetadata() {
+		return ExecuteRequest_ExecutionMetadata_DEFAULT
+	}
+	return p.ExecutionMetadata
+}
 func (p *ExecuteRequest) IsSetAction() bool {
 	return p.Action != nil
 }
@@ -805,6 +1471,10 @@ func (p *ExecuteRequest) IsSetSkipCache() bool {
 
 func (p *ExecuteRequest) IsSetActionDigest() bool {
 	return p.ActionDigest != nil
+}
+
+func (p *ExecuteRequest) IsSetExecutionMetadata() bool {
+	return p.ExecutionMetadata != nil
 }
 
 func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
@@ -835,6 +1505,10 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 			}
 		case 4:
 			if err := p.readField4(iprot); err != nil {
+				return err
+			}
+		case 5:
+			if err := p.readField5(iprot); err != nil {
 				return err
 			}
 		default:
@@ -886,6 +1560,14 @@ func (p *ExecuteRequest) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ExecuteRequest) readField5(iprot thrift.TProtocol) error {
+	p.ExecutionMetadata = &ExecutedActionMetadata{}
+	if err := p.ExecutionMetadata.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionMetadata), err)
+	}
+	return nil
+}
+
 func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ExecuteRequest"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -900,6 +1582,9 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField4(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField5(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -966,6 +1651,21 @@ func (p *ExecuteRequest) writeField4(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:actionDigest: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecuteRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecutionMetadata() {
+		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:executionMetadata: ", p), err)
+		}
+		if err := p.ExecutionMetadata.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionMetadata), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:executionMetadata: ", p), err)
 		}
 	}
 	return err
@@ -1372,17 +2072,19 @@ func (p *OutputDirectory) String() string {
 //  - ActionDigest
 //  - GRPCStatus
 //  - Cached
+//  - ExecutionMetadata
 type ActionResult_ struct {
-	StdoutDigest      *Digest            `thrift:"stdoutDigest,1" json:"stdoutDigest,omitempty"`
-	StderrDigest      *Digest            `thrift:"stderrDigest,2" json:"stderrDigest,omitempty"`
-	StdoutRaw         []byte             `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
-	StderrRaw         []byte             `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
-	OutputFiles       []*OutputFile      `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
-	OutputDirectories []*OutputDirectory `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
-	ExitCode          *int32             `thrift:"exitCode,7" json:"exitCode,omitempty"`
-	ActionDigest      *Digest            `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
-	GRPCStatus        []byte             `thrift:"GRPCStatus,9" json:"GRPCStatus,omitempty"`
-	Cached            *bool              `thrift:"cached,10" json:"cached,omitempty"`
+	StdoutDigest      *Digest                 `thrift:"stdoutDigest,1" json:"stdoutDigest,omitempty"`
+	StderrDigest      *Digest                 `thrift:"stderrDigest,2" json:"stderrDigest,omitempty"`
+	StdoutRaw         []byte                  `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
+	StderrRaw         []byte                  `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
+	OutputFiles       []*OutputFile           `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
+	OutputDirectories []*OutputDirectory      `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
+	ExitCode          *int32                  `thrift:"exitCode,7" json:"exitCode,omitempty"`
+	ActionDigest      *Digest                 `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
+	GRPCStatus        []byte                  `thrift:"GRPCStatus,9" json:"GRPCStatus,omitempty"`
+	Cached            *bool                   `thrift:"cached,10" json:"cached,omitempty"`
+	ExecutionMetadata *ExecutedActionMetadata `thrift:"executionMetadata,11" json:"executionMetadata,omitempty"`
 }
 
 func NewActionResult_() *ActionResult_ {
@@ -1463,6 +2165,15 @@ func (p *ActionResult_) GetCached() bool {
 	}
 	return *p.Cached
 }
+
+var ActionResult__ExecutionMetadata_DEFAULT *ExecutedActionMetadata
+
+func (p *ActionResult_) GetExecutionMetadata() *ExecutedActionMetadata {
+	if !p.IsSetExecutionMetadata() {
+		return ActionResult__ExecutionMetadata_DEFAULT
+	}
+	return p.ExecutionMetadata
+}
 func (p *ActionResult_) IsSetStdoutDigest() bool {
 	return p.StdoutDigest != nil
 }
@@ -1501,6 +2212,10 @@ func (p *ActionResult_) IsSetGRPCStatus() bool {
 
 func (p *ActionResult_) IsSetCached() bool {
 	return p.Cached != nil
+}
+
+func (p *ActionResult_) IsSetExecutionMetadata() bool {
+	return p.ExecutionMetadata != nil
 }
 
 func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
@@ -1555,6 +2270,10 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 			}
 		case 10:
 			if err := p.readField10(iprot); err != nil {
+				return err
+			}
+		case 11:
+			if err := p.readField11(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1681,6 +2400,14 @@ func (p *ActionResult_) readField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ActionResult_) readField11(iprot thrift.TProtocol) error {
+	p.ExecutionMetadata = &ExecutedActionMetadata{}
+	if err := p.ExecutionMetadata.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionMetadata), err)
+	}
+	return nil
+}
+
 func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("ActionResult"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1713,6 +2440,9 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField10(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField11(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1885,6 +2615,21 @@ func (p *ActionResult_) writeField10(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cached: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExecutionMetadata() {
+		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:executionMetadata: ", p), err)
+		}
+		if err := p.ExecutionMetadata.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionMetadata), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:executionMetadata: ", p), err)
 		}
 	}
 	return err

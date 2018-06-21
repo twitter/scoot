@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 // Validate Digest hash and size components assuming SHA256

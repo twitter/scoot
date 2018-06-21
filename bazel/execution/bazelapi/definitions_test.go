@@ -5,7 +5,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
@@ -33,6 +34,9 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 			},
 		},
 		ActionDigest: &remoteexecution.Digest{},
+		ExecutionMetadata: &remoteexecution.ExecutedActionMetadata{
+			QueuedTimestamp: &timestamp.Timestamp{Nanos: 25},
+		},
 	}
 
 	tr := MakeExecReqThriftFromDomain(er)
@@ -54,7 +58,8 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 		result.Request.Action.Platform.Properties[0].Value != er.Request.Action.Platform.Properties[0].Value ||
 		scootproto.GetMsFromDuration(result.Request.Action.Timeout) != scootproto.GetMsFromDuration(er.Request.Action.Timeout) ||
 		result.Request.Action.DoNotCache != er.Request.Action.DoNotCache ||
-		result.String() != er.String() {
+		result.String() != er.String() ||
+		result.ExecutionMetadata.QueuedTimestamp.Nanos != er.ExecutionMetadata.QueuedTimestamp.Nanos {
 		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result, er)
 	}
 }
@@ -94,6 +99,18 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 				},
 			},
 			ExitCode: 1,
+			ExecutionMetadata: &remoteexecution.ExecutedActionMetadata{
+				Worker:                         "lebron23goat",
+				QueuedTimestamp:                &timestamp.Timestamp{Seconds: 4},
+				WorkerStartTimestamp:           &timestamp.Timestamp{Nanos: 0},
+				WorkerCompletedTimestamp:       &timestamp.Timestamp{Seconds: 1, Nanos: 1},
+				InputFetchStartTimestamp:       &timestamp.Timestamp{Seconds: 1, Nanos: 1},
+				InputFetchCompletedTimestamp:   &timestamp.Timestamp{Seconds: 1, Nanos: 2},
+				ExecutionStartTimestamp:        &timestamp.Timestamp{Seconds: 1, Nanos: 1},
+				ExecutionCompletedTimestamp:    &timestamp.Timestamp{Seconds: 1, Nanos: 2},
+				OutputUploadStartTimestamp:     &timestamp.Timestamp{Seconds: 1, Nanos: 1},
+				OutputUploadCompletedTimestamp: &timestamp.Timestamp{Seconds: 1, Nanos: 2},
+			},
 		},
 		ActionDigest: &remoteexecution.Digest{Hash: "bacon", SizeBytes: 420},
 		GRPCStatus: &google_rpc_status.Status{
@@ -132,6 +149,21 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		t.Fatalf("Unexpected output from result\ngot:      %v\nexpected: %v", result.Result, ar.Result)
 	}
 
+	// ExecutionMetadata
+	if result.Result.ExecutionMetadata.Worker != ar.Result.ExecutionMetadata.Worker ||
+		!tsEquals(result.Result.ExecutionMetadata.QueuedTimestamp, ar.Result.ExecutionMetadata.QueuedTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.WorkerStartTimestamp, ar.Result.ExecutionMetadata.WorkerStartTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.WorkerCompletedTimestamp, ar.Result.ExecutionMetadata.WorkerCompletedTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.InputFetchStartTimestamp, ar.Result.ExecutionMetadata.InputFetchStartTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.InputFetchCompletedTimestamp, ar.Result.ExecutionMetadata.InputFetchCompletedTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.ExecutionStartTimestamp, ar.Result.ExecutionMetadata.ExecutionStartTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.ExecutionCompletedTimestamp, ar.Result.ExecutionMetadata.ExecutionCompletedTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.OutputUploadStartTimestamp, ar.Result.ExecutionMetadata.OutputUploadStartTimestamp) ||
+		!tsEquals(result.Result.ExecutionMetadata.OutputUploadCompletedTimestamp, ar.Result.ExecutionMetadata.OutputUploadCompletedTimestamp) {
+		t.Fatalf("Unexpected output from ExecutionMetadata\ngot:      %v\nexpected: %v",
+			result.Result.ExecutionMetadata, ar.Result.ExecutionMetadata)
+	}
+
 	// ActionDigest
 	if result.ActionDigest.Hash != ar.ActionDigest.Hash ||
 		result.ActionDigest.SizeBytes != result.ActionDigest.SizeBytes {
@@ -154,4 +186,11 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 		resPcf.Violations[0].Subject != pcf.Violations[0].Subject {
 		t.Fatalf("Unexpected output from grpc status precondition failure\ngot:      %v\nexpected: %v", resPcf, pcf)
 	}
+}
+
+func tsEquals(a *timestamp.Timestamp, b *timestamp.Timestamp) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+	return (a.Seconds == b.Seconds) && (a.Nanos == b.Nanos)
 }

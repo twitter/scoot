@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
@@ -68,8 +68,11 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string, actio
 	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
 	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker
 	// which is required to support CAS interactions.
+	// ActionDigest is added for convenience and universal availability
+	// ExecutionMetadata is seeded with current time of queueing
+	now := time.Now()
 	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, time.Now().Unix())
+	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, now.Unix())
 	task.Command.Argv = []string{"BZ_PLACEHOLDER"}
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.Timeout = d
@@ -79,6 +82,9 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string, actio
 		ActionDigest: &remoteexecution.Digest{
 			Hash:      actionSha,
 			SizeBytes: actionLen,
+		},
+		ExecutionMetadata: &remoteexecution.ExecutedActionMetadata{
+			QueuedTimestamp: scootproto.GetTimestampFromTime(now),
 		},
 	}
 

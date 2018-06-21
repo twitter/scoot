@@ -15,9 +15,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	uuid "github.com/nu7hatch/gouuid"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
