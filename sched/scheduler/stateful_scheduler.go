@@ -69,6 +69,9 @@ const DefaultSoftMaxSchedulableTasks = 1
 //
 const LongJobDuration = 4 * time.Hour
 
+// How often Scheduler step is called in loop
+const TickRate = 250 * time.Millisecond
+
 // The max job priority we respect (higher priority is untested and disabled)
 const MaxPriority = sched.P2
 
@@ -425,12 +428,14 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(TickRate)
 	}
 }
 
 // run one loop iteration
 func (s *statefulScheduler) step() {
+	defer s.stat.Latency(stats.SchedStepLatency_ms).Time().Stop()
+
 	// update scheduler state with messages received since last loop
 	// nodes added or removed to cluster, new jobs scheduled,
 	// async functions completed & invoke callbacks
