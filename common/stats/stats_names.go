@@ -312,11 +312,6 @@ const (
 	SchedPriority2JobsGauge = "priority2JobsGauge"
 
 	/*
-		the number of jobs with priority 3
-	*/
-	SchedPriority3JobsGauge = "priority3JobsGauge"
-
-	/*
 		the number of times the platform retried sending an end saga message
 	*/
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
@@ -383,6 +378,11 @@ const (
 		scheduler's job handling loop.  (No tasks in this job have been started.)
 	*/
 	SchedWaitingJobsGauge = "schedWaitingJobsGauge"
+
+	/*
+		Amount of time it takes the scheduler to complete a full step()
+	*/
+	SchedStepLatency_ms = "schedStepLatency_ms"
 
 	/******************************** Worker metrics **************************************/
 	/*
@@ -588,4 +588,17 @@ const (
 		Amount of time the server takes to process a UpdateActionResult request
 	*/
 	BzUpdateActionRequestLatency_ms = "bzUpdateActionRequestLatency_ms"
+
+	/* TODO
+	- execution tasks number of inputs/outputs. unknown except in snapshot impl!
+		- at checkout time - best we can do is total bytes and elapsed time from fs_util (dl bytes,ms per task)
+		- at upload time - best we can do is total bytes and elapsed time from fs_util (ul bytes,ms per task)
+	- execution metadata timings (record at worker invoker completion)
+		- queued time spent
+		- checkout time - downloadLatency (works for bazel?)
+		- exec time
+		- output upload time - uploadLatency (works for bazel?)
+	- cas read/write byte gauges
+	+ scheduler tick latency
+	*/
 )
