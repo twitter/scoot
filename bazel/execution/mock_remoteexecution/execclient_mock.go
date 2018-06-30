@@ -5,7 +5,7 @@
 package mock_remoteexecution
 
 import (
-	context "context"
+	context "golang.org/x/net/context"
 	gomock "github.com/golang/mock/gomock"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	grpc "google.golang.org/grpc"

@@ -8,8 +8,8 @@ package execution
 //	this seems to be a go version/mock incompatability
 //
 // TODO UPDATE IF WORKS:
-// mockgen github.com/twitter/scoot/bazel/remoteexecution ExecutionClient > bazel/execution/mock_remoteexecution/execclient_mock.go
-// No manual edit step required, yet
+// mockgen github.com/twitter/scoot/bazel/remoteexecution ExecutionClient,ActionCacheClient > bazel/execution/mock_remoteexecution/execclient_mock.go
+// requires above "context" replacement but not the below dot-import addition
 
 //  mockgen -source=/Users/$(whoami)/workspace/src/github.com/twitter/scoot/bazel/remoteexecution/remote_execution.pb.go ExecutionClient > bazel/execution/mock_remoteexecution/execclient_mock.go
 // NOTE: in the generated file, add the following line to the import list:
