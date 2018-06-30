@@ -66,6 +66,14 @@ data: "abc1234"
 Rpc succeeded with OK status
 ```
 
+## UPDATE ME
+Needs to reflect V2 semantics, which ARE currently supported by `bzutil`:
+* Upload Command first
+* Upload Input Root (via `fs_util`, as required - can skip and use emptySha when using no inputs)
+* Upload Action second, referencing command digest and input root digest
+* Execute with Action digest, optional skip cache flag
+* Get Operation as before
+
 #### Execution - Scheduler
 This is a brief example of using a locally running default scheduler for an Execute request using grpc_cli:
 

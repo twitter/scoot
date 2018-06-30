@@ -14,19 +14,21 @@ import (
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
-	scootproto "github.com/twitter/scoot/common/proto"
 )
 
 const PreconditionMissing = "MISSING"
 
 // These types give us single reference points for passing Execute Requests and Action Results
 
-// Add ActionDigest so it's available throughout the Scoot stack without having to recompute
 // Add ExecutionMetadata so metadata added in the scheduling phase is passed through to worker
+// Not Passed Through Thrift:
+// Add Action so worker has a place to store after fetching during invoke
+// Add Command so worker has a place to store after fetching during invoke
 type ExecuteRequest struct {
 	Request           *remoteexecution.ExecuteRequest
-	ActionDigest      *remoteexecution.Digest
 	ExecutionMetadata *remoteexecution.ExecutedActionMetadata
+	Action            *remoteexecution.Action
+	Command           *remoteexecution.Command
 }
 
 // Add ActionDigest again here so it's available when polling status - no ref to original request
@@ -42,14 +44,7 @@ func (e *ExecuteRequest) String() string {
 	if e == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s\n%s", e.Request, e.ActionDigest)
-}
-
-func (a *ActionResult) String() string {
-	if a == nil {
-		return ""
-	}
-	return fmt.Sprintf("%s\n%s\n%s", a.Result, a.ActionDigest, a.GRPCStatus)
+	return fmt.Sprintf("%s", e.Request)
 }
 
 func (e *ExecuteRequest) GetRequest() *remoteexecution.ExecuteRequest {
@@ -59,18 +54,34 @@ func (e *ExecuteRequest) GetRequest() *remoteexecution.ExecuteRequest {
 	return e.Request
 }
 
-func (e *ExecuteRequest) GetActionDigest() *remoteexecution.Digest {
-	if e == nil {
-		return &remoteexecution.Digest{}
-	}
-	return e.ActionDigest
-}
-
 func (e *ExecuteRequest) GetExecutionMetadata() *remoteexecution.ExecutedActionMetadata {
 	if e == nil {
 		return &remoteexecution.ExecutedActionMetadata{}
 	}
 	return e.ExecutionMetadata
+}
+
+// Not exported to thrift
+func (e *ExecuteRequest) GetAction() *remoteexecution.Action {
+	if e == nil {
+		return &remoteexecution.Action{}
+	}
+	return e.Action
+}
+
+// Not exported to thrift
+func (e *ExecuteRequest) GetCommand() *remoteexecution.Command {
+	if e == nil {
+		return &remoteexecution.Command{}
+	}
+	return e.Command
+}
+
+func (a *ActionResult) String() string {
+	if a == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s\n%s\n%s", a.Result, a.ActionDigest, a.GRPCStatus)
 }
 
 func (a *ActionResult) GetResult() *remoteexecution.ActionResult {
@@ -107,13 +118,14 @@ func MakeExecReqDomainFromThrift(thriftRequest *bazelthrift.ExecuteRequest) *Exe
 		return nil
 	}
 	er := &remoteexecution.ExecuteRequest{
-		InstanceName:    thriftRequest.GetInstanceName(),
-		SkipCacheLookup: thriftRequest.GetSkipCache(),
-		Action:          makeActionFromThrift(thriftRequest.GetAction()),
+		InstanceName:       thriftRequest.GetInstanceName(),
+		SkipCacheLookup:    thriftRequest.GetSkipCache(),
+		ActionDigest:       makeDigestFromThrift(thriftRequest.GetActionDigest()),
+		ExecutionPolicy:    makeExecPolicyFromThrift(thriftRequest.GetExecutionPolicy()),
+		ResultsCachePolicy: makeResCachePolicyFromThrift(thriftRequest.GetResultsCachePolicy()),
 	}
 	return &ExecuteRequest{
 		Request:           er,
-		ActionDigest:      makeDigestFromThrift(thriftRequest.GetActionDigest()),
 		ExecutionMetadata: makeExecutionMetadataFromThrift(thriftRequest.GetExecutionMetadata()),
 	}
 }
@@ -125,11 +137,12 @@ func MakeExecReqThriftFromDomain(executeRequest *ExecuteRequest) *bazelthrift.Ex
 		return nil
 	}
 	return &bazelthrift.ExecuteRequest{
-		InstanceName:      &executeRequest.Request.InstanceName,
-		SkipCache:         &executeRequest.Request.SkipCacheLookup,
-		Action:            makeActionThriftFromDomain(executeRequest.Request.GetAction()),
-		ActionDigest:      makeDigestThriftFromDomain(executeRequest.ActionDigest),
-		ExecutionMetadata: makeExecutionMetadataThriftFromDomain(executeRequest.ExecutionMetadata),
+		InstanceName:       &executeRequest.Request.InstanceName,
+		SkipCache:          &executeRequest.Request.SkipCacheLookup,
+		ActionDigest:       makeDigestThriftFromDomain(executeRequest.Request.GetActionDigest()),
+		ExecutionPolicy:    makeExecPolicyThriftFromDomain(executeRequest.Request.GetExecutionPolicy()),
+		ResultsCachePolicy: makeResCachePolicyThriftFromDomain(executeRequest.Request.GetResultsCachePolicy()),
+		ExecutionMetadata:  makeExecutionMetadataThriftFromDomain(executeRequest.ExecutionMetadata),
 	}
 }
 
@@ -139,13 +152,13 @@ func MakeActionResultDomainFromThrift(thriftResult *bazelthrift.ActionResult_) *
 		return nil
 	}
 	ar := &remoteexecution.ActionResult{
-		StdoutDigest:      makeDigestFromThrift(thriftResult.GetStdoutDigest()),
-		StderrDigest:      makeDigestFromThrift(thriftResult.GetStderrDigest()),
-		StdoutRaw:         thriftResult.GetStdoutRaw(),
-		StderrRaw:         thriftResult.GetStderrRaw(),
 		OutputFiles:       makeOutputFilesFromThrift(thriftResult.GetOutputFiles()),
 		OutputDirectories: makeOutputDirsFromThrift(thriftResult.GetOutputDirectories()),
 		ExitCode:          thriftResult.GetExitCode(),
+		StdoutRaw:         thriftResult.GetStdoutRaw(),
+		StdoutDigest:      makeDigestFromThrift(thriftResult.GetStdoutDigest()),
+		StderrRaw:         thriftResult.GetStderrRaw(),
+		StderrDigest:      makeDigestFromThrift(thriftResult.GetStderrDigest()),
 		ExecutionMetadata: makeExecutionMetadataFromThrift(thriftResult.GetExecutionMetadata()),
 	}
 	return &ActionResult{
@@ -165,35 +178,21 @@ func MakeActionResultThriftFromDomain(actionResult *ActionResult) *bazelthrift.A
 	var ec int32 = actionResult.Result.GetExitCode()
 	var cached bool = actionResult.GetCached()
 	return &bazelthrift.ActionResult_{
-		StdoutDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStdoutDigest()),
-		StderrDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStderrDigest()),
-		StdoutRaw:         actionResult.Result.GetStdoutRaw(),
-		StderrRaw:         actionResult.Result.GetStderrRaw(),
 		OutputFiles:       makeOutputFilesThriftFromDomain(actionResult.Result.GetOutputFiles()),
 		OutputDirectories: makeOutputDirsThriftFromDomain(actionResult.Result.GetOutputDirectories()),
 		ExitCode:          &ec,
+		StdoutRaw:         actionResult.Result.GetStdoutRaw(),
+		StdoutDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStdoutDigest()),
+		StderrRaw:         actionResult.Result.GetStderrRaw(),
+		StderrDigest:      makeDigestThriftFromDomain(actionResult.Result.GetStderrDigest()),
+		ExecutionMetadata: makeExecutionMetadataThriftFromDomain(actionResult.Result.GetExecutionMetadata()),
 		ActionDigest:      makeDigestThriftFromDomain(actionResult.ActionDigest),
 		GRPCStatus:        makeGRPCStatusThriftFromDomain(actionResult.GRPCStatus),
 		Cached:            &cached,
-		ExecutionMetadata: makeExecutionMetadataThriftFromDomain(actionResult.Result.GetExecutionMetadata()),
 	}
 }
 
 // Unexported "from thrift to domain" translations
-func makeActionFromThrift(thriftAction *bazelthrift.Action) *remoteexecution.Action {
-	if thriftAction == nil {
-		return nil
-	}
-	return &remoteexecution.Action{
-		OutputFiles:       thriftAction.GetOutputFiles(),
-		OutputDirectories: thriftAction.GetOutputDirs(),
-		DoNotCache:        thriftAction.GetNoCache(),
-		CommandDigest:     makeDigestFromThrift(thriftAction.GetCommandDigest()),
-		InputRootDigest:   makeDigestFromThrift(thriftAction.GetInputDigest()),
-		Timeout:           scootproto.GetDurationFromMs(thriftAction.GetTimeoutMs()),
-		Platform:          makePlatformFromThrift(thriftAction.GetPlatformProperties()),
-	}
-}
 
 func makeDigestFromThrift(thriftDigest *bazelthrift.Digest) *remoteexecution.Digest {
 	if thriftDigest == nil {
@@ -207,8 +206,8 @@ func makeOutputDirFromThrift(outputDir *bazelthrift.OutputDirectory) *remoteexec
 		return nil
 	}
 	return &remoteexecution.OutputDirectory{
-		TreeDigest: makeDigestFromThrift(outputDir.GetTreeDigest()),
 		Path:       outputDir.GetPath(),
+		TreeDigest: makeDigestFromThrift(outputDir.GetTreeDigest()),
 	}
 }
 
@@ -225,9 +224,8 @@ func makeOutputFileFromThrift(outputFile *bazelthrift.OutputFile) *remoteexecuti
 		return nil
 	}
 	return &remoteexecution.OutputFile{
-		Digest:       makeDigestFromThrift(outputFile.GetDigest()),
 		Path:         outputFile.GetPath(),
-		Content:      outputFile.GetContent(),
+		Digest:       makeDigestFromThrift(outputFile.GetDigest()),
 		IsExecutable: outputFile.GetIsExecutable(),
 	}
 }
@@ -238,19 +236,6 @@ func makeOutputFilesFromThrift(outputFiles []*bazelthrift.OutputFile) []*remotee
 		ofs = append(ofs, makeOutputFileFromThrift(f))
 	}
 	return ofs
-}
-
-func makePlatformFromThrift(thriftProperties []*bazelthrift.Property) *remoteexecution.Platform {
-	platform := &remoteexecution.Platform{}
-	platform.Properties = make([]*remoteexecution.Platform_Property, 0, len(thriftProperties))
-	for _, prop := range thriftProperties {
-		if prop == nil {
-			continue
-		}
-		p := &remoteexecution.Platform_Property{Name: prop.GetName(), Value: prop.GetValue()}
-		platform.Properties = append(platform.Properties, p)
-	}
-	return platform
 }
 
 // returns nil and logs on error
@@ -292,22 +277,21 @@ func makeExecutionMetadataFromThrift(em *bazelthrift.ExecutedActionMetadata) *re
 	}
 }
 
-// Unexported "from domain to thrift" translations
-func makeActionThriftFromDomain(action *remoteexecution.Action) *bazelthrift.Action {
-	if action == nil {
-		return &bazelthrift.Action{}
+func makeExecPolicyFromThrift(policy *bazelthrift.ExecutionPolicy) *remoteexecution.ExecutionPolicy {
+	if policy == nil {
+		return nil
 	}
-	t := scootproto.GetMsFromDuration(action.GetTimeout())
-	return &bazelthrift.Action{
-		CommandDigest:      makeDigestThriftFromDomain(action.GetCommandDigest()),
-		InputDigest:        makeDigestThriftFromDomain(action.GetInputRootDigest()),
-		OutputFiles:        action.GetOutputFiles(),
-		OutputDirs:         action.GetOutputDirectories(),
-		PlatformProperties: makePropertiesThriftFromDomain(action.GetPlatform()),
-		TimeoutMs:          &t,
-		NoCache:            &action.DoNotCache,
-	}
+	return &remoteexecution.ExecutionPolicy{Priority: policy.GetPriority()}
 }
+
+func makeResCachePolicyFromThrift(policy *bazelthrift.ResultsCachePolicy) *remoteexecution.ResultsCachePolicy {
+	if policy == nil {
+		return nil
+	}
+	return &remoteexecution.ResultsCachePolicy{Priority: policy.GetPriority()}
+}
+
+// Unexported "from domain to thrift" translations
 
 func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.Digest {
 	if digest == nil {
@@ -321,8 +305,8 @@ func makeDigestThriftFromDomain(digest *remoteexecution.Digest) *bazelthrift.Dig
 func makeOutputDirThriftFromDomain(outputDir *remoteexecution.OutputDirectory) *bazelthrift.OutputDirectory {
 	p := outputDir.GetPath()
 	return &bazelthrift.OutputDirectory{
-		TreeDigest: makeDigestThriftFromDomain(outputDir.GetTreeDigest()),
 		Path:       &p,
+		TreeDigest: makeDigestThriftFromDomain(outputDir.GetTreeDigest()),
 	}
 }
 
@@ -338,9 +322,8 @@ func makeOutputFileThriftFromDomain(outputFile *remoteexecution.OutputFile) *baz
 	p := outputFile.GetPath()
 	e := outputFile.GetIsExecutable()
 	return &bazelthrift.OutputFile{
-		Digest:       makeDigestThriftFromDomain(outputFile.GetDigest()),
 		Path:         &p,
-		Content:      outputFile.GetContent(),
+		Digest:       makeDigestThriftFromDomain(outputFile.GetDigest()),
 		IsExecutable: &e,
 	}
 }
@@ -351,23 +334,6 @@ func makeOutputFilesThriftFromDomain(outputFiles []*remoteexecution.OutputFile) 
 		ofs = append(ofs, makeOutputFileThriftFromDomain(f))
 	}
 	return ofs
-}
-
-func makePropertiesThriftFromDomain(platform *remoteexecution.Platform) []*bazelthrift.Property {
-	if platform == nil {
-		return make([]*bazelthrift.Property, 0)
-	}
-	props := make([]*bazelthrift.Property, 0, len(platform.GetProperties()))
-	for _, p := range platform.GetProperties() {
-		if p == nil {
-			continue
-		}
-		var name string = p.GetName()
-		var value string = p.GetValue()
-		bp := &bazelthrift.Property{Name: &name, Value: &value}
-		props = append(props, bp)
-	}
-	return props
 }
 
 // returns nil and logs on error
@@ -409,4 +375,20 @@ func makeExecutionMetadataThriftFromDomain(em *remoteexecution.ExecutedActionMet
 		OutputUploadStartTimestamp:     makeTimestampThriftFromDomain(em.GetOutputUploadStartTimestamp()),
 		OutputUploadCompletedTimestamp: makeTimestampThriftFromDomain(em.GetOutputUploadCompletedTimestamp()),
 	}
+}
+
+func makeExecPolicyThriftFromDomain(policy *remoteexecution.ExecutionPolicy) *bazelthrift.ExecutionPolicy {
+	if policy == nil {
+		return nil
+	}
+	var p int32 = policy.GetPriority()
+	return &bazelthrift.ExecutionPolicy{Priority: &p}
+}
+
+func makeResCachePolicyThriftFromDomain(policy *remoteexecution.ResultsCachePolicy) *bazelthrift.ResultsCachePolicy {
+	if policy == nil {
+		return nil
+	}
+	var p int32 = policy.GetPriority()
+	return &bazelthrift.ResultsCachePolicy{Priority: &p}
 }

@@ -108,9 +108,8 @@ func (s *casServer) BatchUpdateBlobs(
 
 // GetTree not supported in Scoot for V1
 func (s *casServer) GetTree(
-	ctx context.Context,
-	req *remoteexecution.GetTreeRequest) (*remoteexecution.GetTreeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
+	req *remoteexecution.GetTreeRequest, gtServer remoteexecution.ContentAddressableStorage_GetTreeServer) error {
+	return status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
 }
 
 // ByteStream APIs

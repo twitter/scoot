@@ -19,7 +19,6 @@ import (
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/grpchelpers"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
-	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
@@ -66,45 +65,38 @@ func (s *executionServer) Serve() error {
 
 // Execution APIs
 
-// Stub of Execute API - most fields omitted, but returns a valid hardcoded response.
 // Takes an ExecuteRequest and forms an ExecuteResponse that is returned as part of a
-// google LongRunning Operation message.
+// google LongRunning Operation message via a stream.
+// By convention, we will not reuse this stream and the client should
+// continue to use GetOperation polling to determine execution state.
 func (s *executionServer) Execute(
-	_ context.Context,
-	req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
+	req *remoteexecution.ExecuteRequest, execServer remoteexecution.Execution_ExecuteServer) error {
 	log.Debugf("Received Execute request: %s", req)
 
 	if !s.IsInitialized() {
-		return nil, status.Error(codes.Internal, "Server not initialized")
+		return status.Error(codes.Internal, "Server not initialized")
 	}
 	s.stat.Counter(stats.BzExecRequestCounter).Inc(1)
 	defer s.stat.Latency(stats.BzExecRequestLatency_ms).Time().Stop()
 
-	// Get digest of request Action from wire format only, for inclusion in response metadata.
-	actionSha, actionLen, err := scootproto.GetSha256(req.GetAction())
-	if err != nil {
-		log.Errorf("Failed to get digest of request action: %s", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error serializing action: %s", err))
-	}
-
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
 	// If we encounter an error here, assume it was due to an InvalidArgument
-	job, err := execReqToScoot(req, actionSha, actionLen)
+	job, err := execReqToScoot(req)
 	if err != nil {
 		log.Errorf("Failed to convert request to Scoot JobDefinition: %s", err)
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error converting request to internal definition: %s", err))
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("Error converting request to internal definition: %s", err))
 	}
 
 	err = sched.ValidateJob(job)
 	if err != nil {
 		log.Errorf("Scoot Job generated from request invalid: %s", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Internal job definition invalid: %s", err))
+		return status.Error(codes.Internal, fmt.Sprintf("Internal job definition invalid: %s", err))
 	}
 
 	id, err := s.scheduler.ScheduleJob(job)
 	if err != nil {
 		log.Errorf("Failed to schedule Scoot job: %s", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to schedule Scoot job: %s", err))
+		return status.Error(codes.Internal, fmt.Sprintf("Failed to schedule Scoot job: %s", err))
 	}
 	log.WithFields(
 		log.Fields{
@@ -112,27 +104,37 @@ func (s *executionServer) Execute(
 		}).Info("Scheduled execute request as Scoot job")
 
 	eom := &remoteexecution.ExecuteOperationMetadata{
-		Stage: remoteexecution.ExecuteOperationMetadata_QUEUED,
-		ActionDigest: &remoteexecution.Digest{
-			Hash:      actionSha,
-			SizeBytes: actionLen,
-		},
+		Stage:        remoteexecution.ExecuteOperationMetadata_QUEUED,
+		ActionDigest: req.GetActionDigest(),
 	}
 
 	// Marshal ExecuteActionMetadata to protobuf.Any format
 	eomAsPBAny, err := marshalAny(eom)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return status.Error(codes.Internal, err.Error())
 	}
 
-	log.Debug("ExecuteRequest completed successfully")
 	// Include the response message in the longrunning operation message
-	op := longrunning.Operation{
+	op := &longrunning.Operation{
 		Name:     id,
 		Metadata: eomAsPBAny,
 		Done:     false,
 	}
-	return &op, nil
+
+	// Send the initial operation on the exec server stream
+	err = execServer.Send(op)
+	if err != nil {
+		return status.Error(codes.Internal, err.Error())
+	}
+
+	log.Debug("ExecuteRequest completed successfully")
+	return nil
+}
+
+func (s *executionServer) WaitExecution(
+	*remoteexecution.WaitExecutionRequest,
+	remoteexecution.Execution_WaitExecutionServer) error {
+	return status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
 // Google LongRunning APIs

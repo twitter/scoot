@@ -14,15 +14,9 @@ var rs *runStatus
 
 func TestValidateExecResponse(t *testing.T) {
 	req := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
-			InputRootDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
+		ActionDigest: &remoteexecution.Digest{
+			Hash:      bazel.EmptySha,
+			SizeBytes: bazel.EmptySize,
 		},
 	}
 	err := validateExecRequest(req)
@@ -31,15 +25,9 @@ func TestValidateExecResponse(t *testing.T) {
 	}
 
 	req2 := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest: &remoteexecution.Digest{
-				Hash:      "1234",
-				SizeBytes: bazel.EmptySize,
-			},
-			InputRootDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
+		ActionDigest: &remoteexecution.Digest{
+			Hash:      "1234",
+			SizeBytes: bazel.EmptySize,
 		},
 	}
 	err = validateExecRequest(req2)
@@ -48,52 +36,12 @@ func TestValidateExecResponse(t *testing.T) {
 	}
 
 	req3 := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: int64(-2),
-			},
-			InputRootDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
+		ActionDigest: &remoteexecution.Digest{
+			Hash:      bazel.EmptySha,
+			SizeBytes: int64(-2),
 		},
 	}
 	err = validateExecRequest(req3)
-	if err == nil {
-		t.Fatalf("Expected req validation to fail")
-	}
-
-	req4 := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
-			InputRootDigest: &remoteexecution.Digest{
-				Hash:      "abcd",
-				SizeBytes: bazel.EmptySize,
-			},
-		},
-	}
-	err = validateExecRequest(req4)
-	if err == nil {
-		t.Fatalf("Expected req validation to fail")
-	}
-
-	req5 := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: bazel.EmptySize,
-			},
-			InputRootDigest: &remoteexecution.Digest{
-				Hash:      bazel.EmptySha,
-				SizeBytes: int64(-3),
-			},
-		},
-	}
-	err = validateExecRequest(req5)
 	if err == nil {
 		t.Fatalf("Expected req validation to fail")
 	}

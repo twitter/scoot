@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
@@ -101,7 +100,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	// Bazel requests - fetch command argv/env from CAS
 	// We can also receive a cached result here, in which case we skip invocation
 	if runType == runner.RunTypeBazel {
-		cachedResult, err := preProcessBazel(inv.filerMap[runType].Filer, cmd)
+		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd)
 		if err != nil {
 			failedStatus := runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -109,9 +108,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			// If we encounter a cas NotFoundError, set a grpc status message in
 			// the failure run status that indicates missing data to client
 			if _, ok := err.(*cas.NotFoundError); ok {
-				log.Info("NotFound error for Command during Bazel preprocess - Setting grpc Status error")
-				errStatus, err := getFailedPreconditionStatus([]*remoteexecution.Digest{
-					cmd.ExecuteRequest.Request.GetAction().GetCommandDigest()})
+				log.Info("NotFound error during Bazel preprocess - Setting grpc Status error")
+				errStatus, err := getFailedPreconditionStatus(notExist)
 				if err != nil {
 					log.Errorf("Error generating Failed Precondition status: %s", err)
 				} else {

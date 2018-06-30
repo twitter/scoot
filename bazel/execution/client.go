@@ -46,12 +46,11 @@ func getFromClient(opc longrunning.OperationsClient, req *longrunning.GetOperati
 
 // Makes an Execute request against a server supporting the google.devtools.remoteexecution API
 // Takes a Resolver and ExecuteRequest data. Currently supported:
-// * CommandDigest
-// * InputRootDigest
+// * ActionDigest
+// * SkipCache
 // TBD support for:
-// * Misc specs: InstanceName, SkipCache, DoNotCache, Platform variables
-func Execute(r dialer.Resolver, commandDigest, inputRootDigest *remoteexecution.Digest,
-	outputFiles, outputDirs []string) (*longrunning.Operation, error) {
+// * Misc specs: InstanceName, Policies
+func Execute(r dialer.Resolver, actionDigest *remoteexecution.Digest, skipCache bool) (*longrunning.Operation, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -59,24 +58,32 @@ func Execute(r dialer.Resolver, commandDigest, inputRootDigest *remoteexecution.
 
 	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		return nil, fmt.Errorf("Failed to fial server %s: %s", serverAddr, err)
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
 	}
 
 	req := &remoteexecution.ExecuteRequest{
-		Action: &remoteexecution.Action{
-			CommandDigest:     commandDigest,
-			InputRootDigest:   inputRootDigest,
-			OutputFiles:       outputFiles,
-			OutputDirectories: outputDirs,
-		},
+		ActionDigest:    actionDigest,
+		SkipCacheLookup: skipCache,
 	}
 
 	ec := remoteexecution.NewExecutionClient(cc)
 	return execFromClient(ec, req)
 }
 
+// By convention, execute client recieves first Operation from stream and closes
 func execFromClient(ec remoteexecution.ExecutionClient, req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
-	return ec.Execute(context.Background(), req)
+	execClient, err := ec.Execute(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	op, err := execClient.Recv()
+	if err != nil {
+		return nil, err
+	}
+
+	execClient.CloseSend()
+	return op, nil
 }
 
 // Internal, util client functions

@@ -165,582 +165,6 @@ func (p *Digest) String() string {
 }
 
 // Attributes:
-//  - Name
-//  - Value
-type Property struct {
-	Name  *string `thrift:"name,1" json:"name,omitempty"`
-	Value *string `thrift:"value,2" json:"value,omitempty"`
-}
-
-func NewProperty() *Property {
-	return &Property{}
-}
-
-var Property_Name_DEFAULT string
-
-func (p *Property) GetName() string {
-	if !p.IsSetName() {
-		return Property_Name_DEFAULT
-	}
-	return *p.Name
-}
-
-var Property_Value_DEFAULT string
-
-func (p *Property) GetValue() string {
-	if !p.IsSetValue() {
-		return Property_Value_DEFAULT
-	}
-	return *p.Value
-}
-func (p *Property) IsSetName() bool {
-	return p.Name != nil
-}
-
-func (p *Property) IsSetValue() bool {
-	return p.Value != nil
-}
-
-func (p *Property) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if err := p.readField1(iprot); err != nil {
-				return err
-			}
-		case 2:
-			if err := p.readField2(iprot); err != nil {
-				return err
-			}
-		default:
-			if err := iprot.Skip(fieldTypeId); err != nil {
-				return err
-			}
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *Property) readField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.Name = &v
-	}
-	return nil
-}
-
-func (p *Property) readField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
-	} else {
-		p.Value = &v
-	}
-	return nil
-}
-
-func (p *Property) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Property"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if err := p.writeField1(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField2(oprot); err != nil {
-		return err
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *Property) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetName() {
-		if err := oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:name: ", p), err)
-		}
-		if err := oprot.WriteString(string(*p.Name)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.name (1) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:name: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Property) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetValue() {
-		if err := oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:value: ", p), err)
-		}
-		if err := oprot.WriteString(string(*p.Value)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.value (2) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:value: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Property) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("Property(%+v)", *p)
-}
-
-// Attributes:
-//  - CommandDigest
-//  - InputDigest
-//  - OutputFiles
-//  - OutputDirs
-//  - PlatformProperties
-//  - TimeoutMs
-//  - NoCache
-type Action struct {
-	CommandDigest      *Digest     `thrift:"commandDigest,1" json:"commandDigest,omitempty"`
-	InputDigest        *Digest     `thrift:"inputDigest,2" json:"inputDigest,omitempty"`
-	OutputFiles        []string    `thrift:"outputFiles,3" json:"outputFiles,omitempty"`
-	OutputDirs         []string    `thrift:"outputDirs,4" json:"outputDirs,omitempty"`
-	PlatformProperties []*Property `thrift:"platformProperties,5" json:"platformProperties,omitempty"`
-	TimeoutMs          *int64      `thrift:"timeoutMs,6" json:"timeoutMs,omitempty"`
-	NoCache            *bool       `thrift:"noCache,7" json:"noCache,omitempty"`
-}
-
-func NewAction() *Action {
-	return &Action{}
-}
-
-var Action_CommandDigest_DEFAULT *Digest
-
-func (p *Action) GetCommandDigest() *Digest {
-	if !p.IsSetCommandDigest() {
-		return Action_CommandDigest_DEFAULT
-	}
-	return p.CommandDigest
-}
-
-var Action_InputDigest_DEFAULT *Digest
-
-func (p *Action) GetInputDigest() *Digest {
-	if !p.IsSetInputDigest() {
-		return Action_InputDigest_DEFAULT
-	}
-	return p.InputDigest
-}
-
-var Action_OutputFiles_DEFAULT []string
-
-func (p *Action) GetOutputFiles() []string {
-	return p.OutputFiles
-}
-
-var Action_OutputDirs_DEFAULT []string
-
-func (p *Action) GetOutputDirs() []string {
-	return p.OutputDirs
-}
-
-var Action_PlatformProperties_DEFAULT []*Property
-
-func (p *Action) GetPlatformProperties() []*Property {
-	return p.PlatformProperties
-}
-
-var Action_TimeoutMs_DEFAULT int64
-
-func (p *Action) GetTimeoutMs() int64 {
-	if !p.IsSetTimeoutMs() {
-		return Action_TimeoutMs_DEFAULT
-	}
-	return *p.TimeoutMs
-}
-
-var Action_NoCache_DEFAULT bool
-
-func (p *Action) GetNoCache() bool {
-	if !p.IsSetNoCache() {
-		return Action_NoCache_DEFAULT
-	}
-	return *p.NoCache
-}
-func (p *Action) IsSetCommandDigest() bool {
-	return p.CommandDigest != nil
-}
-
-func (p *Action) IsSetInputDigest() bool {
-	return p.InputDigest != nil
-}
-
-func (p *Action) IsSetOutputFiles() bool {
-	return p.OutputFiles != nil
-}
-
-func (p *Action) IsSetOutputDirs() bool {
-	return p.OutputDirs != nil
-}
-
-func (p *Action) IsSetPlatformProperties() bool {
-	return p.PlatformProperties != nil
-}
-
-func (p *Action) IsSetTimeoutMs() bool {
-	return p.TimeoutMs != nil
-}
-
-func (p *Action) IsSetNoCache() bool {
-	return p.NoCache != nil
-}
-
-func (p *Action) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if err := p.readField1(iprot); err != nil {
-				return err
-			}
-		case 2:
-			if err := p.readField2(iprot); err != nil {
-				return err
-			}
-		case 3:
-			if err := p.readField3(iprot); err != nil {
-				return err
-			}
-		case 4:
-			if err := p.readField4(iprot); err != nil {
-				return err
-			}
-		case 5:
-			if err := p.readField5(iprot); err != nil {
-				return err
-			}
-		case 6:
-			if err := p.readField6(iprot); err != nil {
-				return err
-			}
-		case 7:
-			if err := p.readField7(iprot); err != nil {
-				return err
-			}
-		default:
-			if err := iprot.Skip(fieldTypeId); err != nil {
-				return err
-			}
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *Action) readField1(iprot thrift.TProtocol) error {
-	p.CommandDigest = &Digest{}
-	if err := p.CommandDigest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CommandDigest), err)
-	}
-	return nil
-}
-
-func (p *Action) readField2(iprot thrift.TProtocol) error {
-	p.InputDigest = &Digest{}
-	if err := p.InputDigest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InputDigest), err)
-	}
-	return nil
-}
-
-func (p *Action) readField3(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return thrift.PrependError("error reading list begin: ", err)
-	}
-	tSlice := make([]string, 0, size)
-	p.OutputFiles = tSlice
-	for i := 0; i < size; i++ {
-		var _elem0 string
-		if v, err := iprot.ReadString(); err != nil {
-			return thrift.PrependError("error reading field 0: ", err)
-		} else {
-			_elem0 = v
-		}
-		p.OutputFiles = append(p.OutputFiles, _elem0)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return thrift.PrependError("error reading list end: ", err)
-	}
-	return nil
-}
-
-func (p *Action) readField4(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return thrift.PrependError("error reading list begin: ", err)
-	}
-	tSlice := make([]string, 0, size)
-	p.OutputDirs = tSlice
-	for i := 0; i < size; i++ {
-		var _elem1 string
-		if v, err := iprot.ReadString(); err != nil {
-			return thrift.PrependError("error reading field 0: ", err)
-		} else {
-			_elem1 = v
-		}
-		p.OutputDirs = append(p.OutputDirs, _elem1)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return thrift.PrependError("error reading list end: ", err)
-	}
-	return nil
-}
-
-func (p *Action) readField5(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return thrift.PrependError("error reading list begin: ", err)
-	}
-	tSlice := make([]*Property, 0, size)
-	p.PlatformProperties = tSlice
-	for i := 0; i < size; i++ {
-		_elem2 := &Property{}
-		if err := _elem2.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem2), err)
-		}
-		p.PlatformProperties = append(p.PlatformProperties, _elem2)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return thrift.PrependError("error reading list end: ", err)
-	}
-	return nil
-}
-
-func (p *Action) readField6(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI64(); err != nil {
-		return thrift.PrependError("error reading field 6: ", err)
-	} else {
-		p.TimeoutMs = &v
-	}
-	return nil
-}
-
-func (p *Action) readField7(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadBool(); err != nil {
-		return thrift.PrependError("error reading field 7: ", err)
-	} else {
-		p.NoCache = &v
-	}
-	return nil
-}
-
-func (p *Action) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Action"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if err := p.writeField1(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField2(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField3(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField4(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField5(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField6(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField7(oprot); err != nil {
-		return err
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *Action) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCommandDigest() {
-		if err := oprot.WriteFieldBegin("commandDigest", thrift.STRUCT, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:commandDigest: ", p), err)
-		}
-		if err := p.CommandDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CommandDigest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:commandDigest: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetInputDigest() {
-		if err := oprot.WriteFieldBegin("inputDigest", thrift.STRUCT, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:inputDigest: ", p), err)
-		}
-		if err := p.InputDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InputDigest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:inputDigest: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOutputFiles() {
-		if err := oprot.WriteFieldBegin("outputFiles", thrift.LIST, 3); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:outputFiles: ", p), err)
-		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.OutputFiles)); err != nil {
-			return thrift.PrependError("error writing list begin: ", err)
-		}
-		for _, v := range p.OutputFiles {
-			if err := oprot.WriteString(string(v)); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return thrift.PrependError("error writing list end: ", err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:outputFiles: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOutputDirs() {
-		if err := oprot.WriteFieldBegin("outputDirs", thrift.LIST, 4); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:outputDirs: ", p), err)
-		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.OutputDirs)); err != nil {
-			return thrift.PrependError("error writing list begin: ", err)
-		}
-		for _, v := range p.OutputDirs {
-			if err := oprot.WriteString(string(v)); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return thrift.PrependError("error writing list end: ", err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:outputDirs: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPlatformProperties() {
-		if err := oprot.WriteFieldBegin("platformProperties", thrift.LIST, 5); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:platformProperties: ", p), err)
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.PlatformProperties)); err != nil {
-			return thrift.PrependError("error writing list begin: ", err)
-		}
-		for _, v := range p.PlatformProperties {
-			if err := v.Write(oprot); err != nil {
-				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return thrift.PrependError("error writing list end: ", err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:platformProperties: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTimeoutMs() {
-		if err := oprot.WriteFieldBegin("timeoutMs", thrift.I64, 6); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:timeoutMs: ", p), err)
-		}
-		if err := oprot.WriteI64(int64(*p.TimeoutMs)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.timeoutMs (6) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:timeoutMs: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetNoCache() {
-		if err := oprot.WriteFieldBegin("noCache", thrift.BOOL, 7); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:noCache: ", p), err)
-		}
-		if err := oprot.WriteBool(bool(*p.NoCache)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.noCache (7) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:noCache: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *Action) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("Action(%+v)", *p)
-}
-
-// Attributes:
 //  - Seconds
 //  - Nanos
 type Timestamp struct {
@@ -1396,30 +820,227 @@ func (p *ExecutedActionMetadata) String() string {
 }
 
 // Attributes:
-//  - Action
+//  - Priority
+type ExecutionPolicy struct {
+	Priority *int32 `thrift:"priority,1" json:"priority,omitempty"`
+}
+
+func NewExecutionPolicy() *ExecutionPolicy {
+	return &ExecutionPolicy{}
+}
+
+var ExecutionPolicy_Priority_DEFAULT int32
+
+func (p *ExecutionPolicy) GetPriority() int32 {
+	if !p.IsSetPriority() {
+		return ExecutionPolicy_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+func (p *ExecutionPolicy) IsSetPriority() bool {
+	return p.Priority != nil
+}
+
+func (p *ExecutionPolicy) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ExecutionPolicy) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Priority = &v
+	}
+	return nil
+}
+
+func (p *ExecutionPolicy) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ExecutionPolicy"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ExecutionPolicy) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err := oprot.WriteFieldBegin("priority", thrift.I32, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:priority: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Priority)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.priority (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:priority: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecutionPolicy) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExecutionPolicy(%+v)", *p)
+}
+
+// Attributes:
+//  - Priority
+type ResultsCachePolicy struct {
+	Priority *int32 `thrift:"priority,1" json:"priority,omitempty"`
+}
+
+func NewResultsCachePolicy() *ResultsCachePolicy {
+	return &ResultsCachePolicy{}
+}
+
+var ResultsCachePolicy_Priority_DEFAULT int32
+
+func (p *ResultsCachePolicy) GetPriority() int32 {
+	if !p.IsSetPriority() {
+		return ResultsCachePolicy_Priority_DEFAULT
+	}
+	return *p.Priority
+}
+func (p *ResultsCachePolicy) IsSetPriority() bool {
+	return p.Priority != nil
+}
+
+func (p *ResultsCachePolicy) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ResultsCachePolicy) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Priority = &v
+	}
+	return nil
+}
+
+func (p *ResultsCachePolicy) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("ResultsCachePolicy"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ResultsCachePolicy) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPriority() {
+		if err := oprot.WriteFieldBegin("priority", thrift.I32, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:priority: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Priority)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.priority (1) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:priority: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ResultsCachePolicy) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ResultsCachePolicy(%+v)", *p)
+}
+
+// Attributes:
 //  - InstanceName
 //  - SkipCache
 //  - ActionDigest
+//  - ExecutionPolicy
+//  - ResultsCachePolicy
 //  - ExecutionMetadata
 type ExecuteRequest struct {
-	Action            *Action                 `thrift:"action,1" json:"action,omitempty"`
-	InstanceName      *string                 `thrift:"instanceName,2" json:"instanceName,omitempty"`
-	SkipCache         *bool                   `thrift:"skipCache,3" json:"skipCache,omitempty"`
-	ActionDigest      *Digest                 `thrift:"actionDigest,4" json:"actionDigest,omitempty"`
-	ExecutionMetadata *ExecutedActionMetadata `thrift:"executionMetadata,5" json:"executionMetadata,omitempty"`
+	InstanceName       *string                 `thrift:"instanceName,1" json:"instanceName,omitempty"`
+	SkipCache          *bool                   `thrift:"skipCache,2" json:"skipCache,omitempty"`
+	ActionDigest       *Digest                 `thrift:"actionDigest,3" json:"actionDigest,omitempty"`
+	ExecutionPolicy    *ExecutionPolicy        `thrift:"executionPolicy,4" json:"executionPolicy,omitempty"`
+	ResultsCachePolicy *ResultsCachePolicy     `thrift:"resultsCachePolicy,5" json:"resultsCachePolicy,omitempty"`
+	ExecutionMetadata  *ExecutedActionMetadata `thrift:"executionMetadata,6" json:"executionMetadata,omitempty"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
 	return &ExecuteRequest{}
-}
-
-var ExecuteRequest_Action_DEFAULT *Action
-
-func (p *ExecuteRequest) GetAction() *Action {
-	if !p.IsSetAction() {
-		return ExecuteRequest_Action_DEFAULT
-	}
-	return p.Action
 }
 
 var ExecuteRequest_InstanceName_DEFAULT string
@@ -1449,6 +1070,24 @@ func (p *ExecuteRequest) GetActionDigest() *Digest {
 	return p.ActionDigest
 }
 
+var ExecuteRequest_ExecutionPolicy_DEFAULT *ExecutionPolicy
+
+func (p *ExecuteRequest) GetExecutionPolicy() *ExecutionPolicy {
+	if !p.IsSetExecutionPolicy() {
+		return ExecuteRequest_ExecutionPolicy_DEFAULT
+	}
+	return p.ExecutionPolicy
+}
+
+var ExecuteRequest_ResultsCachePolicy_DEFAULT *ResultsCachePolicy
+
+func (p *ExecuteRequest) GetResultsCachePolicy() *ResultsCachePolicy {
+	if !p.IsSetResultsCachePolicy() {
+		return ExecuteRequest_ResultsCachePolicy_DEFAULT
+	}
+	return p.ResultsCachePolicy
+}
+
 var ExecuteRequest_ExecutionMetadata_DEFAULT *ExecutedActionMetadata
 
 func (p *ExecuteRequest) GetExecutionMetadata() *ExecutedActionMetadata {
@@ -1457,10 +1096,6 @@ func (p *ExecuteRequest) GetExecutionMetadata() *ExecutedActionMetadata {
 	}
 	return p.ExecutionMetadata
 }
-func (p *ExecuteRequest) IsSetAction() bool {
-	return p.Action != nil
-}
-
 func (p *ExecuteRequest) IsSetInstanceName() bool {
 	return p.InstanceName != nil
 }
@@ -1471,6 +1106,14 @@ func (p *ExecuteRequest) IsSetSkipCache() bool {
 
 func (p *ExecuteRequest) IsSetActionDigest() bool {
 	return p.ActionDigest != nil
+}
+
+func (p *ExecuteRequest) IsSetExecutionPolicy() bool {
+	return p.ExecutionPolicy != nil
+}
+
+func (p *ExecuteRequest) IsSetResultsCachePolicy() bool {
+	return p.ResultsCachePolicy != nil
 }
 
 func (p *ExecuteRequest) IsSetExecutionMetadata() bool {
@@ -1511,6 +1154,10 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 			if err := p.readField5(iprot); err != nil {
 				return err
 			}
+		case 6:
+			if err := p.readField6(iprot); err != nil {
+				return err
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1527,32 +1174,24 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *ExecuteRequest) readField1(iprot thrift.TProtocol) error {
-	p.Action = &Action{}
-	if err := p.Action.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Action), err)
-	}
-	return nil
-}
-
-func (p *ExecuteRequest) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
+		return thrift.PrependError("error reading field 1: ", err)
 	} else {
 		p.InstanceName = &v
 	}
 	return nil
 }
 
-func (p *ExecuteRequest) readField3(iprot thrift.TProtocol) error {
+func (p *ExecuteRequest) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
-		return thrift.PrependError("error reading field 3: ", err)
+		return thrift.PrependError("error reading field 2: ", err)
 	} else {
 		p.SkipCache = &v
 	}
 	return nil
 }
 
-func (p *ExecuteRequest) readField4(iprot thrift.TProtocol) error {
+func (p *ExecuteRequest) readField3(iprot thrift.TProtocol) error {
 	p.ActionDigest = &Digest{}
 	if err := p.ActionDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ActionDigest), err)
@@ -1560,7 +1199,23 @@ func (p *ExecuteRequest) readField4(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *ExecuteRequest) readField4(iprot thrift.TProtocol) error {
+	p.ExecutionPolicy = &ExecutionPolicy{}
+	if err := p.ExecutionPolicy.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionPolicy), err)
+	}
+	return nil
+}
+
 func (p *ExecuteRequest) readField5(iprot thrift.TProtocol) error {
+	p.ResultsCachePolicy = &ResultsCachePolicy{}
+	if err := p.ResultsCachePolicy.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ResultsCachePolicy), err)
+	}
+	return nil
+}
+
+func (p *ExecuteRequest) readField6(iprot thrift.TProtocol) error {
 	p.ExecutionMetadata = &ExecutedActionMetadata{}
 	if err := p.ExecutionMetadata.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionMetadata), err)
@@ -1587,6 +1242,9 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 	if err := p.writeField5(oprot); err != nil {
 		return err
 	}
+	if err := p.writeField6(oprot); err != nil {
+		return err
+	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
 	}
@@ -1597,75 +1255,90 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *ExecuteRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAction() {
-		if err := oprot.WriteFieldBegin("action", thrift.STRUCT, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:action: ", p), err)
+	if p.IsSetInstanceName() {
+		if err := oprot.WriteFieldBegin("instanceName", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:instanceName: ", p), err)
 		}
-		if err := p.Action.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Action), err)
+		if err := oprot.WriteString(string(*p.InstanceName)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.instanceName (1) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:action: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:instanceName: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ExecuteRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetInstanceName() {
-		if err := oprot.WriteFieldBegin("instanceName", thrift.STRING, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:instanceName: ", p), err)
+	if p.IsSetSkipCache() {
+		if err := oprot.WriteFieldBegin("skipCache", thrift.BOOL, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:skipCache: ", p), err)
 		}
-		if err := oprot.WriteString(string(*p.InstanceName)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.instanceName (2) field write error: ", p), err)
+		if err := oprot.WriteBool(bool(*p.SkipCache)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.skipCache (2) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:instanceName: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:skipCache: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ExecuteRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSkipCache() {
-		if err := oprot.WriteFieldBegin("skipCache", thrift.BOOL, 3); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:skipCache: ", p), err)
+	if p.IsSetActionDigest() {
+		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:actionDigest: ", p), err)
 		}
-		if err := oprot.WriteBool(bool(*p.SkipCache)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.skipCache (3) field write error: ", p), err)
+		if err := p.ActionDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:skipCache: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:actionDigest: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ExecuteRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetActionDigest() {
-		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 4); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:actionDigest: ", p), err)
+	if p.IsSetExecutionPolicy() {
+		if err := oprot.WriteFieldBegin("executionPolicy", thrift.STRUCT, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:executionPolicy: ", p), err)
 		}
-		if err := p.ActionDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
+		if err := p.ExecutionPolicy.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionPolicy), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:actionDigest: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:executionPolicy: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ExecuteRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetResultsCachePolicy() {
+		if err := oprot.WriteFieldBegin("resultsCachePolicy", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:resultsCachePolicy: ", p), err)
+		}
+		if err := p.ResultsCachePolicy.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ResultsCachePolicy), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:resultsCachePolicy: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExecuteRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExecutionMetadata() {
-		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 5); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:executionMetadata: ", p), err)
+		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:executionMetadata: ", p), err)
 		}
 		if err := p.ExecutionMetadata.Write(oprot); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionMetadata), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:executionMetadata: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:executionMetadata: ", p), err)
 		}
 	}
 	return err
@@ -1679,28 +1352,17 @@ func (p *ExecuteRequest) String() string {
 }
 
 // Attributes:
-//  - Digest
 //  - Path
-//  - Content
+//  - Digest
 //  - IsExecutable
 type OutputFile struct {
-	Digest       *Digest `thrift:"digest,1" json:"digest,omitempty"`
-	Path         *string `thrift:"path,2" json:"path,omitempty"`
-	Content      []byte  `thrift:"content,3" json:"content,omitempty"`
-	IsExecutable *bool   `thrift:"isExecutable,4" json:"isExecutable,omitempty"`
+	Path         *string `thrift:"path,1" json:"path,omitempty"`
+	Digest       *Digest `thrift:"digest,2" json:"digest,omitempty"`
+	IsExecutable *bool   `thrift:"isExecutable,3" json:"isExecutable,omitempty"`
 }
 
 func NewOutputFile() *OutputFile {
 	return &OutputFile{}
-}
-
-var OutputFile_Digest_DEFAULT *Digest
-
-func (p *OutputFile) GetDigest() *Digest {
-	if !p.IsSetDigest() {
-		return OutputFile_Digest_DEFAULT
-	}
-	return p.Digest
 }
 
 var OutputFile_Path_DEFAULT string
@@ -1712,10 +1374,13 @@ func (p *OutputFile) GetPath() string {
 	return *p.Path
 }
 
-var OutputFile_Content_DEFAULT []byte
+var OutputFile_Digest_DEFAULT *Digest
 
-func (p *OutputFile) GetContent() []byte {
-	return p.Content
+func (p *OutputFile) GetDigest() *Digest {
+	if !p.IsSetDigest() {
+		return OutputFile_Digest_DEFAULT
+	}
+	return p.Digest
 }
 
 var OutputFile_IsExecutable_DEFAULT bool
@@ -1726,16 +1391,12 @@ func (p *OutputFile) GetIsExecutable() bool {
 	}
 	return *p.IsExecutable
 }
-func (p *OutputFile) IsSetDigest() bool {
-	return p.Digest != nil
-}
-
 func (p *OutputFile) IsSetPath() bool {
 	return p.Path != nil
 }
 
-func (p *OutputFile) IsSetContent() bool {
-	return p.Content != nil
+func (p *OutputFile) IsSetDigest() bool {
+	return p.Digest != nil
 }
 
 func (p *OutputFile) IsSetIsExecutable() bool {
@@ -1768,10 +1429,6 @@ func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 			if err := p.readField3(iprot); err != nil {
 				return err
 			}
-		case 4:
-			if err := p.readField4(iprot); err != nil {
-				return err
-			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -1788,6 +1445,15 @@ func (p *OutputFile) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *OutputFile) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Path = &v
+	}
+	return nil
+}
+
+func (p *OutputFile) readField2(iprot thrift.TProtocol) error {
 	p.Digest = &Digest{}
 	if err := p.Digest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Digest), err)
@@ -1795,27 +1461,9 @@ func (p *OutputFile) readField1(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *OutputFile) readField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
-	} else {
-		p.Path = &v
-	}
-	return nil
-}
-
 func (p *OutputFile) readField3(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadBinary(); err != nil {
-		return thrift.PrependError("error reading field 3: ", err)
-	} else {
-		p.Content = v
-	}
-	return nil
-}
-
-func (p *OutputFile) readField4(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
-		return thrift.PrependError("error reading field 4: ", err)
+		return thrift.PrependError("error reading field 3: ", err)
 	} else {
 		p.IsExecutable = &v
 	}
@@ -1835,9 +1483,6 @@ func (p *OutputFile) Write(oprot thrift.TProtocol) error {
 	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
-	if err := p.writeField4(oprot); err != nil {
-		return err
-	}
 	if err := oprot.WriteFieldStop(); err != nil {
 		return thrift.PrependError("write field stop error: ", err)
 	}
@@ -1848,60 +1493,45 @@ func (p *OutputFile) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *OutputFile) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDigest() {
-		if err := oprot.WriteFieldBegin("digest", thrift.STRUCT, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:digest: ", p), err)
+	if p.IsSetPath() {
+		if err := oprot.WriteFieldBegin("path", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:path: ", p), err)
 		}
-		if err := p.Digest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Digest), err)
+		if err := oprot.WriteString(string(*p.Path)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.path (1) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:digest: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:path: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *OutputFile) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPath() {
-		if err := oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:path: ", p), err)
+	if p.IsSetDigest() {
+		if err := oprot.WriteFieldBegin("digest", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:digest: ", p), err)
 		}
-		if err := oprot.WriteString(string(*p.Path)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.path (2) field write error: ", p), err)
+		if err := p.Digest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Digest), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:path: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:digest: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *OutputFile) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetContent() {
-		if err := oprot.WriteFieldBegin("content", thrift.STRING, 3); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:content: ", p), err)
-		}
-		if err := oprot.WriteBinary(p.Content); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.content (3) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:content: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *OutputFile) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIsExecutable() {
-		if err := oprot.WriteFieldBegin("isExecutable", thrift.BOOL, 4); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:isExecutable: ", p), err)
+		if err := oprot.WriteFieldBegin("isExecutable", thrift.BOOL, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:isExecutable: ", p), err)
 		}
 		if err := oprot.WriteBool(bool(*p.IsExecutable)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.isExecutable (4) field write error: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T.isExecutable (3) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:isExecutable: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:isExecutable: ", p), err)
 		}
 	}
 	return err
@@ -1915,24 +1545,15 @@ func (p *OutputFile) String() string {
 }
 
 // Attributes:
-//  - TreeDigest
 //  - Path
+//  - TreeDigest
 type OutputDirectory struct {
-	TreeDigest *Digest `thrift:"treeDigest,1" json:"treeDigest,omitempty"`
-	Path       *string `thrift:"path,2" json:"path,omitempty"`
+	Path       *string `thrift:"path,1" json:"path,omitempty"`
+	TreeDigest *Digest `thrift:"treeDigest,2" json:"treeDigest,omitempty"`
 }
 
 func NewOutputDirectory() *OutputDirectory {
 	return &OutputDirectory{}
-}
-
-var OutputDirectory_TreeDigest_DEFAULT *Digest
-
-func (p *OutputDirectory) GetTreeDigest() *Digest {
-	if !p.IsSetTreeDigest() {
-		return OutputDirectory_TreeDigest_DEFAULT
-	}
-	return p.TreeDigest
 }
 
 var OutputDirectory_Path_DEFAULT string
@@ -1943,12 +1564,21 @@ func (p *OutputDirectory) GetPath() string {
 	}
 	return *p.Path
 }
-func (p *OutputDirectory) IsSetTreeDigest() bool {
-	return p.TreeDigest != nil
-}
 
+var OutputDirectory_TreeDigest_DEFAULT *Digest
+
+func (p *OutputDirectory) GetTreeDigest() *Digest {
+	if !p.IsSetTreeDigest() {
+		return OutputDirectory_TreeDigest_DEFAULT
+	}
+	return p.TreeDigest
+}
 func (p *OutputDirectory) IsSetPath() bool {
 	return p.Path != nil
+}
+
+func (p *OutputDirectory) IsSetTreeDigest() bool {
+	return p.TreeDigest != nil
 }
 
 func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
@@ -1989,18 +1619,18 @@ func (p *OutputDirectory) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *OutputDirectory) readField1(iprot thrift.TProtocol) error {
-	p.TreeDigest = &Digest{}
-	if err := p.TreeDigest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TreeDigest), err)
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Path = &v
 	}
 	return nil
 }
 
 func (p *OutputDirectory) readField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
-	} else {
-		p.Path = &v
+	p.TreeDigest = &Digest{}
+	if err := p.TreeDigest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TreeDigest), err)
 	}
 	return nil
 }
@@ -2025,30 +1655,30 @@ func (p *OutputDirectory) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *OutputDirectory) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTreeDigest() {
-		if err := oprot.WriteFieldBegin("treeDigest", thrift.STRUCT, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:treeDigest: ", p), err)
+	if p.IsSetPath() {
+		if err := oprot.WriteFieldBegin("path", thrift.STRING, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:path: ", p), err)
 		}
-		if err := p.TreeDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TreeDigest), err)
+		if err := oprot.WriteString(string(*p.Path)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.path (1) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:treeDigest: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:path: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *OutputDirectory) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPath() {
-		if err := oprot.WriteFieldBegin("path", thrift.STRING, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:path: ", p), err)
+	if p.IsSetTreeDigest() {
+		if err := oprot.WriteFieldBegin("treeDigest", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:treeDigest: ", p), err)
 		}
-		if err := oprot.WriteString(string(*p.Path)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.path (2) field write error: ", p), err)
+		if err := p.TreeDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TreeDigest), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:path: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:treeDigest: ", p), err)
 		}
 	}
 	return err
@@ -2062,63 +1692,33 @@ func (p *OutputDirectory) String() string {
 }
 
 // Attributes:
-//  - StdoutDigest
-//  - StderrDigest
-//  - StdoutRaw
-//  - StderrRaw
 //  - OutputFiles
 //  - OutputDirectories
 //  - ExitCode
+//  - StdoutRaw
+//  - StdoutDigest
+//  - StderrRaw
+//  - StderrDigest
+//  - ExecutionMetadata
 //  - ActionDigest
 //  - GRPCStatus
 //  - Cached
-//  - ExecutionMetadata
 type ActionResult_ struct {
-	StdoutDigest      *Digest                 `thrift:"stdoutDigest,1" json:"stdoutDigest,omitempty"`
-	StderrDigest      *Digest                 `thrift:"stderrDigest,2" json:"stderrDigest,omitempty"`
-	StdoutRaw         []byte                  `thrift:"stdoutRaw,3" json:"stdoutRaw,omitempty"`
-	StderrRaw         []byte                  `thrift:"stderrRaw,4" json:"stderrRaw,omitempty"`
-	OutputFiles       []*OutputFile           `thrift:"outputFiles,5" json:"outputFiles,omitempty"`
-	OutputDirectories []*OutputDirectory      `thrift:"outputDirectories,6" json:"outputDirectories,omitempty"`
-	ExitCode          *int32                  `thrift:"exitCode,7" json:"exitCode,omitempty"`
-	ActionDigest      *Digest                 `thrift:"actionDigest,8" json:"actionDigest,omitempty"`
-	GRPCStatus        []byte                  `thrift:"GRPCStatus,9" json:"GRPCStatus,omitempty"`
-	Cached            *bool                   `thrift:"cached,10" json:"cached,omitempty"`
-	ExecutionMetadata *ExecutedActionMetadata `thrift:"executionMetadata,11" json:"executionMetadata,omitempty"`
+	OutputFiles       []*OutputFile           `thrift:"outputFiles,1" json:"outputFiles,omitempty"`
+	OutputDirectories []*OutputDirectory      `thrift:"outputDirectories,2" json:"outputDirectories,omitempty"`
+	ExitCode          *int32                  `thrift:"exitCode,3" json:"exitCode,omitempty"`
+	StdoutRaw         []byte                  `thrift:"stdoutRaw,4" json:"stdoutRaw,omitempty"`
+	StdoutDigest      *Digest                 `thrift:"stdoutDigest,5" json:"stdoutDigest,omitempty"`
+	StderrRaw         []byte                  `thrift:"stderrRaw,6" json:"stderrRaw,omitempty"`
+	StderrDigest      *Digest                 `thrift:"stderrDigest,7" json:"stderrDigest,omitempty"`
+	ExecutionMetadata *ExecutedActionMetadata `thrift:"executionMetadata,8" json:"executionMetadata,omitempty"`
+	ActionDigest      *Digest                 `thrift:"actionDigest,9" json:"actionDigest,omitempty"`
+	GRPCStatus        []byte                  `thrift:"GRPCStatus,10" json:"GRPCStatus,omitempty"`
+	Cached            *bool                   `thrift:"cached,11" json:"cached,omitempty"`
 }
 
 func NewActionResult_() *ActionResult_ {
 	return &ActionResult_{}
-}
-
-var ActionResult__StdoutDigest_DEFAULT *Digest
-
-func (p *ActionResult_) GetStdoutDigest() *Digest {
-	if !p.IsSetStdoutDigest() {
-		return ActionResult__StdoutDigest_DEFAULT
-	}
-	return p.StdoutDigest
-}
-
-var ActionResult__StderrDigest_DEFAULT *Digest
-
-func (p *ActionResult_) GetStderrDigest() *Digest {
-	if !p.IsSetStderrDigest() {
-		return ActionResult__StderrDigest_DEFAULT
-	}
-	return p.StderrDigest
-}
-
-var ActionResult__StdoutRaw_DEFAULT []byte
-
-func (p *ActionResult_) GetStdoutRaw() []byte {
-	return p.StdoutRaw
-}
-
-var ActionResult__StderrRaw_DEFAULT []byte
-
-func (p *ActionResult_) GetStderrRaw() []byte {
-	return p.StderrRaw
 }
 
 var ActionResult__OutputFiles_DEFAULT []*OutputFile
@@ -2140,6 +1740,45 @@ func (p *ActionResult_) GetExitCode() int32 {
 		return ActionResult__ExitCode_DEFAULT
 	}
 	return *p.ExitCode
+}
+
+var ActionResult__StdoutRaw_DEFAULT []byte
+
+func (p *ActionResult_) GetStdoutRaw() []byte {
+	return p.StdoutRaw
+}
+
+var ActionResult__StdoutDigest_DEFAULT *Digest
+
+func (p *ActionResult_) GetStdoutDigest() *Digest {
+	if !p.IsSetStdoutDigest() {
+		return ActionResult__StdoutDigest_DEFAULT
+	}
+	return p.StdoutDigest
+}
+
+var ActionResult__StderrRaw_DEFAULT []byte
+
+func (p *ActionResult_) GetStderrRaw() []byte {
+	return p.StderrRaw
+}
+
+var ActionResult__StderrDigest_DEFAULT *Digest
+
+func (p *ActionResult_) GetStderrDigest() *Digest {
+	if !p.IsSetStderrDigest() {
+		return ActionResult__StderrDigest_DEFAULT
+	}
+	return p.StderrDigest
+}
+
+var ActionResult__ExecutionMetadata_DEFAULT *ExecutedActionMetadata
+
+func (p *ActionResult_) GetExecutionMetadata() *ExecutedActionMetadata {
+	if !p.IsSetExecutionMetadata() {
+		return ActionResult__ExecutionMetadata_DEFAULT
+	}
+	return p.ExecutionMetadata
 }
 
 var ActionResult__ActionDigest_DEFAULT *Digest
@@ -2165,31 +1804,6 @@ func (p *ActionResult_) GetCached() bool {
 	}
 	return *p.Cached
 }
-
-var ActionResult__ExecutionMetadata_DEFAULT *ExecutedActionMetadata
-
-func (p *ActionResult_) GetExecutionMetadata() *ExecutedActionMetadata {
-	if !p.IsSetExecutionMetadata() {
-		return ActionResult__ExecutionMetadata_DEFAULT
-	}
-	return p.ExecutionMetadata
-}
-func (p *ActionResult_) IsSetStdoutDigest() bool {
-	return p.StdoutDigest != nil
-}
-
-func (p *ActionResult_) IsSetStderrDigest() bool {
-	return p.StderrDigest != nil
-}
-
-func (p *ActionResult_) IsSetStdoutRaw() bool {
-	return p.StdoutRaw != nil
-}
-
-func (p *ActionResult_) IsSetStderrRaw() bool {
-	return p.StderrRaw != nil
-}
-
 func (p *ActionResult_) IsSetOutputFiles() bool {
 	return p.OutputFiles != nil
 }
@@ -2202,6 +1816,26 @@ func (p *ActionResult_) IsSetExitCode() bool {
 	return p.ExitCode != nil
 }
 
+func (p *ActionResult_) IsSetStdoutRaw() bool {
+	return p.StdoutRaw != nil
+}
+
+func (p *ActionResult_) IsSetStdoutDigest() bool {
+	return p.StdoutDigest != nil
+}
+
+func (p *ActionResult_) IsSetStderrRaw() bool {
+	return p.StderrRaw != nil
+}
+
+func (p *ActionResult_) IsSetStderrDigest() bool {
+	return p.StderrDigest != nil
+}
+
+func (p *ActionResult_) IsSetExecutionMetadata() bool {
+	return p.ExecutionMetadata != nil
+}
+
 func (p *ActionResult_) IsSetActionDigest() bool {
 	return p.ActionDigest != nil
 }
@@ -2212,10 +1846,6 @@ func (p *ActionResult_) IsSetGRPCStatus() bool {
 
 func (p *ActionResult_) IsSetCached() bool {
 	return p.Cached != nil
-}
-
-func (p *ActionResult_) IsSetExecutionMetadata() bool {
-	return p.ExecutionMetadata != nil
 }
 
 func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
@@ -2292,26 +1922,50 @@ func (p *ActionResult_) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *ActionResult_) readField1(iprot thrift.TProtocol) error {
-	p.StdoutDigest = &Digest{}
-	if err := p.StdoutDigest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StdoutDigest), err)
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*OutputFile, 0, size)
+	p.OutputFiles = tSlice
+	for i := 0; i < size; i++ {
+		_elem0 := &OutputFile{}
+		if err := _elem0.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem0), err)
+		}
+		p.OutputFiles = append(p.OutputFiles, _elem0)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField2(iprot thrift.TProtocol) error {
-	p.StderrDigest = &Digest{}
-	if err := p.StderrDigest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StderrDigest), err)
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*OutputDirectory, 0, size)
+	p.OutputDirectories = tSlice
+	for i := 0; i < size; i++ {
+		_elem1 := &OutputDirectory{}
+		if err := _elem1.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem1), err)
+		}
+		p.OutputDirectories = append(p.OutputDirectories, _elem1)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField3(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadBinary(); err != nil {
+	if v, err := iprot.ReadI32(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
-		p.StdoutRaw = v
+		p.ExitCode = &v
 	}
 	return nil
 }
@@ -2320,61 +1974,45 @@ func (p *ActionResult_) readField4(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBinary(); err != nil {
 		return thrift.PrependError("error reading field 4: ", err)
 	} else {
-		p.StderrRaw = v
+		p.StdoutRaw = v
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField5(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return thrift.PrependError("error reading list begin: ", err)
-	}
-	tSlice := make([]*OutputFile, 0, size)
-	p.OutputFiles = tSlice
-	for i := 0; i < size; i++ {
-		_elem3 := &OutputFile{}
-		if err := _elem3.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem3), err)
-		}
-		p.OutputFiles = append(p.OutputFiles, _elem3)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return thrift.PrependError("error reading list end: ", err)
+	p.StdoutDigest = &Digest{}
+	if err := p.StdoutDigest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StdoutDigest), err)
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField6(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return thrift.PrependError("error reading list begin: ", err)
-	}
-	tSlice := make([]*OutputDirectory, 0, size)
-	p.OutputDirectories = tSlice
-	for i := 0; i < size; i++ {
-		_elem4 := &OutputDirectory{}
-		if err := _elem4.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem4), err)
-		}
-		p.OutputDirectories = append(p.OutputDirectories, _elem4)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return thrift.PrependError("error reading list end: ", err)
+	if v, err := iprot.ReadBinary(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.StderrRaw = v
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField7(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI32(); err != nil {
-		return thrift.PrependError("error reading field 7: ", err)
-	} else {
-		p.ExitCode = &v
+	p.StderrDigest = &Digest{}
+	if err := p.StderrDigest.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StderrDigest), err)
 	}
 	return nil
 }
 
 func (p *ActionResult_) readField8(iprot thrift.TProtocol) error {
+	p.ExecutionMetadata = &ExecutedActionMetadata{}
+	if err := p.ExecutionMetadata.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionMetadata), err)
+	}
+	return nil
+}
+
+func (p *ActionResult_) readField9(iprot thrift.TProtocol) error {
 	p.ActionDigest = &Digest{}
 	if err := p.ActionDigest.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ActionDigest), err)
@@ -2382,28 +2020,20 @@ func (p *ActionResult_) readField8(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ActionResult_) readField9(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField10(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBinary(); err != nil {
-		return thrift.PrependError("error reading field 9: ", err)
+		return thrift.PrependError("error reading field 10: ", err)
 	} else {
 		p.GRPCStatus = v
 	}
 	return nil
 }
 
-func (p *ActionResult_) readField10(iprot thrift.TProtocol) error {
+func (p *ActionResult_) readField11(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
-		return thrift.PrependError("error reading field 10: ", err)
+		return thrift.PrependError("error reading field 11: ", err)
 	} else {
 		p.Cached = &v
-	}
-	return nil
-}
-
-func (p *ActionResult_) readField11(iprot thrift.TProtocol) error {
-	p.ExecutionMetadata = &ExecutedActionMetadata{}
-	if err := p.ExecutionMetadata.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExecutionMetadata), err)
 	}
 	return nil
 }
@@ -2455,69 +2085,9 @@ func (p *ActionResult_) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *ActionResult_) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStdoutDigest() {
-		if err := oprot.WriteFieldBegin("stdoutDigest", thrift.STRUCT, 1); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:stdoutDigest: ", p), err)
-		}
-		if err := p.StdoutDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StdoutDigest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:stdoutDigest: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *ActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStderrDigest() {
-		if err := oprot.WriteFieldBegin("stderrDigest", thrift.STRUCT, 2); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:stderrDigest: ", p), err)
-		}
-		if err := p.StderrDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StderrDigest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:stderrDigest: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *ActionResult_) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStdoutRaw() {
-		if err := oprot.WriteFieldBegin("stdoutRaw", thrift.STRING, 3); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:stdoutRaw: ", p), err)
-		}
-		if err := oprot.WriteBinary(p.StdoutRaw); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.stdoutRaw (3) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:stdoutRaw: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *ActionResult_) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStderrRaw() {
-		if err := oprot.WriteFieldBegin("stderrRaw", thrift.STRING, 4); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:stderrRaw: ", p), err)
-		}
-		if err := oprot.WriteBinary(p.StderrRaw); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.stderrRaw (4) field write error: ", p), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:stderrRaw: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *ActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputFiles() {
-		if err := oprot.WriteFieldBegin("outputFiles", thrift.LIST, 5); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:outputFiles: ", p), err)
+		if err := oprot.WriteFieldBegin("outputFiles", thrift.LIST, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:outputFiles: ", p), err)
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OutputFiles)); err != nil {
 			return thrift.PrependError("error writing list begin: ", err)
@@ -2531,16 +2101,16 @@ func (p *ActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
 			return thrift.PrependError("error writing list end: ", err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:outputFiles: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:outputFiles: ", p), err)
 		}
 	}
 	return err
 }
 
-func (p *ActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ActionResult_) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOutputDirectories() {
-		if err := oprot.WriteFieldBegin("outputDirectories", thrift.LIST, 6); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:outputDirectories: ", p), err)
+		if err := oprot.WriteFieldBegin("outputDirectories", thrift.LIST, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:outputDirectories: ", p), err)
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OutputDirectories)); err != nil {
 			return thrift.PrependError("error writing list begin: ", err)
@@ -2554,82 +2124,142 @@ func (p *ActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
 			return thrift.PrependError("error writing list end: ", err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:outputDirectories: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:outputDirectories: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExitCode() {
+		if err := oprot.WriteFieldBegin("exitCode", thrift.I32, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:exitCode: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.ExitCode)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.exitCode (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:exitCode: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStdoutRaw() {
+		if err := oprot.WriteFieldBegin("stdoutRaw", thrift.STRING, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:stdoutRaw: ", p), err)
+		}
+		if err := oprot.WriteBinary(p.StdoutRaw); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.stdoutRaw (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:stdoutRaw: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStdoutDigest() {
+		if err := oprot.WriteFieldBegin("stdoutDigest", thrift.STRUCT, 5); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:stdoutDigest: ", p), err)
+		}
+		if err := p.StdoutDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StdoutDigest), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 5:stdoutDigest: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ActionResult_) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStderrRaw() {
+		if err := oprot.WriteFieldBegin("stderrRaw", thrift.STRING, 6); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:stderrRaw: ", p), err)
+		}
+		if err := oprot.WriteBinary(p.StderrRaw); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.stderrRaw (6) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 6:stderrRaw: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExitCode() {
-		if err := oprot.WriteFieldBegin("exitCode", thrift.I32, 7); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:exitCode: ", p), err)
+	if p.IsSetStderrDigest() {
+		if err := oprot.WriteFieldBegin("stderrDigest", thrift.STRUCT, 7); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:stderrDigest: ", p), err)
 		}
-		if err := oprot.WriteI32(int32(*p.ExitCode)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.exitCode (7) field write error: ", p), err)
+		if err := p.StderrDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StderrDigest), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:exitCode: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:stderrDigest: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetActionDigest() {
-		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 8); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:actionDigest: ", p), err)
+	if p.IsSetExecutionMetadata() {
+		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 8); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:executionMetadata: ", p), err)
 		}
-		if err := p.ActionDigest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
+		if err := p.ExecutionMetadata.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionMetadata), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:actionDigest: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:executionMetadata: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField9(oprot thrift.TProtocol) (err error) {
-	if p.IsSetGRPCStatus() {
-		if err := oprot.WriteFieldBegin("GRPCStatus", thrift.STRING, 9); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:GRPCStatus: ", p), err)
+	if p.IsSetActionDigest() {
+		if err := oprot.WriteFieldBegin("actionDigest", thrift.STRUCT, 9); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 9:actionDigest: ", p), err)
 		}
-		if err := oprot.WriteBinary(p.GRPCStatus); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.GRPCStatus (9) field write error: ", p), err)
+		if err := p.ActionDigest.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ActionDigest), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:GRPCStatus: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 9:actionDigest: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCached() {
-		if err := oprot.WriteFieldBegin("cached", thrift.BOOL, 10); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cached: ", p), err)
+	if p.IsSetGRPCStatus() {
+		if err := oprot.WriteFieldBegin("GRPCStatus", thrift.STRING, 10); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:GRPCStatus: ", p), err)
 		}
-		if err := oprot.WriteBool(bool(*p.Cached)); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T.cached (10) field write error: ", p), err)
+		if err := oprot.WriteBinary(p.GRPCStatus); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.GRPCStatus (10) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cached: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:GRPCStatus: ", p), err)
 		}
 	}
 	return err
 }
 
 func (p *ActionResult_) writeField11(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExecutionMetadata() {
-		if err := oprot.WriteFieldBegin("executionMetadata", thrift.STRUCT, 11); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:executionMetadata: ", p), err)
+	if p.IsSetCached() {
+		if err := oprot.WriteFieldBegin("cached", thrift.BOOL, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:cached: ", p), err)
 		}
-		if err := p.ExecutionMetadata.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExecutionMetadata), err)
+		if err := oprot.WriteBool(bool(*p.Cached)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.cached (11) field write error: ", p), err)
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:executionMetadata: ", p), err)
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:cached: ", p), err)
 		}
 	}
 	return err

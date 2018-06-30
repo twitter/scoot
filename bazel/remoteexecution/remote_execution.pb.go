@@ -28,6 +28,37 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+// The digest function used for converting values into keys for CAS and Action
+// Cache.
+type DigestFunction int32
+
+const (
+	DigestFunction_UNKNOWN DigestFunction = 0
+	DigestFunction_SHA256  DigestFunction = 1
+	DigestFunction_SHA1    DigestFunction = 2
+	DigestFunction_MD5     DigestFunction = 3
+)
+
+var DigestFunction_name = map[int32]string{
+	0: "UNKNOWN",
+	1: "SHA256",
+	2: "SHA1",
+	3: "MD5",
+}
+var DigestFunction_value = map[string]int32{
+	"UNKNOWN": 0,
+	"SHA256":  1,
+	"SHA1":    2,
+	"MD5":     3,
+}
+
+func (x DigestFunction) String() string {
+	return proto.EnumName(DigestFunction_name, int32(x))
+}
+func (DigestFunction) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{0}
+}
+
 // The current stage of execution.
 type ExecuteOperationMetadata_Stage int32
 
@@ -62,7 +93,7 @@ func (x ExecuteOperationMetadata_Stage) String() string {
 	return proto.EnumName(ExecuteOperationMetadata_Stage_name, int32(x))
 }
 func (ExecuteOperationMetadata_Stage) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{15, 0}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{17, 0}
 }
 
 // An `Action` captures all the information about an execution which is required
@@ -76,27 +107,125 @@ func (ExecuteOperationMetadata_Stage) EnumDescriptor() ([]byte, []int) {
 // rather than needing to run afresh.
 //
 // When a server completes execution of an
-// [Action][build.bazel.remote.execution.v0_2.Action], it MAY choose to
-// cache the [result][build.bazel.remote.execution.v0_2.ActionResult] in
-// the [ActionCache][build.bazel.remote.execution.v0_2.ActionCache] unless
+// [Action][build.bazel.remote.execution.v2.Action], it MAY choose to
+// cache the [result][build.bazel.remote.execution.v2.ActionResult] in
+// the [ActionCache][build.bazel.remote.execution.v2.ActionCache] unless
 // `do_not_cache` is `true`. Clients SHOULD expect the server to do so. By
-// default, future calls to [Execute][] the same `Action` will also serve their
-// results from the cache. Clients must take care to understand the caching
-// behaviour. Ideally, all `Action`s will be reproducible so that serving a
-// result from cache is always desirable and correct.
+// default, future calls to
+// [Execute][build.bazel.remote.execution.v2.Execution.Execute] the same
+// `Action` will also serve their results from the cache. Clients must take care
+// to understand the caching behaviour. Ideally, all `Action`s will be
+// reproducible so that serving a result from cache is always desirable and
+// correct.
 type Action struct {
-	// The digest of the [Command][build.bazel.remote.execution.v0_2.Command]
+	// The digest of the [Command][build.bazel.remote.execution.v2.Command]
 	// to run, which MUST be present in the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
 	CommandDigest *Digest `protobuf:"bytes,1,opt,name=command_digest,json=commandDigest,proto3" json:"command_digest,omitempty"`
 	// The digest of the root
-	// [Directory][build.bazel.remote.execution.v0_2.Directory] for the input
+	// [Directory][build.bazel.remote.execution.v2.Directory] for the input
 	// files. The files in the directory tree are available in the correct
 	// location on the build machine before the command is executed. The root
 	// directory, as well as every subdirectory and content blob referred to, MUST
 	// be in the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
 	InputRootDigest *Digest `protobuf:"bytes,2,opt,name=input_root_digest,json=inputRootDigest,proto3" json:"input_root_digest,omitempty"`
+	// A timeout after which the execution should be killed. If the timeout is
+	// absent, then the client is specifying that the execution should continue
+	// as long as the server will let it. The server SHOULD impose a timeout if
+	// the client does not specify one, however, if the client does specify a
+	// timeout that is longer than the server's maximum timeout, the server MUST
+	// reject the request.
+	//
+	// The timeout is a part of the
+	// [Action][build.bazel.remote.execution.v2.Action] message, and
+	// therefore two `Actions` with different timeouts are different, even if they
+	// are otherwise identical. This is because, if they were not, running an
+	// `Action` with a lower timeout than is required might result in a cache hit
+	// from an execution run with a longer timeout, hiding the fact that the
+	// timeout is too short. By encoding it directly in the `Action`, a lower
+	// timeout will result in a cache miss and the execution timeout will fail
+	// immediately, rather than whenever the cache entry gets evicted.
+	Timeout *duration.Duration `protobuf:"bytes,6,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	// If true, then the `Action`'s result cannot be cached.
+	DoNotCache           bool     `protobuf:"varint,7,opt,name=do_not_cache,json=doNotCache,proto3" json:"do_not_cache,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Action) Reset()         { *m = Action{} }
+func (m *Action) String() string { return proto.CompactTextString(m) }
+func (*Action) ProtoMessage()    {}
+func (*Action) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{0}
+}
+func (m *Action) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Action.Unmarshal(m, b)
+}
+func (m *Action) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Action.Marshal(b, m, deterministic)
+}
+func (dst *Action) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Action.Merge(dst, src)
+}
+func (m *Action) XXX_Size() int {
+	return xxx_messageInfo_Action.Size(m)
+}
+func (m *Action) XXX_DiscardUnknown() {
+	xxx_messageInfo_Action.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Action proto.InternalMessageInfo
+
+func (m *Action) GetCommandDigest() *Digest {
+	if m != nil {
+		return m.CommandDigest
+	}
+	return nil
+}
+
+func (m *Action) GetInputRootDigest() *Digest {
+	if m != nil {
+		return m.InputRootDigest
+	}
+	return nil
+}
+
+func (m *Action) GetTimeout() *duration.Duration {
+	if m != nil {
+		return m.Timeout
+	}
+	return nil
+}
+
+func (m *Action) GetDoNotCache() bool {
+	if m != nil {
+		return m.DoNotCache
+	}
+	return false
+}
+
+// A `Command` is the actual command executed by a worker running an
+// [Action][build.bazel.remote.execution.v2.Action] and specifications of its
+// environment.
+//
+// Except as otherwise required, the environment (such as which system
+// libraries or binaries are available, and what filesystems are mounted where)
+// is defined by and specific to the implementation of the remote execution API.
+type Command struct {
+	// The arguments to the command. The first argument must be the path to the
+	// executable, which must be either a relative path, in which case it is
+	// evaluated with respect to the input root, or an absolute path.
+	Arguments []string `protobuf:"bytes,1,rep,name=arguments,proto3" json:"arguments,omitempty"`
+	// The environment variables to set when running the program. The worker may
+	// provide its own default environment variables; these defaults can be
+	// overridden using this field. Additional variables can also be specified.
+	//
+	// In order to ensure that equivalent `Command`s always hash to the same
+	// value, the environment variables MUST be lexicographically sorted by name.
+	// Sorting of strings is done by code point, equivalently, by the UTF-8 bytes.
+	EnvironmentVariables []*Command_EnvironmentVariable `protobuf:"bytes,2,rep,name=environment_variables,json=environmentVariables,proto3" json:"environment_variables,omitempty"`
 	// A list of the output files that the client expects to retrieve from the
 	// action. Only the listed files, as well as directories listed in
 	// `output_directories`, will be returned to the client as output.
@@ -143,132 +272,20 @@ type Action struct {
 	// the client SHOULD ensure that running the action on any such worker will
 	// have the same result.
 	Platform *Platform `protobuf:"bytes,5,opt,name=platform,proto3" json:"platform,omitempty"`
-	// A timeout after which the execution should be killed. If the timeout is
-	// absent, then the client is specifying that the execution should continue
-	// as long as the server will let it. The server SHOULD impose a timeout if
-	// the client does not specify one, however, if the client does specify a
-	// timeout that is longer than the server's maximum timeout, the server MUST
-	// reject the request.
-	//
-	// The timeout is a part of the
-	// [Action][build.bazel.remote.execution.v0_2.Action] message, and
-	// therefore two `Actions` with different timeouts are different, even if they
-	// are otherwise identical. This is because, if they were not, running an
-	// `Action` with a lower timeout than is required might result in a cache hit
-	// from an execution run with a longer timeout, hiding the fact that the
-	// timeout is too short. By encoding it directly in the `Action`, a lower
-	// timeout will result in a cache miss and the execution timeout will fail
-	// immediately, rather than whenever the cache entry gets evicted.
-	Timeout *duration.Duration `protobuf:"bytes,6,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	// If true, then the `Action`'s result cannot be cached.
-	DoNotCache           bool     `protobuf:"varint,7,opt,name=do_not_cache,json=doNotCache,proto3" json:"do_not_cache,omitempty"`
+	// The working directory, relative to the input root, for the command to run
+	// in. It must be a directory which exists in the input tree. If it is left
+	// empty, then the action is run in the input root.
+	WorkingDirectory     string   `protobuf:"bytes,6,opt,name=working_directory,json=workingDirectory,proto3" json:"working_directory,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *Action) Reset()         { *m = Action{} }
-func (m *Action) String() string { return proto.CompactTextString(m) }
-func (*Action) ProtoMessage()    {}
-func (*Action) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{0}
-}
-func (m *Action) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Action.Unmarshal(m, b)
-}
-func (m *Action) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Action.Marshal(b, m, deterministic)
-}
-func (dst *Action) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Action.Merge(dst, src)
-}
-func (m *Action) XXX_Size() int {
-	return xxx_messageInfo_Action.Size(m)
-}
-func (m *Action) XXX_DiscardUnknown() {
-	xxx_messageInfo_Action.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Action proto.InternalMessageInfo
-
-func (m *Action) GetCommandDigest() *Digest {
-	if m != nil {
-		return m.CommandDigest
-	}
-	return nil
-}
-
-func (m *Action) GetInputRootDigest() *Digest {
-	if m != nil {
-		return m.InputRootDigest
-	}
-	return nil
-}
-
-func (m *Action) GetOutputFiles() []string {
-	if m != nil {
-		return m.OutputFiles
-	}
-	return nil
-}
-
-func (m *Action) GetOutputDirectories() []string {
-	if m != nil {
-		return m.OutputDirectories
-	}
-	return nil
-}
-
-func (m *Action) GetPlatform() *Platform {
-	if m != nil {
-		return m.Platform
-	}
-	return nil
-}
-
-func (m *Action) GetTimeout() *duration.Duration {
-	if m != nil {
-		return m.Timeout
-	}
-	return nil
-}
-
-func (m *Action) GetDoNotCache() bool {
-	if m != nil {
-		return m.DoNotCache
-	}
-	return false
-}
-
-// A `Command` is the actual command executed by a worker running an
-// [Action][build.bazel.remote.execution.v0_2.Action].
-//
-// Except as otherwise required, the environment (such as which system
-// libraries or binaries are available, and what filesystems are mounted where)
-// is defined by and specific to the implementation of the remote execution API.
-type Command struct {
-	// The arguments to the command. The first argument must be the path to the
-	// executable, which must be either a relative path, in which case it is
-	// evaluated with respect to the input root, or an absolute path.
-	Arguments []string `protobuf:"bytes,1,rep,name=arguments,proto3" json:"arguments,omitempty"`
-	// The environment variables to set when running the program. The worker may
-	// provide its own default environment variables; these defaults can be
-	// overridden using this field. Additional variables can also be specified.
-	//
-	// In order to ensure that equivalent `Command`s always hash to the same
-	// value, the environment variables MUST be lexicographically sorted by name.
-	// Sorting of strings is done by code point, equivalently, by the UTF-8 bytes.
-	EnvironmentVariables []*Command_EnvironmentVariable `protobuf:"bytes,2,rep,name=environment_variables,json=environmentVariables,proto3" json:"environment_variables,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
-	XXX_unrecognized     []byte                         `json:"-"`
-	XXX_sizecache        int32                          `json:"-"`
 }
 
 func (m *Command) Reset()         { *m = Command{} }
 func (m *Command) String() string { return proto.CompactTextString(m) }
 func (*Command) ProtoMessage()    {}
 func (*Command) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{1}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{1}
 }
 func (m *Command) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command.Unmarshal(m, b)
@@ -302,6 +319,34 @@ func (m *Command) GetEnvironmentVariables() []*Command_EnvironmentVariable {
 	return nil
 }
 
+func (m *Command) GetOutputFiles() []string {
+	if m != nil {
+		return m.OutputFiles
+	}
+	return nil
+}
+
+func (m *Command) GetOutputDirectories() []string {
+	if m != nil {
+		return m.OutputDirectories
+	}
+	return nil
+}
+
+func (m *Command) GetPlatform() *Platform {
+	if m != nil {
+		return m.Platform
+	}
+	return nil
+}
+
+func (m *Command) GetWorkingDirectory() string {
+	if m != nil {
+		return m.WorkingDirectory
+	}
+	return ""
+}
+
 // An `EnvironmentVariable` is one variable to set in the running program's
 // environment.
 type Command_EnvironmentVariable struct {
@@ -318,7 +363,7 @@ func (m *Command_EnvironmentVariable) Reset()         { *m = Command_Environment
 func (m *Command_EnvironmentVariable) String() string { return proto.CompactTextString(m) }
 func (*Command_EnvironmentVariable) ProtoMessage()    {}
 func (*Command_EnvironmentVariable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{1, 0}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{1, 0}
 }
 func (m *Command_EnvironmentVariable) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_EnvironmentVariable.Unmarshal(m, b)
@@ -354,7 +399,7 @@ func (m *Command_EnvironmentVariable) GetValue() string {
 
 // A `Platform` is a set of requirements, such as hardware, operating system, or
 // compiler toolchain, for an
-// [Action][build.bazel.remote.execution.v0_2.Action]'s execution
+// [Action][build.bazel.remote.execution.v2.Action]'s execution
 // environment. A `Platform` is represented as a series of key-value pairs
 // representing the properties that are required of the platform.
 type Platform struct {
@@ -372,7 +417,7 @@ func (m *Platform) Reset()         { *m = Platform{} }
 func (m *Platform) String() string { return proto.CompactTextString(m) }
 func (*Platform) ProtoMessage()    {}
 func (*Platform) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{2}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{2}
 }
 func (m *Platform) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Platform.Unmarshal(m, b)
@@ -402,7 +447,7 @@ func (m *Platform) GetProperties() []*Platform_Property {
 // A single property for the environment. The server is responsible for
 // specifying the property `name`s that it accepts. If an unknown `name` is
 // provided in the requirements for an
-// [Action][build.bazel.remote.execution.v0_2.Action], the server SHOULD
+// [Action][build.bazel.remote.execution.v2.Action], the server SHOULD
 // reject the execution request. If permitted by the server, the same `name`
 // may occur multiple times.
 //
@@ -430,7 +475,7 @@ func (m *Platform_Property) Reset()         { *m = Platform_Property{} }
 func (m *Platform_Property) String() string { return proto.CompactTextString(m) }
 func (*Platform_Property) ProtoMessage()    {}
 func (*Platform_Property) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{2, 0}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{2, 0}
 }
 func (m *Platform_Property) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Platform_Property.Unmarshal(m, b)
@@ -465,8 +510,8 @@ func (m *Platform_Property) GetValue() string {
 }
 
 // A `Directory` represents a directory node in a file tree, containing zero or
-// more children [FileNodes][build.bazel.remote.execution.v0_2.FileNode]
-// and [DirectoryNodes][build.bazel.remote.execution.v0_2.DirectoryNode].
+// more children [FileNodes][build.bazel.remote.execution.v2.FileNode]
+// and [DirectoryNodes][build.bazel.remote.execution.v2.DirectoryNode].
 // Each `Node` contains its name in the directory, the digest of its content
 // (either a file blob or a `Directory` proto), as well as possibly some
 // metadata about the file or directory.
@@ -538,7 +583,7 @@ func (m *Directory) Reset()         { *m = Directory{} }
 func (m *Directory) String() string { return proto.CompactTextString(m) }
 func (*Directory) ProtoMessage()    {}
 func (*Directory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{3}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{3}
 }
 func (m *Directory) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Directory.Unmarshal(m, b)
@@ -589,7 +634,7 @@ func (m *FileNode) Reset()         { *m = FileNode{} }
 func (m *FileNode) String() string { return proto.CompactTextString(m) }
 func (*FileNode) ProtoMessage()    {}
 func (*FileNode) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{4}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{4}
 }
 func (m *FileNode) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FileNode.Unmarshal(m, b)
@@ -631,14 +676,14 @@ func (m *FileNode) GetIsExecutable() bool {
 }
 
 // A `DirectoryNode` represents a child of a
-// [Directory][build.bazel.remote.execution.v0_2.Directory] which is itself
+// [Directory][build.bazel.remote.execution.v2.Directory] which is itself
 // a `Directory` and its associated metadata.
 type DirectoryNode struct {
 	// The name of the directory.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// The digest of the
-	// [Directory][build.bazel.remote.execution.v0_2.Directory] object
-	// represented. See [Digest][build.bazel.remote.execution.v0_2.Digest]
+	// [Directory][build.bazel.remote.execution.v2.Directory] object
+	// represented. See [Digest][build.bazel.remote.execution.v2.Digest]
 	// for information about how to take the digest of a proto message.
 	Digest               *Digest  `protobuf:"bytes,2,opt,name=digest,proto3" json:"digest,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -650,7 +695,7 @@ func (m *DirectoryNode) Reset()         { *m = DirectoryNode{} }
 func (m *DirectoryNode) String() string { return proto.CompactTextString(m) }
 func (*DirectoryNode) ProtoMessage()    {}
 func (*DirectoryNode) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{5}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{5}
 }
 func (m *DirectoryNode) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DirectoryNode.Unmarshal(m, b)
@@ -730,7 +775,7 @@ func (m *Digest) Reset()         { *m = Digest{} }
 func (m *Digest) String() string { return proto.CompactTextString(m) }
 func (*Digest) ProtoMessage()    {}
 func (*Digest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{6}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{6}
 }
 func (m *Digest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Digest.Unmarshal(m, b)
@@ -795,7 +840,7 @@ func (m *ExecutedActionMetadata) Reset()         { *m = ExecutedActionMetadata{}
 func (m *ExecutedActionMetadata) String() string { return proto.CompactTextString(m) }
 func (*ExecutedActionMetadata) ProtoMessage()    {}
 func (*ExecutedActionMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{7}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{7}
 }
 func (m *ExecutedActionMetadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExecutedActionMetadata.Unmarshal(m, b)
@@ -886,7 +931,7 @@ func (m *ExecutedActionMetadata) GetOutputUploadCompletedTimestamp() *timestamp.
 }
 
 // An ActionResult represents the result of an
-// [Action][build.bazel.remote.execution.v0_2.Action] being run.
+// [Action][build.bazel.remote.execution.v2.Action] being run.
 type ActionResult struct {
 	// The output files of the action. For each output file requested in the
 	// `output_files` field of the Action, if the corresponding file existed after
@@ -901,7 +946,7 @@ type ActionResult struct {
 	// in the `output_directories` field of the Action, if the corresponding
 	// directory existed after the action completed, a single entry will be
 	// present in the output list, which will contain the digest of a
-	// [Tree][build.bazel.remote.execution.v0_2.Tree[] message containing the
+	// [Tree][build.bazel.remote.execution.v2.Tree] message containing the
 	// directory tree, and the path equal exactly to the corresponding Action
 	// output_directories member.
 	//
@@ -968,7 +1013,7 @@ type ActionResult struct {
 	StdoutRaw []byte `protobuf:"bytes,5,opt,name=stdout_raw,json=stdoutRaw,proto3" json:"stdout_raw,omitempty"`
 	// The digest for a blob containing the standard output of the action, which
 	// can be retrieved from the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
 	// See `stdout_raw` for when this will be set.
 	StdoutDigest *Digest `protobuf:"bytes,6,opt,name=stdout_digest,json=stdoutDigest,proto3" json:"stdout_digest,omitempty"`
 	// The standard error buffer of the action. The server will determine, based
@@ -980,7 +1025,7 @@ type ActionResult struct {
 	StderrRaw []byte `protobuf:"bytes,7,opt,name=stderr_raw,json=stderrRaw,proto3" json:"stderr_raw,omitempty"`
 	// The digest for a blob containing the standard error of the action, which
 	// can be retrieved from the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
 	// See `stderr_raw` for when this will be set.
 	StderrDigest *Digest `protobuf:"bytes,8,opt,name=stderr_digest,json=stderrDigest,proto3" json:"stderr_digest,omitempty"`
 	// The details of the execution that originally produced this result.
@@ -994,7 +1039,7 @@ func (m *ActionResult) Reset()         { *m = ActionResult{} }
 func (m *ActionResult) String() string { return proto.CompactTextString(m) }
 func (*ActionResult) ProtoMessage()    {}
 func (*ActionResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{8}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{8}
 }
 func (m *ActionResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ActionResult.Unmarshal(m, b)
@@ -1071,9 +1116,9 @@ func (m *ActionResult) GetExecutionMetadata() *ExecutedActionMetadata {
 }
 
 // An `OutputFile` is similar to a
-// [FileNode][build.bazel.remote.execution.v0_2.FileNode], but it is
-// tailored for output as part of an `ActionResult`. It allows a full file path
-// rather than only a name, and allows the server to include content inline.
+// [FileNode][build.bazel.remote.execution.v2.FileNode], but it is used as an
+// output in an `ActionResult`. It allows a full file path rather than
+// only a name.
 //
 // `OutputFile` is binary-compatible with `FileNode`.
 type OutputFile struct {
@@ -1083,17 +1128,6 @@ type OutputFile struct {
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	// The digest of the file's content.
 	Digest *Digest `protobuf:"bytes,2,opt,name=digest,proto3" json:"digest,omitempty"`
-	// The raw content of the file.
-	//
-	// This field may be used by the server to provide the content of a file
-	// inline in an
-	// [ActionResult][build.bazel.remote.execution.v0_2.ActionResult] and
-	// avoid requiring that the client make a separate call to
-	// [ContentAddressableStorage.GetBlob] to retrieve it.
-	//
-	// The client SHOULD NOT assume that it will get raw content with any request,
-	// and always be prepared to retrieve it via `digest`.
-	Content []byte `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	// True if file is executable, false otherwise.
 	IsExecutable         bool     `protobuf:"varint,4,opt,name=is_executable,json=isExecutable,proto3" json:"is_executable,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -1105,7 +1139,7 @@ func (m *OutputFile) Reset()         { *m = OutputFile{} }
 func (m *OutputFile) String() string { return proto.CompactTextString(m) }
 func (*OutputFile) ProtoMessage()    {}
 func (*OutputFile) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{9}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{9}
 }
 func (m *OutputFile) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OutputFile.Unmarshal(m, b)
@@ -1139,13 +1173,6 @@ func (m *OutputFile) GetDigest() *Digest {
 	return nil
 }
 
-func (m *OutputFile) GetContent() []byte {
-	if m != nil {
-		return m.Content
-	}
-	return nil
-}
-
 func (m *OutputFile) GetIsExecutable() bool {
 	if m != nil {
 		return m.IsExecutable
@@ -1154,7 +1181,7 @@ func (m *OutputFile) GetIsExecutable() bool {
 }
 
 // A `Tree` contains all the
-// [Directory][build.bazel.remote.execution.v0_2.Directory] protos in a
+// [Directory][build.bazel.remote.execution.v2.Directory] protos in a
 // single directory Merkle tree, compressed into one message.
 type Tree struct {
 	// The root directory in the tree.
@@ -1173,7 +1200,7 @@ func (m *Tree) Reset()         { *m = Tree{} }
 func (m *Tree) String() string { return proto.CompactTextString(m) }
 func (*Tree) ProtoMessage()    {}
 func (*Tree) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{10}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{10}
 }
 func (m *Tree) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Tree.Unmarshal(m, b)
@@ -1216,7 +1243,7 @@ type OutputDirectory struct {
 	// and it denotes the entire working directory.
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	// The digest of the encoded
-	// [Tree][build.bazel.remote.execution.v0_2.Tree] proto containing the
+	// [Tree][build.bazel.remote.execution.v2.Tree] proto containing the
 	// directory's contents.
 	TreeDigest           *Digest  `protobuf:"bytes,3,opt,name=tree_digest,json=treeDigest,proto3" json:"tree_digest,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -1228,7 +1255,7 @@ func (m *OutputDirectory) Reset()         { *m = OutputDirectory{} }
 func (m *OutputDirectory) String() string { return proto.CompactTextString(m) }
 func (*OutputDirectory) ProtoMessage()    {}
 func (*OutputDirectory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{11}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{11}
 }
 func (m *OutputDirectory) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OutputDirectory.Unmarshal(m, b)
@@ -1262,8 +1289,104 @@ func (m *OutputDirectory) GetTreeDigest() *Digest {
 	return nil
 }
 
+// An `ExecutionPolicy` can be used to control the scheduling of the action.
+type ExecutionPolicy struct {
+	// The priority (relative importance) of this action. Generally, a lower value
+	// means that the action should be run sooner than actions having a greater
+	// priority value, but the interpretation of a given value is server-
+	// dependent. A priority of 0 means the *default* priority. Priorities may be
+	// positive or negative, and such actions should run later or sooner than
+	// actions having the default priority, respectively. The particular semantics
+	// of this field is up to the server. In particular, every server will have
+	// their own supported range of priorities, and will decide how these map into
+	// scheduling policy.
+	Priority             int32    `protobuf:"varint,1,opt,name=priority,proto3" json:"priority,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExecutionPolicy) Reset()         { *m = ExecutionPolicy{} }
+func (m *ExecutionPolicy) String() string { return proto.CompactTextString(m) }
+func (*ExecutionPolicy) ProtoMessage()    {}
+func (*ExecutionPolicy) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{12}
+}
+func (m *ExecutionPolicy) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecutionPolicy.Unmarshal(m, b)
+}
+func (m *ExecutionPolicy) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecutionPolicy.Marshal(b, m, deterministic)
+}
+func (dst *ExecutionPolicy) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecutionPolicy.Merge(dst, src)
+}
+func (m *ExecutionPolicy) XXX_Size() int {
+	return xxx_messageInfo_ExecutionPolicy.Size(m)
+}
+func (m *ExecutionPolicy) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecutionPolicy.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExecutionPolicy proto.InternalMessageInfo
+
+func (m *ExecutionPolicy) GetPriority() int32 {
+	if m != nil {
+		return m.Priority
+	}
+	return 0
+}
+
+// A `ResultsCachePolicy` is used for fine-grained control over how action
+// outputs are stored in the CAS and Action Cache.
+type ResultsCachePolicy struct {
+	// The priority (relative importance) of this content in the overall cache.
+	// Generally, a lower value means a longer retention time or other advantage,
+	// but the interpretation of a given value is server-dependent. A priority of
+	// 0 means a *default* value, decided by the server.
+	//
+	// The particular semantics of this field is up to the server. In particular,
+	// every server will have their own supported range of priorities, and will
+	// decide how these map into retention/eviction policy.
+	Priority             int32    `protobuf:"varint,1,opt,name=priority,proto3" json:"priority,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ResultsCachePolicy) Reset()         { *m = ResultsCachePolicy{} }
+func (m *ResultsCachePolicy) String() string { return proto.CompactTextString(m) }
+func (*ResultsCachePolicy) ProtoMessage()    {}
+func (*ResultsCachePolicy) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{13}
+}
+func (m *ResultsCachePolicy) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ResultsCachePolicy.Unmarshal(m, b)
+}
+func (m *ResultsCachePolicy) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ResultsCachePolicy.Marshal(b, m, deterministic)
+}
+func (dst *ResultsCachePolicy) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResultsCachePolicy.Merge(dst, src)
+}
+func (m *ResultsCachePolicy) XXX_Size() int {
+	return xxx_messageInfo_ResultsCachePolicy.Size(m)
+}
+func (m *ResultsCachePolicy) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResultsCachePolicy.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ResultsCachePolicy proto.InternalMessageInfo
+
+func (m *ResultsCachePolicy) GetPriority() int32 {
+	if m != nil {
+		return m.Priority
+	}
+	return 0
+}
+
 // A request message for
-// [Execution.Execute][build.bazel.remote.execution.v0_2.Execution.Execute].
+// [Execution.Execute][build.bazel.remote.execution.v2.Execution.Execute].
 type ExecuteRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1271,22 +1394,30 @@ type ExecuteRequest struct {
 	// between them in an implementation-defined fashion, otherwise it can be
 	// omitted.
 	InstanceName string `protobuf:"bytes,1,opt,name=instance_name,json=instanceName,proto3" json:"instance_name,omitempty"`
-	// The action to be performed.
-	Action *Action `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
 	// If true, the action will be executed anew even if its result was already
 	// present in the cache. If false, the result may be served from the
-	// [ActionCache][build.bazel.remote.execution.v0_2.ActionCache].
-	SkipCacheLookup      bool     `protobuf:"varint,3,opt,name=skip_cache_lookup,json=skipCacheLookup,proto3" json:"skip_cache_lookup,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	// [ActionCache][build.bazel.remote.execution.v2.ActionCache].
+	SkipCacheLookup bool `protobuf:"varint,3,opt,name=skip_cache_lookup,json=skipCacheLookup,proto3" json:"skip_cache_lookup,omitempty"`
+	// The digest of the [Action][build.bazel.remote.execution.v2.Action] to
+	// execute.
+	ActionDigest *Digest `protobuf:"bytes,6,opt,name=action_digest,json=actionDigest,proto3" json:"action_digest,omitempty"`
+	// An optional policy for execution of the action.
+	// The server will have a default policy if this is not provided.
+	ExecutionPolicy *ExecutionPolicy `protobuf:"bytes,7,opt,name=execution_policy,json=executionPolicy,proto3" json:"execution_policy,omitempty"`
+	// An optional policy for the results of this execution in the remote cache.
+	// The server will have a default policy if this is not provided.
+	// This may be applied to both the ActionResult and the associated blobs.
+	ResultsCachePolicy   *ResultsCachePolicy `protobuf:"bytes,8,opt,name=results_cache_policy,json=resultsCachePolicy,proto3" json:"results_cache_policy,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
 func (m *ExecuteRequest) Reset()         { *m = ExecuteRequest{} }
 func (m *ExecuteRequest) String() string { return proto.CompactTextString(m) }
 func (*ExecuteRequest) ProtoMessage()    {}
 func (*ExecuteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{12}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{14}
 }
 func (m *ExecuteRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExecuteRequest.Unmarshal(m, b)
@@ -1313,18 +1444,32 @@ func (m *ExecuteRequest) GetInstanceName() string {
 	return ""
 }
 
-func (m *ExecuteRequest) GetAction() *Action {
-	if m != nil {
-		return m.Action
-	}
-	return nil
-}
-
 func (m *ExecuteRequest) GetSkipCacheLookup() bool {
 	if m != nil {
 		return m.SkipCacheLookup
 	}
 	return false
+}
+
+func (m *ExecuteRequest) GetActionDigest() *Digest {
+	if m != nil {
+		return m.ActionDigest
+	}
+	return nil
+}
+
+func (m *ExecuteRequest) GetExecutionPolicy() *ExecutionPolicy {
+	if m != nil {
+		return m.ExecutionPolicy
+	}
+	return nil
+}
+
+func (m *ExecuteRequest) GetResultsCachePolicy() *ResultsCachePolicy {
+	if m != nil {
+		return m.ResultsCachePolicy
+	}
+	return nil
 }
 
 // A `LogFile` is a log stored in the CAS.
@@ -1346,7 +1491,7 @@ func (m *LogFile) Reset()         { *m = LogFile{} }
 func (m *LogFile) String() string { return proto.CompactTextString(m) }
 func (*LogFile) ProtoMessage()    {}
 func (*LogFile) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{13}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{15}
 }
 func (m *LogFile) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LogFile.Unmarshal(m, b)
@@ -1381,7 +1526,7 @@ func (m *LogFile) GetHumanReadable() bool {
 }
 
 // The response message for
-// [Execution.Execute][build.bazel.remote.execution.v0_2.Execution.Execute],
+// [Execution.Execute][build.bazel.remote.execution.v2.Execution.Execute],
 // which will be contained in the [response
 // field][google.longrunning.Operation.response] of the
 // [Operation][google.longrunning.Operation].
@@ -1418,7 +1563,7 @@ func (m *ExecuteResponse) Reset()         { *m = ExecuteResponse{} }
 func (m *ExecuteResponse) String() string { return proto.CompactTextString(m) }
 func (*ExecuteResponse) ProtoMessage()    {}
 func (*ExecuteResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{14}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{16}
 }
 func (m *ExecuteResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExecuteResponse.Unmarshal(m, b)
@@ -1467,13 +1612,13 @@ func (m *ExecuteResponse) GetServerLogs() map[string]*LogFile {
 }
 
 // Metadata about an ongoing
-// [execution][build.bazel.remote.execution.v0_2.Execution.Execute], which
+// [execution][build.bazel.remote.execution.v2.Execution.Execute], which
 // will be contained in the [metadata
 // field][google.longrunning.Operation.response] of the
 // [Operation][google.longrunning.Operation].
 type ExecuteOperationMetadata struct {
-	Stage ExecuteOperationMetadata_Stage `protobuf:"varint,1,opt,name=stage,proto3,enum=build.bazel.remote.execution.v0_2.ExecuteOperationMetadata_Stage" json:"stage,omitempty"`
-	// The digest of the [Action][build.bazel.remote.execution.v0_2.Action]
+	Stage ExecuteOperationMetadata_Stage `protobuf:"varint,1,opt,name=stage,proto3,enum=build.bazel.remote.execution.v2.ExecuteOperationMetadata_Stage" json:"stage,omitempty"`
+	// The digest of the [Action][build.bazel.remote.execution.v2.Action]
 	// being executed.
 	ActionDigest *Digest `protobuf:"bytes,2,opt,name=action_digest,json=actionDigest,proto3" json:"action_digest,omitempty"`
 	// If set, the client can use this name with
@@ -1493,7 +1638,7 @@ func (m *ExecuteOperationMetadata) Reset()         { *m = ExecuteOperationMetada
 func (m *ExecuteOperationMetadata) String() string { return proto.CompactTextString(m) }
 func (*ExecuteOperationMetadata) ProtoMessage()    {}
 func (*ExecuteOperationMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{15}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{17}
 }
 func (m *ExecuteOperationMetadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExecuteOperationMetadata.Unmarshal(m, b)
@@ -1542,7 +1687,49 @@ func (m *ExecuteOperationMetadata) GetStderrStreamName() string {
 }
 
 // A request message for
-// [ActionCache.GetActionResult][build.bazel.remote.execution.v0_2.ActionCache.GetActionResult].
+// [WaitExecution][build.bazel.remote.execution.v2.Execution.WaitExecution].
+type WaitExecutionRequest struct {
+	// The name of the [Operation][google.longrunning.operations.v1.Operation]
+	// returned by [Execute][build.bazel.remote.execution.v2.Execution.Execute].
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *WaitExecutionRequest) Reset()         { *m = WaitExecutionRequest{} }
+func (m *WaitExecutionRequest) String() string { return proto.CompactTextString(m) }
+func (*WaitExecutionRequest) ProtoMessage()    {}
+func (*WaitExecutionRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{18}
+}
+func (m *WaitExecutionRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_WaitExecutionRequest.Unmarshal(m, b)
+}
+func (m *WaitExecutionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_WaitExecutionRequest.Marshal(b, m, deterministic)
+}
+func (dst *WaitExecutionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_WaitExecutionRequest.Merge(dst, src)
+}
+func (m *WaitExecutionRequest) XXX_Size() int {
+	return xxx_messageInfo_WaitExecutionRequest.Size(m)
+}
+func (m *WaitExecutionRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_WaitExecutionRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_WaitExecutionRequest proto.InternalMessageInfo
+
+func (m *WaitExecutionRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+// A request message for
+// [ActionCache.GetActionResult][build.bazel.remote.execution.v2.ActionCache.GetActionResult].
 type GetActionResultRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1550,7 +1737,7 @@ type GetActionResultRequest struct {
 	// between them in an implementation-defined fashion, otherwise it can be
 	// omitted.
 	InstanceName string `protobuf:"bytes,1,opt,name=instance_name,json=instanceName,proto3" json:"instance_name,omitempty"`
-	// The digest of the [Action][build.bazel.remote.execution.v0_2.Action]
+	// The digest of the [Action][build.bazel.remote.execution.v2.Action]
 	// whose result is requested.
 	ActionDigest         *Digest  `protobuf:"bytes,2,opt,name=action_digest,json=actionDigest,proto3" json:"action_digest,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -1562,7 +1749,7 @@ func (m *GetActionResultRequest) Reset()         { *m = GetActionResultRequest{}
 func (m *GetActionResultRequest) String() string { return proto.CompactTextString(m) }
 func (*GetActionResultRequest) ProtoMessage()    {}
 func (*GetActionResultRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{16}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{19}
 }
 func (m *GetActionResultRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetActionResultRequest.Unmarshal(m, b)
@@ -1597,7 +1784,7 @@ func (m *GetActionResultRequest) GetActionDigest() *Digest {
 }
 
 // A request message for
-// [ActionCache.UpdateActionResult][build.bazel.remote.execution.v0_2.ActionCache.UpdateActionResult].
+// [ActionCache.UpdateActionResult][build.bazel.remote.execution.v2.ActionCache.UpdateActionResult].
 type UpdateActionResultRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1605,22 +1792,26 @@ type UpdateActionResultRequest struct {
 	// between them in an implementation-defined fashion, otherwise it can be
 	// omitted.
 	InstanceName string `protobuf:"bytes,1,opt,name=instance_name,json=instanceName,proto3" json:"instance_name,omitempty"`
-	// The digest of the [Action][build.bazel.remote.execution.v0_2.Action]
+	// The digest of the [Action][build.bazel.remote.execution.v2.Action]
 	// whose result is being uploaded.
 	ActionDigest *Digest `protobuf:"bytes,2,opt,name=action_digest,json=actionDigest,proto3" json:"action_digest,omitempty"`
-	// The [ActionResult][build.bazel.remote.execution.v0_2.ActionResult]
+	// The [ActionResult][build.bazel.remote.execution.v2.ActionResult]
 	// to store in the cache.
-	ActionResult         *ActionResult `protobuf:"bytes,3,opt,name=action_result,json=actionResult,proto3" json:"action_result,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
-	XXX_unrecognized     []byte        `json:"-"`
-	XXX_sizecache        int32         `json:"-"`
+	ActionResult *ActionResult `protobuf:"bytes,3,opt,name=action_result,json=actionResult,proto3" json:"action_result,omitempty"`
+	// An optional policy for the results of this execution in the remote cache.
+	// The server will have a default policy if this is not provided.
+	// This may be applied to both the ActionResult and the associated blobs.
+	ResultsCachePolicy   *ResultsCachePolicy `protobuf:"bytes,4,opt,name=results_cache_policy,json=resultsCachePolicy,proto3" json:"results_cache_policy,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
 func (m *UpdateActionResultRequest) Reset()         { *m = UpdateActionResultRequest{} }
 func (m *UpdateActionResultRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateActionResultRequest) ProtoMessage()    {}
 func (*UpdateActionResultRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{17}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{20}
 }
 func (m *UpdateActionResultRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UpdateActionResultRequest.Unmarshal(m, b)
@@ -1661,8 +1852,15 @@ func (m *UpdateActionResultRequest) GetActionResult() *ActionResult {
 	return nil
 }
 
+func (m *UpdateActionResultRequest) GetResultsCachePolicy() *ResultsCachePolicy {
+	if m != nil {
+		return m.ResultsCachePolicy
+	}
+	return nil
+}
+
 // A request message for
-// [ContentAddressableStorage.FindMissingBlobs][build.bazel.remote.execution.v0_2.ContentAddressableStorage.FindMissingBlobs].
+// [ContentAddressableStorage.FindMissingBlobs][build.bazel.remote.execution.v2.ContentAddressableStorage.FindMissingBlobs].
 type FindMissingBlobsRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1681,7 +1879,7 @@ func (m *FindMissingBlobsRequest) Reset()         { *m = FindMissingBlobsRequest
 func (m *FindMissingBlobsRequest) String() string { return proto.CompactTextString(m) }
 func (*FindMissingBlobsRequest) ProtoMessage()    {}
 func (*FindMissingBlobsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{18}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{21}
 }
 func (m *FindMissingBlobsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FindMissingBlobsRequest.Unmarshal(m, b)
@@ -1716,7 +1914,7 @@ func (m *FindMissingBlobsRequest) GetBlobDigests() []*Digest {
 }
 
 // A response message for
-// [ContentAddressableStorage.FindMissingBlobs][build.bazel.remote.execution.v0_2.ContentAddressableStorage.FindMissingBlobs].
+// [ContentAddressableStorage.FindMissingBlobs][build.bazel.remote.execution.v2.ContentAddressableStorage.FindMissingBlobs].
 type FindMissingBlobsResponse struct {
 	// A list of the blobs requested *not* present in the storage.
 	MissingBlobDigests   []*Digest `protobuf:"bytes,2,rep,name=missing_blob_digests,json=missingBlobDigests,proto3" json:"missing_blob_digests,omitempty"`
@@ -1729,7 +1927,7 @@ func (m *FindMissingBlobsResponse) Reset()         { *m = FindMissingBlobsRespon
 func (m *FindMissingBlobsResponse) String() string { return proto.CompactTextString(m) }
 func (*FindMissingBlobsResponse) ProtoMessage()    {}
 func (*FindMissingBlobsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{19}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{22}
 }
 func (m *FindMissingBlobsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FindMissingBlobsResponse.Unmarshal(m, b)
@@ -1757,7 +1955,7 @@ func (m *FindMissingBlobsResponse) GetMissingBlobDigests() []*Digest {
 }
 
 // A single request message for
-// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v0_2.ContentAddressableStorage.BatchUpdateBlobs].
+// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v2.ContentAddressableStorage.BatchUpdateBlobs].
 type UpdateBlobRequest struct {
 	// The digest of the blob. This MUST be the digest of `data`.
 	ContentDigest *Digest `protobuf:"bytes,1,opt,name=content_digest,json=contentDigest,proto3" json:"content_digest,omitempty"`
@@ -1772,7 +1970,7 @@ func (m *UpdateBlobRequest) Reset()         { *m = UpdateBlobRequest{} }
 func (m *UpdateBlobRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateBlobRequest) ProtoMessage()    {}
 func (*UpdateBlobRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{20}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{23}
 }
 func (m *UpdateBlobRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_UpdateBlobRequest.Unmarshal(m, b)
@@ -1807,7 +2005,7 @@ func (m *UpdateBlobRequest) GetData() []byte {
 }
 
 // A request message for
-// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v0_2.ContentAddressableStorage.BatchUpdateBlobs].
+// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v2.ContentAddressableStorage.BatchUpdateBlobs].
 type BatchUpdateBlobsRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1826,7 +2024,7 @@ func (m *BatchUpdateBlobsRequest) Reset()         { *m = BatchUpdateBlobsRequest
 func (m *BatchUpdateBlobsRequest) String() string { return proto.CompactTextString(m) }
 func (*BatchUpdateBlobsRequest) ProtoMessage()    {}
 func (*BatchUpdateBlobsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{21}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{24}
 }
 func (m *BatchUpdateBlobsRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BatchUpdateBlobsRequest.Unmarshal(m, b)
@@ -1861,7 +2059,7 @@ func (m *BatchUpdateBlobsRequest) GetRequests() []*UpdateBlobRequest {
 }
 
 // A response message for
-// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v0_2.ContentAddressableStorage.BatchUpdateBlobs].
+// [ContentAddressableStorage.BatchUpdateBlobs][build.bazel.remote.execution.v2.ContentAddressableStorage.BatchUpdateBlobs].
 type BatchUpdateBlobsResponse struct {
 	// The responses to the requests.
 	Responses            []*BatchUpdateBlobsResponse_Response `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
@@ -1874,7 +2072,7 @@ func (m *BatchUpdateBlobsResponse) Reset()         { *m = BatchUpdateBlobsRespon
 func (m *BatchUpdateBlobsResponse) String() string { return proto.CompactTextString(m) }
 func (*BatchUpdateBlobsResponse) ProtoMessage()    {}
 func (*BatchUpdateBlobsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{22}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{25}
 }
 func (m *BatchUpdateBlobsResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BatchUpdateBlobsResponse.Unmarshal(m, b)
@@ -1916,7 +2114,7 @@ func (m *BatchUpdateBlobsResponse_Response) Reset()         { *m = BatchUpdateBl
 func (m *BatchUpdateBlobsResponse_Response) String() string { return proto.CompactTextString(m) }
 func (*BatchUpdateBlobsResponse_Response) ProtoMessage()    {}
 func (*BatchUpdateBlobsResponse_Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{22, 0}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{25, 0}
 }
 func (m *BatchUpdateBlobsResponse_Response) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BatchUpdateBlobsResponse_Response.Unmarshal(m, b)
@@ -1951,7 +2149,7 @@ func (m *BatchUpdateBlobsResponse_Response) GetStatus() *status.Status {
 }
 
 // A request message for
-// [ContentAddressableStorage.GetTree][build.bazel.remote.execution.v0_2.ContentAddressableStorage.GetTree].
+// [ContentAddressableStorage.GetTree][build.bazel.remote.execution.v2.ContentAddressableStorage.GetTree].
 type GetTreeRequest struct {
 	// The instance of the execution system to operate against. A server may
 	// support multiple instances of the execution system (with their own workers,
@@ -1960,9 +2158,9 @@ type GetTreeRequest struct {
 	// omitted.
 	InstanceName string `protobuf:"bytes,1,opt,name=instance_name,json=instanceName,proto3" json:"instance_name,omitempty"`
 	// The digest of the root, which must be an encoded
-	// [Directory][build.bazel.remote.execution.v0_2.Directory] message
+	// [Directory][build.bazel.remote.execution.v2.Directory] message
 	// stored in the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
 	RootDigest *Digest `protobuf:"bytes,2,opt,name=root_digest,json=rootDigest,proto3" json:"root_digest,omitempty"`
 	// A maximum page size to request. If present, the server will request no more
 	// than this many items. Regardless of whether a page size is specified, the
@@ -1970,7 +2168,7 @@ type GetTreeRequest struct {
 	// require the client to retrieve more items using a subsequent request.
 	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// A page token, which must be a value received in a previous
-	// [GetTreeResponse][build.bazel.remote.execution.v0_2.GetTreeResponse].
+	// [GetTreeResponse][build.bazel.remote.execution.v2.GetTreeResponse].
 	// If present, the server will use it to return the following page of results.
 	PageToken            string   `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -1982,7 +2180,7 @@ func (m *GetTreeRequest) Reset()         { *m = GetTreeRequest{} }
 func (m *GetTreeRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTreeRequest) ProtoMessage()    {}
 func (*GetTreeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{23}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{26}
 }
 func (m *GetTreeRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTreeRequest.Unmarshal(m, b)
@@ -2031,13 +2229,13 @@ func (m *GetTreeRequest) GetPageToken() string {
 }
 
 // A response message for
-// [ContentAddressableStorage.GetTree][build.bazel.remote.execution.v0_2.ContentAddressableStorage.GetTree].
+// [ContentAddressableStorage.GetTree][build.bazel.remote.execution.v2.ContentAddressableStorage.GetTree].
 type GetTreeResponse struct {
 	// The directories descended from the requested root.
 	Directories []*Directory `protobuf:"bytes,1,rep,name=directories,proto3" json:"directories,omitempty"`
 	// If present, signifies that there are more results which the client can
 	// retrieve by passing this as the page_token in a subsequent
-	// [request][build.bazel.remote.execution.v0_2.GetTreeRequest].
+	// [request][build.bazel.remote.execution.v2.GetTreeRequest].
 	// If empty, signifies that this is the last page of results.
 	NextPageToken        string   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -2049,7 +2247,7 @@ func (m *GetTreeResponse) Reset()         { *m = GetTreeResponse{} }
 func (m *GetTreeResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTreeResponse) ProtoMessage()    {}
 func (*GetTreeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{24}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{27}
 }
 func (m *GetTreeResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTreeResponse.Unmarshal(m, b)
@@ -2083,6 +2281,345 @@ func (m *GetTreeResponse) GetNextPageToken() string {
 	return ""
 }
 
+// A request message for
+// [Capabilities.GetCapabilities][google.devtools.remoteexecution.v2.Capabilities.GetCapabilities].
+type GetCapabilitiesRequest struct {
+	// The instance of the execution system to operate against. A server may
+	// support multiple instances of the execution system (with their own workers,
+	// storage, caches, etc.). The server MAY require use of this field to select
+	// between them in an implementation-defined fashion, otherwise it can be
+	// omitted.
+	InstanceName         string   `protobuf:"bytes,1,opt,name=instance_name,json=instanceName,proto3" json:"instance_name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetCapabilitiesRequest) Reset()         { *m = GetCapabilitiesRequest{} }
+func (m *GetCapabilitiesRequest) String() string { return proto.CompactTextString(m) }
+func (*GetCapabilitiesRequest) ProtoMessage()    {}
+func (*GetCapabilitiesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{28}
+}
+func (m *GetCapabilitiesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetCapabilitiesRequest.Unmarshal(m, b)
+}
+func (m *GetCapabilitiesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetCapabilitiesRequest.Marshal(b, m, deterministic)
+}
+func (dst *GetCapabilitiesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetCapabilitiesRequest.Merge(dst, src)
+}
+func (m *GetCapabilitiesRequest) XXX_Size() int {
+	return xxx_messageInfo_GetCapabilitiesRequest.Size(m)
+}
+func (m *GetCapabilitiesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetCapabilitiesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetCapabilitiesRequest proto.InternalMessageInfo
+
+func (m *GetCapabilitiesRequest) GetInstanceName() string {
+	if m != nil {
+		return m.InstanceName
+	}
+	return ""
+}
+
+// A response message for
+// [Capabilities.GetCapabilities][google.devtools.remoteexecution.v2.Capabilities.GetCapabilities].
+type ServerCapabilities struct {
+	// Capabilities of the remote cache system.
+	CacheCapabilities *CacheCapabilities `protobuf:"bytes,1,opt,name=cache_capabilities,json=cacheCapabilities,proto3" json:"cache_capabilities,omitempty"`
+	// Capabilities of the remote execution system.
+	ExecutionCapabilities *ExecutionCapabilities `protobuf:"bytes,2,opt,name=execution_capabilities,json=executionCapabilities,proto3" json:"execution_capabilities,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}               `json:"-"`
+	XXX_unrecognized      []byte                 `json:"-"`
+	XXX_sizecache         int32                  `json:"-"`
+}
+
+func (m *ServerCapabilities) Reset()         { *m = ServerCapabilities{} }
+func (m *ServerCapabilities) String() string { return proto.CompactTextString(m) }
+func (*ServerCapabilities) ProtoMessage()    {}
+func (*ServerCapabilities) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{29}
+}
+func (m *ServerCapabilities) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ServerCapabilities.Unmarshal(m, b)
+}
+func (m *ServerCapabilities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ServerCapabilities.Marshal(b, m, deterministic)
+}
+func (dst *ServerCapabilities) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ServerCapabilities.Merge(dst, src)
+}
+func (m *ServerCapabilities) XXX_Size() int {
+	return xxx_messageInfo_ServerCapabilities.Size(m)
+}
+func (m *ServerCapabilities) XXX_DiscardUnknown() {
+	xxx_messageInfo_ServerCapabilities.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ServerCapabilities proto.InternalMessageInfo
+
+func (m *ServerCapabilities) GetCacheCapabilities() *CacheCapabilities {
+	if m != nil {
+		return m.CacheCapabilities
+	}
+	return nil
+}
+
+func (m *ServerCapabilities) GetExecutionCapabilities() *ExecutionCapabilities {
+	if m != nil {
+		return m.ExecutionCapabilities
+	}
+	return nil
+}
+
+// Describes the server/instance capabilities for updating the action cache.
+type ActionCacheUpdateCapabilities struct {
+	UpdateEnabled        bool     `protobuf:"varint,1,opt,name=update_enabled,json=updateEnabled,proto3" json:"update_enabled,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ActionCacheUpdateCapabilities) Reset()         { *m = ActionCacheUpdateCapabilities{} }
+func (m *ActionCacheUpdateCapabilities) String() string { return proto.CompactTextString(m) }
+func (*ActionCacheUpdateCapabilities) ProtoMessage()    {}
+func (*ActionCacheUpdateCapabilities) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{30}
+}
+func (m *ActionCacheUpdateCapabilities) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ActionCacheUpdateCapabilities.Unmarshal(m, b)
+}
+func (m *ActionCacheUpdateCapabilities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ActionCacheUpdateCapabilities.Marshal(b, m, deterministic)
+}
+func (dst *ActionCacheUpdateCapabilities) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ActionCacheUpdateCapabilities.Merge(dst, src)
+}
+func (m *ActionCacheUpdateCapabilities) XXX_Size() int {
+	return xxx_messageInfo_ActionCacheUpdateCapabilities.Size(m)
+}
+func (m *ActionCacheUpdateCapabilities) XXX_DiscardUnknown() {
+	xxx_messageInfo_ActionCacheUpdateCapabilities.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ActionCacheUpdateCapabilities proto.InternalMessageInfo
+
+func (m *ActionCacheUpdateCapabilities) GetUpdateEnabled() bool {
+	if m != nil {
+		return m.UpdateEnabled
+	}
+	return false
+}
+
+// Allowed values for priority in
+// [ResultsCachePolicy][google.devtools.remoteexecution.v2.ResultsCachePolicy]
+// Used for querying both cache and execution valid priority ranges.
+type PriorityCapabilities struct {
+	Priorities           []*PriorityCapabilities_PriorityRange `protobuf:"bytes,1,rep,name=priorities,proto3" json:"priorities,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                              `json:"-"`
+	XXX_unrecognized     []byte                                `json:"-"`
+	XXX_sizecache        int32                                 `json:"-"`
+}
+
+func (m *PriorityCapabilities) Reset()         { *m = PriorityCapabilities{} }
+func (m *PriorityCapabilities) String() string { return proto.CompactTextString(m) }
+func (*PriorityCapabilities) ProtoMessage()    {}
+func (*PriorityCapabilities) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{31}
+}
+func (m *PriorityCapabilities) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PriorityCapabilities.Unmarshal(m, b)
+}
+func (m *PriorityCapabilities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PriorityCapabilities.Marshal(b, m, deterministic)
+}
+func (dst *PriorityCapabilities) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PriorityCapabilities.Merge(dst, src)
+}
+func (m *PriorityCapabilities) XXX_Size() int {
+	return xxx_messageInfo_PriorityCapabilities.Size(m)
+}
+func (m *PriorityCapabilities) XXX_DiscardUnknown() {
+	xxx_messageInfo_PriorityCapabilities.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PriorityCapabilities proto.InternalMessageInfo
+
+func (m *PriorityCapabilities) GetPriorities() []*PriorityCapabilities_PriorityRange {
+	if m != nil {
+		return m.Priorities
+	}
+	return nil
+}
+
+// Supported range of priorities, including boundaries.
+type PriorityCapabilities_PriorityRange struct {
+	MinPriority          int32    `protobuf:"varint,1,opt,name=min_priority,json=minPriority,proto3" json:"min_priority,omitempty"`
+	MaxPriority          int32    `protobuf:"varint,2,opt,name=max_priority,json=maxPriority,proto3" json:"max_priority,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PriorityCapabilities_PriorityRange) Reset()         { *m = PriorityCapabilities_PriorityRange{} }
+func (m *PriorityCapabilities_PriorityRange) String() string { return proto.CompactTextString(m) }
+func (*PriorityCapabilities_PriorityRange) ProtoMessage()    {}
+func (*PriorityCapabilities_PriorityRange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{31, 0}
+}
+func (m *PriorityCapabilities_PriorityRange) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PriorityCapabilities_PriorityRange.Unmarshal(m, b)
+}
+func (m *PriorityCapabilities_PriorityRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PriorityCapabilities_PriorityRange.Marshal(b, m, deterministic)
+}
+func (dst *PriorityCapabilities_PriorityRange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PriorityCapabilities_PriorityRange.Merge(dst, src)
+}
+func (m *PriorityCapabilities_PriorityRange) XXX_Size() int {
+	return xxx_messageInfo_PriorityCapabilities_PriorityRange.Size(m)
+}
+func (m *PriorityCapabilities_PriorityRange) XXX_DiscardUnknown() {
+	xxx_messageInfo_PriorityCapabilities_PriorityRange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PriorityCapabilities_PriorityRange proto.InternalMessageInfo
+
+func (m *PriorityCapabilities_PriorityRange) GetMinPriority() int32 {
+	if m != nil {
+		return m.MinPriority
+	}
+	return 0
+}
+
+func (m *PriorityCapabilities_PriorityRange) GetMaxPriority() int32 {
+	if m != nil {
+		return m.MaxPriority
+	}
+	return 0
+}
+
+// Capabilities of the remote cache system.
+type CacheCapabilities struct {
+	// All the digest functions supported by the remote cache.
+	// Remote cache may support multiple digest functions simultaneously.
+	DigestFunction []DigestFunction `protobuf:"varint,1,rep,packed,name=digest_function,json=digestFunction,proto3,enum=build.bazel.remote.execution.v2.DigestFunction" json:"digest_function,omitempty"`
+	// Capabilities for updating the action cache.
+	ActionCacheUpdateCapabilities *ActionCacheUpdateCapabilities `protobuf:"bytes,2,opt,name=action_cache_update_capabilities,json=actionCacheUpdateCapabilities,proto3" json:"action_cache_update_capabilities,omitempty"`
+	// Supported cache priority range for both CAS and ActionCache.
+	CachePriorityCapabilities *PriorityCapabilities `protobuf:"bytes,3,opt,name=cache_priority_capabilities,json=cachePriorityCapabilities,proto3" json:"cache_priority_capabilities,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}              `json:"-"`
+	XXX_unrecognized          []byte                `json:"-"`
+	XXX_sizecache             int32                 `json:"-"`
+}
+
+func (m *CacheCapabilities) Reset()         { *m = CacheCapabilities{} }
+func (m *CacheCapabilities) String() string { return proto.CompactTextString(m) }
+func (*CacheCapabilities) ProtoMessage()    {}
+func (*CacheCapabilities) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{32}
+}
+func (m *CacheCapabilities) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CacheCapabilities.Unmarshal(m, b)
+}
+func (m *CacheCapabilities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CacheCapabilities.Marshal(b, m, deterministic)
+}
+func (dst *CacheCapabilities) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CacheCapabilities.Merge(dst, src)
+}
+func (m *CacheCapabilities) XXX_Size() int {
+	return xxx_messageInfo_CacheCapabilities.Size(m)
+}
+func (m *CacheCapabilities) XXX_DiscardUnknown() {
+	xxx_messageInfo_CacheCapabilities.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CacheCapabilities proto.InternalMessageInfo
+
+func (m *CacheCapabilities) GetDigestFunction() []DigestFunction {
+	if m != nil {
+		return m.DigestFunction
+	}
+	return nil
+}
+
+func (m *CacheCapabilities) GetActionCacheUpdateCapabilities() *ActionCacheUpdateCapabilities {
+	if m != nil {
+		return m.ActionCacheUpdateCapabilities
+	}
+	return nil
+}
+
+func (m *CacheCapabilities) GetCachePriorityCapabilities() *PriorityCapabilities {
+	if m != nil {
+		return m.CachePriorityCapabilities
+	}
+	return nil
+}
+
+// Capabilities of the remote execution system.
+type ExecutionCapabilities struct {
+	// Remote execution may only support a single digest function.
+	DigestFunction DigestFunction `protobuf:"varint,1,opt,name=digest_function,json=digestFunction,proto3,enum=build.bazel.remote.execution.v2.DigestFunction" json:"digest_function,omitempty"`
+	// Whether remote execution is enabled for the particular server/instance.
+	ExecEnabled bool `protobuf:"varint,2,opt,name=exec_enabled,json=execEnabled,proto3" json:"exec_enabled,omitempty"`
+	// Supported execution priority range.
+	ExecutionPriorityCapabilities *PriorityCapabilities `protobuf:"bytes,3,opt,name=execution_priority_capabilities,json=executionPriorityCapabilities,proto3" json:"execution_priority_capabilities,omitempty"`
+	XXX_NoUnkeyedLiteral          struct{}              `json:"-"`
+	XXX_unrecognized              []byte                `json:"-"`
+	XXX_sizecache                 int32                 `json:"-"`
+}
+
+func (m *ExecutionCapabilities) Reset()         { *m = ExecutionCapabilities{} }
+func (m *ExecutionCapabilities) String() string { return proto.CompactTextString(m) }
+func (*ExecutionCapabilities) ProtoMessage()    {}
+func (*ExecutionCapabilities) Descriptor() ([]byte, []int) {
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{33}
+}
+func (m *ExecutionCapabilities) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExecutionCapabilities.Unmarshal(m, b)
+}
+func (m *ExecutionCapabilities) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExecutionCapabilities.Marshal(b, m, deterministic)
+}
+func (dst *ExecutionCapabilities) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExecutionCapabilities.Merge(dst, src)
+}
+func (m *ExecutionCapabilities) XXX_Size() int {
+	return xxx_messageInfo_ExecutionCapabilities.Size(m)
+}
+func (m *ExecutionCapabilities) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExecutionCapabilities.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExecutionCapabilities proto.InternalMessageInfo
+
+func (m *ExecutionCapabilities) GetDigestFunction() DigestFunction {
+	if m != nil {
+		return m.DigestFunction
+	}
+	return DigestFunction_UNKNOWN
+}
+
+func (m *ExecutionCapabilities) GetExecEnabled() bool {
+	if m != nil {
+		return m.ExecEnabled
+	}
+	return false
+}
+
+func (m *ExecutionCapabilities) GetExecutionPriorityCapabilities() *PriorityCapabilities {
+	if m != nil {
+		return m.ExecutionPriorityCapabilities
+	}
+	return nil
+}
+
 // Details for the tool used to call the API.
 type ToolDetails struct {
 	// Name of the tool, e.g. bazel.
@@ -2098,7 +2635,7 @@ func (m *ToolDetails) Reset()         { *m = ToolDetails{} }
 func (m *ToolDetails) String() string { return proto.CompactTextString(m) }
 func (*ToolDetails) ProtoMessage()    {}
 func (*ToolDetails) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{25}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{34}
 }
 func (m *ToolDetails) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ToolDetails.Unmarshal(m, b)
@@ -2136,7 +2673,7 @@ func (m *ToolDetails) GetToolVersion() string {
 // external context of the request. The server may use this for logging or other
 // purposes. To use it, the client attaches the header to the call using the
 // canonical proto serialization:
-// name: build.bazel.remote.execution.v0_2.requestmetadata-bin
+// name: build.bazel.remote.execution.v2.requestmetadata-bin
 // contents: the base64 encoded binary RequestMetadata message.
 type RequestMetadata struct {
 	// The details for the tool invoking the requests.
@@ -2160,7 +2697,7 @@ func (m *RequestMetadata) Reset()         { *m = RequestMetadata{} }
 func (m *RequestMetadata) String() string { return proto.CompactTextString(m) }
 func (*RequestMetadata) ProtoMessage()    {}
 func (*RequestMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_remote_execution_43055813049f26cf, []int{26}
+	return fileDescriptor_remote_execution_1121cd279bad7f30, []int{35}
 }
 func (m *RequestMetadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RequestMetadata.Unmarshal(m, b)
@@ -2209,38 +2746,49 @@ func (m *RequestMetadata) GetCorrelatedInvocationsId() string {
 }
 
 func init() {
-	proto.RegisterType((*Action)(nil), "build.bazel.remote.execution.v0_2.Action")
-	proto.RegisterType((*Command)(nil), "build.bazel.remote.execution.v0_2.Command")
-	proto.RegisterType((*Command_EnvironmentVariable)(nil), "build.bazel.remote.execution.v0_2.Command.EnvironmentVariable")
-	proto.RegisterType((*Platform)(nil), "build.bazel.remote.execution.v0_2.Platform")
-	proto.RegisterType((*Platform_Property)(nil), "build.bazel.remote.execution.v0_2.Platform.Property")
-	proto.RegisterType((*Directory)(nil), "build.bazel.remote.execution.v0_2.Directory")
-	proto.RegisterType((*FileNode)(nil), "build.bazel.remote.execution.v0_2.FileNode")
-	proto.RegisterType((*DirectoryNode)(nil), "build.bazel.remote.execution.v0_2.DirectoryNode")
-	proto.RegisterType((*Digest)(nil), "build.bazel.remote.execution.v0_2.Digest")
-	proto.RegisterType((*ExecutedActionMetadata)(nil), "build.bazel.remote.execution.v0_2.ExecutedActionMetadata")
-	proto.RegisterType((*ActionResult)(nil), "build.bazel.remote.execution.v0_2.ActionResult")
-	proto.RegisterType((*OutputFile)(nil), "build.bazel.remote.execution.v0_2.OutputFile")
-	proto.RegisterType((*Tree)(nil), "build.bazel.remote.execution.v0_2.Tree")
-	proto.RegisterType((*OutputDirectory)(nil), "build.bazel.remote.execution.v0_2.OutputDirectory")
-	proto.RegisterType((*ExecuteRequest)(nil), "build.bazel.remote.execution.v0_2.ExecuteRequest")
-	proto.RegisterType((*LogFile)(nil), "build.bazel.remote.execution.v0_2.LogFile")
-	proto.RegisterType((*ExecuteResponse)(nil), "build.bazel.remote.execution.v0_2.ExecuteResponse")
-	proto.RegisterMapType((map[string]*LogFile)(nil), "build.bazel.remote.execution.v0_2.ExecuteResponse.ServerLogsEntry")
-	proto.RegisterType((*ExecuteOperationMetadata)(nil), "build.bazel.remote.execution.v0_2.ExecuteOperationMetadata")
-	proto.RegisterType((*GetActionResultRequest)(nil), "build.bazel.remote.execution.v0_2.GetActionResultRequest")
-	proto.RegisterType((*UpdateActionResultRequest)(nil), "build.bazel.remote.execution.v0_2.UpdateActionResultRequest")
-	proto.RegisterType((*FindMissingBlobsRequest)(nil), "build.bazel.remote.execution.v0_2.FindMissingBlobsRequest")
-	proto.RegisterType((*FindMissingBlobsResponse)(nil), "build.bazel.remote.execution.v0_2.FindMissingBlobsResponse")
-	proto.RegisterType((*UpdateBlobRequest)(nil), "build.bazel.remote.execution.v0_2.UpdateBlobRequest")
-	proto.RegisterType((*BatchUpdateBlobsRequest)(nil), "build.bazel.remote.execution.v0_2.BatchUpdateBlobsRequest")
-	proto.RegisterType((*BatchUpdateBlobsResponse)(nil), "build.bazel.remote.execution.v0_2.BatchUpdateBlobsResponse")
-	proto.RegisterType((*BatchUpdateBlobsResponse_Response)(nil), "build.bazel.remote.execution.v0_2.BatchUpdateBlobsResponse.Response")
-	proto.RegisterType((*GetTreeRequest)(nil), "build.bazel.remote.execution.v0_2.GetTreeRequest")
-	proto.RegisterType((*GetTreeResponse)(nil), "build.bazel.remote.execution.v0_2.GetTreeResponse")
-	proto.RegisterType((*ToolDetails)(nil), "build.bazel.remote.execution.v0_2.ToolDetails")
-	proto.RegisterType((*RequestMetadata)(nil), "build.bazel.remote.execution.v0_2.RequestMetadata")
-	proto.RegisterEnum("build.bazel.remote.execution.v0_2.ExecuteOperationMetadata_Stage", ExecuteOperationMetadata_Stage_name, ExecuteOperationMetadata_Stage_value)
+	proto.RegisterType((*Action)(nil), "build.bazel.remote.execution.v2.Action")
+	proto.RegisterType((*Command)(nil), "build.bazel.remote.execution.v2.Command")
+	proto.RegisterType((*Command_EnvironmentVariable)(nil), "build.bazel.remote.execution.v2.Command.EnvironmentVariable")
+	proto.RegisterType((*Platform)(nil), "build.bazel.remote.execution.v2.Platform")
+	proto.RegisterType((*Platform_Property)(nil), "build.bazel.remote.execution.v2.Platform.Property")
+	proto.RegisterType((*Directory)(nil), "build.bazel.remote.execution.v2.Directory")
+	proto.RegisterType((*FileNode)(nil), "build.bazel.remote.execution.v2.FileNode")
+	proto.RegisterType((*DirectoryNode)(nil), "build.bazel.remote.execution.v2.DirectoryNode")
+	proto.RegisterType((*Digest)(nil), "build.bazel.remote.execution.v2.Digest")
+	proto.RegisterType((*ExecutedActionMetadata)(nil), "build.bazel.remote.execution.v2.ExecutedActionMetadata")
+	proto.RegisterType((*ActionResult)(nil), "build.bazel.remote.execution.v2.ActionResult")
+	proto.RegisterType((*OutputFile)(nil), "build.bazel.remote.execution.v2.OutputFile")
+	proto.RegisterType((*Tree)(nil), "build.bazel.remote.execution.v2.Tree")
+	proto.RegisterType((*OutputDirectory)(nil), "build.bazel.remote.execution.v2.OutputDirectory")
+	proto.RegisterType((*ExecutionPolicy)(nil), "build.bazel.remote.execution.v2.ExecutionPolicy")
+	proto.RegisterType((*ResultsCachePolicy)(nil), "build.bazel.remote.execution.v2.ResultsCachePolicy")
+	proto.RegisterType((*ExecuteRequest)(nil), "build.bazel.remote.execution.v2.ExecuteRequest")
+	proto.RegisterType((*LogFile)(nil), "build.bazel.remote.execution.v2.LogFile")
+	proto.RegisterType((*ExecuteResponse)(nil), "build.bazel.remote.execution.v2.ExecuteResponse")
+	proto.RegisterMapType((map[string]*LogFile)(nil), "build.bazel.remote.execution.v2.ExecuteResponse.ServerLogsEntry")
+	proto.RegisterType((*ExecuteOperationMetadata)(nil), "build.bazel.remote.execution.v2.ExecuteOperationMetadata")
+	proto.RegisterType((*WaitExecutionRequest)(nil), "build.bazel.remote.execution.v2.WaitExecutionRequest")
+	proto.RegisterType((*GetActionResultRequest)(nil), "build.bazel.remote.execution.v2.GetActionResultRequest")
+	proto.RegisterType((*UpdateActionResultRequest)(nil), "build.bazel.remote.execution.v2.UpdateActionResultRequest")
+	proto.RegisterType((*FindMissingBlobsRequest)(nil), "build.bazel.remote.execution.v2.FindMissingBlobsRequest")
+	proto.RegisterType((*FindMissingBlobsResponse)(nil), "build.bazel.remote.execution.v2.FindMissingBlobsResponse")
+	proto.RegisterType((*UpdateBlobRequest)(nil), "build.bazel.remote.execution.v2.UpdateBlobRequest")
+	proto.RegisterType((*BatchUpdateBlobsRequest)(nil), "build.bazel.remote.execution.v2.BatchUpdateBlobsRequest")
+	proto.RegisterType((*BatchUpdateBlobsResponse)(nil), "build.bazel.remote.execution.v2.BatchUpdateBlobsResponse")
+	proto.RegisterType((*BatchUpdateBlobsResponse_Response)(nil), "build.bazel.remote.execution.v2.BatchUpdateBlobsResponse.Response")
+	proto.RegisterType((*GetTreeRequest)(nil), "build.bazel.remote.execution.v2.GetTreeRequest")
+	proto.RegisterType((*GetTreeResponse)(nil), "build.bazel.remote.execution.v2.GetTreeResponse")
+	proto.RegisterType((*GetCapabilitiesRequest)(nil), "build.bazel.remote.execution.v2.GetCapabilitiesRequest")
+	proto.RegisterType((*ServerCapabilities)(nil), "build.bazel.remote.execution.v2.ServerCapabilities")
+	proto.RegisterType((*ActionCacheUpdateCapabilities)(nil), "build.bazel.remote.execution.v2.ActionCacheUpdateCapabilities")
+	proto.RegisterType((*PriorityCapabilities)(nil), "build.bazel.remote.execution.v2.PriorityCapabilities")
+	proto.RegisterType((*PriorityCapabilities_PriorityRange)(nil), "build.bazel.remote.execution.v2.PriorityCapabilities.PriorityRange")
+	proto.RegisterType((*CacheCapabilities)(nil), "build.bazel.remote.execution.v2.CacheCapabilities")
+	proto.RegisterType((*ExecutionCapabilities)(nil), "build.bazel.remote.execution.v2.ExecutionCapabilities")
+	proto.RegisterType((*ToolDetails)(nil), "build.bazel.remote.execution.v2.ToolDetails")
+	proto.RegisterType((*RequestMetadata)(nil), "build.bazel.remote.execution.v2.RequestMetadata")
+	proto.RegisterEnum("build.bazel.remote.execution.v2.DigestFunction", DigestFunction_name, DigestFunction_value)
+	proto.RegisterEnum("build.bazel.remote.execution.v2.ExecuteOperationMetadata_Stage", ExecuteOperationMetadata_Stage_name, ExecuteOperationMetadata_Stage_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2258,12 +2806,12 @@ type ExecutionClient interface {
 	// Execute an action remotely.
 	//
 	// In order to execute an action, the client must first upload all of the
-	// inputs, as well as the
-	// [Command][build.bazel.remote.execution.v0_2.Command] to run, into the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
-	// It then calls `Execute` with an
-	// [Action][build.bazel.remote.execution.v0_2.Action] referring to them.
-	// The server will run the action and eventually return the result.
+	// inputs, the
+	// [Command][build.bazel.remote.execution.v2.Command] to run, and the
+	// [Action][build.bazel.remote.execution.v2.Action] into the
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
+	// It then calls `Execute` with an `action_digest` referring to them. The
+	// server will run the action and eventually return the result.
 	//
 	// The input `Action`'s fields MUST meet the various canonicalization
 	// requirements specified in the documentation for their types so that it has
@@ -2274,26 +2822,22 @@ type ExecutionClient interface {
 	// verify the requirement, then it will treat the `Action` as distinct from
 	// another logically equivalent action if they hash differently.
 	//
-	// Returns a [google.longrunning.Operation][google.longrunning.Operation]
+	// Returns a stream of
+	// [google.longrunning.Operation][google.longrunning.Operation] messages
 	// describing the resulting execution, with eventual `response`
-	// [ExecuteResponse][build.bazel.remote.execution.v0_2.ExecuteResponse].
-	// The `metadata` on the operation is of type
-	// [ExecuteOperationMetadata][build.bazel.remote.execution.v0_2.ExecuteOperationMetadata].
+	// [ExecuteResponse][build.bazel.remote.execution.v2.ExecuteResponse]. The
+	// `metadata` on the operation is of type
+	// [ExecuteOperationMetadata][build.bazel.remote.execution.v2.ExecuteOperationMetadata].
 	//
-	// To query the operation, you can use the
-	// [Operations API][google.longrunning.Operations.GetOperation]. If you wish
-	// to allow the server to stream operations updates, rather than requiring
-	// client polling, you can use the
-	// [Watcher API][google.watcher.v1.Watcher.Watch] with the Operation's `name`
-	// as the `target`.
-	//
-	// When using the Watcher API, the initial `data` will be the `Operation` at
-	// the time of the request. Updates will be provided periodically by the
-	// server until the `Operation` completes, at which point the response message
-	// will (assuming no error) be at `data.response`.
+	// If the client remains connected after the first response is returned after
+	// the server, then updates are streamed as if the client had called
+	// [WaitExecution][build.bazel.remote.execution.v2.Execution.WaitExecution]
+	// until the execution completes or the request reaches an error. The
+	// operation can also be queried using [Operations
+	// API][google.longrunning.Operations.GetOperation].
 	//
 	// The server NEED NOT implement other methods or functionality of the
-	// Operation and Watcher APIs.
+	// Operations API.
 	//
 	// Errors discovered during creation of the `Operation` will be reported
 	// as gRPC Status errors, while errors that occurred while running the
@@ -2318,7 +2862,14 @@ type ExecutionClient interface {
 	// where, for each requested blob not present in the CAS, there is a
 	// `Violation` with a `type` of `MISSING` and a `subject` of
 	// `"blobs/{hash}/{size}"` indicating the digest of the missing blob.
-	Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (*longrunning.Operation, error)
+	Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (Execution_ExecuteClient, error)
+	// Wait for an execution operation to complete. When the client initially
+	// makes the request, the server immediately responds with the current status
+	// of the execution. The server will leave the request stream open until the
+	// operation completes, and then respond with the completed operation. The
+	// server MAY choose to stream additional updates as execution progresses,
+	// such as to provide an update as to the state of the execution.
+	WaitExecution(ctx context.Context, in *WaitExecutionRequest, opts ...grpc.CallOption) (Execution_WaitExecutionClient, error)
 }
 
 type executionClient struct {
@@ -2329,13 +2880,68 @@ func NewExecutionClient(cc *grpc.ClientConn) ExecutionClient {
 	return &executionClient{cc}
 }
 
-func (c *executionClient) Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (*longrunning.Operation, error) {
-	out := new(longrunning.Operation)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.Execution/Execute", in, out, opts...)
+func (c *executionClient) Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (Execution_ExecuteClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Execution_serviceDesc.Streams[0], "/build.bazel.remote.execution.v2.Execution/Execute", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &executionExecuteClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Execution_ExecuteClient interface {
+	Recv() (*longrunning.Operation, error)
+	grpc.ClientStream
+}
+
+type executionExecuteClient struct {
+	grpc.ClientStream
+}
+
+func (x *executionExecuteClient) Recv() (*longrunning.Operation, error) {
+	m := new(longrunning.Operation)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *executionClient) WaitExecution(ctx context.Context, in *WaitExecutionRequest, opts ...grpc.CallOption) (Execution_WaitExecutionClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Execution_serviceDesc.Streams[1], "/build.bazel.remote.execution.v2.Execution/WaitExecution", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &executionWaitExecutionClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Execution_WaitExecutionClient interface {
+	Recv() (*longrunning.Operation, error)
+	grpc.ClientStream
+}
+
+type executionWaitExecutionClient struct {
+	grpc.ClientStream
+}
+
+func (x *executionWaitExecutionClient) Recv() (*longrunning.Operation, error) {
+	m := new(longrunning.Operation)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ExecutionServer is the server API for Execution service.
@@ -2343,12 +2949,12 @@ type ExecutionServer interface {
 	// Execute an action remotely.
 	//
 	// In order to execute an action, the client must first upload all of the
-	// inputs, as well as the
-	// [Command][build.bazel.remote.execution.v0_2.Command] to run, into the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage].
-	// It then calls `Execute` with an
-	// [Action][build.bazel.remote.execution.v0_2.Action] referring to them.
-	// The server will run the action and eventually return the result.
+	// inputs, the
+	// [Command][build.bazel.remote.execution.v2.Command] to run, and the
+	// [Action][build.bazel.remote.execution.v2.Action] into the
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage].
+	// It then calls `Execute` with an `action_digest` referring to them. The
+	// server will run the action and eventually return the result.
 	//
 	// The input `Action`'s fields MUST meet the various canonicalization
 	// requirements specified in the documentation for their types so that it has
@@ -2359,26 +2965,22 @@ type ExecutionServer interface {
 	// verify the requirement, then it will treat the `Action` as distinct from
 	// another logically equivalent action if they hash differently.
 	//
-	// Returns a [google.longrunning.Operation][google.longrunning.Operation]
+	// Returns a stream of
+	// [google.longrunning.Operation][google.longrunning.Operation] messages
 	// describing the resulting execution, with eventual `response`
-	// [ExecuteResponse][build.bazel.remote.execution.v0_2.ExecuteResponse].
-	// The `metadata` on the operation is of type
-	// [ExecuteOperationMetadata][build.bazel.remote.execution.v0_2.ExecuteOperationMetadata].
+	// [ExecuteResponse][build.bazel.remote.execution.v2.ExecuteResponse]. The
+	// `metadata` on the operation is of type
+	// [ExecuteOperationMetadata][build.bazel.remote.execution.v2.ExecuteOperationMetadata].
 	//
-	// To query the operation, you can use the
-	// [Operations API][google.longrunning.Operations.GetOperation]. If you wish
-	// to allow the server to stream operations updates, rather than requiring
-	// client polling, you can use the
-	// [Watcher API][google.watcher.v1.Watcher.Watch] with the Operation's `name`
-	// as the `target`.
-	//
-	// When using the Watcher API, the initial `data` will be the `Operation` at
-	// the time of the request. Updates will be provided periodically by the
-	// server until the `Operation` completes, at which point the response message
-	// will (assuming no error) be at `data.response`.
+	// If the client remains connected after the first response is returned after
+	// the server, then updates are streamed as if the client had called
+	// [WaitExecution][build.bazel.remote.execution.v2.Execution.WaitExecution]
+	// until the execution completes or the request reaches an error. The
+	// operation can also be queried using [Operations
+	// API][google.longrunning.Operations.GetOperation].
 	//
 	// The server NEED NOT implement other methods or functionality of the
-	// Operation and Watcher APIs.
+	// Operations API.
 	//
 	// Errors discovered during creation of the `Operation` will be reported
 	// as gRPC Status errors, while errors that occurred while running the
@@ -2403,41 +3005,78 @@ type ExecutionServer interface {
 	// where, for each requested blob not present in the CAS, there is a
 	// `Violation` with a `type` of `MISSING` and a `subject` of
 	// `"blobs/{hash}/{size}"` indicating the digest of the missing blob.
-	Execute(context.Context, *ExecuteRequest) (*longrunning.Operation, error)
+	Execute(*ExecuteRequest, Execution_ExecuteServer) error
+	// Wait for an execution operation to complete. When the client initially
+	// makes the request, the server immediately responds with the current status
+	// of the execution. The server will leave the request stream open until the
+	// operation completes, and then respond with the completed operation. The
+	// server MAY choose to stream additional updates as execution progresses,
+	// such as to provide an update as to the state of the execution.
+	WaitExecution(*WaitExecutionRequest, Execution_WaitExecutionServer) error
 }
 
 func RegisterExecutionServer(s *grpc.Server, srv ExecutionServer) {
 	s.RegisterService(&_Execution_serviceDesc, srv)
 }
 
-func _Execution_Execute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExecuteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Execution_Execute_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExecuteRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ExecutionServer).Execute(ctx, in)
+	return srv.(ExecutionServer).Execute(m, &executionExecuteServer{stream})
+}
+
+type Execution_ExecuteServer interface {
+	Send(*longrunning.Operation) error
+	grpc.ServerStream
+}
+
+type executionExecuteServer struct {
+	grpc.ServerStream
+}
+
+func (x *executionExecuteServer) Send(m *longrunning.Operation) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Execution_WaitExecution_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WaitExecutionRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.Execution/Execute",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExecutionServer).Execute(ctx, req.(*ExecuteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ExecutionServer).WaitExecution(m, &executionWaitExecutionServer{stream})
+}
+
+type Execution_WaitExecutionServer interface {
+	Send(*longrunning.Operation) error
+	grpc.ServerStream
+}
+
+type executionWaitExecutionServer struct {
+	grpc.ServerStream
+}
+
+func (x *executionWaitExecutionServer) Send(m *longrunning.Operation) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _Execution_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "build.bazel.remote.execution.v0_2.Execution",
+	ServiceName: "build.bazel.remote.execution.v2.Execution",
 	HandlerType: (*ExecutionServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "Execute",
-			Handler:    _Execution_Execute_Handler,
+			StreamName:    "Execute",
+			Handler:       _Execution_Execute_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WaitExecution",
+			Handler:       _Execution_WaitExecution_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "remote_execution.proto",
 }
 
@@ -2454,8 +3093,15 @@ type ActionCacheClient interface {
 	//
 	// This method is intended for servers which implement the distributed cache
 	// independently of the
-	// [Execution][build.bazel.remote.execution.v0_2.Execution] API. As a
+	// [Execution][build.bazel.remote.execution.v2.Execution] API. As a
 	// result, it is OPTIONAL for servers to implement.
+	//
+	// In order to allow the server to perform access control based on the type of
+	// action, and to assist with client debugging, the client MUST first upload
+	// the [Action][build.bazel.remote.execution.v2.Execution] that produced the
+	// result, along with its
+	// [Command][build.bazel.remote.execution.v2.Command], into the
+	// `ContentAddressableStorage`.
 	//
 	// Errors:
 	// * `NOT_IMPLEMENTED`: This method is not supported by the server.
@@ -2474,7 +3120,7 @@ func NewActionCacheClient(cc *grpc.ClientConn) ActionCacheClient {
 
 func (c *actionCacheClient) GetActionResult(ctx context.Context, in *GetActionResultRequest, opts ...grpc.CallOption) (*ActionResult, error) {
 	out := new(ActionResult)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.ActionCache/GetActionResult", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v2.ActionCache/GetActionResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2483,7 +3129,7 @@ func (c *actionCacheClient) GetActionResult(ctx context.Context, in *GetActionRe
 
 func (c *actionCacheClient) UpdateActionResult(ctx context.Context, in *UpdateActionResultRequest, opts ...grpc.CallOption) (*ActionResult, error) {
 	out := new(ActionResult)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.ActionCache/UpdateActionResult", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v2.ActionCache/UpdateActionResult", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2501,8 +3147,15 @@ type ActionCacheServer interface {
 	//
 	// This method is intended for servers which implement the distributed cache
 	// independently of the
-	// [Execution][build.bazel.remote.execution.v0_2.Execution] API. As a
+	// [Execution][build.bazel.remote.execution.v2.Execution] API. As a
 	// result, it is OPTIONAL for servers to implement.
+	//
+	// In order to allow the server to perform access control based on the type of
+	// action, and to assist with client debugging, the client MUST first upload
+	// the [Action][build.bazel.remote.execution.v2.Execution] that produced the
+	// result, along with its
+	// [Command][build.bazel.remote.execution.v2.Command], into the
+	// `ContentAddressableStorage`.
 	//
 	// Errors:
 	// * `NOT_IMPLEMENTED`: This method is not supported by the server.
@@ -2525,7 +3178,7 @@ func _ActionCache_GetActionResult_Handler(srv interface{}, ctx context.Context, 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.ActionCache/GetActionResult",
+		FullMethod: "/build.bazel.remote.execution.v2.ActionCache/GetActionResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ActionCacheServer).GetActionResult(ctx, req.(*GetActionResultRequest))
@@ -2543,7 +3196,7 @@ func _ActionCache_UpdateActionResult_Handler(srv interface{}, ctx context.Contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.ActionCache/UpdateActionResult",
+		FullMethod: "/build.bazel.remote.execution.v2.ActionCache/UpdateActionResult",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ActionCacheServer).UpdateActionResult(ctx, req.(*UpdateActionResultRequest))
@@ -2552,7 +3205,7 @@ func _ActionCache_UpdateActionResult_Handler(srv interface{}, ctx context.Contex
 }
 
 var _ActionCache_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "build.bazel.remote.execution.v0_2.ActionCache",
+	ServiceName: "build.bazel.remote.execution.v2.ActionCache",
 	HandlerType: (*ActionCacheServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -2586,8 +3239,9 @@ type ContentAddressableStorageClient interface {
 	// chunks or uploaded using the
 	// [ByteStream API][google.bytestream.ByteStream], as appropriate.
 	//
-	// This request is equivalent to calling [UpdateBlob][] on each individual
-	// blob, in parallel. The requests may succeed or fail independently.
+	// This request is equivalent to calling a hypothetical `UpdateBlob` request
+	// on each individual blob, in parallel. The requests may succeed or fail
+	// independently.
 	//
 	// Errors:
 	// * `INVALID_ARGUMENT`: The client attempted to upload more than 10 MiB of
@@ -2596,16 +3250,22 @@ type ContentAddressableStorageClient interface {
 	// Individual requests may return the following errors, additionally:
 	// * `RESOURCE_EXHAUSTED`: There is insufficient disk quota to store the blob.
 	// * `INVALID_ARGUMENT`: The
-	// [Digest][build.bazel.remote.execution.v0_2.Digest] does not match the
+	// [Digest][build.bazel.remote.execution.v2.Digest] does not match the
 	// provided data.
 	BatchUpdateBlobs(ctx context.Context, in *BatchUpdateBlobsRequest, opts ...grpc.CallOption) (*BatchUpdateBlobsResponse, error)
 	// Fetch the entire directory tree rooted at a node.
 	//
 	// This request must be targeted at a
-	// [Directory][build.bazel.remote.execution.v0_2.Directory] stored in the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage]
+	// [Directory][build.bazel.remote.execution.v2.Directory] stored in the
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage]
 	// (CAS). The server will enumerate the `Directory` tree recursively and
 	// return every node descended from the root.
+	//
+	// The GetTreeRequest.page_token parameter can be used to skip ahead in
+	// the stream (e.g. when retrying a partially completed and aborted request),
+	// by setting it to a value taken from GetTreeResponse.next_page_token of the
+	// last successfully processed GetTreeResponse).
+	//
 	// The exact traversal order is unspecified and, unless retrieving subsequent
 	// pages from an earlier request, is not guaranteed to be stable across
 	// multiple invocations of `GetTree`.
@@ -2614,7 +3274,7 @@ type ContentAddressableStorageClient interface {
 	// portion present and omit the rest.
 	//
 	// * `NOT_FOUND`: The requested tree root is not present in the CAS.
-	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*GetTreeResponse, error)
+	GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (ContentAddressableStorage_GetTreeClient, error)
 }
 
 type contentAddressableStorageClient struct {
@@ -2627,7 +3287,7 @@ func NewContentAddressableStorageClient(cc *grpc.ClientConn) ContentAddressableS
 
 func (c *contentAddressableStorageClient) FindMissingBlobs(ctx context.Context, in *FindMissingBlobsRequest, opts ...grpc.CallOption) (*FindMissingBlobsResponse, error) {
 	out := new(FindMissingBlobsResponse)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/FindMissingBlobs", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v2.ContentAddressableStorage/FindMissingBlobs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2636,20 +3296,43 @@ func (c *contentAddressableStorageClient) FindMissingBlobs(ctx context.Context, 
 
 func (c *contentAddressableStorageClient) BatchUpdateBlobs(ctx context.Context, in *BatchUpdateBlobsRequest, opts ...grpc.CallOption) (*BatchUpdateBlobsResponse, error) {
 	out := new(BatchUpdateBlobsResponse)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/BatchUpdateBlobs", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v2.ContentAddressableStorage/BatchUpdateBlobs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *contentAddressableStorageClient) GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (*GetTreeResponse, error) {
-	out := new(GetTreeResponse)
-	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/GetTree", in, out, opts...)
+func (c *contentAddressableStorageClient) GetTree(ctx context.Context, in *GetTreeRequest, opts ...grpc.CallOption) (ContentAddressableStorage_GetTreeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ContentAddressableStorage_serviceDesc.Streams[0], "/build.bazel.remote.execution.v2.ContentAddressableStorage/GetTree", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &contentAddressableStorageGetTreeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ContentAddressableStorage_GetTreeClient interface {
+	Recv() (*GetTreeResponse, error)
+	grpc.ClientStream
+}
+
+type contentAddressableStorageGetTreeClient struct {
+	grpc.ClientStream
+}
+
+func (x *contentAddressableStorageGetTreeClient) Recv() (*GetTreeResponse, error) {
+	m := new(GetTreeResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ContentAddressableStorageServer is the server API for ContentAddressableStorage service.
@@ -2668,8 +3351,9 @@ type ContentAddressableStorageServer interface {
 	// chunks or uploaded using the
 	// [ByteStream API][google.bytestream.ByteStream], as appropriate.
 	//
-	// This request is equivalent to calling [UpdateBlob][] on each individual
-	// blob, in parallel. The requests may succeed or fail independently.
+	// This request is equivalent to calling a hypothetical `UpdateBlob` request
+	// on each individual blob, in parallel. The requests may succeed or fail
+	// independently.
 	//
 	// Errors:
 	// * `INVALID_ARGUMENT`: The client attempted to upload more than 10 MiB of
@@ -2678,16 +3362,22 @@ type ContentAddressableStorageServer interface {
 	// Individual requests may return the following errors, additionally:
 	// * `RESOURCE_EXHAUSTED`: There is insufficient disk quota to store the blob.
 	// * `INVALID_ARGUMENT`: The
-	// [Digest][build.bazel.remote.execution.v0_2.Digest] does not match the
+	// [Digest][build.bazel.remote.execution.v2.Digest] does not match the
 	// provided data.
 	BatchUpdateBlobs(context.Context, *BatchUpdateBlobsRequest) (*BatchUpdateBlobsResponse, error)
 	// Fetch the entire directory tree rooted at a node.
 	//
 	// This request must be targeted at a
-	// [Directory][build.bazel.remote.execution.v0_2.Directory] stored in the
-	// [ContentAddressableStorage][build.bazel.remote.execution.v0_2.ContentAddressableStorage]
+	// [Directory][build.bazel.remote.execution.v2.Directory] stored in the
+	// [ContentAddressableStorage][build.bazel.remote.execution.v2.ContentAddressableStorage]
 	// (CAS). The server will enumerate the `Directory` tree recursively and
 	// return every node descended from the root.
+	//
+	// The GetTreeRequest.page_token parameter can be used to skip ahead in
+	// the stream (e.g. when retrying a partially completed and aborted request),
+	// by setting it to a value taken from GetTreeResponse.next_page_token of the
+	// last successfully processed GetTreeResponse).
+	//
 	// The exact traversal order is unspecified and, unless retrieving subsequent
 	// pages from an earlier request, is not guaranteed to be stable across
 	// multiple invocations of `GetTree`.
@@ -2696,7 +3386,7 @@ type ContentAddressableStorageServer interface {
 	// portion present and omit the rest.
 	//
 	// * `NOT_FOUND`: The requested tree root is not present in the CAS.
-	GetTree(context.Context, *GetTreeRequest) (*GetTreeResponse, error)
+	GetTree(*GetTreeRequest, ContentAddressableStorage_GetTreeServer) error
 }
 
 func RegisterContentAddressableStorageServer(s *grpc.Server, srv ContentAddressableStorageServer) {
@@ -2713,7 +3403,7 @@ func _ContentAddressableStorage_FindMissingBlobs_Handler(srv interface{}, ctx co
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/FindMissingBlobs",
+		FullMethod: "/build.bazel.remote.execution.v2.ContentAddressableStorage/FindMissingBlobs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ContentAddressableStorageServer).FindMissingBlobs(ctx, req.(*FindMissingBlobsRequest))
@@ -2731,7 +3421,7 @@ func _ContentAddressableStorage_BatchUpdateBlobs_Handler(srv interface{}, ctx co
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/BatchUpdateBlobs",
+		FullMethod: "/build.bazel.remote.execution.v2.ContentAddressableStorage/BatchUpdateBlobs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ContentAddressableStorageServer).BatchUpdateBlobs(ctx, req.(*BatchUpdateBlobsRequest))
@@ -2739,26 +3429,29 @@ func _ContentAddressableStorage_BatchUpdateBlobs_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ContentAddressableStorage_GetTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTreeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _ContentAddressableStorage_GetTree_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetTreeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ContentAddressableStorageServer).GetTree(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/build.bazel.remote.execution.v0_2.ContentAddressableStorage/GetTree",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ContentAddressableStorageServer).GetTree(ctx, req.(*GetTreeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ContentAddressableStorageServer).GetTree(m, &contentAddressableStorageGetTreeServer{stream})
+}
+
+type ContentAddressableStorage_GetTreeServer interface {
+	Send(*GetTreeResponse) error
+	grpc.ServerStream
+}
+
+type contentAddressableStorageGetTreeServer struct {
+	grpc.ServerStream
+}
+
+func (x *contentAddressableStorageGetTreeServer) Send(m *GetTreeResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _ContentAddressableStorage_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "build.bazel.remote.execution.v0_2.ContentAddressableStorage",
+	ServiceName: "build.bazel.remote.execution.v2.ContentAddressableStorage",
 	HandlerType: (*ContentAddressableStorageServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -2769,9 +3462,77 @@ var _ContentAddressableStorage_serviceDesc = grpc.ServiceDesc{
 			MethodName: "BatchUpdateBlobs",
 			Handler:    _ContentAddressableStorage_BatchUpdateBlobs_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "GetTree",
-			Handler:    _ContentAddressableStorage_GetTree_Handler,
+			StreamName:    "GetTree",
+			Handler:       _ContentAddressableStorage_GetTree_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "remote_execution.proto",
+}
+
+// CapabilitiesClient is the client API for Capabilities service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type CapabilitiesClient interface {
+	// GetCapabilities returns the server capabilities configuration.
+	GetCapabilities(ctx context.Context, in *GetCapabilitiesRequest, opts ...grpc.CallOption) (*ServerCapabilities, error)
+}
+
+type capabilitiesClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewCapabilitiesClient(cc *grpc.ClientConn) CapabilitiesClient {
+	return &capabilitiesClient{cc}
+}
+
+func (c *capabilitiesClient) GetCapabilities(ctx context.Context, in *GetCapabilitiesRequest, opts ...grpc.CallOption) (*ServerCapabilities, error) {
+	out := new(ServerCapabilities)
+	err := c.cc.Invoke(ctx, "/build.bazel.remote.execution.v2.Capabilities/GetCapabilities", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CapabilitiesServer is the server API for Capabilities service.
+type CapabilitiesServer interface {
+	// GetCapabilities returns the server capabilities configuration.
+	GetCapabilities(context.Context, *GetCapabilitiesRequest) (*ServerCapabilities, error)
+}
+
+func RegisterCapabilitiesServer(s *grpc.Server, srv CapabilitiesServer) {
+	s.RegisterService(&_Capabilities_serviceDesc, srv)
+}
+
+func _Capabilities_GetCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CapabilitiesServer).GetCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/build.bazel.remote.execution.v2.Capabilities/GetCapabilities",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CapabilitiesServer).GetCapabilities(ctx, req.(*GetCapabilitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Capabilities_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "build.bazel.remote.execution.v2.Capabilities",
+	HandlerType: (*CapabilitiesServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCapabilities",
+			Handler:    _Capabilities_GetCapabilities_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -2779,148 +3540,178 @@ var _ContentAddressableStorage_serviceDesc = grpc.ServiceDesc{
 }
 
 func init() {
-	proto.RegisterFile("remote_execution.proto", fileDescriptor_remote_execution_43055813049f26cf)
+	proto.RegisterFile("remote_execution.proto", fileDescriptor_remote_execution_1121cd279bad7f30)
 }
 
-var fileDescriptor_remote_execution_43055813049f26cf = []byte{
-	// 2214 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x59, 0xcb, 0x93, 0x1b, 0x49,
-	0xd1, 0xff, 0x5a, 0xd2, 0x68, 0x5a, 0x29, 0x8d, 0x25, 0xd7, 0x67, 0x6c, 0x59, 0xb6, 0x77, 0xed,
-	0xde, 0x80, 0x30, 0x83, 0x57, 0xb2, 0xb5, 0x4b, 0x00, 0xb3, 0x3c, 0x76, 0x46, 0x23, 0x3f, 0x66,
-	0xed, 0xf1, 0x6c, 0xcf, 0x8c, 0xd7, 0x2c, 0x8f, 0xa6, 0xa5, 0xae, 0xd1, 0x74, 0x58, 0xea, 0xd2,
-	0x56, 0x95, 0xc6, 0x1e, 0x3b, 0x7c, 0x59, 0x4e, 0x44, 0x40, 0x04, 0xb1, 0x44, 0x70, 0x26, 0x96,
-	0x1b, 0x07, 0x82, 0x7f, 0x80, 0x1b, 0x67, 0x2e, 0x9c, 0x89, 0xbd, 0x10, 0x7b, 0xe1, 0xc2, 0x81,
-	0x13, 0x5c, 0x88, 0x7a, 0xf4, 0x43, 0x0f, 0xa3, 0xd6, 0xd8, 0x1b, 0xc1, 0xad, 0x95, 0x95, 0xf9,
-	0xcb, 0x47, 0x65, 0x65, 0x66, 0x95, 0xe0, 0x2c, 0xc5, 0x03, 0xc2, 0xb1, 0x83, 0x9f, 0xe0, 0xee,
-	0x88, 0xfb, 0x24, 0xa8, 0x0f, 0x29, 0xe1, 0x04, 0x5d, 0xe9, 0x8c, 0xfc, 0xbe, 0x57, 0xef, 0xb8,
-	0x4f, 0x71, 0xbf, 0xae, 0x78, 0xea, 0x31, 0xcf, 0xd1, 0x75, 0xa7, 0x59, 0xbb, 0xd8, 0x23, 0xa4,
-	0xd7, 0xc7, 0x0d, 0x77, 0xe8, 0x37, 0xdc, 0x20, 0x20, 0xdc, 0x15, 0x6b, 0x4c, 0x01, 0xd4, 0xde,
-	0xd0, 0xab, 0x7d, 0x12, 0xf4, 0xe8, 0x28, 0x08, 0xfc, 0xa0, 0xd7, 0x20, 0x43, 0x4c, 0xc7, 0x98,
-	0x5e, 0xd3, 0x4c, 0xf2, 0x57, 0x67, 0x74, 0xd0, 0xf0, 0x46, 0x8a, 0x41, 0xaf, 0xbf, 0x3e, 0xb9,
-	0xce, 0xfd, 0x01, 0x66, 0xdc, 0x1d, 0x0c, 0x35, 0xc3, 0x39, 0xcd, 0x40, 0x87, 0xdd, 0x06, 0xe3,
-	0x2e, 0x1f, 0x69, 0x64, 0xeb, 0xb7, 0x59, 0xc8, 0xaf, 0x77, 0x05, 0x14, 0xda, 0x81, 0x53, 0x5d,
-	0x32, 0x18, 0xb8, 0x81, 0xe7, 0x78, 0x7e, 0x0f, 0x33, 0x5e, 0x35, 0x2e, 0x1b, 0x57, 0x8b, 0xcd,
-	0xaf, 0xd6, 0xe7, 0xfa, 0x58, 0xdf, 0x94, 0x02, 0xf6, 0x8a, 0x06, 0x50, 0x3f, 0xd1, 0x3e, 0x9c,
-	0xf6, 0x83, 0xe1, 0x88, 0x3b, 0x94, 0x10, 0x1e, 0x82, 0x66, 0x16, 0x05, 0x2d, 0x4b, 0x0c, 0x9b,
-	0x10, 0xae, 0x61, 0xaf, 0x40, 0x89, 0x8c, 0xb8, 0xc0, 0x3d, 0xf0, 0xfb, 0x98, 0x55, 0xb3, 0x97,
-	0xb3, 0x57, 0x0b, 0x76, 0x51, 0xd1, 0x6e, 0x0a, 0x12, 0x7a, 0x13, 0x90, 0x66, 0xf1, 0x7c, 0x8a,
-	0xbb, 0x9c, 0x50, 0x1f, 0xb3, 0x6a, 0x4e, 0x32, 0x9e, 0x56, 0x2b, 0x9b, 0xf1, 0x02, 0xba, 0x05,
-	0xe6, 0xb0, 0xef, 0xf2, 0x03, 0x42, 0x07, 0xd5, 0x25, 0x69, 0xdf, 0xd7, 0x52, 0xd8, 0xb7, 0xa3,
-	0x45, 0xec, 0x48, 0x18, 0xbd, 0x05, 0xcb, 0x22, 0xf4, 0x64, 0xc4, 0xab, 0x79, 0x89, 0x73, 0xbe,
-	0xae, 0x22, 0x5f, 0x0f, 0xb7, 0xa6, 0xbe, 0xa9, 0xb7, 0xce, 0x0e, 0x39, 0xd1, 0x65, 0x28, 0x79,
-	0xc4, 0x09, 0x08, 0x77, 0xba, 0x6e, 0xf7, 0x10, 0x57, 0x97, 0x2f, 0x1b, 0x57, 0x4d, 0x1b, 0x3c,
-	0xb2, 0x4d, 0x78, 0x4b, 0x50, 0xac, 0xbf, 0x1a, 0xb0, 0xdc, 0x52, 0xa1, 0x45, 0x17, 0xa1, 0xe0,
-	0xd2, 0xde, 0x68, 0x80, 0x03, 0xce, 0xaa, 0x86, 0xf4, 0x28, 0x26, 0x20, 0x06, 0x5f, 0xc2, 0xc1,
-	0x91, 0x4f, 0x49, 0x20, 0x7e, 0x3b, 0x47, 0x2e, 0xf5, 0xdd, 0x8e, 0x08, 0x52, 0xe6, 0x72, 0xf6,
-	0x6a, 0xb1, 0xf9, 0xdd, 0x14, 0x6e, 0x69, 0x45, 0xf5, 0x76, 0x8c, 0xf3, 0x40, 0xc3, 0xd8, 0x67,
-	0xf0, 0x34, 0x91, 0xd5, 0xbe, 0x07, 0xff, 0x3f, 0x83, 0x19, 0x21, 0xc8, 0x05, 0xee, 0x00, 0xcb,
-	0x34, 0x2a, 0xd8, 0xf2, 0x1b, 0x9d, 0x81, 0xa5, 0x23, 0xb7, 0x3f, 0xc2, 0x32, 0x0d, 0x0a, 0xb6,
-	0xfa, 0x61, 0xfd, 0xda, 0x00, 0x33, 0x8c, 0x26, 0xda, 0x03, 0x18, 0x52, 0x71, 0x04, 0xb8, 0xd8,
-	0x33, 0x43, 0xda, 0xfd, 0xf6, 0x02, 0xdb, 0x51, 0xdf, 0x51, 0xd2, 0xc7, 0x76, 0x02, 0xa7, 0xf6,
-	0x36, 0x98, 0x21, 0x7d, 0x01, 0xc3, 0x3e, 0x35, 0xa0, 0x10, 0x26, 0xca, 0x31, 0x5a, 0x87, 0x25,
-	0x95, 0x71, 0xca, 0xa8, 0x34, 0x39, 0x22, 0xd2, 0x71, 0x9b, 0x78, 0xd8, 0x56, 0x92, 0xc8, 0x86,
-	0x62, 0x32, 0x23, 0xd5, 0xae, 0x5c, 0x4f, 0x75, 0x18, 0xb4, 0x15, 0x12, 0x2d, 0x09, 0x62, 0xfd,
-	0xdc, 0x00, 0x33, 0xd4, 0x33, 0xd3, 0xb7, 0x75, 0xc8, 0x9f, 0xf4, 0xf0, 0x69, 0x41, 0xf4, 0x06,
-	0xac, 0xf8, 0x4c, 0x57, 0x3f, 0xb1, 0xb9, 0xd5, 0x9c, 0x4c, 0xd2, 0x92, 0xcf, 0xda, 0x11, 0x6d,
-	0x2b, 0x67, 0x66, 0x2b, 0x39, 0xeb, 0x00, 0x56, 0xc6, 0x8c, 0xfd, 0x82, 0x4c, 0xb2, 0xde, 0x81,
-	0xbc, 0x2e, 0x08, 0x08, 0x72, 0x87, 0x2e, 0x3b, 0x0c, 0x15, 0x88, 0x6f, 0x74, 0x09, 0x80, 0xf9,
-	0x4f, 0xb1, 0xd3, 0x39, 0xe6, 0x32, 0xce, 0xc6, 0xd5, 0xac, 0x5d, 0x10, 0x94, 0x0d, 0x41, 0xb0,
-	0x3e, 0xcb, 0xc3, 0x59, 0x65, 0x39, 0xf6, 0x54, 0xfd, 0xbb, 0x87, 0xb9, 0xeb, 0xb9, 0xdc, 0x45,
-	0x67, 0x21, 0xff, 0x98, 0xd0, 0x47, 0x98, 0x6a, 0x3c, 0xfd, 0x0b, 0xb5, 0xa1, 0xf2, 0xd1, 0x08,
-	0x8f, 0xb0, 0xe7, 0x44, 0xd5, 0x55, 0x1b, 0x5f, 0x9b, 0x3a, 0xe4, 0x7b, 0x21, 0x87, 0x5d, 0x56,
-	0x32, 0x11, 0x01, 0xed, 0xc0, 0x59, 0x05, 0xe8, 0x30, 0xee, 0x52, 0x9e, 0x00, 0xcb, 0xce, 0x05,
-	0x3b, 0xa3, 0x24, 0x77, 0x85, 0x60, 0x8c, 0xf8, 0x10, 0x6a, 0x1a, 0xb1, 0x4b, 0x06, 0xc3, 0x3e,
-	0xe6, 0x63, 0x26, 0xe6, 0xe6, 0xa2, 0x56, 0x95, 0x74, 0x2b, 0x14, 0x8e, 0x91, 0xbf, 0x0f, 0x17,
-	0x54, 0x01, 0x3f, 0xc0, 0xbc, 0x7b, 0x38, 0x65, 0xf0, 0xd2, 0x7c, 0x68, 0x29, 0x7e, 0x53, 0x48,
-	0x4f, 0x18, 0xed, 0xc2, 0xeb, 0x49, 0xe8, 0x59, 0x96, 0xe7, 0xe7, 0xc2, 0x5f, 0x8c, 0xe1, 0x67,
-	0x58, 0xff, 0x00, 0xce, 0x47, 0x19, 0x34, 0x65, 0xfb, 0xf2, 0x5c, 0xf0, 0x73, 0x91, 0xf0, 0x84,
-	0xe9, 0x3f, 0x86, 0x4b, 0x31, 0xee, 0x2c, 0xc3, 0xcd, 0xb9, 0xd8, 0x17, 0x22, 0x80, 0x19, 0x76,
-	0xff, 0x08, 0x2e, 0xe9, 0xe6, 0x35, 0x1a, 0xf6, 0x89, 0xeb, 0x4d, 0xd9, 0x5e, 0x98, 0x8b, 0x5f,
-	0x53, 0x00, 0xfb, 0x52, 0x7e, 0xc2, 0x7c, 0x0c, 0x57, 0xc6, 0xe1, 0x67, 0xb9, 0x00, 0x73, 0x55,
-	0xbc, 0x96, 0x54, 0x31, 0xed, 0x85, 0xf5, 0xfb, 0x1c, 0x94, 0xd4, 0xc9, 0xb2, 0x31, 0x1b, 0xf5,
-	0x39, 0xda, 0x99, 0x68, 0xdb, 0xaa, 0xf6, 0xbd, 0x99, 0xe2, 0xe0, 0xdf, 0x8f, 0x3a, 0xfb, 0x78,
-	0x97, 0x77, 0x67, 0x76, 0xf9, 0xac, 0xc4, 0x6d, 0xa6, 0xc6, 0x8d, 0x8a, 0xd5, 0xac, 0xc9, 0xe0,
-	0x02, 0x14, 0xf0, 0x13, 0x9f, 0x3b, 0x5d, 0xe2, 0xa9, 0x9a, 0xb7, 0x64, 0x9b, 0x82, 0xd0, 0x12,
-	0x85, 0x4d, 0xd4, 0x18, 0xee, 0x11, 0x31, 0xe0, 0xb8, 0x8f, 0xe5, 0x69, 0x28, 0xd9, 0x05, 0x45,
-	0xb1, 0xdd, 0xc7, 0x68, 0x1b, 0x56, 0xf4, 0xb2, 0x2e, 0x75, 0xf9, 0x45, 0x4b, 0x5d, 0x49, 0xc9,
-	0xeb, 0x32, 0xa7, 0xd4, 0x61, 0x4a, 0xa5, 0xba, 0xe5, 0x48, 0x1d, 0xa6, 0x34, 0x56, 0x27, 0x96,
-	0xb5, 0x3a, 0xf3, 0x24, 0xea, 0x30, 0xa5, 0x5a, 0xdd, 0x21, 0xa0, 0x38, 0xcd, 0x07, 0xba, 0x3a,
-	0xea, 0xdc, 0xfb, 0x56, 0x0a, 0xd0, 0xd9, 0xe5, 0xd5, 0x3e, 0x1d, 0xb1, 0x85, 0xa4, 0xad, 0x9c,
-	0x69, 0x54, 0x32, 0xa2, 0xd7, 0x42, 0xbc, 0xd3, 0xa2, 0xa8, 0x0f, 0x5d, 0x1e, 0x15, 0x75, 0xf1,
-	0xfd, 0x2a, 0x1a, 0x59, 0x15, 0x96, 0xbb, 0x24, 0xe0, 0x38, 0xe0, 0xb2, 0xde, 0x96, 0xec, 0xf0,
-	0x67, 0xaa, 0x16, 0x67, 0x7d, 0x62, 0x40, 0x6e, 0x8f, 0x62, 0x8c, 0xde, 0x85, 0x9c, 0x98, 0x6a,
-	0xf5, 0x8c, 0x7c, 0x6d, 0x91, 0x0e, 0x6e, 0x4b, 0x49, 0x74, 0x1b, 0xcc, 0xee, 0xa1, 0xdf, 0xf7,
-	0x28, 0x0e, 0xf4, 0x59, 0x58, 0x0c, 0x25, 0x92, 0xb6, 0x1e, 0x43, 0x79, 0x22, 0x95, 0x67, 0x46,
-	0x6f, 0x0b, 0x8a, 0x9c, 0x62, 0x1c, 0xa6, 0x47, 0x76, 0xd1, 0x10, 0x82, 0x90, 0x56, 0xdf, 0x5b,
-	0x39, 0x33, 0x53, 0xc9, 0x5a, 0x7f, 0x30, 0xe0, 0x94, 0xde, 0x66, 0x1b, 0x7f, 0x34, 0x0a, 0x07,
-	0x85, 0x80, 0x71, 0x37, 0xe8, 0x62, 0x27, 0xd1, 0xf5, 0x4b, 0x21, 0x71, 0x5b, 0x77, 0x7f, 0x57,
-	0x66, 0xc5, 0x02, 0xfb, 0xa8, 0x6b, 0x89, 0x16, 0x44, 0xab, 0x70, 0x9a, 0x3d, 0xf2, 0x87, 0x6a,
-	0x64, 0x76, 0xfa, 0x84, 0x3c, 0x1a, 0xa9, 0x0e, 0x6a, 0xda, 0x65, 0xb1, 0x20, 0x07, 0xe7, 0xbb,
-	0x92, 0xbc, 0x95, 0x33, 0x73, 0x95, 0xa5, 0xad, 0x9c, 0xb9, 0x54, 0xc9, 0x5b, 0x0c, 0x96, 0xef,
-	0x92, 0x9e, 0xcc, 0xb0, 0x38, 0x9b, 0x8c, 0x93, 0x66, 0xd3, 0x97, 0xe1, 0xd4, 0xe1, 0x68, 0xe0,
-	0x06, 0x0e, 0xc5, 0xae, 0x27, 0x93, 0x26, 0x23, 0x4d, 0x58, 0x91, 0x54, 0x5b, 0x13, 0xad, 0x7f,
-	0x67, 0xa0, 0x1c, 0xc5, 0x89, 0x0d, 0x49, 0xc0, 0x30, 0xba, 0x05, 0x79, 0x2a, 0x0b, 0xa3, 0xd6,
-	0xde, 0x48, 0x1f, 0x03, 0x29, 0x66, 0x6b, 0x71, 0x11, 0x71, 0x19, 0x04, 0xcf, 0xd1, 0x78, 0xca,
-	0x84, 0x92, 0x22, 0xea, 0xe2, 0xbb, 0x0a, 0x79, 0x75, 0xef, 0xd3, 0xdb, 0x8e, 0xc2, 0xca, 0x4e,
-	0x87, 0xdd, 0xfa, 0xae, 0x5c, 0xb1, 0x35, 0x07, 0xea, 0x42, 0x91, 0x61, 0x7a, 0x84, 0xa9, 0xd3,
-	0x27, 0x3d, 0x75, 0x6b, 0x2a, 0x36, 0x37, 0xd2, 0x9f, 0xf8, 0xd0, 0xc5, 0xfa, 0xae, 0x44, 0xb9,
-	0x4b, 0x7a, 0xac, 0x1d, 0x70, 0x7a, 0x6c, 0x03, 0x8b, 0x08, 0x35, 0x1f, 0xca, 0x13, 0xcb, 0xa8,
-	0x02, 0xd9, 0x47, 0xf8, 0x58, 0x27, 0x8c, 0xf8, 0x44, 0xef, 0x26, 0x87, 0xf2, 0x62, 0x73, 0x35,
-	0x85, 0x0d, 0x7a, 0x73, 0xf5, 0x00, 0xbf, 0x96, 0xf9, 0xa6, 0x61, 0xfd, 0x23, 0x03, 0x55, 0x6d,
-	0xda, 0xfd, 0xf0, 0x66, 0x1d, 0x4d, 0x7b, 0x1f, 0xc0, 0x12, 0xe3, 0x6e, 0x4f, 0xe5, 0xe9, 0xa9,
-	0xe6, 0x7a, 0x7a, 0x37, 0xa7, 0xb0, 0x44, 0x1c, 0x7b, 0xd8, 0x56, 0x78, 0xa2, 0x1c, 0xab, 0x54,
-	0x3d, 0xf1, 0xc5, 0xb7, 0xa4, 0xe4, 0x75, 0x39, 0xbe, 0x06, 0x48, 0x77, 0x13, 0xc6, 0x29, 0x76,
-	0x07, 0xea, 0x74, 0x65, 0x65, 0xb0, 0x2a, 0x6a, 0x65, 0x57, 0x2e, 0xc8, 0x13, 0xa6, 0xb8, 0x45,
-	0x33, 0x48, 0x72, 0xe7, 0x22, 0x6e, 0x4c, 0x69, 0xcc, 0x6d, 0xdd, 0x87, 0x25, 0x69, 0x3b, 0x2a,
-	0xc2, 0xf2, 0xfe, 0xf6, 0x7b, 0xdb, 0xf7, 0x3f, 0xd8, 0xae, 0xfc, 0x1f, 0x2a, 0x43, 0xb1, 0xb5,
-	0xde, 0xba, 0xdd, 0x76, 0x5a, 0xb7, 0xdb, 0xad, 0xf7, 0x2a, 0x06, 0x02, 0xc8, 0xbf, 0xbf, 0xdf,
-	0xde, 0x6f, 0x6f, 0x56, 0x32, 0x68, 0x05, 0x0a, 0xed, 0x87, 0xed, 0xd6, 0xfe, 0xde, 0x9d, 0xed,
-	0x5b, 0x95, 0xac, 0xf8, 0xd9, 0xba, 0x7f, 0x6f, 0xe7, 0x6e, 0x7b, 0xaf, 0xbd, 0x59, 0xc9, 0x59,
-	0xbf, 0x30, 0xe0, 0xec, 0x2d, 0xcc, 0xc7, 0xf2, 0x75, 0x91, 0x02, 0xf1, 0x8a, 0x83, 0x67, 0x7d,
-	0x6e, 0xc0, 0xf9, 0xfd, 0xa1, 0xe7, 0x72, 0xfc, 0xbf, 0x62, 0x12, 0xda, 0x8b, 0xf0, 0xf4, 0xb1,
-	0xcd, 0x9e, 0xac, 0x0c, 0x68, 0x54, 0xf5, 0x4b, 0xdc, 0x05, 0xcf, 0xdd, 0xf4, 0x03, 0xef, 0x9e,
-	0xcf, 0x98, 0x1f, 0xf4, 0x36, 0xfa, 0xa4, 0xc3, 0x16, 0x72, 0xf3, 0x2e, 0x94, 0x3a, 0x7d, 0xd2,
-	0xd1, 0x4e, 0x86, 0x53, 0xda, 0x02, 0x5e, 0x16, 0x85, 0xb8, 0xfa, 0x66, 0xd6, 0x63, 0xa8, 0x4e,
-	0x5b, 0xa3, 0x0b, 0xe0, 0x0f, 0xe0, 0xcc, 0x40, 0xd1, 0x9d, 0x97, 0xd3, 0x88, 0x06, 0x31, 0x7c,
-	0xa8, 0xf8, 0x18, 0x4e, 0xab, 0xfd, 0x16, 0xc4, 0x30, 0x00, 0xf2, 0x85, 0x4b, 0x36, 0xfb, 0x97,
-	0x79, 0xe1, 0x92, 0x00, 0xf1, 0xcd, 0x53, 0x4e, 0x45, 0x19, 0x39, 0x4a, 0xc8, 0x6f, 0xeb, 0x97,
-	0x06, 0x9c, 0xdb, 0x70, 0x79, 0xf7, 0x30, 0x36, 0x60, 0xb1, 0x2d, 0xd8, 0x01, 0x93, 0x2a, 0xfe,
-	0x30, 0x18, 0x69, 0x9e, 0x3f, 0xa6, 0xdc, 0xb5, 0x23, 0x14, 0xeb, 0xa7, 0x19, 0xa8, 0x4e, 0x9b,
-	0xa4, 0xf7, 0xa1, 0x03, 0x05, 0xaa, 0xbf, 0xc3, 0x97, 0x8d, 0xcd, 0x14, 0xfa, 0x5e, 0x84, 0x57,
-	0x0f, 0x3f, 0xec, 0x18, 0xb6, 0xf6, 0xb1, 0x01, 0x66, 0xa4, 0x70, 0x0b, 0x8a, 0x89, 0x0d, 0x5f,
-	0x7c, 0x0f, 0x20, 0xce, 0xb0, 0x44, 0x5f, 0xcb, 0xcc, 0xeb, 0x6b, 0xd6, 0x1f, 0x0d, 0x38, 0x75,
-	0x0b, 0x73, 0x31, 0xbe, 0x2d, 0xb4, 0x1f, 0x5b, 0x50, 0x7c, 0xa9, 0x07, 0x4c, 0xa0, 0xf1, 0xdb,
-	0xe5, 0x05, 0x28, 0x0c, 0xdd, 0x1e, 0x76, 0x98, 0xff, 0x54, 0x15, 0xef, 0x25, 0xdb, 0x14, 0x84,
-	0x5d, 0xff, 0xa9, 0xbc, 0x4f, 0xc8, 0x45, 0x4e, 0x1e, 0xe1, 0x40, 0x17, 0x6b, 0xc9, 0xbe, 0x27,
-	0x08, 0xd6, 0xcf, 0x0c, 0x28, 0x47, 0xf6, 0xeb, 0x58, 0x6e, 0x8f, 0xbf, 0x27, 0x19, 0x27, 0x98,
-	0x23, 0x93, 0x00, 0xe8, 0x2b, 0x50, 0x0e, 0xf0, 0x13, 0xee, 0x24, 0xec, 0x50, 0x0f, 0x62, 0x2b,
-	0x82, 0xbc, 0x13, 0xd9, 0x72, 0x0f, 0x8a, 0x7b, 0x84, 0xf4, 0x37, 0x31, 0x77, 0xfd, 0xbe, 0xbc,
-	0x26, 0x71, 0x42, 0xfa, 0xc9, 0x18, 0x9a, 0x82, 0x20, 0xe3, 0x77, 0x05, 0x4a, 0x72, 0xf1, 0x08,
-	0x53, 0x16, 0xce, 0x7c, 0x05, 0xbb, 0x28, 0x68, 0x0f, 0x14, 0xc9, 0xfa, 0xbb, 0x01, 0x65, 0xbd,
-	0x27, 0x51, 0x67, 0x7e, 0x5f, 0x8b, 0x79, 0x4a, 0x87, 0xce, 0x93, 0x7a, 0x0a, 0xdf, 0x12, 0x96,
-	0x29, 0x35, 0x09, 0x33, 0x75, 0xcd, 0xf5, 0x3d, 0x6d, 0x86, 0xa9, 0x08, 0x77, 0x3c, 0xd1, 0x32,
-	0xa5, 0x3e, 0x3f, 0x38, 0x22, 0x5d, 0x37, 0xe4, 0xd2, 0x0d, 0x56, 0xac, 0xdc, 0x89, 0x16, 0xee,
-	0x78, 0x68, 0x0d, 0xce, 0x77, 0x09, 0xa5, 0xb8, 0xef, 0x8a, 0x8b, 0x73, 0x2c, 0xc3, 0x84, 0x90,
-	0xda, 0xba, 0x73, 0x31, 0x43, 0x2c, 0xca, 0xee, 0x78, 0xcd, 0xdf, 0x18, 0x50, 0x68, 0x87, 0x26,
-	0xa3, 0x4f, 0x0c, 0x58, 0xd6, 0x23, 0x05, 0xba, 0xb1, 0xc8, 0x94, 0x25, 0xc3, 0x55, 0xbb, 0x14,
-	0x66, 0x7c, 0xe2, 0x1f, 0x84, 0x7a, 0x34, 0x9b, 0x58, 0x5f, 0xff, 0xf8, 0x2f, 0x7f, 0xfb, 0x55,
-	0xa6, 0x61, 0xad, 0x36, 0x8e, 0x6e, 0x70, 0xcc, 0x78, 0xe3, 0xd9, 0x58, 0xc2, 0x7f, 0x67, 0x75,
-	0xf5, 0x79, 0x43, 0x85, 0x80, 0xad, 0x29, 0x45, 0x78, 0xcd, 0x58, 0x6d, 0x7e, 0x9e, 0x85, 0xa2,
-	0x6a, 0x33, 0x72, 0x90, 0x46, 0x9f, 0xa9, 0xdc, 0x1b, 0xbb, 0xd0, 0xa7, 0xb9, 0x04, 0xce, 0x1e,
-	0x02, 0x6a, 0x8b, 0x76, 0x39, 0xeb, 0x27, 0xd2, 0x8d, 0x0f, 0xd1, 0xc3, 0xb9, 0x6e, 0x28, 0x01,
-	0xd6, 0x78, 0x36, 0xd6, 0xad, 0xeb, 0x87, 0x2e, 0x3b, 0x7c, 0x3e, 0x49, 0x8c, 0x5f, 0x08, 0x9f,
-	0xa3, 0x7f, 0x1a, 0x80, 0xa6, 0x47, 0x04, 0xf4, 0xed, 0xd4, 0xa5, 0xf7, 0x95, 0xf8, 0x49, 0xa4,
-	0x9f, 0x7e, 0xed, 0x0b, 0xf3, 0x73, 0x6d, 0x7c, 0xea, 0x68, 0xfe, 0x2b, 0x07, 0xe7, 0x5b, 0xaa,
-	0xa7, 0xad, 0x7b, 0x1e, 0xc5, 0x8c, 0x89, 0x1b, 0xcb, 0x2e, 0x27, 0x54, 0xcc, 0x83, 0x7f, 0x32,
-	0xa0, 0x32, 0xd9, 0xc0, 0xd1, 0x5a, 0xaa, 0x77, 0xef, 0x99, 0x33, 0x48, 0xed, 0x9d, 0x13, 0xc9,
-	0xaa, 0x62, 0x67, 0x7d, 0x43, 0x06, 0xe7, 0x86, 0x75, 0xed, 0xbf, 0x04, 0x47, 0xf4, 0x06, 0xb6,
-	0x76, 0x10, 0x43, 0xac, 0x19, 0xab, 0xd2, 0x8d, 0xc9, 0x7e, 0x95, 0xca, 0x8d, 0x17, 0xf4, 0xf1,
-	0x54, 0x6e, 0xbc, 0xa8, 0x41, 0x2e, 0xe0, 0x46, 0x27, 0x86, 0x10, 0x6e, 0xfc, 0xd9, 0x80, 0x65,
-	0xdd, 0x00, 0x52, 0x55, 0x8a, 0xf1, 0x66, 0x57, 0x6b, 0x2e, 0x22, 0xa2, 0x6d, 0xfd, 0xa1, 0xb4,
-	0xf5, 0x01, 0xda, 0x9b, 0x67, 0x6b, 0xe3, 0x59, 0xa2, 0x47, 0x86, 0x59, 0x98, 0x24, 0x25, 0x73,
-	0xb0, 0xa7, 0xb4, 0x6c, 0x1c, 0xc1, 0xfc, 0xff, 0x4f, 0x37, 0xce, 0xd8, 0x92, 0x1c, 0x15, 0xcc,
-	0x1d, 0x4a, 0x38, 0xd9, 0x31, 0x3e, 0x2c, 0x2b, 0xf6, 0x88, 0xfb, 0xd3, 0x4c, 0xd6, 0x6e, 0x3f,
-	0xfc, 0x5d, 0xe6, 0xca, 0x86, 0x84, 0xdc, 0x90, 0x90, 0x4a, 0xb6, 0x1e, 0x09, 0xd7, 0x1f, 0x5c,
-	0x77, 0x9a, 0x9d, 0xbc, 0x7c, 0xcf, 0x7c, 0xeb, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x89, 0x17,
-	0xf0, 0xad, 0xd6, 0x1d, 0x00, 0x00,
+var fileDescriptor_remote_execution_1121cd279bad7f30 = []byte{
+	// 2694 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x1a, 0xdd, 0x6f, 0x5b, 0x57,
+	0x9d, 0x6b, 0x3b, 0x8e, 0xfd, 0xb3, 0x13, 0x3b, 0x87, 0xac, 0x75, 0xdd, 0x75, 0x6d, 0xef, 0xb4,
+	0x11, 0xd2, 0xd5, 0xee, 0x5c, 0x36, 0x46, 0xd8, 0x56, 0x1a, 0xc7, 0x59, 0x9a, 0xa5, 0x49, 0xb8,
+	0x49, 0xba, 0x8e, 0x2f, 0x73, 0xe2, 0x7b, 0xe2, 0x5c, 0xc5, 0xbe, 0xc7, 0xbd, 0xf7, 0x38, 0x6d,
+	0x3a, 0x55, 0x42, 0x48, 0x68, 0xd2, 0x40, 0x7b, 0x19, 0x4f, 0x3c, 0x20, 0x81, 0x78, 0x42, 0xfc,
+	0x03, 0x08, 0x78, 0x87, 0x57, 0x90, 0xe0, 0x91, 0x97, 0x09, 0x09, 0x69, 0xe2, 0x8d, 0x67, 0xd0,
+	0xf9, 0xb8, 0x5f, 0xb6, 0xb3, 0x6b, 0x67, 0x1d, 0xe2, 0xed, 0xfa, 0x77, 0x7e, 0xdf, 0xe7, 0xf7,
+	0x79, 0x12, 0x38, 0xe7, 0x90, 0x2e, 0x65, 0xa4, 0x49, 0x1e, 0x91, 0x56, 0x9f, 0x59, 0xd4, 0xae,
+	0xf4, 0x1c, 0xca, 0x28, 0xba, 0xbc, 0xdf, 0xb7, 0x3a, 0x66, 0x65, 0x1f, 0x3f, 0x26, 0x9d, 0x8a,
+	0xc4, 0xa9, 0x04, 0x38, 0xc7, 0xb5, 0xf2, 0xb3, 0x6d, 0x4a, 0xdb, 0x1d, 0x52, 0xc5, 0x3d, 0xab,
+	0x8a, 0x6d, 0x9b, 0x32, 0xcc, 0x4f, 0x5c, 0x49, 0x5e, 0x7e, 0x5e, 0x9d, 0x76, 0xa8, 0xdd, 0x76,
+	0xfa, 0xb6, 0x6d, 0xd9, 0xed, 0x2a, 0xed, 0x11, 0x27, 0x82, 0xf4, 0x9c, 0x42, 0x12, 0xbf, 0xf6,
+	0xfb, 0x07, 0x55, 0xb3, 0x2f, 0x11, 0xd4, 0xf9, 0xe5, 0xc1, 0x73, 0x66, 0x75, 0x89, 0xcb, 0x70,
+	0xb7, 0xa7, 0x10, 0xce, 0x2b, 0x04, 0xa7, 0xd7, 0xaa, 0xba, 0x0c, 0xb3, 0xbe, 0xe2, 0xac, 0x7f,
+	0x90, 0x80, 0xf4, 0xed, 0x16, 0x67, 0x85, 0x36, 0x61, 0xb6, 0x45, 0xbb, 0x5d, 0x6c, 0x9b, 0x4d,
+	0xd3, 0x6a, 0x13, 0x97, 0x95, 0xb4, 0x2b, 0xda, 0x42, 0xae, 0xf6, 0xa5, 0x4a, 0x8c, 0x85, 0x95,
+	0x15, 0x81, 0x6e, 0xcc, 0x28, 0x72, 0xf9, 0x13, 0xed, 0xc0, 0x9c, 0x65, 0xf7, 0xfa, 0xac, 0xe9,
+	0x50, 0xca, 0x3c, 0x96, 0x89, 0xc9, 0x58, 0x16, 0x04, 0x07, 0x83, 0x52, 0xa6, 0x98, 0xde, 0x84,
+	0x69, 0x6e, 0x1b, 0xed, 0xb3, 0x52, 0x5a, 0xb0, 0xba, 0x50, 0x91, 0xa6, 0x55, 0x3c, 0xdb, 0x2b,
+	0x2b, 0xca, 0x37, 0x86, 0x87, 0x89, 0xae, 0x40, 0xde, 0xa4, 0x4d, 0x9b, 0xb2, 0x66, 0x0b, 0xb7,
+	0x0e, 0x49, 0x69, 0xfa, 0x8a, 0xb6, 0x90, 0x31, 0xc0, 0xa4, 0x9b, 0x94, 0xd5, 0x39, 0x64, 0x3d,
+	0x95, 0x49, 0x16, 0xd3, 0xfa, 0x2f, 0x92, 0x30, 0x5d, 0x97, 0x36, 0xa0, 0x67, 0x21, 0x8b, 0x9d,
+	0x76, 0xbf, 0x4b, 0x6c, 0xe6, 0x96, 0xb4, 0x2b, 0xc9, 0x85, 0xac, 0x11, 0x00, 0xd0, 0x03, 0x78,
+	0x86, 0xd8, 0xc7, 0x96, 0x43, 0x6d, 0xfe, 0xbb, 0x79, 0x8c, 0x1d, 0x0b, 0xef, 0x77, 0x88, 0x5b,
+	0x4a, 0x5c, 0x49, 0x2e, 0xe4, 0x6a, 0xaf, 0xc7, 0xda, 0xa7, 0xc4, 0x54, 0x1a, 0x01, 0x97, 0x7b,
+	0x8a, 0x89, 0x31, 0x4f, 0x86, 0x81, 0x2e, 0xba, 0x0a, 0x79, 0xda, 0x67, 0xdc, 0x9f, 0x07, 0x16,
+	0x97, 0x94, 0x14, 0x3a, 0xe5, 0x24, 0x6c, 0x95, 0x83, 0xd0, 0x75, 0x40, 0x0a, 0xc5, 0xb4, 0x1c,
+	0xd2, 0x62, 0xd4, 0xb1, 0x88, 0x5b, 0x4a, 0x09, 0xc4, 0x39, 0x79, 0xb2, 0x12, 0x1c, 0xa0, 0x06,
+	0x64, 0x7a, 0x1d, 0xcc, 0x0e, 0xa8, 0xd3, 0x2d, 0x4d, 0x09, 0x67, 0x7e, 0x39, 0x56, 0xef, 0x6d,
+	0x45, 0x60, 0xf8, 0xa4, 0xe8, 0x1a, 0xcc, 0x3d, 0xa4, 0xce, 0x91, 0x65, 0xb7, 0x7d, 0xb1, 0x27,
+	0xe2, 0x72, 0xb2, 0x46, 0x51, 0x1d, 0x78, 0x52, 0x4f, 0xca, 0xb7, 0xe0, 0x8b, 0x23, 0x4c, 0x46,
+	0x08, 0x52, 0x36, 0xee, 0x12, 0x11, 0x71, 0x59, 0x43, 0x7c, 0xa3, 0x79, 0x98, 0x3a, 0xc6, 0x9d,
+	0x3e, 0x11, 0x31, 0x93, 0x35, 0xe4, 0x0f, 0xfd, 0xa7, 0x1a, 0x64, 0x3c, 0x25, 0x90, 0x01, 0xd0,
+	0x73, 0x78, 0xb6, 0x30, 0x6e, 0xa8, 0x26, 0x7c, 0x5f, 0x1b, 0xdb, 0x86, 0xca, 0xb6, 0xa4, 0x3d,
+	0x31, 0x42, 0x5c, 0xca, 0x5f, 0x81, 0x8c, 0x07, 0x9f, 0x40, 0xad, 0x9f, 0x6b, 0x90, 0xf5, 0xad,
+	0x44, 0xb7, 0x60, 0x4a, 0x5e, 0x92, 0x54, 0x29, 0xde, 0xad, 0xfc, 0xfe, 0x36, 0xa9, 0x49, 0x0c,
+	0x49, 0x87, 0xb6, 0x21, 0x17, 0xbe, 0x42, 0x19, 0x55, 0x95, 0x31, 0xb2, 0x46, 0x69, 0x20, 0x78,
+	0x85, 0x59, 0xe8, 0x1f, 0x68, 0x90, 0xf1, 0xa4, 0x8c, 0xb4, 0xeb, 0x16, 0xa4, 0xcf, 0x96, 0xa3,
+	0x8a, 0x0c, 0x3d, 0x0f, 0x33, 0x96, 0xab, 0xca, 0x23, 0xbf, 0xd4, 0x52, 0x4a, 0xa4, 0x59, 0xde,
+	0x72, 0x1b, 0x3e, 0x4c, 0x24, 0x5a, 0x4a, 0x37, 0x61, 0x26, 0xa2, 0xea, 0xe7, 0xa2, 0x90, 0xfe,
+	0x75, 0x48, 0xab, 0xaa, 0x81, 0x20, 0x75, 0x88, 0xdd, 0x43, 0x8f, 0x3d, 0xff, 0x46, 0x97, 0x00,
+	0x5c, 0xeb, 0x31, 0x69, 0xee, 0x9f, 0x30, 0xe1, 0x61, 0x6d, 0x21, 0x69, 0x64, 0x39, 0x64, 0x99,
+	0x03, 0xf4, 0xbf, 0xa7, 0xe1, 0x9c, 0xd4, 0x9b, 0x98, 0xb2, 0x40, 0xde, 0x25, 0x0c, 0x9b, 0x98,
+	0x61, 0x74, 0x0e, 0xd2, 0x3c, 0xae, 0x89, 0xa3, 0xf8, 0xa9, 0x5f, 0xa8, 0x01, 0xc5, 0x07, 0x7d,
+	0xd2, 0x27, 0x66, 0xd3, 0x2f, 0xbf, 0x4a, 0xf5, 0xf2, 0x50, 0x91, 0xda, 0xf5, 0x30, 0x8c, 0x82,
+	0xa4, 0xf1, 0x01, 0x68, 0x1b, 0xce, 0x49, 0x86, 0x4d, 0x97, 0x61, 0x87, 0x85, 0x98, 0x25, 0x63,
+	0x99, 0xcd, 0x4b, 0xca, 0x1d, 0x4e, 0x18, 0x70, 0xbc, 0x0f, 0x65, 0xc5, 0xb1, 0x45, 0xbb, 0xbd,
+	0x0e, 0x61, 0x11, 0x15, 0x53, 0xb1, 0x5c, 0x4b, 0x92, 0xba, 0xee, 0x11, 0x07, 0x9c, 0xdf, 0x85,
+	0x8b, 0xb2, 0xc6, 0x1f, 0x10, 0xd6, 0x3a, 0x1c, 0x52, 0x78, 0x2a, 0x9e, 0xb5, 0x20, 0x5f, 0xe5,
+	0xd4, 0x03, 0x4a, 0x63, 0xb8, 0x1c, 0x66, 0x3d, 0x4a, 0xf3, 0x74, 0x2c, 0xfb, 0x67, 0x03, 0xf6,
+	0x23, 0xb4, 0xbf, 0x07, 0x17, 0xfc, 0xf8, 0x19, 0xd2, 0x7d, 0x3a, 0x96, 0xf9, 0x79, 0x9f, 0x78,
+	0x40, 0xf5, 0xef, 0xc1, 0xa5, 0x80, 0xef, 0x28, 0xc5, 0x33, 0xb1, 0xbc, 0x2f, 0xfa, 0x0c, 0x46,
+	0xe8, 0xfd, 0x5d, 0xb8, 0xa4, 0xea, 0x7c, 0xbf, 0xd7, 0xa1, 0xd8, 0x1c, 0xd2, 0x3d, 0x1b, 0xcb,
+	0xbf, 0x2c, 0x19, 0xec, 0x09, 0xfa, 0x01, 0xf5, 0x09, 0x5c, 0x8d, 0xb2, 0x1f, 0x65, 0x02, 0xc4,
+	0x8a, 0x78, 0x2e, 0x2c, 0x62, 0xd8, 0x0a, 0xfd, 0x57, 0x29, 0xc8, 0xcb, 0xcc, 0x32, 0x88, 0xdb,
+	0xef, 0x30, 0xb4, 0x39, 0xd0, 0xe1, 0x64, 0xd5, 0xbb, 0x16, 0x9b, 0xf6, 0x5b, 0x7e, 0x0b, 0x8c,
+	0xb6, 0xc3, 0xe6, 0xc8, 0x76, 0x98, 0x14, 0x5c, 0x6f, 0x8c, 0xc9, 0xd5, 0x2f, 0x53, 0xa3, 0x1a,
+	0xe8, 0x45, 0xc8, 0x92, 0x47, 0x16, 0x6b, 0xb6, 0xa8, 0x29, 0xab, 0xdd, 0x94, 0x91, 0xe1, 0x80,
+	0x3a, 0x2f, 0x69, 0xbc, 0xbe, 0x30, 0x93, 0xf2, 0xf9, 0x07, 0x3f, 0x14, 0x99, 0x90, 0x37, 0xb2,
+	0x12, 0x62, 0xe0, 0x87, 0x68, 0x03, 0x66, 0xd4, 0xb1, 0x2a, 0x72, 0xe9, 0xc9, 0x8a, 0x5c, 0x5e,
+	0x52, 0xab, 0x02, 0x27, 0x85, 0x11, 0xc7, 0x11, 0xc2, 0xa6, 0x7d, 0x61, 0xc4, 0x71, 0x02, 0x61,
+	0xfc, 0x58, 0x09, 0xcb, 0x4c, 0x2e, 0x8c, 0x38, 0x8e, 0x12, 0x76, 0x00, 0x28, 0x08, 0xef, 0xae,
+	0xaa, 0x8a, 0x2a, 0xe6, 0xbe, 0x1a, 0xcb, 0x72, 0x74, 0x51, 0x35, 0xe6, 0x7c, 0x24, 0x0f, 0xb4,
+	0x9e, 0xca, 0x68, 0xc5, 0x84, 0xfe, 0x13, 0x0d, 0x20, 0xb8, 0x61, 0x5e, 0xca, 0x7b, 0x98, 0xf9,
+	0xa5, 0x9c, 0x7f, 0xff, 0x4f, 0x5b, 0xd7, 0x87, 0x1a, 0xa4, 0x76, 0x1d, 0x42, 0xd0, 0x9b, 0x90,
+	0xe2, 0x83, 0xad, 0x1a, 0x92, 0x17, 0xc7, 0xef, 0xcd, 0x86, 0xa0, 0x43, 0xab, 0x90, 0x69, 0x1d,
+	0x5a, 0x1d, 0xd3, 0x21, 0xb6, 0x8a, 0xf4, 0x49, 0x78, 0xf8, 0xb4, 0x7a, 0x1f, 0x0a, 0x03, 0xa1,
+	0x3a, 0xd2, 0x47, 0x6b, 0x90, 0x63, 0x0e, 0x21, 0x5e, 0x00, 0x24, 0x27, 0x73, 0x14, 0x70, 0x5a,
+	0xf9, 0xbd, 0x9e, 0xca, 0x24, 0x8a, 0x49, 0xfd, 0x3a, 0x14, 0x1a, 0x1e, 0xe2, 0x36, 0xed, 0x58,
+	0xad, 0x13, 0x54, 0x86, 0x4c, 0xcf, 0xb1, 0xa8, 0x63, 0xb1, 0x13, 0x21, 0x7a, 0xca, 0xf0, 0x7f,
+	0xeb, 0x37, 0x00, 0xc9, 0x2c, 0x77, 0xc5, 0xc0, 0x3d, 0x06, 0xc5, 0x8f, 0x92, 0x30, 0xab, 0x62,
+	0xc5, 0x20, 0x0f, 0xfa, 0xde, 0x35, 0xd9, 0x2e, 0xc3, 0x76, 0x8b, 0x34, 0x43, 0xe3, 0x42, 0xde,
+	0x03, 0x6e, 0xf2, 0xb1, 0x61, 0x11, 0xe6, 0xdc, 0x23, 0xab, 0x27, 0x47, 0xfd, 0x66, 0x87, 0xd2,
+	0xa3, 0xbe, 0xec, 0x9c, 0x19, 0xa3, 0xc0, 0x0f, 0x84, 0xfc, 0x0d, 0x01, 0xe6, 0x79, 0x81, 0x45,
+	0x18, 0x9e, 0x35, 0x09, 0x25, 0xb5, 0xca, 0x8b, 0x6f, 0x43, 0x31, 0xc8, 0x8b, 0x9e, 0xb0, 0x50,
+	0x75, 0x91, 0x1b, 0x63, 0x66, 0x85, 0xef, 0x4b, 0xa3, 0x40, 0x06, 0x9c, 0x4b, 0x60, 0xde, 0x91,
+	0x0e, 0x54, 0x96, 0x29, 0x01, 0x32, 0x93, 0x6f, 0xc6, 0x0a, 0x18, 0xf6, 0xbe, 0x81, 0x9c, 0x21,
+	0x98, 0xbc, 0xdc, 0xf5, 0x54, 0x26, 0x55, 0x9c, 0x5a, 0x4f, 0x65, 0xa6, 0x8a, 0x69, 0xfd, 0x01,
+	0x4c, 0x6f, 0xd0, 0xb6, 0xc8, 0xbd, 0x20, 0xcf, 0xb4, 0xb3, 0xe5, 0xd9, 0x0b, 0x30, 0x7b, 0xd8,
+	0xef, 0x62, 0xbb, 0xe9, 0x10, 0x6c, 0x8a, 0x44, 0x4b, 0x88, 0x8b, 0x99, 0x11, 0x50, 0x43, 0x01,
+	0xf5, 0x7f, 0x27, 0xbc, 0xe0, 0x22, 0x06, 0x71, 0x7b, 0xd4, 0x76, 0x09, 0x6a, 0x40, 0x5a, 0xaa,
+	0xab, 0x64, 0x5f, 0x8f, 0x95, 0x1d, 0xee, 0x2d, 0x86, 0x22, 0xe6, 0x21, 0x24, 0xdc, 0x67, 0x36,
+	0x15, 0x37, 0xa9, 0x40, 0x5e, 0x02, 0x55, 0x23, 0x5a, 0x84, 0xb4, 0x5c, 0x92, 0x55, 0x9a, 0x20,
+	0xaf, 0xcb, 0x39, 0xbd, 0x56, 0x65, 0x47, 0x9c, 0x18, 0x0a, 0x03, 0x61, 0xc8, 0xb9, 0xc4, 0x39,
+	0x26, 0x4e, 0xb3, 0x43, 0xdb, 0x72, 0xd9, 0xca, 0xd5, 0xbe, 0x31, 0x6e, 0x15, 0xf4, 0xcc, 0xab,
+	0xec, 0x08, 0x1e, 0x1b, 0xb4, 0xed, 0x36, 0x6c, 0xe6, 0x9c, 0x18, 0xe0, 0xfa, 0x80, 0x72, 0x1b,
+	0x0a, 0x03, 0xc7, 0xa8, 0x08, 0xc9, 0x23, 0x72, 0xa2, 0xe2, 0x9f, 0x7f, 0xa2, 0x37, 0xc3, 0x6b,
+	0x49, 0xae, 0xb6, 0x10, 0xab, 0x81, 0xba, 0x54, 0xb5, 0xc0, 0x2c, 0x25, 0x5e, 0xd3, 0xf4, 0x4f,
+	0x12, 0x50, 0x52, 0x8a, 0x6d, 0x79, 0x4f, 0x10, 0xfe, 0xd4, 0xbb, 0x07, 0x53, 0x2e, 0xc3, 0x6d,
+	0x99, 0x74, 0xb3, 0xb5, 0x5b, 0xe3, 0x9a, 0x38, 0xc4, 0x89, 0x7b, 0xb0, 0x4d, 0x0c, 0xc9, 0x6d,
+	0x38, 0x05, 0x13, 0x9f, 0x25, 0x05, 0x5f, 0x02, 0xa4, 0xba, 0xaa, 0xcb, 0x1c, 0x82, 0xbb, 0xb2,
+	0x4c, 0x24, 0xe5, 0x32, 0x2a, 0x4f, 0x76, 0xc4, 0x81, 0x28, 0x15, 0x12, 0x9b, 0xb7, 0xc5, 0x30,
+	0x76, 0xca, 0xc7, 0x26, 0x8e, 0x13, 0x60, 0xeb, 0x5b, 0x30, 0x25, 0x34, 0x47, 0x39, 0x98, 0xde,
+	0xdb, 0x7c, 0x7b, 0x73, 0xeb, 0x9d, 0xcd, 0xe2, 0x17, 0x50, 0x01, 0x72, 0xf5, 0xdb, 0xf5, 0xb5,
+	0x46, 0xb3, 0xbe, 0xd6, 0xa8, 0xbf, 0x5d, 0xd4, 0x10, 0x40, 0xfa, 0x9b, 0x7b, 0x8d, 0xbd, 0xc6,
+	0x4a, 0x31, 0x81, 0x66, 0x20, 0xdb, 0xb8, 0xdf, 0xa8, 0xef, 0xed, 0xde, 0xd9, 0x7c, 0xab, 0x98,
+	0xe4, 0x3f, 0xeb, 0x5b, 0x77, 0xb7, 0x37, 0x1a, 0xbb, 0x8d, 0x95, 0x62, 0x4a, 0x5f, 0x84, 0xf9,
+	0x77, 0xb0, 0xc5, 0xfc, 0xd4, 0xf7, 0xca, 0xdc, 0x88, 0x65, 0x48, 0xff, 0xb1, 0x06, 0xe7, 0xde,
+	0x22, 0x2c, 0x12, 0xd3, 0x93, 0x54, 0xc5, 0xa7, 0xea, 0x66, 0xfd, 0x4f, 0x09, 0xb8, 0xb0, 0xd7,
+	0x33, 0x31, 0x23, 0xff, 0x1f, 0x0a, 0x21, 0xc3, 0xe7, 0xa6, 0xd2, 0x3a, 0x79, 0x96, 0x22, 0xa1,
+	0x78, 0xaa, 0x2a, 0x70, 0x5a, 0xc5, 0x4d, 0x3d, 0xd5, 0x8a, 0xcb, 0x17, 0xf3, 0xf3, 0xab, 0x96,
+	0x6d, 0xde, 0xb5, 0x5c, 0xd7, 0xb2, 0xdb, 0xcb, 0x1d, 0xba, 0xef, 0x4e, 0xe4, 0xc9, 0x75, 0xc8,
+	0xef, 0x77, 0xe8, 0xbe, 0xf2, 0xa3, 0x37, 0x36, 0x8f, 0xed, 0xc8, 0x1c, 0x27, 0x96, 0xdf, 0xae,
+	0xde, 0x87, 0xd2, 0xb0, 0x2e, 0xaa, 0x02, 0xbf, 0x0b, 0xf3, 0x5d, 0x09, 0x6f, 0x7e, 0x16, 0x79,
+	0xa8, 0x1b, 0x30, 0xf7, 0xc4, 0x3e, 0x84, 0x39, 0x19, 0x4e, 0x1c, 0xe8, 0x19, 0x2f, 0xde, 0x23,
+	0x6d, 0x46, 0x6c, 0x76, 0xf6, 0xf7, 0x48, 0x41, 0x1e, 0x3c, 0x02, 0x88, 0x41, 0x35, 0x21, 0xa6,
+	0x63, 0xf1, 0xcd, 0xa7, 0xb9, 0xf3, 0xcb, 0x98, 0xb5, 0x0e, 0x03, 0xf1, 0x93, 0x39, 0x7f, 0x13,
+	0x32, 0x8e, 0xc4, 0xf7, 0x1c, 0x11, 0xff, 0xfe, 0x34, 0x64, 0xaa, 0xe1, 0xf3, 0xd0, 0xff, 0xa3,
+	0x41, 0x69, 0x58, 0x21, 0x75, 0x03, 0xdf, 0x87, 0xac, 0xa3, 0xbe, 0xbd, 0xa7, 0xa5, 0xe5, 0x58,
+	0x69, 0xa7, 0x71, 0xab, 0x78, 0x1f, 0x46, 0xc0, 0xb4, 0xfc, 0x03, 0x0d, 0x32, 0xbe, 0xb8, 0x35,
+	0xc8, 0x85, 0x2e, 0x7a, 0x52, 0xef, 0x43, 0x10, 0x57, 0xa1, 0x86, 0x9a, 0x88, 0x6b, 0xa8, 0xfa,
+	0xef, 0x34, 0x98, 0x7d, 0x8b, 0x30, 0x3e, 0x63, 0x4f, 0x74, 0x13, 0x6b, 0x90, 0xfb, 0x0c, 0x0f,
+	0xcd, 0xe0, 0x04, 0x6f, 0xcc, 0x17, 0x21, 0xdb, 0xc3, 0x6d, 0xd2, 0x74, 0xad, 0xc7, 0xb2, 0x77,
+	0xf0, 0xb1, 0x14, 0xb7, 0xc9, 0x8e, 0xf5, 0x58, 0xac, 0x75, 0xe2, 0x90, 0xd1, 0x23, 0x62, 0xab,
+	0x5e, 0x21, 0xd0, 0x77, 0x39, 0x40, 0x7f, 0x5f, 0x83, 0x82, 0xaf, 0xbd, 0xf2, 0xe3, 0x46, 0xf4,
+	0x31, 0x4f, 0x9b, 0x78, 0xd8, 0x0f, 0x93, 0xa3, 0x17, 0xa1, 0x60, 0x93, 0x47, 0xac, 0x19, 0xd2,
+	0x42, 0xbe, 0x44, 0xce, 0x70, 0xf0, 0xb6, 0xaf, 0xc9, 0x1b, 0xa2, 0x61, 0xd4, 0x71, 0x0f, 0xef,
+	0x5b, 0x1d, 0x8b, 0x59, 0x64, 0xa2, 0xc0, 0xd6, 0xff, 0xa1, 0x01, 0x92, 0x53, 0x47, 0x98, 0x05,
+	0xc2, 0x80, 0x64, 0x31, 0x6c, 0x85, 0xa0, 0x2a, 0x34, 0xe2, 0x23, 0x5f, 0xd4, 0xbd, 0x88, 0x4a,
+	0x73, 0xad, 0x41, 0x10, 0xea, 0xc2, 0xb9, 0xd0, 0xeb, 0x49, 0x58, 0x8c, 0xbc, 0xd3, 0x57, 0xc7,
+	0x1f, 0xa6, 0x23, 0xa2, 0x9e, 0x21, 0xa3, 0xc0, 0xfa, 0x2a, 0x5c, 0x92, 0x4d, 0x40, 0x28, 0x27,
+	0x13, 0x25, 0xa2, 0xcf, 0x0b, 0x30, 0xdb, 0x17, 0xd0, 0x26, 0xb1, 0xf9, 0x78, 0x6a, 0x0a, 0x73,
+	0x33, 0xc6, 0x8c, 0x84, 0x36, 0x24, 0x50, 0xff, 0xb3, 0x06, 0xf3, 0xdb, 0x6a, 0x79, 0x89, 0xd0,
+	0xb7, 0x00, 0xd4, 0x52, 0x13, 0xdc, 0x7e, 0x3d, 0xfe, 0x91, 0x7a, 0x04, 0x2b, 0x1f, 0x68, 0x60,
+	0xbb, 0x4d, 0x8c, 0x10, 0xdb, 0xf2, 0x1e, 0xcc, 0x44, 0x0e, 0xd1, 0x55, 0xc8, 0x77, 0x2d, 0xbb,
+	0x39, 0xb0, 0x5e, 0xe5, 0xba, 0x96, 0xed, 0xe1, 0x09, 0x14, 0xfc, 0x28, 0x40, 0x49, 0x28, 0x14,
+	0xfc, 0xc8, 0x43, 0xd1, 0xff, 0x95, 0x80, 0xb9, 0xa1, 0x4b, 0x43, 0xf7, 0xa1, 0x20, 0xb3, 0xac,
+	0x79, 0xd0, 0xb7, 0x85, 0xef, 0x84, 0x59, 0xb3, 0xb5, 0xea, 0x98, 0xe9, 0xb6, 0xaa, 0xc8, 0x8c,
+	0x59, 0x33, 0xf2, 0x1b, 0xbd, 0xaf, 0xc1, 0x15, 0xd5, 0xc8, 0x65, 0x98, 0x29, 0xcf, 0x8f, 0x08,
+	0x83, 0x37, 0xc7, 0xec, 0xed, 0xa7, 0x5c, 0xab, 0x71, 0x09, 0x7f, 0xea, 0xad, 0xf7, 0xe1, 0xa2,
+	0xea, 0xfa, 0xca, 0x17, 0x51, 0x1d, 0xe4, 0x7c, 0xf1, 0xca, 0x99, 0xae, 0xd1, 0xb8, 0x20, 0x38,
+	0x8f, 0x3a, 0xd2, 0x3f, 0x4a, 0xc0, 0x33, 0x23, 0xc3, 0x77, 0xb4, 0xd3, 0xb5, 0xa7, 0xe1, 0xf4,
+	0xab, 0x90, 0xe7, 0xe8, 0x7e, 0x78, 0xcb, 0x95, 0x28, 0xc7, 0x61, 0x2a, 0xb8, 0xd1, 0x13, 0xb8,
+	0x1c, 0x5a, 0x6d, 0x9f, 0xbe, 0x47, 0x82, 0xf7, 0xd2, 0x91, 0x5e, 0xb9, 0x0b, 0xb9, 0x5d, 0x4a,
+	0x3b, 0x2b, 0x84, 0x61, 0xab, 0x23, 0xde, 0xdd, 0x18, 0xa5, 0x9d, 0x70, 0xf1, 0xca, 0x70, 0x80,
+	0xe8, 0x03, 0x57, 0x21, 0x2f, 0x0e, 0x8f, 0x89, 0xe3, 0x72, 0x27, 0xc9, 0xe2, 0x98, 0xe3, 0xb0,
+	0x7b, 0x12, 0xa4, 0xff, 0x53, 0x83, 0x82, 0x2a, 0x86, 0xfe, 0x7a, 0xb3, 0xa5, 0xc8, 0x4c, 0x29,
+	0x43, 0x95, 0xb4, 0x97, 0x62, 0xcd, 0x09, 0xe9, 0x25, 0x85, 0x84, 0x94, 0x54, 0x91, 0x6c, 0x99,
+	0x4a, 0x89, 0x8c, 0x04, 0xdc, 0x31, 0xf9, 0xe6, 0x21, 0xa4, 0x59, 0xf6, 0x31, 0x6d, 0x61, 0x0f,
+	0x4b, 0xed, 0x29, 0xfc, 0xe4, 0x8e, 0x7f, 0x70, 0xc7, 0x44, 0x4b, 0x70, 0xa1, 0x45, 0x1d, 0x87,
+	0x74, 0x30, 0x23, 0x66, 0x88, 0xc6, 0xe5, 0x44, 0xb2, 0x05, 0x9d, 0x0f, 0x10, 0x02, 0x52, 0xf7,
+	0x8e, 0xb9, 0xf8, 0x3a, 0xcc, 0x46, 0xaf, 0x3f, 0xba, 0xbe, 0x00, 0xa4, 0x77, 0xd6, 0x6e, 0xd7,
+	0x5e, 0x79, 0xb5, 0xa8, 0xa1, 0x0c, 0xa4, 0x76, 0xd6, 0x6e, 0xbf, 0x5c, 0x4c, 0xa0, 0x69, 0x48,
+	0xde, 0x5d, 0x79, 0xa5, 0x98, 0xac, 0xfd, 0x36, 0x01, 0x59, 0x3f, 0x1c, 0xd1, 0x87, 0x1a, 0x4c,
+	0xab, 0xad, 0x0e, 0x55, 0xc7, 0x5f, 0x71, 0x85, 0xa3, 0xcb, 0x97, 0xbc, 0x9e, 0x1f, 0xfa, 0x4b,
+	0x77, 0xc5, 0x5f, 0x0e, 0xf5, 0x97, 0x7f, 0xf8, 0x97, 0x8f, 0x3f, 0x4a, 0x5c, 0xd3, 0x5f, 0xac,
+	0x1e, 0xd7, 0xaa, 0xef, 0x45, 0xfa, 0xd3, 0x1b, 0x8b, 0x8b, 0x4f, 0xaa, 0xd2, 0x75, 0xee, 0x92,
+	0x14, 0x41, 0x96, 0xb4, 0xc5, 0x1b, 0x1a, 0xfa, 0x99, 0x06, 0x33, 0x91, 0x15, 0x0a, 0xc5, 0xc7,
+	0xdf, 0xa8, 0x95, 0x6b, 0x32, 0xe5, 0x84, 0x4e, 0xc1, 0xdf, 0xe8, 0xab, 0x8b, 0x8b, 0x4f, 0x96,
+	0x1e, 0x86, 0xb9, 0x0a, 0xe5, 0x6a, 0x7f, 0x4d, 0x42, 0x2e, 0x54, 0x82, 0xd0, 0xdf, 0xe4, 0x68,
+	0x10, 0x79, 0xf2, 0x8e, 0x7f, 0x2e, 0x1d, 0xbd, 0xf4, 0x95, 0x27, 0xdb, 0x6c, 0xf4, 0xef, 0x08,
+	0x03, 0xee, 0xa1, 0xdd, 0x4f, 0xf5, 0xae, 0xda, 0x58, 0xaa, 0xef, 0x45, 0x36, 0xb3, 0xca, 0x21,
+	0x76, 0x0f, 0x9f, 0x0c, 0x02, 0x83, 0xbf, 0x9d, 0x3d, 0x41, 0x9f, 0x68, 0x80, 0x86, 0xd7, 0x41,
+	0xb4, 0x34, 0xe6, 0x24, 0xfc, 0x14, 0xec, 0x3b, 0x12, 0xf6, 0x91, 0xf2, 0xe7, 0x62, 0xdf, 0x52,
+	0x74, 0xb7, 0xac, 0x7d, 0x9c, 0x82, 0x0b, 0x75, 0xb9, 0x5a, 0xdc, 0x36, 0x4d, 0x87, 0xb8, 0x2e,
+	0x2f, 0x92, 0x3b, 0x8c, 0x3a, 0xb8, 0x4d, 0xd0, 0xef, 0x35, 0x28, 0x0e, 0xee, 0x50, 0xe8, 0xb5,
+	0x31, 0xfe, 0x02, 0x3c, 0x72, 0x05, 0x2c, 0x7f, 0xed, 0x0c, 0x94, 0x72, 0xee, 0xd4, 0x6f, 0x0a,
+	0xa7, 0x5c, 0xd7, 0x17, 0x4e, 0x71, 0x0a, 0x1f, 0xd0, 0xdd, 0xa5, 0x83, 0x80, 0x7c, 0x49, 0x5b,
+	0x14, 0xea, 0x0f, 0xae, 0x0c, 0x63, 0xa8, 0x7f, 0xca, 0x12, 0x35, 0x86, 0xfa, 0xa7, 0xed, 0x27,
+	0x63, 0xaa, 0xbf, 0x1f, 0x90, 0x73, 0xf5, 0xff, 0xa8, 0xc1, 0xb4, 0x9a, 0xbf, 0xc7, 0x28, 0x51,
+	0xd1, 0x3d, 0xa3, 0x7c, 0x63, 0x7c, 0x02, 0xa5, 0xe3, 0x7d, 0xa1, 0xa3, 0x81, 0xb6, 0x3f, 0x4d,
+	0xc7, 0xea, 0x7b, 0xa1, 0xc5, 0xc4, 0x8b, 0xb6, 0x30, 0x28, 0x1c, 0x6b, 0x6d, 0x29, 0xe1, 0x86,
+	0x56, 0xfb, 0x83, 0x06, 0xf9, 0xc8, 0x04, 0xf0, 0x1b, 0x59, 0x40, 0x22, 0xb0, 0xb1, 0x0a, 0xc8,
+	0x88, 0x25, 0xa0, 0x1c, 0xff, 0x7e, 0x31, 0x3c, 0xfd, 0xeb, 0xd7, 0x84, 0xb9, 0x2f, 0xa0, 0xe7,
+	0x4f, 0x31, 0x37, 0x3c, 0x10, 0x2c, 0x3b, 0x10, 0xf7, 0xaf, 0x51, 0xcb, 0xf3, 0x86, 0x00, 0x06,
+	0x8f, 0xdf, 0x0e, 0x65, 0x74, 0x5b, 0xfb, 0x56, 0x41, 0x22, 0xfb, 0xb8, 0xbf, 0x4c, 0x24, 0x8d,
+	0xc6, 0xfd, 0x5f, 0x27, 0x2e, 0x2f, 0x0b, 0x86, 0xcb, 0x82, 0xa1, 0xa4, 0x0d, 0x86, 0xfd, 0xca,
+	0xbd, 0xda, 0x7e, 0x5a, 0xfc, 0x1d, 0xf2, 0xe6, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xca, 0xab,
+	0x3f, 0x15, 0xad, 0x25, 0x00, 0x00,
 }

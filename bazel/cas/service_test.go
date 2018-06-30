@@ -249,8 +249,9 @@ func TestBatchUpdateBlobsStub(t *testing.T) {
 func TestGetTreeStub(t *testing.T) {
 	s := casServer{stat: stats.NilStatsReceiver()}
 	req := &remoteexecution.GetTreeRequest{}
+	gtServer := &fakeGetTreeServer{}
 
-	_, err := s.GetTree(context.Background(), req)
+	err := s.GetTree(req, gtServer)
 	if err == nil {
 		t.Fatalf("Non-error response from GetTree")
 	}
@@ -433,4 +434,14 @@ func getFakeActionResult() ([]byte, error) {
 		return nil, err
 	}
 	return arAsBytes, nil
+}
+
+// Fake GetTreeServer
+// Implements ContentAddressableStorage_GetTreeServer interface
+type fakeGetTreeServer struct {
+	grpc.ServerStream
+}
+
+func (s *fakeGetTreeServer) Send(*remoteexecution.GetTreeResponse) error {
+	return nil
 }
