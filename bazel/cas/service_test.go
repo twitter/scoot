@@ -122,6 +122,29 @@ func TestReadEmpty(t *testing.T) {
 	r.reset()
 }
 
+func TestReadMissing(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+
+	// Note: don't actually write the underlying resource beforehand. We expect
+	// that reading an empty blob will bypass the underlying store
+
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/%d", testHash1, testSize1)}
+	r := makeFakeReadServer()
+
+	// Make actual Read request
+	err := s.Read(req, r)
+	if err == nil {
+		t.Fatal("Unexpected success - want NotFound error response from Read")
+	}
+	c := status.Code(err)
+	if c != codes.NotFound {
+		t.Fatalf("Status code from error not expected: %s, got: %s", codes.NotFound, c)
+	}
+
+	r.reset()
+}
+
 func TestWrite(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
@@ -264,6 +287,21 @@ func TestGetTreeStub(t *testing.T) {
 	}
 }
 
+func TestMakeResultAddress(t *testing.T) {
+	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	// e.g. `echo -n "<testHash1>-<ResultAddressKey>" | shasum -a 256`
+	knownHash := "fdc8c407bc2aa6d6cb514ace4299b2f414c4476a77123e3557dafd103d889124"
+	storeName := fmt.Sprintf("%s-%s.%s", bazel.StorePrefix, knownHash, bazel.StorePrefix)
+
+	resultAddr, err := makeCacheResultAddress(ad)
+	if err != nil {
+		t.Fatalf("Failed to create cache result address: %v", err)
+	}
+	if resultAddr.storeName != storeName {
+		t.Fatalf("Unexpected resulting store name: %s, want: %s", resultAddr.storeName, storeName)
+	}
+}
+
 func TestGetActionResult(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
@@ -273,10 +311,14 @@ func TestGetActionResult(t *testing.T) {
 		t.Fatalf("Error getting ActionResult: %s", err)
 	}
 
-	// Get ActionDigest and Write AR to underlying store
+	// Get ActionDigest and Write AR to underlying store using our result cache addressing convention
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
-	resourceName := bazel.DigestStoreName(ad)
-	err = f.Write(resourceName, bytes.NewReader(arAsBytes), nil)
+	address, err := makeCacheResultAddress(ad)
+	if err != nil {
+		t.Fatalf("Failed to create cache result adress: %v", err)
+	}
+
+	err = f.Write(address.storeName, bytes.NewReader(arAsBytes), nil)
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -300,6 +342,31 @@ func TestGetActionResult(t *testing.T) {
 	}
 }
 
+func TestGetActionResultMissing(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+
+	// Make GetActionResult request
+	req := &remoteexecution.GetActionResultRequest{
+		ActionDigest: &remoteexecution.Digest{
+			Hash:      testHash1,
+			SizeBytes: testSize1,
+		},
+	}
+
+	res, err := s.GetActionResult(context.Background(), req)
+	if err == nil {
+		t.Fatal("Unexpected success - want NotFound error response from GetActionResult")
+	}
+	if res != nil {
+		t.Fatal("Unexpected non-nil GetActionResult")
+	}
+	c := status.Code(err)
+	if c != codes.NotFound {
+		t.Fatalf("Status code from error not expected: %s, got: %s", codes.NotFound, c)
+	}
+}
+
 func TestUpdateActionResult(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
@@ -315,10 +382,14 @@ func TestUpdateActionResult(t *testing.T) {
 	}
 
 	// Read from underlying store
-	resourceName := bazel.DigestStoreName(ad)
-	r, err := f.OpenForRead(resourceName)
+	address, err := makeCacheResultAddress(ad)
 	if err != nil {
-		t.Fatalf("Failed to open expected resource for reading: %s: %v", resourceName, err)
+		t.Fatalf("Failed to create cache result adress: %v", err)
+	}
+
+	r, err := f.OpenForRead(address.storeName)
+	if err != nil {
+		t.Fatalf("Failed to open expected resource for reading: %s: %v", address.storeName, err)
 	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {

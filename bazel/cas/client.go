@@ -33,6 +33,14 @@ func (e *NotFoundError) Error() string {
 	return e.Err
 }
 
+// Returns true if an error is of type NotFoundError
+func IsNotFoundError(err error) bool {
+	if _, ok := err.(*NotFoundError); ok {
+		return true
+	}
+	return false
+}
+
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError

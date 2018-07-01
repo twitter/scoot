@@ -51,7 +51,7 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.Actio
 		if err != nil {
 			// Only treat as an error if we didn't get NotFoundError. We still continue:
 			// cache lookup failure is internal, and should not prevent the run
-			if _, ok := err.(*cas.NotFoundError); !ok {
+			if !cas.IsNotFoundError(err) {
 				log.Errorf("Failed to check for cached result, will execute: %s", err)
 			}
 		} else if ar != nil {

@@ -107,7 +107,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 			// If we encounter a cas NotFoundError, set a grpc status message in
 			// the failure run status that indicates missing data to client
-			if _, ok := err.(*cas.NotFoundError); ok {
+			if cas.IsNotFoundError(err) {
 				log.Info("NotFound error during Bazel preprocess - Setting grpc Status error")
 				errStatus, err := getFailedPreconditionStatus(notExist)
 				if err != nil {

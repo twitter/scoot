@@ -62,8 +62,8 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 	// ExecutionMetadata is seeded with current time of queueing
 	now := time.Now()
 	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("%s_%s_%d", bazel.TaskIDPrefix, req.GetActionDigest(), now.Unix())
-	task.Command.Argv = []string{bazel.CommandDefault}
+	task.TaskID = fmt.Sprintf("%s_%s_%d", TaskIDPrefix, req.GetActionDigest(), now.Unix())
+	task.Command.Argv = []string{CommandDefault}
 	task.Command.EnvVars = make(map[string]string)
 	task.Command.SnapshotID = bazel.SnapshotIDFromDigest(req.GetActionDigest())
 	task.Command.ExecuteRequest = &bazelapi.ExecuteRequest{
