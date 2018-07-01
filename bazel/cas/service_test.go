@@ -24,7 +24,7 @@ var testHash1 string = "ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa6
 var testSize1 int64 = 7
 var testData1 []byte = []byte("abc1234")
 
-func TestFindMissingBlobsStub(t *testing.T) {
+func TestFindMissingBlobs(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 

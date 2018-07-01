@@ -17,7 +17,7 @@ import (
 )
 
 // Determine that Execute can accept a well-formed request and returns a well-formed response
-func TestExecuteStub(t *testing.T) {
+func TestExecute(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sc := scheduler.NewMockScheduler(mockCtrl)
@@ -45,30 +45,10 @@ func TestExecuteStub(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Non-nil error from Execute: %v", err)
 	}
-
-	// TODO how to mock from fake server???????????????
-	/*fs.
-	done := res.GetDone()
-	if done {
-		t.Fatal("Expected response to not be done")
-	}
-	metadataAny := res.GetMetadata()
-	if metadataAny == nil {
-		t.Fatalf("Nil metadata from operation: %s", res)
-	}
-	if res.GetResponse() != nil {
-		t.Fatalf("Non-nil response for incomplete task from operation: %s", res)
-	}
-
-	metadata := remoteexecution.ExecuteOperationMetadata{}
-	err = ptypes.UnmarshalAny(metadataAny, &metadata)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
-	}*/
 }
 
 // Determine that GetOperation can accept a well-formed request and returns a well-formed response
-func TestGetOperationStub(t *testing.T) {
+func TestGetOperation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	sc := scheduler.NewMockScheduler(mockCtrl)

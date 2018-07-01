@@ -17,12 +17,13 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
+	"google.golang.org/grpc"
 
 	"github.com/twitter/scoot/bazel/execution/mock_longrunning"
-	//"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
+	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
 )
 
-func TestGetOperation(t *testing.T) {
+func TestClientGetOperation(t *testing.T) {
 	testOperation := "testOp1"
 	getReq := &longrunning.GetOperationRequest{Name: testOperation}
 
@@ -59,8 +60,7 @@ func TestGetOperation(t *testing.T) {
 	}
 }
 
-/* TODO fix for client server or whatever
-func TestExecute(t *testing.T) {
+func TestClientExecute(t *testing.T) {
 	req := &remoteexecution.ExecuteRequest{}
 
 	eomAsPBAny, err := marshalAny(&remoteexecution.ExecuteOperationMetadata{})
@@ -81,9 +81,11 @@ func TestExecute(t *testing.T) {
 		},
 	}
 
+	fakeClient := &fakeExecClient{static: opRes}
+
 	mockCtrl := gomock.NewController(t)
 	execClientMock := mock_remoteexecution.NewMockExecutionClient(mockCtrl)
-	execClientMock.EXPECT().Execute(context.Background(), req).Return(opRes, nil)
+	execClientMock.EXPECT().Execute(context.Background(), req).Return(fakeClient, nil)
 
 	op, err := execFromClient(execClientMock, req)
 	if err != nil {
@@ -95,4 +97,18 @@ func TestExecute(t *testing.T) {
 		t.Fatalf("Error parsing resulting Operation: %s", err)
 	}
 }
-*/
+
+// Fake Execution_ExecuteClient
+// Implements Execution_ExecuteClient interface
+type fakeExecClient struct {
+	grpc.ClientStream
+	static *longrunning.Operation
+}
+
+func (c *fakeExecClient) Recv() (*longrunning.Operation, error) {
+	return c.static, nil
+}
+
+func (c *fakeExecClient) CloseSend() error {
+	return nil
+}
