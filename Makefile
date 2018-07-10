@@ -129,3 +129,7 @@ thrift-bazel-go:
 thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 
 thrift: thrift-go
+
+bazel-proto:
+	cp vendor/github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2/remote_execution.proto bazel/remoteexecution/
+	protoc -I bazel/remoteexecution/ -I ~/workspace/src/github.com/googleapis/googleapis/ bazel/remoteexecution/remote_execution.proto --go_out=plugins=grpc:bazel/remoteexecution

@@ -31,8 +31,8 @@ fetch the correct client and make it available where needed by Scoot.
 Binaries are fetched from https://binaries.pantsbuild.org
 
 ## GRPC CLI Client
-Testing the gRPC APIs can be done with the grpc_cli tool, which can be used as a client for any gRPC server.
-This has to be built and installed from the grpc repo. See:
+Testing the gRPC APIs can be done with the grpc_cli tool, but formatting the proper data structures is difficult,
+so this method is unsupported. This has to be built and installed from the grpc repo. See:
 https://github.com/grpc/grpc/blob/master/doc/command_line_tool.md
 
 #### Twitter MacBook installation pointers
@@ -41,54 +41,6 @@ Use a global, non-MDE copy of brew to install dependencies such as gflags, as MD
 these libraries accessible when trying to compile and link the grpc binaries.
 
 ### Usage Example
-#### CAS - Apiserver
-This is a brief example of using a locally running default apiserver for a CAS Write and Read request using grpc_cli:
-
-```sh
-apiserver
-```
-
-```sh
-[...]$ grpc_cli call localhost:9098 google.bytestream.ByteStream.Write "resource_name: 'uploads/123e4567-e89b-12d3-a456-426655440000/blobs/ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa67856f242/7', write_offset: 0, finish_write: true, data: 'abc1234'"
-reading streaming request message from stdin...
-Request sent.
-got response.
-committed_size: 7
-
-^C
-```
-
-```sh
-[...]$ grpc_cli call localhost:9098 google.bytestream.ByteStream.Read "resource_name: 'blobs/ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa67856f242/7', read_offset: 0, read_limit: 0"
-connecting to localhost:9098
-data: "abc1234"
-
-Rpc succeeded with OK status
-```
-
-#### Execution - Scheduler
-This is a brief example of using a locally running default scheduler for an Execute request using grpc_cli:
-
-```sh
-scheduler
-```
-
-```sh
-[...]$ grpc_cli call localhost:9099 google.devtools.remoteexecution.v1test.Execution.Execute "action: {command_digest: {hash: 'abc123', size_bytes: 0}, input_root_digest: {hash: 'def456', size_bytes: 0}}"
-connecting to localhost:9099
-name: "operations/737a1171-dea7-47c6-4585-f3f7d4f0245e"
-metadata {
-  type_url: "type.googleapis.com/google.devtools.remoteexecution.v1test.ExecuteOperationMetadata"
-  value: "\010\004\022D\n@522578c80d054569075825ebc82573d7d9c429178d3ecf7a9e276b115fa7837f\020\024"
-}
-done: true
-response {
-  type_url: "type.googleapis.com/google.devtools.remoteexecution.v1test.ExecuteResponse"
-  value: "\n\000"
-}
-
-Rpc succeeded with OK status
-```
 
 #### Remote Execution End-to-End Test Example with BZUtil
 This details how to run a Bazel Remote Execution request in Scoot from scratch.
@@ -96,8 +48,9 @@ The worflow will be:
 1. Start up a scheduler, apiserver, and workerserver
 2. Upload the request Command (argv and env) to the apiserver via the CAS API
 3. Upload the request input directory to the apiserver via fs_util/CAS API
-4. Schedule the request on the scheduler via the Execution API
-5. Get results of the request from the scheduler via the Longrunning API
+5. Upload the request Action (references Command and input) to the apiserver via the CAS API
+5. Schedule the request on the scheduler via the Execution API
+6. Get results of the request from the scheduler via the Longrunning API
 
 1:
 ```sh
@@ -113,32 +66,39 @@ INFO[0000] Wrote to CAS successfully                     sourceLine="bzutil/main
 ```
 
 3:
-Example uploading contents of ~/workspace/dir/. Note that ~/workspace/db/ must exist, but can be empty.
+Example uploading contents of ~/workspace/bazel/dir/. Note that ~/workspace/bazel/db/ must exist, but can be empty.
 We don't need this dir for our particular command, but we're uploading one as an example anyway:
 ```sh
-fs_util --local-store-path=/Users/$USER/workspace/db --server-address=localhost:12100 directory save --root /Users/$USER/workspace/dir "**"
-6740a42ee34b6f2f55af17cc01591042c7ccd69082228cf6838882fb046b02a8 76
+fs_util --local-store-path=/Users/$USER/workspace/bazel/db --server-address=localhost:12100 directory save --root /Users/$USER/workspace/bazel/dir "**"
+89a9068bd2d2784d5379b9fa3d02f02d9d0d7ecf4998a8e45b3d6784aacad4d4 157
 ```
 
 4:
 ```sh
-bzutil execute --command="1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29/11" --input_root="6740a42ee34b6f2f55af17cc01591042c7ccd69082228cf6838882fb046b02a8/76"
-INFO[0000] Operation: dc42f75f-0fc8-4e6c-790f-edac95e6d8cf
-	Done: false
-	Metadata:
-		Stage: QUEUED
-		ActionDigest: 953ac960469b1a04ab7114d615aac7a804c435850cd527091bc85cf7114d071f/144
-  sourceLine="bzutil/main.go:177"
+bzutil upload_action -cas_addr=localhost:12100 -command="1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29/11" -input_root="89a9068bd2d2784d5379b9fa3d02f02d9d0d7ecf4998a8e45b3d6784aacad4d4/157"
+INFO[0000] Wrote to CAS successfully                     sourceLine="bzutil/main.go:220"
+0cb08d1ec25eeed4d7a10d8a2cce85ea7810b76cfd43926e305288b19cf9aa3c/141
 ```
 
 5:
 ```sh
-bzutil get_operation --name="dc42f75f-0fc8-4e6c-790f-edac95e6d8cf"
-INFO[0000] Operation: dc42f75f-0fc8-4e6c-790f-edac95e6d8cf
+bzutil execute --action="0cb08d1ec25eeed4d7a10d8a2cce85ea7810b76cfd43926e305288b19cf9aa3c/141"
+INFO[0000] Operation: b53b5e99-0162-43e1-6cbd-e44f8e6d1566
+	Done: false
+	Metadata:
+		Stage: QUEUED
+		ActionDigest: 905f62f396fd837d111ac96007e38502736799a98f7207f90460004667e7fe25/138
+  sourceLine="bzutil/main.go:236"
+```
+
+6:
+```sh
+bzutil get_operation --name="b53b5e99-0162-43e1-6cbd-e44f8e6d1566"
+INFO[0000] Operation: b53b5e99-0162-43e1-6cbd-e44f8e6d1566
 	Done: true
 	Metadata:
 		Stage: COMPLETED
-		ActionDigest: 953ac960469b1a04ab7114d615aac7a804c435850cd527091bc85cf7114d071f/144
+		ActionDigest: 0cb08d1ec25eeed4d7a10d8a2cce85ea7810b76cfd43926e305288b19cf9aa3c/141
 	ExecResponse:
 		Status:
 			Code: OK
@@ -149,7 +109,14 @@ INFO[0000] Operation: dc42f75f-0fc8-4e6c-790f-edac95e6d8cf
 			OutputDirectories: []
 			StdoutDigest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855/0
 			StderrDigest: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855/0
-  sourceLine="bzutil/main.go:187"
+			ExecutionMetadata:
+				Worker: bazel-worker
+				QueueLatency: 420ms
+				WorkerTotal: 17078ms
+				InputFetch: 35ms
+				Execution: 17031ms
+				OutputUpload: 3ms
+  sourceLine="bzutil/main.go:246"
 ```
 
 ### GRPC through a proxy

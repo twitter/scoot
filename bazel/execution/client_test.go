@@ -7,11 +7,8 @@ package execution
 //	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context"
 //	this seems to be a go version/mock incompatability
 //
-//  mockgen -source=/Users/$(whoami)/workspace/src/github.com/twitter/scoot/bazel/remoteexecution/remote_execution.pb.go ExecutionClient > bazel/execution/mock_remoteexecution/execclient_mock.go
-// NOTE: in the generated file, add the following line to the import list:
-//	. "github.com/twitter/scoot/bazel/remoteexecution"
-// this is due to a longstanding gomock bug the owners are sitting on: https://github.com/golang/mock/issues/77
-//
+// mockgen github.com/twitter/scoot/bazel/remoteexecution ExecutionClient,ActionCacheClient > bazel/execution/mock_remoteexecution/execclient_mock.go
+//	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context" and re fmt
 
 import (
 	"testing"
@@ -20,12 +17,13 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
+	"google.golang.org/grpc"
 
 	"github.com/twitter/scoot/bazel/execution/mock_longrunning"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
 )
 
-func TestGetOperation(t *testing.T) {
+func TestClientGetOperation(t *testing.T) {
 	testOperation := "testOp1"
 	getReq := &longrunning.GetOperationRequest{Name: testOperation}
 
@@ -62,7 +60,7 @@ func TestGetOperation(t *testing.T) {
 	}
 }
 
-func TestExecute(t *testing.T) {
+func TestClientExecute(t *testing.T) {
 	req := &remoteexecution.ExecuteRequest{}
 
 	eomAsPBAny, err := marshalAny(&remoteexecution.ExecuteOperationMetadata{})
@@ -83,9 +81,11 @@ func TestExecute(t *testing.T) {
 		},
 	}
 
+	fakeClient := &fakeExecClient{static: opRes}
+
 	mockCtrl := gomock.NewController(t)
 	execClientMock := mock_remoteexecution.NewMockExecutionClient(mockCtrl)
-	execClientMock.EXPECT().Execute(context.Background(), req).Return(opRes, nil)
+	execClientMock.EXPECT().Execute(context.Background(), req).Return(fakeClient, nil)
 
 	op, err := execFromClient(execClientMock, req)
 	if err != nil {
@@ -96,4 +96,19 @@ func TestExecute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error parsing resulting Operation: %s", err)
 	}
+}
+
+// Fake Execution_ExecuteClient
+// Implements Execution_ExecuteClient interface
+type fakeExecClient struct {
+	grpc.ClientStream
+	static *longrunning.Operation
+}
+
+func (c *fakeExecClient) Recv() (*longrunning.Operation, error) {
+	return c.static, nil
+}
+
+func (c *fakeExecClient) CloseSend() error {
+	return nil
 }

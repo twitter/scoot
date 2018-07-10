@@ -29,21 +29,16 @@ func TestGetEmptySha256(t *testing.T) {
 // ExecuteRequests. If this starts to fail, it indicates an instability in hashing Action messages.
 func TestGetActionSha256(t *testing.T) {
 	a := &remoteexecution.Action{
-		CommandDigest:     &remoteexecution.Digest{Hash: "abc123", SizeBytes: 10},
-		InputRootDigest:   &remoteexecution.Digest{Hash: "def456", SizeBytes: 20},
-		OutputFiles:       []string{"output"},
-		OutputDirectories: []string{"/data"},
-		Platform: &remoteexecution.Platform{
-			Properties: []*remoteexecution.Platform_Property{&remoteexecution.Platform_Property{Name: "abc", Value: "123"}},
-		},
-		Timeout:    GetDurationFromMs(60000),
-		DoNotCache: true,
+		CommandDigest:   &remoteexecution.Digest{Hash: "abc123", SizeBytes: 10},
+		InputRootDigest: &remoteexecution.Digest{Hash: "def456", SizeBytes: 20},
+		Timeout:         GetDurationFromMs(60000),
+		DoNotCache:      true,
 	}
 	s, _, err := GetSha256(a)
 	if err != nil {
 		t.Fatalf("GetSha256 failure: %v", err)
 	}
-	expectedSha := "4d1e3f9c9ff80c29be01efb35ddeb7c11cb3f91c79ee183aaaf52c3623c8772c"
+	expectedSha := "ee30b3288c00f2b0e89d49138ca1ff2c0e8223b0de59b491b8de555595f22586"
 	if s != expectedSha {
 		t.Fatalf("Expected known sha for message data: %s, got: %s", expectedSha, s)
 	}

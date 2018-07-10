@@ -34,19 +34,15 @@ func validateExecRequest(req *remoteexecution.ExecuteRequest) error {
 	if req == nil {
 		return fmt.Errorf("Unexpected nil execute request")
 	}
-	cmdDigest := req.GetAction().GetCommandDigest()
-	inputDigest := req.GetAction().GetInputRootDigest()
-	if !bazel.IsValidDigest(cmdDigest.GetHash(), cmdDigest.GetSizeBytes()) {
-		return fmt.Errorf("Request action command digest is invalid")
-	}
-	if !bazel.IsValidDigest(inputDigest.GetHash(), inputDigest.GetSizeBytes()) {
-		return fmt.Errorf("Request action input root digest is invalid")
+	actionDigest := req.GetActionDigest()
+	if !bazel.IsValidDigest(actionDigest.GetHash(), actionDigest.GetSizeBytes()) {
+		return fmt.Errorf("Request action digest is invalid")
 	}
 	return nil
 }
 
 // Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
-func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string, actionLen int64) (
+func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 	result sched.JobDefinition, err error) {
 	if err := validateExecRequest(req); err != nil {
 		return result, err
@@ -58,12 +54,6 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string, actio
 	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
 
-	d, err := time.ParseDuration(fmt.Sprintf("%dms", scootproto.GetMsFromDuration(req.GetAction().GetTimeout())))
-	if err != nil {
-		log.Errorf("Failed to parse Timeout from Action: %s", err)
-		return result, err
-	}
-
 	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
 	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
 	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker
@@ -72,17 +62,12 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest, actionSha string, actio
 	// ExecutionMetadata is seeded with current time of queueing
 	now := time.Now()
 	var task sched.TaskDefinition
-	task.TaskID = fmt.Sprintf("Bazel_ExecuteRequest_%s_%d", actionSha, now.Unix())
-	task.Command.Argv = []string{"BZ_PLACEHOLDER"}
+	task.TaskID = fmt.Sprintf("%s_%s_%d", TaskIDPrefix, req.GetActionDigest(), now.Unix())
+	task.Command.Argv = []string{CommandDefault}
 	task.Command.EnvVars = make(map[string]string)
-	task.Command.Timeout = d
-	task.Command.SnapshotID = bazel.SnapshotIDFromDigest(req.GetAction().GetInputRootDigest())
+	task.Command.SnapshotID = bazel.SnapshotIDFromDigest(req.GetActionDigest())
 	task.Command.ExecuteRequest = &bazelapi.ExecuteRequest{
 		Request: req,
-		ActionDigest: &remoteexecution.Digest{
-			Hash:      actionSha,
-			SizeBytes: actionLen,
-		},
 		ExecutionMetadata: &remoteexecution.ExecutedActionMetadata{
 			QueuedTimestamp: scootproto.GetTimestampFromTime(now),
 		},

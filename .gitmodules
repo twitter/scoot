@@ -54,7 +54,10 @@
 	path = vendor/github.com/sirupsen/logrus
 	url = https://github.com/sirupsen/logrus
     branch = f006c2ac4710855cf0f916dd6b77acf6b048dc6e
-
+[submodule "vendor/github.com/bazelbuild/remote-apis"]
+	path = vendor/github.com/bazelbuild/remote-apis
+	url = https://github.com/bazelbuild/remote-apis
+	branch = cbf6ada7f5b2a0ce14646bf983d03b49118f0ec8
 [submodule "vendor/github.com/golang/groupcache"]
 	path = vendor/github.com/golang/groupcache
 	url = https://github.com/golang/groupcache

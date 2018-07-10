@@ -12,6 +12,9 @@ const (
 
 	// Default buffer sizes
 	DefaultReadCapacity = 1024 * 1024
+
+	// ActionCache constants
+	ResultAddressKey = "ActionCacheResult"
 )
 
 // Resource naming format guidelines

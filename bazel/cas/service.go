@@ -4,6 +4,7 @@ package cas
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -108,9 +109,8 @@ func (s *casServer) BatchUpdateBlobs(
 
 // GetTree not supported in Scoot for V1
 func (s *casServer) GetTree(
-	ctx context.Context,
-	req *remoteexecution.GetTreeRequest) (*remoteexecution.GetTreeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
+	req *remoteexecution.GetTreeRequest, gtServer remoteexecution.ContentAddressableStorage_GetTreeServer) error {
+	return status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
 }
 
 // ByteStream APIs
@@ -339,6 +339,37 @@ func (s *casServer) QueryWriteStatus(
 
 // ActionCache APIs
 
+// V2 API requires explicit uploading of Actions prior to Execution. Because of this,
+// cached ActionResults cannot be directly addressed by the ActionDigest (collision).
+// We address the ActionResult by serializing the ActionDigest with a constant string
+// and getting its hash to use for a unique and predictable blobstore address.
+type cacheResultAddress struct {
+	actionDigest *remoteexecution.Digest
+	storeName    string
+}
+
+func makeCacheResultAddress(ad *remoteexecution.Digest) (*cacheResultAddress, error) {
+	if ad == nil {
+		return nil, fmt.Errorf("Nil ActionDigest provided to NewResultAddress")
+	}
+
+	// form consistent string using ActionDigest, turn into bytes, transform into store name
+	addressKey := fmt.Sprintf("%s-%s", ad.GetHash(), ResultAddressKey)
+	buffer := bytes.NewBufferString(addressKey)
+	addressBytes := buffer.Bytes()
+	len := len(addressBytes)
+	sha := fmt.Sprintf("%x", sha256.Sum256(addressBytes))
+	addressDigest, err := bazel.DigestFromString(fmt.Sprintf("%s/%d", sha, len))
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create digest for cache result address: %v", err)
+	}
+
+	return &cacheResultAddress{
+		actionDigest: ad,
+		storeName:    bazel.DigestStoreName(addressDigest),
+	}, nil
+}
+
 // Retrieve a cached execution result. Results are keyed on ActionDigests of run commands.
 func (s *casServer) GetActionResult(ctx context.Context,
 	req *remoteexecution.GetActionResultRequest) (*remoteexecution.ActionResult, error) {
@@ -361,27 +392,31 @@ func (s *casServer) GetActionResult(ctx context.Context,
 		return &remoteexecution.ActionResult{}, nil
 	}
 
-	// Attempt to read AR from Store. If we error on opening, assume the resource was not found
-	storeName := bazel.DigestStoreName(req.GetActionDigest())
-	log.Infof("Opening store resource for reading: %s", storeName)
+	address, err := makeCacheResultAddress(req.GetActionDigest())
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to create cache result address: %v", err))
+	}
 
-	r, err := s.storeConfig.Store.OpenForRead(storeName)
+	// Attempt to read AR from Store. If we error on opening, assume the resource was not found
+	log.Infof("Opening store resource for reading: %s", address.storeName)
+
+	r, err := s.storeConfig.Store.OpenForRead(address.storeName)
 	if err != nil {
 		log.Errorf("Failed to OpenForRead: %v", err)
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Failed opening %s for read, returning NotFound. Err: %v", storeName, err))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Failed opening %s for read, returning NotFound. Err: %v", address.storeName, err))
 	}
 	defer r.Close()
 
 	arAsBytes, err := ioutil.ReadAll(r)
 	if err != nil {
-		log.Errorf("Failed reading ActionResult from Store (resource %s): %s", storeName, err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Error reading from %s: %s", storeName, err))
+		log.Errorf("Failed reading ActionResult from Store (resource %s): %s", address.storeName, err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error reading from %s: %s", address.storeName, err))
 	}
 
 	// Deserialize store data as AR
 	ar := &remoteexecution.ActionResult{}
 	if err := proto.Unmarshal(arAsBytes, ar); err != nil {
-		log.Errorf("Failed to deserialize bytes from %s as ActionResult: %s", storeName, err)
+		log.Errorf("Failed to deserialize bytes from %s as ActionResult: %s", address.storeName, err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Error deserializing ActionResult: %s", err))
 	}
 
@@ -422,6 +457,11 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Error serializing ActionResult: %s", err))
 	}
 
+	address, err := makeCacheResultAddress(req.GetActionDigest())
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to create cache result address: %v", err))
+	}
+
 	// Write to store
 	// TODO use CAS Default TTL setting until API supports cache priority settings
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
@@ -429,11 +469,10 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 		ttl.TTL = time.Now().Add(DefaultTTL)
 	}
 
-	storeName := bazel.DigestStoreName(req.GetActionDigest())
-	err = s.storeConfig.Store.Write(storeName, bytes.NewReader(asBytes), ttl)
+	err = s.storeConfig.Store.Write(address.storeName, bytes.NewReader(asBytes), ttl)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", address.storeName, err))
 	}
 
 	log.Infof("UpdateActionResult wrote result to cache: %s", req.GetActionResult())

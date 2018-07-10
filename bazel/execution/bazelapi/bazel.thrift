@@ -10,27 +10,10 @@
 # NOTE on Thrift IDL - Always define included data structures above the structures
 # that use them, as Thrift will generate undesirable code otherwise
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Digest
+# Modeled after github.com/bazelbuild/remote-apis#Digest
 struct Digest {
   1: optional string hash
   2: optional i64 sizeBytes
-}
-
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Platform_Property
-struct Property {
-  1: optional string name
-  2: optional string value
-}
-
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#Action
-struct Action {
-  1: optional Digest commandDigest
-  2: optional Digest inputDigest
-  3: optional list<string> outputFiles
-  4: optional list<string> outputDirs
-  5: optional list<Property> platformProperties
-  6: optional i64 timeoutMs
-  7: optional bool noCache
 }
 
 # Modeled after https://godoc.org/github.com/golang/protobuf/ptypes/timestamp
@@ -39,7 +22,7 @@ struct Timestamp {
     2: optional i32 nanos
 }
 
-# Prototype, modeled after bazel/remoteexecution/remote_execution.proto#ExecutedActionMetadata
+# Modeled after github.com/bazelbuild/remote-apis#ExecutedActionMetadata
 struct ExecutedActionMetadata {
     1: optional string worker
     2: optional Timestamp queuedTimestamp
@@ -53,45 +36,54 @@ struct ExecutedActionMetadata {
     10: optional Timestamp outputUploadCompletedTimestamp
 }
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ExecuteRequest
-# Added Digest field for passing around actionDigest
+# Modeled after github.com/bazelbuild/remote-apis#ExecutionPolicy
+struct ExecutionPolicy {
+  1: optional i32 priority
+}
+
+# Modeled after github.com/bazelbuild/remote-apis#ResultsCachePolicy
+struct ResultsCachePolicy {
+  1: optional i32 priority
+}
+
+# Modeled after github.com/bazelbuild/remote-apis#ExecuteRequest
 # Added ExecutionMetadata field so worker has access to scheduling timestamp data
 struct ExecuteRequest {
-  1: optional Action action
-  2: optional string instanceName
-  3: optional bool skipCache
-  4: optional Digest actionDigest
-  5: optional ExecutedActionMetadata executionMetadata
+  1: optional string instanceName
+  2: optional bool skipCache
+  3: optional Digest actionDigest
+  4: optional ExecutionPolicy executionPolicy
+  5: optional ResultsCachePolicy resultsCachePolicy
+  6: optional ExecutedActionMetadata executionMetadata
 }
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputFile
+# Modeled after github.com/bazelbuild/remote-apis#OutputFile
 struct OutputFile {
-  1: optional Digest digest
-  2: optional string path
-  3: optional binary content
-  4: optional bool isExecutable
+  1: optional string path
+  2: optional Digest digest
+  3: optional bool isExecutable
 }
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#OutputDirectory
+# Modeled after github.com/bazelbuild/remote-apis#OutputDirectory
 struct OutputDirectory {
-  1: optional Digest treeDigest
-  2: optional string path
+  1: optional string path
+  2: optional Digest treeDigest
 }
 
-# Modeled after https://godoc.org/google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test#ActionResult
+# Modeled after github.com/bazelbuild/remote-apis#ActionResult
 # Added Digest field for passing around actionDigest
 # Added GRPCStatus field for passing a googleapis rpc status value as protobuf-serialized bytes
 # Added cached field for signaling whether the result was retrieved from ActionCache and not executed
 struct ActionResult {
-  1: optional Digest stdoutDigest
-  2: optional Digest stderrDigest
-  3: optional binary stdoutRaw
-  4: optional binary stderrRaw
-  5: optional list<OutputFile> outputFiles
-  6: optional list<OutputDirectory> outputDirectories
-  7: optional i32 exitCode
-  8: optional Digest actionDigest
-  9: optional binary GRPCStatus
-  10: optional bool cached
-  11: optional ExecutedActionMetadata executionMetadata
+  1: optional list<OutputFile> outputFiles
+  2: optional list<OutputDirectory> outputDirectories
+  3: optional i32 exitCode
+  4: optional binary stdoutRaw
+  5: optional Digest stdoutDigest
+  6: optional binary stderrRaw
+  7: optional Digest stderrDigest
+  8: optional ExecutedActionMetadata executionMetadata
+  9: optional Digest actionDigest
+  10: optional binary GRPCStatus
+  11: optional bool cached
 }
