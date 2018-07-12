@@ -234,6 +234,7 @@ func execute(execAddr, actionDigestStr string, skipCache bool) {
 		log.Fatalf("Error making Execute request: %s", err)
 	}
 	log.Info(execution.ExecuteOperationToStr(operation))
+	fmt.Printf("%s", operation.GetName())
 }
 
 func getOperation(execAddr, opName string) {
@@ -244,6 +245,7 @@ func getOperation(execAddr, opName string) {
 	}
 
 	log.Info(execution.ExecuteOperationToStr(operation))
+	fmt.Printf(operation.GetDone())
 }
 
 func printSupported() {

@@ -48,7 +48,7 @@ The worflow will be:
 1. Start up a scheduler, apiserver, and workerserver
 2. Upload the request Command (argv and env) to the apiserver via the CAS API
 3. Upload the request input directory to the apiserver via fs_util/CAS API
-5. Upload the request Action (references Command and input) to the apiserver via the CAS API
+4. Upload the request Action (references Command and input) to the apiserver via the CAS API
 5. Schedule the request on the scheduler via the Execution API
 6. Get results of the request from the scheduler via the Longrunning API
 
@@ -75,7 +75,7 @@ fs_util --local-store-path=/Users/$USER/workspace/bazel/db --server-address=loca
 
 4:
 ```sh
-bzutil upload_action -cas_addr=localhost:12100 -command="1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29/11" -input_root="89a9068bd2d2784d5379b9fa3d02f02d9d0d7ecf4998a8e45b3d6784aacad4d4/157"
+bzutil upload_action --cas_addr=localhost:12100 --command="1833d7c57656d2b7ee97e2068ce742f80e61357fba12a8b8d627782da3a58c29/11" --input_root="89a9068bd2d2784d5379b9fa3d02f02d9d0d7ecf4998a8e45b3d6784aacad4d4/157"
 INFO[0000] Wrote to CAS successfully                     sourceLine="bzutil/main.go:220"
 0cb08d1ec25eeed4d7a10d8a2cce85ea7810b76cfd43926e305288b19cf9aa3c/141
 ```
