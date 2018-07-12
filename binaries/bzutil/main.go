@@ -10,6 +10,7 @@ package main
 // * longrunning.GetOperation polling of operation/scootjob by name and pretty print of result
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -67,11 +68,13 @@ func main() {
 	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	execActionDigest := execCommand.String("action", "", "Action digest as '<hash>/<size>'")
 	execSkipCache := execCommand.Bool("skip_cache", false, "Skip checking for cached results")
+	execJson := execCommand.Bool("json", false, "Print operation as JSON")
 
 	// Get Operation
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
+	getJson := execCommand.Bool("json", false, "Print operation as JSON")
 
 	// Parse input flags
 	if len(os.Args) < 2 {
@@ -108,12 +111,12 @@ func main() {
 		if *execActionDigest == "" {
 			log.Fatalf("action digest required for %s", execCmdStr)
 		}
-		execute(*execAddr, *execActionDigest, *execSkipCache)
+		execute(*execAddr, *execActionDigest, *execSkipCache, *execJson)
 	} else if getCommand.Parsed() {
 		if *getName == "" {
 			log.Fatalf("name required for %s", getOpCmdStr)
 		}
-		getOperation(*getAddr, *getName)
+		getOperation(*getAddr, *getName, *getJson)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -221,7 +224,7 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache boo
 	fmt.Printf("%s/%d\n", hash, size)
 }
 
-func execute(execAddr, actionDigestStr string, skipCache bool) {
+func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
 	r := dialer.NewConstantResolver(execAddr)
 
 	actionDigest, err := bazel.DigestFromString(actionDigestStr)
@@ -234,10 +237,16 @@ func execute(execAddr, actionDigestStr string, skipCache bool) {
 		log.Fatalf("Error making Execute request: %s", err)
 	}
 	log.Info(execution.ExecuteOperationToStr(operation))
-	fmt.Printf("%s", operation.GetName())
+	if execJson {
+		b, err := json.Marshal(operation)
+		if err != nil {
+			log.Fatalf("Error converting operation to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	}
 }
 
-func getOperation(execAddr, opName string) {
+func getOperation(execAddr, opName string, getJson bool) {
 	r := dialer.NewConstantResolver(execAddr)
 	operation, err := execution.GetOperation(r, opName)
 	if err != nil {
@@ -245,7 +254,13 @@ func getOperation(execAddr, opName string) {
 	}
 
 	log.Info(execution.ExecuteOperationToStr(operation))
-	fmt.Printf(operation.GetDone())
+	if getJson {
+		b, err := json.Marshal(operation)
+		if err != nil {
+			log.Fatalf("Error converting operation to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	}
 }
 
 func printSupported() {
