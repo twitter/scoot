@@ -74,7 +74,7 @@ func main() {
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
-	getJson := execCommand.Bool("json", false, "Print operation as JSON")
+	getJson := getCommand.Bool("json", false, "Print operation as JSON")
 
 	// Parse input flags
 	if len(os.Args) < 2 {
