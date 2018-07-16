@@ -55,7 +55,7 @@ func main() {
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
-	uploadJson := uploadCommand.Bool("json", false, "Print command as JSON")
+	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON")
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
@@ -63,7 +63,7 @@ func main() {
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
 	actionRootDigest := uploadAction.String("input_root", "", "Input root digest as '<hash>/<size>'")
 	actionNoCache := uploadAction.Bool("no_cache", false, "Flag to prevent result caching")
-	actionJson := uploadAction.Bool("json", false, "Print action as JSON")
+	actionJson := uploadAction.Bool("json", false, "Print action digest as JSON")
 
 	// Execute
 	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
