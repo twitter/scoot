@@ -38,3 +38,10 @@ func DigestFromString(s string) (*remoteexecution.Digest, error) {
 	}
 	return DigestFromSnapshotID(snap)
 }
+
+func DigestToStr(d *remoteexecution.Digest) string {
+	if d == nil || d.GetHash() == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%d", d.GetHash(), d.GetSizeBytes())
+}

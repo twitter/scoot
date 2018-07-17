@@ -12,6 +12,7 @@ import (
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/proto"
 )
@@ -125,7 +126,7 @@ func ExecuteOperationToStr(op *longrunning.Operation) string {
 	s := fmt.Sprintf("Operation: %s\n\tDone: %t\n", op.GetName(), op.GetDone())
 	s += fmt.Sprintf("\tMetadata:\n")
 	s += fmt.Sprintf("\t\tStage: %s\n", eom.GetStage())
-	s += fmt.Sprintf("\t\tActionDigest: %s\n", DigestToStr(eom.GetActionDigest()))
+	s += fmt.Sprintf("\t\tActionDigest: %s\n", bazel.DigestToStr(eom.GetActionDigest()))
 	if res != nil {
 		s += fmt.Sprintf("\tExecResponse:\n")
 		s += fmt.Sprintf("\t\tStatus: %s\n", res.GetStatus())
@@ -135,8 +136,8 @@ func ExecuteOperationToStr(op *longrunning.Operation) string {
 		s += fmt.Sprintf("\t\t\tExitCode: %d\n", res.GetResult().GetExitCode())
 		s += fmt.Sprintf("\t\t\tOutputFiles: %s\n", res.GetResult().GetOutputFiles())
 		s += fmt.Sprintf("\t\t\tOutputDirectories: %s\n", res.GetResult().GetOutputDirectories())
-		s += fmt.Sprintf("\t\t\tStdoutDigest: %s\n", DigestToStr(res.GetResult().GetStdoutDigest()))
-		s += fmt.Sprintf("\t\t\tStderrDigest: %s\n", DigestToStr(res.GetResult().GetStderrDigest()))
+		s += fmt.Sprintf("\t\t\tStdoutDigest: %s\n", bazel.DigestToStr(res.GetResult().GetStdoutDigest()))
+		s += fmt.Sprintf("\t\t\tStderrDigest: %s\n", bazel.DigestToStr(res.GetResult().GetStderrDigest()))
 		if res.GetResult().GetExecutionMetadata() != nil {
 			em := res.GetResult().GetExecutionMetadata()
 			s += fmt.Sprintf("\t\t\tExecutionMetadata:\n")
@@ -149,13 +150,6 @@ func ExecuteOperationToStr(op *longrunning.Operation) string {
 		}
 	}
 	return s
-}
-
-func DigestToStr(d *remoteexecution.Digest) string {
-	if d == nil || d.GetHash() == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s/%d", d.GetHash(), d.GetSizeBytes())
 }
 
 func addLatencyToStr(inputStr, indent, label string, startTs, endTs *timestamp.Timestamp) string {

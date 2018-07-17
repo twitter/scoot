@@ -185,7 +185,7 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 	}
 
 	log.Info("Wrote to CAS successfully")
-	log.Info(execution.DigestToStr(digest))
+	log.Info(bazel.DigestToStr(digest))
 	if uploadJson {
 		b, err := json.Marshal(digest)
 		if err != nil {
@@ -230,7 +230,7 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 	}
 
 	log.Info("Wrote to CAS successfully")
-	log.Info(execution.DigestToStr(digest))
+	log.Info(bazel.DigestToStr(digest))
 	if actionJson {
 		b, err := json.Marshal(digest)
 		if err != nil {
