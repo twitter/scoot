@@ -55,6 +55,7 @@ func main() {
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
+	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON")
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
@@ -62,6 +63,7 @@ func main() {
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
 	actionRootDigest := uploadAction.String("input_root", "", "Input root digest as '<hash>/<size>'")
 	actionNoCache := uploadAction.Bool("no_cache", false, "Flag to prevent result caching")
+	actionJson := uploadAction.Bool("json", false, "Print action digest as JSON")
 
 	// Execute
 	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
@@ -101,12 +103,12 @@ func main() {
 		if len(uploadArgv) == 0 {
 			log.Fatalf("Argv required for %s - will interpret all non-flag arguments as Argv", uploadCmdStr)
 		}
-		uploadBzCommand(uploadArgv, *uploadAddr, *uploadEnv, *uploadOutputFiles, *uploadOutputDirs)
+		uploadBzCommand(uploadArgv, *uploadAddr, *uploadEnv, *uploadOutputFiles, *uploadOutputDirs, *uploadJson)
 	} else if uploadAction.Parsed() {
 		if *actionCommandDigest == "" || *actionRootDigest == "" {
 			log.Fatalf("command and input_root required for %s", execCmdStr)
 		}
-		uploadBzAction(*actionAddr, *actionCommandDigest, *actionRootDigest, *actionNoCache)
+		uploadBzAction(*actionAddr, *actionCommandDigest, *actionRootDigest, *actionNoCache, *actionJson)
 	} else if execCommand.Parsed() {
 		if *execActionDigest == "" {
 			log.Fatalf("action digest required for %s", execCmdStr)
@@ -122,7 +124,7 @@ func main() {
 	}
 }
 
-func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsStr string) {
+func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsStr string, uploadJson bool) {
 	envMap := make(map[string]string)
 	for _, pair := range strings.Split(env, ",") {
 		if pair == "" {
@@ -183,10 +185,17 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 	}
 
 	log.Info("Wrote to CAS successfully")
-	fmt.Printf("%s/%d\n", hash, size)
+	log.Info(bazel.DigestToStr(digest))
+	if uploadJson {
+		b, err := json.Marshal(digest)
+		if err != nil {
+			log.Fatalf("Error converting digest to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	}
 }
 
-func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache bool) {
+func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, actionJson bool) {
 	commandDigest, err := bazel.DigestFromString(commandDigestStr)
 	if err != nil {
 		log.Fatalf("Error converting action to Digest: %s", err)
@@ -221,7 +230,14 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache boo
 	}
 
 	log.Info("Wrote to CAS successfully")
-	fmt.Printf("%s/%d\n", hash, size)
+	log.Info(bazel.DigestToStr(digest))
+	if actionJson {
+		b, err := json.Marshal(digest)
+		if err != nil {
+			log.Fatalf("Error converting digest to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	}
 }
 
 func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
