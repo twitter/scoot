@@ -467,21 +467,21 @@ func (s *fakeWriteServer) SendAndClose(res *bytestream.WriteResponse) error {
 
 func (s *fakeWriteServer) Recv() (*bytestream.WriteRequest, error) {
 	// Format a WriteRequest based on the chunks requested and the offset of what has been recvd
-	recvLen := int64(len(s.data) / s.recvChunks)
+	chunkSize := int64(len(s.data) / s.recvChunks)
 	if s.recvCount+1 >= s.recvChunks {
-		recvLen = int64(len(s.data)) - s.offset
+		chunkSize = int64(len(s.data)) - s.offset
 	}
 	finished := false
-	if recvLen+s.offset >= int64(len(s.data)) {
+	if chunkSize+s.offset >= int64(len(s.data)) {
 		finished = true
 	}
 	r := &bytestream.WriteRequest{
 		ResourceName: s.resourceName,
-		WriteOffset:  0,
+		WriteOffset:  s.offset,
 		FinishWrite:  finished,
-		Data:         s.data[s.offset : s.offset+recvLen],
+		Data:         s.data[s.offset : s.offset+chunkSize],
 	}
-	s.offset = s.offset + recvLen
+	s.offset = s.offset + chunkSize
 	s.recvCount++
 	return r, nil
 }

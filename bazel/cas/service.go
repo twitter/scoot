@@ -224,6 +224,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 	var p []byte
 	var buffer *bytes.Buffer
+	var committed int64 = 0
 	var resource *Resource = nil
 	resourceName, storeName := "", ""
 	var err error
@@ -286,12 +287,13 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			log.Errorf("Invalid resource name in subsequent request: %s", wr.GetResourceName())
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
 		}
-		if wr.GetWriteOffset() > 0 {
+		if wr.GetWriteOffset() != committed {
 			log.Error("Invalid write offset")
-			return status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("WriteOffset invalid: got %d after committing %d bytes", wr.GetWriteOffset(), committed))
 		}
 
 		buffer.Write(wr.GetData())
+		committed += int64(len(wr.GetData()))
 
 		// Per API, client indicates all data has been sent
 		if wr.GetFinishWrite() {
@@ -300,7 +302,6 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	}
 
 	// Get committed length and verify - Digest size can be arbitrarily set by the client, but is a trusted value after insertion
-	committed := int64(buffer.Len())
 	if committed != resource.Digest.GetSizeBytes() {
 		log.Errorf("Data length/digest mismatch: %d/%d", committed, resource.Digest.GetSizeBytes())
 		return status.Error(codes.Internal, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
