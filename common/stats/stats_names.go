@@ -516,66 +516,62 @@ const (
 
 	/****************************** Bazel Metrics **********************************************/
 
-	// TODO Gauge values not effective - just getting the last-set value at every metric post/publish interval
-	//	histogram the only effective way of doing this? P-vals like latency calculated & emitted each interval
-	//	probable have to add histogram to stats
-	// TODO Not clear from these what component they are emitted by
 	/****************************** Execution Service ******************************************/
 	/*
-		Execute API metrics
+		Execute API metrics emitted by Scheduler
 	*/
 	BzExecSuccessCounter = "bzExecSuccessCounter"
 	BzExecFailureCounter = "bzExecFailureCounter"
 	BzExecLatency_ms     = "bzExecLatency_ms"
 
 	/*
-		Longrunning GetOperation API metrics
+		Longrunning GetOperation API metrics emitted by Scheduler
 	*/
 	BzGetOpSuccessCounter = "bzGetOpSuccessCounter"
 	BzGetOpFailureCounter = "bzGetOpFailureCounter"
 	BzGetOpLatency_ms     = "bzGetOpLatency_ms"
 
 	/*
-		Execution metadata timing metrics
+		Execution metadata timing metrics emitted by Worker
 	*/
-	BzExecQueuedLatency_ms = "bzExecQueuedLatency_ms"
-	BzExecExecerTime_ms    = "bzExecExecerTime_ms"
+	BzExecQueuedTimeHistogram_ms = "bzExecQueuedTimeHistogram_ms"
+	BzExecExecerTimeHistogram_ms = "bzExecExecerTimeHistogram_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
-		FindMissingBlobs API metrics
+		FindMissingBlobs API metrics emitted by Apiserver
 	*/
-	BzFindBlobsSuccessCounter = "bzFindBlobsSuccessCounter"
-	BzFindBlobsFailureCounter = "bzFindBlobsFailureCounter"
-	BzFindBlobsLengthGauge    = "bzFindlobsLengthGauge"
-	BzFindBlobsLatency_ms     = "bzFindBlobsLatency_ms"
+	BzFindBlobsSuccessCounter  = "bzFindBlobsSuccessCounter"
+	BzFindBlobsFailureCounter  = "bzFindBlobsFailureCounter"
+	BzFindBlobsLengthHistogram = "bzFindlobsLengthHistogram"
+	BzFindBlobsLatency_ms      = "bzFindBlobsLatency_ms"
 
 	/*
-		CAS Read API metrics
+		CAS Read API metrics emitted by Apiserver
 	*/
 	BzReadSuccessCounter = "bzReadSuccessCounter"
 	BzReadFailureCounter = "bzReadFailureCounter"
-	BzReadBytesGauge     = "bzReadBytesGauge"
+	BzReadBytesHistogram = "bzReadBytesHistogram"
 	BzReadLatency_ms     = "bzReadLatency_ms"
 
 	/*
-		CAS Write API metrics
+		CAS Write API metrics emitted by Apiserver
 	*/
 	BzWriteSuccessCounter = "bzWriteSuccessCounter"
 	BzWriteFailureCounter = "bzWriteFailureCounter"
-	BzWriteBytesGauge     = "bzWriteBytesGauge"
+	BzWriteBytesHistogram = "bzWriteBytesHistogram"
 	BzWriteLatency_ms     = "bzWriteLatency_ms"
 
 	/****************************** ActionCache Service ****************************************/
 	/*
-		GetActionResult API metrics
+		GetActionResult API metrics emitted by Apiserver
 	*/
 	BzGetActionSuccessCounter = "bzGetActionSuccessCounter"
 	BzGetActionFailureCounter = "bzGetActionFailureCounter"
 	BzGetActionLatency_ms     = "bzGetActionLatency_ms"
 
 	/*
-		UpdateActionResult API metrics
+		UpdateActionResult API metrics emitted by Apiserver
 	*/
 	BzUpdateActionSuccessCounter = "bzUpdateActionSuccessCounter"
 	BzUpdateActionFailureCounter = "bzUpdateActionFailureCounter"

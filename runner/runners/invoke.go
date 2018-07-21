@@ -415,8 +415,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
 			execerTime := rts.execEnd.Sub(rts.execStart)
-			inv.stat.Gauge(stats.BzExecQueuedLatency_ms).Update(int64(queuedDuration / time.Millisecond))
-			inv.stat.Gauge(stats.BzExecExecerTime_ms).Update(int64(execerTime / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecExecerTimeHistogram_ms).Update(int64(execerTime / time.Millisecond))
 
 			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})

@@ -83,7 +83,7 @@ func (s *casServer) FindMissingBlobs(
 	defer func() {
 		if err == nil {
 			s.stat.Counter(stats.BzFindBlobsSuccessCounter).Inc(1)
-			s.stat.Gauge(stats.BzFindBlobsLengthGauge).Update(length)
+			s.stat.Histogram(stats.BzFindBlobsLengthHistogram).Update(length)
 		} else {
 			s.stat.Counter(stats.BzFindBlobsFailureCounter).Inc(1)
 		}
@@ -144,7 +144,9 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	defer func() {
 		if err == nil {
 			s.stat.Counter(stats.BzReadSuccessCounter).Inc(1)
-			s.stat.Gauge(stats.BzReadBytesGauge).Update(length)
+			if length > 0 {
+				s.stat.Histogram(stats.BzReadBytesHistogram).Update(length)
+			}
 		} else {
 			s.stat.Counter(stats.BzReadFailureCounter).Inc(1)
 		}
@@ -259,7 +261,9 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	defer func() {
 		if err == nil {
 			s.stat.Counter(stats.BzWriteSuccessCounter).Inc(1)
-			s.stat.Gauge(stats.BzWriteBytesGauge).Update(committed)
+			if committed > 0 {
+				s.stat.Histogram(stats.BzWriteBytesHistogram).Update(committed)
+			}
 		} else {
 			s.stat.Counter(stats.BzWriteFailureCounter).Inc(1)
 		}
