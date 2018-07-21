@@ -76,8 +76,18 @@ func (s *executionServer) Execute(
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzExecRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzExecRequestLatency_ms).Time().Stop()
+
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzExecSuccessCounter).Inc(1)
+		} else {
+			s.stat.Counter(stats.BzExecFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzExecLatency_ms).Time().Stop()
 
 	// Transform ExecuteRequest into Scoot Job, validate and schedule
 	// If we encounter an error here, assume it was due to an InvalidArgument
@@ -151,8 +161,18 @@ func (s *executionServer) GetOperation(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzGetOpRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzGetOpRequestLatency_ms).Time().Stop()
+
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzGetOpSuccessCounter).Inc(1)
+		} else {
+			s.stat.Counter(stats.BzGetOpFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzGetOpLatency_ms).Time().Stop()
 
 	rs, err := s.getRunStatusAndValidate(req.Name)
 	if err != nil {

@@ -516,89 +516,68 @@ const (
 
 	/****************************** Bazel Metrics **********************************************/
 
+	// TODO Gauge values not effective - just getting the last-set value at every metric post/publish interval
+	//	histogram the only effective way of doing this? P-vals like latency calculated & emitted each interval
+	//	probable have to add histogram to stats
+	// TODO Not clear from these what component they are emitted by
 	/****************************** Execution Service ******************************************/
 	/*
-		Number of Execute requests received
+		Execute API metrics
 	*/
-	BzExecRequestCounter = "bzExecRequestCounter"
+	BzExecSuccessCounter = "bzExecSuccessCounter"
+	BzExecFailureCounter = "bzExecFailureCounter"
+	BzExecLatency_ms     = "bzExecLatency_ms"
 
 	/*
-		Amount of time the server takes to process an Execute request
+		Longrunning GetOperation API metrics
 	*/
-	BzExecRequestLatency_ms = "bzExecRequestLatency_ms"
+	BzGetOpSuccessCounter = "bzGetOpSuccessCounter"
+	BzGetOpFailureCounter = "bzGetOpFailureCounter"
+	BzGetOpLatency_ms     = "bzGetOpLatency_ms"
 
 	/*
-		Number of GetOperation requests received
+		Execution metadata timing metrics
 	*/
-	BzGetOpRequestCounter = "bzGetOpRequestCounter"
-
-	/*
-		Amount of time the server takes to process a GetOperation request
-	*/
-	BzGetOpRequestLatency_ms = "bzGetOpRequestLatency_ms"
+	BzExecQueuedLatency_ms = "bzExecQueuedLatency_ms"
+	BzExecExecerTime_ms    = "bzExecExecerTime_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
-		Number of FindMissingBlobs requests received
+		FindMissingBlobs API metrics
 	*/
-	BzFindBlobsRequestCounter = "bzFindBlobsRequestCounter"
+	BzFindBlobsSuccessCounter = "bzFindBlobsSuccessCounter"
+	BzFindBlobsFailureCounter = "bzFindBlobsFailureCounter"
+	BzFindBlobsLengthGauge    = "bzFindlobsLengthGauge"
+	BzFindBlobsLatency_ms     = "bzFindBlobsLatency_ms"
 
 	/*
-		Amount of time the server takes to process a FindMissingBlobs request
+		CAS Read API metrics
 	*/
-	BzFindBlobsRequestLatency_ms = "bzFindBlobsRequestLatency_ms"
+	BzReadSuccessCounter = "bzReadSuccessCounter"
+	BzReadFailureCounter = "bzReadFailureCounter"
+	BzReadBytesGauge     = "bzReadBytesGauge"
+	BzReadLatency_ms     = "bzReadLatency_ms"
 
 	/*
-		Number of CAS Read requests received
+		CAS Write API metrics
 	*/
-	BzReadRequestCounter = "bzReadRequestCounter"
-
-	/*
-		Amount of time the server takes to process a CAS Read request
-	*/
-	BzReadRequestLatency_ms = "bzReadRequestLatency_ms"
-
-	/*
-		Number of CAS Write requests received
-	*/
-	BzWriteRequestCounter = "bzWriteRequestCounter"
-
-	/*
-		Amount of time the server takes to process a CAS Write request
-	*/
-	BzWriteRequestLatency_ms = "bzWriteRequestLatency_ms"
+	BzWriteSuccessCounter = "bzWriteSuccessCounter"
+	BzWriteFailureCounter = "bzWriteFailureCounter"
+	BzWriteBytesGauge     = "bzWriteBytesGauge"
+	BzWriteLatency_ms     = "bzWriteLatency_ms"
 
 	/****************************** ActionCache Service ****************************************/
 	/*
-		Number of GetActionResult requests received
+		GetActionResult API metrics
 	*/
-	BzGetActionRequestCounter = "bzGetActionRequestCounter"
+	BzGetActionSuccessCounter = "bzGetActionSuccessCounter"
+	BzGetActionFailureCounter = "bzGetActionFailureCounter"
+	BzGetActionLatency_ms     = "bzGetActionLatency_ms"
 
 	/*
-		Amount of time the server takes to process a GetActionResult request
+		UpdateActionResult API metrics
 	*/
-	BzGetActionRequestLatency_ms = "bzGetActionRequestLatency_ms"
-
-	/*
-		Number of UpdateActionResult requests received
-	*/
-	BzUpdateActionRequestCounter = "bzUpdateActionRequestCounter"
-
-	/*
-		Amount of time the server takes to process a UpdateActionResult request
-	*/
-	BzUpdateActionRequestLatency_ms = "bzUpdateActionRequestLatency_ms"
-
-	/* TODO
-	- execution tasks number of inputs/outputs. unknown except in snapshot impl!
-		- at checkout time - best we can do is total bytes and elapsed time from fs_util (dl bytes,ms per task)
-		- at upload time - best we can do is total bytes and elapsed time from fs_util (ul bytes,ms per task)
-	- execution metadata timings (record at worker invoker completion)
-		- queued time spent
-		- checkout time - downloadLatency (works for bazel?)
-		- exec time
-		- output upload time - uploadLatency (works for bazel?)
-	- cas read/write byte gauges
-	+ scheduler tick latency
-	*/
+	BzUpdateActionSuccessCounter = "bzUpdateActionSuccessCounter"
+	BzUpdateActionFailureCounter = "bzUpdateActionFailureCounter"
+	BzUpdateActionLatency_ms     = "bzUpdateActionLatency_ms"
 )
