@@ -312,11 +312,6 @@ const (
 	SchedPriority2JobsGauge = "priority2JobsGauge"
 
 	/*
-		the number of jobs with priority 3
-	*/
-	SchedPriority3JobsGauge = "priority3JobsGauge"
-
-	/*
 		the number of times the platform retried sending an end saga message
 	*/
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
@@ -383,6 +378,11 @@ const (
 		scheduler's job handling loop.  (No tasks in this job have been started.)
 	*/
 	SchedWaitingJobsGauge = "schedWaitingJobsGauge"
+
+	/*
+		Amount of time it takes the scheduler to complete a full step()
+	*/
+	SchedStepLatency_ms = "schedStepLatency_ms"
 
 	/******************************** Worker metrics **************************************/
 	/*
@@ -518,74 +518,62 @@ const (
 
 	/****************************** Execution Service ******************************************/
 	/*
-		Number of Execute requests received
+		Execute API metrics emitted by Scheduler
 	*/
-	BzExecRequestCounter = "bzExecRequestCounter"
+	BzExecSuccessCounter = "bzExecSuccessCounter"
+	BzExecFailureCounter = "bzExecFailureCounter"
+	BzExecLatency_ms     = "bzExecLatency_ms"
 
 	/*
-		Amount of time the server takes to process an Execute request
+		Longrunning GetOperation API metrics emitted by Scheduler
 	*/
-	BzExecRequestLatency_ms = "bzExecRequestLatency_ms"
+	BzGetOpSuccessCounter = "bzGetOpSuccessCounter"
+	BzGetOpFailureCounter = "bzGetOpFailureCounter"
+	BzGetOpLatency_ms     = "bzGetOpLatency_ms"
 
 	/*
-		Number of GetOperation requests received
+		Execution metadata timing metrics emitted by Worker
 	*/
-	BzGetOpRequestCounter = "bzGetOpRequestCounter"
-
-	/*
-		Amount of time the server takes to process a GetOperation request
-	*/
-	BzGetOpRequestLatency_ms = "bzGetOpRequestLatency_ms"
+	BzExecQueuedTimeHistogram_ms = "bzExecQueuedTimeHistogram_ms"
+	BzExecExecerTimeHistogram_ms = "bzExecExecerTimeHistogram_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
-		Number of FindMissingBlobs requests received
+		FindMissingBlobs API metrics emitted by Apiserver
 	*/
-	BzFindBlobsRequestCounter = "bzFindBlobsRequestCounter"
+	BzFindBlobsSuccessCounter  = "bzFindBlobsSuccessCounter"
+	BzFindBlobsFailureCounter  = "bzFindBlobsFailureCounter"
+	BzFindBlobsLengthHistogram = "bzFindBlobsLengthHistogram"
+	BzFindBlobsLatency_ms      = "bzFindBlobsLatency_ms"
 
 	/*
-		Amount of time the server takes to process a FindMissingBlobs request
+		CAS Read API metrics emitted by Apiserver
 	*/
-	BzFindBlobsRequestLatency_ms = "bzFindBlobsRequestLatency_ms"
+	BzReadSuccessCounter = "bzReadSuccessCounter"
+	BzReadFailureCounter = "bzReadFailureCounter"
+	BzReadBytesHistogram = "bzReadBytesHistogram"
+	BzReadLatency_ms     = "bzReadLatency_ms"
 
 	/*
-		Number of CAS Read requests received
+		CAS Write API metrics emitted by Apiserver
 	*/
-	BzReadRequestCounter = "bzReadRequestCounter"
-
-	/*
-		Amount of time the server takes to process a CAS Read request
-	*/
-	BzReadRequestLatency_ms = "bzReadRequestLatency_ms"
-
-	/*
-		Number of CAS Write requests received
-	*/
-	BzWriteRequestCounter = "bzWriteRequestCounter"
-
-	/*
-		Amount of time the server takes to process a CAS Write request
-	*/
-	BzWriteRequestLatency_ms = "bzWriteRequestLatency_ms"
+	BzWriteSuccessCounter = "bzWriteSuccessCounter"
+	BzWriteFailureCounter = "bzWriteFailureCounter"
+	BzWriteBytesHistogram = "bzWriteBytesHistogram"
+	BzWriteLatency_ms     = "bzWriteLatency_ms"
 
 	/****************************** ActionCache Service ****************************************/
 	/*
-		Number of GetActionResult requests received
+		GetActionResult API metrics emitted by Apiserver
 	*/
-	BzGetActionRequestCounter = "bzGetActionRequestCounter"
+	BzGetActionSuccessCounter = "bzGetActionSuccessCounter"
+	BzGetActionFailureCounter = "bzGetActionFailureCounter"
+	BzGetActionLatency_ms     = "bzGetActionLatency_ms"
 
 	/*
-		Amount of time the server takes to process a GetActionResult request
+		UpdateActionResult API metrics emitted by Apiserver
 	*/
-	BzGetActionRequestLatency_ms = "bzGetActionRequestLatency_ms"
-
-	/*
-		Number of UpdateActionResult requests received
-	*/
-	BzUpdateActionRequestCounter = "bzUpdateActionRequestCounter"
-
-	/*
-		Amount of time the server takes to process a UpdateActionResult request
-	*/
-	BzUpdateActionRequestLatency_ms = "bzUpdateActionRequestLatency_ms"
+	BzUpdateActionSuccessCounter = "bzUpdateActionSuccessCounter"
+	BzUpdateActionFailureCounter = "bzUpdateActionFailureCounter"
+	BzUpdateActionLatency_ms     = "bzUpdateActionLatency_ms"
 )

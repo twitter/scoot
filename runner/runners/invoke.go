@@ -78,7 +78,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// Records various stages of the run
 	// TODO opporunity for consolidation with existing timers and metrics as part of larger refactor
-	var rts runTimes
+	rts := &runTimes{}
 	rts.invokeStart = stamp()
 
 	var co snapshot.Checkout
@@ -382,6 +382,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 			return status
 		} else if runType == runner.RunTypeBazel {
+			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
+			inv.stat.Counter(stats.WorkerUploads).Inc(1)
+			defer func() {
+				uploadTimer.Stop()
+			}()
+
 			// Process Bazel uploads of std* output and other data to CAS
 			ingestCh := make(chan interface{})
 			go func() {
@@ -406,6 +412,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 				actionResult = res.(*bazelapi.ActionResult)
 			}
+
+			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
+			execerTime := rts.execEnd.Sub(rts.execStart)
+			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecExecerTimeHistogram_ms).Update(int64(execerTime / time.Millisecond))
 
 			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -470,6 +481,7 @@ type runTimes struct {
 	execEnd       time.Time
 	outputStart   time.Time
 	outputEnd     time.Time
+	queuedTime    time.Time // set by scheduler and must be populated e.g. by task metadata
 }
 
 // Wrapper around time values to encourage "stamp()" usage so it's harder to lose track of runTimes fields.

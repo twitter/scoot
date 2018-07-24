@@ -142,7 +142,7 @@ func postProcessBazel(filer snapshot.Filer,
 	coDir string,
 	stdout, stderr runner.Output,
 	st execer.ProcessStatus,
-	rts runTimes) (*bazelapi.ActionResult, error) {
+	rts *runTimes) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
 		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
@@ -177,6 +177,7 @@ func postProcessBazel(filer snapshot.Filer,
 
 	rts.outputEnd = stamp()
 	rts.invokeEnd = stamp()
+	rts.queuedTime = scootproto.GetTimeFromTimestamp(cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp())
 
 	// Update ExecutionMetadata with invoker runTimes data and existing queued time
 	// TODO Invoker should contain some metadata about the worker it lives on

@@ -75,10 +75,23 @@ func (s *casServer) FindMissingBlobs(
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzFindBlobsRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzFindBlobsRequestLatency_ms).Time().Stop()
+
+	var err error = nil
+	var length int64 = 0
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzFindBlobsSuccessCounter).Inc(1)
+			s.stat.Histogram(stats.BzFindBlobsLengthHistogram).Update(length)
+		} else {
+			s.stat.Counter(stats.BzFindBlobsFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzFindBlobsLatency_ms).Time().Stop()
 
 	res := remoteexecution.FindMissingBlobsResponse{}
+	length = int64(len(req.GetBlobDigests()))
 
 	for _, digest := range req.GetBlobDigests() {
 		// We hardcode support for empty data in snapshot/filer/checkouter.go, so never report it as missing
@@ -123,8 +136,22 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzReadRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzReadRequestLatency_ms).Time().Stop()
+
+	var length int64 = 0
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzReadSuccessCounter).Inc(1)
+			if length > 0 {
+				s.stat.Histogram(stats.BzReadBytesHistogram).Update(length)
+			}
+		} else {
+			s.stat.Counter(stats.BzReadFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzReadLatency_ms).Time().Stop()
 
 	// Parse resource name per Bazel API specification
 	resource, err := ParseReadResource(req.GetResourceName())
@@ -154,15 +181,20 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		log.Infof("Opening store resource for reading: %s", storeName)
 		r, err = s.storeConfig.Store.OpenForRead(storeName)
 		if err != nil {
-			log.Errorf("Failed to OpenForRead: %v", err)
-			return status.Error(codes.NotFound, fmt.Sprintf("Failed opening resource %s for read, returning NotFound. Err: %v", storeName, err))
+			// If an error occurred opening the underlying resource, we interpret this as NotFound.
+			// Although we return an error response to the caller to indicate this, we regard this
+			// as a normal defined behavior of the API, and don't count it towards failure metrics.
+			// Reset err to nil to prevent recording as a failure.
+			openErr := err
+			err = nil
+			log.Errorf("Failed to OpenForRead: %v", openErr)
+			return status.Error(codes.NotFound, fmt.Sprintf("Failed opening resource %s for read, returning NotFound. Err: %v", storeName, openErr))
 		}
 	}
 	defer r.Close()
 
 	res := &bytestream.ReadResponse{}
 	c := int64(DefaultReadCapacity)
-	length := int64(0)
 
 	// If ReadOffset was specified, discard bytes prior to it
 	if req.GetReadOffset() > 0 {
@@ -197,6 +229,9 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		if err == nil {
 			continue
 		} else if err == io.EOF {
+			// We expect to hit an EOF, non-nil error condition as the conclusion of a normal read.
+			// Reset err to nil here to prevent recording this as a failure in metrics.
+			err = nil
 			break
 		} else {
 			log.Errorf("Failed to read from Store: %v", err)
@@ -219,15 +254,26 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzWriteRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzWriteRequestLatency_ms).Time().Stop()
 
 	var p []byte
 	var buffer *bytes.Buffer
 	var committed int64 = 0
 	var resource *Resource = nil
 	resourceName, storeName := "", ""
-	var err error
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzWriteSuccessCounter).Inc(1)
+			if committed > 0 {
+				s.stat.Histogram(stats.BzWriteBytesHistogram).Update(committed)
+			}
+		} else {
+			s.stat.Counter(stats.BzWriteFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzWriteLatency_ms).Time().Stop()
 
 	// As indicated above, not supporting partial/resumable Writes for now.
 	// Reads in a stream of data from the client, and proceeds when we've gotten it all.
@@ -253,7 +299,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			if resource.Digest.GetHash() == bazel.EmptySha {
 				log.Infof("Request to write empty sha - bypassing Store write and Closing")
 				res := &bytestream.WriteResponse{CommittedSize: bazel.EmptySize}
-				err := ser.SendAndClose(res)
+				err = ser.SendAndClose(res)
 				if err != nil {
 					log.Errorf("Error during SendAndClose() for EmptySha: %s", err)
 					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose: %v", err))
@@ -379,8 +425,18 @@ func (s *casServer) GetActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzGetActionRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzGetActionRequestLatency_ms).Time().Stop()
+
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzGetActionSuccessCounter).Inc(1)
+		} else {
+			s.stat.Counter(stats.BzGetActionFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzGetActionLatency_ms).Time().Stop()
 
 	// Validate input digest
 	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {
@@ -403,8 +459,14 @@ func (s *casServer) GetActionResult(ctx context.Context,
 
 	r, err := s.storeConfig.Store.OpenForRead(address.storeName)
 	if err != nil {
-		log.Errorf("Failed to OpenForRead: %v", err)
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Failed opening %s for read, returning NotFound. Err: %v", address.storeName, err))
+		// If an error occurred opening the underlying resource, we interpret this as NotFound.
+		// Although we return an error response to the caller to indicate this, we regard this
+		// as a normal defined behavior of the API, and don't count it towards failure metrics.
+		// Reset err to nil to prevent recording as a failure.
+		openErr := err
+		err = nil
+		log.Errorf("Failed to OpenForRead: %v", openErr)
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Failed opening %s for read, returning NotFound. Err: %v", address.storeName, openErr))
 	}
 	defer r.Close()
 
@@ -416,7 +478,8 @@ func (s *casServer) GetActionResult(ctx context.Context,
 
 	// Deserialize store data as AR
 	ar := &remoteexecution.ActionResult{}
-	if err := proto.Unmarshal(arAsBytes, ar); err != nil {
+	err = proto.Unmarshal(arAsBytes, ar)
+	if err != nil {
 		log.Errorf("Failed to deserialize bytes from %s as ActionResult: %s", address.storeName, err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Error deserializing ActionResult: %s", err))
 	}
@@ -434,8 +497,18 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-	s.stat.Counter(stats.BzUpdateActionRequestCounter).Inc(1)
-	defer s.stat.Latency(stats.BzUpdateActionRequestLatency_ms).Time().Stop()
+
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzUpdateActionSuccessCounter).Inc(1)
+		} else {
+			s.stat.Counter(stats.BzUpdateActionFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzUpdateActionLatency_ms).Time().Stop()
 
 	// Validate input digest, ActionResult
 	if !bazel.IsValidDigest(req.GetActionDigest().GetHash(), req.GetActionDigest().GetSizeBytes()) {

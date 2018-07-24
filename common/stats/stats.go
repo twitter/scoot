@@ -116,6 +116,9 @@ type StatsReceiver interface {
 	// Add a gauge, which holds a float64 value that can be set arbitrarily.
 	GaugeFloat(name ...string) GaugeFloat
 
+	// Provide a histogram of sampled stats
+	Histogram(name ...string) Histogram
+
 	// Removes the given named stats item if it exists
 	Remove(name ...string)
 
