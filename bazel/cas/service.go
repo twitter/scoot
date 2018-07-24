@@ -181,7 +181,10 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		log.Infof("Opening store resource for reading: %s", storeName)
 		r, err = s.storeConfig.Store.OpenForRead(storeName)
 		if err != nil {
-			// Reset err to nil - don't count NotFound towards request failures
+			// If an error occurred opening the underlying resource, we interpret this as NotFound.
+			// Although we return an error response to the caller to indicate this, we regard this
+			// as a normal defined behavior of the API, and don't count it towards failure metrics.
+			// Reset err to nil to prevent recording as a failure.
 			openErr := err
 			err = nil
 			log.Errorf("Failed to OpenForRead: %v", openErr)
@@ -226,6 +229,8 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		if err == nil {
 			continue
 		} else if err == io.EOF {
+			// We expect to hit an EOF, non-nil error condition as the conclusion of a normal read.
+			// Reset err to nil here to prevent recording this as a failure in metrics.
 			err = nil
 			break
 		} else {
@@ -454,7 +459,10 @@ func (s *casServer) GetActionResult(ctx context.Context,
 
 	r, err := s.storeConfig.Store.OpenForRead(address.storeName)
 	if err != nil {
-		// Reset err to nil - don't count NotFound towards request failures
+		// If an error occurred opening the underlying resource, we interpret this as NotFound.
+		// Although we return an error response to the caller to indicate this, we regard this
+		// as a normal defined behavior of the API, and don't count it towards failure metrics.
+		// Reset err to nil to prevent recording as a failure.
 		openErr := err
 		err = nil
 		log.Errorf("Failed to OpenForRead: %v", openErr)
