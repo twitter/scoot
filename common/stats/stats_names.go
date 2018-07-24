@@ -543,7 +543,7 @@ const (
 	*/
 	BzFindBlobsSuccessCounter  = "bzFindBlobsSuccessCounter"
 	BzFindBlobsFailureCounter  = "bzFindBlobsFailureCounter"
-	BzFindBlobsLengthHistogram = "bzFindlobsLengthHistogram"
+	BzFindBlobsLengthHistogram = "bzFindBlobsLengthHistogram"
 	BzFindBlobsLatency_ms      = "bzFindBlobsLatency_ms"
 
 	/*
