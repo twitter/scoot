@@ -3,7 +3,7 @@
 set -e
 
 pants_release="1.9.0.dev0+1e6ae97f"
-pants_release_url="${pants_release/+/%2B}"
+pants_release_url=$(echo $pants_release | sed 's/+/%2B/')
 
 get_fs_util() {
 	case "$(uname -s)" in
