@@ -533,7 +533,10 @@ const (
 
 	/****************************** Worker/Invoker Execution Timings ***************************/
 	/*
-		Execution metadata timing metrics emitted by Worker
+		Execution metadata timing metrics emitted by Worker.
+		These probably aren't updated enough to make use of the Histogram values, but
+		using that type results in these values being automatically cleared each
+		stat interval vs a gauge.
 	*/
 	BzExecQueuedTimeHistogram_ms     = "bzExecQueuedTimeHistogram_ms"
 	BzExecInputFetchTimeHistogram_ms = "bzExecInputFetchTimeHistogram_ms"
