@@ -531,11 +531,13 @@ const (
 	BzGetOpFailureCounter = "bzGetOpFailureCounter"
 	BzGetOpLatency_ms     = "bzGetOpLatency_ms"
 
+	/****************************** Worker/Invoker Execution Timings ***************************/
 	/*
 		Execution metadata timing metrics emitted by Worker
 	*/
-	BzExecQueuedTimeHistogram_ms = "bzExecQueuedTimeHistogram_ms"
-	BzExecExecerTimeHistogram_ms = "bzExecExecerTimeHistogram_ms"
+	BzExecQueuedTimeHistogram_ms     = "bzExecQueuedTimeHistogram_ms"
+	BzExecInputFetchTimeHistogram_ms = "bzExecInputFetchTimeHistogram_ms"
+	BzExecExecerTimeHistogram_ms     = "bzExecExecerTimeHistogram_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
