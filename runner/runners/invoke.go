@@ -99,6 +99,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// Bazel requests - fetch command argv/env from CAS
 	// We can also receive a cached result here, in which case we skip invocation
+	rts.inputStart = stamp()
 	if runType == runner.RunTypeBazel {
 		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd)
 		if err != nil {
@@ -132,7 +133,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		downloadTimer = inv.stat.Latency(stats.WorkerDownloadLatency_ms).Time()
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
-	rts.checkoutStart = stamp()
 
 	go func() {
 		if cmd.SnapshotID == "" {
@@ -207,7 +207,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
 		defer co.Release()
-		rts.checkoutEnd = stamp()
+		rts.inputEnd = stamp()
 	}
 	log.WithFields(
 		log.Fields{
@@ -414,8 +414,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 
 			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
+			inputTime := rts.inputEnd.Sub(rts.inputStart)
 			execerTime := rts.execEnd.Sub(rts.execStart)
 			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecInputFetchTimeHistogram_ms).Update(int64(inputTime / time.Millisecond))
 			inv.stat.Histogram(stats.BzExecExecerTimeHistogram_ms).Update(int64(execerTime / time.Millisecond))
 
 			status := runner.CompleteStatus(id, "", st.ExitCode,
@@ -473,15 +475,15 @@ func copyLogFile(tmpDir, logName, logPath string) error {
 // Tracking timestamps for stages of an invoker run.
 // Values are only set with non-zero Time when stage has completed successfully.
 type runTimes struct {
-	invokeStart   time.Time
-	invokeEnd     time.Time
-	checkoutStart time.Time
-	checkoutEnd   time.Time
-	execStart     time.Time
-	execEnd       time.Time
-	outputStart   time.Time
-	outputEnd     time.Time
-	queuedTime    time.Time // set by scheduler and must be populated e.g. by task metadata
+	invokeStart time.Time
+	invokeEnd   time.Time
+	inputStart  time.Time
+	inputEnd    time.Time
+	execStart   time.Time
+	execEnd     time.Time
+	outputStart time.Time
+	outputEnd   time.Time
+	queuedTime  time.Time // set by scheduler and must be populated e.g. by task metadata
 }
 
 // Wrapper around time values to encourage "stamp()" usage so it's harder to lose track of runTimes fields.
