@@ -120,6 +120,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return failedStatus
 		}
 		if cachedResult != nil {
+			actionCacheCheckTime := rts.actionCacheCheckEnd.Sub(rts.actionCacheCheckStart)
+			inv.stat.Histogram(stats.BzExecActionCacheCheckTimeHistogram_ms).Update(int64(actionCacheCheckTime / time.Millisecond))
 			status := runner.CompleteStatus(id, "", 0,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			status.ActionResult = cachedResult

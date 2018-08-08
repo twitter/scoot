@@ -58,14 +58,12 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command, rts *runTimes) (
 			}
 		} else if ar != nil {
 			log.Info("Returning cached result for command")
-			rts.actionFetchEnd = stamp()
 			return &bazelapi.ActionResult{
 				Result:       ar,
 				ActionDigest: cmd.ExecuteRequest.GetRequest().GetActionDigest(),
 				Cached:       true,
 			}, notExist, nil
 		}
-
 	}
 
 	missing, err := fetchBazelCommandData(bzFiler, cmd, rts)
