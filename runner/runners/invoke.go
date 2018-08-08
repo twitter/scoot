@@ -101,7 +101,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	// We can also receive a cached result here, in which case we skip invocation
 	rts.inputStart = stamp()
 	if runType == runner.RunTypeBazel {
-		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd)
+		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd, rts)
 		if err != nil {
 			failedStatus := runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -414,9 +414,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 
 			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
+			actionCacheCheckTime := rts.actionCacheCheckEnd.Sub(rts.actionCacheCheckStart)
+			actionFetchTime := rts.actionFetchEnd.Sub(rts.actionFetchStart)
+			commandFetchTime := rts.commandFetchEnd.Sub(rts.commandFetchStart)
 			inputTime := rts.inputEnd.Sub(rts.inputStart)
 			execerTime := rts.execEnd.Sub(rts.execStart)
 			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecActionCacheCheckTimeHistogram_ms).Update(int64(actionCacheCheckTime / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecActionFetchTimeHistogram_ms).Update(int64(actionFetchTime / time.Millisecond))
+			inv.stat.Histogram(stats.BzExecCommandFetchTimeHistogram_ms).Update(int64(commandFetchTime / time.Millisecond))
 			inv.stat.Histogram(stats.BzExecInputFetchTimeHistogram_ms).Update(int64(inputTime / time.Millisecond))
 			inv.stat.Histogram(stats.BzExecExecerTimeHistogram_ms).Update(int64(execerTime / time.Millisecond))
 
@@ -475,15 +481,21 @@ func copyLogFile(tmpDir, logName, logPath string) error {
 // Tracking timestamps for stages of an invoker run.
 // Values are only set with non-zero Time when stage has completed successfully.
 type runTimes struct {
-	invokeStart time.Time
-	invokeEnd   time.Time
-	inputStart  time.Time
-	inputEnd    time.Time
-	execStart   time.Time
-	execEnd     time.Time
-	outputStart time.Time
-	outputEnd   time.Time
-	queuedTime  time.Time // set by scheduler and must be populated e.g. by task metadata
+	invokeStart           time.Time
+	invokeEnd             time.Time
+	inputStart            time.Time
+	actionCacheCheckStart time.Time
+	actionCacheCheckEnd   time.Time
+	actionFetchStart      time.Time
+	actionFetchEnd        time.Time
+	commandFetchStart     time.Time
+	commandFetchEnd       time.Time
+	inputEnd              time.Time
+	execStart             time.Time
+	execEnd               time.Time
+	outputStart           time.Time
+	outputEnd             time.Time
+	queuedTime            time.Time // set by scheduler and must be populated e.g. by task metadata
 }
 
 // Wrapper around time values to encourage "stamp()" usage so it's harder to lose track of runTimes fields.

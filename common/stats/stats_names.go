@@ -538,9 +538,12 @@ const (
 		using that type results in these values being automatically cleared each
 		stat interval vs a gauge.
 	*/
-	BzExecQueuedTimeHistogram_ms     = "bzExecQueuedTimeHistogram_ms"
-	BzExecInputFetchTimeHistogram_ms = "bzExecInputFetchTimeHistogram_ms"
-	BzExecExecerTimeHistogram_ms     = "bzExecExecerTimeHistogram_ms"
+	BzExecQueuedTimeHistogram_ms           = "bzExecQueuedTimeHistogram_ms"
+	BzExecInputFetchTimeHistogram_ms       = "bzExecInputFetchTimeHistogram_ms"
+	BzExecActionCacheCheckTimeHistogram_ms = "BzExecActionCacheCheckTimeHistogram_ms"
+	BzExecActionFetchTimeHistogram_ms      = "BzExecActionFetchTimeHistogram_ms"
+	BzExecCommandFetchTimeHistogram_ms     = "BzExecCommandFetchTimeHistogram_ms"
+	BzExecExecerTimeHistogram_ms           = "bzExecExecerTimeHistogram_ms"
 
 	/****************************** CAS Service ******************************************/
 	/*
