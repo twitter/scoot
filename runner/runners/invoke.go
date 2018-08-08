@@ -13,6 +13,7 @@ import (
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
+	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
@@ -120,7 +121,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return failedStatus
 		}
 		if cachedResult != nil {
+			rts.queuedTime = scootproto.GetTimeFromTimestamp(cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp())
+			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
 			actionCacheCheckTime := rts.actionCacheCheckEnd.Sub(rts.actionCacheCheckStart)
+			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
 			inv.stat.Histogram(stats.BzExecActionCacheCheckTimeHistogram_ms).Update(int64(actionCacheCheckTime / time.Millisecond))
 			status := runner.CompleteStatus(id, "", 0,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
