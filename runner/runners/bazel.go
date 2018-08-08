@@ -33,7 +33,7 @@ import (
 // Preliminary setup for handling Bazel commands - verify Filer and populate command.
 // Can return a bazelapi.ActionResult if a result was found already in the ActionCache.
 // Returns slice of any digests that could not be retrieved.
-func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.ActionResult, []*remoteexecution.Digest, error) {
+func preProcessBazel(filer snapshot.Filer, cmd *runner.Command, rts *runTimes) (*bazelapi.ActionResult, []*remoteexecution.Digest, error) {
 	notExist := []*remoteexecution.Digest{}
 
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
@@ -47,7 +47,9 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.Actio
 	// Check for existing result in ActionCache
 	if !cmd.ExecuteRequest.GetRequest().GetSkipCacheLookup() {
 		log.Info("Checking for existing results for command in ActionCache")
+		rts.actionCacheCheckStart = stamp()
 		ar, err := cas.GetCacheResult(bzFiler.CASResolver, cmd.ExecuteRequest.GetRequest().GetActionDigest())
+		rts.actionCacheCheckEnd = stamp()
 		if err != nil {
 			// Only treat as an error if we didn't get NotFoundError. We still continue:
 			// cache lookup failure is internal, and should not prevent the run
@@ -64,7 +66,7 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.Actio
 		}
 	}
 
-	missing, err := fetchBazelCommandData(bzFiler, cmd)
+	missing, err := fetchBazelCommandData(bzFiler, cmd, rts)
 	if err != nil {
 		log.Errorf("Error fetching Bazel command: %v", err)
 		// NB: Important to return this error as-is
@@ -79,10 +81,11 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command) (*bazelapi.Actio
 // Get the Bazel API data from the embedded ExecuteRequest ActionDigest.
 // Fetches Action, and from Action's CommandDigest, the Command.
 // Overwrites runner.Command fields
-func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) ([]*remoteexecution.Digest, error) {
+func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts *runTimes) ([]*remoteexecution.Digest, error) {
 	notExist := []*remoteexecution.Digest{}
 
 	log.Info("Fetching Bazel Action data from CAS server")
+	rts.actionFetchStart = stamp()
 	actionDigest := cmd.ExecuteRequest.GetRequest().GetActionDigest()
 	actionBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, actionDigest)
 	if err != nil {
@@ -98,6 +101,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) ([]
 	if err = proto.Unmarshal(actionBytes, action); err != nil {
 		return notExist, fmt.Errorf("Failed to unmarshal bytes as remoteexecution.Action: %s", err)
 	}
+	rts.actionFetchEnd = stamp()
 
 	d, err := time.ParseDuration(fmt.Sprintf("%dms", scootproto.GetMsFromDuration(action.GetTimeout())))
 	if err != nil {
@@ -105,6 +109,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) ([]
 	}
 
 	log.Info("Fetching Bazel Command data from CAS server")
+	rts.commandFetchStart = stamp()
 	commandDigest := action.GetCommandDigest()
 	commandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, commandDigest)
 	if err != nil {
@@ -120,6 +125,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command) ([]
 	if err = proto.Unmarshal(commandBytes, bzCommand); err != nil {
 		return notExist, fmt.Errorf("Failed to unmarshal bytes as remoteexecution.Command: %s", err)
 	}
+	rts.commandFetchEnd = stamp()
 
 	// Update cmd's SnapshotID, Argv, EnvVars, and Timeout (overwrite) from Command
 	cmd.SnapshotID = bazel.SnapshotIDFromDigest(action.GetInputRootDigest())
