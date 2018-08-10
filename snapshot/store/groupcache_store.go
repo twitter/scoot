@@ -49,6 +49,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 			if err != nil {
 				return err
 			}
+			defer reader.Close()
 			data, err := ioutil.ReadAll(reader)
 			if err != nil {
 				return err
