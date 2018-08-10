@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
+	"net/http/pprof"
 	"time"
 
 	"github.com/twitter/scoot/common/stats"
@@ -38,6 +39,11 @@ func (s *TwitterServer) Serve() error {
 	mux.HandleFunc("/", helpHandler)
 	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/admin/metrics.json", s.statsHandler)
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Index)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	for path, handler := range s.Handlers {
 		mux.Handle(path, handler)
 	}
@@ -50,7 +56,7 @@ func (s *TwitterServer) Serve() error {
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	msg := "Common paths: '/health', '/admin/metrics.json', '/output'"
+	msg := "Common paths: '/health', '/admin/metrics.json', '/output', '/debug/pprof'"
 	http.Error(w, msg, http.StatusNotImplemented)
 }
 
