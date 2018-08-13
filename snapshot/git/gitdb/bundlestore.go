@@ -262,6 +262,7 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error
 	if err != nil {
 		return "", err
 	}
+	defer r.Close()
 	if _, err := io.Copy(f, r); err != nil {
 		return "", err
 	}
