@@ -62,9 +62,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // Check for name enforcement for HTTP API
 func checkBundleName(name string) error {
-	bundleRE := "^bs-[a-z0-9]{40}.bundle"
-	if ok, _ := regexp.MatchString(bundleRE, name); ok {
+	if ok := bundleRE.MatchString(name); ok {
 		return nil
 	}
 	return fmt.Errorf("Error with bundleName, expected %q, got: %s", bundleRE, name)
 }
+
+bundleRE := regexp.MustCompile("^bs-[a-z0-9]{40}.bundle")
