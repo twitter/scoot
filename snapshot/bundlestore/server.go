@@ -1,9 +1,7 @@
 package bundlestore
 
 import (
-	"fmt"
 	"net/http"
-	"regexp"
 
 	log "github.com/sirupsen/logrus"
 
@@ -59,13 +57,3 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	s.storeConfig.Stat.Counter(stats.BundlestoreRequestOkCounter).Inc(1)
 }
-
-// Check for name enforcement for HTTP API
-func checkBundleName(name string) error {
-	if ok := bundleRE.MatchString(name); ok {
-		return nil
-	}
-	return fmt.Errorf("Error with bundleName, expected %q, got: %s", bundleRE, name)
-}
-
-bundleRE := regexp.MustCompile("^bs-[a-z0-9]{40}.bundle")
