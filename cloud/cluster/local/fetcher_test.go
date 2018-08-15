@@ -2,6 +2,7 @@ package local
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/twitter/scoot/cloud/cluster"
@@ -19,8 +20,9 @@ func TestFetcher(t *testing.T) {
 		cluster.NewIdNode("localhost:9876"),
 		cluster.NewIdNode("localhost:9877"),
 	}
+	re := regexp.MustCompile("workerserver.*thrift_addr(?: +|=)([^ ]*)")
 
-	nodes, err := parseData([]byte(psOutput), "workerserver", "thrift_addr")
+	nodes, err := parseData([]byte(psOutput), "workerserver", "thrift_addr", re)
 	if err != nil {
 		t.Fatalf("error parsing: %v", err)
 	}

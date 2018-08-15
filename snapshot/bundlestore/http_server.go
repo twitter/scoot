@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -110,4 +111,14 @@ func (s *httpServer) HandleDownload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	s.storeConfig.Stat.Counter(stats.BundlestoreDownloadOkCounter).Inc(1)
+}
+
+var bundleRE *regexp.Regexp = regexp.MustCompile("^bs-[a-z0-9]{40}.bundle")
+
+// Check for name enforcement for HTTP API
+func checkBundleName(name string) error {
+	if ok := bundleRE.MatchString(name); ok {
+		return nil
+	}
+	return fmt.Errorf("Error with bundleName, expected %q, got: %s", bundleRE, name)
 }
