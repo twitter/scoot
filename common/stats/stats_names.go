@@ -5,228 +5,104 @@ This file defines all the metrics being collected.   As new metrics are added pl
 */
 
 const (
-	/************************* Bundlestore metrics **************************/
-	//TODO - verify all the bundlestore descriptions
-	/*
-		the number of groupcache peers the bundlestore sees
-	*/
-	BundlestoreGroupcachePeerCountGauge = "peerCountGauge"
-
-	/*
-		the number of times bundlestore is discovering how many peers it has
-	*/
-	BundlestoreGroupcachePeerDiscoveryCounter = "peerDiscoveryCounter"
-
-	/*
-		the number of times bundlestore is reading from its underlying groupcache
-	*/
-	BundlestoreGroupcacheReadUnderlyingCounter = "readUnderlyingCounter"
-
-	/*
-		amount of time it takes to download a bundlestore (to the worker_ (note: it includes downloads that errored)
-	*/
-	BundlestoreDownloadLatency_ms = "downloadLatency_ms"
-
-	/*
-		number of times bundlestore tries to download a snapshot (to a worker) (includes downloads that errored
-	*/
-	BundlestoreDownloadCounter = "downloadCounter"
-
-	/*
-		number of times the bundlestore download (to the worker) failed
-	*/
-	BundlestoreDownloadErrCounter = "downloadErrCounter"
-
-	/*
-		number of times the bundlestore download (to the worker) succeeded
-	*/
-	BundlestoreDownloadOkCounter = "downloadOkCounter"
-
-	/*
-	   bundlestore service request
-	*/
-	BundlestoreRequestCounter = "serveRequestCounter"
-
-	/*
-	   End of processing any bundlestore service request
-	*/
-	BundlestoreRequestOkCounter = "serveOkCounter"
-
-	/*
-		record the start of the bundlestore server
-	*/
-	BundlestoreServerStartedGauge = "bundlestoreStartGauge"
-
-	/*
-		number of times a snapshot was uploaded to the bundlestore service
-	*/
-	BundlestoreUploadCounter = "uploadCounter"
-
-	/*
-		the number of bundlestore uploads that errored
-	*/
-	BundlestoreUploadErrCounter = "uploadErrCounter"
-
-	/*
-		number of times an upload is trying to overwrite an existing one
-	*/
-	BundlestoreUploadExistingCounter = "uploadExistingCounter"
-
-	/*
-		time to upload a snapshot to a bundlestore service
-	*/
-	BundlestoreUploadLatency_ms = "uploadLatency_ms"
-
-	/*
-		the number of bundlestore uploads that were successful
-	*/
-	BundlestoreUploadOkCounter = "uploadOkCounter"
-
-	/*
-		The length of time the server has been running
-	*/
-	BundlestoreUptime_ms = "bundlestoreUptimeGauge_ms"
-
 	/****************** ClusterManger metrics ***************************/
 	/*
-		the number of worker nodes that are available or running tasks (not suspended)
+		Cluster metrics on Node types
+		Available - available or running tasks (not suspended)
+		Free - available, not running
+		Running - running tasks
+		Lost - not responding to status requests
 	*/
 	ClusterAvailableNodes = "availableNodes"
+	ClusterFreeNodes      = "freeNodes"
+	ClusterRunningNodes   = "runningNodes"
+	ClusterLostNodes      = "lostNodes"
+
+	/************************* Bundlestore metrics **************************/
+	/*
+		Bundlestore download metrics (Reads/Gets from top-level Bundlestore/Apiserver)
+	*/
+	BundlestoreDownloadLatency_ms = "downloadLatency_ms"
+	BundlestoreDownloadCounter    = "downloadCounter"
+	BundlestoreDownloadErrCounter = "downloadErrCounter"
+	BundlestoreDownloadOkCounter  = "downloadOkCounter"
 
 	/*
-		the number of free worker nodes (available, but not running a task)
+		Bundlestore upload metrics (Writes/Puts to top-level Bundlestore/Apiserver)
 	*/
-	ClusterFreeNodes = "freeNodes"
+	BundlestoreUploadCounter         = "uploadCounter"
+	BundlestoreUploadErrCounter      = "uploadErrCounter"
+	BundlestoreUploadExistingCounter = "uploadExistingCounter"
+	BundlestoreUploadLatency_ms      = "uploadLatency_ms"
+	BundlestoreUploadOkCounter       = "uploadOkCounter"
 
 	/*
-		the number of running worker nodes (running + free + suspended ~= allNodes (may lag))
+	   Bundlestore request counters and uptime statistics
 	*/
-	ClusterRunningNodes = "runningNodes"
+	BundlestoreRequestCounter     = "serveRequestCounter"
+	BundlestoreRequestOkCounter   = "serveOkCounter"
+	BundlestoreServerStartedGauge = "bundlestoreStartGauge"
+	BundlestoreUptime_ms          = "bundlestoreUptimeGauge_ms"
 
+	/************************* Groupcache Metrics ***************************/
 	/*
-		the number of lost worker nodes (not responding to status requests)
+		Groupcache Read metrics
 	*/
-	ClusterLostNodes = "lostNodes"
-
-	/************************* Groupcache Metrics ***************************/ // TODO verify/update all groupcache descriptions
-	/*
-		the number of time groupcache tried to determine if a bundle existed
-	*/
-	GroupcacheExistsCounter = "existsCounter"
-
-	/*
-		the amount of time it takes to determine if a bundlestore exists
-	*/
-	GroupcachExistsLatency_ms = "existsLatency_ms"
-
-	/*
-		the number of exists requests that returned true
-	*/
-	GroupcacheExistsOkCounter = "existsOkCounter"
-
-	/*
-		the number of gets directed to the groupcache
-	*/
-	GroupcacheGetCounter = "cacheGetCounter"
-
-	/*
-		the number of times the requested bundle was found in this groupcache
-	*/
-	GroupcacheHitCounter = "cacheHitCounter"
-
-	/*
-		?
-	*/
-	GroupcacheHotBytesGauge = "hotBytesGauge"
-
-	/*
-		?
-	*/
-	GroupcacheHotGetsCounter = "hotGetsCounter"
-
-	/*
-		?
-	*/
-	GroupcacheHotHitsCounter = "hotHitsCounter"
-
-	/*
-		?
-	*/
-	GroupcacheHotItemsGauge = "hotItemsGauge"
-
-	/*
-		?
-	*/
-	GroupcacheIncomingRequestsCounter = "cacheIncomingRequestsCounter"
-
-	/*
-		?
-	*/
-	GroupcacheLocalLoadErrCounter = "cacheLocalLoadErrCounter"
-
-	/*
-		?
-	*/
-	GroupcacheLocalLoadCounter = "cacheLocalLoadCounter"
-
-	/*
-		?the size of the bundles managed by this instance of the service
-	*/
-	GroupcacheMainBytesGauge = "mainBytesGauge"
-
-	/*
-		?the number of times the service tried to find a bundle in its cache?
-	*/
-	GroupcacheMainGetsCounter = "mainGetsCounter"
-
-	/*
-		?the number of times the requested bundle was found in the service
-	*/
-	GroupcacheMainHitsCounter = "mainHitsCounter"
-
-	/*
-		?the number of items managed by this instance of the service
-	*/
-	GroupcacheMainItemsGauge = "mainItemsGauge"
-
-	/*
-		the number of times the groupcache tried to get a bundle from its peers
-	*/
-	GroupcachePeerGetsCounter = "cachePeerGetsCounter"
-
-	/*
-		the number of errors encountered trying to interact with a peer
-	*/
-	GroupcachPeerErrCounter = "cachePeerErrCounter"
-
-	/*
-		the number of attempted bundle reads for the specific bundlestore instande
-	*/
-	GroupcacheReadCounter = "readCounter"
-
-	/*
-		the number of successful bundle reads for the specific bundlestore instance
-	*/
-	GroupcacheReadOkCounter = "readOkCounter"
-
-	/*
-		the time to read a bundle from groupcache ?includes blob store as well as memory retrieval?
-	*/
+	GroupcacheReadCounter    = "readCounter"
+	GroupcacheReadOkCounter  = "readOkCounter"
 	GroupcacheReadLatency_ms = "readLatency_ms"
 
 	/*
-		the number of write requests to groupcache
+		Groupcache Exists metrics
 	*/
-	GroupcacheWriteCounter = "writeCounter"
-	/*
-		the number of successful writes to groupcache
-	*/
-	GroupcacheWriteOkCounter = "writeOkCounter"
+	GroupcacheExistsCounter   = "existsCounter"
+	GroupcachExistsLatency_ms = "existsLatency_ms"
+	GroupcacheExistsOkCounter = "existsOkCounter"
 
 	/*
-		the amount of time it took groupcache to write the bundle
+		Groupcache Write metrics
 	*/
+	GroupcacheWriteCounter    = "writeCounter"
+	GroupcacheWriteOkCounter  = "writeOkCounter"
 	GroupcacheWriteLatency_ms = "writeLatency_ms"
+
+	/*
+		Groupcache Underlying load metrics (cache miss loads)
+	*/
+	GroupcacheReadUnderlyingCounter    = "readUnderlyingCounter"
+	GroupcacheReadUnderlyingLatency_ms = "readUnderlyingLatency_ms"
+
+	/*
+		Groupcache library - per-cache metrics (typical groupcache includes separate "main" and "hot" caches)
+	*/
+	GroupcacheMainBytesGauge       = "mainBytesGauge"
+	GroupcacheMainGetsCounter      = "mainGetsCounter"
+	GroupcacheMainHitsCounter      = "mainHitsCounter"
+	GroupcacheMainItemsGauge       = "mainItemsGauge"
+	GroupcacheMainEvictionsCounter = "mainEvictionsCounter"
+	GroupcacheHotBytesGauge        = "hotBytesGauge"
+	GroupcacheHotGetsCounter       = "hotGetsCounter"
+	GroupcacheHotHitsCounter       = "hotHitsCounter"
+	GroupcacheHotItemsGauge        = "hotItemsGauge"
+	GroupcacheHotEvictionsCounter  = "hotEvictionsCounter"
+
+	/*
+		Groupcache library - per-group metrics (overall metrics for a groupcache on a single Apiserver)
+	*/
+	GroupcacheGetCounter              = "cacheGetCounter"
+	GroupcacheHitCounter              = "cacheHitCounter"
+	GroupcacheLoadCounter             = "cacheLoadCounter"
+	GroupcacheIncomingRequestsCounter = "cacheIncomingRequestsCounter"
+	GroupcacheLocalLoadErrCounter     = "cacheLocalLoadErrCounter"
+	GroupcacheLocalLoadCounter        = "cacheLocalLoadCounter"
+	GroupcachePeerGetsCounter         = "cachePeerGetsCounter"
+	GroupcachPeerErrCounter           = "cachePeerErrCounter"
+
+	/*
+		Groupcache peer pool metrics (maintained by Scoot)
+	*/
+	GroupcachePeerCountGauge       = "peerCountGauge"
+	GroupcachePeerDiscoveryCounter = "peerDiscoveryCounter"
 
 	/****************************** Scheduler Metrics ****************************************/
 	/*
@@ -241,11 +117,11 @@ const (
 	*/
 	SchedCompletedTaskCounter = "completedTaskCounter"
 
-	/* TODO - remove? (discuss usefulness)
-	The number of times any of the following conditions occurred:
-	- the task's command errored while running
-	- the platform could not run the task
-	- the platform encountered an error reporting the end of the task to saga
+	/*
+		The number of times any of the following conditions occurred:
+		- the task's command errored while running
+		- the platform could not run the task
+		- the platform encountered an error reporting the end of the task to saga
 	*/
 	SchedFailedTaskCounter = "failedTaskCounter"
 
@@ -263,15 +139,15 @@ const (
 	*/
 	SchedJobsCounter = "schedJobsCounter"
 
-	/* TODO - remove? (discuss usefulness)
-	the amount of time it takes to verify a job definition, add it to the job channel and
-	return a job id.
+	/*
+		the amount of time it takes to verify a job definition, add it to the job channel and
+		return a job id.
 	*/
 	SchedJobLatency_ms = "schedJobLatency_ms"
 
-	/* TODO - remove? (discuss usefulness)
-	the number of jobs requests that have been able to be converted from the thrift
-	request to the sched.JobDefinition structure.
+	/*
+		the number of jobs requests that have been able to be converted from the thrift
+		request to the sched.JobDefinition structure.
 	*/
 	SchedJobRequestsCounter = "schedJobRequestsCounter"
 
@@ -324,7 +200,6 @@ const (
 	/*
 		the number of tasks that were scheduled to be started on nodes with the last
 		run of the scheduling algorithm
-		TODO- verify the description with Jason
 	*/
 	SchedScheduledTasksCounter = "scheduledTasksCounter"
 

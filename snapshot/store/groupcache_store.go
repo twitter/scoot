@@ -44,7 +44,8 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
 		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
 			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
-			stat.Counter(stats.BundlestoreGroupcacheReadUnderlyingCounter).Inc(1)
+			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
+			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return err
@@ -75,8 +76,8 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 		peers = append(peers, "http://"+string(node.Id()))
 	}
 	log.Info("New groupcacheStore peers: ", peers)
-	stat.Counter(stats.BundlestoreGroupcachePeerDiscoveryCounter).Inc(1)
-	stat.Gauge(stats.BundlestoreGroupcachePeerCountGauge).Update(int64(len(peers)))
+	stat.Counter(stats.GroupcachePeerDiscoveryCounter).Inc(1)
+	stat.Gauge(stats.GroupcachePeerCountGauge).Update(int64(len(peers)))
 	return peers
 }
 
@@ -104,14 +105,17 @@ func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
 	stat.Gauge(stats.GroupcacheMainItemsGauge).Update(cache.CacheStats(groupcache.MainCache).Items)
 	stat.Counter(stats.GroupcacheMainGetsCounter).Update(cache.CacheStats(groupcache.MainCache).Gets)
 	stat.Counter(stats.GroupcacheMainHitsCounter).Update(cache.CacheStats(groupcache.MainCache).Hits)
+	stat.Counter(stats.GroupcacheMainEvictionsCounter).Update(cache.CacheStats(groupcache.MainCache).Evictions)
 
 	stat.Gauge(stats.GroupcacheHotBytesGauge).Update(cache.CacheStats(groupcache.HotCache).Bytes)
 	stat.Gauge(stats.GroupcacheHotItemsGauge).Update(cache.CacheStats(groupcache.HotCache).Items)
 	stat.Counter(stats.GroupcacheHotGetsCounter).Update(cache.CacheStats(groupcache.HotCache).Gets)
 	stat.Counter(stats.GroupcacheHotHitsCounter).Update(cache.CacheStats(groupcache.HotCache).Hits)
+	stat.Counter(stats.GroupcacheHotEvictionsCounter).Update(cache.CacheStats(groupcache.HotCache).Evictions)
 
 	stat.Counter(stats.GroupcacheGetCounter).Update(cache.Stats.Gets.Get())
 	stat.Counter(stats.GroupcacheHitCounter).Update(cache.Stats.CacheHits.Get())
+	stat.Counter(stats.GroupcacheLoadCounter).Update(cache.Stats.Loads.Get())
 	stat.Counter(stats.GroupcachePeerGetsCounter).Update(cache.Stats.PeerLoads.Get())
 	stat.Counter(stats.GroupcachPeerErrCounter).Update(cache.Stats.PeerErrors.Get())
 	stat.Counter(stats.GroupcacheLocalLoadCounter).Update(cache.Stats.LocalLoads.Get())
