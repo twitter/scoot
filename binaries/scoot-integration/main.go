@@ -9,8 +9,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -50,14 +48,17 @@ func main() {
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
 	installBinaries()
-
-	snapshotBytes, err := createSnapshot()
+	gopath, err := testhelpers.GetGopath()
+	if err != nil {
+		log.Fatal(err)
+	}
+	snapshotBytes, err := createSnapshot(gopath)
 	if err != nil {
 		log.Fatalf("Error creating snapshotID: %v", err)
 	}
 	snapshotID := strings.TrimSpace(string(snapshotBytes))
 	timeout := time.After(10 * time.Second)
-	jobBytes, err := runJob(snapshotID)
+	jobBytes, err := runJob(gopath, snapshotID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func main() {
 		case <-timeout:
 			log.Fatal("Timed out while waiting for job to complete")
 		default:
-			jsonStatusBytes, err = getStatus(jobID)
+			jsonStatusBytes, err = getStatus(gopath, jobID)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -88,43 +89,18 @@ func main() {
 }
 
 func installBinaries() {
-	installBinary("scootapi")
-	installBinary("scoot-snapshot-db")
+	testhelpers.InstallBinary("scootapi")
+	testhelpers.InstallBinary("scoot-snapshot-db")
 }
 
-func createSnapshot() ([]byte, error) {
-	gopath, err := getGopath()
-	if err != nil {
-		return nil, err
-	}
+func createSnapshot(gopath string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scoot-snapshot-db", "create", "ingest_dir", "--dir", ".").Output()
 }
 
-func runJob(snapshotID string) ([]byte, error) {
-	gopath, err := getGopath()
-	if err != nil {
-		return nil, err
-	}
+func runJob(gopath, snapshotID string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scootapi", "run_job", "sleep", "1", "--snapshot_id", snapshotID).Output()
 }
 
-func getStatus(jobID string) ([]byte, error) {
-	gopath, err := getGopath()
-	if err != nil {
-		return nil, err
-	}
+func getStatus(gopath, jobID string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scootapi", "get_job_status", jobID, "--json").Output()
-}
-
-func getGopath() (gopath string, err error) {
-	gopath = os.Getenv("GOPATH")
-	if gopath == "" {
-		err = fmt.Errorf("GOPATH not set")
-	}
-	return strings.Split(gopath, ":")[0], err
-}
-
-func installBinary(name string) {
-	cmd := exec.Command("go", "install", "./binaries/"+name)
-	cmd.Run()
 }

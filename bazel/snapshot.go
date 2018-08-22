@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 // Generate a SnapshotID based on digest sha and size
