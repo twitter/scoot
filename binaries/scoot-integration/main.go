@@ -9,6 +9,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -29,8 +30,7 @@ func main() {
 
 	level, err := log.ParseLevel(*logLevelFlag)
 	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal(err)
 	}
 	log.SetLevel(level)
 
@@ -41,7 +41,7 @@ func main() {
 	log.Info("Creating test cluster")
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
-		log.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)
+		testhelpers.KillAndExit(cluster1Cmds, err)
 	}
 	defer cluster1Cmds.Kill()
 
@@ -50,17 +50,17 @@ func main() {
 	installBinaries()
 	gopath, err := testhelpers.GetGopath()
 	if err != nil {
-		log.Fatal(err)
+		testhelpers.KillAndExit(cluster1Cmds, err)
 	}
 	snapshotBytes, err := createSnapshot(gopath)
 	if err != nil {
-		log.Fatalf("Error creating snapshotID: %v", err)
+		testhelpers.KillAndExit(cluster1Cmds, err)
 	}
 	snapshotID := strings.TrimSpace(string(snapshotBytes))
 	timeout := time.After(10 * time.Second)
 	jobBytes, err := runJob(gopath, snapshotID)
 	if err != nil {
-		log.Fatal(err)
+		testhelpers.KillAndExit(cluster1Cmds, err)
 	}
 	jobID := strings.TrimSpace(string(jobBytes))
 
@@ -70,14 +70,14 @@ func main() {
 	for status.Status != scoot.Status_COMPLETED {
 		select {
 		case <-timeout:
-			log.Fatal("Timed out while waiting for job to complete")
+			testhelpers.KillAndExit(cluster1Cmds, fmt.Errorf("Timed out while waiting for job to complete"))
 		default:
 			jsonStatusBytes, err = getStatus(gopath, jobID)
 			if err != nil {
-				log.Fatal(err)
+				testhelpers.KillAndExit(cluster1Cmds, err)
 			}
 			if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
-				log.Fatal(err)
+				testhelpers.KillAndExit(cluster1Cmds, err)
 			}
 			log.Infof("Status: %v", status)
 			if status.Status == scoot.Status_COMPLETED {
@@ -86,6 +86,7 @@ func main() {
 			time.Sleep(1 * time.Second)
 		}
 	}
+	cluster1Cmds.Kill()
 }
 
 func installBinaries() {
