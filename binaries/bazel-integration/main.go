@@ -56,7 +56,9 @@ func main() {
 		log.Error(err)
 		return
 	}
-	time.Sleep(5 * time.Second)
+	// TODO: WaitForClusterToBeReady should wait for CAS/ApiServers too
+	time.Sleep(3 * time.Second)
+
 	// Upload Command
 	b, err := uploadCommand(gopath)
 	if err != nil {
