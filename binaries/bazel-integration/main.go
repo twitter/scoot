@@ -43,19 +43,19 @@ func main() {
 	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)
 	clusterCmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, fmt.Errorf("Unexpected Error while Setting up Local Cluster %v", err))
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Unexpected Error while Setting up Local Cluster %v", err))
 	}
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
 	log.Info("Installing binaries")
 	err = installBinaries()
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 
 	gopath, err := testhelpers.GetGopath()
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	// TODO: WaitForClusterToBeReady should wait for CAS/ApiServers too
 	time.Sleep(3 * time.Second)
@@ -63,7 +63,7 @@ func main() {
 	// Upload Command
 	b, err := uploadCommand(gopath)
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	commandDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, commandDigest)
@@ -72,17 +72,17 @@ func main() {
 		SizeBytes: 10,
 	}
 	if err = assertEqual(*commandDigest, expectedCommandDigest); err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	// Save Directory
 	b, err = saveDirectory(gopath)
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	s := strings.Split(strings.TrimSpace(string(b)), " ")
 	sb, err := strconv.ParseInt(s[1], 10, 64)
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	rootDigest := &remoteexecution.Digest{
 		Hash:      s[0],
@@ -93,12 +93,12 @@ func main() {
 		SizeBytes: bazel.EmptySize,
 	}
 	if err = assertEqual(*rootDigest, expectedRootDigest); err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	// Upload Action
 	b, err = uploadAction(gopath, bazel.DigestToStr(commandDigest), bazel.DigestToStr(rootDigest))
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	actionDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, actionDigest)
@@ -107,12 +107,12 @@ func main() {
 		SizeBytes: int64(138),
 	}
 	if err = assertEqual(*actionDigest, expectedActionDigest); err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	// Execute
 	b, err = execute(gopath, bazel.DigestToStr(actionDigest))
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 
 		log.Error(err)
 		panic("Unable to execute action")
@@ -124,11 +124,11 @@ func main() {
 	time.Sleep(3 * time.Second)
 	b, err = getOperation(gopath, operation.GetName())
 	if err != nil {
-		testhelpers.KillAndExit(clusterCmds, err)
+		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 	json.Unmarshal(b, operation)
 	if !operation.GetDone() {
-		testhelpers.KillAndExit(clusterCmds, fmt.Errorf("Expected operation to be Done. Op: %v", operation))
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected operation to be Done. Op: %v", operation))
 	}
 	clusterCmds.Kill()
 }
