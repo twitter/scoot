@@ -20,6 +20,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/remoteexecution"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scootapi"
@@ -53,7 +54,7 @@ func main() {
 		testhelpers.KillAndExit1(clusterCmds, err)
 	}
 
-	gopath, err := testhelpers.GetGopath()
+	gopath, err := common.GetFirstGopath()
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
 	}
@@ -113,9 +114,6 @@ func main() {
 	b, err = execute(gopath, bazel.DigestToStr(actionDigest))
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
-
-		log.Error(err)
-		panic("Unable to execute action")
 	}
 	operation := &longrunning.Operation{}
 	json.Unmarshal(b, operation)

@@ -16,6 +16,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
@@ -48,7 +49,7 @@ func main() {
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
 	installBinaries()
-	gopath, err := testhelpers.GetGopath()
+	gopath, err := common.GetFirstGopath()
 	if err != nil {
 		testhelpers.KillAndExit1(cluster1Cmds, err)
 	}
