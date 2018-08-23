@@ -14,3 +14,18 @@ func GetFirstGopath() (string, error) {
 	s := strings.Split(gp, ":")
 	return s[0], nil
 }
+
+func SplitCommaSepToMap(commaSepString string) map[string]string {
+	m := make(map[string]string)
+	for _, pair := range strings.Split(commaSepString, ",") {
+		if pair == "" {
+			continue
+		}
+		kv := strings.Split(pair, "=")
+		if len(kv) != 2 {
+			continue
+		}
+		m[kv[0]] = kv[1]
+	}
+	return m
+}
