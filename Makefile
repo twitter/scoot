@@ -92,6 +92,7 @@ integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
 	go install ./binaries/...
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
+	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
 clean-mockgen:
 	rm */*_mock.go

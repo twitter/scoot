@@ -50,3 +50,8 @@ func WaitForClusterToBeReady(client scoot.CloudScoot) {
 
 	return
 }
+
+func KillAndExit1(cmds *setup.Cmds, err error) {
+	cmds.Kill()
+	log.Fatal(err)
+}
