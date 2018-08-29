@@ -69,9 +69,10 @@ func main() {
 	commandDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, commandDigest)
 	expectedCommandDigest := remoteexecution.Digest{
-		Hash:      "e361091a14e8ef7697ddca9b2b8d666218e35c87a7c5fbf5d1f73e8066e3bcb6",
-		SizeBytes: 10,
+		Hash:      "175d74a061402620b4a8a201f1ae99c191e203af2d8afea996da2b01d32ead03",
+		SizeBytes: 12,
 	}
+
 	if err = assertEqual(*commandDigest, expectedCommandDigest); err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
 	}
