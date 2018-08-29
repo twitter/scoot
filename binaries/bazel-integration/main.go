@@ -105,7 +105,7 @@ func main() {
 	actionDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, actionDigest)
 	expectedActionDigest := remoteexecution.Digest{
-		Hash:      "f4e8ec9aaabde53fe3bd848fa10a122a17a4951da064e987f97bbfc174f25832",
+		Hash:      "f374a34fb4d4f9fd33b47eaca6efb9a0625a74d2724352f19005ddd24025a751",
 		SizeBytes: int64(138),
 	}
 	if err = assertEqual(*actionDigest, expectedActionDigest); err != nil {
