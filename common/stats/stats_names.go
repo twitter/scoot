@@ -447,6 +447,11 @@ const (
 
 	/****************************** ActionCache Service ****************************************/
 	/*
+		ActionCache result metrics
+	*/
+	BzCachedExecCounter = "bzCachedExecCounter"
+
+	/*
 		GetActionResult API metrics emitted by Apiserver
 	*/
 	BzGetActionSuccessCounter = "bzGetActionSuccessCounter"
