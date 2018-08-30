@@ -1,6 +1,8 @@
 package bazel
 
 import (
+	"fmt"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -63,5 +65,25 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 			}).Errorf("Failed to Materialize %s", id)
 		return nil, err
 	}
+	parentDir, _ := path.Split(co.Path())
+	err = bf.setUpJDKSymlink(parentDir)
+	if err != nil {
+		return nil, err
+	}
+
 	return co, nil
+}
+
+func (bf *BzFiler) setUpJDKSymlink(dir string) error {
+	l := <-bf.JDKSymlinkCh
+	sl, ok := l.(string)
+	if !ok {
+		// nil is sent on bf.JDKSymlinkCh when no JDK_SYMLINK property is defined
+		return nil
+	}
+	javaHome, ok := os.LookupEnv("JAVA_HOME")
+	if !ok {
+		return fmt.Errorf("Failed setting up platform property JDK_SYMLINK: $JAVA_HOME not set")
+	}
+	return os.Symlink(javaHome, path.Join(dir, sl))
 }

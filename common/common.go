@@ -15,6 +15,8 @@ func GetFirstGopath() (string, error) {
 	return s[0], nil
 }
 
+// Splits a comma separated string consisting of key value pairs,
+// e.g. "k1=v1,k2=v2", into a map
 func SplitCommaSepToMap(commaSepString string) map[string]string {
 	m := make(map[string]string)
 	for _, pair := range strings.Split(commaSepString, ",") {

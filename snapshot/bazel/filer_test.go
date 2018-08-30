@@ -3,6 +3,8 @@ package bazel
 import (
 	"fmt"
 	"os"
+	// "os/exec"
+	"path"
 	"strings"
 	"testing"
 
@@ -29,8 +31,9 @@ func setup() (*temp.TempDir, *BzFiler) {
 		os.Exit(1)
 	}
 	bf := &BzFiler{
-		tree: noopBzTree{},
-		tmp:  tmp,
+		tree:         noopBzTree{},
+		tmp:          tmp,
+		JDKSymlinkCh: make(chan interface{}),
 	}
 	return tmp, bf
 }
@@ -93,6 +96,9 @@ func TestBzCheckouterInvalidCheckout(t *testing.T) {
 func TestBzCheckouterValidCheckout(t *testing.T) {
 	size := int64(5)
 	id := bazel.SnapshotID(bazel.EmptySha, size)
+	go func() {
+		noopBf.JDKSymlinkCh <- nil
+	}()
 	snap, err := noopBf.Checkout(id)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
@@ -120,12 +126,60 @@ func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
+	go func() {
+		noopBf.JDKSymlinkCh <- nil
+	}()
 	snap, err := noopBf.CheckoutAt(id, tempDir.Dir)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
 	}
 	if snap.ID() != id {
 		t.Fatalf("Expected snapshot ID to be %v, was %v", id, snap.ID())
+	}
+}
+
+func TestBzCheckouterValidCheckoutWithJDKSymlink(t *testing.T) {
+	size := int64(5)
+	id := bazel.SnapshotID(bazel.EmptySha, size)
+	go func() {
+		noopBf.JDKSymlinkCh <- "jdk_symlink"
+	}()
+	snap, err := noopBf.Checkout(id)
+	if err != nil {
+		t.Fatalf("Expected checkout to be valid. Err: %v", err)
+	}
+	if snap.ID() != id {
+		t.Fatalf("Expected snapshot ID to be %v, was %v", id, snap.ID())
+	}
+	parentDir, _ := path.Split(snap.Path())
+	if _, err := os.Stat(path.Join(parentDir, "jdk_symlink")); os.IsNotExist(err) {
+		t.Fatalf("Expected JDK symlink to exist in checkout")
+	}
+}
+
+func TestBzCheckouterValidCheckoutAtWithJDKSymlink(t *testing.T) {
+	size := int64(5)
+	id := bazel.SnapshotID(bazel.EmptySha, size)
+	go func() {
+		noopBf.JDKSymlinkCh <- "jdk_symlink"
+	}()
+	tempDir, err := tmpTest.TempDir("")
+	if err != nil {
+		t.Fatalf("Error creating temp dir. %v", err)
+	}
+	go func() {
+		noopBf.JDKSymlinkCh <- nil
+	}()
+	snap, err := noopBf.CheckoutAt(id, tempDir.Dir)
+	if err != nil {
+		t.Fatalf("Expected checkout to be valid. Err: %v", err)
+	}
+	if snap.ID() != id {
+		t.Fatalf("Expected snapshot ID to be %v, was %v", id, snap.ID())
+	}
+	parentDir, _ := path.Split(snap.Path())
+	if _, err := os.Stat(path.Join(parentDir, "jdk_symlink")); os.IsNotExist(err) {
+		t.Fatalf("Expected JDK symlink to exist in checkout")
 	}
 }
 

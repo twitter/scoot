@@ -32,6 +32,7 @@ func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, keep bool) (*BzFiler, err
 		keepCheckouts: keep,
 		CASResolver:   r,
 		updater:       snapshots.MakeNoopUpdater(),
+		JDKSymlinkCh:  make(chan interface{}),
 	}
 	return bf, nil
 }
@@ -44,9 +45,9 @@ type BzFiler struct {
 	tree bzTree
 	tmp  *temp.TempDir
 
-	keepCheckouts bool
 	// keepCheckouts exists for debuggability. Instead of removing checkouts on release,
 	// we can optionally keep them to inspect
+	keepCheckouts bool
 
 	// Public resolver exposes selection of server host:port for underlying connections to cas
 	// NOTE: we may want to introduce a custom resolver that limits the number of underlying
@@ -57,6 +58,10 @@ type BzFiler struct {
 	// an underlying tool that makes CAS requests on our behalf during Checkout and Ingest.
 	CASResolver dialer.Resolver
 	updater     snapshot.Updater
+
+	// Receives either nil or a string the goroutine preprocessing the Bazel remote execution command.
+	// If a string, creates a symlink in the checkout working directory that points to $JAVA_HOME.
+	JDKSymlinkCh chan interface{}
 }
 
 // Interface that specifies actions on directory tree structures for Bazel

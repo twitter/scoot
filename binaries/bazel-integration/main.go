@@ -69,8 +69,8 @@ func main() {
 	commandDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, commandDigest)
 	expectedCommandDigest := remoteexecution.Digest{
-		Hash:      "175d74a061402620b4a8a201f1ae99c191e203af2d8afea996da2b01d32ead03",
-		SizeBytes: 12,
+		Hash:      "87d505be361979c2aa929aeeb38a61f648cc54b348f29e49ec05e0a412ad941c",
+		SizeBytes: 33,
 	}
 
 	if err = assertEqual(*commandDigest, expectedCommandDigest); err != nil {
@@ -105,8 +105,8 @@ func main() {
 	actionDigest := &remoteexecution.Digest{}
 	json.Unmarshal(b, actionDigest)
 	expectedActionDigest := remoteexecution.Digest{
-		Hash:      "f374a34fb4d4f9fd33b47eaca6efb9a0625a74d2724352f19005ddd24025a751",
-		SizeBytes: int64(138),
+		Hash:      "2ea4a6b3ce4b49cb3cfd40ffacebfd2b4809fede70c7e29f3786bf6c27f8902b",
+		SizeBytes: 138,
 	}
 	if err = assertEqual(*actionDigest, expectedActionDigest); err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
@@ -142,7 +142,7 @@ func installBinaries() error {
 }
 
 func uploadCommand(gopath string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/bzutil", "upload_command", "--json", "--cas_addr=localhost:12100", "sleep", "1").Output()
+	return exec.Command(gopath+"/bin/bzutil", "upload_command", "--json", "--cas_addr=localhost:12100", "--platform_props=JDK_SYMLINK=.jvm", "sleep", "1").Output()
 }
 
 func saveDirectory(gopath string) ([]byte, error) {

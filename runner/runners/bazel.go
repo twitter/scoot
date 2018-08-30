@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -137,20 +136,16 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	cmd.Timeout = d
 
 	// Adjust environment as specified by supported platform properties
-	for _, platProp := range bzCommand.GetPlatform().GetProperties() {
-		if platProp.GetName() == "JDK_SYMLINK" {
-			javaHome, ok := os.LookupEnv("JAVA_HOME")
-			if !ok {
-				msg := "Unsuccessful lookup of $JAVA_HOME, not defined."
-				log.Error(msg)
-				return nil, fmt.Errorf(msg)
+	go func() {
+		for _, platProp := range bzCommand.GetPlatform().GetProperties() {
+			if platProp.GetName() == "JDK_SYMLINK" {
+				log.Info("JDK_SYMLINK platform property identified. Creating %s symlink", platProp.GetValue())
+				bzFiler.JDKSymlinkCh <- platProp.GetValue()
+				break
 			}
-			if b, err := exec.Command("ln", "-s", javaHome, platProp.GetValue()).CombinedOutput(); err != nil {
-				log.Errorf("Error symlinking %s to %s. %s, %s", platProp.GetValue(), javaHome, string(b), err)
-				return nil, err
-			}
+			bzFiler.JDKSymlinkCh <- nil
 		}
-	}
+	}()
 
 	// Add Action, Command to cmd's ExecuteRequest for reference
 	cmd.ExecuteRequest.Action = action

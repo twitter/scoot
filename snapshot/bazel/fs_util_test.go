@@ -176,7 +176,9 @@ func TestMaterializeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	go func() {
+		bf.JDKSymlinkCh <- nil
+	}()
 	co, err := bf.Checkout(id)
 	if err != nil {
 		t.Fatal(err)
