@@ -135,23 +135,19 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	}
 	cmd.Timeout = d
 
-	// Adjust environment as specified by supported platform properties
-	go func() {
-		for _, platProp := range bzCommand.GetPlatform().GetProperties() {
-			if platProp.GetName() == "JDK_SYMLINK" {
-				log.Info("JDK_SYMLINK platform property identified. Creating %s symlink", platProp.GetValue())
-				bzFiler.JDKSymlinkCh <- platProp.GetValue()
-				break
-			}
-			bzFiler.JDKSymlinkCh <- nil
-		}
-	}()
-
 	// Add Action, Command to cmd's ExecuteRequest for reference
 	cmd.ExecuteRequest.Action = action
 	cmd.ExecuteRequest.Command = bzCommand
 
 	return notExist, nil
+}
+
+func setupJDKSymlink(path, filename string) error {
+	jh, ok := os.LookupEnv("JAVA_HOME")
+	if !ok {
+		return fmt.Errorf("Unable to find $JAVA_HOME. Symlink not created")
+	}
+	return os.Symlink(jh, filepath.Join(path, filename))
 }
 
 // Post-execer actions for Bazel tasks - upload outputs and std* logs, format result structure

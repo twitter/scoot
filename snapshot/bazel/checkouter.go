@@ -1,9 +1,7 @@
 package bazel
 
 import (
-	"fmt"
-	"os"
-	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -33,7 +31,7 @@ func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bf.CheckoutAt(id, path.Join(tmp.Dir, snapshotDirName))
+	return bf.CheckoutAt(id, filepath.Join(tmp.Dir, snapshotDirName))
 }
 
 func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
@@ -65,25 +63,6 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 			}).Errorf("Failed to Materialize %s", id)
 		return nil, err
 	}
-	parentDir, _ := path.Split(co.Path())
-	err = bf.setUpJDKSymlink(parentDir)
-	if err != nil {
-		return nil, err
-	}
 
 	return co, nil
-}
-
-func (bf *BzFiler) setUpJDKSymlink(dir string) error {
-	l := <-bf.JDKSymlinkCh
-	sl, ok := l.(string)
-	if !ok {
-		// nil is sent on bf.JDKSymlinkCh when no JDK_SYMLINK property is defined
-		return nil
-	}
-	javaHome, ok := os.LookupEnv("JAVA_HOME")
-	if !ok {
-		return fmt.Errorf("Failed setting up platform property JDK_SYMLINK: $JAVA_HOME not set")
-	}
-	return os.Symlink(javaHome, path.Join(dir, sl))
 }

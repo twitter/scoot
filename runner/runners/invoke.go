@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -251,7 +252,19 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
 	// TODO Don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
 	// (via Invoker -> QueueRunner construction) or Command level (job requestor specifies in e.g. a PlatformProperty)
-	if runType != runner.RunTypeBazel {
+	switch runType {
+	case runner.RunTypeBazel:
+		for _, pp := range cmd.ExecuteRequest.GetCommand().GetPlatform().GetProperties() {
+			if pp.GetName() == "JDK_SYMLINK" {
+				log.Infof("JDK_SYMLINK platform property identified. Creating %s symlink", pp.GetValue())
+				parentDir, _ := path.Split(co.Path())
+				err = setupJDKSymlink(parentDir, pp.GetValue())
+				if err != nil {
+					return runner.FailedStatus(id, err, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+				}
+			}
+		}
+	case runner.RunTypeScoot:
 		stdout.Write([]byte(header))
 		stderr.Write([]byte(header))
 		stdlog.Write([]byte(header))
@@ -266,7 +279,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"stderr": stderr.AsFile(),
 			"stdlog": stdlog.AsFile(),
 		}).Debug("Stdout/Stderr output")
-
 	rts.execStart = stamp() // candidate for availability via Execer
 	p, err := inv.exec.Exec(execer.Command{
 		Argv:    cmd.Argv,
