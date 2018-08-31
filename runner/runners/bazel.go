@@ -142,6 +142,14 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	return notExist, nil
 }
 
+func setupJDKSymlink(path, filename string) error {
+	jh, ok := os.LookupEnv("JAVA_HOME")
+	if !ok {
+		return fmt.Errorf("Unable to find $JAVA_HOME. Symlink not created")
+	}
+	return os.Symlink(jh, filepath.Join(path, filename))
+}
+
 // Post-execer actions for Bazel tasks - upload outputs and std* logs, format result structure
 func postProcessBazel(filer snapshot.Filer,
 	cmd *runner.Command,

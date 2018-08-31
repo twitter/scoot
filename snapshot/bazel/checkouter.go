@@ -1,7 +1,7 @@
 package bazel
 
 import (
-	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -31,7 +31,7 @@ func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bf.CheckoutAt(id, path.Join(tmp.Dir, snapshotDirName))
+	return bf.CheckoutAt(id, filepath.Join(tmp.Dir, snapshotDirName))
 }
 
 func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {
@@ -63,5 +63,6 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 			}).Errorf("Failed to Materialize %s", id)
 		return nil, err
 	}
+
 	return co, nil
 }

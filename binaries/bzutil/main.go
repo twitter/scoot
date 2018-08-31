@@ -23,6 +23,7 @@ import (
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	scootproto "github.com/twitter/scoot/common/proto"
@@ -55,6 +56,7 @@ func main() {
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
+	uploadPlatformProps := uploadCommand.String("platform_props", "", "comma-separated command platoform properties, i.e. \"key1=val1,key2=val2\"")
 	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON")
 
 	// Upload Action
@@ -103,7 +105,7 @@ func main() {
 		if len(uploadArgv) == 0 {
 			log.Fatalf("Argv required for %s - will interpret all non-flag arguments as Argv", uploadCmdStr)
 		}
-		uploadBzCommand(uploadArgv, *uploadAddr, *uploadEnv, *uploadOutputFiles, *uploadOutputDirs, *uploadJson)
+		uploadBzCommand(uploadArgv, *uploadAddr, *uploadEnv, *uploadOutputFiles, *uploadOutputDirs, *uploadPlatformProps, *uploadJson)
 	} else if uploadAction.Parsed() {
 		if *actionCommandDigest == "" || *actionRootDigest == "" {
 			log.Fatalf("command and input_root required for %s", execCmdStr)
@@ -124,25 +126,21 @@ func main() {
 	}
 }
 
-func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsStr string, uploadJson bool) {
-	envMap := make(map[string]string)
-	for _, pair := range strings.Split(env, ",") {
-		if pair == "" {
-			continue
-		}
-		kv := strings.Split(pair, "=")
-		if len(kv) != 2 {
-			continue
-		}
-		envMap[kv[0]] = kv[1]
-	}
-	log.Infof("Using argv: %q env: %s", cmdArgs, envMap)
+func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsStr, platformProps string, uploadJson bool) {
+	envMap := common.SplitCommaSepToMap(env)
+	platMap := common.SplitCommaSepToMap(platformProps)
+	log.Infof("Using argv: %q env: %s platform properties: %s", cmdArgs, envMap, platMap)
 
 	// create Command struct from inputs
 	cmdEnvVars := []*remoteexecution.Command_EnvironmentVariable{}
 	for k, v := range envMap {
 		cmdEnvVars = append(cmdEnvVars, &remoteexecution.Command_EnvironmentVariable{Name: k, Value: v})
 	}
+	cmdPlatformProperties := []*remoteexecution.Platform_Property{}
+	for k, v := range platMap {
+		cmdPlatformProperties = append(cmdPlatformProperties, &remoteexecution.Platform_Property{Name: k, Value: v})
+	}
+	cmdPlatform := &remoteexecution.Platform{Properties: cmdPlatformProperties}
 
 	outputFiles := []string{}
 	outputDirs := []string{}
@@ -164,6 +162,7 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 		EnvironmentVariables: cmdEnvVars,
 		OutputFiles:          outputFiles,
 		OutputDirectories:    outputDirs,
+		Platform:             cmdPlatform,
 	}
 
 	// serialize and get hash/size
