@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -257,7 +256,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		for _, pp := range cmd.ExecuteRequest.GetCommand().GetPlatform().GetProperties() {
 			if pp.GetName() == "JDK_SYMLINK" {
 				log.Infof("JDK_SYMLINK platform property identified. Creating %s symlink", pp.GetValue())
-				parentDir, _ := path.Split(co.Path())
+				parentDir, _ := filepath.Split(co.Path())
 				err = setupJDKSymlink(parentDir, pp.GetValue())
 				if err != nil {
 					return runner.FailedStatus(id, err, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -269,6 +268,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stderr.Write([]byte(header))
 		stdlog.Write([]byte(header))
 	}
+
 	log.WithFields(
 		log.Fields{
 			"runID":  id,
