@@ -165,7 +165,7 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	err = s.underlying.Write(name, data, ttl)
+	err = s.underlying.Write(name, bytes.NewBuffer(b), ttl)
 	if err != nil {
 		return err
 	}
