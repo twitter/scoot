@@ -156,16 +156,21 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	log.Info("Write() populating cache: ", name)
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
+
+	// Read data into a []byte and make a right-sized copy, as ReadAll will reserve at 2x capacity
 	b, err := ioutil.ReadAll(data)
 	if err != nil {
 		return err
 	}
+	c := make([]byte, len(b))
+	copy(c, b)
+
 	err = s.underlying.Write(name, bytes.NewBuffer(b), ttl)
 	if err != nil {
 		return err
 	}
 
-	s.cache.PopulateCache(name, b)
+	s.cache.PopulateCache(name, c)
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)
 	return nil
 }
