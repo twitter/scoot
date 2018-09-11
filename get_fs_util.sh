@@ -2,7 +2,7 @@
 # Pulls in fs_util tool for use in remote exec ingestion, checkout, and CAS ops
 set -e
 
-pants_release="1.9.0.dev0+1e6ae97f"
+pants_release="1.10.0rc0+bc6dedd2"
 pants_release_url=$(echo $pants_release | sed 's/+/%2B/')
 
 get_fs_util() {
