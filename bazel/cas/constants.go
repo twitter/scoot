@@ -15,6 +15,9 @@ const (
 
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
+
+	// Maximum concurrent connections allowed to access underlying Store resources
+	MaxConnections = 100
 )
 
 // Resource naming format guidelines

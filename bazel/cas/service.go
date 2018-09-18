@@ -33,6 +33,7 @@ type casServer struct {
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 	stat        stats.StatsReceiver
+	concurrent  chan struct{}
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
@@ -43,6 +44,7 @@ func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsRecei
 		server:      grpchelpers.NewServer(),
 		storeConfig: cfg,
 		stat:        stat,
+		concurrent:  make(chan struct{}, MaxConnections),
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
@@ -74,6 +76,10 @@ func (s *casServer) FindMissingBlobs(
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+	if s.concurrent != nil {
+		s.concurrent <- struct{}{}
+		defer func() { <-s.concurrent }()
 	}
 
 	var err error = nil
@@ -135,6 +141,10 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
+	}
+	if s.concurrent != nil {
+		s.concurrent <- struct{}{}
+		defer func() { <-s.concurrent }()
 	}
 
 	var length int64 = 0
@@ -253,6 +263,10 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
+	}
+	if s.concurrent != nil {
+		s.concurrent <- struct{}{}
+		defer func() { <-s.concurrent }()
 	}
 
 	var p []byte
@@ -425,6 +439,10 @@ func (s *casServer) GetActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
+	if s.concurrent != nil {
+		s.concurrent <- struct{}{}
+		defer func() { <-s.concurrent }()
+	}
 
 	var err error = nil
 
@@ -496,6 +514,10 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+	if s.concurrent != nil {
+		s.concurrent <- struct{}{}
+		defer func() { <-s.concurrent }()
 	}
 
 	var err error = nil
