@@ -439,10 +439,6 @@ func (s *casServer) GetActionResult(ctx context.Context,
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
-	}
 
 	var err error = nil
 
@@ -514,10 +510,6 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
-	}
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
 	}
 
 	var err error = nil
