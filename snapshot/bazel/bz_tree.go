@@ -2,6 +2,7 @@ package bazel
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 
@@ -78,6 +79,11 @@ func (bc bzCommand) save(path string) (string, error) {
 
 // Materializes the digest identified by sha in dir using the fsUtilCmd
 func (bc bzCommand) materialize(sha string, size int64, dir string) error {
+	// short circuit if the input is empty, but create the target dir as fs_util would do
+	if sha == bazel.EmptySha && size == bazel.EmptySize {
+		return os.Mkdir(dir, 0777)
+	}
+
 	// we don't expect there to be any useful output
 	_, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
 	if err != nil {

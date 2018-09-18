@@ -21,8 +21,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
+	"github.com/twitter/scoot/common/dialer"
 )
 
 func TestClientRead(t *testing.T) {
@@ -69,6 +71,17 @@ func TestClientReadMissing(t *testing.T) {
 	}
 }
 
+func TestClientReadEmpty(t *testing.T) {
+	digest := &remoteexecution.Digest{
+		Hash:      bazel.EmptySha,
+		SizeBytes: bazel.EmptySize,
+	}
+	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest)
+	if data != nil || err != nil {
+		t.Fatal("Expected nil data and err from empty client read")
+	}
+}
+
 func TestClientWrite(t *testing.T) {
 	// Make a WriteRequest with known data
 	offset, limit := int64(0), testSize1
@@ -86,6 +99,17 @@ func TestClientWrite(t *testing.T) {
 	err := writeFromClient(bsClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from client write: %s", err)
+	}
+}
+
+func TestClientWriteEmpty(t *testing.T) {
+	digest := &remoteexecution.Digest{
+		Hash:      bazel.EmptySha,
+		SizeBytes: bazel.EmptySize,
+	}
+	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil)
+	if err != nil {
+		t.Fatal("Expected nil err from empty client write")
 	}
 }
 

@@ -189,3 +189,30 @@ func TestMaterializeDir(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMaterializeEmptyDir(t *testing.T) {
+	root, err := tmpTest.TempDir("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpDirPrefix := "tmp"
+	tmpDir, err := root.TempDir(tmpDirPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id := bazel.SnapshotID(bazel.EmptySha, bazel.EmptySize)
+	bf := makeTestingFiler()
+
+	co, err := bf.Checkout(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := exec.Command("diff", "-r", co.Path(), tmpDir.Dir).Output()
+	if string(output) != "" {
+		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir.Dir, string(output))
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
