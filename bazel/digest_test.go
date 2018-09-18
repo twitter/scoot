@@ -47,3 +47,20 @@ func TestDigestFromString(t *testing.T) {
 		t.Fatalf("Failed to create digest from string: %s", err)
 	}
 }
+
+func TestEmptyDigest(t *testing.T) {
+	d1 := &remoteexecution.Digest{
+		Hash:      EmptySha,
+		SizeBytes: EmptySize,
+	}
+	d2 := &remoteexecution.Digest{
+		Hash:      "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+		SizeBytes: 123,
+	}
+	if !IsEmptyDigest(d1) {
+		t.Fatal("Empty hash/size not recognized")
+	}
+	if IsEmptyDigest(d2) {
+		t.Fatal("Non-empty hash/size false positive")
+	}
+}

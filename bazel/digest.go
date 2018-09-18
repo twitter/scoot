@@ -45,3 +45,7 @@ func DigestToStr(d *remoteexecution.Digest) string {
 	}
 	return fmt.Sprintf("%s/%d", d.GetHash(), d.GetSizeBytes())
 }
+
+func IsEmptyDigest(d *remoteexecution.Digest) bool {
+	return d.GetHash() == EmptySha && d.GetSizeBytes() == EmptySize
+}

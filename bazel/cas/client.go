@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -45,6 +46,11 @@ func IsNotFoundError(err error) bool {
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
 func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
+	// skip request processing for empty sha
+	if digest == nil || bazel.IsEmptyDigest(digest) {
+		return nil, nil
+	}
+
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -108,6 +114,11 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 
 // Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
 func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
+	// skip request processing for empty sha
+	if digest == nil || bazel.IsEmptyDigest(digest) {
+		return nil
+	}
+
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return fmt.Errorf("Failed to resolve server address: %s", err)
