@@ -39,9 +39,10 @@ type casServer struct {
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
 // based on a listener, and preregisters the service
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
+	opt := grpc.MaxConcurrentStreams(100)
 	g := casServer{
 		listener:    l,
-		server:      grpchelpers.NewServer(),
+		server:      grpchelpers.NewServer(opt),
 		storeConfig: cfg,
 		stat:        stat,
 		concurrent:  make(chan struct{}, MaxConnections),
