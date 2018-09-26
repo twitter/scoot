@@ -15,10 +15,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
+	"golang.org/x/time/rate"
 	"google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/tap"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/grpchelpers"
@@ -33,24 +35,48 @@ type casServer struct {
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 	stat        stats.StatsReceiver
-	concurrent  chan struct{}
+	concurrent  chan struct{} // TODO candidate for removal
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
 // based on a listener, and preregisters the service
+// TODO closed src apiserver main.go is set up with a LimitListener at 100
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
-	opt := grpc.MaxConcurrentStreams(100)
+	// TODO experimental
+	maxStreamOpt := grpc.MaxConcurrentStreams(20)
+	tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
 	g := casServer{
 		listener:    l,
-		server:      grpchelpers.NewServer(opt),
+		server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
 		storeConfig: cfg,
 		stat:        stat,
-		concurrent:  make(chan struct{}, MaxConnections),
+		//concurrent:  make(chan struct{}, MaxConnections), TODO left as nil to disable blocking
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
 	bytestream.RegisterByteStreamServer(g.server, &g)
 	return &g
+}
+
+type tapLimiter struct {
+	limiter *rate.Limiter
+}
+
+// TODO experimental
+func newTap() *tapLimiter {
+	return &tapLimiter{limiter: rate.NewLimiter(100, 10)}
+}
+
+func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Context, error) {
+	// if no deadline is set in context, add one so this request can time out
+	if _, ok := ctx.Deadline(); !ok {
+		ctx, _ = context.WithDeadline(ctx, time.Now().Add(10*time.Second))
+	}
+	err := t.limiter.Wait(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.ResourceExhausted, "Service exhausted while waiting for rate limiter")
+	}
+	return ctx, nil
 }
 
 func (s *casServer) IsInitialized() bool {
@@ -220,6 +246,12 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		c = req.GetReadLimit()
 	}
 
+	/* TODO the memory culprit
+	Is there a way to use a buffer pool here?
+	So I limit this function to say 100 concurrent, but then here I am doing N chunks of 1MB
+	in a for loop, but still in parallel, if Send() passes off to an async server stream backend?
+	* Try: get rid of MaxConns and channel restrictors. Log how many Sends were needed? Call GC() here?
+	*/
 	// Read data in chunks and stream to client
 	p := make([]byte, 0, c)
 	for {
