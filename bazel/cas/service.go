@@ -43,7 +43,7 @@ type casServer struct {
 // TODO closed src apiserver main.go is set up with a LimitListener at 100
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
 	// TODO experimental
-	maxStreamOpt := grpc.MaxConcurrentStreams(20)
+	maxStreamOpt := grpc.MaxConcurrentStreams(100)
 	tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
 	g := casServer{
 		listener:    l,
@@ -64,7 +64,7 @@ type tapLimiter struct {
 
 // TODO experimental
 func newTap() *tapLimiter {
-	return &tapLimiter{limiter: rate.NewLimiter(100, 10)}
+	return &tapLimiter{limiter: rate.NewLimiter(1000, 100)}
 }
 
 func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Context, error) {
@@ -74,6 +74,7 @@ func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Conte
 	}
 	err := t.limiter.Wait(ctx)
 	if err != nil {
+		log.Error("Tap dropped connection waiting for rate limiter")
 		return nil, status.Errorf(codes.ResourceExhausted, "Service exhausted while waiting for rate limiter")
 	}
 	return ctx, nil
