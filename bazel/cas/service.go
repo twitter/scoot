@@ -44,11 +44,10 @@ type casServer struct {
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
 	// TODO experimental
 	maxStreamOpt := grpc.MaxConcurrentStreams(10)
-	//tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
+	tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
 	g := casServer{
-		listener: l,
-		server:   grpchelpers.NewServer(maxStreamOpt),
-		//server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
+		listener:    l,
+		server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
 		storeConfig: cfg,
 		stat:        stat,
 		//concurrent:  make(chan struct{}, MaxConnections), TODO left as nil to disable blocking
@@ -65,7 +64,7 @@ type tapLimiter struct {
 
 // TODO experimental
 func newTap() *tapLimiter {
-	return &tapLimiter{limiter: rate.NewLimiter(1000, 100)}
+	return &tapLimiter{limiter: rate.NewLimiter(200, 20)}
 }
 
 func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Context, error) {
