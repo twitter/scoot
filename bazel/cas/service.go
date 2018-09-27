@@ -64,7 +64,7 @@ type tapLimiter struct {
 
 // TODO experimental
 func newTap() *tapLimiter {
-	return &tapLimiter{limiter: rate.NewLimiter(200, 20)}
+	return &tapLimiter{limiter: rate.NewLimiter(100, 20)}
 }
 
 func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Context, error) {
