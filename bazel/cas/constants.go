@@ -16,8 +16,11 @@ const (
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
 
-	// Maximum concurrent connections allowed to access underlying Store resources
-	MaxConnections = 100
+	// GRPC Server connection-related setting limits
+	MaxSimultaneousConnections = 200 // limits total simultaneous connections via the Listener
+	MaxRequestsPerSecond       = 100 // limits total incoming requests allowed per second
+	MaxRequestsBurst           = 20  // allows this many requests in a burst faster than MaxRPS average
+	MaxConcurrentStreams       = 10  // limits concurrent streams _per client_
 )
 
 // Resource naming format guidelines
