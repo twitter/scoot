@@ -43,11 +43,12 @@ type casServer struct {
 // TODO closed src apiserver main.go is set up with a LimitListener at 100
 func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
 	// TODO experimental
-	maxStreamOpt := grpc.MaxConcurrentStreams(100)
-	tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
+	maxStreamOpt := grpc.MaxConcurrentStreams(10)
+	//tapLimiterOpt := grpc.InTapHandle(newTap().Handler)
 	g := casServer{
-		listener:    l,
-		server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
+		listener: l,
+		server:   grpchelpers.NewServer(maxStreamOpt),
+		//server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
 		storeConfig: cfg,
 		stat:        stat,
 		//concurrent:  make(chan struct{}, MaxConnections), TODO left as nil to disable blocking
@@ -164,6 +165,7 @@ func (s *casServer) GetTree(
 
 // Serves content in the bundlestore to a client via grpc streaming.
 // Implements googleapis bytestream Read
+// TODO one log per request...
 func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_ReadServer) error {
 	log.Debugf("Received CAS Read request: %s", req)
 
