@@ -68,12 +68,7 @@ func newTap() *tapLimiter {
 }
 
 func (t *tapLimiter) Handler(ctx context.Context, info *tap.Info) (context.Context, error) {
-	// if no deadline is set in context, add one so this request can time out
-	if _, ok := ctx.Deadline(); !ok {
-		ctx, _ = context.WithDeadline(ctx, time.Now().Add(10*time.Second))
-	}
-	err := t.limiter.Wait(ctx)
-	if err != nil {
+	if !t.limiter.Allow() {
 		log.Error("Tap dropped connection waiting for rate limiter")
 		return nil, status.Errorf(codes.ResourceExhausted, "Service exhausted while waiting for rate limiter")
 	}
