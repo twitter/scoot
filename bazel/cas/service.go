@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/common/grpchelpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
@@ -33,18 +32,25 @@ type casServer struct {
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 	stat        stats.StatsReceiver
-	concurrent  chan struct{}
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
-// based on a listener, and preregisters the service
-func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
+// based on GRPCConfig, StoreConfig, and StatsReceiver, and preregisters the service
+func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.StatsReceiver) *casServer {
+	if gc == nil {
+		return nil
+	}
+
+	l, err := gc.NewListener()
+	if err != nil {
+		panic(err)
+	}
+	gs := gc.NewGRPCServer()
 	g := casServer{
 		listener:    l,
-		server:      grpchelpers.NewServer(),
-		storeConfig: cfg,
+		server:      gs,
+		storeConfig: sc,
 		stat:        stat,
-		concurrent:  make(chan struct{}, MaxConnections),
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
@@ -76,10 +82,6 @@ func (s *casServer) FindMissingBlobs(
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
-	}
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
 	}
 
 	var err error = nil
@@ -141,10 +143,6 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
-	}
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
 	}
 
 	var length int64 = 0
@@ -263,10 +261,6 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
-	}
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
 	}
 
 	var p []byte

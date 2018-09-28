@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"net"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +30,10 @@ func main() {
 	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
+	grpcConns := flag.Int("max_grpc_conn", 0, "max grpc listener connections")
+	grpcRate := flag.Int("max_grpc_rps", 0, "max grpc incoming requests per second")
+	grpcBurst := flag.Int("max_grpc_rps_burst", 0, "max grpc incoming requests burst")
+	grpcStreams := flag.Int("max_grpc_streams", 0, "max grpc streams per client")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -58,8 +61,14 @@ func main() {
 			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, nil)
 		},
 
-		func() (bazel.GRPCListener, error) {
-			return net.Listen("tcp", *grpcAddr)
+		func() *bazel.GRPCConfig {
+			return &bazel.GRPCConfig{
+				GRPCAddr:          *grpcAddr,
+				ListenerMaxConns:  *grpcConns,
+				RateLimitPerSec:   *grpcRate,
+				BurstLimitPerSec:  *grpcBurst,
+				ConcurrentStreams: *grpcStreams,
+			}
 		},
 
 		func() (*temp.TempDir, error) {
