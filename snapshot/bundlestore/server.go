@@ -22,7 +22,6 @@ type Server struct {
 	storeConfig *store.StoreConfig
 	httpServer  *httpServer
 	casServer   bazel.GRPCServer
-	concurrent  chan struct{}
 }
 
 // Make a new server that delegates to an underlying store.
@@ -38,17 +37,11 @@ func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, l
 		storeConfig: cfg,
 		httpServer:  MakeHTTPServer(cfg),
 		casServer:   cas.MakeCASServer(l, cfg, stat),
-		concurrent:  make(chan struct{}, MaxConnections),
 	}
 }
 
 // Implements http.Handler interface
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if s.concurrent != nil {
-		s.concurrent <- struct{}{}
-		defer func() { <-s.concurrent }()
-	}
-
 	s.storeConfig.Stat.Counter(stats.BundlestoreRequestCounter).Inc(1)
 	switch req.Method {
 	case "POST":
