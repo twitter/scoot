@@ -1,7 +1,6 @@
 package server
 
 import (
-	"net"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -89,12 +88,14 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			return thrift.NewTBinaryProtocolFactoryDefault()
 		},
 
-		func() (bazel.GRPCListener, error) {
-			return net.Listen("tcp", scootapi.DefaultSched_GRPC)
+		func() *bazel.GRPCConfig {
+			return &bazel.GRPCConfig{
+				GRPCAddr: scootapi.DefaultSched_GRPC,
+			}
 		},
 
-		func(l bazel.GRPCListener, s scheduler.Scheduler, stat stats.StatsReceiver) bazel.GRPCServer {
-			return execution.MakeExecutionServer(l, s, stat)
+		func(gc *bazel.GRPCConfig, s scheduler.Scheduler, stat stats.StatsReceiver) bazel.GRPCServer {
+			return execution.MakeExecutionServer(gc, s, stat)
 		},
 	)
 

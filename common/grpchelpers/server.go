@@ -5,6 +5,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// This package can be relocated/deprecated when the daemon is removed
+
 // NewServer returns a new grpc server just like grpc.NewServer(), but
 // which automatically implements the grpc server reflection protocol.
 // See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md

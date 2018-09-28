@@ -16,8 +16,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
-	"github.com/twitter/scoot/common/grpchelpers"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
@@ -35,12 +35,21 @@ type executionServer struct {
 	stat      stats.StatsReceiver
 }
 
-// Creates a new GRPCServer (executionServer) based on a listener, and preregisters the service
-func MakeExecutionServer(l net.Listener, s scheduler.Scheduler, stat stats.StatsReceiver) *executionServer {
+// Creates a new GRPCServer (executionServer) based on a GRPC config, scheduler, and stats, and preregisters the service
+func MakeExecutionServer(gc *bazel.GRPCConfig, s scheduler.Scheduler, stat stats.StatsReceiver) *executionServer {
+	if gc == nil {
+		return nil
+	}
+
+	l, err := gc.NewListener()
+	if err != nil {
+		panic(err)
+	}
+	gs := gc.NewGRPCServer()
 	g := executionServer{
 		listener:  l,
 		sagaCoord: s.GetSagaCoord(),
-		server:    grpchelpers.NewServer(),
+		server:    gs,
 		scheduler: s,
 		stat:      stat,
 	}

@@ -27,7 +27,7 @@ type Server struct {
 // Make a new server that delegates to an underlying store.
 // TTL may be nil, in which case defaults are applied downstream.
 // TTL duration may be overriden by request headers, but we always pass this TTLKey to the store.
-func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, l bazel.GRPCListener) *Server {
+func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, gc *bazel.GRPCConfig) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
 	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	cfg := &store.StoreConfig{Store: s, TTLCfg: ttl, Stat: scopedStat}
@@ -36,7 +36,7 @@ func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, l
 	return &Server{
 		storeConfig: cfg,
 		httpServer:  MakeHTTPServer(cfg),
-		casServer:   cas.MakeCASServer(l, cfg, stat),
+		casServer:   cas.MakeCASServer(gc, cfg, stat),
 	}
 }
 

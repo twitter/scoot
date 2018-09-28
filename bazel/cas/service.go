@@ -15,16 +15,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
-	"golang.org/x/net/netutil"
-	"golang.org/x/time/rate"
 	"google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/tap"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/common/grpchelpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
@@ -39,42 +35,27 @@ type casServer struct {
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
-// based on a listener, and preregisters the service
-func MakeCASServer(l net.Listener, cfg *store.StoreConfig, stat stats.StatsReceiver) *casServer {
-	// wrap listener with limiter and set GRPC server options
-	limitListener := netutil.LimitListener(l, MaxSimultaneousConnections)
-	maxStreamOpt := grpc.MaxConcurrentStreams(MaxConcurrentStreams)
-	tapLimiterOpt := grpc.InTapHandle(newTap().handler)
+// based on GRPCConfig, StoreConfig, and StatsReceiver, and preregisters the service
+func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.StatsReceiver) *casServer {
+	if gc == nil {
+		return nil
+	}
+
+	l, err := gc.NewListener()
+	if err != nil {
+		panic(err)
+	}
+	gs := gc.NewGRPCServer()
 	g := casServer{
-		listener:    limitListener,
-		server:      grpchelpers.NewServer(maxStreamOpt, tapLimiterOpt),
-		storeConfig: cfg,
+		listener:    l,
+		server:      gs,
+		storeConfig: sc,
 		stat:        stat,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
 	bytestream.RegisterByteStreamServer(g.server, &g)
 	return &g
-}
-
-// Encapsulates a rate-per-second limiter that will check all incoming requests (per-connection goroutine)
-// Fulfills grpc/tap.ServerInHandle function
-type tapLimiter struct {
-	limiter *rate.Limiter
-}
-
-func newTap() *tapLimiter {
-	return &tapLimiter{limiter: rate.NewLimiter(MaxRequestsPerSecond, MaxRequestsBurst)}
-}
-
-// Wait until the Limiter allows the a request or the Context expires
-// Client sees non-nil err as an RPC error with code=Unavailable, desc includes RST_STREAM or REFUSED_STREAM
-func (t *tapLimiter) handler(ctx context.Context, info *tap.Info) (context.Context, error) {
-	if err := t.limiter.Wait(ctx); err != nil {
-		log.Debugf("Tap limiter dropped connection due to rate limit: %s. Incoming request: %s", err, info.FullMethodName)
-		return nil, status.Error(codes.ResourceExhausted, "Resource exhausted due to rate limit")
-	}
-	return ctx, nil
 }
 
 func (s *casServer) IsInitialized() bool {

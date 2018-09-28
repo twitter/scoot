@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
@@ -31,7 +31,11 @@ func main() {
 	grpcAddr := flag.String("grpc_addr", scootapi.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
-	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes.")
+	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes")
+	grpcConns := flag.Int("max_grpc_conn", cas.MaxSimultaneousConnections, "max grpc listener connections")
+	grpcRate := flag.Int("max_grpc_rps", cas.MaxRequestsPerSecond, "max grpc incoming requests per second")
+	grpcBurst := flag.Int("max_grpc_rps_burst", cas.MaxRequestsBurst, "max grpc incoming requests burst")
+	grpcStreams := flag.Int("max_grpc_streams", cas.MaxConcurrentStreams, "max grpc streams per client")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -93,8 +97,14 @@ func main() {
 		func(sh *StoreAndHandler) store.Store {
 			return sh.store
 		},
-		func() (bazel.GRPCListener, error) {
-			return net.Listen("tcp", *grpcAddr)
+		func() *bazel.GRPCConfig {
+			return &bazel.GRPCConfig{
+				GRPCAddr:          *grpcAddr,
+				ListenerMaxConns:  *grpcConns,
+				RateLimitPerSec:   *grpcRate,
+				BurstLimitPerSec:  *grpcBurst,
+				ConcurrentStreams: *grpcStreams,
+			}
 		},
 	)
 	bundlestore.RunServer(bag, schema, configText)

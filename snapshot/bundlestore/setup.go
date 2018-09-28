@@ -1,7 +1,6 @@
 package bundlestore
 
 import (
-	"net"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -59,8 +58,10 @@ func Defaults() *ice.MagicBag {
 			return makeServers(h, g)
 		},
 
-		func() (bazel.GRPCListener, error) {
-			return net.Listen("tcp", scootapi.DefaultApiBundlestore_GRPC)
+		func() *bazel.GRPCConfig {
+			return &bazel.GRPCConfig{
+				GRPCAddr: scootapi.DefaultApiBundlestore_GRPC,
+			}
 		},
 
 		func(s *Server) bazel.GRPCServer {

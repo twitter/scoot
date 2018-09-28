@@ -16,7 +16,7 @@ const (
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
 
-	// GRPC Server connection-related setting limits
+	// GRPC Server connection-related setting limits recommended for CAS
 	MaxSimultaneousConnections = 200 // limits total simultaneous connections via the Listener
 	MaxRequestsPerSecond       = 100 // limits total incoming requests allowed per second
 	MaxRequestsBurst           = 20  // allows this many requests in a burst faster than MaxRPS average
