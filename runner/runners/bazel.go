@@ -377,3 +377,10 @@ func getCheckoutMissingStatus(snapshotID string) (*google_rpc_status.Status, err
 	}
 	return getFailedPreconditionStatus([]*remoteexecution.Digest{inputRoot})
 }
+
+func getInternalErrorStatus(message string) *google_rpc_status.Status {
+	return &google_rpc_status.Status{
+		Code:    int32(google_rpc_code.Code_INTERNAL),
+		Message: message,
+	}
+}
