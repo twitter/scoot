@@ -235,7 +235,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create stdout: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
 		return failedStatus
 	}
 	defer stdout.Close()
@@ -245,7 +247,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create stderr: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
 		return failedStatus
 	}
 	defer stderr.Close()
@@ -255,7 +259,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create combined stdout/stderr: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
 		return failedStatus
 	}
 	defer stdlog.Close()
