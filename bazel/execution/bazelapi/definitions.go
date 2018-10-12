@@ -33,6 +33,7 @@ type ExecuteRequest struct {
 
 // Add ActionDigest again here so it's available when polling status - no ref to original request
 // Add GoogleAPIs RPC Status here so that we can propagate detailed error statuses from the runner upwards
+// Add Cached here so that the runner can propagate whether it used a cached result upwards
 type ActionResult struct {
 	Result       *remoteexecution.ActionResult
 	ActionDigest *remoteexecution.Digest

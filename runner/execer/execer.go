@@ -55,8 +55,6 @@ type Execer interface {
 }
 
 type Process interface {
-	// TODO(dbentley): perhaps have a poll method?
-
 	// Blocks until the process terminates.
 	Wait() ProcessStatus
 

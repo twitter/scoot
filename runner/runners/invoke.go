@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -104,8 +105,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	if runType == runner.RunTypeBazel {
 		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd, rts)
 		if err != nil {
-			failedStatus := runner.FailedStatus(id, fmt.Errorf("Error preprocessing Bazel command: %s", err),
+			msg := fmt.Sprintf("Error preprocessing Bazel command: %s", err)
+			failedStatus := runner.FailedStatus(id, errors.New(msg),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 
 			// If we encounter a cas NotFoundError, set a grpc status message in
 			// the failure run status that indicates missing data to client
@@ -200,6 +203,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			// For Checkout errors from Bazel commands that indicate non-existance, we set a GRPC
 			// Status error indicating that the InputRoot data could not be found.
 			if runType == runner.RunTypeBazel {
+				msg := fmt.Sprintf("Failed to checkout Snapshot: %s", err)
+				failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 				if _, ok := err.(*bzsnapshot.CheckoutNotExistError); ok {
 					log.Info("Checkout for Bazel command returned CheckoutNotExistError - Setting grpc Status error")
 					errStatus, err := getCheckoutMissingStatus(cmd.SnapshotID)
@@ -227,29 +232,44 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
-		return runner.FailedStatus(id, fmt.Errorf("could not create stdout: %v", err),
+		msg := fmt.Sprintf("could not create stdout: %s", err)
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	}
 	defer stdout.Close()
 
 	stderr, err := inv.output.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
-		return runner.FailedStatus(id, fmt.Errorf("could not create stderr: %v", err),
+		msg := fmt.Sprintf("could not create stderr: %s", err)
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	}
 	defer stderr.Close()
 
 	stdlog, err := inv.output.Create(fmt.Sprintf("%s-stdlog", id))
 	if err != nil {
-		return runner.FailedStatus(id, fmt.Errorf("could not create combined stdout/stderr: %v", err),
+		msg := fmt.Sprintf("could not create combined stdout/stderr: %s", err)
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	}
 	defer stdlog.Close()
 
 	marker := "###########################################\n###########################################\n"
 	format := "%s\n\nDate: %v\nOut: %s\tErr: %s\tOutErr: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
-	// TODO Don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
+	// TODO We don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
 	// (via Invoker -> QueueRunner construction) or Command level (job requestor specifies in e.g. a PlatformProperty)
 	switch runType {
 	case runner.RunTypeBazel:
@@ -259,7 +279,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				parentDir, _ := filepath.Split(co.Path() + "/")
 				err = setupJDKSymlink(parentDir, pp.GetValue())
 				if err != nil {
-					return runner.FailedStatus(id, err, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+					msg := fmt.Sprintf("Failed setting up JDK symlink to %s: %s", pp.GetValue(), err)
+					failedStatus := runner.FailedStatus(id, errors.New(msg),
+						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+					return failedStatus
 				}
 			}
 		}
@@ -289,8 +313,13 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		LogTags: cmd.LogTags,
 	})
 	if err != nil {
-		return runner.FailedStatus(id, fmt.Errorf("could not exec: %v", err),
+		msg := fmt.Sprintf("could not exec: %s", err)
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	}
 
 	var timeoutCh <-chan time.Time
@@ -426,8 +455,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			case res := <-ingestCh:
 				switch res.(type) {
 				case error:
-					return runner.FailedStatus(id, fmt.Errorf("Error postprocessing Bazel command: %s", res),
+					msg := fmt.Sprintf("Error postprocessing Bazel command: %s", res)
+					failedStatus := runner.FailedStatus(id, errors.New(msg),
 						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+					return failedStatus
 				}
 				actionResult = res.(*bazelapi.ActionResult)
 			}
@@ -455,11 +487,21 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
 	case execer.FAILED:
-		return runner.FailedStatus(id, fmt.Errorf("error execing: %v", st.Error),
+		msg := fmt.Sprintf("error execing: %s", st.Error)
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	default:
-		return runner.FailedStatus(id, fmt.Errorf("unexpected exec state: %v", st),
+		msg := "unexpected exec state"
+		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
+		return failedStatus
 	}
 }
 
