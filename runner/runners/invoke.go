@@ -316,7 +316,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not exec: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.New(msg),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		if runType == runner.RunTypeBazel {
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+		}
 		return failedStatus
 	}
 
