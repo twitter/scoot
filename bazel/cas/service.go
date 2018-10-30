@@ -24,6 +24,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
+// TODO sha256 checking on reads/writes!
 
 // Implements GRPCServer, remoteexecution.ContentAddressableStoreServer,
 // remoteexecution.ActionCacheServer, bytestream.ByteStreamServer interfaces
