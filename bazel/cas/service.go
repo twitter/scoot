@@ -24,7 +24,6 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
-// TODO sha256 checking on reads/writes!
 
 // Implements GRPCServer, remoteexecution.ContentAddressableStoreServer,
 // remoteexecution.ActionCacheServer, bytestream.ByteStreamServer interfaces
@@ -356,10 +355,15 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 		}
 	}
 
-	// Get committed length and verify - Digest size can be arbitrarily set by the client, but is a trusted value after insertion
+	// Verify committed length with Digest size
 	if committed != resource.Digest.GetSizeBytes() {
 		log.Errorf("Data length/digest mismatch: %d/%d", committed, resource.Digest.GetSizeBytes())
 		return status.Error(codes.Internal, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
+	}
+	// Verify buffer SHA with Digest SHA
+	if bufferHash := fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes())); bufferHash != resource.Digest.GetHash() {
+		log.Errorf("Data hash/digest hash mismatch: %s/%s", bufferHash, resource.Digest.GetHash())
+		return status.Error(codes.Internal, fmt.Sprintf("Data to be written did not hash to given Digest"))
 	}
 
 	// Write to underlying Store
@@ -546,7 +550,7 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 	}
 
 	// Write to store
-	// TODO use CAS Default TTL setting until API supports cache priority settings
+	// Use CAS Default TTL setting until API supports cache priority settings
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
 	if ttl != nil {
 		ttl.TTL = time.Now().Add(DefaultTTL)

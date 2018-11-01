@@ -20,7 +20,7 @@ import (
 	"github.com/twitter/scoot/snapshot/store"
 )
 
-var testHash1 string = "ce58a4479be1d32816ee82e57eae04415dc2bda173fa7b0f11d18aa67856f242"
+var testHash1 string = "36f583dd16f4e1e201eb1e6f6d8e35a2ccb3bbe2658de46b4ffae7b0e9ed872e"
 var testSize1 int64 = 7
 var testData1 []byte = []byte("abc1234")
 
@@ -290,7 +290,7 @@ func TestGetTreeStub(t *testing.T) {
 func TestMakeResultAddress(t *testing.T) {
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	// e.g. `echo -n "<testHash1>-<ResultAddressKey>" | shasum -a 256`
-	knownHash := "fdc8c407bc2aa6d6cb514ace4299b2f414c4476a77123e3557dafd103d889124"
+	knownHash := "96da053bc6583a4307c182fefa3ca7d55cfdfb3a770698adc197c61961b041f1"
 	storeName := fmt.Sprintf("%s-%s.%s", bazel.StorePrefix, knownHash, bazel.StorePrefix)
 
 	resultAddr, err := makeCacheResultAddress(ad)
