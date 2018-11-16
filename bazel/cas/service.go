@@ -121,14 +121,21 @@ func (s *casServer) FindMissingBlobs(
 	return &res, nil
 }
 
-// BatchUpdate not supported in Scoot for V1
+// BatchUpdate not supported in Scoot
 func (s *casServer) BatchUpdateBlobs(
 	ctx context.Context,
 	req *remoteexecution.BatchUpdateBlobsRequest) (*remoteexecution.BatchUpdateBlobsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - update blobs independently")
 }
 
-// GetTree not supported in Scoot for V1
+// BatchRead not supported in Scoot
+func (s *casServer) BatchReadBlobs(
+	ctx context.Context,
+	req *remoteexecution.BatchReadBlobsRequest) (*remoteexecution.BatchReadBlobsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - read blobs independently")
+}
+
+// GetTree not supported in Scoot
 func (s *casServer) GetTree(
 	req *remoteexecution.GetTreeRequest, gtServer remoteexecution.ContentAddressableStorage_GetTreeServer) error {
 	return status.Error(codes.Unimplemented, "Currently unsupported in Scoot")
@@ -390,8 +397,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	return nil
 }
 
-// QueryWriteStatus gives status information about a Write operation in progress
-// Unsupported, may be added later for V1
+// QueryWriteStatus not supported in Scoot
 func (s *casServer) QueryWriteStatus(
 	context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - Writes are not resumable")
