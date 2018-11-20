@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -16,6 +17,8 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -98,41 +101,269 @@ func (s *casServer) FindMissingBlobs(
 	}()
 	defer s.stat.Latency(stats.BzFindBlobsLatency_ms).Time().Stop()
 
+	sem := make(chan struct{}, BatchParallelism)
+	resultCh := make(chan *remoteexecution.Digest)
+	var wg sync.WaitGroup
 	res := remoteexecution.FindMissingBlobsResponse{}
 	length = int64(len(req.GetBlobDigests()))
+	log.Infof("Processing CAS FindMissingBlobs request of length: %d", length)
 
+	go func() {
+		for d := range resultCh {
+			if d != nil {
+				res.MissingBlobDigests = append(res.MissingBlobDigests, d)
+			}
+			wg.Done()
+		}
+	}()
+
+	// Perform operations in goroutines
 	for _, digest := range req.GetBlobDigests() {
-		// We hardcode support for empty data in snapshot/filer/checkouter.go, so never report it as missing
-		// Empty SHA can be used to represent working with a plain, empty directory, but can cause problems in Stores
-		if digest.GetHash() == bazel.EmptySha {
-			continue
+		if err != nil {
+			break
 		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(d *remoteexecution.Digest) {
+			// We hardcode support for empty data in snapshot/filer/checkouter.go, so never report it as missing
+			// Empty SHA can be used to represent working with a plain, empty directory, but can cause problems in Stores
+			if d.GetHash() == bazel.EmptySha {
+				resultCh <- nil
+				return
+			}
 
-		storeName := bazel.DigestStoreName(digest)
-		if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
-			log.Errorf("Error checking existence: %v", err)
-			return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
-		} else if !exists {
-			res.MissingBlobDigests = append(res.MissingBlobDigests, digest)
-		}
+			storeName := bazel.DigestStoreName(d)
+			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
+				log.Errorf("Error checking existence of %s: %v", storeName, err)
+				err = fmt.Errorf("Store failed checking existence of one or more digests")
+			} else if !exists {
+				resultCh <- d
+				return
+			}
+			resultCh <- nil
+		}(digest)
 	}
 
-	log.Infof("Returning missing blob digests: %s", res.MissingBlobDigests)
+	wg.Wait()
+	close(resultCh)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	log.Infof("Returning CAS FindMissingBlobs missing digests: %s", res.MissingBlobDigests)
 	return &res, nil
 }
 
-// BatchUpdate not supported in Scoot
+// BatchUpdateBlobs writes a batch of inlined blob data into bundlestore with parallelism
 func (s *casServer) BatchUpdateBlobs(
 	ctx context.Context,
 	req *remoteexecution.BatchUpdateBlobsRequest) (*remoteexecution.BatchUpdateBlobsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - update blobs independently")
+	log.Debugf("Received CAS BatchUpdateBlobs request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
+	var length int64 = 0
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzBatchUpdateSuccessCounter).Inc(1)
+			if length > 0 {
+				s.stat.Histogram(stats.BzBatchUpdateLengthHistogram).Update(length)
+			}
+		} else {
+			s.stat.Counter(stats.BzBatchUpdateFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzBatchUpdateLatency_ms).Time().Stop()
+
+	sem := make(chan struct{}, BatchParallelism)
+	resultCh := make(chan *remoteexecution.BatchUpdateBlobsResponse_Response)
+	var wg sync.WaitGroup
+	res := &remoteexecution.BatchUpdateBlobsResponse{}
+	length = int64(len(req.GetRequests()))
+	log.Infof("Processing CAS BatchUpdateBlobs request of length: %d", length)
+
+	go func() {
+		for r := range resultCh {
+			res.Responses = append(res.GetResponses(), r)
+			wg.Done()
+		}
+	}()
+
+	// Perform operations in goroutines
+	for _, blobReq := range req.GetRequests() {
+		if err != nil {
+			break
+		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(r *remoteexecution.BatchUpdateBlobsRequest_Request) {
+			writeRes := &remoteexecution.BatchUpdateBlobsResponse_Response{Digest: r.GetDigest()}
+
+			// Return OK if we got a request to write the empty sha
+			if r.GetDigest().GetHash() == bazel.EmptySha {
+				writeRes.Status = &google_rpc_status.Status{
+					Code: int32(google_rpc_code.Code_OK),
+				}
+				resultCh <- writeRes
+				return
+			}
+
+			// Verify data length with Digest size
+			if int64(len(r.GetData())) != r.GetDigest().GetSizeBytes() {
+				log.Errorf("Data length/digest mismatch: %d/%d", len(r.GetData()), r.GetDigest().GetSizeBytes())
+				writeRes.Status = &google_rpc_status.Status{
+					Code:    int32(google_rpc_code.Code_INVALID_ARGUMENT),
+					Message: fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", len(r.GetData()), r.GetDigest().GetSizeBytes()),
+				}
+				resultCh <- writeRes
+				return
+			}
+			// Verify buffer SHA with Digest SHA
+			if bufferHash := fmt.Sprintf("%x", sha256.Sum256(r.GetData())); bufferHash != r.GetDigest().GetHash() {
+				log.Errorf("Data hash/digest hash mismatch: %s/%s", bufferHash, r.GetDigest().GetHash())
+				writeRes.Status = &google_rpc_status.Status{
+					Code:    int32(google_rpc_code.Code_INVALID_ARGUMENT),
+					Message: fmt.Sprintf("Data to be written did not hash to given Digest"),
+				}
+				resultCh <- writeRes
+				return
+			}
+
+			storeName := bazel.DigestStoreName(r.GetDigest())
+			buffer := bytes.NewReader(r.GetData())
+			writeErr := s.writeToStore(storeName, buffer)
+			if writeErr != nil {
+				writeRes.Status = &google_rpc_status.Status{
+					Code:    int32(google_rpc_code.Code_INTERNAL),
+					Message: writeErr.Error(),
+				}
+			} else {
+				writeRes.Status = &google_rpc_status.Status{
+					Code: int32(google_rpc_code.Code_OK),
+				}
+			}
+			resultCh <- writeRes
+		}(blobReq)
+	}
+
+	wg.Wait()
+	close(resultCh)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	log.Infof("Finished processing CAS BatchUpdateBlobs Request of length: %d", length)
+	return res, err
 }
 
-// BatchRead not supported in Scoot
+// BatchReadBlobs reads a batch of blobs from bundlestore with parallelism and returns them inline in the response
 func (s *casServer) BatchReadBlobs(
 	ctx context.Context,
 	req *remoteexecution.BatchReadBlobsRequest) (*remoteexecution.BatchReadBlobsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Currently unsupported in Scoot - read blobs independently")
+	log.Debugf("Received CAS BatchReadBlobs request: %s", req)
+
+	if !s.IsInitialized() {
+		return nil, status.Error(codes.Internal, "Server not initialized")
+	}
+
+	var length int64 = 0
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzBatchReadSuccessCounter).Inc(1)
+			if length > 0 {
+				s.stat.Histogram(stats.BzBatchReadLengthHistogram).Update(length)
+			}
+		} else {
+			s.stat.Counter(stats.BzBatchReadFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzBatchReadLatency_ms).Time().Stop()
+
+	sem := make(chan struct{}, BatchParallelism)
+	resultCh := make(chan *remoteexecution.BatchReadBlobsResponse_Response)
+	var wg sync.WaitGroup
+	res := &remoteexecution.BatchReadBlobsResponse{}
+	length = int64(len(req.GetDigests()))
+	log.Infof("Processing CAS BatchReadBlobs request of length: %d", length)
+
+	go func() {
+		for r := range resultCh {
+			res.Responses = append(res.GetResponses(), r)
+			wg.Done()
+		}
+	}()
+
+	// Perform operations in goroutines
+	for _, digest := range req.GetDigests() {
+		if err != nil {
+			break
+		}
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(d *remoteexecution.Digest) {
+			readRes := &remoteexecution.BatchReadBlobsResponse_Response{Digest: d}
+
+			// Return empty data if we got a request to read the empty sha
+			if d.GetHash() == bazel.EmptySha {
+				readRes.Status = &google_rpc_status.Status{
+					Code: int32(google_rpc_code.Code_OK),
+				}
+				resultCh <- readRes
+				return
+			}
+
+			// Read and return result. We interpret read errors as Not Found
+			storeName := bazel.DigestStoreName(d)
+			r, openErr := s.storeConfig.Store.OpenForRead(storeName)
+			if openErr != nil {
+				readRes.Status = &google_rpc_status.Status{
+					Code: int32(google_rpc_code.Code_NOT_FOUND),
+				}
+				resultCh <- readRes
+				return
+			}
+
+			asBytes, readErr := ioutil.ReadAll(r)
+			if readErr != nil {
+				log.Errorf("Error reading data for digest %s: %s", d.GetHash(), readErr)
+				readRes.Status = &google_rpc_status.Status{
+					Code:    int32(google_rpc_code.Code_INTERNAL),
+					Message: fmt.Sprintf("Error reading data for digest %s: %s", d.GetHash(), readErr),
+				}
+				resultCh <- readRes
+				return
+			}
+			defer r.Close()
+
+			if int64(len(asBytes)) != d.GetSizeBytes() {
+				readRes.Status = &google_rpc_status.Status{
+					Code:    int32(google_rpc_code.Code_INVALID_ARGUMENT),
+					Message: fmt.Sprintf("Data length mismatch - read %d for Digest %s/%d", len(asBytes), d.GetHash(), d.GetSizeBytes()),
+				}
+				resultCh <- readRes
+				return
+			}
+			readRes.Data = asBytes
+			readRes.Status = &google_rpc_status.Status{
+				Code: int32(google_rpc_code.Code_OK),
+			}
+			resultCh <- readRes
+		}(digest)
+	}
+
+	wg.Wait()
+	close(resultCh)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	log.Infof("Finished processing CAS BatchReadBlobs Request of length: %d", length)
+	return res, err
 }
 
 // GetTree not supported in Scoot
@@ -365,22 +596,16 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	// Verify committed length with Digest size
 	if committed != resource.Digest.GetSizeBytes() {
 		log.Errorf("Data length/digest mismatch: %d/%d", committed, resource.Digest.GetSizeBytes())
-		return status.Error(codes.Internal, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
 	}
 	// Verify buffer SHA with Digest SHA
 	if bufferHash := fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes())); bufferHash != resource.Digest.GetHash() {
 		log.Errorf("Data hash/digest hash mismatch: %s/%s", bufferHash, resource.Digest.GetHash())
-		return status.Error(codes.Internal, fmt.Sprintf("Data to be written did not hash to given Digest"))
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("Data to be written did not hash to given Digest"))
 	}
 
 	// Write to underlying Store
-	// TODO use CAS Default TTL setting until API supports cache priority settings
-	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
-	if ttl != nil {
-		ttl.TTL = time.Now().Add(DefaultTTL)
-	}
-
-	err = s.storeConfig.Store.Write(storeName, buffer, ttl)
+	err = s.writeToStore(storeName, buffer)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
@@ -573,6 +798,18 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 }
 
 // Internal functions
+
+func (s *casServer) writeToStore(name string, data io.Reader) error {
+	// Using CAS Default TTL setting until API supports cache priority settings
+	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
+	if ttl != nil {
+		ttl.TTL = time.Now().Add(DefaultTTL)
+	}
+	if err := s.storeConfig.Store.Write(name, data, ttl); err != nil {
+		return err
+	}
+	return nil
+}
 
 // Interface for reading Empty data in a normal way while bypassing the underlying store
 type nilReader struct{}

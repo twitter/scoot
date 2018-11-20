@@ -13,6 +13,9 @@ const (
 	// Default buffer sizes
 	DefaultReadCapacity = 1024 * 1024
 
+	// Batch parallelism for underlying store operations
+	BatchParallelism = 10
+
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
 

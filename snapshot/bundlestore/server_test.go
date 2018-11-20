@@ -19,7 +19,7 @@ import (
 func TestServer(t *testing.T) {
 	// Construct server with a fake store and random port address.
 	now := time.Time{}.Add(time.Minute)
-	fakeStore := &store.FakeStore{Files: map[string][]byte{}, TTL: nil}
+	fakeStore := &store.FakeStore{TTL: nil}
 	store.DefaultTTL = 0
 
 	listener, _ := net.Listen("tcp", "localhost:0")
@@ -51,7 +51,8 @@ func TestServer(t *testing.T) {
 		resp.Body.Close()
 	}
 
-	if !reflect.DeepEqual(fakeStore.Files[bundle1ID], []byte("baz_data")) {
+	storeData, _ := fakeStore.Files.Load(bundle1ID)
+	if !reflect.DeepEqual(storeData, []byte("baz_data")) {
 		t.Fatalf("Failed to post data")
 	}
 

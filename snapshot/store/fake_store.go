@@ -6,26 +6,32 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sync"
 )
 
 // Implements Store. FakeStore just keeps references to data that would be stored
 type FakeStore struct {
-	Files map[string][]byte
+	Files sync.Map // map[string][]byte
 	TTL   *TTLValue
 }
 
 func (f *FakeStore) Exists(name string) (bool, error) {
-	if _, ok := f.Files[name]; !ok {
+	if _, ok := f.Files.Load(name); !ok {
 		return false, nil
 	}
 	return true, nil
 }
 
 func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
-	if ok, _ := f.Exists(name); !ok {
+	v, ok := f.Files.Load(name)
+	if !ok {
 		return nil, errors.New("Doesn't exist :" + name)
 	}
-	return ioutil.NopCloser(bytes.NewBuffer(f.Files[name])), nil
+	b, ok := v.([]byte)
+	if !ok {
+		return nil, errors.New("Couldn't read data as []byte")
+	}
+	return ioutil.NopCloser(bytes.NewBuffer(b)), nil
 }
 
 func (f *FakeStore) Root() string { return "" }
@@ -35,16 +41,11 @@ func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.TTL, ttl)
 	}
 
-	// Initialize map on first entry
-	if f.Files == nil {
-		f.Files = make(map[string][]byte)
-	}
-
 	b, err := ioutil.ReadAll(data)
 	if err != nil {
 		return err
 	} else {
-		f.Files[name] = b
+		f.Files.Store(name, b)
 		return nil
 	}
 }

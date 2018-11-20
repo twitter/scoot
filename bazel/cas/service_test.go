@@ -11,6 +11,7 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,16 +24,36 @@ import (
 var testHash1 string = "36f583dd16f4e1e201eb1e6f6d8e35a2ccb3bbe2658de46b4ffae7b0e9ed872e"
 var testSize1 int64 = 7
 var testData1 []byte = []byte("abc1234")
+var testHash2 string = "ed1073e458620413772fcf13e3730a6392211f04b63dde663d085eb72435d56b"
+var testSize2 int64 = 7
+var testData2 []byte = []byte("efg9876")
+var testHash3 string = "67a619457aae3e869af3e7c92078424a773397c1520a9cec76fde54ee8350137"
+var testSize3 int64 = 7
+var testData3 []byte = []byte("qqqqqqq")
+var testHash4 string = "40011c325e5305a8aaab651bb4328480576bd14c2186500ca49f5c171fbe916d"
+var testSize4 int64 = 7
+var testData4 []byte = []byte("wwwwwww")
+var testHash5 string = "3de47205e772b39d369b811a8cc515a31cf310511bf1f4529b7234988509da55"
+var testSize5 int64 = 7
+var testData5 []byte = []byte("eeeeeee")
+var testHash6 string = "5252f52cb79e2276783cfdca50304fed06a0eabc8dbcc3abfe3aaac5792c4fc6"
+var testSize6 int64 = 7
+var testData6 []byte = []byte("rrrrrrr")
 
 func TestFindMissingBlobs(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
-	// Create 2 digests, write 1 to Store, check both for missing, expect other 1 back
-	dExists := &remoteexecution.Digest{Hash: "abc123", SizeBytes: 1}
-	dMissing := &remoteexecution.Digest{Hash: "efg456", SizeBytes: 9}
-	digests := []*remoteexecution.Digest{dExists, dMissing}
-	expected := []*remoteexecution.Digest{dMissing}
+	// Create 6 digests, write 1 to Store, expect all missing expect 1
+	// Count of 6 intended to be > cas.BatchParallelism value
+	dExists := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
+	dMissing1 := &remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2}
+	dMissing2 := &remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3}
+	dMissing3 := &remoteexecution.Digest{Hash: testHash4, SizeBytes: testSize4}
+	dMissing4 := &remoteexecution.Digest{Hash: testHash5, SizeBytes: testSize5}
+	dMissing5 := &remoteexecution.Digest{Hash: testHash6, SizeBytes: testSize6}
+	digests := []*remoteexecution.Digest{dExists, dMissing1, dMissing2, dMissing3, dMissing4, dMissing5}
+	expected := []*remoteexecution.Digest{dMissing1, dMissing2, dMissing3, dMissing4, dMissing5}
 
 	resourceName := bazel.DigestStoreName(dExists)
 	err := f.Write(resourceName, bytes.NewReader([]byte("")), nil)
@@ -50,9 +71,16 @@ func TestFindMissingBlobs(t *testing.T) {
 	if len(expected) != len(res.MissingBlobDigests) {
 		t.Fatalf("Length of missing blobs mismatch, expected %d got %d", len(expected), len(res.MissingBlobDigests))
 	}
-	for i, d := range res.MissingBlobDigests {
-		if expected[i] != d {
-			t.Fatalf("Non-match iterating through missing digests, expected %s got: %s", expected[i], d)
+	for _, d := range expected {
+		found := false
+		for _, v := range res.MissingBlobDigests {
+			if v == d {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("Expected missing digest %s not found in results", d)
 		}
 	}
 }
@@ -168,16 +196,9 @@ func TestWrite(t *testing.T) {
 	// Verify Write by reading directly from underlying Store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	resourceName := bazel.DigestStoreName(d)
-	r, err := f.OpenForRead(resourceName)
+	_, err = readAndCompare(f, resourceName, testData1)
 	if err != nil {
-		t.Fatalf("Failed to open expected resource for reading: %s: %v", resourceName, err)
-	}
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatalf("Error reading from fake store: %v", err)
-	}
-	if bytes.Compare(b, testData1) != 0 {
-		t.Fatalf("Data read from store did not match - expected: %s, got: %s", testData1, b)
+		t.Fatal(err)
 	}
 }
 
@@ -252,20 +273,174 @@ func TestQueryWriteStatusStub(t *testing.T) {
 	}
 }
 
-func TestBatchUpdateBlobsStub(t *testing.T) {
-	s := casServer{stat: stats.NilStatsReceiver()}
-	req := &remoteexecution.BatchUpdateBlobsRequest{}
+func TestBatchUpdateBlobs(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
-	_, err := s.BatchUpdateBlobs(context.Background(), req)
-	if err == nil {
-		t.Fatalf("Non-error response from BatchUpdateBlobs")
+	// All expected to succeeded unless otherwise indicated.
+	// Count of 6 intended to be > cas.BatchParallelism value
+	req := &remoteexecution.BatchUpdateBlobsRequest{
+		Requests: []*remoteexecution.BatchUpdateBlobsRequest_Request{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1},
+				Data:   testData1,
+			},
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2},
+				Data:   testData2,
+			},
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3},
+				Data:   testData3,
+			},
+			// empty (should still succeed)
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: bazel.EmptySha, SizeBytes: bazel.EmptySize},
+				Data:   []byte{},
+			},
+			// mismatch data sha
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: testHash4, SizeBytes: testSize4},
+				Data:   testData2,
+			},
+			// mismatch data length
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
+				Digest: &remoteexecution.Digest{Hash: testHash5, SizeBytes: testSize5 + 1},
+				Data:   testData5,
+			},
+		},
 	}
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("Not ok reading grpc status from error")
+
+	res, err := s.BatchUpdateBlobs(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Error response from BatchUpdateBlobs: %s", err)
 	}
-	if st.Code() != codes.Unimplemented {
-		t.Fatalf("Expected status code %d, got: %d", codes.Unimplemented, st.Code())
+
+	// Check response validity in Status and/or underlying Store as required
+	for _, writeRes := range res.GetResponses() {
+		switch h := writeRes.GetDigest().GetHash(); h {
+		case testHash1:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			resourceName := bazel.DigestStoreName(&remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1})
+			_, err = readAndCompare(f, resourceName, testData1)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case testHash2:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			resourceName := bazel.DigestStoreName(&remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2})
+			_, err = readAndCompare(f, resourceName, testData2)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case testHash3:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			resourceName := bazel.DigestStoreName(&remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3})
+			_, err = readAndCompare(f, resourceName, testData3)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case testHash4:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_INVALID_ARGUMENT) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_INVALID_ARGUMENT)
+			}
+		case testHash5:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_INVALID_ARGUMENT) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_INVALID_ARGUMENT)
+			}
+		case bazel.EmptySha:
+			if writeRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", writeRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+		default:
+			t.Fatalf("Unexpected hash in response: %s", h)
+		}
+	}
+}
+
+func TestBatchReadBlobs(t *testing.T) {
+	f := &store.FakeStore{}
+	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+
+	// All expected to succeed unless otherwise indicated.
+	// Count of 6 intended to be > cas.BatchParallelism value
+	req := &remoteexecution.BatchReadBlobsRequest{
+		Digests: []*remoteexecution.Digest{
+			&remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1},
+			&remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2},
+			&remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3},
+			// empty (should still succeed)
+			&remoteexecution.Digest{Hash: bazel.EmptySha, SizeBytes: bazel.EmptySize},
+			// mismatch length
+			&remoteexecution.Digest{Hash: testHash4, SizeBytes: testSize4 + 1},
+			// non exist
+			&remoteexecution.Digest{Hash: testHash5, SizeBytes: testSize5},
+		},
+	}
+
+	// write expected data to underlying store
+	writeHashes := []string{testHash1, testHash2, testHash3, testHash4}
+	writeSizes := []int64{testSize1, testSize2, testSize3, testSize4}
+	writeData := [][]byte{testData1, testData2, testData3, testData4}
+	for i := 0; i < len(writeHashes); i++ {
+		d := &remoteexecution.Digest{Hash: writeHashes[i], SizeBytes: writeSizes[i]}
+		resourceName := bazel.DigestStoreName(d)
+		err := f.Write(resourceName, bytes.NewReader(writeData[i]), nil)
+		if err != nil {
+			t.Fatalf("Failed to write into FakeStore: %v", err)
+		}
+	}
+
+	res, err := s.BatchReadBlobs(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Non-nil err response from BatchReadBlobs: %s", err)
+	}
+
+	// Check response validity in Status and/or Data as required
+	for _, readRes := range res.GetResponses() {
+		switch h := readRes.GetDigest().GetHash(); h {
+		case testHash1:
+			if readRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			if bytes.Compare(readRes.Data, testData1) != 0 {
+				t.Fatalf("Data read did not match - expected: %s, got: %s", testData1, readRes.Data)
+			}
+		case testHash2:
+			if readRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			if bytes.Compare(readRes.Data, testData2) != 0 {
+				t.Fatalf("Data read did not match - expected: %s, got: %s", testData2, readRes.Data)
+			}
+		case testHash3:
+			if readRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+			if bytes.Compare(readRes.Data, testData3) != 0 {
+				t.Fatalf("Data read did not match - expected: %s, got: %s", testData3, readRes.Data)
+			}
+		case testHash4:
+			if readRes.Status.Code != int32(google_rpc_code.Code_INVALID_ARGUMENT) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_INVALID_ARGUMENT)
+			}
+		case testHash5:
+			if readRes.Status.Code != int32(google_rpc_code.Code_NOT_FOUND) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_NOT_FOUND)
+			}
+		case bazel.EmptySha:
+			if readRes.Status.Code != int32(google_rpc_code.Code_OK) {
+				t.Fatalf("Unexpected status code %d for hash %s: %d", readRes.Status.Code, h, google_rpc_code.Code_OK)
+			}
+		default:
+			t.Fatalf("Unexpected hash in response: %s", h)
+		}
 	}
 }
 
@@ -387,13 +562,9 @@ func TestUpdateActionResult(t *testing.T) {
 		t.Fatalf("Failed to create cache result adress: %v", err)
 	}
 
-	r, err := f.OpenForRead(address.storeName)
+	b, err := readAndCompare(f, address.storeName, nil)
 	if err != nil {
-		t.Fatalf("Failed to open expected resource for reading: %s: %v", address.storeName, err)
-	}
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		t.Fatalf("Error reading from fake store: %v", err)
+		t.Fatal(err)
 	}
 	resAr := &remoteexecution.ActionResult{}
 	if err = proto.Unmarshal(b, resAr); err != nil {
@@ -515,4 +686,23 @@ type fakeGetTreeServer struct {
 
 func (s *fakeGetTreeServer) Send(*remoteexecution.GetTreeResponse) error {
 	return nil
+}
+
+// Helper functions
+
+func readAndCompare(f store.Store, name string, testData []byte) ([]byte, error) {
+	r, err := f.OpenForRead(name)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open expected resource for reading: %s: %v", name, err)
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("Error reading from fake store: %v", err)
+	}
+	if testData != nil {
+		if bytes.Compare(b, testData) != 0 {
+			return nil, fmt.Errorf("Data read from store did not match - expected: %s, got: %s", testData, b)
+		}
+	}
+	return b, nil
 }

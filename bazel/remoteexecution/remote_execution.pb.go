@@ -2692,10 +2692,10 @@ type ServerCapabilities struct {
 	// Earliest non-deprecated RE API version supported.
 	LowApiVersion *SemVer `protobuf:"bytes,4,opt,name=low_api_version,json=lowApiVersion,proto3" json:"low_api_version,omitempty"`
 	// Latest RE API version supported.
-	HighApiVersion       *SemVer `protobuf:"bytes,5,opt,name=high_api_version,json=highApiVersion,proto3" json:"high_api_version,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
-	XXX_unrecognized     []byte         `json:"-"`
-	XXX_sizecache        int32          `json:"-"`
+	HighApiVersion       *SemVer  `protobuf:"bytes,5,opt,name=high_api_version,json=highApiVersion,proto3" json:"high_api_version,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *ServerCapabilities) Reset()         { *m = ServerCapabilities{} }
