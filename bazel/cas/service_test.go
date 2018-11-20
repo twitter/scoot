@@ -45,7 +45,7 @@ func TestFindMissingBlobs(t *testing.T) {
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// Create 6 digests, write 1 to Store, expect all missing expect 1
-	// Count of 6 intended to be > cas.BatchParallelism value
+	// NOTE Count of 6 intended to be > cas.BatchParallelism value
 	dExists := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	dMissing1 := &remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2}
 	dMissing2 := &remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3}
@@ -278,7 +278,7 @@ func TestBatchUpdateBlobs(t *testing.T) {
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// All expected to succeeded unless otherwise indicated.
-	// Count of 6 intended to be > cas.BatchParallelism value
+	// NOTE Count of 6 intended to be > cas.BatchParallelism value
 	req := &remoteexecution.BatchUpdateBlobsRequest{
 		Requests: []*remoteexecution.BatchUpdateBlobsRequest_Request{
 			&remoteexecution.BatchUpdateBlobsRequest_Request{
@@ -369,7 +369,7 @@ func TestBatchReadBlobs(t *testing.T) {
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
 
 	// All expected to succeed unless otherwise indicated.
-	// Count of 6 intended to be > cas.BatchParallelism value
+	// NOTE Count of 6 intended to be > cas.BatchParallelism value
 	req := &remoteexecution.BatchReadBlobsRequest{
 		Digests: []*remoteexecution.Digest{
 			&remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1},

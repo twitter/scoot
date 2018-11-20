@@ -113,6 +113,7 @@ func (s *casServer) FindMissingBlobs(
 			if d != nil {
 				res.MissingBlobDigests = append(res.MissingBlobDigests, d)
 			}
+			<-sem
 			wg.Done()
 		}
 	}()
@@ -189,6 +190,7 @@ func (s *casServer) BatchUpdateBlobs(
 	go func() {
 		for r := range resultCh {
 			res.Responses = append(res.GetResponses(), r)
+			<-sem
 			wg.Done()
 		}
 	}()
@@ -295,6 +297,7 @@ func (s *casServer) BatchReadBlobs(
 	go func() {
 		for r := range resultCh {
 			res.Responses = append(res.GetResponses(), r)
+			<-sem
 			wg.Done()
 		}
 	}()

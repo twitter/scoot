@@ -14,7 +14,8 @@ const (
 	DefaultReadCapacity = 1024 * 1024
 
 	// Batch parallelism for underlying store operations
-	BatchParallelism = 10
+	// NOTE if service implementation is changed, retest with setting <= 5
+	BatchParallelism = 5
 
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
