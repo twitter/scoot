@@ -40,6 +40,8 @@ var testHash6 string = "5252f52cb79e2276783cfdca50304fed06a0eabc8dbcc3abfe3aaac5
 var testSize6 int64 = 7
 var testData6 []byte = []byte("rrrrrrr")
 
+// TODO make batch tests easier to programmatically test above BatchParallelism threshold
+
 func TestFindMissingBlobs(t *testing.T) {
 	f := &store.FakeStore{}
 	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
