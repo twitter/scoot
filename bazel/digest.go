@@ -47,5 +47,5 @@ func DigestToStr(d *remoteexecution.Digest) string {
 }
 
 func IsEmptyDigest(d *remoteexecution.Digest) bool {
-	return d.GetHash() == EmptySha && d.GetSizeBytes() == EmptySize
+	return d.GetHash() == EmptySha
 }
