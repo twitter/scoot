@@ -80,7 +80,7 @@ func (bc bzCommand) save(path string) (string, error) {
 // Materializes the digest identified by sha in dir using the fsUtilCmd
 func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 	// short circuit if the input is empty, but create the target dir as fs_util would do
-	if sha == bazel.EmptySha && size == bazel.EmptySize {
+	if sha == bazel.EmptySha {
 		return os.Mkdir(dir, 0777)
 	}
 

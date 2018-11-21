@@ -445,6 +445,22 @@ const (
 	BzWriteBytesHistogram = "bzWriteBytesHistogram"
 	BzWriteLatency_ms     = "bzWriteLatency_ms"
 
+	/*
+		CAS BatchUpdateBlobs API metrics emitted by Apiserver
+	*/
+	BzBatchUpdateSuccessCounter  = "bzBatchUpdateSuccessCounter"
+	BzBatchUpdateFailureCounter  = "bzBatchUpdateFailureCounter"
+	BzBatchUpdateLengthHistogram = "bzBatchUpdateLengthHistogram"
+	BzBatchUpdateLatency_ms      = "bzBatchUpdateLatency_ms"
+
+	/*
+		CAS BatchReadBlobs API metrics emitted by Apiserver
+	*/
+	BzBatchReadSuccessCounter  = "bzBatchReadSuccessCounter"
+	BzBatchReadFailureCounter  = "bzBatchReadFailureCounter"
+	BzBatchReadLengthHistogram = "bzBatchReadLengthHistogram"
+	BzBatchReadLatency_ms      = "bzBatchReadLatency_ms"
+
 	/****************************** ActionCache Service ****************************************/
 	/*
 		ActionCache result metrics

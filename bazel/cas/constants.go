@@ -13,6 +13,11 @@ const (
 	// Default buffer sizes
 	DefaultReadCapacity = 1024 * 1024
 
+	// Batch parallelism for underlying store operations
+	// NOTE experimental/arbitrary setting. Consider adding a mechanism to set via StoreConfigs
+	// NOTE if service implementation is changed, retest with setting <= 5
+	BatchParallelism = 5
+
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
 
