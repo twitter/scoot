@@ -215,8 +215,13 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 
 	// we couldn't unbundle
 	// see if it's because we're missing prereqs
-	if exitError := err.(*exec.ExitError); exitError == nil || !strings.Contains(string(exitError.Stderr), "error: Repository lacks these prerequisite commits:") {
+	lacksCommitsStr := "error: Repository lacks these prerequisite commits:"
+	exitError, ok := err.(*exec.ExitError)
+	if ok && exitError == nil || ok && !strings.Contains(string(exitError.Stderr), lacksCommitsStr) {
 		log.Info("Can't find sha: ", s.SHA(), " and prereqs aren't the problem, returning err: ", err.Error())
+		return err
+	} else if !ok {
+		log.Info("Error of unexpected type while unbundling, returning err:", err.Error())
 		return err
 	}
 
