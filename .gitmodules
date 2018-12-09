@@ -53,7 +53,7 @@
 [submodule "vendor/github.com/sirupsen/logrus"]
 	path = vendor/github.com/sirupsen/logrus
 	url = https://github.com/sirupsen/logrus
-    branch = f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+    branch = 1ed61965b9e594bf37539680d7f63eccd060314f
 [submodule "vendor/github.com/bazelbuild/remote-apis"]
 	path = vendor/github.com/bazelbuild/remote-apis
 	url = https://github.com/bazelbuild/remote-apis
@@ -163,7 +163,7 @@
 [submodule "vendor/gopkg.in/yaml.v2"]
 	path = vendor/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
-	branch = b6679148d27038e59d7818facc4d100e677a64ae
+	branch = 5420a8b6744d3b0345ab293f6fcba19c978f1183
 [submodule "vendor/github.com/stathat/go"]
 	path = vendor/github.com/stathat/go
 	url = https://github.com/stathat/go
@@ -187,7 +187,7 @@
 [submodule "vendor/github.com/pkg/errors"]
 	path = vendor/github.com/pkg/errors
 	url = https://github.com/pkg/errors
-	branch = 17b591df37844cde689f4d5813e5cea0927d8dd2
+	branch = 059132a15dd08d6704c67711dae0cf35ab991756
 [submodule "vendor/github.com/pkg/sftp"]
 	path = vendor/github.com/pkg/sftp
 	url = https://github.com/pkg/sftp
