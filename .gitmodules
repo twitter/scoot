@@ -187,7 +187,7 @@
 [submodule "vendor/github.com/pkg/errors"]
 	path = vendor/github.com/pkg/errors
 	url = https://github.com/pkg/errors
-	branch = 059132a15dd08d6704c67711dae0cf35ab991756
+	branch = 17b591df37844cde689f4d5813e5cea0927d8dd2
 [submodule "vendor/github.com/pkg/sftp"]
 	path = vendor/github.com/pkg/sftp
 	url = https://github.com/pkg/sftp
