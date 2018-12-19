@@ -7,9 +7,11 @@ import (
 
 // Resolver resolves a service, getting an address or URL.
 type Resolver interface {
-	// Resolve resolves a service, getting an address or URL (or an error)
+	// Resolve resolves a service, getting an address or URL
+	// If a Resolve() call completes successfully but finds no addresses, it will return ("", nil)
 	Resolve() (string, error)
-	// ResolveAll resolves a slice of all known addresses or URLs (or an error)
+	// ResolveAll resolves a slice of all known addresses or URLs
+	// If a ResolveAll() call completes successfully but finds no addresses, it will return ([]string{}, nil)
 	ResolveAll() ([]string, error)
 }
 
@@ -69,6 +71,7 @@ type CompositeResolver struct {
 
 // NewCompositeResolves creates a new CompositeResolve that resolves by looking through delegates (in order)
 // A Resolver that returns ("", nil) is ignored, otherwise its result is retuned
+// CompositeResolver will error if no delegate returned a non-empty result
 func NewCompositeResolver(dels ...Resolver) *CompositeResolver {
 	return &CompositeResolver{dels: dels}
 }
