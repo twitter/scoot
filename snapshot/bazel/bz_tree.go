@@ -98,15 +98,17 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, error) {
-	serverAddr, err := bc.casResolver.Resolve()
+	serverAddrs, err := bc.casResolver.ResolveAll()
 	if err != nil {
 		return nil, err
 	}
 
-	// localStorePath required, add serverAddr if resolved
+	// localStorePath required, add serverAddrs if resolved
 	args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
-	if serverAddr != "" {
-		args = append([]string{fsUtilCmdServerAddr, serverAddr}, args...)
+	if len(serverAddrs) > 0 {
+		for _, addr := range serverAddrs {
+			args = append([]string{fsUtilCmdServerAddr, addr}, args...)
+		}
 	}
 
 	return exec.Command(fsUtilCmd, args...).Output()

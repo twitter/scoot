@@ -66,3 +66,11 @@ func (r *BundlestoreResolver) Resolve() (string, error) {
 	}
 	return APIAddrToBundlestoreURI(s), nil
 }
+
+func (r *BundlestoreResolver) ResolveAll() ([]string, error) {
+	_, s, err := GetScootapiAddr()
+	if s == "" || err != nil {
+		return []string{}, err
+	}
+	return []string{APIAddrToBundlestoreURI(s)}, nil
+}
