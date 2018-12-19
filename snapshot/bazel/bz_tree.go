@@ -111,6 +111,7 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 		}
 	}
 
+	log.Debugf("%s %s", fsUtilCmd, args)
 	return exec.Command(fsUtilCmd, args...).Output()
 }
 
