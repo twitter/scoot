@@ -45,12 +45,24 @@ func IsNotFoundError(err error) bool {
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
-func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
+// If retries > 0, does simple retry attempts when encountering errors
+func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, retries int) (bytes []byte, err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil, nil
 	}
 
+	for ; retries >= 0; retries-- {
+		bytes, err = byteStreamRead(r, digest)
+
+		if err == nil || IsNotFoundError(err) {
+			break
+		}
+	}
+	return bytes, err
+}
+
+func byteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -77,13 +89,6 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, 
 }
 
 func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest) ([]byte, error) {
-	if req == nil {
-		return nil, fmt.Errorf("Unexpected nil ReadRequest in cas client write")
-	}
-	if req.ReadOffset != 0 || req.ReadLimit <= 0 {
-		return nil, fmt.Errorf("Unsupported ReadRequest - Offset must be 0, Limit must be known > 0")
-	}
-
 	rc, err := bsc.Read(context.Background(), req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get ReadClient: %s", err)
@@ -113,12 +118,24 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 }
 
 // Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
-func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
+// If retries > 0, does simple retry attempts when encountering errors
+func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, retries int) (err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil
 	}
 
+	for ; retries >= 0; retries-- {
+		err = byteStreamWrite(r, digest, data)
+
+		if err == nil {
+			break
+		}
+	}
+	return err
+}
+
+func byteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return fmt.Errorf("Failed to resolve server address: %s", err)
@@ -147,10 +164,6 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 }
 
 func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteRequest) error {
-	if req == nil {
-		return fmt.Errorf("Unexpected nil WriteRequest in cas client write")
-	}
-
 	wc, err := bsc.Write(context.Background())
 	if err != nil {
 		return fmt.Errorf("Failed to make Write request: %s", err)
@@ -174,7 +187,19 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 }
 
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
-func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remoteexecution.ActionResult, error) {
+// If retries > 0, does simple retry attempts when encountering errors
+func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, retries int) (ar *remoteexecution.ActionResult, err error) {
+	for ; retries >= 0; retries-- {
+		ar, err = getCacheResult(r, digest)
+
+		if err == nil || IsNotFoundError(err) {
+			break
+		}
+	}
+	return ar, err
+}
+
+func getCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remoteexecution.ActionResult, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -194,10 +219,6 @@ func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remotee
 
 func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 	req *remoteexecution.GetActionResultRequest) (*remoteexecution.ActionResult, error) {
-	if req == nil {
-		return nil, fmt.Errorf("Unexpected nil GetActionResultRequest in client")
-	}
-
 	ar, err := acc.GetActionResult(context.Background(), req)
 	if err != nil {
 		// If error is a grpc Status, check if it has a grpc NOT_FOUND code
@@ -213,7 +234,20 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 }
 
 // Client function for UpdateActionResult requests. Takes a Resolver for ActionCache server and Digest/ActionResult to update.
-func UpdateCacheResult(r dialer.Resolver,
+// If retries > 0, does simple retry attempts when encountering errors
+func UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
+	ar *remoteexecution.ActionResult, retries int) (out *remoteexecution.ActionResult, err error) {
+	for ; retries >= 0; retries-- {
+		out, err = updateCacheResult(r, digest, ar)
+
+		if err == nil {
+			break
+		}
+	}
+	return out, err
+}
+
+func updateCacheResult(r dialer.Resolver,
 	digest *remoteexecution.Digest, ar *remoteexecution.ActionResult) (*remoteexecution.ActionResult, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -234,10 +268,6 @@ func UpdateCacheResult(r dialer.Resolver,
 
 func updateCacheFromClient(acc remoteexecution.ActionCacheClient,
 	req *remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
-	if req == nil {
-		return nil, fmt.Errorf("Unexpected nil UpdateActionResultRequest in client")
-	}
-
 	ar, err := acc.UpdateActionResult(context.Background(), req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make UpdateActionResult request: %s", err)

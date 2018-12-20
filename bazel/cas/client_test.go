@@ -76,7 +76,7 @@ func TestClientReadEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest)
+	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest, 0)
 	if data != nil || err != nil {
 		t.Fatal("Expected nil data and err from empty client read")
 	}
@@ -107,7 +107,7 @@ func TestClientWriteEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil)
+	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil, 0)
 	if err != nil {
 		t.Fatal("Expected nil err from empty client write")
 	}
