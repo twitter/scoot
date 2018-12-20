@@ -51,6 +51,9 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, retries i
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil, nil
 	}
+	if retries < 0 {
+		retries = 0
+	}
 
 	for ; retries >= 0; retries-- {
 		bytes, err = byteStreamRead(r, digest)
@@ -124,6 +127,9 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil
 	}
+	if retries < 0 {
+		retries = 0
+	}
 
 	for ; retries >= 0; retries-- {
 		err = byteStreamWrite(r, digest, data)
@@ -189,6 +195,9 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
 // If retries > 0, does simple retry attempts when encountering errors
 func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, retries int) (ar *remoteexecution.ActionResult, err error) {
+	if retries < 0 {
+		retries = 0
+	}
 	for ; retries >= 0; retries-- {
 		ar, err = getCacheResult(r, digest)
 
@@ -237,6 +246,9 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 // If retries > 0, does simple retry attempts when encountering errors
 func UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
 	ar *remoteexecution.ActionResult, retries int) (out *remoteexecution.ActionResult, err error) {
+	if retries < 0 {
+		retries = 0
+	}
 	for ; retries >= 0; retries-- {
 		out, err = updateCacheResult(r, digest, ar)
 
