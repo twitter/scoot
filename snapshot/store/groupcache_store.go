@@ -14,16 +14,19 @@ import (
 	"github.com/twitter/scoot/common/stats"
 )
 
-//TODO: we should consider modifying google groupcache lib further to:
-// 1) It makes more sense given our use-case to cache bundles loaded via peer 100% of the time (currently 10%).
-// 2) Modify peer proto to support setting bundle data on the peer that owns the bundlename. (via PopulateCache()).
-// 3) For populate cache requests from user, fill the right cache, main or hot.
-//
-//TODO: Add a doneCh/Done() to stop the created goroutine.
-
 // Called periodically in a goroutine. Must include the current instance among the fetched nodes.
 type PeerFetcher interface {
 	Fetch() ([]cluster.Node, error)
+}
+
+//TODO: we should consider extending contexts in groupcache lib further to:
+// 1) control hot cache population rate deterministically (currently hardcoded at 10%)
+// 2) add more advanced caching behaviors like propagation to peer caches,
+//	  or populate cache and skip underlying store write, etc.
+
+// ttlContext is a wrapper to pass Scoot store.TTLs through Groupcache's Context interface{}'s
+type ttlContext struct {
+	ttl *TTLValue
 }
 
 // Note: Endpoint is concatenated with Name in groupcache internals, and AddrSelf is expected as HOST:PORT.
@@ -41,11 +44,14 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, "", stats.DefaultStartupGaugeSpikeLen)
 
 	// Create the cache which knows how to retrieve the underlying bundle data.
-	var cache = groupcache.NewGroup(cfg.Name, cfg.Memory_bytes, groupcache.GetterFunc(
-		func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
+	var cache = groupcache.NewGroup(
+		cfg.Name,
+		cfg.Memory_bytes,
+		groupcache.GetterFunc(func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
 			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
+
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return err
@@ -57,8 +63,26 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 			}
 			dest.SetBytes(data)
 			return nil
-		},
-	))
+		}),
+		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte) error {
+			log.Info("New bundle, write and populate cache: ", bundleName)
+			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
+			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
+
+			// Get TTL via context type assertion, or set to nil and let underlying use its default
+			ttlc, ok := ctx.(*ttlContext)
+			if !ok || ttlc == nil {
+				ttlc = &ttlContext{ttl: nil}
+			}
+
+			buf := bytes.NewReader(data)
+			err := underlying.Write(bundleName, buf, ttlc.ttl)
+			if err != nil {
+				return err
+			}
+			return nil
+		}),
+	)
 
 	// Create and initialize peer group.
 	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
@@ -98,31 +122,7 @@ func loop(c *cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group
 	}
 }
 
-// The groupcache lib updates its stats in the background - we need to convert those to our own stat representation.
-// Gauges are expected to fluctuate, counters are expected to only ever increase.
-func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
-	stat.Gauge(stats.GroupcacheMainBytesGauge).Update(cache.CacheStats(groupcache.MainCache).Bytes)
-	stat.Gauge(stats.GroupcacheMainItemsGauge).Update(cache.CacheStats(groupcache.MainCache).Items)
-	stat.Counter(stats.GroupcacheMainGetsCounter).Update(cache.CacheStats(groupcache.MainCache).Gets)
-	stat.Counter(stats.GroupcacheMainHitsCounter).Update(cache.CacheStats(groupcache.MainCache).Hits)
-	stat.Counter(stats.GroupcacheMainEvictionsCounter).Update(cache.CacheStats(groupcache.MainCache).Evictions)
-
-	stat.Gauge(stats.GroupcacheHotBytesGauge).Update(cache.CacheStats(groupcache.HotCache).Bytes)
-	stat.Gauge(stats.GroupcacheHotItemsGauge).Update(cache.CacheStats(groupcache.HotCache).Items)
-	stat.Counter(stats.GroupcacheHotGetsCounter).Update(cache.CacheStats(groupcache.HotCache).Gets)
-	stat.Counter(stats.GroupcacheHotHitsCounter).Update(cache.CacheStats(groupcache.HotCache).Hits)
-	stat.Counter(stats.GroupcacheHotEvictionsCounter).Update(cache.CacheStats(groupcache.HotCache).Evictions)
-
-	stat.Counter(stats.GroupcacheGetCounter).Update(cache.Stats.Gets.Get())
-	stat.Counter(stats.GroupcacheHitCounter).Update(cache.Stats.CacheHits.Get())
-	stat.Counter(stats.GroupcacheLoadCounter).Update(cache.Stats.Loads.Get())
-	stat.Counter(stats.GroupcachePeerGetsCounter).Update(cache.Stats.PeerLoads.Get())
-	stat.Counter(stats.GroupcachPeerErrCounter).Update(cache.Stats.PeerErrors.Get())
-	stat.Counter(stats.GroupcacheLocalLoadCounter).Update(cache.Stats.LocalLoads.Get())
-	stat.Counter(stats.GroupcacheLocalLoadErrCounter).Update(cache.Stats.LocalLoadErrs.Get())
-	stat.Counter(stats.GroupcacheIncomingRequestsCounter).Update(cache.Stats.ServerRequests.Get())
-}
-
+// Implements snapshot/store.Store interface
 type groupcacheStore struct {
 	underlying Store
 	cache      *groupcache.Group
@@ -153,7 +153,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 }
 
 func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
-	log.Info("Write() populating cache: ", name)
+	log.Info("Write() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
 
@@ -165,16 +165,44 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	err = s.underlying.Write(name, bytes.NewBuffer(b), ttl)
-	if err != nil {
+	ttlc := &ttlContext{ttl: ttl}
+	if err := s.cache.Put(ttlc, name, c); err != nil {
 		return err
 	}
-
-	s.cache.PopulateCache(name, c)
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)
 	return nil
 }
 
 func (s *groupcacheStore) Root() string {
 	return s.underlying.Root()
+}
+
+// The groupcache lib updates its stats in the background - we need to convert those to our own stat representation.
+// Gauges are expected to fluctuate, counters are expected to only ever increase.
+func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
+	stat.Gauge(stats.GroupcacheMainBytesGauge).Update(cache.CacheStats(groupcache.MainCache).Bytes)
+	stat.Gauge(stats.GroupcacheMainItemsGauge).Update(cache.CacheStats(groupcache.MainCache).Items)
+	stat.Counter(stats.GroupcacheMainGetsCounter).Update(cache.CacheStats(groupcache.MainCache).Gets)
+	stat.Counter(stats.GroupcacheMainHitsCounter).Update(cache.CacheStats(groupcache.MainCache).Hits)
+	stat.Counter(stats.GroupcacheMainEvictionsCounter).Update(cache.CacheStats(groupcache.MainCache).Evictions)
+
+	stat.Gauge(stats.GroupcacheHotBytesGauge).Update(cache.CacheStats(groupcache.HotCache).Bytes)
+	stat.Gauge(stats.GroupcacheHotItemsGauge).Update(cache.CacheStats(groupcache.HotCache).Items)
+	stat.Counter(stats.GroupcacheHotGetsCounter).Update(cache.CacheStats(groupcache.HotCache).Gets)
+	stat.Counter(stats.GroupcacheHotHitsCounter).Update(cache.CacheStats(groupcache.HotCache).Hits)
+	stat.Counter(stats.GroupcacheHotEvictionsCounter).Update(cache.CacheStats(groupcache.HotCache).Evictions)
+
+	stat.Counter(stats.GroupcacheGetCounter).Update(cache.Stats.Gets.Get())
+	stat.Counter(stats.GroupcachePutCounter).Update(cache.Stats.Puts.Get())
+	stat.Counter(stats.GroupcacheHitCounter).Update(cache.Stats.CacheHits.Get())
+	stat.Counter(stats.GroupcacheLoadCounter).Update(cache.Stats.Loads.Get())
+	stat.Counter(stats.GroupcacheStoreCounter).Update(cache.Stats.Stores.Get())
+	stat.Counter(stats.GroupcachePeerGetsCounter).Update(cache.Stats.PeerLoads.Get())
+	stat.Counter(stats.GroupcachePeerPutsCounter).Update(cache.Stats.PeerStores.Get())
+	stat.Counter(stats.GroupcachPeerErrCounter).Update(cache.Stats.PeerErrors.Get())
+	stat.Counter(stats.GroupcacheLocalLoadCounter).Update(cache.Stats.LocalLoads.Get())
+	stat.Counter(stats.GroupcacheLocalLoadErrCounter).Update(cache.Stats.LocalLoadErrs.Get())
+	stat.Counter(stats.GroupcacheLocalStoreCounter).Update(cache.Stats.LocalStores.Get())
+	stat.Counter(stats.GroupcacheLocalStoreErrCounter).Update(cache.Stats.LocalStoreErrs.Get())
+	stat.Counter(stats.GroupcacheIncomingRequestsCounter).Update(cache.Stats.ServerRequests.Get())
 }

@@ -65,7 +65,7 @@
 [submodule "github.com/twitter/groupcache"]
 	path = vendor/github.com/twitter/groupcache
 	url = https://github.com/twitter/groupcache
-	branch = 85fde1c5c36988481c30fc26605cd83f21cc94d1
+	branch = dgassaway/groupcache-put
 [submodule "github.com/twitter/fuse"]
 	path = vendor/github.com/twitter/fuse
 	url = https://github.com/twitter/fuse
