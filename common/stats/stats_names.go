@@ -67,10 +67,12 @@ const (
 	GroupcacheWriteLatency_ms = "writeLatency_ms"
 
 	/*
-		Groupcache Underlying load metrics (cache miss loads)
+		Groupcache Underlying load metrics (cache misses)
 	*/
-	GroupcacheReadUnderlyingCounter    = "readUnderlyingCounter"
-	GroupcacheReadUnderlyingLatency_ms = "readUnderlyingLatency_ms"
+	GroupcacheReadUnderlyingCounter     = "readUnderlyingCounter"
+	GroupcacheReadUnderlyingLatency_ms  = "readUnderlyingLatency_ms"
+	GroupcacheWriteUnderlyingCounter    = "writeUnderlyingCounter"
+	GroupcacheWriteUnderlyingLatency_ms = "writeUnderlyingLatency_ms"
 
 	/*
 		Groupcache library - per-cache metrics (typical groupcache includes separate "main" and "hot" caches)
@@ -90,12 +92,17 @@ const (
 		Groupcache library - per-group metrics (overall metrics for a groupcache on a single Apiserver)
 	*/
 	GroupcacheGetCounter              = "cacheGetCounter"
+	GroupcachePutCounter              = "cachePutCounter"
 	GroupcacheHitCounter              = "cacheHitCounter"
 	GroupcacheLoadCounter             = "cacheLoadCounter"
+	GroupcacheStoreCounter            = "cacheStoreCounter"
 	GroupcacheIncomingRequestsCounter = "cacheIncomingRequestsCounter"
 	GroupcacheLocalLoadErrCounter     = "cacheLocalLoadErrCounter"
 	GroupcacheLocalLoadCounter        = "cacheLocalLoadCounter"
+	GroupcacheLocalStoreErrCounter    = "cacheLocalStoreErrCounter"
+	GroupcacheLocalStoreCounter       = "cacheLocalStoreCounter"
 	GroupcachePeerGetsCounter         = "cachePeerGetsCounter"
+	GroupcachePeerPutsCounter         = "cachePeerPutsCounter"
 	GroupcachPeerErrCounter           = "cachePeerErrCounter"
 
 	/*
