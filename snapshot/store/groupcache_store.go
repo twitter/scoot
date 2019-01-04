@@ -24,11 +24,6 @@ type PeerFetcher interface {
 // 2) add more advanced caching behaviors like propagation to peer caches,
 //	  or populate cache and skip underlying store write, etc.
 
-// ttlContext is a wrapper to pass Scoot store.TTLs through Groupcache's Context interface{}'s
-type ttlContext struct {
-	ttl *TTLValue
-}
-
 // Note: Endpoint is concatenated with Name in groupcache internals, and AddrSelf is expected as HOST:PORT.
 type GroupcacheConfig struct {
 	Name         string
@@ -39,7 +34,7 @@ type GroupcacheConfig struct {
 }
 
 // Add in-memory caching to the given store.
-func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.StatsReceiver) (Store, http.Handler, error) {
+func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfig, stat stats.StatsReceiver) (Store, http.Handler, error) {
 	stat = stat.Scope("bundlestoreCache")
 	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, "", stats.DefaultStartupGaugeSpikeLen)
 
@@ -64,19 +59,15 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, stat stats.Sta
 			dest.SetBytes(data)
 			return nil
 		}),
-		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte) error {
+		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl time.Duration) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
-			// Get TTL via context type assertion, or set to nil and let underlying use its default
-			ttlc, ok := ctx.(*ttlContext)
-			if !ok || ttlc == nil {
-				ttlc = &ttlContext{ttl: nil}
-			}
-
+			// Convert duration back to TTLValue
+			ttlv := GetTTLValue(ttlc)
 			buf := bytes.NewReader(data)
-			err := underlying.Write(bundleName, buf, ttlc.ttl)
+			err := underlying.Write(bundleName, buf, ttlv)
 			if err != nil {
 				return err
 			}
@@ -165,8 +156,10 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	ttlc := &ttlContext{ttl: ttl}
-	if err := s.cache.Put(ttlc, name, c); err != nil {
+	// NOTE we potentially lose an overridden TTLValue.Key by passing through Groupcache.
+	// This isn't currently used and we should consider removing support for per-Write TTL Key values.
+	d := GetDurationTTL(ttl)
+	if err := s.cache.Put(nil, name, c, d); err != nil {
 		return err
 	}
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)

@@ -31,6 +31,19 @@ func GetTTLValue(c *TTLConfig) *TTLValue {
 	return nil
 }
 
+// Return a time.Duration based on Now given a TTLValue specifying a fixed time.
+// Returns a zero duration if TTLValue is nil or if duration would be negative.
+func GetDurationTTL(t *TTLValue) time.Duration {
+	var d time.Duration
+	if t != nil {
+		d = t.TTL.Sub(time.Now())
+	}
+	if d < 0 {
+		d = 0
+	}
+	return d
+}
+
 // Read-only operations on store, limited for now to a couple essential functions.
 type StoreRead interface {
 	// Check if the bundle exists. Not guaranteed to be any cheaper than actually reading the bundle.
