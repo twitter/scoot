@@ -65,7 +65,8 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
 			// Convert duration back to TTLValue
-			ttlv := GetTTLValue(ttlc)
+			tmpConfig := &TTLConfig{TTL: ttl, TTLKey: ttlc.TTLKey}
+			ttlv := GetTTLValue(tmpConfig)
 			buf := bytes.NewReader(data)
 			err := underlying.Write(bundleName, buf, ttlv)
 			if err != nil {
@@ -156,8 +157,6 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	// NOTE we potentially lose an overridden TTLValue.Key by passing through Groupcache.
-	// This isn't currently used and we should consider removing support for per-Write TTL Key values.
 	d := GetDurationTTL(ttl)
 	if err := s.cache.Put(nil, name, c, d); err != nil {
 		return err
