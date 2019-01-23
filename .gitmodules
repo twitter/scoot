@@ -58,14 +58,10 @@
 	path = vendor/github.com/bazelbuild/remote-apis
 	url = https://github.com/bazelbuild/remote-apis
 	branch = cbf6ada7f5b2a0ce14646bf983d03b49118f0ec8
-[submodule "vendor/github.com/golang/groupcache"]
-	path = vendor/github.com/golang/groupcache
-	url = https://github.com/golang/groupcache
-	branch = 72d04f9fcdec7d3821820cc4a6f150eae553639a
 [submodule "github.com/twitter/groupcache"]
 	path = vendor/github.com/twitter/groupcache
 	url = https://github.com/twitter/groupcache
-	branch = dgassaway/propagate-ttl
+	branch = 3f0c8041e29b3d32eade74079a62f8fd7d9d9268
 [submodule "github.com/twitter/fuse"]
 	path = vendor/github.com/twitter/fuse
 	url = https://github.com/twitter/fuse
