@@ -150,6 +150,25 @@ func setupJDKSymlink(path, filename string) error {
 	return os.Symlink(jh, filepath.Join(path, filename))
 }
 
+// API indicates directories where output files and directories would be created exist before execution
+func createOutputPaths(cmd *runner.Command, coDir string) error {
+	for _, relPath := range cmd.ExecuteRequest.GetCommand().GetOutputFiles() {
+		dir := filepath.Dir(filepath.Join(coDir, relPath))
+		err := os.MkdirAll(dir, 0777)
+		if err != nil {
+			return fmt.Errorf("Failed to create parent output dir %s: %s", dir, err)
+		}
+	}
+	for _, relPath := range cmd.ExecuteRequest.GetCommand().GetOutputDirectories() {
+		dir := filepath.Dir(filepath.Join(coDir, relPath))
+		err := os.MkdirAll(dir, 0777)
+		if err != nil {
+			return fmt.Errorf("Failed to create parent output dir %s: %s", dir, err)
+		}
+	}
+	return nil
+}
+
 // Post-execer actions for Bazel tasks - upload outputs and std* logs, format result structure
 func postProcessBazel(filer snapshot.Filer,
 	cmd *runner.Command,

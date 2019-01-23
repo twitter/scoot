@@ -271,6 +271,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
 	// TODO We don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
 	// (via Invoker -> QueueRunner construction) or Command level (job requestor specifies in e.g. a PlatformProperty)
+
+	// Processing/setup post checkout before execution
 	switch runType {
 	case runner.RunTypeBazel:
 		for _, pp := range cmd.ExecuteRequest.GetCommand().GetPlatform().GetProperties() {
@@ -286,6 +288,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					return failedStatus
 				}
 			}
+		}
+
+		err = createOutputPaths(cmd, co.Path())
+		if err != nil {
+			msg := fmt.Sprintf("Failed setting up output directories: %s", err)
+			failedStatus := runner.FailedStatus(id, errors.New(msg),
+				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
+			return failedStatus
 		}
 	case runner.RunTypeScoot:
 		stdout.Write([]byte(header))
