@@ -13,7 +13,7 @@
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net
-	branch = 0a9397675ba34b2845f758fe3cd68828369c6517
+	branch = 891ebc4b82d6e74f468c533b06f983c7be918a96
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
