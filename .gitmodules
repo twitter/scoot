@@ -61,7 +61,7 @@
 [submodule "github.com/twitter/groupcache"]
 	path = vendor/github.com/twitter/groupcache
 	url = https://github.com/twitter/groupcache
-	branch = dgassaway/cache-load-assert-check
+	branch = 677d001d35093016bf2514bc28bb93cd79709d43
 [submodule "github.com/twitter/fuse"]
 	path = vendor/github.com/twitter/fuse
 	url = https://github.com/twitter/fuse
