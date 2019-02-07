@@ -56,8 +56,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			if err != nil {
 				return err
 			}
-			dest.SetBytes(data)
-			return nil
+			return dest.SetBytes(data)
 		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl time.Duration) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
