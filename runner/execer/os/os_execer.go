@@ -102,7 +102,7 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 
 	proc := &osProcess{cmd: cmd, wg: &wg, LogTags: command.LogTags}
 	if e.memCap > 0 {
-		go e.monitorMem(proc)
+		go e.monitorMem(proc, command.MemCh)
 	}
 	return proc, nil
 }
@@ -121,7 +121,7 @@ type osProcess struct {
 //
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
-func (e *osExecer) monitorMem(p *osProcess) {
+func (e *osExecer) monitorMem(p *osProcess, memCh chan struct{}) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -182,6 +182,7 @@ func (e *osExecer) monitorMem(p *osProcess) {
 					State: execer.FAILED,
 					Error: msg,
 				}
+				memCh <- struct{}{}
 				p.mutex.Unlock()
 				p.Abort()
 				return

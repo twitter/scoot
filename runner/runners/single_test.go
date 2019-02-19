@@ -122,14 +122,16 @@ func TestMemCap(t *testing.T) {
 
 	query := runner.Query{
 		AllRuns: true,
-		States:  runner.MaskForState(runner.FAILED),
+		States:  runner.MaskForState(runner.COMPLETE),
 	}
 	// Travis may be slow, wait a super long time? This may also be necessary due to slow debug output from os_execer? TBD.
 	if runs, _, err := r.Query(query, runner.Wait{Timeout: 10 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
-	} else if len(runs) != 1 || !strings.Contains(runs[0].Error, "MemoryCap") {
+	} else if len(runs) != 1 {
+		t.Fatalf("Expected a single COMPLETE run, got %v", len(runs))
+	} else if runs[0].ExitCode != 1 {
 		status, _, err := r.StatusAll()
-		t.Fatalf("Expected result with FAILURE and matching err string, got: %v -- status %v -- err %v", runs, status, err)
+		t.Fatalf("Expected result with COMPLETE and an exit code of 1, got: %v -- status %v -- err %v", runs, status, err)
 	}
 }
 

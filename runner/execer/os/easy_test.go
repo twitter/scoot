@@ -118,6 +118,7 @@ func TestMemCap(t *testing.T) {
 	// Command to increase memory by 1MB every .1s up to 5s.
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
+	memCh := make(chan struct{})
 	cmd := execer.Command{
 		Argv: []string{"python", "-c", str},
 		LogTags: tags.LogTags{
@@ -125,6 +126,7 @@ func TestMemCap(t *testing.T) {
 			JobID:  "jobID1234",
 			TaskID: "taskID1234",
 		},
+		MemCh: memCh,
 	}
 	// Terminate nearly immediately, after memory grows to 1MB.
 	e := NewBoundedExecer(execer.Memory(1024*1024), stats.NilStatsReceiver())
@@ -134,13 +136,20 @@ func TestMemCap(t *testing.T) {
 	}
 	defer process.Abort()
 	pid := process.(*osProcess).cmd.Process.Pid
-	// Sleep to give bounded execer time to kill process and release memory
-	time.Sleep(2 * time.Second)
 	var usage execer.Memory
-	if usage, err = e.memUsage(pid); err != nil {
-		t.Fatalf(err.Error())
-	}
-	if usage != 0 {
-		t.Fatalf("Expected usage to be 0MB, was: %dB", usage)
+	var timeoutCh <-chan time.Time
+	timeout := time.NewTimer(time.Second * 2)
+	timeoutCh = timeout.C
+	defer timeout.Stop()
+	select {
+	case <-memCh:
+		if usage, err = e.memUsage(pid); err != nil {
+			t.Fatalf(err.Error())
+		}
+		if usage != 0 {
+			t.Fatalf("Expected usage to be 0MB, was: %dB", usage)
+		}
+	case <-timeoutCh:
+		t.Fatalf("Memory usage didn't exceed memCap within 2 seconds")
 	}
 }

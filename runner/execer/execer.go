@@ -20,6 +20,7 @@ type Command struct {
 	Dir     string
 	Stdout  io.Writer
 	Stderr  io.Writer
+	MemCh   chan struct{}
 	tags.LogTags
 }
 
