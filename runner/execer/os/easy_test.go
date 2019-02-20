@@ -118,7 +118,7 @@ func TestMemCap(t *testing.T) {
 	// Command to increase memory by 1MB every .1s up to 5s.
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
-	memCh := make(chan struct{})
+	memCh := make(chan execer.ProcessStatus)
 	cmd := execer.Command{
 		Argv: []string{"python", "-c", str},
 		LogTags: tags.LogTags{

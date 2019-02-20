@@ -121,7 +121,7 @@ type osProcess struct {
 //
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
-func (e *osExecer) monitorMem(p *osProcess, memCh chan struct{}) {
+func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -179,11 +179,12 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan struct{}) {
 						"taskID": p.TaskID,
 					}).Info(msg)
 				p.result = &execer.ProcessStatus{
-					State: execer.FAILED,
-					Error: msg,
+					State:    execer.COMPLETE,
+					Error:    msg,
+					ExitCode: 1,
 				}
 				if memCh != nil {
-					memCh <- struct{}{}
+					memCh <- *p.result
 				}
 				p.mutex.Unlock()
 				p.Abort()

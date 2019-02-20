@@ -129,9 +129,9 @@ func TestMemCap(t *testing.T) {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 {
 		t.Fatalf("Expected a single COMPLETE run, got %v", len(runs))
-	} else if runs[0].ExitCode != 1 {
+	} else if runs[0].ExitCode != 1 || !strings.Contains(runs[0].Error, "Cmd exceeded MemoryCap, aborting") {
 		status, _, err := r.StatusAll()
-		t.Fatalf("Expected result with COMPLETE and an exit code of 1, got: %v -- status %v -- err %v", runs, status, err)
+		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
 	}
 }
 
