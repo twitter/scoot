@@ -182,7 +182,9 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan struct{}) {
 					State: execer.FAILED,
 					Error: msg,
 				}
-				memCh <- struct{}{}
+				if memCh != nil {
+					memCh <- struct{}{}
+				}
 				p.mutex.Unlock()
 				p.Abort()
 				return
