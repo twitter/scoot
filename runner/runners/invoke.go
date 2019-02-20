@@ -376,16 +376,20 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
 		log.WithFields(
 			log.Fields{
-				"cmd":    cmd.String(),
-				"tag":    cmd.Tag,
-				"jobID":  cmd.JobID,
-				"taskID": cmd.TaskID,
+				"runID":    id,
+				"cmd":      cmd.String(),
+				"tag":      cmd.Tag,
+				"jobID":    cmd.JobID,
+				"taskID":   cmd.TaskID,
+				"status":   st,
+				"checkout": co.Path(),
 			}).Infof("Cmd exceeded MemoryCap, aborting %v", cmd.String())
 	case st = <-processCh:
 		// Process has completed
 		log.WithFields(
 			log.Fields{
 				"runID":    id,
+				"cmd":      cmd.String(),
 				"tag":      cmd.Tag,
 				"jobID":    cmd.JobID,
 				"taskID":   cmd.TaskID,
