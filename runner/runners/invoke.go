@@ -53,8 +53,9 @@ type Invoker struct {
 // updateCh will not close until the run is finished running.
 func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- struct{}, updateCh <-chan runner.RunStatus) {
 	abortChFull := make(chan struct{})
+	memChFull := make(chan execer.ProcessStatus)
 	updateChFull := make(chan runner.RunStatus)
-	go inv.run(cmd, id, abortChFull, updateChFull)
+	go inv.run(cmd, id, abortChFull, memChFull, updateChFull)
 	return abortChFull, updateChFull
 }
 
@@ -62,7 +63,7 @@ func (inv *Invoker) Run(cmd *runner.Command, id runner.RunID) (abortCh chan<- st
 // Run will send updates the process is running to updateCh.
 // Run will enforce cmd's Timeout, and will abort cmd if abortCh is signaled.
 // Run will not return until the process is not running.
-func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, updateCh chan runner.RunStatus) (r runner.RunStatus) {
+func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struct{}, memCh chan execer.ProcessStatus, updateCh chan runner.RunStatus) (r runner.RunStatus) {
 	log.WithFields(
 		log.Fields{
 			"runID":  id,
@@ -321,6 +322,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		Dir:     co.Path(),
 		Stdout:  io.MultiWriter(stdout, stdlog),
 		Stderr:  io.MultiWriter(stderr, stdlog),
+		MemCh:   memCh,
 		LogTags: cmd.LogTags,
 	})
 	if err != nil {
@@ -369,17 +371,32 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}).Info("Run timedout")
 		return runner.TimeoutStatus(id,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	case st = <-memCh:
+		stdout.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
+		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
+		log.WithFields(
+			log.Fields{
+				"runID":    id,
+				"cmd":      cmd.String(),
+				"tag":      cmd.Tag,
+				"jobID":    cmd.JobID,
+				"taskID":   cmd.TaskID,
+				"status":   st,
+				"checkout": co.Path(),
+			}).Infof("Cmd exceeded MemoryCap, aborting %v", cmd.String())
 	case st = <-processCh:
+		// Process has completed
+		log.WithFields(
+			log.Fields{
+				"runID":    id,
+				"cmd":      cmd.String(),
+				"tag":      cmd.Tag,
+				"jobID":    cmd.JobID,
+				"taskID":   cmd.TaskID,
+				"status":   st,
+				"checkout": co.Path(),
+			}).Info("Run done")
 	}
-	log.WithFields(
-		log.Fields{
-			"runID":    id,
-			"tag":      cmd.Tag,
-			"jobID":    cmd.JobID,
-			"taskID":   cmd.TaskID,
-			"status":   st,
-			"checkout": co.Path(),
-		}).Info("Run done")
 
 	switch st.State {
 	case execer.COMPLETE:
@@ -439,6 +456,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				status.StdoutRef = snapshotID + "/" + stdoutName
 				status.StderrRef = snapshotID + "/" + stderrName
 			}
+			if st.Error != "" {
+				status.Error = st.Error
+			}
 			return status
 		} else if runType == runner.RunTypeBazel {
 			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
@@ -491,6 +511,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			status.ActionResult = actionResult
+			if st.Error != "" {
+				status.Error = st.Error
+			}
 			return status
 		} else {
 			// should never have an unknown RunType here
