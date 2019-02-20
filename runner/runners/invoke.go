@@ -372,8 +372,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return runner.TimeoutStatus(id,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	case st = <-memCh:
-		stdout.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\nCmd exceeded MemoryCap, aborting %v", marker, cmd.String())))
-		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\nCmd exceeded MemoryCap, aborting %v", marker, cmd.String())))
+		stdout.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
+		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
 		log.WithFields(
 			log.Fields{
 				"cmd":    cmd.String(),
