@@ -229,11 +229,12 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	}
 }
 
-// Query for all sets of (pid, pgid, rss). Given a pid, find its associated pgid.
-// From there, sum the memory of all processes with the same pgid.
+// Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
+// Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
+// From there, sum the memory of all processes in aforementioned set.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	str := `
-PID=%s
+PID=%d
 PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
 all_processes=dict()
