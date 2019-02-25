@@ -233,22 +233,28 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 // From there, sum the memory of all processes with the same pgid.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	str := `
-PID=%d
-PSLIST=$(ps -e -o pid= -o pgid= -o rss= | tr '\n' ';' | sed 's,;$,,')
+PID=%s
+PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
-
-processes=dict()
-memory=dict()
+all_processes=dict()
+related_processes=dict()
 id=None
 total=0
 for line in \"$PSLIST\".split(';'):
-  pid, pgid, mem = tuple(line.split())
-  if pid == \"$PID\":
-    id = pgid
-  processes.setdefault(pgid, []).append(pid)
-  memory[pid] = mem
-for p in processes.setdefault(id, []):
-  total += int(memory[p])
+  pid, pgid, ppid, rss = tuple(line.split())
+  all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
+
+for pid, proc in all_processes.items():
+  if pid == \"$PID\" or proc['pgid'] == \"$PID\" or proc['ppid'] == \"$PID\":
+    related_processes[pid] = proc
+
+for rel_pid, _ in related_processes.items():
+  for pid, proc in all_processes.items():
+    if proc['pgid'] == rel_pid or proc['ppid'] == rel_pid:
+      related_processes[pid] = proc
+
+for pid, proc in related_processes.items():
+  total += int(proc['rss'])
 print total
 
 " | python
