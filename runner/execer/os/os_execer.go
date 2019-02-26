@@ -229,26 +229,43 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	}
 }
 
-// Query for all sets of (pid, pgid, rss). Given a pid, find its associated pgid.
-// From there, sum the memory of all processes with the same pgid.
+// Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
+// Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
+// From there, sum the memory of all processes in aforementioned set.
+// TODO: Python script is hard to test and probably non-performant compared to a native Go solution.
+// 		 Refactor into unit-testable Go func.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	str := `
 PID=%d
-PSLIST=$(ps -e -o pid= -o pgid= -o rss= | tr '\n' ';' | sed 's,;$,,')
+PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
-
-processes=dict()
-memory=dict()
-id=None
+all_processes=dict()
+related_processes=dict()
+process_groups=dict()
+parent_processes=dict()
+children = []
+proc_group_id = None
 total=0
 for line in \"$PSLIST\".split(';'):
-  pid, pgid, mem = tuple(line.split())
+  pid, pgid, ppid, rss = tuple(line.split())
+  all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
+  process_groups.setdefault(pgid, []).append(pid)
+  parent_processes.setdefault(ppid, []).append(pid)
   if pid == \"$PID\":
-    id = pgid
-  processes.setdefault(pgid, []).append(pid)
-  memory[pid] = mem
-for p in processes.setdefault(id, []):
-  total += int(memory[p])
+    proc_group_id = pgid
+
+# Add all processes from pid's process group to related_processes
+for pid in process_groups.setdefault(proc_group_id, []):
+  related_processes[pid] = all_processes[pid]
+
+# Add children processes of related_processes to children list
+for pid, _ in related_processes.items():
+  # Add all processes from children list to related_processes
+  for child in parent_processes.get(pid, []):
+    related_processes[child] = all_processes[child]
+
+for pid, proc in related_processes.items():
+  total += int(proc['rss'])
 print total
 
 " | python
