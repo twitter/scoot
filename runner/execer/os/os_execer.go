@@ -247,13 +247,13 @@ total=0
 for line in \"$PSLIST\".split(';'):
   pid, pgid, ppid, rss = tuple(line.split())
   all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
-  process_groups.get(pgid, []).append(pid)
-  parent_processes.get(ppid, {}).append(pid)
+  process_groups.setdefault(pgid, []).append(pid)
+  parent_processes.setdefault(ppid, []).append(pid)
   if pid == \"$PID\":
     proc_group_id = pgid
 
 # Add all processes from pid's process group to related_processes
-for pid in process_groups[proc_group_id]:
+for pid in process_groups.setdefault(proc_group_id, []):
   related_processes[pid] = all_processes[pid]
 
 # Add children processes of related_processes to children list
