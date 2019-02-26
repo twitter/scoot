@@ -239,20 +239,28 @@ PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
 echo "
 all_processes=dict()
 related_processes=dict()
-id=None
+process_groups=dict()
+parent_processes=dict()
+children = []
+proc_group_id = None
 total=0
 for line in \"$PSLIST\".split(';'):
   pid, pgid, ppid, rss = tuple(line.split())
   all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
+  process_groups.get(pgid, []).append(pid)
+  parent_processes.get(ppid, {}).append(pid)
+  if pid == \"$PID\":
+    proc_group_id = pgid
 
-for pid, proc in all_processes.items():
-  if pid == \"$PID\" or proc['pgid'] == \"$PID\" or proc['ppid'] == \"$PID\":
-    related_processes[pid] = proc
+# Add all processes from pid's process group to related_processes
+for pid in process_groups[proc_group_id]:
+  related_processes[pid] = all_processes[pid]
 
-for rel_pid, _ in related_processes.items():
-  for pid, proc in all_processes.items():
-    if proc['pgid'] == rel_pid or proc['ppid'] == rel_pid:
-      related_processes[pid] = proc
+# Add children processes of related_processes to children list
+for pid, _ in related_processes.items():
+  # Add all processes from children list to related_processes
+  for child in parent_processes.get(pid, []):
+    related_processes[child] = all_processes[child]
 
 for pid, proc in related_processes.items():
   total += int(proc['rss'])
