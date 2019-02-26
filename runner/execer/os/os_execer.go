@@ -232,6 +232,8 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 // Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
 // Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
 // From there, sum the memory of all processes in aforementioned set.
+// TODO: Python script is hard to test and probably non-performant compared to a native Go solution.
+// 		 Refactor into unit-testable Go func.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	str := `
 PID=%d
