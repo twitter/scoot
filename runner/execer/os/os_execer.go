@@ -244,7 +244,6 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
 	if err != nil {
-		log.Fatalf("bro %v", string(b))
 		return 0, err
 	}
 	allProcesses := make(map[int]proc)
