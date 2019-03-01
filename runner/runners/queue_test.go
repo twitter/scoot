@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -200,6 +203,9 @@ func TestAbortQueuedCommand(t *testing.T) {
 }
 
 func setup(capacity int, interval time.Duration, t *testing.T) *env {
+	log.AddHook(hooks.NewContextHook())
+	logrusLevel, _ := log.ParseLevel("debug")
+	log.SetLevel(logrusLevel)
 	sim := execers.NewSimExecer()
 	tmpDir, err := temp.TempDirDefault()
 	if err != nil {

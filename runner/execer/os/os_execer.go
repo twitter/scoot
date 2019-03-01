@@ -229,54 +229,79 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	}
 }
 
+type proc struct {
+	pid  int
+	pgid int
+	ppid int
+	rss  int
+}
+
 // Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
 // Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
 // From there, sum the memory of all processes in aforementioned set.
-// TODO: Python script is hard to test and probably non-performant compared to a native Go solution.
-// 		 Refactor into unit-testable Go func.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	str := `
-PID=%d
-PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
-echo "
-all_processes=dict()
-related_processes=dict()
-process_groups=dict()
-parent_processes=dict()
-children = []
-proc_group_id = None
-total=0
-for line in \"$PSLIST\".split(';'):
-  pid, pgid, ppid, rss = tuple(line.split())
-  all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
-  process_groups.setdefault(pgid, []).append(pid)
-  parent_processes.setdefault(ppid, []).append(pid)
-  if pid == \"$PID\":
-    proc_group_id = pgid
-
-# Add all processes from pid's process group to related_processes
-for pid in process_groups.setdefault(proc_group_id, []):
-  related_processes[pid] = all_processes[pid]
-
-# Add children processes of related_processes to children list
-for pid, _ in related_processes.items():
-  # Add all processes from children list to related_processes
-  for child in parent_processes.get(pid, []):
-    related_processes[child] = all_processes[child]
-
-for pid, proc in related_processes.items():
-  total += int(proc['rss'])
-print total
-
-" | python
-`
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
-	if usageKB, err := cmd.Output(); err != nil {
+	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
+	psList := exec.Command("bash", "-c", cmd)
+	b, err := psList.Output()
+	if err != nil {
+		log.Fatalf("bro %v", string(b))
 		return 0, err
-	} else {
-		u, err := strconv.Atoi(strings.TrimSpace(string(usageKB)))
-		return execer.Memory(u * 1024), err
 	}
+	allProcesses := make(map[int]proc)
+	relatedProcesses := make(map[int]proc)
+	processGroups := make(map[int][]proc)
+	parentProcesses := make(map[int][]proc)
+	lines := strings.Split(string(b), ";")
+	var procGroupID int
+	total := 0
+	for idx := 0; idx < len(lines); idx += 1 {
+		processInfo := strings.Fields(lines[idx])
+		for idx := 0; idx < len(processInfo); idx += 1 {
+			processInfo[idx] = strings.TrimSpace(processInfo[idx])
+		}
+		procPid, err := strconv.Atoi(processInfo[0])
+		if err != nil {
+			return 0, err
+		}
+		procPgid, err := strconv.Atoi(processInfo[1])
+		if err != nil {
+			return 0, err
+		}
+		procPpid, err := strconv.Atoi(processInfo[2])
+		if err != nil {
+			return 0, err
+		}
+		procRss, err := strconv.Atoi(processInfo[3])
+		if err != nil {
+			return 0, err
+		}
+		p := proc{
+			pid:  procPid,
+			pgid: procPgid,
+			ppid: procPpid,
+			rss:  procRss,
+		}
+		allProcesses[p.pid] = p
+		processGroups[p.pgid] = append(processGroups[p.pgid], p)
+		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
+		if p.pid == pid {
+			procGroupID = p.pgid
+		}
+	}
+	for idx := 0; idx < len(processGroups[procGroupID]); idx += 1 {
+		p := processGroups[procGroupID][idx]
+		relatedProcesses[p.pid] = allProcesses[p.pid]
+	}
+	for procPid, _ := range relatedProcesses {
+		for idx := 0; idx < len(parentProcesses[procPid]); idx += 1 {
+			p := parentProcesses[pid][idx]
+			relatedProcesses[parentProcesses[procPid][idx].pid] = allProcesses[p.pid]
+		}
+	}
+	for _, proc := range relatedProcesses {
+		total += proc.rss
+	}
+	return execer.Memory(total * 1024), nil
 }
 
 /*
