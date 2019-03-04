@@ -19,7 +19,7 @@ type PeerFetcher interface {
 	Fetch() ([]cluster.Node, error)
 }
 
-//TODO: we should consider extending contexts in groupcache lib further to:
+// TODO: we should consider extending contexts in groupcache lib further to:
 // 1) control hot cache population rate deterministically (currently hardcoded at 10%)
 // 2) add more advanced caching behaviors like propagation to peer caches,
 //	  or populate cache and skip underlying store write, etc.
@@ -144,7 +144,6 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 }
 
 func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
-	log.Info("Write() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
 
@@ -157,6 +156,8 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	copy(c, b)
 
 	d := GetDurationTTL(ttl)
+
+	log.Infof("Write() bundle %s: length: %d ttl: %s", name, len(b), ttl)
 	if err := s.cache.Put(nil, name, c, d); err != nil {
 		return err
 	}
