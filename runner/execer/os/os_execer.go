@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,20 +20,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const bytesToKB = 1024
+
 func NewExecer() *osExecer {
-	return &osExecer{}
+	return &osExecer{pg: &osProcGetter{}}
 }
 
 // For now memory can be capped on a per-execer basis rather than a per-command basis.
 // This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
 func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
 }
 
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
 	memCap execer.Memory
 	stat   stats.StatsReceiver
+	pg     procGetter
+}
+
+type procGetter interface {
+	getProcs() (map[int]proc, map[int]proc, map[int][]proc, map[int][]proc, error)
+	parseProcs([]string) (map[int]proc, map[int]proc, map[int][]proc, map[int][]proc, error)
 }
 
 type WriterDelegater interface {
@@ -236,57 +243,21 @@ type proc struct {
 	rss  int
 }
 
+type osProcGetter struct{}
+
 // Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
 // Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
 // From there, sum the memory of all processes in aforementioned set.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
-	psList := exec.Command("bash", "-c", cmd)
-	b, err := psList.Output()
+	allProcesses, relatedProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
 	if err != nil {
-		return 0, err
+		return 0, nil
 	}
-	allProcesses := make(map[int]proc)
-	relatedProcesses := make(map[int]proc)
-	processGroups := make(map[int][]proc)
-	parentProcesses := make(map[int][]proc)
-	lines := strings.Split(string(b), ";")
-	var procGroupID int
+	if _, ok := allProcesses[pid]; !ok {
+		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
+	}
+	procGroupID := allProcesses[pid].pgid
 	total := 0
-	for idx := 0; idx < len(lines); idx += 1 {
-		processInfo := strings.Fields(lines[idx])
-		for idx := 0; idx < len(processInfo); idx += 1 {
-			processInfo[idx] = strings.TrimSpace(processInfo[idx])
-		}
-		procPid, err := strconv.Atoi(processInfo[0])
-		if err != nil {
-			return 0, err
-		}
-		procPgid, err := strconv.Atoi(processInfo[1])
-		if err != nil {
-			return 0, err
-		}
-		procPpid, err := strconv.Atoi(processInfo[2])
-		if err != nil {
-			return 0, err
-		}
-		procRss, err := strconv.Atoi(processInfo[3])
-		if err != nil {
-			return 0, err
-		}
-		p := proc{
-			pid:  procPid,
-			pgid: procPgid,
-			ppid: procPpid,
-			rss:  procRss,
-		}
-		allProcesses[p.pid] = p
-		processGroups[p.pgid] = append(processGroups[p.pgid], p)
-		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
-		if p.pid == pid {
-			procGroupID = p.pgid
-		}
-	}
 	for idx := 0; idx < len(processGroups[procGroupID]); idx += 1 {
 		p := processGroups[procGroupID][idx]
 		relatedProcesses[p.pid] = allProcesses[p.pid]
@@ -300,7 +271,42 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	for _, proc := range relatedProcesses {
 		total += proc.rss
 	}
-	return execer.Memory(total * 1024), nil
+	return execer.Memory(total * bytesToKB), nil
+}
+
+func (pg *osProcGetter) getProcs() (
+	allProcesses map[int]proc, relatedProcesses map[int]proc, processGroups map[int][]proc,
+	parentProcesses map[int][]proc, err error) {
+	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
+	psList := exec.Command("bash", "-c", cmd)
+	b, err := psList.Output()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	procs := strings.Split(string(b), ";")
+	return pg.parseProcs(procs)
+}
+
+func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, relatedProcesses map[int]proc, processGroups map[int][]proc,
+	parentProcesses map[int][]proc, err error) {
+	allProcesses = make(map[int]proc)
+	relatedProcesses = make(map[int]proc)
+	processGroups = make(map[int][]proc)
+	parentProcesses = make(map[int][]proc)
+	for idx := 0; idx < len(procs); idx += 1 {
+		var p proc
+		n, err := fmt.Sscanf(procs[idx], "%d %d %d %d", &p.pid, &p.pgid, &p.ppid, &p.rss)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if n != 4 {
+			return nil, nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
+		}
+		allProcesses[p.pid] = p
+		processGroups[p.pgid] = append(processGroups[p.pgid], p)
+		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
+	}
+	return allProcesses, relatedProcesses, processGroups, parentProcesses, nil
 }
 
 /*
