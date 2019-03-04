@@ -40,8 +40,8 @@ type osExecer struct {
 }
 
 type procGetter interface {
-	getProcs() (map[int]proc, map[int]proc, map[int][]proc, map[int][]proc, error)
-	parseProcs([]string) (map[int]proc, map[int]proc, map[int][]proc, map[int][]proc, error)
+	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
+	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
 }
 
 type WriterDelegater interface {
@@ -249,7 +249,7 @@ type osProcGetter struct{}
 // Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
 // From there, sum the memory of all processes in aforementioned set.
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	allProcesses, relatedProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
+	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
 	if err != nil {
 		return 0, nil
 	}
@@ -257,56 +257,74 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
 	}
 	procGroupID := allProcesses[pid].pgid
+	log.Info(procGroupID)
+	log.Info(processGroups[procGroupID])
+	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
+	// introduces non-deterministic flaky behavior wrt memUsage summation. We add related procs to the relatedProcesses
+	// slice iff they aren't present in relatedProcessesMap
+	relatedProcesses := []proc{}
+	relatedProcessesMap := make(map[int]proc)
 	total := 0
+	// Seed relatedProcesses with all procs from pid's process group
 	for idx := 0; idx < len(processGroups[procGroupID]); idx += 1 {
 		p := processGroups[procGroupID][idx]
-		relatedProcesses[p.pid] = allProcesses[p.pid]
+		relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+		relatedProcessesMap[p.pid] = p
 	}
-	for procPid, _ := range relatedProcesses {
-		for idx := 0; idx < len(parentProcesses[procPid]); idx += 1 {
-			p := parentProcesses[pid][idx]
-			relatedProcesses[parentProcesses[procPid][idx].pid] = allProcesses[p.pid]
+
+	// Add all child procs of processes in pid's process group (and their child procs as well)
+	for i := 0; i < len(relatedProcesses); i += 1 {
+		rp := relatedProcesses[i]
+		procPid := rp.pid
+		for j := 0; j < len(parentProcesses[procPid]); j += 1 {
+			p := parentProcesses[procPid][j]
+			// Make sure it isn't already present in map
+			if _, ok := relatedProcessesMap[p.pid]; !ok {
+				relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+				relatedProcessesMap[p.pid] = p
+			}
 		}
 	}
-	for _, proc := range relatedProcesses {
+
+	// Add total rss usage of all relatedProcesses
+	for _, proc := range relatedProcessesMap {
 		total += proc.rss
 	}
 	return execer.Memory(total * bytesToKB), nil
 }
 
 func (pg *osProcGetter) getProcs() (
-	allProcesses map[int]proc, relatedProcesses map[int]proc, processGroups map[int][]proc,
+	allProcesses map[int]proc, processGroups map[int][]proc,
 	parentProcesses map[int][]proc, err error) {
 	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 	procs := strings.Split(string(b), ";")
 	return pg.parseProcs(procs)
 }
 
-func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, relatedProcesses map[int]proc, processGroups map[int][]proc,
+func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, processGroups map[int][]proc,
 	parentProcesses map[int][]proc, err error) {
 	allProcesses = make(map[int]proc)
-	relatedProcesses = make(map[int]proc)
 	processGroups = make(map[int][]proc)
 	parentProcesses = make(map[int][]proc)
 	for idx := 0; idx < len(procs); idx += 1 {
 		var p proc
 		n, err := fmt.Sscanf(procs[idx], "%d %d %d %d", &p.pid, &p.pgid, &p.ppid, &p.rss)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 		if n != 4 {
-			return nil, nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
+			return nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
 		}
 		allProcesses[p.pid] = p
 		processGroups[p.pgid] = append(processGroups[p.pgid], p)
 		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
 	}
-	return allProcesses, relatedProcesses, processGroups, parentProcesses, nil
+	return allProcesses, processGroups, parentProcesses, nil
 }
 
 /*
