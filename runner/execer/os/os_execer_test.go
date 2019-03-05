@@ -31,7 +31,7 @@ func TestOsExecerMemUsage(t *testing.T) {
 	}
 }
 
-// // Tests that memory of processes spawned by a process in original process's process group are counted
+// Tests that memory of processes spawned by a process in original process's process group are counted
 func TestParentProcGroup(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 2 2 %d", rss)}}
@@ -42,7 +42,7 @@ func TestParentProcGroup(t *testing.T) {
 	}
 }
 
-// // Tests that memory of processes within process group are counted
+// Tests that memory of processes within process group are counted
 func TestProcGroup(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss)}}
@@ -53,7 +53,7 @@ func TestProcGroup(t *testing.T) {
 	}
 }
 
-// // Tests that memory of unrelated processes are not counted
+// Tests that memory of unrelated processes are not counted
 func TestUnrelatedProcs(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{
@@ -70,13 +70,13 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{
 		fmt.Sprintf("0  0      0  %d", rss), fmt.Sprintf("1   0 1 %d", rss),
-		fmt.Sprintf("2 1       1 %d", rss), fmt.Sprintf("3  2    2      %d", rss),
-		fmt.Sprintf("4  3   3 %d", rss),
-		fmt.Sprintf("100    0   0  %d ", rss), fmt.Sprintf("   101   100  100  %d", rss),
-		fmt.Sprintf("  1000   1000      1000 %d   ", rss)}}
+		fmt.Sprintf("2 1       1 %d", rss), fmt.Sprintf("3  2    1      %d", rss),
+		fmt.Sprintf("4  3   3 %d", rss), fmt.Sprintf("5  2   3 %d", rss),
+		fmt.Sprintf("6  5   5 %d", rss), fmt.Sprintf("100    0   0  %d ", rss),
+		fmt.Sprintf("   101   100  100  %d", rss), fmt.Sprintf("  1000   1000      1001 %d   ", rss)}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
 	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*7*bytesToKB) || err != nil {
+	if mem != execer.Memory(rss*9*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.allProcesses, pg.processGroups, pg.parentProcesses)
 	}
 }

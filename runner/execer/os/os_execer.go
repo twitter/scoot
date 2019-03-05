@@ -39,6 +39,23 @@ type osExecer struct {
 	pg     procGetter
 }
 
+type osProcess struct {
+	cmd    *exec.Cmd
+	wg     *sync.WaitGroup
+	result *execer.ProcessStatus
+	mutex  sync.Mutex
+	tags.LogTags
+}
+
+type osProcGetter struct{}
+
+type proc struct {
+	pid  int
+	pgid int
+	ppid int
+	rss  int
+}
+
 type procGetter interface {
 	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
 	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
@@ -112,14 +129,6 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		go e.monitorMem(proc, command.MemCh)
 	}
 	return proc, nil
-}
-
-type osProcess struct {
-	cmd    *exec.Cmd
-	wg     *sync.WaitGroup
-	result *execer.ProcessStatus
-	mutex  sync.Mutex
-	tags.LogTags
 }
 
 // TODO(rcouto): More we can do here to make sure we're
@@ -236,18 +245,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	}
 }
 
-type proc struct {
-	pid  int
-	pgid int
-	ppid int
-	rss  int
-}
-
-type osProcGetter struct{}
-
-// Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
-// Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
-// From there, sum the memory of all processes in aforementioned set.
+// Sums memory usage for a given process, including usage by related processes
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
 	if err != nil {
@@ -257,8 +255,6 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
 	}
 	procGroupID := allProcesses[pid].pgid
-	log.Info(procGroupID)
-	log.Info(processGroups[procGroupID])
 	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
 	// introduces non-deterministic flaky behavior wrt memUsage summation. We add related procs to the relatedProcesses
 	// slice iff they aren't present in relatedProcessesMap
