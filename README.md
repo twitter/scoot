@@ -15,15 +15,10 @@ The Scheduler receives and distrubutes jobs to workers, and maintains state. It 
 
 The Worker (workerserver) receives information about jobs and runs them, and is responsible for all Snapshot-related functionality.
 
-###### Daemon
-
-The local daemon serves a Protobuf interface and can either send Scoot jobs to a remote scheduler or to embedded local workers.
-
 ###### Client APIs
 
 * Cloud Scoot API
 * Worker API
-* Daemon API
 
 ###### Jobs and Tasks
 
@@ -70,20 +65,6 @@ Install the Thrift tool and golang thrift repository locally using the following
 __Generating thrift files (scootapi used as an example)__
 See documentation in thrift definition files for specific generation instructions, or `make thrift`.
 
-## Scoot Protobuf Code
-__Generating go protobuf files (for local Scoot Daemon)__
-cd to scoot's daemon/protocol
-
-protoc -I . daemon.proto --go_out=plugins=grpc:.
-
-__Generating python client files (for client library accessing local Scoot Daemon)__
-cd to scoot's daemon/protocol
-
-```sh
-python -m grpc.tools.protoc -I. --python_out=./python/scoot --grpc_python_out=./python/scoot daemon.proto
-```
-
-
 # Installation Instructions
 ## Install 3rd party tools:
 ### Thrift (version >= 0.9.3)
@@ -96,33 +77,7 @@ brew install thrift
 go get github.com/apache/thrift/lib/go/thrift
 ```
 
-### Protobuf for the Scoot Daemon
-* If necessary, remove any conflicting or older versions of Protobuf:
-```sh
-brew uninstall protobuf
-```
-
-
-### grpcio for python
-```sh
-pip install grpcio grpcio-tools
-```
-(If grpcio* is already installed you should probably update it by including '--upgrade' to the above pip command)
-
-### docopt for python
-```sh
-pip install docopt==0.6.2
-```
-
 ## Install/Access Scoot Executables and libraries
-### Scoot Local Daemon, Local Scheduler and Local Worker
 *cd to scoot directory (workspace/github.com/twitter/scoot)
 *run: go install ./binaries/...
 ** the binaries will be installed in workspace/bin
-
-### Scoot Local Daemon Command Line Client
-```python workspace/github.com/twitter/scoot/daemon/protocol/python/scoot/scoot.py
-
-### Python client library
-Can be found at workspace/github.com/twitter/scoot/daemon/protocol/python/scoot/client_lib.py
-
