@@ -5,10 +5,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner/execer"
+
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	log.AddHook(hooks.NewContextHook())
+	logrusLevel, _ := log.ParseLevel("debug")
+	log.SetLevel(logrusLevel)
+}
 
 func TestAll(t *testing.T) {
 	exer := NewExecer()
