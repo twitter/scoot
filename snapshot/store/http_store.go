@@ -108,7 +108,6 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 		return errors.New("'/' not allowed in name when writing bundles.")
 	}
 	uri := s.rootURI + name
-	log.Infof("Writing %s", uri)
 
 	post := func() (*http.Response, error) {
 		req, err := http.NewRequest("POST", uri, data)
@@ -122,7 +121,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 		if ttl.TTLKey != "" {
 			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(time.RFC1123)}
 		}
-		log.Infof("Write header: %s %v", uri, req.Header)
+		log.Infof("Writing %s: length: %d header: %v", uri, req.ContentLength, req.Header)
 		return s.client.Do(req)
 	}
 
