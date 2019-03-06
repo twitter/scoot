@@ -1,5 +1,8 @@
 package server
 
+// these functions are the service side entry points for the thrift protocol
+// (they are call from cloudscoot.go)
+
 import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/twitter/scoot/common/stats"
@@ -63,4 +66,14 @@ func (h *Handler) OfflineWorker(req *scoot.OfflineWorkerReq) error {
 // Implements ReinstateWorker Cloud Scoot API
 func (h *Handler) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
 	return api.ReinstateWorker(req, h.scheduler)
+}
+
+// Implements GetSchedulerStatus Cloud Scoot API
+func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
+	return api.GetSchedulerStatus(h.scheduler)
+}
+
+// Implements ThrottleScheduler Cloud Scoot API
+func (h *Handler) ThrottleScheduler(maxNumTasks int32) error {
+	return api.ThrottleScheduler(h.scheduler, maxNumTasks)
 }

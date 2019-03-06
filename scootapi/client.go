@@ -1,4 +1,6 @@
 package scootapi
+// scootapi provides client side access to the scoot services.  It is used by the
+// command line binaries to submit (thrift) requests to the scoot services.
 
 import (
 	"fmt"
@@ -127,6 +129,40 @@ func (c *CloudScootClient) ReinstateWorker(req *scoot.ReinstateWorkerReq) error 
 		c.closeConnection()
 	}
 	return err
+}
+
+func (c *CloudScootClient) ThrottleScheduler(maxTasks int32) (error) {
+	// validation is also implemented in sched/definitions.go.  We cannot use it here because it
+	// causes a circular dependency.  The two implementations can be consolidated when the code
+	// is restructured
+	if maxTasks < -1 {
+		return fmt.Errorf("invlid throttle value:%d. Must be >= -1.", maxTasks)
+	}
+
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.ThrottleScheduler(maxTasks)
+	return err
+}
+
+func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
+	err := c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	schedulerStatus, err := c.client.GetSchedulerStatus()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return schedulerStatus, err
 }
 
 // helper method to check for a non-nil client / create one

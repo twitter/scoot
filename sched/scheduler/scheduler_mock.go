@@ -80,3 +80,25 @@ func (_m *MockScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error {
 func (_mr *_MockSchedulerRecorder) ReinstateWorker(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "ReinstateWorker", arg0)
 }
+
+func (_m *MockScheduler) Throttle(maxTasks int) error {
+	ret := _m.ctrl.Call(_m, "Throttle", maxTasks)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockSchedulerRecorder) Throttle(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Throttle", arg0)
+}
+
+func (_m *MockScheduler) GetSchedulerStatus() (bool, int, int) {
+	ret := _m.ctrl.Call(_m, "GetSchedulerStatus")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(int)
+	return ret0, ret1, ret2
+}
+
+func (_mr *_MockSchedulerRecorder) GetSchedulerStatus() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetSchedulerStatus")
+}

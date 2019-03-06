@@ -109,6 +109,7 @@ type SchedulerConfig struct {
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	SoftMaxSchedulableTasks int
+	HardMaxSchedulableTasks	int
 	Admins                  []string
 }
 
@@ -262,6 +263,8 @@ func NewStatefulScheduler(
 	if config.SoftMaxSchedulableTasks == 0 {
 		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
 	}
+
+	config.HardMaxSchedulableTasks = -1
 
 	sched := &statefulScheduler{
 		config:        &config,
@@ -548,6 +551,21 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 }
 
+
+func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
+	// get the count of total tasks across all jobs, completed tasks and
+	// running tasks
+	var total, completed, running int
+	for _, job := range s.inProgressJobs {
+		total += len(job.Tasks)
+		completed += job.TasksCompleted
+		running += job.TasksRunning
+	}
+
+	return total, completed, running
+}
+
+
 // Checks if any new jobs have been requested since the last loop and adds
 // them to the jobs the scheduler is handling
 func (s *statefulScheduler) addJobs() {
@@ -567,7 +585,15 @@ checkLoop:
 		select {
 		case checkJobMsg := <-s.checkJobCh:
 			var err error
-			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
+			var total, completed, _ = s.getSchedulerTaskCounts()
+			if s.config.HardMaxSchedulableTasks != -1 &&
+				s.config.HardMaxSchedulableTasks < (total - completed) + len(checkJobMsg.jobDef.Tasks) {
+				err = fmt.Errorf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, " +
+					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle " +
+					"limit.", checkJobMsg.jobDef.JobType, checkJobMsg.jobDef.Requestor, checkJobMsg.jobDef.Basis,
+					checkJobMsg.jobDef.Tag, s.config.HardMaxSchedulableTasks, total - completed,
+					len(checkJobMsg.jobDef.Tasks))
+			} else if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
 				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)
 			} else if len(jobs) >= s.config.MaxJobsPerRequestor {
 				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxJobsPerRequestor)
@@ -666,11 +692,7 @@ addLoop:
 	}
 
 	if receivedJob {
-		for _, job := range s.inProgressJobs {
-			total += len(job.Tasks)
-			completed += job.TasksCompleted
-			running += job.TasksRunning
-		}
+		total, completed, running = s.getSchedulerTaskCounts()
 		log.WithFields(
 			log.Fields{
 				"unscheduledTasks": total - completed - running,
@@ -1100,4 +1122,28 @@ func (s *statefulScheduler) killJobs() {
 
 		req.responseCh <- nil
 	}
+}
+
+// set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job
+// requests when the number of running and waiting tasks won't exceed the limit
+func (s *statefulScheduler) Throttle(limit int) error {
+
+	err := sched.ValidateThrottleRequest(limit)
+	if err != nil {
+		return err
+	}
+	s.config.HardMaxSchedulableTasks = limit
+	return nil
+}
+
+// return
+// - true/false indicating if the scheduler is accepting job requests
+// - the current number of tasks running or waiting to run
+// - the max number of tasks the scheduler will handle, -1 -> there is no max number
+func (s *statefulScheduler) GetSchedulerStatus() (bool, int, int) {
+	var total, completed, _ = s.getSchedulerTaskCounts()
+	var task_cnt = total - completed
+	var receiving = s.config.HardMaxSchedulableTasks == -1 ||
+		task_cnt < s.config.HardMaxSchedulableTasks
+	return receiving, task_cnt, s.config.HardMaxSchedulableTasks
 }

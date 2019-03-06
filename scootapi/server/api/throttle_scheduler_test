@@ -1,0 +1,34 @@
+package api
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/golang/mock/gomock"
+	"fmt"
+)
+
+/*
+*/
+func Test_ThrottleScheduler(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	s := scheduler.NewMockScheduler(mockCtrl)
+	s.EXPECT().Throttle(10).Return(nil)
+
+	// test scheduler.KillJob returning a non-null error
+	err := ThrottleScheduler(s, 10)
+
+	if err != nil {
+		t.Fatalf("Expected nil, got: %s", err)
+	}
+	// test scheduler.KillJob returning a non-null error
+	err = ThrottleScheduler(s, -3)
+
+	if strings.Compare(fmt.Sprint("%v", err),"Error throttle must be > -1") != 0 {
+		t.Fatalf("Expected error, got: %s", err)
+	}
+}
