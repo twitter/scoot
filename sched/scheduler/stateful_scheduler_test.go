@@ -570,19 +570,19 @@ func Test_StatefulScheduler_Throttle_Off(t *testing.T) {
 		for testing {
 			s.step()
 		}
-	} ()
+	}()
 
 	id, err := s.ScheduleJob(jobDef)
 
-	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler," +
-		" throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle " +
+	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler,"+
+		" throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
 		"limit.", jobDef.JobType, jobDef.Requestor, jobDef.Basis, jobDef.Tag, 0, 0, 5)
-	if strings.Compare(expected, fmt.Sprintf("%s",err)) != 0 {
+	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
 		t.Fatalf("Expected: %s, got: %s", expected, err)
 	}
 
 	if id != "" {
-		t.Fatalf("Expected job request to be denied, instead got job id: %s",id)
+		t.Fatalf("Expected job request to be denied, instead got job id: %s", id)
 	}
 
 }
@@ -667,7 +667,6 @@ func Test_StatefulScheduler_ThrottleSome(t *testing.T) {
 	loopMU.Unlock()
 }
 
-
 func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
@@ -693,7 +692,7 @@ func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 	id1, err := s.ScheduleJob(job1Def)
 
 	if id1 == "" || err != nil {
-		t.Fatalf("expected a job id and no error, got: id:%s, err:%s",id1, err)
+		t.Fatalf("expected a job id and no error, got: id:%s, err:%s", id1, err)
 	}
 
 	// Off: limit the scheduler and add a job that's too big
@@ -701,8 +700,8 @@ func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 
 	id, err := s.ScheduleJob(job2Def)
 
-	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, " +
-		"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle " +
+	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, "+
+		"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
 		"limit.", job2Def.JobType, job2Def.Requestor, job2Def.Basis, job2Def.Tag, 2, 7, 3)
 	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
 		t.Fatalf("Expected: %s, got: %s", expected, err)
@@ -717,14 +716,13 @@ func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 	id, err = s.ScheduleJob(job2Def)
 
 	if id1 == "" || err != nil {
-		t.Fatalf("expected a job id and no error, got: id:%s, err:%s",id1, err)
+		t.Fatalf("expected a job id and no error, got: id:%s, err:%s", id1, err)
 	}
 
 	loopMU.Lock()
 	keepLooping = false
 	loopMU.Unlock()
 }
-
 
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
 	t *testing.T, statsRegistry stats.StatsRegistry) bool {

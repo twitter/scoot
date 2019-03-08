@@ -23,5 +23,3 @@ type Scheduler interface {
 
 	GetSchedulerStatus() (bool, int, int)
 }
-
-

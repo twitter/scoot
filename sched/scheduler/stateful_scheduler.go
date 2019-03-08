@@ -109,7 +109,7 @@ type SchedulerConfig struct {
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	SoftMaxSchedulableTasks int
-	HardMaxSchedulableTasks	int
+	HardMaxSchedulableTasks int
 	Admins                  []string
 }
 
@@ -551,7 +551,6 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 }
 
-
 func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
 	// get the count of total tasks across all jobs, completed tasks and
 	// running tasks
@@ -564,7 +563,6 @@ func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
 
 	return total, completed, running
 }
-
 
 // Checks if any new jobs have been requested since the last loop and adds
 // them to the jobs the scheduler is handling
@@ -587,11 +585,11 @@ checkLoop:
 			var err error
 			var total, completed, _ = s.getSchedulerTaskCounts()
 			if s.config.HardMaxSchedulableTasks != -1 &&
-				s.config.HardMaxSchedulableTasks < (total - completed) + len(checkJobMsg.jobDef.Tasks) {
-				err = fmt.Errorf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, " +
-					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle " +
+				s.config.HardMaxSchedulableTasks < (total-completed)+len(checkJobMsg.jobDef.Tasks) {
+				err = fmt.Errorf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, "+
+					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
 					"limit.", checkJobMsg.jobDef.JobType, checkJobMsg.jobDef.Requestor, checkJobMsg.jobDef.Basis,
-					checkJobMsg.jobDef.Tag, s.config.HardMaxSchedulableTasks, total - completed,
+					checkJobMsg.jobDef.Tag, s.config.HardMaxSchedulableTasks, total-completed,
 					len(checkJobMsg.jobDef.Tasks))
 			} else if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
 				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)

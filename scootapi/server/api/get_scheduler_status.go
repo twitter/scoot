@@ -11,10 +11,10 @@ it's current throttle value (-1 implies it is not throttled)
 */
 func NewSchedulerStatus(receiving bool, numTasks int, throttle int) *scoot.SchedulerStatus {
 	return &scoot.SchedulerStatus{
-		ReceivingJobs	: receiving,
-		CurrentTasks 	: int32(numTasks),
-		MaxTasks		: int32(throttle),
-		}
+		ReceivingJobs: receiving,
+		CurrentTasks:  int32(numTasks),
+		MaxTasks:      int32(throttle),
+	}
 }
 
 func GetSchedulerStatus(scheduler scheduler.Scheduler) (*scoot.SchedulerStatus, error) {
@@ -26,4 +26,3 @@ func GetSchedulerStatus(scheduler scheduler.Scheduler) (*scoot.SchedulerStatus, 
 	receiving, numTasks, throttle = scheduler.GetSchedulerStatus()
 	return NewSchedulerStatus(receiving, numTasks, throttle), nil
 }
-

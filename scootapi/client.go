@@ -1,4 +1,5 @@
 package scootapi
+
 // scootapi provides client side access to the scoot services.  It is used by the
 // command line binaries to submit (thrift) requests to the scoot services.
 
@@ -131,7 +132,7 @@ func (c *CloudScootClient) ReinstateWorker(req *scoot.ReinstateWorkerReq) error 
 	return err
 }
 
-func (c *CloudScootClient) ThrottleScheduler(maxTasks int32) (error) {
+func (c *CloudScootClient) ThrottleScheduler(maxTasks int32) error {
 	// validation is also implemented in sched/definitions.go.  We cannot use it here because it
 	// causes a circular dependency.  The two implementations can be consolidated when the code
 	// is restructured
