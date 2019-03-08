@@ -91,12 +91,11 @@ func (_mr *_MockSchedulerRecorder) Throttle(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Throttle", arg0)
 }
 
-func (_m *MockScheduler) GetSchedulerStatus() (bool, int, int) {
+func (_m *MockScheduler) GetSchedulerStatus() (int, int) {
 	ret := _m.ctrl.Call(_m, "GetSchedulerStatus")
-	ret0, _ := ret[0].(bool)
+	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(int)
-	ret2, _ := ret[2].(int)
-	return ret0, ret1, ret2
+	return ret0, ret1
 }
 
 func (_mr *_MockSchedulerRecorder) GetSchedulerStatus() *gomock.Call {

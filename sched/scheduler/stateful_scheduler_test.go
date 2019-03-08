@@ -593,12 +593,11 @@ func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
 
 	s.Throttle(0)
 
-	var r bool
 	var num_tasks, throttle int
-	r, num_tasks, throttle = s.GetSchedulerStatus()
-	if r || num_tasks != 0 || throttle != 0 {
-		t.Fatalf("GetSchedulerStatus: expected: false, 0, 0, got: %t, %d, %d",
-			r, num_tasks, throttle)
+	num_tasks, throttle = s.GetSchedulerStatus()
+	if num_tasks != 0 || throttle != 0 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, 0, got: %d, %d",
+			num_tasks, throttle)
 	}
 }
 
@@ -608,12 +607,11 @@ func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
 
 	s.Throttle(-1)
 
-	var r bool
 	var num_tasks, throttle int
-	r, num_tasks, throttle = s.GetSchedulerStatus()
-	if !r || num_tasks != 0 || throttle != -1 {
-		t.Fatalf("GetSchedulerStatus: expected: true, 0, -1, got: %t, %d, %d",
-			r, num_tasks, throttle)
+	num_tasks, throttle = s.GetSchedulerStatus()
+	if num_tasks != 0 || throttle != -1 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, -1, got: %d, %d",
+			num_tasks, throttle)
 	}
 }
 
@@ -623,12 +621,11 @@ func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
 
 	s.Throttle(10)
 
-	var r bool
 	var num_tasks, throttle int
-	r, num_tasks, throttle = s.GetSchedulerStatus()
-	if !r || num_tasks != 0 || throttle != 10 {
-		t.Fatalf("GetSchedulerStatus: expected: true, 0, 10, got: %t, %d, %d",
-			r, num_tasks, throttle)
+	num_tasks, throttle = s.GetSchedulerStatus()
+	if num_tasks != 0 || throttle != 10 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, 10, got: %d, %d",
+			num_tasks, throttle)
 	}
 }
 

@@ -1138,10 +1138,8 @@ func (s *statefulScheduler) Throttle(limit int) error {
 // - true/false indicating if the scheduler is accepting job requests
 // - the current number of tasks running or waiting to run
 // - the max number of tasks the scheduler will handle, -1 -> there is no max number
-func (s *statefulScheduler) GetSchedulerStatus() (bool, int, int) {
+func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
 	var task_cnt = total - completed
-	var receiving = s.config.HardMaxSchedulableTasks == -1 ||
-		task_cnt < s.config.HardMaxSchedulableTasks
-	return receiving, task_cnt, s.config.HardMaxSchedulableTasks
+	return task_cnt, s.config.HardMaxSchedulableTasks
 }

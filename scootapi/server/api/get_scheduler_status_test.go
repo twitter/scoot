@@ -15,14 +15,13 @@ func Test_GetSchedulerStatus(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	s := scheduler.NewMockScheduler(mockCtrl)
-	s.EXPECT().GetSchedulerStatus().Return(true, 20, -1)
+	s.EXPECT().GetSchedulerStatus().Return(20, -1)
 
-	// test scheduler.KillJob returning a non-null error
+	// test scheduler.GetSchedulerStatus
 	status, err := GetSchedulerStatus(s)
-	if status.ReceivingJobs != true ||
-		status.CurrentTasks != 20 ||
+	if status.CurrentTasks != 20 ||
 		status.MaxTasks != -1 {
-		t.Fatalf("Expected {true, 20, -1}, got %v", status)
+		t.Fatalf("Expected {20, -1}, got %v", status)
 	}
 
 	if err != nil {

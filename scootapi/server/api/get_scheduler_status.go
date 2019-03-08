@@ -6,12 +6,11 @@ import (
 )
 
 /**
-Get the scheduler status: is it receiving jobs, how many tasks is it currently handling and
+Get the scheduler status: how many tasks is it currently handling and
 it's current throttle value (-1 implies it is not throttled)
 */
-func NewSchedulerStatus(receiving bool, numTasks int, throttle int) *scoot.SchedulerStatus {
+func NewSchedulerStatus(numTasks int, throttle int) *scoot.SchedulerStatus {
 	return &scoot.SchedulerStatus{
-		ReceivingJobs: receiving,
 		CurrentTasks:  int32(numTasks),
 		MaxTasks:      int32(throttle),
 	}
@@ -19,10 +18,9 @@ func NewSchedulerStatus(receiving bool, numTasks int, throttle int) *scoot.Sched
 
 func GetSchedulerStatus(scheduler scheduler.Scheduler) (*scoot.SchedulerStatus, error) {
 
-	var receiving bool
 	var numTasks int
 	var throttle int
 
-	receiving, numTasks, throttle = scheduler.GetSchedulerStatus()
-	return NewSchedulerStatus(receiving, numTasks, throttle), nil
+	numTasks, throttle = scheduler.GetSchedulerStatus()
+	return NewSchedulerStatus(numTasks, throttle), nil
 }

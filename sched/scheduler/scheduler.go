@@ -21,5 +21,5 @@ type Scheduler interface {
 
 	Throttle(maxTasks int) error
 
-	GetSchedulerStatus() (bool, int, int)
+	GetSchedulerStatus() (int, int)
 }

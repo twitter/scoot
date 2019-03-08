@@ -19,13 +19,13 @@ func Test_ThrottleScheduler(t *testing.T) {
 	s := scheduler.NewMockScheduler(mockCtrl)
 	s.EXPECT().Throttle(10).Return(nil)
 
-	// test scheduler.KillJob returning a non-null error
+	// test scheduler.ThrottleScheduler returning a non-null error
 	err := ThrottleScheduler(s, 10)
 
 	if err != nil {
 		t.Fatalf("Expected nil, got: %s", err)
 	}
-	// test scheduler.KillJob returning a non-null error
+	// test scheduler.ThrottleScheduler
 	err = ThrottleScheduler(s, -3)
 
 	if strings.Compare(fmt.Sprint("%v", err),"Error throttle must be > -1") != 0 {

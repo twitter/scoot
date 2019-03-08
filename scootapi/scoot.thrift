@@ -127,7 +127,6 @@ struct ReinstateWorkerReq {
 }
 
 struct SchedulerStatus {
-  1: required bool receivingJobs
   2: required i32 currentTasks
   3: required i32 maxTasks
 }

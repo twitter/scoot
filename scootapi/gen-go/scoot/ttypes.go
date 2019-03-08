@@ -2580,21 +2580,16 @@ func (p *ReinstateWorkerReq) String() string {
 }
 
 // Attributes:
-//  - ReceivingJobs
 //  - CurrentTasks
 //  - MaxTasks
 type SchedulerStatus struct {
-	ReceivingJobs bool  `thrift:"receivingJobs,1,required" json:"receivingJobs"`
-	CurrentTasks  int32 `thrift:"currentTasks,2,required" json:"currentTasks"`
-	MaxTasks      int32 `thrift:"maxTasks,3,required" json:"maxTasks"`
+	// unused field # 1
+	CurrentTasks int32 `thrift:"currentTasks,2,required" json:"currentTasks"`
+	MaxTasks     int32 `thrift:"maxTasks,3,required" json:"maxTasks"`
 }
 
 func NewSchedulerStatus() *SchedulerStatus {
 	return &SchedulerStatus{}
-}
-
-func (p *SchedulerStatus) GetReceivingJobs() bool {
-	return p.ReceivingJobs
 }
 
 func (p *SchedulerStatus) GetCurrentTasks() int32 {
@@ -2609,7 +2604,6 @@ func (p *SchedulerStatus) Read(iprot thrift.TProtocol) error {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
 
-	var issetReceivingJobs bool = false
 	var issetCurrentTasks bool = false
 	var issetMaxTasks bool = false
 
@@ -2622,11 +2616,6 @@ func (p *SchedulerStatus) Read(iprot thrift.TProtocol) error {
 			break
 		}
 		switch fieldId {
-		case 1:
-			if err := p.readField1(iprot); err != nil {
-				return err
-			}
-			issetReceivingJobs = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
 				return err
@@ -2649,23 +2638,11 @@ func (p *SchedulerStatus) Read(iprot thrift.TProtocol) error {
 	if err := iprot.ReadStructEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 	}
-	if !issetReceivingJobs {
-		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field ReceivingJobs is not set"))
-	}
 	if !issetCurrentTasks {
 		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field CurrentTasks is not set"))
 	}
 	if !issetMaxTasks {
 		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field MaxTasks is not set"))
-	}
-	return nil
-}
-
-func (p *SchedulerStatus) readField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadBool(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.ReceivingJobs = v
 	}
 	return nil
 }
@@ -2692,9 +2669,6 @@ func (p *SchedulerStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("SchedulerStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
-	if err := p.writeField1(oprot); err != nil {
-		return err
-	}
 	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
@@ -2708,19 +2682,6 @@ func (p *SchedulerStatus) Write(oprot thrift.TProtocol) error {
 		return thrift.PrependError("write struct stop error: ", err)
 	}
 	return nil
-}
-
-func (p *SchedulerStatus) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("receivingJobs", thrift.BOOL, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:receivingJobs: ", p), err)
-	}
-	if err := oprot.WriteBool(bool(p.ReceivingJobs)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.receivingJobs (1) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:receivingJobs: ", p), err)
-	}
-	return err
 }
 
 func (p *SchedulerStatus) writeField2(oprot thrift.TProtocol) (err error) {
