@@ -16,7 +16,7 @@ import (
 //		watch_job [job id]
 //		run_smoke_test
 //		get_scheduler_status
-//		throttle [limit]
+//		set_scheduler_status [limit]
 //	Global flags:
 //		--addr [<host:port> of cloud server]
 // 		--log_level [<error|info|debug> level and above should be logged]

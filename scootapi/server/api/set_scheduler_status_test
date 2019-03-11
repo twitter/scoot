@@ -17,15 +17,15 @@ func Test_SetSchedulerStatus(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	s := scheduler.NewMockScheduler(mockCtrl)
-	s.EXPECT().Throttle(10).Return(nil)
+	s.EXPECT().SetSchedulerStatus(10).Return(nil)
 
-	// test scheduler.ThrottleScheduler returning a non-null error
+	// test scheduler.SetSchedulerStatus returning a non-null error
 	err := SetSchedulerStatus(s, 10)
 
 	if err != nil {
 		t.Fatalf("Expected nil, got: %s", err)
 	}
-	// test scheduler.ThrottleScheduler
+	// test scheduler.SetSchedulerStatus
 	err = SetSchedulerStatus(s, -3)
 
 	if strings.Compare(fmt.Sprint("%v", err),"Error task limit must be > -1") != 0 {

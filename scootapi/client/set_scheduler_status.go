@@ -22,7 +22,7 @@ func (c *setSchedulerStatus) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:     "set_scheduler_status",
 		Short:   "set the scheduler status",
-		Example: "scootapi SetSchedulerStatus 20",
+		Example: "scootapi set_scheduler_status 20",
 	}
 	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
 	return r
