@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,20 +20,45 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const bytesToKB = 1024
+
 func NewExecer() *osExecer {
-	return &osExecer{}
+	return &osExecer{pg: &osProcGetter{}}
 }
 
 // For now memory can be capped on a per-execer basis rather than a per-command basis.
 // This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
 func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer")}
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
 }
 
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
 	memCap execer.Memory
 	stat   stats.StatsReceiver
+	pg     procGetter
+}
+
+type osProcess struct {
+	cmd    *exec.Cmd
+	wg     *sync.WaitGroup
+	result *execer.ProcessStatus
+	mutex  sync.Mutex
+	tags.LogTags
+}
+
+type osProcGetter struct{}
+
+type proc struct {
+	pid  int
+	pgid int
+	ppid int
+	rss  int
+}
+
+type procGetter interface {
+	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
+	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
 }
 
 type WriterDelegater interface {
@@ -105,14 +129,6 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 		go e.monitorMem(proc, command.MemCh)
 	}
 	return proc, nil
-}
-
-type osProcess struct {
-	cmd    *exec.Cmd
-	wg     *sync.WaitGroup
-	result *execer.ProcessStatus
-	mutex  sync.Mutex
-	tags.LogTags
 }
 
 // TODO(rcouto): More we can do here to make sure we're
@@ -229,54 +245,82 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 	}
 }
 
-// Query for all sets of (pid, pgid, ppid, rss). Given a pid, find all processes with pid as its pgid or ppid.
-// Given this list of pids, find all processes with a pgid or ppid in that set, and modify the set in place.
-// From there, sum the memory of all processes in aforementioned set.
-// TODO: Python script is hard to test and probably non-performant compared to a native Go solution.
-// 		 Refactor into unit-testable Go func.
+// Sums memory usage for a given process, including usage by related processes
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	str := `
-PID=%d
-PSLIST=$(ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,')
-echo "
-all_processes=dict()
-related_processes=dict()
-process_groups=dict()
-parent_processes=dict()
-children = []
-proc_group_id = None
-total=0
-for line in \"$PSLIST\".split(';'):
-  pid, pgid, ppid, rss = tuple(line.split())
-  all_processes[pid] = {'pgid': pgid, 'ppid': ppid, 'rss': rss}
-  process_groups.setdefault(pgid, []).append(pid)
-  parent_processes.setdefault(ppid, []).append(pid)
-  if pid == \"$PID\":
-    proc_group_id = pgid
-
-# Add all processes from pid's process group to related_processes
-for pid in process_groups.setdefault(proc_group_id, []):
-  related_processes[pid] = all_processes[pid]
-
-# Add children processes of related_processes to children list
-for pid, _ in related_processes.items():
-  # Add all processes from children list to related_processes
-  for child in parent_processes.get(pid, []):
-    related_processes[child] = all_processes[child]
-
-for pid, proc in related_processes.items():
-  total += int(proc['rss'])
-print total
-
-" | python
-`
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(str, pid))
-	if usageKB, err := cmd.Output(); err != nil {
-		return 0, err
-	} else {
-		u, err := strconv.Atoi(strings.TrimSpace(string(usageKB)))
-		return execer.Memory(u * 1024), err
+	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
+	if err != nil {
+		return 0, nil
 	}
+	if _, ok := allProcesses[pid]; !ok {
+		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
+	}
+	procGroupID := allProcesses[pid].pgid
+	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
+	// introduces non-deterministic flaky behavior wrt memUsage summation. We add related procs to the relatedProcesses
+	// slice iff they aren't present in relatedProcessesMap
+	relatedProcesses := []proc{}
+	relatedProcessesMap := make(map[int]proc)
+	total := 0
+	// Seed relatedProcesses with all procs from pid's process group
+	for idx := 0; idx < len(processGroups[procGroupID]); idx += 1 {
+		p := processGroups[procGroupID][idx]
+		relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+		relatedProcessesMap[p.pid] = p
+	}
+
+	// Add all child procs of processes in pid's process group (and their child procs as well)
+	for i := 0; i < len(relatedProcesses); i += 1 {
+		rp := relatedProcesses[i]
+		procPid := rp.pid
+		for j := 0; j < len(parentProcesses[procPid]); j += 1 {
+			p := parentProcesses[procPid][j]
+			// Make sure it isn't already present in map
+			if _, ok := relatedProcessesMap[p.pid]; !ok {
+				relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+				relatedProcessesMap[p.pid] = p
+			}
+		}
+	}
+
+	// Add total rss usage of all relatedProcesses
+	for _, proc := range relatedProcessesMap {
+		total += proc.rss
+	}
+	return execer.Memory(total * bytesToKB), nil
+}
+
+func (pg *osProcGetter) getProcs() (
+	allProcesses map[int]proc, processGroups map[int][]proc,
+	parentProcesses map[int][]proc, err error) {
+	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
+	psList := exec.Command("bash", "-c", cmd)
+	b, err := psList.Output()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	procs := strings.Split(string(b), ";")
+	return pg.parseProcs(procs)
+}
+
+func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, processGroups map[int][]proc,
+	parentProcesses map[int][]proc, err error) {
+	allProcesses = make(map[int]proc)
+	processGroups = make(map[int][]proc)
+	parentProcesses = make(map[int][]proc)
+	for idx := 0; idx < len(procs); idx += 1 {
+		var p proc
+		n, err := fmt.Sscanf(procs[idx], "%d %d %d %d", &p.pid, &p.pgid, &p.ppid, &p.rss)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if n != 4 {
+			return nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
+		}
+		allProcesses[p.pid] = p
+		processGroups[p.pgid] = append(processGroups[p.pgid], p)
+		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
+	}
+	return allProcesses, processGroups, parentProcesses, nil
 }
 
 /*
