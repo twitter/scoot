@@ -155,7 +155,7 @@ service CloudScoot {
   SchedulerStatus GetSchedulerStatus() throws (
     1: ScootServerError err
   )
-  void ThrottleScheduler(1: i32 maxTasks) throws (
+  void SetSchedulerStatus(1: i32 maxTasks) throws (
     1: InvalidRequest ir
     2: ScootServerError err
   )

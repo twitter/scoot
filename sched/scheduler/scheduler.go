@@ -19,7 +19,7 @@ type Scheduler interface {
 
 	ReinstateWorker(req sched.ReinstateWorkerReq) error
 
-	Throttle(maxTasks int) error
+	SetSchedulerStatus(maxTasks int) error
 
 	GetSchedulerStatus() (int, int)
 }

@@ -14,33 +14,34 @@ import (
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 
-type throttleSchedulerCmd struct {
+type setSchedulerStatus struct {
 	printAsJson bool
 }
 
-func (c *throttleSchedulerCmd) registerFlags() *cobra.Command {
+func (c *setSchedulerStatus) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:   "throttle_scheduler",
-		Short: "ThrottleScheduler",
+		Use:     "set_scheduler_status",
+		Short:   "set the scheduler status",
+		Example: "scootapi SetSchedulerStatus 20",
 	}
 	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
 	return r
 }
 
-func (c *throttleSchedulerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *setSchedulerStatus) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Throttle the scheduler", args)
+	log.Info("Set the maximum number of (running + waiting) tasks the scheduler will allow.", args)
 
 	if len(args) == 0 {
-		return errors.New("a throttle value >= -1 must be provided.")
+		return errors.New("tasks limit >= -1 must be provided.")
 	}
 
 	limit, err := strconv.Atoi(args[0])
 	if err != nil || limit < -1 {
-		return fmt.Errorf("Invalid input. Throttle limit must be an integer > -1.")
+		return fmt.Errorf("Invalid input. Tasks limit must be an integer > -1.")
 	}
 
-	err = cl.scootClient.ThrottleScheduler(int32(limit))
+	err = cl.scootClient.SetSchedulerStatus(int32(limit))
 
 	if err != nil {
 		switch err := err.(type) {

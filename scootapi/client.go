@@ -132,12 +132,12 @@ func (c *CloudScootClient) ReinstateWorker(req *scoot.ReinstateWorkerReq) error 
 	return err
 }
 
-func (c *CloudScootClient) ThrottleScheduler(maxTasks int32) error {
+func (c *CloudScootClient) SetSchedulerStatus(maxTasks int32) error {
 	// validation is also implemented in sched/definitions.go.  We cannot use it here because it
 	// causes a circular dependency.  The two implementations can be consolidated when the code
 	// is restructured
 	if maxTasks < -1 {
-		return fmt.Errorf("invlid throttle value:%d. Must be >= -1.", maxTasks)
+		return fmt.Errorf("invlid max tasks value:%d. Must be >= -1.", maxTasks)
 	}
 
 	err := c.checkForClient()
@@ -145,7 +145,7 @@ func (c *CloudScootClient) ThrottleScheduler(maxTasks int32) error {
 		return err
 	}
 
-	err = c.client.ThrottleScheduler(maxTasks)
+	err = c.client.SetSchedulerStatus(maxTasks)
 	return err
 }
 

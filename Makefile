@@ -95,7 +95,7 @@ integrationtest:
 	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
 clean-mockgen:
-	rm */*_mock.go
+	rm -rf */*_mock.go
 
 clean-data:
 	rm -rf ./.scootdata/*

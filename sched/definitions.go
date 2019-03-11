@@ -222,12 +222,12 @@ func ValidateJob(job JobDefinition) error {
 	return nil
 }
 
-func ValidateThrottleRequest(maxTasks int) error {
+func ValidateMaxTasks(maxTasks int) error {
 	// validation is also implemented in scootapi/client.go.  This implementation cannot be used
 	// there because it causes a circular dependency.  The two implementations can be consolidated
 	// when the code is restructured
 	if maxTasks < -1 {
-		return fmt.Errorf("invlid throttle value:%d. Must be >= -1.", maxTasks)
+		return fmt.Errorf("invalid tasks limit:%d. Must be >= -1.", maxTasks)
 	}
 
 	return nil

@@ -36,7 +36,7 @@ type CloudScoot interface {
 	GetSchedulerStatus() (r *SchedulerStatus, err error)
 	// Parameters:
 	//  - MaxTasks
-	ThrottleScheduler(maxTasks int32) (err error)
+	SetSchedulerStatus(maxTasks int32) (err error)
 }
 
 type CloudScootClient struct {
@@ -562,24 +562,24 @@ func (p *CloudScootClient) recvGetSchedulerStatus() (value *SchedulerStatus, err
 
 // Parameters:
 //  - MaxTasks
-func (p *CloudScootClient) ThrottleScheduler(maxTasks int32) (err error) {
-	if err = p.sendThrottleScheduler(maxTasks); err != nil {
+func (p *CloudScootClient) SetSchedulerStatus(maxTasks int32) (err error) {
+	if err = p.sendSetSchedulerStatus(maxTasks); err != nil {
 		return
 	}
-	return p.recvThrottleScheduler()
+	return p.recvSetSchedulerStatus()
 }
 
-func (p *CloudScootClient) sendThrottleScheduler(maxTasks int32) (err error) {
+func (p *CloudScootClient) sendSetSchedulerStatus(maxTasks int32) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("ThrottleScheduler", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("SetSchedulerStatus", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := CloudScootThrottleSchedulerArgs{
+	args := CloudScootSetSchedulerStatusArgs{
 		MaxTasks: maxTasks,
 	}
 	if err = args.Write(oprot); err != nil {
@@ -591,7 +591,7 @@ func (p *CloudScootClient) sendThrottleScheduler(maxTasks int32) (err error) {
 	return oprot.Flush()
 }
 
-func (p *CloudScootClient) recvThrottleScheduler() (err error) {
+func (p *CloudScootClient) recvSetSchedulerStatus() (err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -601,12 +601,12 @@ func (p *CloudScootClient) recvThrottleScheduler() (err error) {
 	if err != nil {
 		return
 	}
-	if method != "ThrottleScheduler" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "ThrottleScheduler failed: wrong method name")
+	if method != "SetSchedulerStatus" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetSchedulerStatus failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "ThrottleScheduler failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetSchedulerStatus failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
@@ -623,10 +623,10 @@ func (p *CloudScootClient) recvThrottleScheduler() (err error) {
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "ThrottleScheduler failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetSchedulerStatus failed: invalid message type")
 		return
 	}
-	result := CloudScootThrottleSchedulerResult{}
+	result := CloudScootSetSchedulerStatusResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -670,7 +670,7 @@ func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 	self22.processorMap["OfflineWorker"] = &cloudScootProcessorOfflineWorker{handler: handler}
 	self22.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
 	self22.processorMap["GetSchedulerStatus"] = &cloudScootProcessorGetSchedulerStatus{handler: handler}
-	self22.processorMap["ThrottleScheduler"] = &cloudScootProcessorThrottleScheduler{handler: handler}
+	self22.processorMap["SetSchedulerStatus"] = &cloudScootProcessorSetSchedulerStatus{handler: handler}
 	return self22
 }
 
@@ -1015,16 +1015,16 @@ func (p *cloudScootProcessorGetSchedulerStatus) Process(seqId int32, iprot, opro
 	return true, err
 }
 
-type cloudScootProcessorThrottleScheduler struct {
+type cloudScootProcessorSetSchedulerStatus struct {
 	handler CloudScoot
 }
 
-func (p *cloudScootProcessorThrottleScheduler) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := CloudScootThrottleSchedulerArgs{}
+func (p *cloudScootProcessorSetSchedulerStatus) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetSchedulerStatusArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ThrottleScheduler", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("SetSchedulerStatus", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -1032,24 +1032,24 @@ func (p *cloudScootProcessorThrottleScheduler) Process(seqId int32, iprot, oprot
 	}
 
 	iprot.ReadMessageEnd()
-	result := CloudScootThrottleSchedulerResult{}
+	result := CloudScootSetSchedulerStatusResult{}
 	var err2 error
-	if err2 = p.handler.ThrottleScheduler(args.MaxTasks); err2 != nil {
+	if err2 = p.handler.SetSchedulerStatus(args.MaxTasks); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
 		case *ScootServerError:
 			result.Err = v
 		default:
-			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ThrottleScheduler: "+err2.Error())
-			oprot.WriteMessageBegin("ThrottleScheduler", thrift.EXCEPTION, seqId)
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetSchedulerStatus: "+err2.Error())
+			oprot.WriteMessageBegin("SetSchedulerStatus", thrift.EXCEPTION, seqId)
 			x.Write(oprot)
 			oprot.WriteMessageEnd()
 			oprot.Flush()
 			return true, err2
 		}
 	}
-	if err2 = oprot.WriteMessageBegin("ThrottleScheduler", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("SetSchedulerStatus", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -2614,18 +2614,18 @@ func (p *CloudScootGetSchedulerStatusResult) String() string {
 
 // Attributes:
 //  - MaxTasks
-type CloudScootThrottleSchedulerArgs struct {
+type CloudScootSetSchedulerStatusArgs struct {
 	MaxTasks int32 `thrift:"maxTasks,1" json:"maxTasks"`
 }
 
-func NewCloudScootThrottleSchedulerArgs() *CloudScootThrottleSchedulerArgs {
-	return &CloudScootThrottleSchedulerArgs{}
+func NewCloudScootSetSchedulerStatusArgs() *CloudScootSetSchedulerStatusArgs {
+	return &CloudScootSetSchedulerStatusArgs{}
 }
 
-func (p *CloudScootThrottleSchedulerArgs) GetMaxTasks() int32 {
+func (p *CloudScootSetSchedulerStatusArgs) GetMaxTasks() int32 {
 	return p.MaxTasks
 }
-func (p *CloudScootThrottleSchedulerArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetSchedulerStatusArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -2658,7 +2658,7 @@ func (p *CloudScootThrottleSchedulerArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerArgs) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetSchedulerStatusArgs) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
@@ -2667,8 +2667,8 @@ func (p *CloudScootThrottleSchedulerArgs) readField1(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("ThrottleScheduler_args"); err != nil {
+func (p *CloudScootSetSchedulerStatusArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetSchedulerStatus_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -2683,7 +2683,7 @@ func (p *CloudScootThrottleSchedulerArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetSchedulerStatusArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("maxTasks", thrift.I32, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:maxTasks: ", p), err)
 	}
@@ -2696,51 +2696,51 @@ func (p *CloudScootThrottleSchedulerArgs) writeField1(oprot thrift.TProtocol) (e
 	return err
 }
 
-func (p *CloudScootThrottleSchedulerArgs) String() string {
+func (p *CloudScootSetSchedulerStatusArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootThrottleSchedulerArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetSchedulerStatusArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Ir
 //  - Err
-type CloudScootThrottleSchedulerResult struct {
+type CloudScootSetSchedulerStatusResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
 }
 
-func NewCloudScootThrottleSchedulerResult() *CloudScootThrottleSchedulerResult {
-	return &CloudScootThrottleSchedulerResult{}
+func NewCloudScootSetSchedulerStatusResult() *CloudScootSetSchedulerStatusResult {
+	return &CloudScootSetSchedulerStatusResult{}
 }
 
-var CloudScootThrottleSchedulerResult_Ir_DEFAULT *InvalidRequest
+var CloudScootSetSchedulerStatusResult_Ir_DEFAULT *InvalidRequest
 
-func (p *CloudScootThrottleSchedulerResult) GetIr() *InvalidRequest {
+func (p *CloudScootSetSchedulerStatusResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return CloudScootThrottleSchedulerResult_Ir_DEFAULT
+		return CloudScootSetSchedulerStatusResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
 
-var CloudScootThrottleSchedulerResult_Err_DEFAULT *ScootServerError
+var CloudScootSetSchedulerStatusResult_Err_DEFAULT *ScootServerError
 
-func (p *CloudScootThrottleSchedulerResult) GetErr() *ScootServerError {
+func (p *CloudScootSetSchedulerStatusResult) GetErr() *ScootServerError {
 	if !p.IsSetErr() {
-		return CloudScootThrottleSchedulerResult_Err_DEFAULT
+		return CloudScootSetSchedulerStatusResult_Err_DEFAULT
 	}
 	return p.Err
 }
-func (p *CloudScootThrottleSchedulerResult) IsSetIr() bool {
+func (p *CloudScootSetSchedulerStatusResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) IsSetErr() bool {
+func (p *CloudScootSetSchedulerStatusResult) IsSetErr() bool {
 	return p.Err != nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetSchedulerStatusResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -2777,7 +2777,7 @@ func (p *CloudScootThrottleSchedulerResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetSchedulerStatusResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -2785,7 +2785,7 @@ func (p *CloudScootThrottleSchedulerResult) readField1(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) readField2(iprot thrift.TProtocol) error {
+func (p *CloudScootSetSchedulerStatusResult) readField2(iprot thrift.TProtocol) error {
 	p.Err = &ScootServerError{}
 	if err := p.Err.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
@@ -2793,8 +2793,8 @@ func (p *CloudScootThrottleSchedulerResult) readField2(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("ThrottleScheduler_result"); err != nil {
+func (p *CloudScootSetSchedulerStatusResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetSchedulerStatus_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -2812,7 +2812,7 @@ func (p *CloudScootThrottleSchedulerResult) Write(oprot thrift.TProtocol) error 
 	return nil
 }
 
-func (p *CloudScootThrottleSchedulerResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetSchedulerStatusResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -2827,7 +2827,7 @@ func (p *CloudScootThrottleSchedulerResult) writeField1(oprot thrift.TProtocol) 
 	return err
 }
 
-func (p *CloudScootThrottleSchedulerResult) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetSchedulerStatusResult) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetErr() {
 		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
@@ -2842,9 +2842,9 @@ func (p *CloudScootThrottleSchedulerResult) writeField2(oprot thrift.TProtocol) 
 	return err
 }
 
-func (p *CloudScootThrottleSchedulerResult) String() string {
+func (p *CloudScootSetSchedulerStatusResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootThrottleSchedulerResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetSchedulerStatusResult(%+v)", *p)
 }

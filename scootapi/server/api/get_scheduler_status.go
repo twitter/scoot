@@ -11,8 +11,8 @@ it's current throttle value (-1 implies it is not throttled)
 */
 func NewSchedulerStatus(numTasks int, throttle int) *scoot.SchedulerStatus {
 	return &scoot.SchedulerStatus{
-		CurrentTasks:  int32(numTasks),
-		MaxTasks:      int32(throttle),
+		CurrentTasks: int32(numTasks),
+		MaxTasks:     int32(throttle),
 	}
 }
 

@@ -22,7 +22,6 @@ import (
 	"github.com/twitter/scoot/sched/worker/workers"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
-	"sync"
 )
 
 //Mocks sometimes hang without useful output, this allows early exit with err msg.
@@ -547,8 +546,8 @@ func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
-	err := s.Throttle(-10)
-	expected := "invlid throttle value:-10. Must be >= -1."
+	err := s.SetSchedulerStatus(-10)
+	expected := "invalid tasks limit:-10. Must be >= -1."
 	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
 		t.Fatalf("expected: %s, got: %s", expected, err)
 	}
@@ -560,22 +559,21 @@ func Test_StatefulScheduler_Throttle_Off(t *testing.T) {
 
 	jobDef := sched.GenJobDef(5)
 
-	err := s.Throttle(0)
+	err := s.SetSchedulerStatus(0)
+	time.Sleep(1) // pause to let throttle be set
+
 	if err != nil {
 		t.Fatalf("expected nil, got %s", err)
 	}
-	// set up the scheduler looping to process job requests
-	testing := true
-	go func() {
-		for testing {
-			s.step()
-		}
-	}()
+
+	// keep the scheduler looping to process the requests
+	loopDone := make(chan bool)
+	go startSchedulerLoop(s, loopDone)
 
 	id, err := s.ScheduleJob(jobDef)
 
 	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler,"+
-		" throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
+		" throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the max tasks "+
 		"limit.", jobDef.JobType, jobDef.Requestor, jobDef.Basis, jobDef.Tag, 0, 0, 5)
 	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
 		t.Fatalf("Expected: %s, got: %s", expected, err)
@@ -585,19 +583,21 @@ func Test_StatefulScheduler_Throttle_Off(t *testing.T) {
 		t.Fatalf("Expected job request to be denied, instead got job id: %s", id)
 	}
 
+	loopDone <- true
+	time.Sleep(1) // let the step go routine shut down (avoid race condition with other tests)
 }
 
 func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
-	s.Throttle(0)
+	s.SetSchedulerStatus(0)
 
-	var num_tasks, throttle int
-	num_tasks, throttle = s.GetSchedulerStatus()
-	if num_tasks != 0 || throttle != 0 {
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != 0 {
 		t.Fatalf("GetSchedulerStatus: expected: 0, 0, got: %d, %d",
-			num_tasks, throttle)
+			num_tasks, max_tasks)
 	}
 }
 
@@ -605,13 +605,13 @@ func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
-	s.Throttle(-1)
+	s.SetSchedulerStatus(-1)
 
-	var num_tasks, throttle int
-	num_tasks, throttle = s.GetSchedulerStatus()
-	if num_tasks != 0 || throttle != -1 {
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != -1 {
 		t.Fatalf("GetSchedulerStatus: expected: 0, -1, got: %d, %d",
-			num_tasks, throttle)
+			num_tasks, max_tasks)
 	}
 }
 
@@ -619,13 +619,13 @@ func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
-	s.Throttle(10)
+	s.SetSchedulerStatus(10)
 
-	var num_tasks, throttle int
-	num_tasks, throttle = s.GetSchedulerStatus()
-	if num_tasks != 0 || throttle != 10 {
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != 10 {
 		t.Fatalf("GetSchedulerStatus: expected: 0, 10, got: %d, %d",
-			num_tasks, throttle)
+			num_tasks, max_tasks)
 	}
 }
 
@@ -635,21 +635,11 @@ func Test_StatefulScheduler_ThrottleSome(t *testing.T) {
 
 	jobDef := sched.GenJobDef(5)
 
-	// set up the scheduler looping to process job requests
-	loopMU := sync.RWMutex{}
-	keepLooping := true
+	// keep the scheduler looping to process the requests
+	loopDone := make(chan bool)
+	go startSchedulerLoop(s, loopDone)
 
-	go func() {
-		loopMU.RLock()
-		for keepLooping {
-			loopMU.RUnlock()
-			s.step()
-			loopMU.RLock()
-		}
-		loopMU.RUnlock()
-	}()
-
-	s.Throttle(2)
+	s.SetSchedulerStatus(2)
 	id, err := s.ScheduleJob(jobDef)
 
 	if err == nil {
@@ -659,31 +649,30 @@ func Test_StatefulScheduler_ThrottleSome(t *testing.T) {
 	if id != "" {
 		t.Fatalf("Expected job request to be denied, instead got job id: %s", id)
 	}
-	loopMU.Lock()
-	keepLooping = false
-	loopMU.Unlock()
+
+	loopDone <- true
+	time.Sleep(1) // let the step go routine shut down (avoid race condition with other tests)
 }
 
-func Test_StatefulScheduler_OnOffOn(t *testing.T) {
+func Test_statefulScheduler_OnOffOn(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinator()
 	s, _, _ := initializeServices(sc, false)
 
 	job1Def := sched.GenJobDef(7)
+	for i, _ := range job1Def.Tasks {
+		// set the command to pause
+		job1Def.Tasks[i].Argv = []string{"pause"}
+	}
+
 	job2Def := sched.GenJobDef(3)
+	for i, _ := range job2Def.Tasks {
+		// set the command to pause
+		job2Def.Tasks[i].Argv = []string{"pause"}
+	}
 
 	// keep the scheduler looping to process the requests
-	loopMU := sync.RWMutex{}
-	keepLooping := true
-
-	go func() {
-		loopMU.RLock()
-		for keepLooping {
-			loopMU.RUnlock()
-			s.step()
-			loopMU.RLock()
-		}
-		loopMU.RUnlock()
-	}()
+	loopDone := make(chan bool)
+	go startSchedulerLoop(s, loopDone)
 
 	// On: add the job when scheduler is on
 	id1, err := s.ScheduleJob(job1Def)
@@ -693,12 +682,13 @@ func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 	}
 
 	// Off: limit the scheduler and add a job that's too big
-	s.Throttle(2)
+	s.SetSchedulerStatus(2)
+	time.Sleep(1) // pause to let throttle be set
 
 	id, err := s.ScheduleJob(job2Def)
 
 	expected := fmt.Sprintf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, "+
-		"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
+		"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the max tasks "+
 		"limit.", job2Def.JobType, job2Def.Requestor, job2Def.Basis, job2Def.Tag, 2, 7, 3)
 	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
 		t.Fatalf("Expected: %s, got: %s", expected, err)
@@ -709,16 +699,28 @@ func Test_StatefulScheduler_OnOffOn(t *testing.T) {
 	}
 
 	// On: set the scheduler to accepting all and resubmit the job
-	s.Throttle(-1)
+	s.SetSchedulerStatus(-1)
+	time.Sleep(1) // pause to let throttle be set
+
 	id, err = s.ScheduleJob(job2Def)
 
 	if id1 == "" || err != nil {
 		t.Fatalf("expected a job id and no error, got: id:%s, err:%s", id1, err)
 	}
 
-	loopMU.Lock()
-	keepLooping = false
-	loopMU.Unlock()
+	loopDone <- true
+	time.Sleep(1) // wait for the loop to stop
+}
+
+func startSchedulerLoop(s *statefulScheduler, stopCh chan bool) {
+	for {
+		select {
+		case <-stopCh:
+			return
+		default:
+			s.step()
+		}
+	}
 }
 
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,

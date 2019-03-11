@@ -32,6 +32,9 @@ func init() {
 		}
 		log.SetLevel(level)
 		log.AddHook(hooks.NewContextHook())
+	} else {
+		// setting Error level to avoid Travis test failure due to log too long
+		log.SetLevel(log.ErrorLevel)
 	}
 }
 
@@ -587,7 +590,7 @@ checkLoop:
 			if s.config.HardMaxSchedulableTasks != -1 &&
 				s.config.HardMaxSchedulableTasks < (total-completed)+len(checkJobMsg.jobDef.Tasks) {
 				err = fmt.Errorf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, "+
-					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the throttle "+
+					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the max tasks "+
 					"limit.", checkJobMsg.jobDef.JobType, checkJobMsg.jobDef.Requestor, checkJobMsg.jobDef.Basis,
 					checkJobMsg.jobDef.Tag, s.config.HardMaxSchedulableTasks, total-completed,
 					len(checkJobMsg.jobDef.Tasks))
@@ -1124,13 +1127,13 @@ func (s *statefulScheduler) killJobs() {
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job
 // requests when the number of running and waiting tasks won't exceed the limit
-func (s *statefulScheduler) Throttle(limit int) error {
+func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 
-	err := sched.ValidateThrottleRequest(limit)
+	err := sched.ValidateMaxTasks(maxTasks)
 	if err != nil {
 		return err
 	}
-	s.config.HardMaxSchedulableTasks = limit
+	s.config.HardMaxSchedulableTasks = maxTasks
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 
 /*
 */
-func Test_ThrottleScheduler(t *testing.T) {
+func Test_SetSchedulerStatus(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -20,15 +20,15 @@ func Test_ThrottleScheduler(t *testing.T) {
 	s.EXPECT().Throttle(10).Return(nil)
 
 	// test scheduler.ThrottleScheduler returning a non-null error
-	err := ThrottleScheduler(s, 10)
+	err := SetSchedulerStatus(s, 10)
 
 	if err != nil {
 		t.Fatalf("Expected nil, got: %s", err)
 	}
 	// test scheduler.ThrottleScheduler
-	err = ThrottleScheduler(s, -3)
+	err = SetSchedulerStatus(s, -3)
 
-	if strings.Compare(fmt.Sprint("%v", err),"Error throttle must be > -1") != 0 {
+	if strings.Compare(fmt.Sprint("%v", err),"Error task limit must be > -1") != 0 {
 		t.Fatalf("Expected error, got: %s", err)
 	}
 }

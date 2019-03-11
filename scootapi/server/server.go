@@ -73,7 +73,7 @@ func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 	return api.GetSchedulerStatus(h.scheduler)
 }
 
-// Implements ThrottleScheduler Cloud Scoot API
-func (h *Handler) ThrottleScheduler(maxNumTasks int32) error {
-	return api.ThrottleScheduler(h.scheduler, maxNumTasks)
+// Implements SetSchedulerStatus Cloud Scoot API
+func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
+	return api.SetSchedulerStatus(h.scheduler, maxNumTasks)
 }
