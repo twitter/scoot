@@ -2583,9 +2583,8 @@ func (p *ReinstateWorkerReq) String() string {
 //  - CurrentTasks
 //  - MaxTasks
 type SchedulerStatus struct {
-	// unused field # 1
-	CurrentTasks int32 `thrift:"currentTasks,2,required" json:"currentTasks"`
-	MaxTasks     int32 `thrift:"maxTasks,3,required" json:"maxTasks"`
+	CurrentTasks int32 `thrift:"currentTasks,1,required" json:"currentTasks"`
+	MaxTasks     int32 `thrift:"maxTasks,2,required" json:"maxTasks"`
 }
 
 func NewSchedulerStatus() *SchedulerStatus {
@@ -2616,13 +2615,13 @@ func (p *SchedulerStatus) Read(iprot thrift.TProtocol) error {
 			break
 		}
 		switch fieldId {
-		case 2:
-			if err := p.readField2(iprot); err != nil {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
 				return err
 			}
 			issetCurrentTasks = true
-		case 3:
-			if err := p.readField3(iprot); err != nil {
+		case 2:
+			if err := p.readField2(iprot); err != nil {
 				return err
 			}
 			issetMaxTasks = true
@@ -2647,18 +2646,18 @@ func (p *SchedulerStatus) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *SchedulerStatus) readField2(iprot thrift.TProtocol) error {
+func (p *SchedulerStatus) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
+		return thrift.PrependError("error reading field 1: ", err)
 	} else {
 		p.CurrentTasks = v
 	}
 	return nil
 }
 
-func (p *SchedulerStatus) readField3(iprot thrift.TProtocol) error {
+func (p *SchedulerStatus) readField2(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
-		return thrift.PrependError("error reading field 3: ", err)
+		return thrift.PrependError("error reading field 2: ", err)
 	} else {
 		p.MaxTasks = v
 	}
@@ -2669,10 +2668,10 @@ func (p *SchedulerStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("SchedulerStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
-	if err := p.writeField2(oprot); err != nil {
+	if err := p.writeField1(oprot); err != nil {
 		return err
 	}
-	if err := p.writeField3(oprot); err != nil {
+	if err := p.writeField2(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -2684,28 +2683,28 @@ func (p *SchedulerStatus) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *SchedulerStatus) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("currentTasks", thrift.I32, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:currentTasks: ", p), err)
+func (p *SchedulerStatus) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("currentTasks", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:currentTasks: ", p), err)
 	}
 	if err := oprot.WriteI32(int32(p.CurrentTasks)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.currentTasks (2) field write error: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T.currentTasks (1) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:currentTasks: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:currentTasks: ", p), err)
 	}
 	return err
 }
 
-func (p *SchedulerStatus) writeField3(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("maxTasks", thrift.I32, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:maxTasks: ", p), err)
+func (p *SchedulerStatus) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("maxTasks", thrift.I32, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:maxTasks: ", p), err)
 	}
 	if err := oprot.WriteI32(int32(p.MaxTasks)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.maxTasks (3) field write error: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T.maxTasks (2) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:maxTasks: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:maxTasks: ", p), err)
 	}
 	return err
 }

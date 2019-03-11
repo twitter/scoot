@@ -586,15 +586,7 @@ checkLoop:
 		select {
 		case checkJobMsg := <-s.checkJobCh:
 			var err error
-			var total, completed, _ = s.getSchedulerTaskCounts()
-			if s.config.HardMaxSchedulableTasks != -1 &&
-				s.config.HardMaxSchedulableTasks < (total-completed)+len(checkJobMsg.jobDef.Tasks) {
-				err = fmt.Errorf("Job (%s, %s, %s, %s) request denied due to scheduler throttling. Scheduler, "+
-					"throttled to %d tasks, is currently managing %d tasks.  The job's %d tasks exceed the max tasks "+
-					"limit.", checkJobMsg.jobDef.JobType, checkJobMsg.jobDef.Requestor, checkJobMsg.jobDef.Basis,
-					checkJobMsg.jobDef.Tag, s.config.HardMaxSchedulableTasks, total-completed,
-					len(checkJobMsg.jobDef.Tasks))
-			} else if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
+			if jobs, ok := s.requestorMap[checkJobMsg.jobDef.Requestor]; !ok && len(s.requestorMap) >= s.config.MaxRequestors {
 				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)
 			} else if len(jobs) >= s.config.MaxJobsPerRequestor {
 				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxJobsPerRequestor)

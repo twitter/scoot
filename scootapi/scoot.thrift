@@ -127,8 +127,8 @@ struct ReinstateWorkerReq {
 }
 
 struct SchedulerStatus {
-  2: required i32 currentTasks
-  3: required i32 maxTasks
+  1: required i32 currentTasks
+  2: required i32 maxTasks
 }
 
 service CloudScoot {
