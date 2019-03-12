@@ -5,9 +5,7 @@ implements the command line entry for the throttle scheduler command
 */
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -16,32 +14,27 @@ import (
 
 type setSchedulerStatus struct {
 	printAsJson bool
+	maxTasks    int
 }
 
 func (c *setSchedulerStatus) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:     "set_scheduler_status",
 		Short:   "set the scheduler status",
-		Example: "scootapi set_scheduler_status 20",
+		Example: "scootapi set_scheduler_status --task-throttle 20",
 	}
 	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
+	r.Flags().IntVar(&c.maxTasks, "task-throttle", -1, "Set the task throttle")
 	return r
 }
 
 func (c *setSchedulerStatus) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Set the maximum number of (running + waiting) tasks the scheduler will allow.", args)
+	log.Info("Set the maximum number of (running + waiting) tasks we want the scheduler"+
+		" to run.  Note: the scheduler does not enforce this limit.  We expect the job"+
+		" requetor to adhere to it.", args)
 
-	if len(args) == 0 {
-		return errors.New("tasks limit >= -1 must be provided.")
-	}
-
-	limit, err := strconv.Atoi(args[0])
-	if err != nil || limit < -1 {
-		return fmt.Errorf("Invalid input. Tasks limit must be an integer > -1.")
-	}
-
-	err = cl.scootClient.SetSchedulerStatus(int32(limit))
+	err := cl.scootClient.SetSchedulerStatus(int32(c.maxTasks))
 
 	if err != nil {
 		switch err := err.(type) {
