@@ -32,6 +32,9 @@ func init() {
 		}
 		log.SetLevel(level)
 		log.AddHook(hooks.NewContextHook())
+	} else {
+		// setting Error level to avoid Travis test failure due to log too long
+		log.SetLevel(log.ErrorLevel)
 	}
 }
 
@@ -97,6 +100,9 @@ var NodeScaleAdjustment = []float32{.15, .3, .55}
 //     how long to sleep between runner req retries.
 // ReadyFnBackoff -
 //     how long to wait between runner status queries to determine [init] status.
+// TaskThrottle -
+//	   requestors will try not to schedule jobs that make the scheduler exceed
+//     the TaskThrottle.  Note: Sickle may exceed it with retries.
 type SchedulerConfig struct {
 	MaxRetriesPerTask       int
 	DebugMode               bool
@@ -109,6 +115,7 @@ type SchedulerConfig struct {
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	SoftMaxSchedulableTasks int
+	TaskThrottle            int
 	Admins                  []string
 }
 
@@ -262,6 +269,8 @@ func NewStatefulScheduler(
 	if config.SoftMaxSchedulableTasks == 0 {
 		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
 	}
+
+	config.TaskThrottle = -1
 
 	sched := &statefulScheduler{
 		config:        &config,
@@ -548,6 +557,19 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 }
 
+func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
+	// get the count of total tasks across all jobs, completed tasks and
+	// running tasks
+	var total, completed, running int
+	for _, job := range s.inProgressJobs {
+		total += len(job.Tasks)
+		completed += job.TasksCompleted
+		running += job.TasksRunning
+	}
+
+	return total, completed, running
+}
+
 // Checks if any new jobs have been requested since the last loop and adds
 // them to the jobs the scheduler is handling
 func (s *statefulScheduler) addJobs() {
@@ -666,11 +688,7 @@ addLoop:
 	}
 
 	if receivedJob {
-		for _, job := range s.inProgressJobs {
-			total += len(job.Tasks)
-			completed += job.TasksCompleted
-			running += job.TasksRunning
-		}
+		total, completed, running = s.getSchedulerTaskCounts()
 		log.WithFields(
 			log.Fields{
 				"unscheduledTasks": total - completed - running,
@@ -1100,4 +1118,26 @@ func (s *statefulScheduler) killJobs() {
 
 		req.responseCh <- nil
 	}
+}
+
+// set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job
+// requests when the number of running and waiting tasks won't exceed the limit
+func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
+
+	err := sched.ValidateMaxTasks(maxTasks)
+	if err != nil {
+		return err
+	}
+	s.config.TaskThrottle = maxTasks
+	return nil
+}
+
+// return
+// - true/false indicating if the scheduler is accepting job requests
+// - the current number of tasks running or waiting to run
+// - the max number of tasks the scheduler will handle, -1 -> there is no max number
+func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
+	var total, completed, _ = s.getSchedulerTaskCounts()
+	var task_cnt = total - completed
+	return task_cnt, s.config.TaskThrottle
 }

@@ -542,6 +542,58 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 	}
 }
 
+func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinator()
+	s, _, _ := initializeServices(sc, false)
+
+	err := s.SetSchedulerStatus(-10)
+	expected := "invalid tasks limit:-10. Must be >= -1."
+	if strings.Compare(expected, fmt.Sprintf("%s", err)) != 0 {
+		t.Fatalf("expected: %s, got: %s", expected, err)
+	}
+}
+func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinator()
+	s, _, _ := initializeServices(sc, false)
+
+	s.SetSchedulerStatus(0)
+
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != 0 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, 0, got: %d, %d",
+			num_tasks, max_tasks)
+	}
+}
+
+func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinator()
+	s, _, _ := initializeServices(sc, false)
+
+	s.SetSchedulerStatus(-1)
+
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != -1 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, -1, got: %d, %d",
+			num_tasks, max_tasks)
+	}
+}
+
+func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinator()
+	s, _, _ := initializeServices(sc, false)
+
+	s.SetSchedulerStatus(10)
+
+	var num_tasks, max_tasks int
+	num_tasks, max_tasks = s.GetSchedulerStatus()
+	if num_tasks != 0 || max_tasks != 10 {
+		t.Fatalf("GetSchedulerStatus: expected: 0, 10, got: %d, %d",
+			num_tasks, max_tasks)
+	}
+}
+
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
 	t *testing.T, statsRegistry stats.StatsRegistry) bool {
 	// check the gauges

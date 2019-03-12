@@ -126,6 +126,11 @@ struct ReinstateWorkerReq {
   2: required string requestor
 }
 
+struct SchedulerStatus {
+  1: required i32 currentTasks
+  2: required i32 maxTasks
+}
+
 service CloudScoot {
    JobId RunJob(1: JobDefinition job) throws (
     1: InvalidRequest ir
@@ -144,6 +149,13 @@ service CloudScoot {
     2: ScootServerError err
   )
   void ReinstateWorker(1: ReinstateWorkerReq req) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  SchedulerStatus GetSchedulerStatus() throws (
+    1: ScootServerError err
+  )
+  void SetSchedulerStatus(1: i32 maxTasks) throws (
     1: InvalidRequest ir
     2: ScootServerError err
   )

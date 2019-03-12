@@ -27,6 +27,9 @@ func init() {
 		}
 		log.SetLevel(level)
 		log.AddHook(hooks.NewContextHook())
+	} else {
+		// setting Error level to avoid Travis test failure due to log too long
+		log.SetLevel(log.ErrorLevel)
 	}
 }
 

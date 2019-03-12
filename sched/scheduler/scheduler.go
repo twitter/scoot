@@ -18,4 +18,8 @@ type Scheduler interface {
 	OfflineWorker(req sched.OfflineWorkerReq) error
 
 	ReinstateWorker(req sched.ReinstateWorkerReq) error
+
+	SetSchedulerStatus(maxTasks int) error
+
+	GetSchedulerStatus() (int, int)
 }

@@ -33,6 +33,10 @@ type CloudScoot interface {
 	// Parameters:
 	//  - Req
 	ReinstateWorker(req *ReinstateWorkerReq) (err error)
+	GetSchedulerStatus() (r *SchedulerStatus, err error)
+	// Parameters:
+	//  - MaxTasks
+	SetSchedulerStatus(maxTasks int32) (err error)
 }
 
 type CloudScootClient struct {
@@ -479,6 +483,166 @@ func (p *CloudScootClient) recvReinstateWorker() (err error) {
 	return
 }
 
+func (p *CloudScootClient) GetSchedulerStatus() (r *SchedulerStatus, err error) {
+	if err = p.sendGetSchedulerStatus(); err != nil {
+		return
+	}
+	return p.recvGetSchedulerStatus()
+}
+
+func (p *CloudScootClient) sendGetSchedulerStatus() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("GetSchedulerStatus", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootGetSchedulerStatusArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvGetSchedulerStatus() (value *SchedulerStatus, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "GetSchedulerStatus" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetSchedulerStatus failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetSchedulerStatus failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error18 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error19 error
+		error19, err = error18.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error19
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetSchedulerStatus failed: invalid message type")
+		return
+	}
+	result := CloudScootGetSchedulerStatusResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Err != nil {
+		err = result.Err
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - MaxTasks
+func (p *CloudScootClient) SetSchedulerStatus(maxTasks int32) (err error) {
+	if err = p.sendSetSchedulerStatus(maxTasks); err != nil {
+		return
+	}
+	return p.recvSetSchedulerStatus()
+}
+
+func (p *CloudScootClient) sendSetSchedulerStatus(maxTasks int32) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("SetSchedulerStatus", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootSetSchedulerStatusArgs{
+		MaxTasks: maxTasks,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvSetSchedulerStatus() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "SetSchedulerStatus" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetSchedulerStatus failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetSchedulerStatus failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error20 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error21 error
+		error21, err = error20.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error21
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetSchedulerStatus failed: invalid message type")
+		return
+	}
+	result := CloudScootSetSchedulerStatusResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	return
+}
+
 type CloudScootProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      CloudScoot
@@ -499,13 +663,15 @@ func (p *CloudScootProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 
-	self18 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self18.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
-	self18.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
-	self18.processorMap["KillJob"] = &cloudScootProcessorKillJob{handler: handler}
-	self18.processorMap["OfflineWorker"] = &cloudScootProcessorOfflineWorker{handler: handler}
-	self18.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
-	return self18
+	self22 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self22.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
+	self22.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
+	self22.processorMap["KillJob"] = &cloudScootProcessorKillJob{handler: handler}
+	self22.processorMap["OfflineWorker"] = &cloudScootProcessorOfflineWorker{handler: handler}
+	self22.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
+	self22.processorMap["GetSchedulerStatus"] = &cloudScootProcessorGetSchedulerStatus{handler: handler}
+	self22.processorMap["SetSchedulerStatus"] = &cloudScootProcessorSetSchedulerStatus{handler: handler}
+	return self22
 }
 
 func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -518,12 +684,12 @@ func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bo
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x19 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x23 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x19.Write(oprot)
+	x23.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x19
+	return false, x23
 
 }
 
@@ -779,6 +945,111 @@ func (p *cloudScootProcessorReinstateWorker) Process(seqId int32, iprot, oprot t
 		}
 	}
 	if err2 = oprot.WriteMessageBegin("ReinstateWorker", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorGetSchedulerStatus struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorGetSchedulerStatus) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetSchedulerStatusArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetSchedulerStatus", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootGetSchedulerStatusResult{}
+	var retval *SchedulerStatus
+	var err2 error
+	if retval, err2 = p.handler.GetSchedulerStatus(); err2 != nil {
+		switch v := err2.(type) {
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetSchedulerStatus: "+err2.Error())
+			oprot.WriteMessageBegin("GetSchedulerStatus", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetSchedulerStatus", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorSetSchedulerStatus struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorSetSchedulerStatus) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetSchedulerStatusArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SetSchedulerStatus", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootSetSchedulerStatusResult{}
+	var err2 error
+	if err2 = p.handler.SetSchedulerStatus(args.MaxTasks); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetSchedulerStatus: "+err2.Error())
+			oprot.WriteMessageBegin("SetSchedulerStatus", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	}
+	if err2 = oprot.WriteMessageBegin("SetSchedulerStatus", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -2140,4 +2411,440 @@ func (p *CloudScootReinstateWorkerResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("CloudScootReinstateWorkerResult(%+v)", *p)
+}
+
+type CloudScootGetSchedulerStatusArgs struct {
+}
+
+func NewCloudScootGetSchedulerStatusArgs() *CloudScootGetSchedulerStatusArgs {
+	return &CloudScootGetSchedulerStatusArgs{}
+}
+
+func (p *CloudScootGetSchedulerStatusArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetSchedulerStatus_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetSchedulerStatusArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Err
+type CloudScootGetSchedulerStatusResult struct {
+	Success *SchedulerStatus  `thrift:"success,0" json:"success,omitempty"`
+	Err     *ScootServerError `thrift:"err,1" json:"err,omitempty"`
+}
+
+func NewCloudScootGetSchedulerStatusResult() *CloudScootGetSchedulerStatusResult {
+	return &CloudScootGetSchedulerStatusResult{}
+}
+
+var CloudScootGetSchedulerStatusResult_Success_DEFAULT *SchedulerStatus
+
+func (p *CloudScootGetSchedulerStatusResult) GetSuccess() *SchedulerStatus {
+	if !p.IsSetSuccess() {
+		return CloudScootGetSchedulerStatusResult_Success_DEFAULT
+	}
+	return p.Success
+}
+
+var CloudScootGetSchedulerStatusResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootGetSchedulerStatusResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootGetSchedulerStatusResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootGetSchedulerStatusResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) readField0(iprot thrift.TProtocol) error {
+	p.Success = &SchedulerStatus{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) readField1(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetSchedulerStatus_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetSchedulerStatusResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetSchedulerStatusResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetSchedulerStatusResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetSchedulerStatusResult(%+v)", *p)
+}
+
+// Attributes:
+//  - MaxTasks
+type CloudScootSetSchedulerStatusArgs struct {
+	MaxTasks int32 `thrift:"maxTasks,1" json:"maxTasks"`
+}
+
+func NewCloudScootSetSchedulerStatusArgs() *CloudScootSetSchedulerStatusArgs {
+	return &CloudScootSetSchedulerStatusArgs{}
+}
+
+func (p *CloudScootSetSchedulerStatusArgs) GetMaxTasks() int32 {
+	return p.MaxTasks
+}
+func (p *CloudScootSetSchedulerStatusArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusArgs) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.MaxTasks = v
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetSchedulerStatus_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("maxTasks", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:maxTasks: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.MaxTasks)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.maxTasks (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:maxTasks: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootSetSchedulerStatusArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetSchedulerStatusArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Ir
+//  - Err
+type CloudScootSetSchedulerStatusResult struct {
+	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootSetSchedulerStatusResult() *CloudScootSetSchedulerStatusResult {
+	return &CloudScootSetSchedulerStatusResult{}
+}
+
+var CloudScootSetSchedulerStatusResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootSetSchedulerStatusResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootSetSchedulerStatusResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootSetSchedulerStatusResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootSetSchedulerStatusResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootSetSchedulerStatusResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootSetSchedulerStatusResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetSchedulerStatus_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetSchedulerStatusResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetSchedulerStatusResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetSchedulerStatusResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetSchedulerStatusResult(%+v)", *p)
 }
