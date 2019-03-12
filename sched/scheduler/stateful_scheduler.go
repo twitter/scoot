@@ -100,6 +100,9 @@ var NodeScaleAdjustment = []float32{.15, .3, .55}
 //     how long to sleep between runner req retries.
 // ReadyFnBackoff -
 //     how long to wait between runner status queries to determine [init] status.
+// TaskThrottle -
+//	   requestors will try not to schedule jobs that make the scheduler exceed
+//     the TaskThrottle.  Note: Sickle may exceed it with retries.
 type SchedulerConfig struct {
 	MaxRetriesPerTask       int
 	DebugMode               bool
@@ -112,7 +115,7 @@ type SchedulerConfig struct {
 	MaxRequestors           int
 	MaxJobsPerRequestor     int
 	SoftMaxSchedulableTasks int
-	HardMaxSchedulableTasks int
+	TaskThrottle            int
 	Admins                  []string
 }
 
@@ -267,7 +270,7 @@ func NewStatefulScheduler(
 		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
 	}
 
-	config.HardMaxSchedulableTasks = -1
+	config.TaskThrottle = -1
 
 	sched := &statefulScheduler{
 		config:        &config,
@@ -1125,7 +1128,7 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 	if err != nil {
 		return err
 	}
-	s.config.HardMaxSchedulableTasks = maxTasks
+	s.config.TaskThrottle = maxTasks
 	return nil
 }
 
@@ -1136,5 +1139,5 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
 	var task_cnt = total - completed
-	return task_cnt, s.config.HardMaxSchedulableTasks
+	return task_cnt, s.config.TaskThrottle
 }
