@@ -186,7 +186,7 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 }
 
 func TestRunStatusRoundTrip(t *testing.T) {
-	sagaLog := sagalogs.MakeInMemorySagaLog()
+	sagaLog := sagalogs.MakeInMemorySagaLog(0, 1)
 	sagaCoord := s.MakeSagaCoordinator(sagaLog)
 
 	jobID := "foo"
@@ -224,7 +224,10 @@ func TestRunStatusRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runStatus := jobStatus.TaskData[taskID]
+	runStatus, ok := jobStatus.TaskData[taskID]
+	if !ok {
+		t.Fatalf("Expected taskID: %s not found in jobStatus.TaskData", taskID)
+	}
 	if *runStatus.OutUri != stdoutRef {
 		t.Fatalf("runStatus.OutUri: %v (expected %v)", *runStatus.OutUri, stdoutRef)
 	}

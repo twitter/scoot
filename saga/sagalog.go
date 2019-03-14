@@ -7,7 +7,7 @@ import (
 )
 
 /*
- *  SagaLog Interface, Implemented
+ *  SagaLog Interface
  */
 type SagaLog interface {
 
@@ -25,7 +25,8 @@ type SagaLog interface {
 
 	/*
 	 * Returns all of the messages logged so far for the
-	 * specified saga.
+	 * specified saga. Does not return an error if the
+	 * saga does not exist.
 	 */
 	GetMessages(sagaId string) ([]SagaMessage, error)
 

@@ -1,6 +1,8 @@
 package scootconfig
 
 import (
+	"time"
+
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
@@ -9,7 +11,9 @@ import (
 // InMemorySagaLog struct is used by goice to create an InMemory instance
 // of the SagaLog interface.
 type InMemorySagaLogConfig struct {
-	Type string
+	Type          string
+	ExpirationSec int
+	GCIntervalSec int
 }
 
 // Adds the InMemorySagaLog Create function to the goice MagicBag
@@ -19,7 +23,9 @@ func (c *InMemorySagaLogConfig) Install(bag *ice.MagicBag) {
 
 // Creates an instance of an InMemorySagaLog
 func (c *InMemorySagaLogConfig) Create() saga.SagaLog {
-	return sagalogs.MakeInMemorySagaLog()
+	return sagalogs.MakeInMemorySagaLog(
+		time.Duration(c.ExpirationSec)*time.Second,
+		time.Duration(c.GCIntervalSec)*time.Second)
 }
 
 // FileSagaLogConfig struct is used by goice to create a FileSagaLog

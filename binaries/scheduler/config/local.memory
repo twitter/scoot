@@ -11,6 +11,8 @@
     "DefaultTaskTimeout" : "30m"
   },
   "SagaLog": {
-    "Type": "memory"
+    "Type": "memory",
+    "ExpirationSec": 0,
+    "GCIntervalSec": 1
   }
 }

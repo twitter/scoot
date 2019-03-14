@@ -21,7 +21,7 @@ func Test_RequestCounters(t *testing.T) {
 	s := scheduler.NewMockScheduler(mockCtrl)
 	s.EXPECT().ScheduleJob(gomock.Any()).Return("mockJobId", nil)
 	s.EXPECT().KillJob(gomock.Any()).Return(nil)
-	sc := sagalogs.MakeInMemorySagaCoordinator()
+	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
 	statsRegistry := stats.NewFinagleStatsRegistry()
 
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
