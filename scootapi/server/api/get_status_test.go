@@ -186,8 +186,7 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 }
 
 func TestRunStatusRoundTrip(t *testing.T) {
-	sagaLog := sagalogs.MakeInMemorySagaLog(0, 1)
-	sagaCoord := s.MakeSagaCoordinator(sagaLog)
+	sagaCoord := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 
 	jobID := "foo"
 	saga, err := sagaCoord.MakeSaga(jobID, nil)

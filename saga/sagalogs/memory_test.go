@@ -8,8 +8,25 @@ import (
 	"github.com/twitter/scoot/saga"
 )
 
-func TestMemoryStartLogGetMessages(t *testing.T) {
-	slog := MakeInMemorySagaLog(0, 1)
+func TestMemorySagaParams(t *testing.T) {
+	// OK
+	MakeInMemorySagaLogNoGC()
+	MakeInMemorySagaLog(0, 0)
+	MakeInMemorySagaLog(0, 1)
+	MakeInMemorySagaLog(1*time.Hour, 1*time.Second)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Expected panic from did not happen")
+		}
+	}()
+
+	// Non-zero expiration with zero interval should panic
+	MakeInMemorySagaLog(1, 0)
+}
+
+func TestMemorySagaStartLogGetMessages(t *testing.T) {
+	slog := MakeInMemorySagaLogNoGC()
 
 	sagaId := "s1"
 	jobData := []byte{0, 1, 2, 3, 4, 5}
@@ -61,7 +78,7 @@ func TestMemoryStartLogGetMessages(t *testing.T) {
 	}
 }
 
-func TestMemoryGC(t *testing.T) {
+func TestMemorySagaGC(t *testing.T) {
 	// set GC slow enough that it won't happen during the test
 	slog := MakeInMemorySagaLog(1*time.Hour, 1*time.Hour)
 

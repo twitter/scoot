@@ -27,7 +27,7 @@ type logData struct {
 
 // Returns an Instance of a Saga based on an inMemorySagaLog.
 // This is an in-memory impl, and is not durable.
-// Implements GC of whole sagas based on time expiration.
+// Implements GC of whole sagas based on time expiration regardless of Saga state.
 // GC should be set at a duration that realistically will not purge active Sagas.
 // gcExpiration: duration after which a Saga was created, it will be deleted.
 // 	A zero duration is interpretted as "never gc" (the Log will eventually consume all memory).
@@ -36,23 +36,34 @@ func MakeInMemorySagaCoordinator(gcExpiration time.Duration, gcInterval time.Dur
 	return saga.MakeSagaCoordinator(MakeInMemorySagaLog(gcExpiration, gcInterval))
 }
 
+// Make an InMemorySagaLog with specified GC expiration and interval duration.
 func MakeInMemorySagaLog(gcExpiration time.Duration, gcInterval time.Duration) saga.SagaLog {
 	slog := &inMemorySagaLog{
 		sagas:        make(map[string]*logData),
 		mutex:        sync.RWMutex{},
 		gcExpiration: gcExpiration,
-		gcTicker:     time.NewTicker(gcInterval),
 	}
-	go func() {
-		if gcExpiration != 0 {
+	if gcExpiration != 0 {
+		slog.gcTicker = time.NewTicker(gcInterval)
+		go func() {
 			for range slog.gcTicker.C {
 				if err := slog.gcSagas(); err != nil {
 					log.Errorf("Error running gcSagas: %s", err)
 				}
 			}
-		}
-	}()
+		}()
+	}
 	return slog
+}
+
+// Shorthand creator function to create a non-GCing SagaLog with Coordinator
+func MakeInMemorySagaCoordinatorNoGC() saga.SagaCoordinator {
+	return saga.MakeSagaCoordinator(MakeInMemorySagaLogNoGC())
+}
+
+// Shorthand creator function to create a non-GCing SagaLog
+func MakeInMemorySagaLogNoGC() saga.SagaLog {
+	return MakeInMemorySagaLog(0, 0)
 }
 
 // Creates a Saga in the log and adds a StartSagaMessage to it
@@ -111,7 +122,8 @@ func (slog *inMemorySagaLog) GetActiveSagas() ([]string, error) {
 	return keys, nil
 }
 
-// Check for expired Sagas and then delete them
+// Check for expired Sagas and then delete them.
+// Sagas need not be completed to be GCd.
 func (slog *inMemorySagaLog) gcSagas() error {
 	expired := slog.getExpiredSagaIds()
 	if len(expired) == 0 {

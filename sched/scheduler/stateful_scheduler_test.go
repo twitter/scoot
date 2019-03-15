@@ -55,7 +55,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 	return &schedulerDeps{
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinator(0, 1),
+		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
 			return workers.MakeInmemoryWorker(n, tmp)
 		},
@@ -103,7 +103,7 @@ func Test_StatefulScheduler_Initialize(t *testing.T) {
 }
 
 func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, true)
 
 	jobDef := sched.GenJobDef(1)
@@ -167,7 +167,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 }
 
 func Test_StatefulScheduler_AddJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, true)
 
 	jobDef := sched.GenJobDef(2)
@@ -377,7 +377,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
 	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", sched.P0)
@@ -401,7 +401,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 	putJobInScheduler(1, s, "pause", "", sched.P0)
 
@@ -418,7 +418,7 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, true)
 	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", sched.P0)
 	s.step() // get the job in the queue
@@ -458,7 +458,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
@@ -543,7 +543,7 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 }
 
 func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
 	err := s.SetSchedulerStatus(-10)
@@ -553,7 +553,7 @@ func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
 	}
 }
 func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(0)
@@ -567,7 +567,7 @@ func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
 }
 
 func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(-1)
@@ -581,7 +581,7 @@ func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
 }
 
 func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinator(0, 1)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(10)
@@ -724,7 +724,7 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 	return &schedulerDeps{
 		initialCl: cl.nodes,
 		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinator(0, 1),
+		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()
