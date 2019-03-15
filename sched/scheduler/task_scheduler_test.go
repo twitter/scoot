@@ -19,7 +19,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
-	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
+	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
 	js := newJobState(&job, saga, nil)
 
 	// create a test cluster with no nodes
@@ -49,7 +49,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
-	saga, _ := sagalogs.MakeInMemorySagaCoordinator().MakeSaga(job.Id, jobAsBytes)
+	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
 	js := newJobState(&job, saga, nil)
 	req := map[string][]*jobState{"": []*jobState{js}}
 
