@@ -10,7 +10,8 @@ git:
     submodules: false
 
 before_install:
-  - make dependencies
+  - apt-get install go-dep
+  - dep ensure -update
 
 before_script:
   - make format
