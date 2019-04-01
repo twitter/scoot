@@ -41,19 +41,19 @@ go run ./binaries/scootapi/main.go run_smoke_test
 Scoot has a few  tests that exercise varying levels of common usages and workflows.
 
 ### Smoketest/Swarmtest
-Invokes a scootapi client directly to run jobs against a local cluster and waits for the 
+Invokes a scootapi client directly to run jobs against a local cluster and waits for the
 scheduled jobs to complete.
 
 (./scootapi/client/smoke_test_cmd.go)
 
 ### Recoverytest
-Invokes a scootapi client directly to run jobs against a local cluster, kills the cluster, 
+Invokes a scootapi client directly to run jobs against a local cluster, kills the cluster,
 attempts to spin up a new one, and waits for the originally scheduled jobs to complete.
 
 (./binaries/recoverytest/main.go)
 
 ### Integration
-Invokes a scootapi and scoot-snapshot-db client via CLI to run a job against a local cluster 
+Invokes a scootapi and scoot-snapshot-db client via CLI to run a job against a local cluster
 and waits for the job to complete
 
 (./tests/integration_test.go)
@@ -70,14 +70,16 @@ See documentation in thrift definition files for specific generation instruction
 ### Thrift (version >= 0.9.3)
 macOS:
 ```sh
-brew install thrift
+> brew install thrift
+> brew install dep
 ```
-### Thrift for go:
-```sh
-go get github.com/apache/thrift/lib/go/thrift
+## Install dependencies
+
+``` sh
+dep ensure -update
 ```
 
 ## Install/Access Scoot Executables and libraries
 *cd to scoot directory (workspace/github.com/twitter/scoot)
-*run: go install ./binaries/...
-** the binaries will be installed in workspace/bin
+*run: `go install ./binaries/...`
+** the binaries will be installed in `workspace/bin`
