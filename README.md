@@ -74,7 +74,6 @@ macOS:
 > brew install dep
 ```
 ## Install dependencies
-
 ``` sh
 dep ensure -update
 ```

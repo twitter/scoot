@@ -9,8 +9,12 @@ go:
 git:
     submodules: false
 
+addons:
+  apt:
+    packages:
+      - go-dep
+
 before_install:
-  - apt-get install go-dep
   - dep ensure -update
 
 before_script:
