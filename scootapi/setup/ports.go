@@ -23,11 +23,12 @@ func WaitForPortTimeout(port int, timeout time.Duration) error {
 		// Use exec.Command because we don't worry about these getting orphaned,
 		// and don't want to fill up our Cmds's list of running cmds
 		cmd := exec.Command("nc", "-z", "localhost", strconv.Itoa(port))
+		// TODO: this will constantly fail if netcat is not installed!!
 		if err := cmd.Run(); err == nil {
 			log.Infof("Port %v active", port)
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return fmt.Errorf("port %v is not up after 5s", port)
+	return fmt.Errorf("port %v is not up after %s", port, timeout)
 }
