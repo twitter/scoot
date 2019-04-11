@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
-
+	// "runtime/debug"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -496,9 +497,14 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 // store.Stores do not support partial Writes, and neither does our implementation.
 // We can support partial Write by keeping buffers for inflight requests in the casServer.
 // When the entire Write is buffered, we can Write to the Store and return a response with the result.
-// NOTE We also no not currently attempt any resolution between multiple client UUIDs writing the same resource
+// NOTE We also so not currently attempt any resolution between multiple client UUIDs writing the same resource
 func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
-	log.Debug("Received CAS Write request")
+
+	// debug.PrintStack()
+
+	var intId = rand.Intn(200000)
+
+	log.Debugf("%s(%d) -- Received CAS Write request", time.Now().UTC(), intId)
 
 	if !s.IsInitialized() {
 		return status.Error(codes.Internal, "Server not initialized")
@@ -529,7 +535,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	for {
 		wr, err := ser.Recv()
 		if err != nil {
-			log.Errorf("Failed to Recv(): %v", err)
+			log.Errorf("%s(%d) -- Failed to Recv(): %v", time.Now().UTC(), intId, err)
 			return status.Error(codes.Internal, fmt.Sprintf("Failed to Recv: %v", err))
 		}
 
@@ -539,19 +545,19 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 			resource, err = ParseWriteResource(resourceName)
 			if err != nil {
-				log.Errorf("Error parsing resource: %v", err)
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
+				log.Errorf("%s(%d) -- Error parsing resource: %v", time.Now().UTC(), intId, err)
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s(%d) -- %v", time.Now().UTC(), intId, err))
 			}
-			log.Debugf("Using resource name: %s", resourceName)
+			log.Debugf("%s(%d) -- Using resource name: %s", time.Now().UTC(), intId, resourceName)
 
 			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
 			if resource.Digest.GetHash() == bazel.EmptySha {
-				log.Infof("Request to write empty sha - bypassing Store write and Closing")
+				log.Infof("%s(%d) -- Request to write empty sha - bypassing Store write and Closing", time.Now().UTC(), intId)
 				res := &bytestream.WriteResponse{CommittedSize: bazel.EmptySize}
 				err = ser.SendAndClose(res)
 				if err != nil {
-					log.Errorf("Error during SendAndClose() for EmptySha: %s", err)
-					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose: %v", err))
+					log.Errorf("%s(%d) -- Error during SendAndClose() for EmptySha: %s", time.Now().UTC(), intId, err)
+					return status.Error(codes.Internal, fmt.Sprintf("%s(%d) -- Failed to SendAndClose: %v", time.Now().UTC(), intId, err))
 				}
 				return nil
 			}
@@ -563,15 +569,15 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			// Note that Store does not support `stat`, so we trust client-provided size to avoid reading the data
 			storeName = bazel.DigestStoreName(resource.Digest)
 			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
-				log.Errorf("Error checking existence: %v", err)
-				return status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
+				log.Errorf("%s(%d) -- Error checking existence: %v", time.Now().UTC(), intId, err)
+				return status.Error(codes.Internal, fmt.Sprintf("%s(%d) -- Store failed checking existence of %s: %v", time.Now().UTC(), intId, storeName, err))
 			} else if exists {
-				log.Infof("Resource exists in store: %s. Using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
+				log.Infof("%s(%d) -- Resource exists in store: %s. Using client digest size: %d", time.Now().UTC(), intId, storeName, resource.Digest.GetSizeBytes())
 				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
 				err = ser.SendAndClose(res)
 				if err != nil {
-					log.Errorf("Error during SendAndClose() for Existing: %v", err)
-					return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
+					log.Errorf("%s(%d) -- Error during SendAndClose() for Existing: %v", time.Now().UTC(), intId, err)
+					return status.Error(codes.Internal, fmt.Sprintf("%s(%d) -- Failed to SendAndClose WriteResponse: %v", time.Now().UTC(), intId, err))
 				}
 				return nil
 			}
@@ -579,12 +585,12 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 		// Validate subsequent WriteRequest fields
 		if wr.GetResourceName() != "" && resourceName != wr.GetResourceName() {
-			log.Errorf("Invalid resource name in subsequent request: %s", wr.GetResourceName())
-			return status.Error(codes.InvalidArgument, fmt.Sprintf("ResourceName %s mismatch with previous %s", wr.GetResourceName(), resourceName))
+			log.Errorf("%s(%d) -- Invalid resource name in subsequent request: %s", time.Now().UTC(), intId, wr.GetResourceName())
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("%s(%d) -- ResourceName %s mismatch with previous %s", time.Now().UTC(), intId, wr.GetResourceName(), resourceName))
 		}
 		if wr.GetWriteOffset() != committed {
-			log.Error("Invalid write offset")
-			return status.Error(codes.InvalidArgument, fmt.Sprintf("WriteOffset invalid: got %d after committing %d bytes", wr.GetWriteOffset(), committed))
+			log.Errorf("%s(%d) -- Invalid write offset", time.Now().UTC(), intId)
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("%s(%d) -- WriteOffset invalid: got %d after committing %d bytes", time.Now().UTC(), intId, wr.GetWriteOffset(), committed))
 		}
 
 		buffer.Write(wr.GetData())
@@ -598,30 +604,30 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 
 	// Verify committed length with Digest size
 	if committed != resource.Digest.GetSizeBytes() {
-		log.Errorf("Data length/digest mismatch: %d/%d", committed, resource.Digest.GetSizeBytes())
-		return status.Error(codes.InvalidArgument, fmt.Sprintf("Data to be written len: %d mismatch with request Digest size: %d", committed, resource.Digest.GetSizeBytes()))
+		log.Errorf("%s(%d) -- Data length/digest mismatch: %d/%d", time.Now().UTC(), intId, committed, resource.Digest.GetSizeBytes())
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("%s(%d) -- Data to be written len: %d mismatch with request Digest size: %d", time.Now().UTC(), intId, committed, resource.Digest.GetSizeBytes()))
 	}
 	// Verify buffer SHA with Digest SHA
 	if bufferHash := fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes())); bufferHash != resource.Digest.GetHash() {
-		log.Errorf("Data hash/digest hash mismatch: %s/%s", bufferHash, resource.Digest.GetHash())
-		return status.Error(codes.InvalidArgument, fmt.Sprintf("Data to be written did not hash to given Digest"))
+		log.Errorf("%s(%d) -- Data hash/digest hash mismatch: %s/%s", time.Now().UTC(), intId, bufferHash, resource.Digest.GetHash())
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("%s(%d) -- Data to be written did not hash to given Digest", time.Now().UTC(), intId))
 	}
 
 	// Write to underlying Store
 	err = s.writeToStore(storeName, buffer)
 	if err != nil {
-		log.Errorf("Store failed to Write: %v", err)
-		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
+		log.Errorf("%s(%d) -- Store failed to Write: %v", time.Now().UTC(), intId, err)
+		return status.Error(codes.Internal, fmt.Sprintf("%s(%d) -- Store failed writing to %s: %v", time.Now().UTC(), intId, storeName, err))
 	}
 
 	res := &bytestream.WriteResponse{CommittedSize: committed}
 	err = ser.SendAndClose(res)
 	if err != nil {
-		log.Errorf("Error during SendAndClose(): %v", err)
-		return status.Error(codes.Internal, fmt.Sprintf("Failed to SendAndClose WriteResponse: %v", err))
+		log.Errorf("%s(%d) -- Error during SendAndClose(): %v", time.Now().UTC(), intId, err)
+		return status.Error(codes.Internal, fmt.Sprintf("%s(%d) -- Failed to SendAndClose WriteResponse: %v", time.Now().UTC(), intId, err))
 	}
 
-	log.Infof("Finished handling Write request for %s, %d bytes", storeName, committed)
+	log.Infof("%s(%d) -- Finished handling Write request for %s, %d bytes", time.Now().UTC(), intId, storeName, committed)
 	return nil
 }
 
