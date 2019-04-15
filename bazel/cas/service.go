@@ -12,7 +12,6 @@ import (
 	"net"
 	"sync"
 	"time"
-	// "runtime/debug"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -497,10 +496,8 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 // store.Stores do not support partial Writes, and neither does our implementation.
 // We can support partial Write by keeping buffers for inflight requests in the casServer.
 // When the entire Write is buffered, we can Write to the Store and return a response with the result.
-// NOTE We also so not currently attempt any resolution between multiple client UUIDs writing the same resource
+// NOTE We also do not currently attempt any resolution between multiple client UUIDs writing the same resource
 func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
-
-	// debug.PrintStack()
 
 	var intId = rand.Intn(200000)
 
