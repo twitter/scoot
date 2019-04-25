@@ -111,12 +111,12 @@
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:e4c72127d910a96daf869a44f3dd563b86dbe6931a172863a0e99c5ff04b59e4"
+  digest = "1:fd61cf4ae1953d55df708acb6b91492d538f49c305b364a014049914495db426"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
-  revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
-  version = "v1.4.0"
+  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:645cabccbb4fa8aab25a956cbcbdf6a6845ca736b2c64e197ca7cbb9d210b939"
@@ -150,15 +150,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  pruneopts = "UT"
-  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
-
-[[projects]]
-  branch = "master"
-  digest = "1:ece18bebf37543e3ea16619bd9bd2b36dcec7bffa9008598dd8c4fe7803a5797"
+  digest = "1:738050588b3b31a8975a622403f3dc284cb4c581458d54e86c0bd77d46d09b86"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -171,27 +163,26 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "74de082e2cca95839e88aa0aeee5aadf6ce7710f"
+  revision = "4829fb13d2c62012c17688fa7f629f371014946d"
 
 [[projects]]
   branch = "master"
-  digest = "1:f6321364014431568a59b49b449d6ae60c017f3afa3f4ab787a5636853b16b1e"
+  digest = "1:157e5158a7f29d6633eed502880463aa43de3c36d451c7051591efd12f455ac8"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows",
-  ]
+  packages = ["unix"]
   pruneopts = "UT"
-  revision = "9eb1bfa1ce65ae8a6ff3114b0aaf9a41a6cf3560"
+  revision = "9f0b1ff7b46a4014ddb5d4bdb6602a43b882cb27"
 
 [[projects]]
-  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
+  digest = "1:f4ea3f623a07a2602bb9c1624d6dc7d291261278ba2484508fac559dc7926048"
   name = "golang.org/x/text"
   packages = [
     "collate",
     "collate/build",
     "internal/colltab",
     "internal/gen",
+    "internal/language",
+    "internal/language/compact",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
@@ -204,8 +195,8 @@
     "unicode/rangetable",
   ]
   pruneopts = "UT"
-  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
-  version = "v0.3.0"
+  revision = "c942b20a5d85b458c4dce1589326051d85e25d6d"
+  version = "v0.3.1"
 
 [[projects]]
   branch = "master"
@@ -230,7 +221,7 @@
   revision = "bd91e49a0898e27abb88c339b432fa53d7497ac0"
 
 [[projects]]
-  digest = "1:87d21766dc058648c95ae9f929496931684f576e2fbd7c80e36ab7c07b6896cf"
+  digest = "1:305ae1b02020aa7bd0bf7c51eb20cec7fec7d813c8b37e517ac588963fedd43d"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -247,6 +238,7 @@
     "grpclog",
     "internal",
     "internal/backoff",
+    "internal/balancerload",
     "internal/binarylog",
     "internal/channelz",
     "internal/envconfig",
@@ -268,8 +260,8 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "3507fb8e1a5ad030303c106fef3a47c9fdad16ad"
-  version = "v1.19.1"
+  revision = "25c4f928eaa6d96443009bd842389fb4fa48664e"
+  version = "v1.20.1"
 
 [solve-meta]
   analyzer-name = "dep"
