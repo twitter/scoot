@@ -9,7 +9,7 @@ Scoot is infrastructure to make developer tools smaller, simpler, and more distr
 
 ###### Scheduler
 
-The Scheduler receives and distrubutes jobs to workers, and maintains state. It is also responsible for serving the Cloud Scoot API for clients.
+The Scheduler receives and distributes jobs to workers, and maintains state. It is also responsible for serving the Cloud Scoot API for clients.
 
 ###### Worker
 
