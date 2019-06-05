@@ -66,6 +66,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 	return &localSnapshot{sha: sha, kind: KindGitCommitSnapshot}, nil
 }
 
+// TODO deprecate this whole dumb thing
 func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error) {
 	indexDir, err := db.tmp.TempDir("git-index")
 	if err != nil {

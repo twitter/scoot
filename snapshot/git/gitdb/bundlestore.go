@@ -190,6 +190,7 @@ func (s *bundlestoreSnapshot) ID() snap.ID {
 func (s *bundlestoreSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
+// TODO --- this is the entry point ---
 func (s *bundlestoreSnapshot) Download(db *DB) error {
 	log.Infof("Downloading sha: %s", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
@@ -234,6 +235,9 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	// large (say, a half hour) that it's reasonable to assume its easy to get.
 	// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
 	// update our stream.
+	// TODO probably have to make sure everything here works (snapshot creation/fetch)
+	// 	in Twitter land without stream remote (may not be able to remove stream altogether)
+	// KABOOM
 	if err := db.stream.updateStream(s.streamName, db); err != nil {
 		log.Infof("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
 		return err
