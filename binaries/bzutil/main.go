@@ -43,6 +43,7 @@ var supportedCommands map[string]bool = map[string]bool{
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
+	log.SetLevel(log.InfoLevel)
 
 	// TODO additional commands
 	// - upload Directory (tbd)
@@ -57,7 +58,7 @@ func main() {
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
 	uploadPlatformProps := uploadCommand.String("platform_props", "", "comma-separated command platoform properties, i.e. \"key1=val1,key2=val2\"")
-	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON")
+	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON to stdout")
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
@@ -65,20 +66,20 @@ func main() {
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
 	actionRootDigest := uploadAction.String("input_root", "", "Input root digest as '<hash>/<size>'")
 	actionNoCache := uploadAction.Bool("no_cache", false, "Flag to prevent result caching")
-	actionJson := uploadAction.Bool("json", false, "Print action digest as JSON")
+	actionJson := uploadAction.Bool("json", false, "Print action digest as JSON to stdout")
 
 	// Execute
 	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
 	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	execActionDigest := execCommand.String("action", "", "Action digest as '<hash>/<size>'")
 	execSkipCache := execCommand.Bool("skip_cache", false, "Skip checking for cached results")
-	execJson := execCommand.Bool("json", false, "Print operation as JSON")
+	execJson := execCommand.Bool("json", false, "Print operation as JSON to stdout")
 
 	// Get Operation
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
-	getJson := getCommand.Bool("json", false, "Print operation as JSON")
+	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout")
 
 	// Parse input flags
 	if len(os.Args) < 2 {

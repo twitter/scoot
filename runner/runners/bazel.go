@@ -175,7 +175,9 @@ func postProcessBazel(filer snapshot.Filer,
 	coDir string,
 	stdout, stderr runner.Output,
 	st execer.ProcessStatus,
-	rts *runTimes) (*bazelapi.ActionResult, error) {
+	rts *runTimes,
+	rID runner.RunnerID,
+) (*bazelapi.ActionResult, error) {
 	bzFiler, ok := filer.(*bzsnapshot.BzFiler)
 	if !ok {
 		return nil, fmt.Errorf("Filer could not be asserted as type BzFiler. Type is: %s", reflect.TypeOf(filer))
@@ -213,9 +215,8 @@ func postProcessBazel(filer snapshot.Filer,
 	rts.queuedTime = scootproto.GetTimeFromTimestamp(cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp())
 
 	// Update ExecutionMetadata with invoker runTimes data and existing queued time
-	// TODO Invoker should contain some metadata about the worker it lives on
 	metadata := &remoteexecution.ExecutedActionMetadata{
-		Worker:                         "bazel-worker",
+		Worker:                         rID.String(),
 		QueuedTimestamp:                cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp(),
 		WorkerStartTimestamp:           scootproto.GetTimestampFromTime(rts.invokeStart),
 		WorkerCompletedTimestamp:       scootproto.GetTimestampFromTime(rts.invokeEnd),
@@ -300,7 +301,7 @@ func ingestOutputFiles(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir s
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Ingested OutputFile: %s", relPath)
+		log.Infof("Ingested OutputFile: %s as %s", relPath, digest)
 
 		of := &remoteexecution.OutputFile{
 			Path:         relPath,
@@ -337,7 +338,7 @@ func ingestOutputDirs(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, coDir st
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Ingested OutputDirectory: %s", relPath)
+		log.Infof("Ingested OutputDirectory: %s as %s", relPath, digest)
 
 		od := &remoteexecution.OutputDirectory{
 			Path:       relPath,

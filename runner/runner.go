@@ -88,6 +88,18 @@ func MakeRunTypeMap() RunTypeMap {
 	return make(map[RunType]snapshot.FilerAndInitDoneCh)
 }
 
+// Can be used to initialize a Runner with specific identifying information
+type RunnerID struct {
+	ID string
+}
+
+// Return a string representation of a RunnerID
+func (rID RunnerID) String() string {
+	return rID.ID
+}
+
+var EmptyID RunnerID = RunnerID{ID: ""}
+
 // Service allows starting/abort'ing runs and checking on their status.
 type Service interface {
 	Controller
