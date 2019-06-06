@@ -1,6 +1,10 @@
 package runners
 
 import (
+	"fmt"
+	"math/rand"
+	"os"
+
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/runner"
@@ -23,7 +27,10 @@ func (m module) Install(b *ice.MagicBag) {
 			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
 		},
 		func() runner.RunnerID {
-			return runner.EmptyID
+			// suitable local testing purposes, but a production implementation would supply a unique ID
+			hostname, _ := os.Hostname()
+			hostname = fmt.Sprintf("%s-%d", hostname, rand.Intn(10000))
+			return runner.RunnerID{ID: hostname}
 		},
 		NewSingleRunner,
 	)
