@@ -270,6 +270,7 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 	if err != nil {
 		return nil, fmt.Errorf("Error writing data to CAS server: %s", err)
 	}
+	log.Infof("Wrote file to CAS: %s as %s", path, digest)
 
 	return digest, nil
 }
