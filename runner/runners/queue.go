@@ -74,8 +74,14 @@ to complete successfully before serving requests.
 @param: stats - the stats receiver the queue will use when reporting its metrics
 */
 func NewQueueRunner(
-	exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, capacity int, stat stats.StatsReceiver) runner.Service {
-
+	exec execer.Execer,
+	filerMap runner.RunTypeMap,
+	output runner.OutputCreator,
+	tmp *temp.TempDir,
+	capacity int,
+	stat stats.StatsReceiver,
+	rID runner.RunnerID,
+) runner.Service {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
@@ -89,7 +95,7 @@ func NewQueueRunner(
 	}
 
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filerMap, output, tmp, stat)
+	inv := NewInvoker(exec, filerMap, output, tmp, stat, rID)
 
 	controller := &QueueController{
 		statusManager: statusManager,
@@ -149,8 +155,14 @@ func NewQueueRunner(
 }
 
 func NewSingleRunner(
-	exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) runner.Service {
-	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat)
+	exec execer.Execer,
+	filerMap runner.RunTypeMap,
+	output runner.OutputCreator,
+	tmp *temp.TempDir,
+	stat stats.StatsReceiver,
+	rID runner.RunnerID,
+) runner.Service {
+	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat, rID)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

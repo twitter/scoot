@@ -28,11 +28,18 @@ import (
 // invoke.go: Invoker runs a Scoot command.
 
 // NewInvoker creates an Invoker that will use the supplied helpers
-func NewInvoker(exec execer.Execer, filerMap runner.RunTypeMap, output runner.OutputCreator, tmp *temp.TempDir, stat stats.StatsReceiver) *Invoker {
+func NewInvoker(
+	exec execer.Execer,
+	filerMap runner.RunTypeMap,
+	output runner.OutputCreator,
+	tmp *temp.TempDir,
+	stat stats.StatsReceiver,
+	rID runner.RunnerID,
+) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat, rID: rID}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
@@ -44,6 +51,7 @@ type Invoker struct {
 	output   runner.OutputCreator
 	tmp      *temp.TempDir
 	stat     stats.StatsReceiver
+	rID      runner.RunnerID
 }
 
 // Run runs cmd
@@ -473,7 +481,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			// Process Bazel uploads of std* output and other data to CAS
 			ingestCh := make(chan interface{})
 			go func() {
-				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st, rts)
+				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st, rts, inv.rID)
 				if err != nil {
 					ingestCh <- err
 				} else {
