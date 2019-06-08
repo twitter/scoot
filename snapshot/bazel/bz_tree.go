@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -49,7 +50,7 @@ func (bc bzCommand) save(path string) (string, error) {
 	}
 	log.Info(args)
 
-	output, err := bc.runCmd(args)
+	stdout, _, err := bc.runCmd(args)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -58,12 +59,12 @@ func (bc bzCommand) save(path string) (string, error) {
 		return "", err
 	}
 
-	err = validateFsUtilSaveOutput(output)
+	err = validateFsUtilSaveOutput(stdout)
 	if err != nil {
 		return "", err
 	}
 
-	s, err := splitFsUtilSaveOutput(output)
+	s, err := splitFsUtilSaveOutput(stdout)
 	if err != nil {
 		return "", err
 	}
@@ -84,8 +85,7 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 		return os.Mkdir(dir, 0777)
 	}
 
-	// we don't expect there to be any useful output
-	_, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
+	_, stderr, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -93,14 +93,18 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 		}
 		return err
 	}
+
+	// temporarily dump stderr to program's stderr
+	fmt.Fprintf(os.Stderr, "FS_UTIL MATERIALIZE DEBUG/STDERR:\n%s\n", string(stderr))
+
 	return nil
 }
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
-func (bc bzCommand) runCmd(args []string) ([]byte, error) {
+func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
 	serverAddrs, err := bc.casResolver.ResolveAll()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// localStorePath required, add serverAddrs if resolved
@@ -112,7 +116,13 @@ func (bc bzCommand) runCmd(args []string) ([]byte, error) {
 	}
 
 	log.Debugf("%s %s", fsUtilCmd, args)
-	return exec.Command(fsUtilCmd, args...).Output()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd := exec.Command(fsUtilCmd, args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	return stdout.Bytes(), stderr.Bytes(), err
 }
 
 // Noop bzTree for stub testing
