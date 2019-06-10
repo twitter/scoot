@@ -89,7 +89,6 @@ func (s *streamSnapshot) Download(db *DB) error {
 // updateStream updates the named stream
 // the stream name is used to make sure we're operating on the right remote/refspec
 // the sha is optionally used to override refspec for remote with a specific sha request
-// TODO definitely deprecate. at least in twitter. probably just don't configure a stream
 func (b *streamBackend) updateStream(name string, db *DB) error {
 	b.stat.Counter(stats.GitStreamUpdateFetches).Inc(1)
 
