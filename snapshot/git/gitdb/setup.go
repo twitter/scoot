@@ -27,7 +27,7 @@ func (m module) Install(b *ice.MagicBag) {
 			return &NoopRepoUpdater{}
 		},
 		func(store store.Store) *BundlestoreConfig {
-			return &BundlestoreConfig{Store: store}
+			return &BundlestoreConfig{Store: store, AllowStreamUpdate: true}
 		},
 		func() *StreamConfig {
 			return nil

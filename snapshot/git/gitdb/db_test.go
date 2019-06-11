@@ -412,7 +412,8 @@ func TestBundlestore(t *testing.T) {
 	}
 
 	bundleCfg := &BundlestoreConfig{
-		Store: store,
+		Store:             store,
+		AllowStreamUpdate: true,
 	}
 
 	authorDB := MakeDBFromRepo(authorDataRepo, nil, fixture.tmp,
