@@ -16,8 +16,10 @@ import (
 )
 
 // BundlestoreConfig defines how to talk to Bundlestore
+// AllowStreamUpdate controls whether bundlestore download failures can fall back on stream updates
 type BundlestoreConfig struct {
-	Store store.Store
+	Store             store.Store
+	AllowStreamUpdate bool
 }
 
 type bundlestoreBackend struct {
@@ -225,26 +227,28 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		return err
 	}
 
-	// we are missing prereqs, so let's try updating the stream that's the basis of the bundle
-	// this likely happened because:
-	// we're in a worker that started at time T1, when master pointed at commit C1
-	// at time T2, a commit C2 was created in our stream
-	// at time T3, a user ingested a git commit C3 whose ancestor is C2
-	// GitDB in their scoot-snapshot-db picked a merge-base of C2, because T3-T2 was sufficiently
-	// large (say, a half hour) that it's reasonable to assume its easy to get.
-	// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
-	// update our stream.
-	if err := db.stream.updateStream(s.streamName, db); err != nil {
-		log.Infof("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
-		return err
-	}
+	if db.bundles.cfg.AllowStreamUpdate {
+		// we are missing prereqs, so let's try updating the stream that's the basis of the bundle
+		// this likely happened because:
+		// we're in a worker that started at time T1, when master pointed at commit C1
+		// at time T2, a commit C2 was created in our stream
+		// at time T3, a user ingested a git commit C3 whose ancestor is C2
+		// GitDB in their scoot-snapshot-db picked a merge-base of C2, because T3-T2 was sufficiently
+		// large (say, a half hour) that it's reasonable to assume its easy to get.
+		// Now we've got the bundle for C3, which depends on C2, but we only have C1, so we have to
+		// update our stream.
+		if err := db.stream.updateStream(s.streamName, db); err != nil {
+			log.Infof("Couldn't download sha: %s, updateStream returned error: %s", s.SHA(), err.Error())
+			return err
+		}
 
-	if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err != nil {
-		// if we still can't unbundle, then the bundle might be corrupt or the
-		// prereqs might not be in the stream, or maybe the git server is serving us
-		// stale data.
-		log.Infof("Couldn't download sha: %s, the final unbundling attempt returned error: %s", s.SHA(), err.Error())
-		return err
+		if _, err := db.dataRepo.Run("bundle", "unbundle", filename); err != nil {
+			// if we still can't unbundle, then the bundle might be corrupt or the
+			// prereqs might not be in the stream, or maybe the git server is serving us
+			// stale data.
+			log.Infof("Couldn't download sha: %s, the final unbundling attempt returned error: %s", s.SHA(), err.Error())
+			return err
+		}
 	}
 
 	return db.shaPresent(s.sha)

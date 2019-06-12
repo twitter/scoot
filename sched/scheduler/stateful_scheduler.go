@@ -890,8 +890,12 @@ func (s *statefulScheduler) scheduleTasks() {
 				aborted := (err != nil && err.(*taskError).st.State == runner.ABORTED)
 				if err != nil {
 					// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
+					// TODO - we no longer set a node as flaky on failed status.
+					// In practice, we've observed that this results in checkout failures causing
+					// nodes to drop out of the cluster and reduce capacity to no benefit.
+					// A more comprehensive solution would be to overhaul this behavior.
 					taskErr := err.(*taskError)
-					flaky = (taskErr.runnerErr != nil)
+					flaky = (taskErr.runnerErr != nil && taskErr.st.State != runner.FAILED)
 
 					msg := "Error running job (will be retried):"
 					if aborted {
