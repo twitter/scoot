@@ -10,14 +10,22 @@ import (
 )
 
 func MakeBzFiler(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, false)
+	return makeBzFiler(tmp, r, nil, false)
+}
+
+func MakeBzFilerUpdater(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(tmp, r, u, false)
 }
 
 func MakeBzFilerKeepCheckouts(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, true)
+	return makeBzFiler(tmp, r, nil, true)
 }
 
-func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, keep bool) (*BzFiler, error) {
+func MakeBzFilerUpdaterKeepCheckouts(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(tmp, r, u, true)
+}
+
+func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater, keep bool) (*BzFiler, error) {
 	if tmp == nil {
 		return nil, fmt.Errorf("TempDir must be provided to MakeBzFiler")
 	}
@@ -25,13 +33,16 @@ func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, keep bool) (*BzFiler, err
 	if err != nil {
 		return nil, err
 	}
+	if u == nil {
+		u = snapshots.MakeNoopUpdater()
+	}
 
 	bf := &BzFiler{
 		tree:          makeBzCommand(treeDir.Dir, r),
 		tmp:           tmp,
 		keepCheckouts: keep,
 		CASResolver:   r,
-		updater:       snapshots.MakeNoopUpdater(),
+		updater:       u,
 	}
 	return bf, nil
 }
