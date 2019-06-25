@@ -56,6 +56,12 @@ func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator,
 // Create a new Output that writes to local fs.
 // Note: id should not have leading or trailing slashes.
 func (s *localOutputCreator) Create(id string) (runner.Output, error) {
+	if _, err := os.Stat(s.tmp.Dir); os.IsNotExist(err) {
+		err = os.MkdirAll(s.tmp.Dir, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+	}
 	f, err := s.tmp.TempFile(id)
 	if err != nil {
 		return nil, err
