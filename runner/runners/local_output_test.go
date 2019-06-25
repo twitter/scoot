@@ -21,6 +21,7 @@ func TestLocalOutputCreator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create temp dir: %v", err)
 	}
+	defer os.RemoveAll(td.Dir)
 	h, err := NewHttpOutputCreator(td, "")
 	if err != nil {
 		t.Fatalf("Unable to create output creator: %v", err)
@@ -39,6 +40,7 @@ func TestLocalOutputCreatorNonexistentTempDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create temp dir: %v", err)
 	}
+	defer os.RemoveAll(td.Dir)
 	h, err := NewHttpOutputCreator(td, "")
 	if err != nil {
 		t.Fatalf("Unable to create output creator: %v", err)
