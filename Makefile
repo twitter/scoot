@@ -19,13 +19,6 @@ default:
 	go build $$(go list ./... | grep -v /vendor/)
 
 dependencies:
-	# Populates the vendor directory to reflect the latest run of check-dependencies.
-
-	# Checkout our vendored dependencies.
-	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
-	#       When used as a library, the vendor folder will be empty by default (if 'go get'd).
-	git submodule update --init --recursive
-
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
 	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
 	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
@@ -34,12 +27,6 @@ dependencies:
 	# Install go-bindata tool which is used to generate binary version of config file
 	# this is only used by go generate
 	go get github.com/twitter/go-bindata/...
-
-check-dependencies:
-	# Run this whenever a dependency is added.
-	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
-	./deps.sh
-	go get github.com/golang/mock/mockgen
 
 generate:
 	go generate $$(go list ./... | grep -v /vendor/)
