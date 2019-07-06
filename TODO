@@ -1,6 +1,6 @@
 For go 1.12.6
 
-- Make Makefile work with new version and go mod
++ Make Makefile work with new version and go mod
 
 - Travis steps need to work - includes submodules and deps.sh cruft
 
