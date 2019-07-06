@@ -31,7 +31,7 @@ func LogRunStatus(status *scoot.JobStatus) {
 	log.Info("Task Data:")
 	for task, runStatus := range status.GetTaskData() {
 		if runStatus == nil {
-			log.Infof("%s: ExitCode: <nil>, Error: <nil>")
+			log.Infof("%s: ExitCode: <nil>, Error: <nil>", task)
 			continue
 		}
 		log.Infof("%s: ExitCode: %v, Error: %v", task, runStatus.GetExitCode(), runStatus.GetError())

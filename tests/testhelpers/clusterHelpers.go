@@ -1,6 +1,7 @@
 package testhelpers
 
 import (
+	"context"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -39,12 +40,12 @@ func CreateLocalTestCluster() (*setup.Cmds, error) {
 // Blocks until the cluster is ready, by pinging the GetStatus Api
 // Until a successful response is returned.
 func WaitForClusterToBeReady(client scoot.CloudScoot) {
-	status, err := client.GetStatus("testJobId")
+	status, err := client.GetStatus(context.Background(), "testJobId")
 	log.Infof("Waiting for Cluster Status: %+v, Error: %v", status, err)
 
 	for err != nil {
 		time.Sleep(500 * time.Millisecond)
-		status, err = client.GetStatus("testJobId")
+		status, err = client.GetStatus(context.Background(), "testJobId")
 		log.Infof("Waiting for Cluster Status: %+v, Error: %v", status, err)
 	}
 

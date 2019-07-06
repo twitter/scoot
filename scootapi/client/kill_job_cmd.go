@@ -5,6 +5,7 @@ implements the command line entry for the kill job command
 */
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string)
 
 	jobId := args[0]
 
-	status, err := cl.scootClient.KillJob(jobId)
+	status, err := cl.scootClient.KillJob(context.Background(), jobId)
 
 	if err != nil {
 		switch err := err.(type) {
