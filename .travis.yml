@@ -6,8 +6,8 @@ language: go
 go:
   - "1.12.x"
 
-git:
-    submodules: false
+env:
+  - GO111MODULE=on
 
 before_install:
   - make dependencies
