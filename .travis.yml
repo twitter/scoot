@@ -9,9 +9,6 @@ go:
 env:
   - GO111MODULE=on
 
-before_install:
-  - make dependencies
-
 before_script:
   - make format
   - make vet
