@@ -35,10 +35,6 @@ func main() {
 
 	// Initialize Local Cluster
 	log.Infof("Creating test cluster")
-	// TODO broken on travis here:
-	// INFO[0000] Starting up a Local ApiServer                 sourceLine="setup/api.go:49"
-	// INFO[0000] Running[go install ./binaries/...]            sourceLine="setup/cmds.go:157"
-	// INFO[0000] Run Done: fork/exec /home/travis/.gimme/versions/go1.12.6.linux.amd64/bin/go: no such file or directory  sourceLine="setup/cmds.go:161"
 	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		log.Fatalf("Unexpected Error while Setting up Local Cluster %v", err)

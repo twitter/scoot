@@ -17,6 +17,7 @@ type Builder interface {
 	ApiServer() (string, error)
 }
 
+// TODO change back
 const repoName = "github.com/dgassaway/scoot"
 
 // GoBuilder uses the go command-line tools to build Scoot
@@ -60,11 +61,7 @@ func (b *GoBuilder) install() {
 		return
 	}
 	repoDir := RepoRoot(goPath)
-	fmt.Printf("Using Gopath: %s, RepoDir: %s\n", goPath, repoDir)
-	// /home/travis/gopath
-	// /home/travis/gopath/src/github.com/twitter/scoot
 
-	// TODO try being verbose about gopath... used some weird dir not matching `go env` output on travis?
 	cmd := b.cmds.Command("go", "install", "./binaries/...")
 	cmd.Dir = repoDir
 	if err := b.cmds.RunCmd(cmd); err != nil {

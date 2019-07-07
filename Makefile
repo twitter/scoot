@@ -73,7 +73,7 @@ recoverytest:
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
 	go install ./binaries/...
-	$(FIRSTGOPATH)/bin/recoverytest
+	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
 integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
