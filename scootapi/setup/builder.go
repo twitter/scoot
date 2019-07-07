@@ -60,7 +60,7 @@ func (b *GoBuilder) install() {
 		return
 	}
 	repoDir := RepoRoot(goPath)
-	fmt.Printf("Using Gopath: %s, RepoDir: %\n", goPath, repoDir)
+	fmt.Printf("Using Gopath: %s, RepoDir: %s\n", goPath, repoDir)
 
 	// TODO try being verbose about gopath... used some weird dir not matching `go env` output on travis?
 	cmd := b.cmds.Command("go", "install", "./binaries/...")
