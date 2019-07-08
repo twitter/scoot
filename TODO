@@ -1,7 +1,0 @@
-For go 1.12.x
-
-+ Make Makefile work with new version and go mod
-+ Travis steps need to work - includes submodules and deps.sh cruft
-- Integration steps with internal (generate vendor dir and pull in?)
-    1st step - use new golang and modules external, scripted workflow to internal
-    2nd step - new golang internal, works with gomod
