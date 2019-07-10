@@ -97,7 +97,7 @@ func (s *httpStore) Exists(name string) (bool, error) {
 		log.Infof("Exists error: %s %v", name, err)
 		return false, err
 	}
-	log.Infof("Exists ok: %s %v", name)
+	log.Infof("Exists ok: %s", name)
 	r.Close()
 	return true, nil
 }
@@ -131,7 +131,7 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			log.Infof("Write response status error: %s %v -- %s", uri, resp.Status)
+			log.Infof("Write response status error: %s -- %s", uri, resp.Status)
 			return errors.New(resp.Status)
 		}
 	}

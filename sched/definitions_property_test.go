@@ -21,13 +21,13 @@ func Test_JobSerializeDeserialize(t *testing.T) {
 
 			binaryJob, err := job.Serialize()
 			if err != nil {
-				log.Info("Unexpected Error Occurred when Serializing Job %v", err)
+				log.Infof("Unexpected Error Occurred when Serializing Job %v", err)
 				return false
 			}
 
 			deserializedJob, err := DeserializeJob(binaryJob)
 			if err != nil {
-				log.Info("Unexpected Error Occurred when Deserializing Job %v", err)
+				log.Infof("Unexpected Error Occurred when Deserializing Job %v", err)
 				return false
 			}
 			return reflect.DeepEqual(job, deserializedJob)

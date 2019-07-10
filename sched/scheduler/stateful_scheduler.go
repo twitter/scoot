@@ -157,6 +157,7 @@ type statefulScheduler struct {
 	checkJobCh    chan jobCheckMsg
 	addJobCh      chan jobAddedMsg
 	killJobCh     chan jobKillRequest
+	stepTicker    *time.Ticker
 
 	// Scheduler State
 	clusterState   *clusterState
@@ -280,6 +281,7 @@ func NewStatefulScheduler(
 		checkJobCh:    make(chan jobCheckMsg, 1),
 		addJobCh:      make(chan jobAddedMsg, 1),
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
+		stepTicker:    time.NewTicker(TickRate),
 
 		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs:   make([]*jobState, 0),
@@ -333,8 +335,8 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 
 		 Return either the error message or job id to the caller.
 	*/
-	defer s.stat.Latency(stats.SchedJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
-	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)         // TODO errata metric - remove if unused
+	defer s.stat.Latency(stats.SchedJobLatency_ms).Time().Stop()
+	s.stat.Counter(stats.SchedJobRequestsCounter).Inc(1)
 	log.WithFields(
 		log.Fields{
 			"requestor": jobDef.Requestor,
@@ -437,7 +439,24 @@ func generateJobId() string {
 func (s *statefulScheduler) loop() {
 	for {
 		s.step()
-		time.Sleep(TickRate)
+
+		// wait until our TickRate has elapsed or we have a pending action.
+		// resend messages asynchronously in case the channel is blocked.
+		select {
+		case msg := <-s.checkJobCh:
+			go func() {
+				s.checkJobCh <- msg
+			}()
+		case msg := <-s.addJobCh:
+			go func() {
+				s.addJobCh <- msg
+			}()
+		case msg := <-s.killJobCh:
+			go func() {
+				s.killJobCh <- msg
+			}()
+		case <-s.stepTicker.C:
+		}
 	}
 }
 
