@@ -3,6 +3,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -63,9 +64,10 @@ func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 }
 
 func (c *simpleClient) Close() error {
-	if c.workerClient != nil {
-		return c.workerClient.Transport.Close()
-	}
+	// NOTE: underlying thrift.TClient no longer exposes Transport or Close() interface
+	//if c.workerClient != nil {
+	//	return c.workerClient.Transport.Close()
+	//}
 	return nil
 }
 
@@ -76,7 +78,7 @@ func (c *simpleClient) Run(cmd *runner.Command) (runner.RunStatus, error) {
 		return runner.RunStatus{}, err
 	}
 
-	status, err := workerClient.Run(workerapi.DomainRunCommandToThrift(cmd))
+	status, err := workerClient.Run(context.Background(), workerapi.DomainRunCommandToThrift(cmd))
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
@@ -90,7 +92,7 @@ func (c *simpleClient) Abort(runID runner.RunID) (runner.RunStatus, error) {
 		return runner.RunStatus{}, err
 	}
 
-	status, err := workerClient.Abort(string(runID))
+	status, err := workerClient.Abort(context.Background(), string(runID))
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
@@ -109,7 +111,7 @@ func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 		return workerapi.WorkerStatus{}, err
 	}
 
-	status, err := workerClient.QueryWorker()
+	status, err := workerClient.QueryWorker(context.Background())
 	if err != nil {
 		return workerapi.WorkerStatus{}, err
 	}

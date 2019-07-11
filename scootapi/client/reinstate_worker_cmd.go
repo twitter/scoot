@@ -5,6 +5,7 @@ implements the command line entry for the reinstate worker job command
 */
 
 import (
+	"context"
 	"fmt"
 	"os/user"
 
@@ -38,7 +39,7 @@ func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 		return err
 	}
 
-	err = cl.scootClient.ReinstateWorker(&scoot.ReinstateWorkerReq{ID: id, Requestor: requestor.Username})
+	err = cl.scootClient.ReinstateWorker(context.Background(), &scoot.ReinstateWorkerReq{ID: id, Requestor: requestor.Username})
 
 	if err != nil {
 		switch err := err.(type) {

@@ -249,6 +249,10 @@ func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOp
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
+func (s *executionServer) WaitOperation(context.Context, *longrunning.WaitOperationRequest) (*longrunning.Operation, error) {
+	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
+}
+
 // Internal functions
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {

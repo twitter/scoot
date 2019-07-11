@@ -1,6 +1,7 @@
 package testhelpers
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -39,7 +40,7 @@ func GenerateJob(numTasks int, snapshotID string) *scoot.JobDefinition {
 
 func StartJob(client *scootapi.CloudScootClient, job *scoot.JobDefinition) string {
 	for {
-		j, err := client.RunJob(job)
+		j, err := client.RunJob(context.Background(), job)
 		if err == nil {
 			return j.ID
 		}
@@ -73,7 +74,7 @@ func WaitForJobsToCompleteAndLogStatus(
 		for jobId, oldStatus := range jobs {
 
 			if !IsJobCompleted(oldStatus) {
-				currStatus, err := client.GetStatus(jobId)
+				currStatus, err := client.GetStatus(context.Background(), jobId)
 
 				// if there is an error just continue
 				if err != nil {

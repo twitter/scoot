@@ -5,6 +5,7 @@ implements the command line entry for the get scheduler status command
 */
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -30,7 +31,7 @@ func (c *getSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, arg
 
 	log.Info("Checking Status for Scheduler", args)
 
-	status, err := cl.scootClient.GetSchedulerStatus()
+	status, err := cl.scootClient.GetSchedulerStatus(context.Background())
 
 	if err != nil {
 		switch err := err.(type) {

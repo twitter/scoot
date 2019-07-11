@@ -16,16 +16,9 @@ SCOOT_LOGLEVEL ?= info
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
 default:
-	go build $$(go list ./... | grep -v /vendor/)
+	go build $$(go list ./...)
 
 dependencies:
-	# Populates the vendor directory to reflect the latest run of check-dependencies.
-
-	# Checkout our vendored dependencies.
-	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
-	#       When used as a library, the vendor folder will be empty by default (if 'go get'd).
-	git submodule update --init --recursive
-
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
 	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
 	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
@@ -35,40 +28,34 @@ dependencies:
 	# this is only used by go generate
 	go get github.com/twitter/go-bindata/...
 
-check-dependencies:
-	# Run this whenever a dependency is added.
-	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
-	./deps.sh
-	go get github.com/golang/mock/mockgen
-
 generate:
-	go generate $$(go list ./... | grep -v /vendor/)
+	go generate $$(go list ./...)
 
 format:
-	go fmt $$(go list ./... | grep -v /vendor/)
+	go fmt $$(go list ./...)
 
 fs_util:
 	# Fetches fs_util tool from pantsbuild binaries
 	sh get_fs_util.sh
 
 vet:
-	go vet $$(go list ./... | grep -v /vendor/)
+	go vet $$(go list ./...)
 
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
-	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...) $(TRAVIS_FILTER)
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./...) $(TRAVIS_FILTER)
 
 test-unit:
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output
-	go test -count=1 -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
+	go test -count=1 -race -timeout 120s $$(go list ./...)
 
 testlocal: generate test
 
@@ -107,7 +94,7 @@ clean: clean-data clean-mockgen clean-go
 
 fullbuild: dependencies generate test
 
-travis: dependencies fs_util recoverytest swarmtest integrationtest test clean-data
+travis: fs_util recoverytest swarmtest integrationtest test clean-data
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
@@ -131,6 +118,7 @@ thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 
 thrift: thrift-go
 
+# TODO no vendor dir
 bazel-proto:
 	cp vendor/github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2/remote_execution.proto bazel/remoteexecution/
 	protoc -I bazel/remoteexecution/ -I ~/workspace/src/github.com/googleapis/googleapis/ bazel/remoteexecution/remote_execution.proto --go_out=plugins=grpc:bazel/remoteexecution

@@ -37,7 +37,10 @@ func (d *simpleDialer) Dial(addr string) (thrift.TTransport, thrift.TProtocolFac
 		return nil, nil, fmt.Errorf("Error opening socket: %v", err)
 	}
 
-	transport = d.transportFactory.GetTransport(transport)
+	transport, err = d.transportFactory.GetTransport(transport)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error getting transport: %v", err)
+	}
 	err = transport.Open()
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error opening transport: %v", err)

@@ -118,6 +118,7 @@ func (c *Cmds) Kill() {
 // Commands creates a Command that is watched (and with appropriate redirection)
 func (c *Cmds) Command(path string, arg ...string) *exec.Cmd {
 	c.mu.Lock()
+	log.Infof("RunCmd: %s %s\n", path, arg)
 	defer c.mu.Unlock()
 	// TODO(dbentley): consider migrating to use Execer and OSExecer
 	cmd := exec.Command(path, arg...)

@@ -5,6 +5,7 @@ implements the command line entry for the offline worker job command
 */
 
 import (
+	"context"
 	"fmt"
 	"os/user"
 
@@ -38,7 +39,7 @@ func (c *offlineWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []s
 		return err
 	}
 
-	err = cl.scootClient.OfflineWorker(&scoot.OfflineWorkerReq{ID: id, Requestor: requestor.Username})
+	err = cl.scootClient.OfflineWorker(context.Background(), &scoot.OfflineWorkerReq{ID: id, Requestor: requestor.Username})
 
 	if err != nil {
 		switch err := err.(type) {

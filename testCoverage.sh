@@ -4,7 +4,7 @@ set -e
 echo "" > coverage.txt
 echo "" > dirlist.out
 
-find . -name \*.go | xargs -n 1 dirname | uniq | grep -v /vendor/ | grep -v /fuse > dirlist.out
+find . -name \*.go | xargs -n 1 dirname | uniq > dirlist.out
 
 for d in $(sort dirlist.out | uniq); do
     go test -timeout 120s -race -coverprofile=profile.out -covermode=atomic $d
