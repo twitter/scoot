@@ -112,7 +112,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	log.Info("Fetching Bazel Command data from CAS server")
 	rts.commandFetchStart = stamp()
 	commandDigest := action.GetCommandDigest()
-	commandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, commandDigest, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5))
+	commandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, commandDigest, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5)))
 	if err != nil {
 		// NB: Important to return this error as-is
 		// CAS client function returns a particular error type if the read
@@ -267,7 +267,7 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 	sha := fmt.Sprintf("%x", sha256.Sum256(bytes))
 	digest := &remoteexecution.Digest{Hash: sha, SizeBytes: int64(len(bytes))}
 
-	err = cas.ByteStreamWrite(bzFiler.CASResolver, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5))
+	err = cas.ByteStreamWrite(bzFiler.CASResolver, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5)))
 	if err != nil {
 		return nil, fmt.Errorf("Error writing data to CAS server: %s", err)
 	}
