@@ -440,8 +440,10 @@ func (s *statefulScheduler) loop() {
 	for {
 		s.step()
 
-		// wait until our TickRate has elapsed or we have a pending action.
-		// resend messages asynchronously in case the channel is blocked.
+		// Wait until our TickRate has elapsed or we have a pending action.
+		// Detect pending action by monitoring statefulScheduler's job channels.
+		// Since "detect" means we pulled off of a channel, put it back,
+		// asynchronously in case the channel is blocked/full (it will be drained next step())
 		select {
 		case msg := <-s.checkJobCh:
 			go func() {
