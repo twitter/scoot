@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -48,7 +49,7 @@ func preProcessBazel(filer snapshot.Filer, cmd *runner.Command, rts *runTimes) (
 	if !cmd.ExecuteRequest.GetRequest().GetSkipCacheLookup() {
 		log.Info("Checking for existing results for command in ActionCache")
 		rts.actionCacheCheckStart = stamp()
-		ar, err := cas.GetCacheResult(bzFiler.CASResolver, cmd.ExecuteRequest.GetRequest().GetActionDigest(), 2)
+		ar, err := cas.GetCacheResult(bzFiler.CASResolver, cmd.ExecuteRequest.GetRequest().GetActionDigest(), backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5)))
 		rts.actionCacheCheckEnd = stamp()
 		if err != nil {
 			// Only treat as an error if we didn't get NotFoundError. We still continue:
@@ -87,7 +88,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	log.Info("Fetching Bazel Action data from CAS server")
 	rts.actionFetchStart = stamp()
 	actionDigest := cmd.ExecuteRequest.GetRequest().GetActionDigest()
-	actionBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, actionDigest, 5)
+	actionBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, actionDigest, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5)))
 	if err != nil {
 		// NB: Important to return this error as-is
 		// CAS client function returns a particular error type if the read
@@ -111,7 +112,7 @@ func fetchBazelCommandData(bzFiler *bzsnapshot.BzFiler, cmd *runner.Command, rts
 	log.Info("Fetching Bazel Command data from CAS server")
 	rts.commandFetchStart = stamp()
 	commandDigest := action.GetCommandDigest()
-	commandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, commandDigest, 5)
+	commandBytes, err := cas.ByteStreamRead(bzFiler.CASResolver, commandDigest, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5))
 	if err != nil {
 		// NB: Important to return this error as-is
 		// CAS client function returns a particular error type if the read
@@ -241,7 +242,7 @@ func postProcessBazel(filer snapshot.Filer,
 	// Add result to ActionCache. Errors non-fatal
 	if !cmd.ExecuteRequest.GetAction().GetDoNotCache() {
 		log.Info("Updating results in ActionCache")
-		_, err = cas.UpdateCacheResult(bzFiler.CASResolver, ad, ar, 2)
+		_, err = cas.UpdateCacheResult(bzFiler.CASResolver, ad, ar, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5)))
 		if err != nil {
 			log.Errorf("Error updating result to ActionCache: %s", err)
 		}
@@ -266,7 +267,7 @@ func writeFileToCAS(bzFiler *bzsnapshot.BzFiler, path string) (*remoteexecution.
 	sha := fmt.Sprintf("%x", sha256.Sum256(bytes))
 	digest := &remoteexecution.Digest{Hash: sha, SizeBytes: int64(len(bytes))}
 
-	err = cas.ByteStreamWrite(bzFiler.CASResolver, digest, bytes, 5)
+	err = cas.ByteStreamWrite(bzFiler.CASResolver, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(5))
 	if err != nil {
 		return nil, fmt.Errorf("Error writing data to CAS server: %s", err)
 	}
