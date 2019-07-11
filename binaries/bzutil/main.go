@@ -212,6 +212,8 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 			log.Fatalf("Error converting digest to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
 	}
 }
 
@@ -257,6 +259,8 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 			log.Fatalf("Error converting digest to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
 	}
 }
 
@@ -279,6 +283,8 @@ func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
 			log.Fatalf("Error converting operation to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s\n", operation.GetName())
 	}
 }
 
@@ -296,6 +302,8 @@ func getOperation(execAddr, opName string, getJson bool) {
 			log.Fatalf("Error converting operation to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s\n", operation.GetName())
 	}
 }
 
