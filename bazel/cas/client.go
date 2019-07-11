@@ -2,7 +2,9 @@ package cas
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
@@ -55,12 +57,14 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, retries i
 		retries = 0
 	}
 
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(retries))
 	for ; retries >= 0; retries-- {
 		bytes, err = byteStreamRead(r, digest)
 
 		if err == nil || IsNotFoundError(err) {
 			break
 		}
+		time.Sleep(b.NextBackOff())
 	}
 	return bytes, err
 }
@@ -130,6 +134,7 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 	if retries < 0 {
 		retries = 0
 	}
+	b := backoff.WithMaxRetries(backoff.NewExponentialBackOff(), uint64(retries))
 
 	for ; retries >= 0; retries-- {
 		err = byteStreamWrite(r, digest, data)
@@ -137,6 +142,7 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 		if err == nil {
 			break
 		}
+		time.Sleep(b.NextBackOff())
 	}
 	return err
 }
