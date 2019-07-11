@@ -2,7 +2,6 @@ package cas
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
