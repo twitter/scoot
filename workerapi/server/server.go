@@ -3,7 +3,6 @@
 package server
 
 import (
-	"context"
 	"reflect"
 	"sync"
 	"time"
@@ -119,7 +118,7 @@ func (h *handler) updateTimeLastRpc() {
 }
 
 // Implements worker.thrift Worker.QueryWorker interface
-func (h *handler) QueryWorker(ctx context.Context) (*worker.WorkerStatus, error) {
+func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.stat.Counter(stats.WorkerServerQueries).Inc(1)
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
@@ -145,7 +144,7 @@ func (h *handler) QueryWorker(ctx context.Context) (*worker.WorkerStatus, error)
 }
 
 // Implements worker.thrift Worker.Run interface
-func (h *handler) Run(ctx context.Context, cmd *worker.RunCommand) (*worker.RunStatus, error) {
+func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	defer h.stat.Latency(stats.WorkerServerStartRunLatency_ms).Time().Stop()
 	h.stat.Counter(stats.WorkerServerRuns).Inc(1)
 	log.WithFields(
@@ -194,7 +193,7 @@ func (h *handler) Run(ctx context.Context, cmd *worker.RunCommand) (*worker.RunS
 }
 
 // Implements worker.thrift Worker.Abort interface
-func (h *handler) Abort(ctx context.Context, runId string) (*worker.RunStatus, error) {
+func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	h.stat.Counter(stats.WorkerServerAborts).Inc(1)
 	h.updateTimeLastRpc()
 	log.Infof("Worker aborting runID: %s", runId)
@@ -209,7 +208,7 @@ func (h *handler) Abort(ctx context.Context, runId string) (*worker.RunStatus, e
 }
 
 // Implements worker.thrift Worker.Erase interface
-func (h *handler) Erase(ctx context.Context, runId string) error {
+func (h *handler) Erase(runId string) error {
 	h.stat.Counter(stats.WorkerServerClears).Inc(1)
 	h.updateTimeLastRpc()
 	log.Infof("Worker erasing runID: %s", runId)

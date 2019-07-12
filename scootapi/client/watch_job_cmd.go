@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -55,7 +54,7 @@ func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string
 
 func GetAndPrintStatus(jobId string, thriftClient scoot.CloudScoot) (*scoot.Status, error) {
 
-	status, err := thriftClient.GetStatus(context.Background(), jobId)
+	status, err := thriftClient.GetStatus(jobId)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:

@@ -4,9 +4,7 @@ package scootapi
 // command line binaries to submit (thrift) requests to the scoot services.
 
 import (
-	"context"
 	"fmt"
-
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
@@ -38,12 +36,12 @@ func NewCloudScootClient(config CloudScootClientConfig) *CloudScootClient {
 
 // RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
 //the specified job. If successful the JobId is returned if not an error.
-func (c *CloudScootClient) RunJob(ctx context.Context, jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
+func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
 	err = c.checkForClient()
 	if err != nil {
 		return nil, err
 	}
-	jobId, err := c.client.RunJob(context.Background(), jobDef)
+	jobId, err := c.client.RunJob(jobDef)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -57,12 +55,12 @@ func (c *CloudScootClient) RunJob(ctx context.Context, jobDef *scoot.JobDefiniti
 
 // GetStatus API. Returns the JobStatus of the specified JobId if successful,
 // otherwise an erorr.
-func (c *CloudScootClient) GetStatus(ctx context.Context, jobId string) (r *scoot.JobStatus, err error) {
+func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err error) {
 	err = c.checkForClient()
 	if err != nil {
 		return nil, err
 	}
-	jobStatus, err := c.client.GetStatus(context.Background(), jobId)
+	jobStatus, err := c.client.GetStatus(jobId)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -83,12 +81,12 @@ func (c *CloudScootClient) Close() error {
 	return nil
 }
 
-func (c *CloudScootClient) KillJob(ctx context.Context, jobId string) (r *scoot.JobStatus, err error) {
+func (c *CloudScootClient) KillJob(jobId string) (r *scoot.JobStatus, err error) {
 	err = c.checkForClient()
 	if err != nil {
 		return nil, err
 	}
-	jobStatus, err := c.client.KillJob(context.Background(), jobId)
+	jobStatus, err := c.client.KillJob(jobId)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -100,12 +98,12 @@ func (c *CloudScootClient) KillJob(ctx context.Context, jobId string) (r *scoot.
 	return jobStatus, err
 }
 
-func (c *CloudScootClient) OfflineWorker(ctx context.Context, req *scoot.OfflineWorkerReq) error {
+func (c *CloudScootClient) OfflineWorker(req *scoot.OfflineWorkerReq) error {
 	err := c.checkForClient()
 	if err != nil {
 		return err
 	}
-	err = c.client.OfflineWorker(context.Background(), req)
+	err = c.client.OfflineWorker(req)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -117,12 +115,12 @@ func (c *CloudScootClient) OfflineWorker(ctx context.Context, req *scoot.Offline
 	return err
 }
 
-func (c *CloudScootClient) ReinstateWorker(ctx context.Context, req *scoot.ReinstateWorkerReq) error {
+func (c *CloudScootClient) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
 	err := c.checkForClient()
 	if err != nil {
 		return err
 	}
-	err = c.client.ReinstateWorker(context.Background(), req)
+	err = c.client.ReinstateWorker(req)
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -134,7 +132,7 @@ func (c *CloudScootClient) ReinstateWorker(ctx context.Context, req *scoot.Reins
 	return err
 }
 
-func (c *CloudScootClient) SetSchedulerStatus(ctx context.Context, maxTasks int32) error {
+func (c *CloudScootClient) SetSchedulerStatus(maxTasks int32) error {
 	// validation is also implemented in sched/definitions.go.  We cannot use it here because it
 	// causes a circular dependency.  The two implementations can be consolidated when the code
 	// is restructured
@@ -147,16 +145,16 @@ func (c *CloudScootClient) SetSchedulerStatus(ctx context.Context, maxTasks int3
 		return err
 	}
 
-	err = c.client.SetSchedulerStatus(context.Background(), maxTasks)
+	err = c.client.SetSchedulerStatus(maxTasks)
 	return err
 }
 
-func (c *CloudScootClient) GetSchedulerStatus(ctx context.Context) (*scoot.SchedulerStatus, error) {
+func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 	err := c.checkForClient()
 	if err != nil {
 		return nil, err
 	}
-	schedulerStatus, err := c.client.GetSchedulerStatus(context.Background())
+	schedulerStatus, err := c.client.GetSchedulerStatus()
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -192,9 +190,8 @@ func createClient(addr string, dialer dialer.Dialer) (*scoot.CloudScootClient, e
 // helper method to close the connection and reset the
 // struct field to nil so it will get recreated next
 func (c *CloudScootClient) closeConnection() error {
-	// NOTE underlying thrift.TClient no longer exposes Transport or Close() interface
-	// err := c.client.Transport.Close()
+	err := c.client.Transport.Close()
 	c.client = nil
 
-	return nil
+	return err
 }
