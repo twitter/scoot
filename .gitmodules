@@ -2,6 +2,10 @@
 	path = vendor/github.com/apache/thrift
 	url = https://github.com/apache/thrift
 	branch = 0e9fed1e12ed066865e46c6903782b2ef95f4650
+[submodule "vendor/github.com/cenkalti/backoff"]
+	path = vendor/github.com/cenkalti/backoff
+	url = https://github.com/cenkalti/backoff
+	branch = 2146c93394225c3732078705043ce9f26584d334
 [submodule "vendor/github.com/spf13/cobra"]
 	path = vendor/github.com/spf13/cobra
 	url = https://github.com/spf13/cobra
