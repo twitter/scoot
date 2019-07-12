@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
@@ -110,7 +109,7 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 		return err
 	}
 
-	st, err := r.cl.scootClient.GetStatus(context.Background(), jobs[0])
+	st, err := r.cl.scootClient.GetStatus(jobs[0])
 	if err != nil {
 		return err
 	}

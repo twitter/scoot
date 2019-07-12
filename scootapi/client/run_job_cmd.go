@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -119,7 +118,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	jobId, err := cl.scootClient.RunJob(context.Background(), jobDef)
+	jobId, err := cl.scootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:

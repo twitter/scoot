@@ -5,7 +5,6 @@ implements the command line entry for the throttle scheduler command
 */
 
 import (
-	"context"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -35,7 +34,7 @@ func (c *setSchedulerStatus) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 		" to run.  Note: the scheduler does not enforce this limit.  We expect the job"+
 		" requetor to adhere to it.", args)
 
-	err := cl.scootClient.SetSchedulerStatus(context.Background(), int32(c.maxTasks))
+	err := cl.scootClient.SetSchedulerStatus(int32(c.maxTasks))
 
 	if err != nil {
 		switch err := err.(type) {

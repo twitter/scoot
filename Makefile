@@ -98,21 +98,21 @@ travis: fs_util recoverytest swarmtest integrationtest test clean-data
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
-	cd workerapi && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
+	cd workerapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
 	rm -rf workerapi/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
-	cd sched && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
+	cd sched && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
+	cd scootapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 	rm -rf scootapi/gen-go/scoot/cloud_scoot-remote/
 
 thrift-bazel-go:
 	# Create generated code in github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/... from bazel.thrift
-	cd bazel/execution/bazelapi && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift && cd ..
+	cd bazel/execution/bazelapi && rm -rf gen-go && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift && cd ..
 
 thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 

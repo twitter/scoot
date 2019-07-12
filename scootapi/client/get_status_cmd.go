@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,7 +35,7 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 
 	jobId := args[0]
 
-	status, err := cl.scootClient.GetStatus(context.Background(), jobId)
+	status, err := cl.scootClient.GetStatus(jobId)
 
 	if err != nil {
 		switch err := err.(type) {

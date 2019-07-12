@@ -3,7 +3,7 @@ module github.com/twitter/scoot
 go 1.12
 
 require (
-	github.com/apache/thrift v0.12.0
+	github.com/apache/thrift v0.0.0-20160616201512-0e9fed1e12ed
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/mock v1.1.1
 	github.com/golang/protobuf v1.3.1

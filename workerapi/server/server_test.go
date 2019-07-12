@@ -1,7 +1,6 @@
 package server
 
 import (
-	//"context"
 	//"fmt"
 	log "github.com/sirupsen/logrus"
 	//"testing"
@@ -65,7 +64,7 @@ Test the stats collected by the server's stats() goroutine:
 
 	// trigger a pausing command
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
-	h.Run(context.Background(), runCmd)
+	h.Run(runCmd)
 
 	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 	// verify stats during paused command
@@ -114,7 +113,7 @@ Test the stats collected by the server's stats() goroutine:
 	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	runCmd := &worker.RunCommand{Argv: []string{"pause", "complete 0"}}
-	h.Run(context.Background(), runCmd)
+	h.Run(runCmd)
 	time.Sleep(stats.StatReportIntvl + (10 * time.Millisecond))
 
 	simExecer.Resume()

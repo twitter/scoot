@@ -4,8 +4,6 @@ package server
 // (they are call from cloudscoot.go)
 
 import (
-	"context"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
@@ -40,42 +38,42 @@ type Handler struct {
 }
 
 // Implements RunJob Cloud Scoot API
-func (h *Handler) RunJob(ctx context.Context, def *scoot.JobDefinition) (*scoot.JobId, error) {
+func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency(stats.SchedServerRunJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
 	h.stat.Counter(stats.SchedServerRunJobCounter).Inc(1)                 // TODO errata metric - remove if unused
 	return api.RunJob(h.scheduler, def, h.stat)
 }
 
 // Implements GetStatus Cloud Scoot API
-func (h *Handler) GetStatus(ctx context.Context, jobId string) (*scoot.JobStatus, error) {
+func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobStatusLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobStatusCounter).Inc(1)
 	return api.GetJobStatus(jobId, h.sagaCoord)
 }
 
 // Implements KillJob Cloud Scoot API
-func (h *Handler) KillJob(ctx context.Context, jobId string) (*scoot.JobStatus, error) {
+func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobKillLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
 	return api.KillJob(jobId, h.scheduler, h.sagaCoord)
 }
 
 // Implements OfflineWorker Cloud Scoot API
-func (h *Handler) OfflineWorker(ctx context.Context, req *scoot.OfflineWorkerReq) error {
+func (h *Handler) OfflineWorker(req *scoot.OfflineWorkerReq) error {
 	return api.OfflineWorker(req, h.scheduler)
 }
 
 // Implements ReinstateWorker Cloud Scoot API
-func (h *Handler) ReinstateWorker(ctx context.Context, req *scoot.ReinstateWorkerReq) error {
+func (h *Handler) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
 	return api.ReinstateWorker(req, h.scheduler)
 }
 
 // Implements GetSchedulerStatus Cloud Scoot API
-func (h *Handler) GetSchedulerStatus(ctx context.Context) (*scoot.SchedulerStatus, error) {
+func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 	return api.GetSchedulerStatus(h.scheduler)
 }
 
 // Implements SetSchedulerStatus Cloud Scoot API
-func (h *Handler) SetSchedulerStatus(ctx context.Context, maxNumTasks int32) error {
+func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 	return api.SetSchedulerStatus(h.scheduler, maxNumTasks)
 }

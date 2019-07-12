@@ -2,8 +2,6 @@
 package thrifthelpers
 
 import (
-	"context"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -31,7 +29,7 @@ func JsonSerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	protocol := thrift.NewTJSONProtocol(transport)
 
 	d := &thrift.TSerializer{Transport: transport, Protocol: protocol}
-	serializedValue, err := d.Write(context.Background(), sourceStruct)
+	serializedValue, err := d.Write(sourceStruct)
 
 	return serializedValue, err
 }
@@ -59,7 +57,7 @@ func BinarySerialize(sourceStruct thrift.TStruct) (b []byte, err error) {
 	}
 
 	d := thrift.NewTSerializer()
-	serializedValue, err := d.Write(context.Background(), sourceStruct)
+	serializedValue, err := d.Write(sourceStruct)
 
 	return serializedValue, err
 }
