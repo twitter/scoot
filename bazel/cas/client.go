@@ -5,6 +5,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
@@ -51,8 +52,11 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil, nil
 	}
+	try := 1
 	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		bytes, err = byteStreamRead(r, digest)
+		try += 1
 		if IsNotFoundError(err) {
 			return nil
 		}
@@ -122,8 +126,12 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil
 	}
+	try := 1
 	backoff.Retry(func() error {
-		return byteStreamWrite(r, digest, data)
+		log.Debugf("Try #%d", try)
+		err = byteStreamWrite(r, digest, data)
+		try += 1
+		return err
 	}, b)
 	return err
 }
@@ -181,8 +189,11 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
 func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
+	try := 1
 	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		ar, err = getCacheResult(r, digest)
+		try += 1
 		if IsNotFoundError(err) {
 			return nil
 		}
@@ -228,8 +239,11 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 // Client function for UpdateActionResult requests. Takes a Resolver for ActionCache server and Digest/ActionResult to update.
 func UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
 	ar *remoteexecution.ActionResult, b backoff.BackOff) (out *remoteexecution.ActionResult, err error) {
+	try := 1
 	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		out, err = updateCacheResult(r, digest, ar)
+		try += 1
 		return err
 	}, b)
 	return out, err
