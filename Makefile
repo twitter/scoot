@@ -18,13 +18,13 @@ SCOOT_LOGLEVEL ?= info
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
 default:
-	go build $$(go list ./...)
+	go build ./...
 
 format:
-	go fmt $$(go list ./...)
+	go fmt ./...
 
 vet:
-	go vet $$(go list ./...)
+	go vet ./...
 
 ############## dependencies
 
@@ -112,7 +112,7 @@ clean: clean-data clean-mockgen clean-go
 ############## code gen for mocks, bindata configs, thrift, and protoc
 
 generate:
-	go generate $$(go list ./...)
+	go generate ./...
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
