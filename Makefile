@@ -36,7 +36,7 @@ dev-dependencies:
 
 	# Install go-bindata tool which is used to generate binary version of config file
 	# this is only used by go generate
-	go get github.com/twitter/go-bindata
+	go get github.com/twitter/go-bindata@2fa2cba09795
 
 	# check thrift, protoc versions
 ifneq ($(THRIFTVERSION),0.9.3)
