@@ -1,12 +1,6 @@
 package cas
 
-// To generate required mockgen files for these tests, from the Top Level github.com/twitter/scoot dir:
-//
-//	(prerequisite: go get google.golang.org/genproto/googleapis/bytestream)
-// 	mockgen google.golang.org/genproto/googleapis/bytestream ByteStreamClient,ByteStream_ReadClient,ByteStream_WriteClient > bazel/cas/mock_bytestream/bsclient_mock.go
-//	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context"
-//	this seems to be a go version/mock incompatability
-//
+//go:generate mockgen -destination=mock_bytestream/bsclient_mock.go google.golang.org/genproto/googleapis/bytestream ByteStreamClient,ByteStream_ReadClient,ByteStream_WriteClient
 
 import (
 	"bytes"

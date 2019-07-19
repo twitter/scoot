@@ -1,14 +1,6 @@
 package execution
 
-// To generate required mockgen files for these tests, from the Top Level github.com/twitter/scoot dir:
-//
-//  (prerequisite: go get google.golang.org/genproto/googleapis/longrunning)
-//  mockgen google.golang.org/genproto/googleapis/longrunning OperationsClient > bazel/execution/mock_longrunning/opclient_mock.go
-//	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context"
-//	this seems to be a go version/mock incompatability
-//
-// mockgen github.com/twitter/scoot/bazel/remoteexecution ExecutionClient,ActionCacheClient > bazel/execution/mock_remoteexecution/execclient_mock.go
-//	NOTE: in the generated file, replace the "context" import with "golang.org/x/net/context" and re fmt
+//go:generate mockgen -destination=mock_remoteexecution/execclient_mock.go github.com/twitter/scoot/bazel/remoteexecution ExecutionClient,ActionCacheClient
 
 import (
 	"testing"
