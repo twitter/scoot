@@ -5,6 +5,8 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/twitter/scoot"
 FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
+THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
+PROTOCVERSION := $(shell protoc --version | cut -d ' ' -f 2 | tr -d '\n')
 
 SHELL := /bin/bash -o pipefail
 
@@ -18,28 +20,41 @@ TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_
 default:
 	go build $$(go list ./...)
 
-dependencies:
-	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
-	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
-	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
-	go get github.com/golang/mock/mockgen
-
-	# Install go-bindata tool which is used to generate binary version of config file
-	# this is only used by go generate
-	go get github.com/twitter/go-bindata/...
-
-generate:
-	go generate $$(go list ./...)
-
 format:
 	go fmt $$(go list ./...)
 
+vet:
+	go vet $$(go list ./...)
+
+############## dependencies
+
+# tool dependencies for developer workflows only (regenerating test mocks, bindata, thrift or proto code)
+dev-dependencies:
+	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
+	# Both the binary and a mock checkout will be placed in $GOPATH
+	go get github.com/golang/mock/mockgen@58cd061d09382b6011f84c1291ebe50ef2e25bab
+
+	# Install go-bindata tool which is used to generate binary version of config file
+	# this is only used by go generate
+	go get github.com/twitter/go-bindata
+
+	# check thrift, protoc versions
+ifneq ($(THRIFTVERSION),0.9.3)
+	echo "Wanted thrift version 0.9.3, got $(THRIFTVERSION)"
+	exit 1
+endif
+
+ifneq ($(PROTOCVERSION),3.5.1)
+	echo "Wanted protoc version 3.5.1, got $(PROTOCVERSION)"
+	exit 1
+endif
+
+# universal dep needed to run scoot
 fs_util:
 	# Fetches fs_util tool from pantsbuild binaries
 	sh get_fs_util.sh
 
-vet:
-	go vet $$(go list ./...)
+############## tests and coverage
 
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
@@ -57,9 +72,9 @@ test-unit:
 	# Only invoked manually so we don't need to modify output
 	go test -count=1 -race -timeout 120s $$(go list ./...)
 
-testlocal: generate test
-
 test: test-unit-property-integration coverage
+
+############## standalone binary & integration tests
 
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
@@ -81,6 +96,8 @@ integrationtest:
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
 	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
+############## cleanup
+
 clean-mockgen:
 	rm */*_mock.go
 
@@ -92,9 +109,10 @@ clean-go:
 
 clean: clean-data clean-mockgen clean-go
 
-fullbuild: dependencies generate test
+############## code gen for mocks, bindata configs, thrift, and protoc
 
-travis: fs_util recoverytest swarmtest integrationtest test clean-data
+generate:
+	go generate $$(go list ./...)
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
@@ -118,7 +136,13 @@ thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 
 thrift: thrift-go
 
-# TODO no vendor dir
 bazel-proto:
-	cp vendor/github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2/remote_execution.proto bazel/remoteexecution/
+	# see bazel/remoteexecution/README.md
+	cp $(FIRSTGOPATH)/src/github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2/remote_execution.proto bazel/remoteexecution/
 	protoc -I bazel/remoteexecution/ -I ~/workspace/src/github.com/googleapis/googleapis/ bazel/remoteexecution/remote_execution.proto --go_out=plugins=grpc:bazel/remoteexecution
+
+############## top-level dev-fullbuild, travis targets
+
+dev-fullbuild: dev-dependencies generate test
+
+travis: fs_util recoverytest swarmtest integrationtest test clean-data
