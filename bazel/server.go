@@ -3,6 +3,7 @@ package bazel
 
 import (
 	"net"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/tap"
 
@@ -32,6 +34,7 @@ type GRPCConfig struct {
 	RateLimitPerSec   int    // Maximum incoming requests per second
 	BurstLimitPerSec  int    // Maximum per-burst incoming requests per second (within RateLimitPerSec)
 	ConcurrentStreams int    // Maximum concurrent GRPC streams allowed per client
+	MaxConnIdleMins   int    // Maximum time a connection can remain open until the server closes it
 }
 
 // Creates a new net.Listener with the configured address and limits
@@ -63,6 +66,14 @@ func (c *GRPCConfig) NewGRPCServer() *grpc.Server {
 		log.Infof("Setting concurrent streams limit: %d", c.ConcurrentStreams)
 		streamsOpt := grpc.MaxConcurrentStreams(uint32(c.ConcurrentStreams))
 		serverOpts = append(serverOpts, streamsOpt)
+	}
+
+	if c.MaxConnIdleMins > 0 {
+		log.Infof("Setting KeepaliveParams: max connection idle mins: %d", c.MaxConnIdleMins)
+		kpOpt := grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle: time.Duration(c.MaxConnIdleMins) * time.Minute,
+		})
+		serverOpts = append(serverOpts, kpOpt)
 	}
 
 	return grpchelpers.NewServer(serverOpts...)

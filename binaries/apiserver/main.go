@@ -36,6 +36,7 @@ func main() {
 	grpcRate := flag.Int("max_grpc_rps", cas.MaxRequestsPerSecond, "max grpc incoming requests per second")
 	grpcBurst := flag.Int("max_grpc_rps_burst", cas.MaxRequestsBurst, "max grpc incoming requests burst")
 	grpcStreams := flag.Int("max_grpc_streams", cas.MaxConcurrentStreams, "max grpc streams per client")
+	grpcIdleMins := flag.Int("max_grpc_idle_mins", bazel.MaxConnIdleMins, "max grpc connection idle time")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -104,6 +105,7 @@ func main() {
 				RateLimitPerSec:   *grpcRate,
 				BurstLimitPerSec:  *grpcBurst,
 				ConcurrentStreams: *grpcStreams,
+				MaxConnIdleMins:   *grpcIdleMins,
 			}
 		},
 	)
