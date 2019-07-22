@@ -30,10 +30,11 @@ func main() {
 	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
-	grpcConns := flag.Int("max_grpc_conn", 0, "max grpc listener connections")
-	grpcRate := flag.Int("max_grpc_rps", 0, "max grpc incoming requests per second")
-	grpcBurst := flag.Int("max_grpc_rps_burst", 0, "max grpc incoming requests burst")
-	grpcStreams := flag.Int("max_grpc_streams", 0, "max grpc streams per client")
+	grpcConns := flag.Int("max_grpc_conn", bazel.MaxSimultaneousConnections, "max grpc listener connections")
+	grpcRate := flag.Int("max_grpc_rps", bazel.MaxRequestsPerSecond, "max grpc incoming requests per second")
+	grpcBurst := flag.Int("max_grpc_rps_burst", bazel.MaxRequestsBurst, "max grpc incoming requests burst")
+	grpcStreams := flag.Int("max_grpc_streams", bazel.MaxConcurrentStreams, "max grpc streams per client")
+	grpcIdleMins := flag.Int("max_grpc_idle_mins", bazel.MaxConnIdleMins, "max grpc connection idle time")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -68,6 +69,7 @@ func main() {
 				RateLimitPerSec:   *grpcRate,
 				BurstLimitPerSec:  *grpcBurst,
 				ConcurrentStreams: *grpcStreams,
+				MaxConnIdleMins:   *grpcIdleMins,
 			}
 		},
 
