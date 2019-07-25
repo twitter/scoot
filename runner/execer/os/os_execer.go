@@ -395,7 +395,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	return result
 }
 
-func (p *osProcess) Abort() (result execer.ProcessStatus) {
+func (p *osProcess) Abort() (result *execer.ProcessStatus) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	if p.result != nil {
@@ -416,12 +416,17 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	}()
 	select {
 	case err = <-doneCh:
-		log.Info("Process aborted via SIGINT")
+		if err != nil {
+			log.Errorf("Error aborting command via SIGINT: %s", err)
+			err = p.Kill()
+		} else {
+			log.Info("Process aborted via SIGINT")
+		}
 	case <-time.After(10 * time.Second):
-		msg := "10 second timeout for graceful abort exceeded, killing command"
+		msg := "10 second timeout for graceful abort exceeded."
 		log.Error(msg)
-		result.Error += msg
-		err = p.cmd.Process.Kill()
+		result.Error += fmt.Sprintf(" %s. Killing command.", msg)
+		err = p.Kill()
 	}
 	if err != nil {
 		result.Error += "Couldn't kill process. Will still attempt cleanup."
@@ -433,6 +438,10 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		}
 	}
 	return result
+}
+
+func (p *osProcess) Kill() error {
+	return p.cmd.Process.Kill()
 }
 
 // Kill process along with all child processes, assuming no child processes called setpgid
