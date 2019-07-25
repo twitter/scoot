@@ -252,8 +252,7 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 		return 0, nil
 	}
 	if _, ok := allProcesses[pid]; !ok {
-		log.Errorf("%d was not present in list of all processes", pid)
-		return 0, nil
+		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
 	}
 	procGroupID := allProcesses[pid].pgid
 	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
