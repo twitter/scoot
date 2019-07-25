@@ -412,15 +412,15 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	doneCh := make(chan error)
 	var err error
 	go func() {
-		doneCh <- p.cmd.Process.Signal(os.Interrupt)
+		doneCh <- p.cmd.Process.Signal(syscall.SIGTERM)
 	}()
 	select {
 	case err = <-doneCh:
 		if err != nil {
-			log.Errorf("Error aborting command via SIGINT: %s", err)
+			log.Errorf("Error aborting command via SIGTERM: %s", err)
 			err = p.Kill()
 		} else {
-			log.Info("Process aborted via SIGINT")
+			log.Info("Process aborted via SIGTERM")
 		}
 	case <-time.After(10 * time.Second):
 		msg := "10 second timeout for graceful abort exceeded."
@@ -429,7 +429,7 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 		err = p.Kill()
 	}
 	if err != nil {
-		result.Error += "Couldn't kill process. Will still attempt cleanup."
+		result.Error += " Couldn't kill process. Will still attempt cleanup."
 	}
 	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
