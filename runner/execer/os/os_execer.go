@@ -203,7 +203,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 					memCh <- *p.result
 				}
 				p.mutex.Unlock()
-				p.Abort()
+				p.MemCapKill()
 				return
 			}
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
@@ -252,7 +252,8 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 		return 0, nil
 	}
 	if _, ok := allProcesses[pid]; !ok {
-		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
+		log.Errorf("%d was not present in list of all processes", pid)
+		return 0, nil
 	}
 	procGroupID := allProcesses[pid].pgid
 	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
@@ -395,17 +396,17 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	return result
 }
 
-func (p *osProcess) Abort() (result execer.ProcessStatus) {
+func (p *osProcess) Abort() execer.ProcessStatus {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	if p.result != nil {
 		return *p.result
 	} else {
-		p.result = &result
+		p.result = &execer.ProcessStatus{}
 	}
-	result.State = execer.FAILED
-	result.ExitCode = -1
-	result.Error = "Aborted."
+	p.result.State = execer.FAILED
+	p.result.ExitCode = -1
+	p.result.Error = "Aborted."
 
 	// Attempt to SIGTERM process, allowing for graceful exit
 	// SIGKILL after 10 seconds
@@ -425,23 +426,39 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	case <-time.After(10 * time.Second):
 		msg := "10 second timeout for graceful abort exceeded."
 		log.Error(msg)
-		result.Error += fmt.Sprintf(" %s. Killing command.", msg)
-		err = p.Kill()
+		p.KillAndWait(fmt.Sprintf(" %s. Killing command.", msg))
 	}
-	if err != nil {
-		result.Error += " Couldn't kill process. Will still attempt cleanup."
-	}
-	_, err = p.cmd.Process.Wait()
-	if err, ok := err.(*exec.ExitError); ok {
-		if status, ok := err.Sys().(syscall.WaitStatus); ok {
-			result.ExitCode = status.ExitStatus()
-		}
-	}
-	return result
+	return *p.result
 }
 
 func (p *osProcess) Kill() error {
 	return p.cmd.Process.Kill()
+}
+
+func (p *osProcess) MemCapKill() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.result == nil {
+		p.result = &execer.ProcessStatus{}
+	}
+	p.KillAndWait("Killed for memory usage over MemCap")
+}
+
+func (p *osProcess) KillAndWait(resultError string) {
+	p.result = &execer.ProcessStatus{}
+	p.result.State = execer.FAILED
+	p.result.ExitCode = -1
+	p.result.Error = resultError
+	err := p.Kill()
+	if err != nil {
+		p.result.Error += fmt.Sprintf(" Couldn't kill process: %s. Will still attempt cleanup.", err)
+	}
+	_, err = p.cmd.Process.Wait()
+	if err, ok := err.(*exec.ExitError); ok {
+		if status, ok := err.Sys().(syscall.WaitStatus); ok {
+			p.result.ExitCode = status.ExitStatus()
+		}
+	}
 }
 
 // Kill process along with all child processes, assuming no child processes called setpgid
