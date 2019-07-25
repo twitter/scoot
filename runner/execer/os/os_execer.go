@@ -407,7 +407,7 @@ func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	result.ExitCode = -1
 	result.Error = "Aborted."
 
-	// Attempt to SIGINT process, allowing for graceful exit
+	// Attempt to SIGTERM process, allowing for graceful exit
 	// SIGKILL after 10 seconds
 	doneCh := make(chan error)
 	var err error
