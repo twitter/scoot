@@ -395,7 +395,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	return result
 }
 
-func (p *osProcess) Abort() (result *execer.ProcessStatus) {
+func (p *osProcess) Abort() (result execer.ProcessStatus) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	if p.result != nil {
