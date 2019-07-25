@@ -425,7 +425,7 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 	case <-time.After(10 * time.Second):
 		msg := "10 second timeout for graceful abort exceeded."
 		log.Error(msg)
-		p.KillAndWait(fmt.Sprintf(" %s. Killing command.", msg))
+		p.KillAndWait(fmt.Sprintf("%s. Killing command.", msg))
 	}
 	return *p.result
 }
@@ -442,11 +442,11 @@ func (p *osProcess) MemCapKill() {
 	}
 	p.result.State = execer.FAILED
 	p.result.ExitCode = -1
-	p.result.Error = resultError
 	p.KillAndWait("Killed for memory usage over MemCap")
 }
 
 func (p *osProcess) KillAndWait(resultError string) {
+	p.result.Error += fmt.Sprintf(" %s", resultError)
 	err := p.Kill()
 	if err != nil {
 		p.result.Error += fmt.Sprintf(" Couldn't kill process: %s. Will still attempt cleanup.", err)
