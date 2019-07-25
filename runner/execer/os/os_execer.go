@@ -440,14 +440,13 @@ func (p *osProcess) MemCapKill() {
 	if p.result == nil {
 		p.result = &execer.ProcessStatus{}
 	}
+	p.result.State = execer.FAILED
+	p.result.ExitCode = -1
+	p.result.Error = resultError
 	p.KillAndWait("Killed for memory usage over MemCap")
 }
 
 func (p *osProcess) KillAndWait(resultError string) {
-	p.result = &execer.ProcessStatus{}
-	p.result.State = execer.FAILED
-	p.result.ExitCode = -1
-	p.result.Error = resultError
 	err := p.Kill()
 	if err != nil {
 		p.result.Error += fmt.Sprintf(" Couldn't kill process: %s. Will still attempt cleanup.", err)
