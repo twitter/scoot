@@ -16,7 +16,7 @@ SCOOT_LOGLEVEL ?= info
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
 default:
-	go build $$(go list ./... | grep -v vendor)
+	go build $$(go list ./... | grep -v /vendor/)
 
 dependencies:
 	# Populates the vendor directory to reflect the latest run of check-dependencies.
@@ -42,33 +42,33 @@ check-dependencies:
 	go get github.com/golang/mock/mockgen
 
 generate:
-	go generate $$(go list ./... | grep -v vendor)
+	go generate $$(go list ./... | grep -v /vendor/)
 
 format:
-	go fmt $$(go list ./... | grep -v vendor)
+	go fmt $$(go list ./... | grep -v /vendor/)
 
 fs_util:
 	# Fetches fs_util tool from pantsbuild binaries
 	sh get_fs_util.sh
 
 vet:
-	go vet $$(go list ./... | grep -v vendor)
+	go vet $$(go list ./... | grep -v /vendor/)
 
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
-	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v vendor | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v vendor | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
 
 test-unit:
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output
-	go test -count=1 -race -timeout 120s $$(go list ./... | grep -v vendor | grep -v /cmd/)
+	go test -count=1 -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
 
 testlocal: generate test
 

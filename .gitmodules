@@ -37,7 +37,7 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
-	branch = 62bee037599929a6e9146f29d10dd5208c43507d
+	branch = fc99dfbffb4e5ed5758a37e31dd861afe285406b
 [submodule "vendor/github.com/luci/go-render"]
 	path = vendor/github.com/luci/go-render
 	url = https://github.com/luci/go-render
