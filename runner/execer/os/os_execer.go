@@ -22,14 +22,19 @@ import (
 
 const bytesToKB = 1024
 
-func NewExecer() *osExecer {
-	return &osExecer{pg: &osProcGetter{}}
+// Used for mocking memCap monitoring
+type procGetter interface {
+	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
+	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
 }
 
-// For now memory can be capped on a per-execer basis rather than a per-command basis.
-// This is ok since we currently (Q1 2017) only support one run at a time in our codebase.
-func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
+type WriterDelegater interface {
+	// Return an underlying Writer. Why? Because some methods type assert to
+	// a more specific type and are more clever (e.g., if it's an *os.File, hook it up
+	// directly to a new process's stdout/stderr.)
+	// We care about this cleverness, so Output both is-a and has-a Writer
+	// Cf. runner/runners/local_output.go
+	WriterDelegate() io.Writer
 }
 
 type osExecer struct {
@@ -56,21 +61,16 @@ type proc struct {
 	rss  int
 }
 
-type procGetter interface {
-	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
-	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
+func NewExecer() *osExecer {
+	return &osExecer{pg: &osProcGetter{}}
 }
 
-type WriterDelegater interface {
-	// Return an underlying Writer. Why? Because some methods type assert to
-	// a more specific type and are more clever (e.g., if it's an *os.File, hook it up
-	// directly to a new process's stdout/stderr.)
-	// We care about this cleverness, so Output both is-a and has-a Writer
-	// Cf. runner/runners/local_output.go
-	WriterDelegate() io.Writer
+func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
+	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
 }
 
-func (e *osExecer) Exec(command execer.Command) (result execer.Process, err error) {
+// Start a command, monitor its memory, and return an &osProcess wrapper for it
+func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
 	}
@@ -131,10 +131,6 @@ func (e *osExecer) Exec(command execer.Command) (result execer.Process, err erro
 	return proc, nil
 }
 
-// TODO(rcouto): More we can do here to make sure we're
-// cleaning up after ourselves completely / not leaving
-// orphaned processes behind
-//
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
 func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
@@ -203,7 +199,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 					memCh <- *p.result
 				}
 				p.mutex.Unlock()
-				p.Abort()
+				p.MemCapKill()
 				return
 			}
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
@@ -249,7 +245,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	if _, ok := allProcesses[pid]; !ok {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
@@ -289,6 +285,7 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	return execer.Memory(total * bytesToKB), nil
 }
 
+// Get a full list of processes running, including their pid, pgid, ppid, and memory usage
 func (pg *osProcGetter) getProcs() (
 	allProcesses map[int]proc, processGroups map[int][]proc,
 	parentProcesses map[int][]proc, err error) {
@@ -302,6 +299,7 @@ func (pg *osProcGetter) getProcs() (
 	return pg.parseProcs(procs)
 }
 
+// Format processes into pgid and ppid groups for summation of memory usage
 func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, processGroups map[int][]proc,
 	parentProcesses map[int][]proc, err error) {
 	allProcesses = make(map[int]proc)
@@ -323,16 +321,11 @@ func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, p
 	return allProcesses, processGroups, parentProcesses, nil
 }
 
-/*
-Wait for the process to finish.
-
-If the command finishes without error return the status COMPLETE and exit Code 0.
-
-If the command fails, and we can get the exit code from the command, return COMPLETE with the failing exit code.
-
-if the command fails and we cannot get the exit code from the command, return FAILED and the error
-that prevented getting the exit code.
-*/
+// Wait for the process to finish.
+// If the command finishes without error return the status COMPLETE and exit Code 0.
+// If the command fails, and we can get the exit code from the command, return COMPLETE with the failing exit code.
+// if the command fails and we cannot get the exit code from the command, return FAILED and the error
+// that prevented getting the exit code.
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	// Wait for the output goroutines to finish then wait on the process itself to release resources.
 	p.wg.Wait()
@@ -395,29 +388,131 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 	return result
 }
 
-func (p *osProcess) Abort() (result execer.ProcessStatus) {
+// Attempt to SIGTERM process, allowing for graceful exit
+// SIGKILL after 10 seconds or if osProcess.cmd.Wait() returns an error
+func (p *osProcess) Abort() execer.ProcessStatus {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	if p.result != nil {
 		return *p.result
 	} else {
-		p.result = &result
+		p.result = &execer.ProcessStatus{}
 	}
-	result.State = execer.FAILED
-	result.ExitCode = -1
-	result.Error = "Aborted."
+	p.result.State = execer.FAILED
+	p.result.ExitCode = -1
+	p.result.Error = "Aborted."
 
-	err := p.cmd.Process.Kill()
+	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		msg := fmt.Sprintf("Error aborting command via SIGTERM: %s.", err)
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Errorf(msg)
+		p.KillAndWait(msg)
+	} else {
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Info("Aborting process via SIGTERM")
+	}
+
+	// Add buffer in case of race condition where both <-cmdDoneCh returns an error & timeout is exceeded at same time
+	errCh := make(chan error, 1)
+	go func() {
+		select {
+		case <-time.After(time.Second * 10):
+			errCh <- errors.New("10 second timeout exceeded.")
+		}
+	}()
+
+	cmdDoneCh := make(chan error)
+	go func() {
+		cmdDoneCh <- p.cmd.Wait()
+	}()
+
+	for {
+		select {
+		case err := <-cmdDoneCh:
+			if err != nil {
+				msg := fmt.Sprintf("Command failed to finish successfully: %v", err)
+				log.WithFields(
+					log.Fields{
+						"pid":    p.cmd.Process.Pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
+					}).Error(msg)
+				errCh <- errors.New(msg)
+				// Loop back and pull from errCh to force cleanup
+			} else {
+				log.WithFields(
+					log.Fields{
+						"pid":    p.cmd.Process.Pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
+					}).Info("Command finished via SIGTERM")
+				return *p.result
+			}
+		case msg := <-errCh:
+			log.WithFields(
+				log.Fields{
+					"pid":    p.cmd.Process.Pid,
+					"tag":    p.Tag,
+					"jobID":  p.JobID,
+					"taskID": p.TaskID,
+				}).Error(msg)
+			p.KillAndWait(fmt.Sprintf("%s. Killing command.", msg))
+			return *p.result
+		default:
+		}
+	}
+}
+
+// Kill osProcess for exceeding MemCap
+func (p *osProcess) MemCapKill() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.result == nil {
+		p.result = &execer.ProcessStatus{}
+	}
+	p.result.State = execer.FAILED
+	p.result.ExitCode = -1
+	p.KillAndWait("Killed for memory usage over MemCap")
+}
+
+// Kills osProcess via SIGKILL and all processes of its pgid
+func (p *osProcess) KillAndWait(resultError string) {
+	pgid, err := syscall.Getpgid(p.cmd.Process.Pid)
 	if err != nil {
-		result.Error = "Aborted. Couldn't kill process. Will still attempt cleanup."
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"error":  err,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Error("Error finding pgid")
+	} else {
+		defer cleanupProcs(pgid)
+	}
+	p.result.Error += fmt.Sprintf(" %s", resultError)
+	err = p.cmd.Process.Kill()
+	if err != nil {
+		p.result.Error += fmt.Sprintf(" Couldn't kill process: %s. Will still attempt cleanup.", err)
 	}
 	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
-			result.ExitCode = status.ExitStatus()
+			p.result.ExitCode = status.ExitStatus()
 		}
 	}
-	return result
 }
 
 // Kill process along with all child processes, assuming no child processes called setpgid
