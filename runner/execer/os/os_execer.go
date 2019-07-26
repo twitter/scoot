@@ -245,7 +245,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	if _, ok := allProcesses[pid]; !ok {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
@@ -402,34 +402,24 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 	p.result.ExitCode = -1
 	p.result.Error = "Aborted."
 
-	sigCh := make(chan error)
-	var err error
-
-	go func() {
-		sigCh <- p.cmd.Process.Signal(syscall.SIGTERM)
-	}()
-
-	select {
-	case err = <-sigCh:
-		if err != nil {
-			msg := fmt.Sprintf("Error aborting command via SIGTERM: %s.", err)
-			log.WithFields(
-				log.Fields{
-					"pid":    p.cmd.Process.Pid,
-					"tag":    p.Tag,
-					"jobID":  p.JobID,
-					"taskID": p.TaskID,
-				}).Errorf(msg)
-			p.KillAndWait(msg)
-		} else {
-			log.WithFields(
-				log.Fields{
-					"pid":    p.cmd.Process.Pid,
-					"tag":    p.Tag,
-					"jobID":  p.JobID,
-					"taskID": p.TaskID,
-				}).Info("Aborting process via SIGTERM")
-		}
+	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		msg := fmt.Sprintf("Error aborting command via SIGTERM: %s.", err)
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Errorf(msg)
+		p.KillAndWait(msg)
+	} else {
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Info("Aborting process via SIGTERM")
 	}
 
 	// Add buffer in case of race condition where both <-cmdDoneCh returns an error & timeout is exceeded at same time
@@ -448,9 +438,9 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 
 	for {
 		select {
-		case err = <-cmdDoneCh:
+		case err := <-cmdDoneCh:
 			if err != nil {
-				msg := fmt.Sprintf("Command failed to finish: %v", err)
+				msg := fmt.Sprintf("Command failed to finish successfully: %v", err)
 				log.WithFields(
 					log.Fields{
 						"pid":    p.cmd.Process.Pid,

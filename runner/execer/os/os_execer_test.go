@@ -96,17 +96,29 @@ func TestAbortCatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	pid := proc.(*osProcess).cmd.Process.Pid
+
 	time.Sleep(2 * time.Second)
-	usage, err := e.memUsage(proc.(*osProcess).cmd.Process.Pid)
+	usage, err := e.memUsage(pid)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if usage == 0 {
-		t.Fatalf("Expected usage to be >0 for process %d", proc.(*osProcess).cmd.Process.Pid)
+		t.Fatalf("Expected usage to be >0 for process %d", pid)
 	}
+
 	proc.Abort()
-	usage, err = e.memUsage(proc.(*osProcess).cmd.Process.Pid)
-	if usage != 0 && err == nil {
+	usage, err = e.memUsage(pid)
+	if usage != 0 {
+		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
+	}
+
+	time.Sleep(3 * time.Second)
+	usage, err = e.memUsage(pid)
+	if err == nil {
+		t.Fatalf("Expected %d to not exist as a process anymore.", pid)
+	}
+	if usage != 0 {
 		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
 }
