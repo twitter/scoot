@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/runner/execer"
@@ -83,19 +84,28 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 }
 
 func TestAbortCatch(t *testing.T) {
-	e := NewBoundedTestExecer(0, &testProcGetter{})
+	e := NewBoundedTestExecer(0, &osProcGetter{})
 	var stdout, stderr bytes.Buffer
 	cmd := execer.Command{
-		Argv:   []string{"bash", "-c", "trap ':' SIGTERM && while :; do sleep 1; done"},
+		Argv:   []string{"sh", "./trap_script.sh"},
 		Stderr: &stderr,
 		Stdout: &stdout,
 	}
+
 	proc, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	proc.Abort()
+	time.Sleep(2 * time.Second)
 	usage, err := e.memUsage(proc.(*osProcess).cmd.Process.Pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage == 0 {
+		t.Fatalf("Expected usage to be >0 for process %d", proc.(*osProcess).cmd.Process.Pid)
+	}
+	proc.Abort()
+	usage, err = e.memUsage(proc.(*osProcess).cmd.Process.Pid)
 	if usage != 0 && err == nil {
 		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
