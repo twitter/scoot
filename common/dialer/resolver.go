@@ -10,9 +10,10 @@ type Resolver interface {
 	// Resolve resolves a service, getting an address or URL
 	// If a Resolve() call completes successfully but finds no addresses, it will return ("", nil)
 	Resolve() (string, error)
-	// ResolveAll resolves a slice of all known addresses or URLs
-	// If a ResolveAll() call completes successfully but finds no addresses, it will return ([]string{}, nil)
-	ResolveAll() ([]string, error)
+	// ResolveMany resolves a slice of random addresses or URLs
+	// The int parameter specifies the maximum number of addresses to return. If 0, all addresses are returned.
+	// If the call completes successfully but finds no addresses, it will return ([]string{}, nil)
+	ResolveMany(int) ([]string, error)
 }
 
 // ConstantResolver always returns the same value
@@ -30,8 +31,8 @@ func (r *ConstantResolver) Resolve() (string, error) {
 	return r.s, nil
 }
 
-// ResolveAll returns the constant in a slice
-func (r *ConstantResolver) ResolveAll() ([]string, error) {
+// ResolveMany returns the constant in a slice
+func (r *ConstantResolver) ResolveMany(n int) ([]string, error) {
 	all := []string{}
 	if r.s != "" {
 		all = append(all, r.s)
@@ -54,8 +55,8 @@ func (r *EnvResolver) Resolve() (string, error) {
 	return os.Getenv(r.key), nil
 }
 
-// ResolveAll retuns the env key in a slice
-func (r *EnvResolver) ResolveAll() ([]string, error) {
+// ResolveMany retuns the env key in a slice
+func (r *EnvResolver) ResolveMany(n int) ([]string, error) {
 	all := []string{}
 	s, err := r.Resolve()
 	if s != "" {
@@ -86,10 +87,10 @@ func (r *CompositeResolver) Resolve() (string, error) {
 	return "", fmt.Errorf("could not resolve: no delegate resolved: %v", r.dels)
 }
 
-// ResolveAll resolves by resolving, in order, via delegates
-func (r *CompositeResolver) ResolveAll() ([]string, error) {
+// ResolveMany resolves by resolving, in order, via delegates
+func (r *CompositeResolver) ResolveMany(n int) ([]string, error) {
 	for _, r := range r.dels {
-		if s, err := r.ResolveAll(); len(s) != 0 || err != nil {
+		if s, err := r.ResolveMany(n); len(s) != 0 || err != nil {
 			return s, err
 		}
 	}

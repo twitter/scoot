@@ -102,7 +102,7 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 
 // Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
 func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
-	serverAddrs, err := bc.casResolver.ResolveAll()
+	serverAddrs, err := bc.casResolver.ResolveMany(maxResolveToFSUtil)
 	if err != nil {
 		return nil, nil, err
 	}

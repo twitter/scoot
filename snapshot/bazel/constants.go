@@ -22,4 +22,6 @@ const (
 	fsUtilCmdGlobWildCard = "**"
 
 	emptyID = bazel.SnapshotIDPrefix + "-" + bazel.EmptySha + "-0"
+
+	maxResolveToFSUtil = 10
 )
