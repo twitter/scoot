@@ -23,5 +23,5 @@ const (
 
 	emptyID = bazel.SnapshotIDPrefix + "-" + bazel.EmptySha + "-0"
 
-	maxResolveToFSUtil = 10
+	maxResolveToFSUtil = 5
 )
