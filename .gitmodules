@@ -21,7 +21,7 @@
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
-	branch = 7a6a684ca69eb4cae85ad0a484f2e531598c047b
+	branch = 045159ad57f3781d409358e3ade910a018c16b30
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
