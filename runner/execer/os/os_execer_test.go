@@ -1,6 +1,7 @@
 package os
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -78,6 +79,25 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*9*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.allProcesses, pg.processGroups, pg.parentProcesses)
+	}
+}
+
+func TestAbortCatch(t *testing.T) {
+	e := NewBoundedTestExecer(0, &testProcGetter{})
+	var stdout, stderr bytes.Buffer
+	cmd := execer.Command{
+		Argv:   []string{"bash", "-c", "trap ':' SIGTERM && while :; do sleep 1; done"},
+		Stderr: &stderr,
+		Stdout: &stdout,
+	}
+	proc, err := e.Exec(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proc.Abort()
+	usage, err := e.memUsage(proc.(*osProcess).cmd.Process.Pid)
+	if usage != 0 && err == nil {
+		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
 }
 

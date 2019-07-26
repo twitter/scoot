@@ -154,7 +154,7 @@ func TestMemCap(t *testing.T) {
 	case <-memCh:
 		if usage, err = e.memUsage(pid); err != nil {
 			// We don't return this error because it just means the process was already killed
-			log.Error("Error finding memUsage: %s", err)
+			log.Errorf("Error finding memUsage: %s", err)
 		}
 		if usage != 0 {
 			t.Fatalf("Expected usage to be 0MB, was: %dB", usage)
