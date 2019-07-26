@@ -26,6 +26,8 @@ type Checkouter interface {
 
 	// Create checkout in a caller controlled dir.
 	CheckoutAt(id string, dir string) (Checkout, error)
+
+	// TODO Cancel() interface? (would need for Ingester too)
 }
 
 // Checkout represents one checkout of a Snapshot.

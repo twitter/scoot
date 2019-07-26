@@ -115,6 +115,8 @@ func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
 		}
 	}
 
+	// TODO stop using Run - use Start() and then Wait()?
+	// what is the abort mechanism? Filers don't have a checkout abort...
 	log.Debugf("%s %s", fsUtilCmd, args)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

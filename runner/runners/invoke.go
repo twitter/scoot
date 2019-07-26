@@ -187,6 +187,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}()
 
 	select {
+	// TODO CLEANUPS REQUIRED (above Filer.Checkout operation)
 	case <-abortCh:
 		go func() {
 			if err := <-checkoutCh; err != nil {
@@ -444,6 +445,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}()
 
+			// TODO CLEANUP REQUIRED (Filer.Ingest call above) (ingestCh)
 			// Meaningful to support Abort after execer has completed?
 			var snapshotID string
 			select {
@@ -489,6 +491,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}()
 
+			// TODO CLEANUP REQUIRED (postProcessBazel call above) (ingestCh)
+			// need to, because this can call Ingest (fs_util)
 			// Meaningful to support Abort after execer has completed?
 			var actionResult *bazelapi.ActionResult
 			select {
