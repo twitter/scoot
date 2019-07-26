@@ -3,7 +3,9 @@ package cas
 import (
 	"fmt"
 
+	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
+	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
@@ -45,23 +47,21 @@ func IsNotFoundError(err error) bool {
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
-// If retries > 0, does simple retry attempts when encountering errors
-func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, retries int) (bytes []byte, err error) {
+func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (bytes []byte, err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil, nil
 	}
-	if retries < 0 {
-		retries = 0
-	}
-
-	for ; retries >= 0; retries-- {
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		bytes, err = byteStreamRead(r, digest)
-
-		if err == nil || IsNotFoundError(err) {
-			break
+		try += 1
+		if IsNotFoundError(err) {
+			return nil
 		}
-	}
+		return err
+	}, b)
 	return bytes, err
 }
 
@@ -121,23 +121,18 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 }
 
 // Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
-// If retries > 0, does simple retry attempts when encountering errors
-func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, retries int) (err error) {
+func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, b backoff.BackOff) (err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil
 	}
-	if retries < 0 {
-		retries = 0
-	}
-
-	for ; retries >= 0; retries-- {
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		err = byteStreamWrite(r, digest, data)
-
-		if err == nil {
-			break
-		}
-	}
+		try += 1
+		return err
+	}, b)
 	return err
 }
 
@@ -193,18 +188,17 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 }
 
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
-// If retries > 0, does simple retry attempts when encountering errors
-func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, retries int) (ar *remoteexecution.ActionResult, err error) {
-	if retries < 0 {
-		retries = 0
-	}
-	for ; retries >= 0; retries-- {
+func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		ar, err = getCacheResult(r, digest)
-
-		if err == nil || IsNotFoundError(err) {
-			break
+		try += 1
+		if IsNotFoundError(err) {
+			return nil
 		}
-	}
+		return err
+	}, b)
 	return ar, err
 }
 
@@ -243,19 +237,15 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 }
 
 // Client function for UpdateActionResult requests. Takes a Resolver for ActionCache server and Digest/ActionResult to update.
-// If retries > 0, does simple retry attempts when encountering errors
 func UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
-	ar *remoteexecution.ActionResult, retries int) (out *remoteexecution.ActionResult, err error) {
-	if retries < 0 {
-		retries = 0
-	}
-	for ; retries >= 0; retries-- {
+	ar *remoteexecution.ActionResult, b backoff.BackOff) (out *remoteexecution.ActionResult, err error) {
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
 		out, err = updateCacheResult(r, digest, ar)
-
-		if err == nil {
-			break
-		}
-	}
+		try += 1
+		return err
+	}, b)
 	return out, err
 }
 

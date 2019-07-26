@@ -32,7 +32,7 @@ func (c *setSchedulerStatus) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 
 	log.Info("Set the maximum number of (running + waiting) tasks we want the scheduler"+
 		" to run.  Note: the scheduler does not enforce this limit.  We expect the job"+
-		" requetor to adhere to it.", args)
+		" requestor to adhere to it.", args)
 
 	err := cl.scootClient.SetSchedulerStatus(int32(c.maxTasks))
 

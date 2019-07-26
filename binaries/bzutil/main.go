@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -199,7 +200,7 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 	// upload command to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, 1)
+	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
@@ -212,6 +213,8 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 			log.Fatalf("Error converting digest to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
 	}
 }
 
@@ -244,7 +247,7 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 	// upload action to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, 1)
+	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
@@ -257,6 +260,8 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 			log.Fatalf("Error converting digest to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
 	}
 }
 
@@ -279,6 +284,8 @@ func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
 			log.Fatalf("Error converting operation to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s\n", operation.GetName())
 	}
 }
 
@@ -296,6 +303,8 @@ func getOperation(execAddr, opName string, getJson bool) {
 			log.Fatalf("Error converting operation to JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s\n", operation.GetName())
 	}
 }
 

@@ -61,6 +61,7 @@ func Execute(r dialer.Resolver, actionDigest *remoteexecution.Digest, skipCache 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
 	}
+	defer cc.Close()
 
 	req := &remoteexecution.ExecuteRequest{
 		ActionDigest:    actionDigest,
@@ -77,13 +78,13 @@ func execFromClient(ec remoteexecution.ExecutionClient, req *remoteexecution.Exe
 	if err != nil {
 		return nil, err
 	}
+	defer execClient.CloseSend()
 
 	op, err := execClient.Recv()
 	if err != nil {
 		return nil, err
 	}
 
-	execClient.CloseSend()
 	return op, nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cenkalti/backoff"
 	"github.com/golang/mock/gomock"
 	uuid "github.com/nu7hatch/gouuid"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
@@ -70,7 +71,7 @@ func TestClientReadEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest, 0)
+	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest, backoff.NewConstantBackOff(0))
 	if data != nil || err != nil {
 		t.Fatal("Expected nil data and err from empty client read")
 	}
@@ -101,7 +102,7 @@ func TestClientWriteEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil, 0)
+	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil, backoff.NewConstantBackOff(0))
 	if err != nil {
 		t.Fatal("Expected nil err from empty client write")
 	}
