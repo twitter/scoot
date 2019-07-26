@@ -449,7 +449,7 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 						"taskID": p.TaskID,
 					}).Error(msg)
 				errCh <- errors.New(msg)
-				// Loop back and pull from cmdFailCh to force cleanup
+				// Loop back and pull from errCh to force cleanup
 			} else {
 				log.WithFields(
 					log.Fields{
