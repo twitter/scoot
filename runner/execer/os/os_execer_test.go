@@ -1,8 +1,10 @@
 package os
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/runner/execer"
@@ -78,6 +80,46 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*9*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.allProcesses, pg.processGroups, pg.parentProcesses)
+	}
+}
+
+func TestAbortCatch(t *testing.T) {
+	e := NewBoundedTestExecer(0, &osProcGetter{})
+	var stdout, stderr bytes.Buffer
+	cmd := execer.Command{
+		Argv:   []string{"sh", "./trap_script.sh"},
+		Stderr: &stderr,
+		Stdout: &stdout,
+	}
+
+	proc, err := e.Exec(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid := proc.(*osProcess).cmd.Process.Pid
+
+	time.Sleep(2 * time.Second)
+	usage, err := e.memUsage(pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if usage == 0 {
+		t.Fatalf("Expected usage to be >0 for process %d", pid)
+	}
+
+	proc.Abort()
+	usage, err = e.memUsage(pid)
+	if usage != 0 {
+		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
+	}
+
+	time.Sleep(3 * time.Second)
+	usage, err = e.memUsage(pid)
+	if err == nil {
+		t.Fatalf("Expected %d to not exist as a process anymore.", pid)
+	}
+	if usage != 0 {
+		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
 }
 
