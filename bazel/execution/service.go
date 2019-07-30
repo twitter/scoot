@@ -5,6 +5,7 @@ package execution
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
@@ -183,7 +184,7 @@ func (s *executionServer) GetOperation(
 	}()
 	defer s.stat.Latency(stats.BzGetOpLatency_ms).Time().Stop()
 
-	rs, err := s.getRunStatusAndValidate(req.Name)
+	rs, err := s.getRunStatusAndValidate(req.GetName())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -203,7 +204,7 @@ func (s *executionServer) GetOperation(
 
 	isDone := runStatusToDoneBool(rs)
 	op := longrunning.Operation{
-		Name:     req.Name,
+		Name:     req.GetName(),
 		Metadata: eomAsPBAny,
 		Done:     runStatusToDoneBool(rs),
 	}
@@ -245,8 +246,63 @@ func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOp
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
-func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOperationRequest) (*empty.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
+// Takes a CancelOperation request and kills the Operation via scoot's KillJob API.
+// Waits up to xxx seconds to verify the Operation has been terminated successfully
+// before returning
+func (s *executionServer) CancelOperation(_ context.Context, req *longrunning.CancelOperationRequest) (*empty.Empty, error) {
+	log.Debugf("Received CancelOperation request: %v", req)
+
+	var err error = nil
+
+	// Record metrics based on final error condition
+	defer func() {
+		if err == nil {
+			s.stat.Counter(stats.BzCancelOpSuccessCounter).Inc(1)
+		} else {
+			s.stat.Counter(stats.BzCancelOpFailureCounter).Inc(1)
+		}
+	}()
+	defer s.stat.Latency(stats.BzCancelOpLatency_ms).Time().Stop()
+
+	rs, err := s.killJobAndValidate(req.GetName())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	isDone := runStatusToDoneBool(rs)
+	if !isDone {
+		doneCh := make(chan bool)
+		errCh := make(chan error)
+		go func() {
+			for {
+				rs, err = s.getRunStatusAndValidate(req.GetName())
+				if err != nil {
+					errCh <- err
+				} else {
+					doneCh <- runStatusToDoneBool(rs)
+				}
+				time.Sleep(1 * time.Second)
+			}
+
+		}()
+		timeoutCh := time.NewTimer(time.Second * 10).C
+		for {
+			select {
+			case <-timeoutCh:
+				log.Error("Unable to verify Operation was successfully cancelled before timeout.")
+				// Still return nil error, as CancelOperation is best-effort
+				return &empty.Empty{}, nil
+			case err = <-errCh:
+				log.Errorf("Error getting run status & validating for cancelled operation: %s", err)
+			case b := <-doneCh:
+				if b {
+					log.Debug("CancelOperationRequest completed successfully")
+					return &empty.Empty{}, nil
+				}
+			}
+		}
+	}
+	log.Debug("CancelOperationRequest completed successfully")
+	return &empty.Empty{}, nil
 }
 
 // Internal functions
@@ -257,6 +313,26 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 		return nil, err
 	}
 	log.Debugf("Received job status %s", js)
+
+	err = validateBzJobStatus(js)
+	if err != nil {
+		return nil, err
+	}
+	loghelpers.LogRunStatus(js)
+
+	var rs runStatus
+	for _, rStatus := range js.GetTaskData() {
+		rs = runStatus{rStatus}
+	}
+	return &rs, nil
+}
+
+func (s *executionServer) killJobAndValidate(jobID string) (*runStatus, error) {
+	js, err := api.KillJob(jobID, s.scheduler, s.sagaCoord)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Received job status after kill request %s", js)
 
 	err = validateBzJobStatus(js)
 	if err != nil {
