@@ -115,8 +115,22 @@ func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
 		}
 	}
 
-	// TODO stop using Run - use Start() and then Wait()?
+	// TODO stop using Run - use a runner/execer/os execer?
+	// This starts an internal channel
+	// Cancel handlers send msg onto cancel channel, signalling os execer, etc.
 	// what is the abort mechanism? Filers don't have a checkout abort...
+	// Test
+	//
+	// BzFiler gets an Execer, AbortCh, mutex
+	//
+	// craft an execer/Command
+	// Wait on a processCh
+	// Open an abortCh and wait on it, too. Cancel's signal abortCh if not nil
+	// Do any assoc cleanups
+	// Bytes buffers are OK output, need to interpret ProcessState exit for return value
+	//
+	// Cancel outside of running Exec is a no-op (no abortCh open)
+	//	creation/closing/sending of abortCh should be mutexed
 	log.Debugf("%s %s", fsUtilCmd, args)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

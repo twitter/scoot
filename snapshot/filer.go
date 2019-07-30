@@ -27,7 +27,8 @@ type Checkouter interface {
 	// Create checkout in a caller controlled dir.
 	CheckoutAt(id string, dir string) (Checkout, error)
 
-	// TODO Cancel() interface? (would need for Ingester too)
+	// Request to cancel any current Checkouter operations
+	CancelCheckout() error
 }
 
 // Checkout represents one checkout of a Snapshot.
@@ -53,6 +54,9 @@ type Ingester interface {
 	// Takes a mapping of source paths to be copied into corresponding destination directories.
 	// Source paths are absolute, and destination directories are relative to Checkout root.
 	IngestMap(srcToDest map[string]string) (id string, err error)
+
+	// Request to cancel any current Ingester operations
+	CancelIngest() error
 }
 
 const NoDuration time.Duration = time.Duration(0)
@@ -93,6 +97,10 @@ func (dba *dbAdapter) CheckoutAt(id string, dir string) (Checkout, error) {
 	}
 }
 
+func (dba *dbAdapter) CancelCheckout() error {
+	return nil
+}
+
 func (dba *dbAdapter) Ingest(path string) (id string, err error) {
 	if ident, err := dba.db.IngestDir(path); err != nil {
 		return "", err
@@ -105,6 +113,10 @@ func (dba *dbAdapter) IngestMap(srcToDest map[string]string) (string, error) {
 	errMsg := "Not implemented"
 	log.Error(errMsg)
 	return "", fmt.Errorf(errMsg)
+}
+
+func (dba *dbAdapter) CancelIngest() error {
+	return nil
 }
 
 func (dba *dbAdapter) Update() error {

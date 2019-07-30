@@ -58,10 +58,12 @@ type Reader interface {
 	ExportGitCommit(id ID, exportRepo *repo.Repository) (commit string, err error)
 }
 
+// TODO remove this abstraction, or consolidate it with Filer
 // DB is the full read-write Snapshot Database, allowing creation and reading of Snapshots,
 // and updating of the underlying DB resource.
 type DB interface {
 	Creator
 	Reader
 	Updater
+	Cancel() error // Request to cancel in-progress operations
 }

@@ -2,9 +2,11 @@ package bazel
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
@@ -68,6 +70,12 @@ type BzFiler struct {
 	// an underlying tool that makes CAS requests on our behalf during Checkout and Ingest.
 	CASResolver dialer.Resolver
 	updater     snapshot.Updater
+
+	treeExecer execer.Execer
+
+	// synchronization
+	treeMutex sync.Mutex
+	abortCh ...
 }
 
 // Interface that specifies actions on directory tree structures for Bazel

@@ -37,6 +37,7 @@ type WriterDelegater interface {
 	WriterDelegate() io.Writer
 }
 
+// Implements runner/execer.Execer
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
 	memCap execer.Memory
@@ -44,6 +45,7 @@ type osExecer struct {
 	pg     procGetter
 }
 
+// Implements runner/execer.Process
 type osProcess struct {
 	cmd    *exec.Cmd
 	wg     *sync.WaitGroup

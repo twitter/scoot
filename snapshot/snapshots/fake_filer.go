@@ -94,6 +94,10 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 	return
 }
 
+func (t *tempFiler) CancelIngest() error {
+	return nil
+}
+
 func (t *tempFiler) Checkout(id string) (snapshot.Checkout, error) {
 	dir, err := t.tmp.TempDir("checkout-" + id + "__")
 	if err != nil {
@@ -123,6 +127,10 @@ func (t *tempFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error)
 	}, nil
 }
 
+func (t *tempFiler) CancelCheckout() error {
+	return nil
+}
+
 func (t *tempFiler) Update() error { return nil }
 
 func (t *tempFiler) UpdateInterval() time.Duration { return snapshot.NoDuration }
@@ -140,6 +148,9 @@ func (n *NoopIngester) Ingest(string) (string, error) {
 }
 func (n *NoopIngester) IngestMap(map[string]string) (string, error) {
 	return "", nil
+}
+func (n *NoopIngester) CancelIngest() error {
+	return nil
 }
 
 // Make an Updater that does nothing
