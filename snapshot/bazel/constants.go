@@ -23,5 +23,7 @@ const (
 
 	emptyID = bazel.SnapshotIDPrefix + "-" + bazel.EmptySha + "-0"
 
+	// limit amount of CAS addresses resolved in BzFiler calls to fs_util to this
+	// value, in order to limit number of connections
 	maxResolveToFSUtil = 5
 )

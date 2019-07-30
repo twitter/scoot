@@ -11,7 +11,7 @@ type Resolver interface {
 	// If a Resolve() call completes successfully but finds no addresses, it will return ("", nil)
 	Resolve() (string, error)
 	// ResolveMany resolves a slice of random addresses or URLs
-	// The int parameter specifies the maximum number of addresses to return. If 0, all addresses are returned.
+	// The int parameter specifies the maximum number of addresses to return. If <= 0, all addresses are returned.
 	// If the call completes successfully but finds no addresses, it will return ([]string{}, nil)
 	ResolveMany(int) ([]string, error)
 }
