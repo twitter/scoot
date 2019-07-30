@@ -67,7 +67,7 @@ func (r *BundlestoreResolver) Resolve() (string, error) {
 	return APIAddrToBundlestoreURI(s), nil
 }
 
-func (r *BundlestoreResolver) ResolveAll() ([]string, error) {
+func (r *BundlestoreResolver) ResolveMany(n int) ([]string, error) {
 	_, s, err := GetScootapiAddr()
 	if s == "" || err != nil {
 		return []string{}, err

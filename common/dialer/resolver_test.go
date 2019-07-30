@@ -17,7 +17,7 @@ func TestConstantResolver(t *testing.T) {
 		t.Fatalf("got: %s, want: %s", res, addr)
 	}
 
-	slice, err := c.ResolveAll()
+	slice, err := c.ResolveMany(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestEnvResolver(t *testing.T) {
 		t.Fatalf("got: %s, want: %s", res, addr)
 	}
 
-	slice, err := e.ResolveAll()
+	slice, err := e.ResolveMany(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestCompositeResolver(t *testing.T) {
 
 	os.Setenv("SCOOT_TEST_ADDR", addr2)
 
-	slice, err := e.ResolveAll()
+	slice, err := e.ResolveMany(0)
 	if err != nil {
 		t.Fatal(err)
 	}

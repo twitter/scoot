@@ -21,7 +21,7 @@
 [submodule "vendor/google.golang.org/grpc"]
 	path = vendor/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
-	branch = 7a6a684ca69eb4cae85ad0a484f2e531598c047b
+	branch = 045159ad57f3781d409358e3ade910a018c16b30
 [submodule "vendor/github.com/golang/protobuf"]
 	path = vendor/github.com/golang/protobuf
 	url = https://github.com/golang/protobuf
@@ -37,7 +37,7 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
-	branch = 62bee037599929a6e9146f29d10dd5208c43507d
+	branch = fc99dfbffb4e5ed5758a37e31dd861afe285406b
 [submodule "vendor/github.com/luci/go-render"]
 	path = vendor/github.com/luci/go-render
 	url = https://github.com/luci/go-render
