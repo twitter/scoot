@@ -22,10 +22,10 @@ const (
 	ResultAddressKey = "ActionCacheResult"
 
 	// GRPC Server connection-related setting limits recommended for CAS
-	MaxSimultaneousConnections = 200 // limits total simultaneous connections via the Listener
-	MaxRequestsPerSecond       = 100 // limits total incoming requests allowed per second
-	MaxRequestsBurst           = 20  // allows this many requests in a burst faster than MaxRPS average
-	MaxConcurrentStreams       = 10  // limits concurrent streams _per client_
+	MaxSimultaneousConnections = 1000 // limits total simultaneous connections via the Listener
+	MaxRequestsPerSecond       = 500  // limits total incoming requests allowed per second
+	MaxRequestsBurst           = 250  // allows this many requests in a burst faster than MaxRPS average
+	MaxConcurrentStreams       = 0    // limits concurrent streams _per client_
 )
 
 // Resource naming format guidelines
