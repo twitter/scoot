@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
@@ -57,6 +58,20 @@ func TestClientGetOperation(t *testing.T) {
 	_, _, err = ParseExecuteOperation(op)
 	if err != nil {
 		t.Fatalf("Error parsing resulting Operation: %s", err)
+	}
+}
+
+func TestClientCancelOperation(t *testing.T) {
+	testOperation := "testOp1"
+	cancelReq := &longrunning.CancelOperationRequest{Name: testOperation}
+
+	mockCtrl := gomock.NewController(t)
+	opClientMock := mock_longrunning.NewMockOperationsClient(mockCtrl)
+	opClientMock.EXPECT().CancelOperation(context.Background(), cancelReq).Return(&empty.Empty{}, nil)
+
+	_, err := cancelFromClient(opClientMock, cancelReq)
+	if err != nil {
+		t.Fatalf("Error on CancelOperation: %s", err)
 	}
 }
 

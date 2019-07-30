@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
@@ -41,6 +42,30 @@ func GetOperation(r dialer.Resolver, name string) (*longrunning.Operation, error
 
 func getFromClient(opc longrunning.OperationsClient, req *longrunning.GetOperationRequest) (*longrunning.Operation, error) {
 	return opc.GetOperation(context.Background(), req)
+}
+
+// Make a CancelOperation request against a server support the google.longrunning.operations API
+// Takes a Resolver and name of the Operation to Cancel
+func CancelOperation(r dialer.Resolver, name string) (*empty.Empty, error) {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	req := &longrunning.CancelOperationRequest{Name: name}
+
+	opc := longrunning.NewOperationsClient(cc)
+	return cancelFromClient(opc, req)
+}
+
+func cancelFromClient(opc longrunning.OperationsClient, req *longrunning.CancelOperationRequest) (*empty.Empty, error) {
+	return opc.CancelOperation(context.Background(), req)
 }
 
 // Google Bazel Execution client APIs
