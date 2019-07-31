@@ -11,6 +11,7 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -218,29 +219,38 @@ func (s *executionServer) GetOperation(
 		} else {
 			grpcs = runStatusToGoogleRpcStatus(rs)
 		}
-		res := &remoteexecution.ExecuteResponse{
-			Result:       actionResult.GetResult(),
-			CachedResult: actionResult.GetCached(),
-			Status:       grpcs,
-		}
-		resAsPBAny, err := marshalAny(res)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		op.Result = &longrunning.Operation_Response{
-			Response: resAsPBAny,
+		if grpcs.GetCode() == int32(google_rpc_code.Code_CANCELLED) {
+			op.Result = &longrunning.Operation_Error{
+				Error: &google_rpc_status.Status{
+					Code:    grpcs.GetCode(),
+					Message: "CANCELLED",
+				},
+			}
+		} else {
+			res := &remoteexecution.ExecuteResponse{
+				Result:       actionResult.GetResult(),
+				CachedResult: actionResult.GetCached(),
+				Status:       grpcs,
+			}
+			resAsPBAny, err := marshalAny(res)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			op.Result = &longrunning.Operation_Response{
+				Response: resAsPBAny,
+			}
 		}
 	}
-
 	log.Debug("GetOperationRequest completed successfully")
 	return &op, nil
 }
 
+// Unsupported
 func (s *executionServer) ListOperations(context.Context, *longrunning.ListOperationsRequest) (*longrunning.ListOperationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
-// TODO hook up to Job Kill API
+// Unsupported
 func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOperationRequest) (*empty.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
