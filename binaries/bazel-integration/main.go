@@ -17,7 +17,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/longrunning"
-	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	// google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/remoteexecution"
