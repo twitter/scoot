@@ -67,7 +67,6 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 	return co, nil
 }
 
-// TODO ch to cancel in flight bztree ops
 func (bf *BzFiler) CancelCheckout() error {
-	return nil
+	return bf.tree.cancel()
 }

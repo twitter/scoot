@@ -54,7 +54,7 @@ type Execer interface {
 	Exec(command Command) (Process, error)
 }
 
-// TODO why a separate interface from Execer?
+// TODO why not include directly in Execer?
 type Process interface {
 	// Blocks until the process terminates.
 	Wait() ProcessStatus
@@ -63,6 +63,7 @@ type Process interface {
 	Abort() ProcessStatus
 }
 
+// TODO when are these valid in what cases?
 type ProcessStatus struct {
 	State    ProcessState
 	ExitCode int

@@ -2,11 +2,9 @@ package bazel
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
@@ -62,24 +60,16 @@ type BzFiler struct {
 	keepCheckouts bool
 
 	// Public resolver exposes selection of server host:port for underlying connections to cas
-	// NOTE: we may want to introduce a custom resolver that limits the number of underlying
-	// resolve calls if these are costly (i.e. make a network request) and we make a high number
-	// of CAS requests.
 	// GRPC package provides tools for making client connection contexts that support
 	// retry and backoff configuration, but we currently have to expose the resolver to
 	// an underlying tool that makes CAS requests on our behalf during Checkout and Ingest.
 	CASResolver dialer.Resolver
 	updater     snapshot.Updater
-
-	treeExecer execer.Execer
-
-	// synchronization
-	treeMutex sync.Mutex
-	abortCh ...
 }
 
 // Interface that specifies actions on directory tree structures for Bazel
 type bzTree interface {
 	save(path string) (string, error)                     // Save a directory glob, return a SnapshotID as string
 	materialize(sha string, size int64, dir string) error // Unpack a tree from a sha into target directory
+	cancel() error                                        // Cancel an in-progress operation running on a tree
 }

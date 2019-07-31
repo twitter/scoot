@@ -26,7 +26,6 @@ func (bf *BzFiler) IngestMap(srcToDest map[string]string) (string, error) {
 	return "", fmt.Errorf(errMsg)
 }
 
-// TODO cancel ch to inflight bztree ops
 func (bf *BzFiler) CancelIngest() error {
-	return nil
+	return bf.tree.cancel()
 }
