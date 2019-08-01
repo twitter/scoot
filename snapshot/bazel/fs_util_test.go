@@ -241,8 +241,12 @@ func TestCancelOperation(t *testing.T) {
 		doneCh <- bc.exec(cmd)
 	}()
 
+	// simplest way to ensure cancel gets run after exec actually starts
 	go func() {
-		bc.cancel()
+		for {
+			bc.cancel()
+			time.Sleep(1 * time.Millisecond)
+		}
 	}()
 
 	select {
