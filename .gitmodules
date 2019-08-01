@@ -57,7 +57,7 @@
 [submodule "vendor/github.com/sirupsen/logrus"]
 	path = vendor/github.com/sirupsen/logrus
 	url = https://github.com/sirupsen/logrus
-    branch = 1ed61965b9e594bf37539680d7f63eccd060314f
+    branch = 839c75faf7f98a33d445d181f3018b5c3409a45e
 [submodule "vendor/github.com/bazelbuild/remote-apis"]
 	path = vendor/github.com/bazelbuild/remote-apis
 	url = https://github.com/bazelbuild/remote-apis
