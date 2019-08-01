@@ -17,9 +17,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/longrunning"
-	// google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/execution"
 	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -94,15 +95,16 @@ func testSuccessfulCommand(gopath string, clusterCmds *setup.Cmds) {
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
 	}
-	json.Unmarshal(b, op)
+	op, err = execution.ExtractOpFromJson(b)
+	if err != nil {
+		testhelpers.KillAndExit1(clusterCmds, err)
+	}
 	if !op.GetDone() {
 		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected operation to be Done. Op: %v", op))
 	}
-	// TODO: propagate op.Result through json Unmarshaling and verify op.Response is set per contract defined at
-	// https://github.com/googleapis/go-genproto/blob/c506a9f9061087022822e8da603a52fc387115a8/googleapis/longrunning/operations.pb.go#L50
-	// if op.GetResponse() == nil {
-	// 	testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected result to be set. Op: %v", op))
-	// }
+	if op.GetResponse() == nil {
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected result to be set. Op: %v", op))
+	}
 	log.Info("Operation completed successfully")
 }
 
@@ -136,7 +138,6 @@ func testCancelledCommand(gopath string, clusterCmds *setup.Cmds) {
 	// Get Operation and verify it was cancelled
 	time.Sleep(3 * time.Second)
 	b, err = getOperation(gopath, op.GetName())
-	log.Errorf("b: %s", string(b))
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, err)
 	}
@@ -144,17 +145,20 @@ func testCancelledCommand(gopath string, clusterCmds *setup.Cmds) {
 	if !op.GetDone() {
 		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected operation to be Done. Op: %v", op))
 	}
-	// TODO: propagate op.Result through json Unmarshaling and verify op.Error is set per contract defined at
-	// https://github.com/googleapis/go-genproto/blob/c506a9f9061087022822e8da603a52fc387115a8/googleapis/longrunning/operations.pb.go#L50
-	// if op.GetError() == nil {
-	// 	testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected result to be of type Operation_Error, was %+v", op.GetResult()))
-	// }
-	// if op.GetError().GetCode() != int32(google_rpc_code.Code_CANCELLED) {
-	// 	testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("op.Error.Code to be %d, was %d", google_rpc_code.Code_CANCELLED, op.GetError().GetCode()))
-	// }
-	// if op.GetError().GetMessage() != "CANCELLED" {
-	// 	testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("op.Error.Message to be 'CANCELLED', was %s", op.GetError().GetMessage()))
-	// }
+
+	op, err = execution.ExtractOpFromJson(b)
+	if err != nil {
+		testhelpers.KillAndExit1(clusterCmds, err)
+	}
+	if op.GetError() == nil {
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected result to be of type Operation_Error, was %+v", op.GetResult()))
+	}
+	if op.GetError().GetCode() != int32(google_rpc_code.Code_CANCELLED) {
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected op.Error.Code to be %d, was %d", google_rpc_code.Code_CANCELLED, op.GetError().GetCode()))
+	}
+	if op.GetError().GetMessage() != "CANCELLED" {
+		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Expected op.Error.Message to be 'CANCELLED', was %s", op.GetError().GetMessage()))
+	}
 
 	log.Info("Operation cancelled successfully")
 }
