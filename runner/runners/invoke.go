@@ -189,6 +189,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	select {
 	case <-abortCh:
 		go func() {
+			if err := inv.filerMap[runType].Filer.CancelCheckout(); err != nil {
+				log.Errorf("Error canceling checkout: %s", err)
+			}
 			if err := <-checkoutCh; err != nil {
 				// If there was an error there should be no lingering gitdb locks, so return.
 				return
@@ -278,8 +281,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	marker := "###########################################\n###########################################\n"
 	format := "%s\n\nDate: %v\nOut: %s\tErr: %s\tOutErr: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
-	// TODO We don't add headers for Bazel. Not clear if a switch for this would come at the Worker level
-	// (via Invoker -> QueueRunner construction) or Command level (job requestor specifies in e.g. a PlatformProperty)
+	// NOTE We don't add headers for Bazel.
+	// If we wanted to allow optionally, a switch for this would come either at the Worker level
+	// (via Invoker -> QueueRunner construction), or the Command level (job requestor specifies in e.g. a PlatformProperty)
 
 	// Processing/setup post checkout before execution
 	switch runType {
@@ -444,10 +448,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}()
 
-			// Meaningful to support Abort after execer has completed?
 			var snapshotID string
 			select {
 			case <-abortCh:
+				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
+					log.Errorf("Error canceling ingest: %s", err)
+				}
 				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			case res := <-ingestCh:
 				switch res.(type) {
@@ -489,10 +495,13 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				}
 			}()
 
-			// Meaningful to support Abort after execer has completed?
 			var actionResult *bazelapi.ActionResult
 			select {
 			case <-abortCh:
+				// postProcessBazel actions here can be calling Filer.Ingest on Bazel OutputFiles/Dirs
+				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
+					log.Errorf("Error canceling ingest: %s", err)
+				}
 				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			case res := <-ingestCh:
 				switch res.(type) {

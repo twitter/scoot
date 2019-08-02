@@ -57,7 +57,7 @@ func makeMockSagaCoordinator(t *testing.T) saga.SagaCoordinator {
 func makeMockScheduler(t *testing.T) *scheduler.MockScheduler {
 
 	scheduler := scheduler.NewMockScheduler(mockCtrl)
-	scheduler.EXPECT().KillJob("err").Return(fmt.Errorf("saw kil job request in scheduler"))
+	scheduler.EXPECT().KillJob("err").Return(fmt.Errorf("saw kill job request in scheduler"))
 	scheduler.EXPECT().KillJob("1").Return(nil)
 
 	return scheduler

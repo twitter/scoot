@@ -35,6 +35,7 @@ var uploadCmdStr string = "upload_command"
 var uploadActionStr string = "upload_action"
 var execCmdStr string = "execute"
 var getOpCmdStr string = "get_operation"
+var cancelOpCmdStr string = "cancel_operation"
 var supportedCommands map[string]bool = map[string]bool{
 	uploadCmdStr:    true,
 	uploadActionStr: true,
@@ -86,6 +87,13 @@ func main() {
 	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout")
 	getLogLevel := getCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
+	// Cancel Operation
+	cancelCommand := flag.NewFlagSet(cancelOpCmdStr, flag.ExitOnError)
+	cancelAddr := cancelCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	cancelName := cancelCommand.String("name", "", "Operation name to query")
+	cancelJson := cancelCommand.Bool("json", false, "Print operation as JSON to stdout")
+	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
+
 	// Parse input flags
 	if len(os.Args) < 2 {
 		printSupported()
@@ -100,6 +108,8 @@ func main() {
 		execCommand.Parse(os.Args[2:])
 	case getOpCmdStr:
 		getCommand.Parse(os.Args[2:])
+	case cancelOpCmdStr:
+		cancelCommand.Parse(os.Args[2:])
 	default:
 		printSupported()
 		os.Exit(1)
@@ -131,6 +141,12 @@ func main() {
 		}
 		parseAndSetLevel(*getLogLevel)
 		getOperation(*getAddr, *getName, *getJson)
+	} else if cancelCommand.Parsed() {
+		if *cancelName == "" {
+			log.Fatalf("name required for %s", cancelOpCmdStr)
+		}
+		parseAndSetLevel(*cancelLogLevel)
+		cancelOperation(*cancelAddr, *cancelName, *cancelJson)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -295,7 +311,6 @@ func getOperation(execAddr, opName string, getJson bool) {
 	if err != nil {
 		log.Fatalf("Error making GetOperation request: %s", err)
 	}
-
 	log.Info(execution.ExecuteOperationToStr(operation))
 	if getJson {
 		b, err := json.Marshal(operation)
@@ -305,6 +320,23 @@ func getOperation(execAddr, opName string, getJson bool) {
 		fmt.Printf("%s\n", b)
 	} else {
 		fmt.Printf("%s\n", operation.GetName())
+	}
+}
+
+func cancelOperation(execAddr, opName string, getJson bool) {
+	r := dialer.NewConstantResolver(execAddr)
+	emp, err := execution.CancelOperation(r, opName)
+	if err != nil {
+		log.Fatalf("Error making CancelOperation request: %s", err)
+	}
+	if getJson {
+		b, err := json.Marshal(emp)
+		if err != nil {
+			log.Fatalf("Error converting empty.Empty to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	} else {
+		fmt.Printf("%s\n", emp)
 	}
 }
 

@@ -29,6 +29,10 @@ func (c *noopCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, e
 	}, nil
 }
 
+func (c *noopCheckouter) CancelCheckout() error {
+	return nil
+}
+
 // MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
 func MakeTempCheckouter(tmp *temp.TempDir) snapshot.Checkouter {
 	return &tempCheckouter{tmp: tmp}
@@ -51,6 +55,10 @@ func (c *tempCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, e
 		path: dir,
 		id:   id,
 	}, nil
+}
+
+func (c *tempCheckouter) CancelCheckout() error {
+	return nil
 }
 
 type staticCheckout struct {

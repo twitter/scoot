@@ -29,7 +29,7 @@ func setup() (*temp.TempDir, *BzFiler) {
 		os.Exit(1)
 	}
 	bf := &BzFiler{
-		tree: noopBzTree{},
+		tree: &noopBzTree{},
 		tmp:  tmp,
 	}
 	return tmp, bf

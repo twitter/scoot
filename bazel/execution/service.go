@@ -11,6 +11,7 @@ import (
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
+	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -183,7 +184,7 @@ func (s *executionServer) GetOperation(
 	}()
 	defer s.stat.Latency(stats.BzGetOpLatency_ms).Time().Stop()
 
-	rs, err := s.getRunStatusAndValidate(req.Name)
+	rs, err := s.getRunStatusAndValidate(req.GetName())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -203,7 +204,7 @@ func (s *executionServer) GetOperation(
 
 	isDone := runStatusToDoneBool(rs)
 	op := longrunning.Operation{
-		Name:     req.Name,
+		Name:     req.GetName(),
 		Metadata: eomAsPBAny,
 		Done:     runStatusToDoneBool(rs),
 	}
@@ -218,35 +219,62 @@ func (s *executionServer) GetOperation(
 		} else {
 			grpcs = runStatusToGoogleRpcStatus(rs)
 		}
-		res := &remoteexecution.ExecuteResponse{
-			Result:       actionResult.GetResult(),
-			CachedResult: actionResult.GetCached(),
-			Status:       grpcs,
-		}
-		resAsPBAny, err := marshalAny(res)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		op.Result = &longrunning.Operation_Response{
-			Response: resAsPBAny,
+		if grpcs.GetCode() == int32(google_rpc_code.Code_CANCELLED) {
+			op.Result = &longrunning.Operation_Error{
+				Error: &google_rpc_status.Status{
+					Code:    grpcs.GetCode(),
+					Message: "CANCELLED",
+				},
+			}
+		} else {
+			res := &remoteexecution.ExecuteResponse{
+				Result:       actionResult.GetResult(),
+				CachedResult: actionResult.GetCached(),
+				Status:       grpcs,
+			}
+			resAsPBAny, err := marshalAny(res)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			op.Result = &longrunning.Operation_Response{
+				Response: resAsPBAny,
+			}
 		}
 	}
-
 	log.Debug("GetOperationRequest completed successfully")
 	return &op, nil
 }
 
+// Unsupported
 func (s *executionServer) ListOperations(context.Context, *longrunning.ListOperationsRequest) (*longrunning.ListOperationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
-// TODO hook up to Job Kill API
+// Unsupported
 func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOperationRequest) (*empty.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
-func (s *executionServer) CancelOperation(context.Context, *longrunning.CancelOperationRequest) (*empty.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
+// Takes a CancelOperation request and asynchronously starts cancellation on the specified Operation
+// via Scoot's KillJob API. Note that successful cancellation is not guaranteed. The client should use
+// GetOperation to determine if the cancellation succeeded
+func (s *executionServer) CancelOperation(_ context.Context, req *longrunning.CancelOperationRequest) (*empty.Empty, error) {
+	log.Debugf("Received CancelOperation request: %v", req)
+	go func() {
+		var err error = nil
+		// Record metrics based on final error condition
+		defer func() {
+			if err == nil {
+				s.stat.Counter(stats.BzCancelOpSuccessCounter).Inc(1)
+			} else {
+				s.stat.Counter(stats.BzCancelOpFailureCounter).Inc(1)
+			}
+		}()
+		defer s.stat.Latency(stats.BzCancelOpLatency_ms).Time().Stop()
+		err = s.killJobAndValidate(req.GetName())
+	}()
+
+	return &empty.Empty{}, nil
 }
 
 // Internal functions
@@ -269,4 +297,20 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 		rs = runStatus{rStatus}
 	}
 	return &rs, nil
+}
+
+func (s *executionServer) killJobAndValidate(jobID string) error {
+	js, err := api.KillJob(jobID, s.scheduler, s.sagaCoord)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Received job status after kill request %s", js)
+
+	err = validateBzJobStatus(js)
+	if err != nil {
+		return err
+	}
+	loghelpers.LogRunStatus(js)
+
+	return nil
 }

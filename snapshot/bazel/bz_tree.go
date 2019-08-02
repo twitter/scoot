@@ -4,38 +4,44 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/runner/execer"
+	osexecer "github.com/twitter/scoot/runner/execer/os"
 )
 
 // Implements snapshot/bazel/bzTree
 type bzCommand struct {
 	localStorePath string
 	casResolver    dialer.Resolver
-	// Currently, uses resolver for each underlying runCmd. In the future, we may
-	// want to limit the number of calls to Resolve if these happen too frequently.
-	//
+
 	// Not yet implemented:
 	// bypassLocalStore bool
 	// skipServer bool
+
+	// Fields for managing underlying invocations of the fs_util tool
+	execer  execer.Execer
+	mu      sync.Mutex
+	abortCh chan struct{}
 }
 
-func makeBzCommand(storePath string, resolver dialer.Resolver) bzCommand {
-	return bzCommand{
+func makeBzCommand(storePath string, resolver dialer.Resolver) *bzCommand {
+	return &bzCommand{
 		localStorePath: storePath,
 		casResolver:    resolver,
+		execer:         osexecer.NewExecer(),
 	}
 }
 
 // Saves the file/dir specified by path using the fsUtilCmd & validates the id format
 // Note: if there are any "irregular" files in path or path's parent dir (root) - e.g. *.sock
 // files, etc. - fs_util will fail to expand globs.
-func (bc bzCommand) save(path string) (string, error) {
+func (bc *bzCommand) save(path string) (string, error) {
 	fileType, err := getFileType(path)
 	if err != nil {
 		return "", err
@@ -50,13 +56,12 @@ func (bc bzCommand) save(path string) (string, error) {
 	}
 	log.Info(args)
 
-	stdout, _, err := bc.runCmd(args)
+	stdout, _, st, err := bc.runCmd(args)
 	if err != nil {
-		exitError, ok := err.(*exec.ExitError)
-		if ok {
-			return "", fmt.Errorf("Error: %s. Stderr: %s", err, exitError.Stderr)
-		}
-		return "", err
+		return "", fmt.Errorf("Error running command: %s", err)
+	}
+	if st.State != execer.COMPLETE || st.ExitCode != 0 || st.Error != "" {
+		return "", fmt.Errorf("Error execing save. ProcessStatus: %v", st)
 	}
 
 	err = validateFsUtilSaveOutput(stdout)
@@ -79,19 +84,21 @@ func (bc bzCommand) save(path string) (string, error) {
 }
 
 // Materializes the digest identified by sha in dir using the fsUtilCmd
-func (bc bzCommand) materialize(sha string, size int64, dir string) error {
+func (bc *bzCommand) materialize(sha string, size int64, dir string) error {
 	// short circuit if the input is empty, but create the target dir as fs_util would do
 	if sha == bazel.EmptySha {
 		return os.Mkdir(dir, 0777)
 	}
 
-	_, stderr, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
+	_, stderr, st, err := bc.runCmd([]string{fsUtilCmdDirectory, fsUtilCmdMaterialize, sha, strconv.FormatInt(size, 10), dir})
 	if err != nil {
-		exitError, ok := err.(*exec.ExitError)
-		if ok {
-			return &CheckoutNotExistError{Err: fmt.Sprintf("Error: %s. Stderr: %s", err, exitError.Stderr)}
-		}
-		return err
+		return fmt.Errorf("Error running command: %s", err)
+	}
+	if st.State == execer.COMPLETE && st.ExitCode != 0 {
+		// Interpret normal run with non-0 exit as "this didn't exist"
+		return &CheckoutNotExistError{Err: fmt.Sprintf("Error -  ProcessStatus: %v", st)}
+	} else if st.State != execer.COMPLETE || st.ExitCode != 0 || st.Error != "" {
+		return fmt.Errorf("Error execing materialize. ProcessStatus: %v", st)
 	}
 
 	// temporarily dump stderr to program's stderr
@@ -100,11 +107,22 @@ func (bc bzCommand) materialize(sha string, size int64, dir string) error {
 	return nil
 }
 
-// Runs fsUtilCmd as an os/exec.Cmd with appropriate flags
-func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
+// send a signal on the abortCh if there is an exec running
+func (bc *bzCommand) cancel() error {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	if bc.abortCh != nil {
+		bc.abortCh <- struct{}{}
+	}
+	return nil
+}
+
+// Runs fsUtilCmd via an execer with appropriate flags
+func (bc *bzCommand) runCmd(args []string) ([]byte, []byte, execer.ProcessStatus, error) {
 	serverAddrs, err := bc.casResolver.ResolveMany(maxResolveToFSUtil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, execer.ProcessStatus{}, err
 	}
 
 	// localStorePath required, add serverAddrs if resolved
@@ -113,20 +131,65 @@ func (bc bzCommand) runCmd(args []string) ([]byte, []byte, error) {
 		for _, addr := range serverAddrs {
 			args = append([]string{fsUtilCmdServerAddr, addr}, args...)
 		}
+		log.Debugf("%s %s", fsUtilCmd, args)
 	}
 
-	log.Debugf("%s %s", fsUtilCmd, args)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd := exec.Command(fsUtilCmd, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	return stdout.Bytes(), stderr.Bytes(), err
+	argv := append([]string{fsUtilCmd}, args...)
+
+	cmd := execer.Command{
+		Argv:   argv,
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+
+	st := bc.exec(cmd)
+
+	return stdout.Bytes(), stderr.Bytes(), st, nil
+}
+
+func (bc *bzCommand) exec(c execer.Command) execer.ProcessStatus {
+	bc.startupCh()
+	p, err := bc.execer.Exec(c)
+
+	if err != nil {
+		return execer.ProcessStatus{
+			State:    execer.FAILED,
+			ExitCode: 0,
+			Error:    fmt.Sprintf("failed to exec command: %s", err)}
+	}
+
+	processCh := make(chan execer.ProcessStatus, 1)
+	go func() { processCh <- p.Wait() }()
+	var st execer.ProcessStatus
+
+	select {
+	case st = <-processCh:
+	case <-bc.abortCh:
+		st = p.Abort()
+	}
+
+	bc.shutdownCh()
+	return st
+}
+
+func (bc *bzCommand) startupCh() {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	bc.abortCh = make(chan struct{})
+}
+
+func (bc *bzCommand) shutdownCh() {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+	close(bc.abortCh)
+	bc.abortCh = nil
 }
 
 // Noop bzTree for stub testing
 type noopBzTree struct{}
 
-func (bc noopBzTree) save(path string) (string, error)                     { return "", nil }
-func (bc noopBzTree) materialize(sha string, size int64, dir string) error { return nil }
+func (bc *noopBzTree) save(path string) (string, error)                     { return "", nil }
+func (bc *noopBzTree) materialize(sha string, size int64, dir string) error { return nil }
+func (bc *noopBzTree) cancel() error                                        { return nil }
