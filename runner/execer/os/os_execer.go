@@ -20,8 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const bytesToKB = 1024
-
 // Used for mocking memCap monitoring
 type procGetter interface {
 	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
@@ -47,10 +45,12 @@ type osExecer struct {
 
 // Implements runner/execer.Process
 type osProcess struct {
-	cmd    *exec.Cmd
-	wg     *sync.WaitGroup
-	result *execer.ProcessStatus
-	mutex  sync.Mutex
+	cmd     *exec.Cmd
+	wg      *sync.WaitGroup
+	waiting bool
+	result  *execer.ProcessStatus
+	mutex   sync.Mutex
+	ats     int // Abort Timeout before sigkill, in Seconds
 	tags.LogTags
 }
 
@@ -126,7 +126,7 @@ func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 		return nil, err
 	}
 
-	proc := &osProcess{cmd: cmd, wg: &wg, LogTags: command.LogTags}
+	proc := &osProcess{cmd: cmd, wg: &wg, ats: AbortTimeoutSec, LogTags: command.LogTags}
 	if e.memCap > 0 {
 		go e.monitorMem(proc, command.MemCh)
 	}
@@ -219,20 +219,22 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 						"taskID":      p.TaskID,
 					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
 
-				// Debug output with timeout since it seems CombinedOutput() sometimes fails to return.
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-				ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
-				log.WithFields(
-					log.Fields{
-						"pid":    pid,
-						"ps":     string(ps),
-						"err":    err,
-						"errCtx": ctx.Err(),
-						"tag":    p.Tag,
-						"jobID":  p.JobID,
-						"taskID": p.TaskID,
-					}).Tracef("ps after increasing mem_cap utilization for pid %d", pid)
-				cancel()
+				// Trace output with timeout since it seems CombinedOutput() sometimes fails to return.
+				if log.IsLevelEnabled(log.TraceLevel) {
+					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+					ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+					log.WithFields(
+						log.Fields{
+							"pid":    pid,
+							"ps":     string(ps),
+							"err":    err,
+							"errCtx": ctx.Err(),
+							"tag":    p.Tag,
+							"jobID":  p.JobID,
+							"taskID": p.TaskID,
+						}).Tracef("ps after increasing mem_cap utilization for pid %d", pid)
+					cancel()
+				}
 
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
@@ -329,9 +331,14 @@ func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, p
 // if the command fails and we cannot get the exit code from the command, return FAILED and the error
 // that prevented getting the exit code.
 func (p *osProcess) Wait() (result execer.ProcessStatus) {
+	p.mutex.Lock()
+	p.waiting = true
+	p.mutex.Unlock()
+
 	// Wait for the output goroutines to finish then wait on the process itself to release resources.
 	p.wg.Wait()
 	pid := p.cmd.Process.Pid
+
 	err := p.cmd.Wait()
 	log.WithFields(
 		log.Fields{
@@ -343,21 +350,24 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
+	p.waiting = false
 
-	// Debug output with timeout since it seems CombinedOutput() sometimes fails to return.
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	ps, errDbg := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
-	log.WithFields(
-		log.Fields{
-			"pid":    pid,
-			"tag":    p.Tag,
-			"jobID":  p.JobID,
-			"taskID": p.TaskID,
-			"ps":     string(ps),
-			"err":    errDbg,
-			"errCtx": ctx.Err(),
-		}).Tracef("Current ps for pid %d", pid)
-	cancel()
+	// Trace output with timeout since it seems CombinedOutput() sometimes fails to return.
+	if log.IsLevelEnabled(log.TraceLevel) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ps, errDbg := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+		log.WithFields(
+			log.Fields{
+				"pid":    pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+				"ps":     string(ps),
+				"err":    errDbg,
+				"errCtx": ctx.Err(),
+			}).Tracef("Current ps for pid %d", pid)
+		cancel()
+	}
 
 	if p.result != nil {
 		return *p.result
@@ -402,7 +412,7 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 	}
 	p.result.State = execer.FAILED
 	p.result.ExitCode = -1
-	p.result.Error = "Aborted."
+	p.result.Error = "Aborted"
 
 	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		msg := fmt.Sprintf("Error aborting command via SIGTERM: %s.", err)
@@ -428,21 +438,65 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 	errCh := make(chan error, 1)
 	go func() {
 		select {
-		case <-time.After(time.Second * 10):
-			errCh <- errors.New("10 second timeout exceeded.")
+		case <-time.After(time.Second * time.Duration(p.ats)):
+			errCh <- errors.New(fmt.Sprintf("%d second timeout exceeded.", p.ats))
 		}
 	}()
 
 	cmdDoneCh := make(chan error)
-	go func() {
-		cmdDoneCh <- p.cmd.Wait()
-	}()
+
+	// Wait in the process if nothing already has claimed it;
+	// if cmd.Wait() was already called, calling it again is an immediate error.
+	// If already called, just poll periodically if the process has exited
+	if !p.waiting {
+		go func() {
+			// p.wg ignored
+			cmdDoneCh <- p.cmd.Wait()
+		}()
+	} else {
+		go func() {
+			timeout := time.Now().Add(time.Second * time.Duration(p.ats))
+			for time.Now().Before(timeout) {
+				// note that we can't rely on ProcessState.Exited() - not true when p is signaled
+				if p.cmd.ProcessState != nil {
+					cmdDoneCh <- nil
+					return
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		}()
+	}
 
 	for {
 		select {
 		case err := <-cmdDoneCh:
+			sigtermed := false
+			if err == nil {
+				sigtermed = true
+			}
 			if err != nil {
-				msg := fmt.Sprintf("Command failed to finish successfully: %v", err)
+				if err, ok := err.(*exec.ExitError); ok {
+					if status, ok := err.Sys().(syscall.WaitStatus); ok {
+						if status.Signaled() {
+							sigtermed = true
+						}
+					}
+				}
+			}
+
+			if sigtermed {
+				log.WithFields(
+					log.Fields{
+						"pid":    p.cmd.Process.Pid,
+						"tag":    p.Tag,
+						"jobID":  p.JobID,
+						"taskID": p.TaskID,
+					}).Info("Command finished via SIGTERM")
+				p.result.Error += " (SIGTERM)"
+				return *p.result
+			} else {
+				// We weren't able to infer the task exited either normally or due to sigterm
+				msg := fmt.Sprintf("Command failed to terminate successfully: %v", err)
 				log.WithFields(
 					log.Fields{
 						"pid":    p.cmd.Process.Pid,
@@ -452,15 +506,6 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 					}).Error(msg)
 				errCh <- errors.New(msg)
 				// Loop back and pull from errCh to force cleanup
-			} else {
-				log.WithFields(
-					log.Fields{
-						"pid":    p.cmd.Process.Pid,
-						"tag":    p.Tag,
-						"jobID":  p.JobID,
-						"taskID": p.TaskID,
-					}).Info("Command finished via SIGTERM")
-				return *p.result
 			}
 		case msg := <-errCh:
 			log.WithFields(
@@ -471,6 +516,7 @@ func (p *osProcess) Abort() execer.ProcessStatus {
 					"taskID": p.TaskID,
 				}).Error(msg)
 			p.KillAndWait(fmt.Sprintf("%s. Killing command.", msg))
+			p.result.Error += " (SIGKILL)"
 			return *p.result
 		default:
 		}
