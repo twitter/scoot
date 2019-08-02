@@ -5,11 +5,14 @@ package bazel
 import (
 	"os/exec"
 	"testing"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/runner/execer"
+	"github.com/twitter/scoot/runner/execer/execers"
 )
 
 // uses test vars and setup/teardown defined in filer_test.go
@@ -214,5 +217,44 @@ func TestMaterializeEmptyDir(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// test cancellation functionality
+func TestCancelOperation(t *testing.T) {
+	_, err := tmpTest.TempDir("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bf := makeTestingFiler()
+	// Override bf's bzCommand's execer with a sim execer
+	bc := bf.tree.(*bzCommand)
+	bc.execer = execers.NewSimExecer()
+
+	cmd := execer.Command{
+		Argv: []string{"pause", "complete 0"},
+	}
+	doneCh := make(chan execer.ProcessStatus)
+
+	go func() {
+		doneCh <- bc.exec(cmd)
+	}()
+
+	// simplest way to ensure cancel gets run after exec actually starts
+	go func() {
+		for {
+			bc.cancel()
+			time.Sleep(1 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case st := <-doneCh:
+		if st.State != execer.FAILED {
+			t.Fatalf("Expected state after Abort: %s, got: %s", execer.FAILED, st.State)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Hit unexpected timeout waiting for bzCommand exec to finish/abort")
 	}
 }

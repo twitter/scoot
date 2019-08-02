@@ -262,6 +262,9 @@ func (pdb *pausingDB) Update() error {
 func (pdb *pausingDB) UpdateInterval() time.Duration {
 	return time.Millisecond * 100
 }
+func (pdb *pausingDB) Cancel() error {
+	return nil
+}
 
 type erroringOutputCreator struct{}
 

@@ -3,6 +3,7 @@ package os
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,6 +84,44 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 	}
 }
 
+func TestAbortSigterm(t *testing.T) {
+	e := NewExecer()
+	cmd := execer.Command{
+		Argv: []string{"sleep", "1000"},
+	}
+
+	// test without Wait(). In this case result.Error should get set to
+	proc, err := e.Exec(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proc.(*osProcess).ats = 1
+
+	res := proc.Abort()
+	// error string could be implementation dependent
+	if !strings.Contains(res.Error, "SIGTERM") {
+		t.Fatalf("Expected error set with SIGTERM message, got: %s", res.Error)
+	}
+
+	// Abort and Wait can collide in the real world.
+	// However, in here, it's a data race.
+	// Uncomment and `go test` without the -race flag to verify this behavior.
+	/*proc, err = e.Exec(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proc.(*osProcess).ats = 1
+
+	go func() {
+		proc.Wait()
+	}()
+	time.Sleep(100 * time.Millisecond)
+	res = proc.Abort()
+	if !strings.Contains(res.Error, "SIGTERM") {
+		t.Fatalf("Expected error set with SIGTERM message, got: %s", res.Error)
+	}*/
+}
+
 func TestAbortCatch(t *testing.T) {
 	e := NewBoundedTestExecer(0, &osProcGetter{})
 	var stdout, stderr bytes.Buffer
@@ -97,8 +136,9 @@ func TestAbortCatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	pid := proc.(*osProcess).cmd.Process.Pid
+	proc.(*osProcess).ats = 1
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 	usage, err := e.memUsage(pid)
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +153,7 @@ func TestAbortCatch(t *testing.T) {
 		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	usage, err = e.memUsage(pid)
 	if err == nil {
 		t.Fatalf("Expected %d to not exist as a process anymore.", pid)
