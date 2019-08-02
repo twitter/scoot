@@ -25,3 +25,7 @@ func (bf *BzFiler) IngestMap(srcToDest map[string]string) (string, error) {
 	log.Error(errMsg)
 	return "", fmt.Errorf(errMsg)
 }
+
+func (bf *BzFiler) CancelIngest() error {
+	return bf.tree.cancel()
+}

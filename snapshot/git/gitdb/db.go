@@ -480,3 +480,8 @@ func (db *DB) StreamName() string {
 	}
 	return ""
 }
+
+// Unimplemented
+func (db *DB) Cancel() error {
+	return nil
+}

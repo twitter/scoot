@@ -66,3 +66,7 @@ func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) 
 
 	return co, nil
 }
+
+func (bf *BzFiler) CancelCheckout() error {
+	return bf.tree.cancel()
+}

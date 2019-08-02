@@ -101,10 +101,11 @@ func TestMemUsage(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+	process.(*osProcess).ats = 1
 	defer process.Abort()
 	// Check for growing memory usage at [1.5, 3]s. Then check that the usage is between a reasonable min/max.
 	prevUsage := 0
-	sleepDuration := 1500 * time.Millisecond
+	sleepDuration := 500 * time.Millisecond
 	for i := 0; i < 2; i++ {
 		time.Sleep(sleepDuration)
 		if newUsage, err := e.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
@@ -115,8 +116,8 @@ func TestMemUsage(t *testing.T) {
 			prevUsage = int(newUsage)
 		}
 	}
-	if prevUsage < 15*1024*1024 {
-		t.Fatalf("Expected usage to be at least 20MB, was: %dB", prevUsage)
+	if prevUsage < 5*1024*1024 {
+		t.Fatalf("Expected usage to be at least 5MB, was: %dB", prevUsage)
 	}
 	if prevUsage > 50*1024*1024 {
 		t.Fatalf("Expected usage to be less than 50MB, was: %dB", prevUsage)
@@ -143,6 +144,7 @@ func TestMemCap(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+	process.(*osProcess).ats = 1
 	defer process.Abort()
 	pid := process.(*osProcess).cmd.Process.Pid
 	var usage execer.Memory
