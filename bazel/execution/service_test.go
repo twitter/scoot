@@ -1,7 +1,9 @@
 package execution
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
@@ -88,6 +90,46 @@ func TestGetOperation(t *testing.T) {
 	err = ptypes.UnmarshalAny(metadataAny, &metadata)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal metadata from any: %v", err)
+	}
+}
+
+// Determine that CancelOperation can accept a well-formed request and returns a well-formed response
+func TestCancelOperation(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	sc := scheduler.NewMockScheduler(mockCtrl)
+	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
+	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	sc.EXPECT().KillJob(gomock.Any()).Return(nil).Do(func(interface{}) { wg.Done() })
+	mockSagaLog.EXPECT().GetMessages(gomock.Any()).Return([]saga.SagaMessage{}, nil)
+
+	s := executionServer{
+		scheduler: sc,
+		sagaCoord: sagaC,
+		stat:      stats.NilStatsReceiver(),
+	}
+	ctx := context.Background()
+
+	req := longrunning.CancelOperationRequest{
+		Name: "testJobID",
+	}
+
+	_, err := s.CancelOperation(ctx, &req)
+	if err != nil {
+		t.Fatalf("Non-nil error from CancelOperation: %v", err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Timeout while attempting to cancel job. Likely means wg.Wait() was never called")
 	}
 }
 

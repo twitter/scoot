@@ -413,6 +413,13 @@ const (
 	BzGetOpFailureCounter = "bzGetOpFailureCounter"
 	BzGetOpLatency_ms     = "bzGetOpLatency_ms"
 
+	/*
+		Longrunning CancelOperation API metrics emitted by Scheduler
+	*/
+	BzCancelOpSuccessCounter = "bzCancelOpSuccessCounter"
+	BzCancelOpFailureCounter = "bzCancelOpFailureCounter"
+	BzCancelOpLatency_ms     = "bzCancelOpLatency_ms"
+
 	/****************************** Worker/Invoker Execution Timings ***************************/
 	/*
 		Execution metadata timing metrics emitted by Worker.
