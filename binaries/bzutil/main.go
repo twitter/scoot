@@ -41,6 +41,7 @@ var supportedCommands map[string]bool = map[string]bool{
 	uploadActionStr: true,
 	execCmdStr:      true,
 	getOpCmdStr:     true,
+	cancelOpCmdStr:  true,
 }
 
 func main() {
@@ -67,7 +68,8 @@ func main() {
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
 	actionAddr := uploadAction.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
-	actionRootDigest := uploadAction.String("input_root", "", "Input root digest as '<hash>/<size>'")
+	actionRootDigest := uploadAction.String("input_root", bazel.DigestToStr(bazel.EmptyDigest()),
+		"Input root digest as '<hash>/<size>' (default to empty)")
 	actionNoCache := uploadAction.Bool("no_cache", false, "Flag to prevent result caching")
 	actionJson := uploadAction.Bool("json", false, "Print action digest as JSON to stdout")
 	actionLogLevel := uploadAction.String("log_level", "", "Log everything at this level and above (error|info|debug)")
@@ -91,7 +93,6 @@ func main() {
 	cancelCommand := flag.NewFlagSet(cancelOpCmdStr, flag.ExitOnError)
 	cancelAddr := cancelCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	cancelName := cancelCommand.String("name", "", "Operation name to query")
-	cancelJson := cancelCommand.Bool("json", false, "Print operation as JSON to stdout")
 	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
 	// Parse input flags
@@ -146,7 +147,7 @@ func main() {
 			log.Fatalf("name required for %s", cancelOpCmdStr)
 		}
 		parseAndSetLevel(*cancelLogLevel)
-		cancelOperation(*cancelAddr, *cancelName, *cancelJson)
+		cancelOperation(*cancelAddr, *cancelName)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -312,6 +313,7 @@ func getOperation(execAddr, opName string, getJson bool) {
 		log.Fatalf("Error making GetOperation request: %s", err)
 	}
 	log.Info(execution.ExecuteOperationToStr(operation))
+	// We only use default Marshalling, which leaves most nested fields serialized
 	if getJson {
 		b, err := json.Marshal(operation)
 		if err != nil {
@@ -323,21 +325,14 @@ func getOperation(execAddr, opName string, getJson bool) {
 	}
 }
 
-func cancelOperation(execAddr, opName string, getJson bool) {
+func cancelOperation(execAddr, opName string) {
 	r := dialer.NewConstantResolver(execAddr)
-	emp, err := execution.CancelOperation(r, opName)
+	_, err := execution.CancelOperation(r, opName)
 	if err != nil {
 		log.Fatalf("Error making CancelOperation request: %s", err)
 	}
-	if getJson {
-		b, err := json.Marshal(emp)
-		if err != nil {
-			log.Fatalf("Error converting empty.Empty to JSON: %v", err)
-		}
-		fmt.Printf("%s\n", b)
-	} else {
-		fmt.Printf("%s\n", emp)
-	}
+	log.Info("CancelOperation request made successfully")
+	// No output
 }
 
 func printSupported() {

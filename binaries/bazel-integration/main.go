@@ -246,7 +246,7 @@ func getOperation(gopath, name string) ([]byte, error) {
 }
 
 func cancelOperation(gopath, name string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/bzutil", "cancel_operation", "--json", fmt.Sprintf("--name=%s", name)).Output()
+	return exec.Command(gopath+"/bin/bzutil", "cancel_operation", fmt.Sprintf("--name=%s", name)).Output()
 }
 
 func assertEqual(recvd, expected remoteexecution.Digest) error {

@@ -50,7 +50,7 @@ func TestClientGetOperation(t *testing.T) {
 		t.Fatalf("Error on GetOperation: %s", err)
 	}
 
-	_, _, err = ParseExecuteOperation(op)
+	_, _, _, err = ParseExecuteOperation(op)
 	if err != nil {
 		t.Fatalf("Error parsing resulting Operation: %s", err)
 	}
@@ -102,7 +102,7 @@ func TestClientExecute(t *testing.T) {
 		t.Fatalf("Error on Execute: %s", err)
 	}
 
-	_, _, err = ParseExecuteOperation(op)
+	_, _, _, err = ParseExecuteOperation(op)
 	if err != nil {
 		t.Fatalf("Error parsing resulting Operation: %s", err)
 	}
