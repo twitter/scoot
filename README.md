@@ -26,6 +26,11 @@ The Worker (workerserver) receives information about jobs and runs them, and is 
 
 Scoot work is broken down into independent jobs, which can consist of one or more tasks, which are executed sequentially.
 
+#### Go Version
+
+Scoot is intended to work with go modules. If this repository is on your GOPATH, please set GO111MODULE=on when
+working with go tools in this repository, and preferably use the Go distribution pinned in the .travis.yml file.
+
 ### Example
 
 Setup a scheduler and worker nodes locally:
