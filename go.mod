@@ -5,6 +5,7 @@ go 1.12
 require (
 	cloud.google.com/go v0.26.0 // indirect
 	github.com/apache/thrift v0.0.0-20160616201512-0e9fed1e12ed
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/client9/misspell v0.3.4 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
@@ -29,7 +30,7 @@ require (
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
-	google.golang.org/genproto v0.0.0-20171212231943-a8101f21cf98
-	google.golang.org/grpc v1.22.1
+	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
+	google.golang.org/grpc v1.14.0
 	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc // indirect
 )

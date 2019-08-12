@@ -7,6 +7,8 @@ PROJECT_URL := "https://github.com/twitter/scoot"
 FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
 THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
 PROTOCVERSION := $(shell protoc --version | cut -d ' ' -f 2 | tr -d '\n')
+GO111MODULE := on
+export GO111MODULE
 
 SHELL := /bin/bash -o pipefail
 
