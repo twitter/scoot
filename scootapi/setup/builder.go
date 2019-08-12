@@ -17,8 +17,6 @@ type Builder interface {
 	ApiServer() (string, error)
 }
 
-const repoName = "github.com/twitter/scoot"
-
 // GoBuilder uses the go command-line tools to build Scoot
 type GoBuilder struct {
 	cmds *Cmds
@@ -46,7 +44,8 @@ func GoPath() (string, error) {
 }
 
 func RepoRoot(goPath string) string {
-	return path.Join(goPath, "src", repoName)
+	rr, _ := os.Getwd()
+	return rr
 }
 
 // install runs go install and caches the results

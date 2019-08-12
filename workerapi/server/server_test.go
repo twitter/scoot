@@ -1,9 +1,9 @@
 package server
 
 import (
-	"fmt"
+	//"fmt"
 	log "github.com/sirupsen/logrus"
-	"testing"
+	//"testing"
 	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
@@ -23,7 +23,8 @@ import (
 /*
 Test the stats collected by the server's stats() goroutine:
 */
-func TestInitStats(t *testing.T) {
+// TODO DISABLED TEST - time.Sleep based tests have data races and need to be refactored
+/*func TestInitStats(t *testing.T) {
 
 	//setup the test environment
 	// create a worker - (starting the init activity)
@@ -95,12 +96,13 @@ func TestInitStats(t *testing.T) {
 		}) {
 		t.Fatal("init done stats test failed")
 	}
-}
+}*/
 
 /*
 Test the stats collected by the server's stats() goroutine:
 */
-func TestFailedRunsStats(t *testing.T) {
+// TODO DISABLED TEST - time.Sleep based tests have data races and need to be refactored
+/*func TestFailedRunsStats(t *testing.T) {
 
 	//setup the test environment
 	// create a worker - (starting the init activity)
@@ -125,7 +127,7 @@ func TestFailedRunsStats(t *testing.T) {
 		}) {
 		t.Fatal("init done stats test failed")
 	}
-}
+}*/
 
 func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRegistry stats.StatsRegistry, simExecer *execers.SimExecer) {
 

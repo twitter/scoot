@@ -4,13 +4,10 @@ dist: trusty
 language: go
 
 go:
-  - "1.10.x"
+  - "1.12.7"
 
-git:
-    submodules: false
-
-before_install:
-  - make dependencies
+env:
+  - GO111MODULE=on
 
 before_script:
   - make format

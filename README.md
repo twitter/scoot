@@ -3,7 +3,9 @@
 [![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
 [![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
 
-Scoot is infrastructure to make developer tools smaller, simpler, and more distributed. The core concept of Scoot is the Snapshot, which represents an immutable filesystem state. Scoot allows for execution of commands against input Snapshots to create new output Snapshots.
+Scoot is a distributed task runner.
+The core concept of Scoot is the Snapshot, which represents an immutable filesystem state.
+Scoot allows for execution of commands against input Snapshots to create new output Snapshots.
 
 ### Scoot Components
 
@@ -65,17 +67,15 @@ Install the Thrift tool and golang thrift repository locally using the following
 __Generating thrift files (scootapi used as an example)__
 See documentation in thrift definition files for specific generation instructions, or `make thrift`.
 
-# Installation Instructions
+# Development Installation Instructions
 ## Install 3rd party tools:
-### Thrift (version >= 0.9.3)
+### Thrift (version == 0.9.3)
 macOS:
 ```sh
-brew install thrift
+brew install thrift@0.9
 ```
 ### Thrift for go:
-```sh
-go get github.com/apache/thrift/lib/go/thrift
-```
+go modules will take care of this
 
 ## Install/Access Scoot Executables and libraries
 *cd to scoot directory (workspace/github.com/twitter/scoot)

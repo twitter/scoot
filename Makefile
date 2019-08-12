@@ -5,6 +5,8 @@ BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/twitter/scoot"
 FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
+THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
+PROTOCVERSION := $(shell protoc --version | cut -d ' ' -f 2 | tr -d '\n')
 
 SHELL := /bin/bash -o pipefail
 
@@ -16,63 +18,63 @@ SCOOT_LOGLEVEL ?= info
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
 default:
-	go build $$(go list ./... | grep -v /vendor/)
+	go build ./...
 
-dependencies:
-	# Populates the vendor directory to reflect the latest run of check-dependencies.
+format:
+	go fmt ./...
 
-	# Checkout our vendored dependencies.
-	# Note: The submodule dependencies must be initialized prior to running scoot binaries.
-	#       When used as a library, the vendor folder will be empty by default (if 'go get'd).
-	git submodule update --init --recursive
+vet:
+	go vet ./...
 
+############## dependencies
+
+# tool dependencies for developer workflows only (regenerating test mocks, bindata, thrift or proto code)
+dev-dependencies:
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
-	# Both the binary and a mock checkout will be placed in $GOPATH (duplicating the vendor checkout.)
-	# We use 'go get' here because 'go install' will not build out of our vendored mock repo.
-	go get github.com/golang/mock/mockgen
+	# Both the binary and a mock checkout will be placed in $GOPATH
+	go get github.com/golang/mock/mockgen@58cd061d09382b6011f84c1291ebe50ef2e25bab
 
 	# Install go-bindata tool which is used to generate binary version of config file
 	# this is only used by go generate
-	go get github.com/twitter/go-bindata/...
+	go get github.com/twitter/go-bindata@2fa2cba09795
 
-check-dependencies:
-	# Run this whenever a dependency is added.
-	# We run our own script to get all transitive dependencies. See github.com/pantsbuild/pants/issues/3606.
-	./deps.sh
-	go get github.com/golang/mock/mockgen
+	# check thrift, protoc versions
+ifneq ($(THRIFTVERSION),0.9.3)
+	echo "Wanted thrift version 0.9.3, got $(THRIFTVERSION)"
+	exit 1
+endif
 
-generate:
-	go generate $$(go list ./... | grep -v /vendor/)
+ifneq ($(PROTOCVERSION),3.5.1)
+	echo "Wanted protoc version 3.5.1, got $(PROTOCVERSION)"
+	exit 1
+endif
 
-format:
-	go fmt $$(go list ./... | grep -v /vendor/)
-
+# universal dep needed to run scoot
 fs_util:
 	# Fetches fs_util tool from pantsbuild binaries
 	sh get_fs_util.sh
 
-vet:
-	go vet $$(go list ./... | grep -v /vendor/)
+############## tests and coverage
 
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
-	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...) $(TRAVIS_FILTER)
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./... | grep -v /vendor/ | grep -v /cmd/) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./...) $(TRAVIS_FILTER)
 
 test-unit:
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output
-	go test -count=1 -race -timeout 120s $$(go list ./... | grep -v /vendor/ | grep -v /cmd/)
-
-testlocal: generate test
+	go test -count=1 -race -timeout 120s $$(go list ./...)
 
 test: test-unit-property-integration coverage
+
+############## standalone binary & integration tests
 
 swarmtest:
 	# Setup a local schedule against local workers (--strategy local.local)
@@ -94,6 +96,8 @@ integrationtest:
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
 	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
+############## cleanup
+
 clean-mockgen:
 	rm */*_mock.go
 
@@ -105,32 +109,38 @@ clean-go:
 
 clean: clean-data clean-mockgen clean-go
 
-fullbuild: dependencies generate test
+############## code gen for mocks, bindata configs, thrift, and protoc
 
-travis: dependencies fs_util recoverytest swarmtest integrationtest test clean-data
+generate:
+	go generate ./...
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
-	cd workerapi && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
+	cd workerapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
 	rm -rf workerapi/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
-	cd sched && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
+	cd sched && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
+	cd scootapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
 	rm -rf scootapi/gen-go/scoot/cloud_scoot-remote/
 
 thrift-bazel-go:
 	# Create generated code in github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/... from bazel.thrift
-	cd bazel/execution/bazelapi && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift && cd ..
+	cd bazel/execution/bazelapi && rm -rf gen-go && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift && cd ..
 
 thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
 
 thrift: thrift-go
 
 bazel-proto:
-	cp vendor/github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2/remote_execution.proto bazel/remoteexecution/
-	protoc -I bazel/remoteexecution/ -I ~/workspace/src/github.com/googleapis/googleapis/ bazel/remoteexecution/remote_execution.proto --go_out=plugins=grpc:bazel/remoteexecution
+	# see bazel/remoteexecution/README.md
+
+############## top-level dev-fullbuild, travis targets
+
+dev-fullbuild: dev-dependencies generate test
+
+travis: fs_util recoverytest swarmtest integrationtest test clean-data
