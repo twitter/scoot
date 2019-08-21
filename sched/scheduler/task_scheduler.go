@@ -278,7 +278,7 @@ func assign(
 		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
 			if groups, ok := nodeGroups[snapId]; ok {
 				for _, ns := range groups.idle {
-					if ns.suspended() {
+					if ns.suspended() || cs.isOfflined(ns) {
 						continue
 					}
 					snapshotId = snapId

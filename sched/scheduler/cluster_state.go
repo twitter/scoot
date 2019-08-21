@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -35,6 +36,15 @@ type clusterState struct {
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
+}
+
+func (c *clusterState) isOfflined(ns *nodeState) bool {
+	for _, v := range c.offlinedNodes {
+		if reflect.DeepEqual(v, ns) {
+			return true
+		}
+	}
+	return false
 }
 
 type nodeGroup struct {
