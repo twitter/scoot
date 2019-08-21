@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -40,7 +39,7 @@ type clusterState struct {
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
 	for _, v := range c.offlinedNodes {
-		if reflect.DeepEqual(v, ns) {
+		if v == ns {
 			return true
 		}
 	}
