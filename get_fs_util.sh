@@ -1,7 +1,8 @@
 #!/bin/bash
 # Pulls in fs_util tool for use in remote exec ingestion, checkout, and CAS ops
-set -e
+set -ex
 
+firstgopath=${GOPATH%%:*}
 pants_release="1.17.0rc0+git42969028"
 pants_release_url=$(echo $pants_release | sed 's/+/%2B/')
 
@@ -23,8 +24,6 @@ get_fs_util() {
 			;;
 	esac
 
-	firstgopath=${GOPATH%%:*}
-
     if [[ -f "$firstgopath/bin/fs_util-$pants_release" ]]; then
         echo "Target file exists locally"
         return
@@ -35,4 +34,5 @@ get_fs_util() {
     ln -s -f "$firstgopath/bin/fs_util-$pants_release" "$firstgopath/bin/fs_util"
 }
 
+mkdir -p "$firstgopath/bin"
 get_fs_util
