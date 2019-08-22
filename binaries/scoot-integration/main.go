@@ -67,7 +67,6 @@ func main() {
 
 	var jsonStatusBytes []byte
 	status := scoot.JobStatus{}
-
 	for status.Status != scoot.Status_COMPLETED {
 		select {
 		case <-timeout:
@@ -87,6 +86,78 @@ func main() {
 			time.Sleep(1 * time.Second)
 		}
 	}
+
+	_, err = offlineWorker(gopath, fmt.Sprintf("localhost:%d", scootapi.WorkerPorts+1))
+	if err != nil {
+		log.Error(err)
+		testhelpers.KillAndExit1(cluster1Cmds, err)
+	}
+	jobIDs, err := runXJobs(gopath, snapshotID, 10)
+	if err != nil {
+		testhelpers.KillAndExit1(cluster1Cmds, err)
+	}
+	jobIDToStatus := make(map[string]scoot.JobStatus)
+	for _, jobID := range jobIDs {
+		jobIDToStatus[jobID] = scoot.JobStatus{}
+	}
+	for jobID, status := range jobIDToStatus {
+		timeout = time.After(10 * time.Second)
+		for status.Status != scoot.Status_COMPLETED {
+			select {
+			case <-timeout:
+				testhelpers.KillAndExit1(cluster1Cmds, fmt.Errorf("Timed out while waiting for job to complete"))
+			default:
+				jsonStatusBytes, err = getStatus(gopath, jobID)
+				if err != nil {
+					testhelpers.KillAndExit1(cluster1Cmds, err)
+				}
+				if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
+					testhelpers.KillAndExit1(cluster1Cmds, err)
+				}
+				log.Infof("Status: %v", status)
+				if status.Status == scoot.Status_COMPLETED {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+
+	_, err = reinstateWorker(gopath, fmt.Sprintf("localhost:%d", scootapi.WorkerPorts+1))
+	if err != nil {
+		testhelpers.KillAndExit1(cluster1Cmds, err)
+	}
+	jobIDs, err = runXJobs(gopath, snapshotID, 10)
+	if err != nil {
+		testhelpers.KillAndExit1(cluster1Cmds, err)
+	}
+	jobIDToStatus = make(map[string]scoot.JobStatus)
+	for _, jobID := range jobIDs {
+		jobIDToStatus[jobID] = scoot.JobStatus{}
+	}
+	for jobID, status := range jobIDToStatus {
+		timeout = time.After(10 * time.Second)
+		for status.Status != scoot.Status_COMPLETED {
+			select {
+			case <-timeout:
+				testhelpers.KillAndExit1(cluster1Cmds, fmt.Errorf("Timed out while waiting for job to complete"))
+			default:
+				jsonStatusBytes, err = getStatus(gopath, jobID)
+				if err != nil {
+					testhelpers.KillAndExit1(cluster1Cmds, err)
+				}
+				if err = json.Unmarshal(jsonStatusBytes, &status); err != nil {
+					testhelpers.KillAndExit1(cluster1Cmds, err)
+				}
+				log.Infof("Status: %v", status)
+				if status.Status == scoot.Status_COMPLETED {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+
 	cluster1Cmds.Kill()
 }
 
@@ -103,6 +174,27 @@ func runJob(gopath, snapshotID string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scootapi", "run_job", "sleep", "1", "--snapshot_id", snapshotID).Output()
 }
 
+func runXJobs(gopath, snapshotID string, x int) ([]string, error) {
+	jobIDs := []string{}
+	for i := 0; i < x; i++ {
+		jobBytes, err := runJob(gopath, snapshotID)
+		if err != nil {
+			return nil, err
+		}
+		jobID := strings.TrimSpace(string(jobBytes))
+		jobIDs = append(jobIDs, jobID)
+	}
+	return jobIDs, nil
+}
+
 func getStatus(gopath, jobID string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scootapi", "get_job_status", jobID, "--json").Output()
+}
+
+func offlineWorker(gopath, workerID string) ([]byte, error) {
+	return exec.Command(gopath+"/bin/scootapi", "offline_worker", workerID).Output()
+}
+
+func reinstateWorker(gopath, workerID string) ([]byte, error) {
+	return exec.Command(gopath+"/bin/scootapi", "reinstate_worker", workerID).Output()
 }

@@ -37,6 +37,13 @@ type clusterState struct {
 	stats            stats.StatsReceiver           // for collecting stats about node availability
 }
 
+func (c *clusterState) isOfflined(ns *nodeState) bool {
+	if _, ok := c.offlinedNodes[ns.node.Id()]; ok {
+		return true
+	}
+	return false
+}
+
 type nodeGroup struct {
 	idle map[cluster.NodeId]*nodeState
 	busy map[cluster.NodeId]*nodeState
