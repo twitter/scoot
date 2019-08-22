@@ -35,4 +35,5 @@ get_fs_util() {
     ln -s -f "$firstgopath/bin/fs_util-$pants_release" "$firstgopath/bin/fs_util"
 }
 
+mkdir -p "$firstgopath/bin"
 get_fs_util
