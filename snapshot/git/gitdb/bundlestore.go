@@ -11,7 +11,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -135,7 +137,6 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	// TODO clean up
 	d, err := db.tmp.TempDir("bundle-")
 	if err != nil {
 		return nil, err
@@ -200,9 +201,12 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		return nil
 	}
 
-	// TODO(dbentley): keep stats about bundlestore downloading
-	// TODO(dbentley): keep stats about how long it takes to unbundle
-	filename, err := s.downloadBundle(db)
+	dlDir, filename, err := s.downloadBundle(db)
+	if dlDir != "" {
+		defer func() {
+			os.RemoveAll(dlDir)
+		}()
+	}
 	if err != nil {
 		log.Info("Unable to download bundle: ", err)
 		return err
@@ -255,29 +259,59 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.sha)
 }
 
-func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error) {
+// TODO separate the use cases that need git/repo/stream semantics from things that can be passed
+// around as binary bundles, and simplify the use cases accordingly
+func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+	log.Infof("Downloading sha: %s", s.SHA())
+
+	tmpRepoIniter := &TmpRepoIniter{tmp: db.tmp}
+	tmpRepo, err := tmpRepoIniter.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	dlDir, filename, err := s.downloadBundle(db)
+	if dlDir != "" {
+		defer func() {
+			os.RemoveAll(dlDir)
+		}()
+	}
+	if err != nil {
+		log.Info("Unable to download bundle: ", err)
+		return tmpRepo, err
+	}
+
+	if _, err = tmpRepo.Run("bundle", "unbundle", filename); err != nil {
+		return tmpRepo, err
+	}
+	log.Infof("Unbundling got the sha: %s, returning from DownloadTempRepo()", s.SHA())
+
+	return tmpRepo, tmpRepo.ShaPresent(s.sha)
+}
+
+func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
 	d, err := db.tmp.TempDir("bundle-")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	bundleName := makeBundleName(s.bundleKey)
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 	defer f.Close()
 
 	r, err := db.bundles.cfg.Store.OpenForRead(bundleName)
 	if err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 	defer r.Close()
 	if _, err := io.Copy(f, r); err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 
-	return f.Name(), nil
+	return d.Dir, f.Name(), nil
 }
 
 func makeBundleName(key string) string {

@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // A Stream is a sequence of GitCommitSnapshots that updates.
@@ -84,6 +86,10 @@ func (s *streamSnapshot) Download(db *DB) error {
 	}
 
 	return db.shaPresent(s.SHA())
+}
+
+func (s *streamSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+	return nil, errors.New("DownloadTempRepo unimplemented in streamSnapshot")
 }
 
 // updateStream updates the named stream

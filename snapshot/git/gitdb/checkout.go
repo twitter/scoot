@@ -11,14 +11,28 @@ import (
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
-// TODO cleanup from this entry point only
+// NOTE we assume in practice this only gets used where downloading and reading
+// the file to a tempdir, which is then deleted, is acceptable
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
 		return "", err
 	}
 
-	if err := v.Download(db); err != nil {
+	tmp, err := db.tmp.TempDir("readfile-download")
+	if err != nil {
+		return "", fmt.Errorf("Failed to create TempDir: %s", err)
+	}
+
+	defer func() {
+		err = os.RemoveAll(tmp.Dir)
+		if err != nil {
+			log.Errorf("Error removing readFileAll dir %s: %s", tmp.Dir, err)
+		}
+	}()
+
+	r, err := v.DownloadTempRepo(db, tmp)
+	if err != nil {
 		return "", err
 	}
 
@@ -26,7 +40,7 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 		return "", fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind())
 	}
 
-	return db.dataRepo.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
+	return r.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
 }
 
 // checkout creates a checkout of id.

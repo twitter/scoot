@@ -55,7 +55,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 		return nil, fmt.Errorf("not a valid commit: %s, %v", commitish, err)
 	}
 
-	if err := db.shaPresent(sha); err == nil {
+	if err := db.dataRepo.ShaPresent(sha); err == nil {
 		return &localSnapshot{sha: sha, kind: KindGitCommitSnapshot}, nil
 	}
 
@@ -96,6 +96,5 @@ func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error)
 }
 
 func (db *DB) shaPresent(sha string) error {
-	_, err := db.dataRepo.Run("rev-parse", "--verify", sha+"^{object}")
-	return err
+	return db.dataRepo.ShaPresent(sha)
 }

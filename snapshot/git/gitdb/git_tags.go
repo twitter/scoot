@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // TagsConfig specifies how GitDB should store Snapshots as tags in another git repo
@@ -97,6 +99,10 @@ func (s *tagsSnapshot) Download(db *DB) error {
 	}
 
 	return db.shaPresent(s.SHA())
+}
+
+func (s *tagsSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+	return nil, errors.New("DownloadTempRepo unimplemented in tagsSnapshot")
 }
 
 // we store tags as <prefix>/<sha>, e.g. reserved_scoot/1cdbb0e2c889a2e301589cc349615c2c1545f641
