@@ -11,6 +11,7 @@ import (
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
+// TODO cleanup from this entry point only
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {

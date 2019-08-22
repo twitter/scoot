@@ -135,6 +135,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
+	// TODO clean up
 	d, err := db.tmp.TempDir("bundle-")
 	if err != nil {
 		return nil, err
