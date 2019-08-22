@@ -38,10 +38,8 @@ type clusterState struct {
 }
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
-	for _, v := range c.offlinedNodes {
-		if v == ns {
-			return true
-		}
+	if _, ok := c.offlinedNodes[ns.node.Id()]; ok {
+		return true
 	}
 	return false
 }
