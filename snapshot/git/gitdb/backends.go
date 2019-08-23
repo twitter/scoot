@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 // backend allows getting a snapshot for an ID, which can then be used to download the ID
@@ -27,6 +29,9 @@ type snapshot interface {
 	Kind() SnapshotKind
 	SHA() string
 	Download(db *DB) error
+
+	// Download into a preexisting TempDir, resulting in a new Repository at that location
+	DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error)
 }
 
 // parseID parses ID into a snapshot

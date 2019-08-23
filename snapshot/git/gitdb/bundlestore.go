@@ -11,7 +11,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -192,6 +194,12 @@ func (s *bundlestoreSnapshot) ID() snap.ID {
 func (s *bundlestoreSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
+// Update's db's repo with this bundlestoreSnapshot's SHA.
+// The snapshot must be a git 'bundle' file.
+// Do this by getting the git bundle file from an underlying Store and
+// unbundling it into the dataRepo. In cases where db.bundles.cfg.AllowStreamUpdate
+// is true, will attempt to update the db's stream if initial unbundle attempt fails.
+// Returns nil if the SHA ended up in the repo, or an error.
 func (s *bundlestoreSnapshot) Download(db *DB) error {
 	log.Infof("Downloading sha: %s", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
@@ -199,9 +207,10 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 		return nil
 	}
 
-	// TODO(dbentley): keep stats about bundlestore downloading
-	// TODO(dbentley): keep stats about how long it takes to unbundle
-	filename, err := s.downloadBundle(db)
+	dlDir, filename, err := s.downloadBundle(db)
+	if dlDir != "" {
+		defer os.RemoveAll(dlDir)
+	}
 	if err != nil {
 		log.Info("Unable to download bundle: ", err)
 		return err
@@ -254,29 +263,62 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.sha)
 }
 
-func (s *bundlestoreSnapshot) downloadBundle(db *DB) (filename string, err error) {
+// TODO separate the use cases that need git/repo/stream semantics from things that can be passed
+// around as binary bundles, and simplify the use cases accordingly.
+// Downloads the snapshot's SHA locally similar to Download, but into a
+// temp repository located under tmp and not db's persistent dataRepo.
+// Returns the temp repo and nil if the sha can be found in it, or an error.
+func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+	log.Infof("Downloading sha: %s", s.SHA())
+
+	tmpRepoIniter := &TmpRepoIniter{tmp: db.tmp}
+	tmpRepo, err := tmpRepoIniter.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	dlDir, filename, err := s.downloadBundle(db)
+	if dlDir != "" {
+		defer os.RemoveAll(dlDir)
+	}
+	if err != nil {
+		log.Info("Unable to download bundle: ", err)
+		return tmpRepo, err
+	}
+
+	if _, err = tmpRepo.Run("bundle", "unbundle", filename); err != nil {
+		return tmpRepo, err
+	}
+	log.Infof("Unbundling got the sha: %s, returning from DownloadTempRepo()", s.SHA())
+
+	return tmpRepo, tmpRepo.ShaPresent(s.sha)
+}
+
+// Fetch a bundle file via the underlying Store configured in the DB's bundlestore config
+// Downloads into a temp dir, the path of which is included in the return (for cleanup purposes)
+func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
 	d, err := db.tmp.TempDir("bundle-")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	bundleName := makeBundleName(s.bundleKey)
 	bundleFilename := path.Join(d.Dir, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 	defer f.Close()
 
 	r, err := db.bundles.cfg.Store.OpenForRead(bundleName)
 	if err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 	defer r.Close()
 	if _, err := io.Copy(f, r); err != nil {
-		return "", err
+		return d.Dir, "", err
 	}
 
-	return f.Name(), nil
+	return d.Dir, f.Name(), nil
 }
 
 func makeBundleName(key string) string {

@@ -12,6 +12,10 @@ import (
 	"github.com/twitter/scoot/snapshot/store"
 )
 
+// TODO The interfaces and functionality here should be refactored to only use git when necessary.
+// Many operations relying on git are more inefficient than they need to be:
+// we could be using memory buffers/streams instead of using git cmds on disk to transform data.
+
 // SnapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
 // kind instead of type because type is a keyword
 type SnapshotKind string

@@ -11,21 +11,31 @@ import (
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
+// NOTE we assume in practice this only gets used where we are downloading and reading
+// the file to a tempdir, and any underlying file/snapshot is deleted
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
 		return "", err
 	}
 
-	if err := v.Download(db); err != nil {
+	tmp, err := db.tmp.TempDir("readFileAll-")
+	if err != nil {
+		return "", fmt.Errorf("Failed to create TempDir: %s", err)
+	}
+	defer os.RemoveAll(tmp.Dir)
+
+	r, err := v.DownloadTempRepo(db, tmp)
+	if err != nil {
 		return "", err
 	}
+	defer os.RemoveAll(r.Dir())
 
 	if v.Kind() != KindFSSnapshot {
 		return "", fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind())
 	}
 
-	return db.dataRepo.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
+	return r.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
 }
 
 // checkout creates a checkout of id.
@@ -104,7 +114,6 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 
 // checkoutGitCommitSnapshot checks out a commit into our work tree.
 // We could use multiple work trees, except our internal git doesn't yet have work-tree support.
-// TODO(dbentley): migrate to work-trees.
 func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 	cmds := [][]string{
 		// -d removes directories. -x ignores gitignore and removes everything.

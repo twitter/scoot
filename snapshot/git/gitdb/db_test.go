@@ -483,6 +483,14 @@ func TestBundlestore(t *testing.T) {
 	if err := assertSnapshotContents(consumerDB, id, "stdout.txt", "stdout"); err != nil {
 		t.Fatal(err)
 	}
+
+	data, err := consumerDB.ReadFileAll(id, "stdout.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "stdout" {
+		t.Fatalf("Read data from stdout.txt: %q, wanted: %q", string(data), "stdout")
+	}
 }
 
 type dbFixture struct {

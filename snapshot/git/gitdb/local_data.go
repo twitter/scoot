@@ -1,9 +1,12 @@
 package gitdb
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
+	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 const localIDText = "local"
@@ -38,4 +41,8 @@ func (s *localSnapshot) SHA() string        { return s.sha }
 func (s *localSnapshot) Download(db *DB) error {
 	// a localSnapshot is either present already or we have no way to download it
 	return db.shaPresent(s.SHA())
+}
+
+func (s *localSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+	return nil, errors.New("DownloadTempRepo unimplemented in localSnapshot")
 }

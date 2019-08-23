@@ -102,6 +102,12 @@ func (r *Repository) RunExtraEnvSha(extraEnv []string, args ...string) (string, 
 	return validateSha(out)
 }
 
+// Returns nil if the Repository contains a given sha, or an error if not
+func (r *Repository) ShaPresent(sha string) error {
+	_, err := r.Run("rev-parse", "--verify", sha+"^{object}")
+	return err
+}
+
 // validateSha trims and validates sha as a git sha, returning the valid sha xor an error
 func validateSha(sha string) (string, error) {
 	if len(sha) == 40 || len(sha) == 41 && sha[40] == '\n' {
