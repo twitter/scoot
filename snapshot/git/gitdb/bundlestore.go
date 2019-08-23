@@ -203,9 +203,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 
 	dlDir, filename, err := s.downloadBundle(db)
 	if dlDir != "" {
-		defer func() {
-			os.RemoveAll(dlDir)
-		}()
+		defer os.RemoveAll(dlDir)
 	}
 	if err != nil {
 		log.Info("Unable to download bundle: ", err)
@@ -272,9 +270,7 @@ func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo
 
 	dlDir, filename, err := s.downloadBundle(db)
 	if dlDir != "" {
-		defer func() {
-			os.RemoveAll(dlDir)
-		}()
+		defer os.RemoveAll(dlDir)
 	}
 	if err != nil {
 		log.Info("Unable to download bundle: ", err)
