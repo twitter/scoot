@@ -194,6 +194,12 @@ func (s *bundlestoreSnapshot) ID() snap.ID {
 func (s *bundlestoreSnapshot) Kind() SnapshotKind { return s.kind }
 func (s *bundlestoreSnapshot) SHA() string        { return s.sha }
 
+// Update's db's repo with this bundlestoreSnapshot's SHA.
+// The snapshot must be a git 'bundle' file.
+// Do this by getting the git bundle file from an underlying Store and
+// unbundling it into the dataRepo. In cases where db.bundles.cfg.AllowStreamUpdate
+// is true, will attempt to update the db's stream if initial unbundle attempt fails.
+// Returns nil if the SHA ended up in the repo, or an error.
 func (s *bundlestoreSnapshot) Download(db *DB) error {
 	log.Infof("Downloading sha: %s", s.SHA())
 	if err := db.shaPresent(s.SHA()); err == nil {
@@ -258,7 +264,10 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 }
 
 // TODO separate the use cases that need git/repo/stream semantics from things that can be passed
-// around as binary bundles, and simplify the use cases accordingly
+// around as binary bundles, and simplify the use cases accordingly.
+// Downloads the snapshot's SHA locally similar to Download, but into a
+// temp repository located under tmp and not db's persistent dataRepo.
+// Returns the temp repo and nil if the sha can be found in it, or an error.
 func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
 	log.Infof("Downloading sha: %s", s.SHA())
 
@@ -285,6 +294,8 @@ func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo
 	return tmpRepo, tmpRepo.ShaPresent(s.sha)
 }
 
+// Fetch a bundle file via the underlying Store configured in the DB's bundlestore config
+// Downloads into a temp dir, the path of which is included in the return (for cleanup purposes)
 func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
 	d, err := db.tmp.TempDir("bundle-")
 	if err != nil {

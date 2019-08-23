@@ -11,8 +11,8 @@ import (
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
-// NOTE we assume in practice this only gets used where downloading and reading
-// the file to a tempdir, which is then deleted, is acceptable
+// NOTE we assume in practice this only gets used where we are downloading and reading
+// the file to a tempdir, and any underlying file/snapshot is deleted
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
