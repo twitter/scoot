@@ -22,16 +22,17 @@ func (f *FakeStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
 	v, ok := f.Files.Load(name)
 	if !ok {
-		return nil, errors.New("Doesn't exist :" + name)
+		return nil, nil, errors.New("Doesn't exist :" + name)
 	}
 	b, ok := v.([]byte)
 	if !ok {
-		return nil, errors.New("Couldn't read data as []byte")
+		return nil, nil, errors.New("Couldn't read data as []byte")
 	}
-	return ioutil.NopCloser(bytes.NewBuffer(b)), nil
+
+	return ioutil.NopCloser(bytes.NewBuffer(b)), f.TTL, nil
 }
 
 func (f *FakeStore) Root() string { return "" }

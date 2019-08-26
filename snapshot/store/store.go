@@ -50,7 +50,7 @@ type StoreRead interface {
 	Exists(name string) (bool, error)
 
 	// Open the bundle for streaming read. It is the caller's responsibility to call Close().
-	OpenForRead(name string) (io.ReadCloser, error)
+	OpenForRead(name string) (io.ReadCloser, *TTLValue, error)
 
 	// Get the base location, like a directory or base URI that the Store writes to
 	Root() string

@@ -46,11 +46,21 @@ type httpStore struct {
 	client  Client
 }
 
-func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
+func getTTLValue(resp *http.Response) *TTLValue {
+	ttlk := http.CanonicalHeaderKey("x-ton-expires")
+	expire := resp.Header.Get(ttlk)
+	ttl, err := time.Parse(time.RFC1123, expire)
+	if err != nil {
+		return nil
+	}
+	return &TTLValue{TTL: ttl, TTLKey: ttlk}
+}
+
+func (s *httpStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
 	return s.openForRead(name, false)
 }
 
-func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, error) {
+func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, *TTLValue, error) {
 	label := "Read"
 	if existCheck {
 		label = "Exist"
@@ -70,26 +80,27 @@ func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, er
 		if !existCheck {
 			log.Infof("%s error: %s %v", label, uri, err)
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
-		return resp.Body, nil
+		ttlv := getTTLValue(resp)
+		return resp.Body, ttlv, nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, os.ErrNotExist
+		return nil, nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
-		return nil, os.ErrInvalid
+		return nil, nil, os.ErrInvalid
 	}
-	return nil, fmt.Errorf("could not open: %+v", resp)
+	return nil, nil, fmt.Errorf("could not open: %+v", resp)
 }
 
 func (s *httpStore) Exists(name string) (bool, error) {
-	r, err := s.openForRead(name, true)
+	r, ttlv, err := s.openForRead(name, true)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -99,6 +110,9 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	}
 	log.Infof("Exists ok: %s", name)
 	r.Close()
+	if ttlv != nil && ttlv.TTL.Before(time.Now()) {
+		return false, nil
+	}
 	return true, nil
 }
 

@@ -42,21 +42,25 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 	var cache = groupcache.NewGroup(
 		cfg.Name,
 		cfg.Memory_bytes,
-		groupcache.GetterFunc(func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
+		groupcache.GetterFunc(func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) (*time.Time, error) {
 			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
 
-			reader, err := underlying.OpenForRead(bundleName)
+			reader, ttlv, err := underlying.OpenForRead(bundleName)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer reader.Close()
 			data, err := ioutil.ReadAll(reader)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			return dest.SetBytes(data)
+			var ttl *time.Time
+			if ttlv != nil {
+				ttl = &ttlv.TTL
+			}
+			return ttl, dest.SetBytes(data)
 		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl time.Duration) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
@@ -120,23 +124,24 @@ type groupcacheStore struct {
 	stat       stats.StatsReceiver
 }
 
-func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
 	log.Info("Read() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcacheReadLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheReadCounter).Inc(1)
 	var data []byte
-	if err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
-		return nil, err
+	if _, err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
+		return nil, nil, err
 	}
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
-	return ioutil.NopCloser(bytes.NewReader(data)), nil
+	return ioutil.NopCloser(bytes.NewReader(data)), nil, nil
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {
 	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
-	if err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{})); err != nil {
+	ttl, err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{}))
+	if err != nil || (ttl != nil && ttl.Before(time.Now())) {
 		return false, nil
 	}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)

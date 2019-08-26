@@ -31,9 +31,10 @@ type FileStore struct {
 	bundleDir string
 }
 
-func (s *FileStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *FileStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
 	bundlePath := filepath.Join(s.bundleDir, name)
-	return os.Open(bundlePath)
+	r, err := os.Open(bundlePath)
+	return r, nil, err
 }
 
 func (s *FileStore) Exists(name string) (bool, error) {

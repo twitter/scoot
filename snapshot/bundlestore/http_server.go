@@ -92,7 +92,7 @@ func (s *httpServer) HandleDownload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r, err := s.storeConfig.Store.OpenForRead(bundleName)
+	r, _, err := s.storeConfig.Store.OpenForRead(bundleName)
 	if err != nil {
 		log.Infof("Read err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
 		http.NotFound(w, req)
