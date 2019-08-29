@@ -3,7 +3,7 @@
 set -ex
 
 firstgopath=${GOPATH%%:*}
-pants_release="1.17.0rc0+git42969028"
+pants_release="1.19.0+git382674bd"
 pants_release_url=$(echo $pants_release | sed 's/+/%2B/')
 
 get_fs_util() {
