@@ -62,14 +62,13 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			}
 			return ttl, dest.SetBytes(data)
 		}),
-		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl time.Duration) error {
+		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
 			// Convert duration back to TTLValue
-			tmpConfig := &TTLConfig{TTL: ttl, TTLKey: ttlc.TTLKey}
-			ttlv := GetTTLValue(tmpConfig)
+			ttlv := &TTLValue{TTL: *ttl, TTLKey: ttlc.TTLKey}
 			buf := bytes.NewReader(data)
 			err := underlying.Write(bundleName, buf, ttlv)
 			if err != nil {
@@ -141,7 +140,7 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
 	ttl, err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{}))
-	if err != nil || (ttl != nil && ttl.Before(time.Now())) {
+	if err != nil || (ttl != nil && ttl.Before(time.Now().UTC())) {
 		return false, nil
 	}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)
@@ -160,10 +159,8 @@ func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) erro
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	d := GetDurationTTL(ttl)
-
 	log.Infof("Write() bundle %s: length: %d ttl: %s", name, len(b), ttl)
-	if err := s.cache.Put(nil, name, c, d); err != nil {
+	if err := s.cache.Put(nil, name, c, &ttl.TTL); err != nil {
 		return err
 	}
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)
