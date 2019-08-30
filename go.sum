@@ -78,6 +78,7 @@ github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795 h1:cPFP5qjFNOQU
 github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795/go.mod h1:oImxtYs/VVcqQCg6taR5pyiXWMlT+WVg7tnwMyZzTn4=
 github.com/twitter/groupcache v0.0.0-20190208044251-7852b63ca833 h1:M6UKHRa4429lPYQxc11SFnFHuE0/n2IyigGVCvMJllQ=
 github.com/twitter/groupcache v0.0.0-20190208044251-7852b63ca833/go.mod h1:F3VyMCQItbfWsYao7dIdhp2t4hdXRuJIIC7RWWmyijM=
+github.com/twitter/groupcache v0.0.0-20190830195751-11158c6be16d h1:jb3jKhSKeHt97kkokwo+Whj/J/ZiyD/HlAp7A+1/bQo=
 github.com/twitter/groupcache v0.0.0-20190830195751-11158c6be16d/go.mod h1:F3VyMCQItbfWsYao7dIdhp2t4hdXRuJIIC7RWWmyijM=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=

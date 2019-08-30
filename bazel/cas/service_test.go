@@ -693,7 +693,7 @@ func (s *fakeGetTreeServer) Send(*remoteexecution.GetTreeResponse) error {
 // Helper functions
 
 func readAndCompare(f store.Store, name string, testData []byte) ([]byte, error) {
-	r, err := f.OpenForRead(name)
+	r, _, err := f.OpenForRead(name)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open expected resource for reading: %s: %v", name, err)
 	}
