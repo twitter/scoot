@@ -10,7 +10,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/mock v1.0.1-0.20180211072722-58cd061d0938
-	github.com/golang/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/leanovate/gopter v0.2.4
 	github.com/luci/go-render v0.0.0-20160219211803-9a04cc21af0f
@@ -21,7 +21,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795 // indirect
-	github.com/twitter/groupcache v0.0.0-20190208044251-7852b63ca833
+	github.com/twitter/groupcache v0.0.0-20190830195751-11158c6be16d
 	golang.org/x/exp v0.0.0-20190121172915-509febef88a4 // indirect
 	golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3 // indirect
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
