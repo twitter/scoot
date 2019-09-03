@@ -31,6 +31,9 @@ vet:
 install:
 	go install ./binaries/...
 
+mod-update:
+	go get -u $(repo)
+
 ############## dependencies
 
 # tool dependencies for developer workflows only (regenerating test mocks, bindata, thrift or proto code)
@@ -109,7 +112,10 @@ clean-data:
 clean-go:
 	go clean ./...
 
-clean: clean-data clean-mockgen clean-go
+clean-mod:
+	go mod tidy
+
+clean: clean-data clean-mockgen clean-go clean-mod
 
 ############## code gen for mocks, bindata configs, thrift, and protoc
 
