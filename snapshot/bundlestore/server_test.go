@@ -256,7 +256,7 @@ func TestRetry(t *testing.T) {
 	client.MaxRetries = 3
 	hs := store.MakeCustomHTTPStore(rootUri, client)
 
-	if _, _, err := hs.OpenForRead(""); err == nil {
+	if _, err := hs.OpenForRead(""); err == nil {
 		t.Fatalf("Expected err, got nil")
 	}
 	if server.counter != 3 {
@@ -273,7 +273,7 @@ func TestRetry(t *testing.T) {
 	server.counter = 0
 	server.code = []int{http.StatusInternalServerError, http.StatusBadGateway, http.StatusOK}
 	client.MaxRetries = 10
-	if _, _, err := hs.OpenForRead("foo"); err != nil {
+	if _, err := hs.OpenForRead("foo"); err != nil {
 		t.Fatalf("Expected success, got: %v", err)
 	}
 	if server.counter != 3 {

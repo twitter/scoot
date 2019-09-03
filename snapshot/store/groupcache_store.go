@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -47,7 +48,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
 
-			reader, ttlv, err := underlying.OpenForRead(bundleName)
+			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return nil, err
 			}
@@ -57,8 +58,8 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 				return nil, err
 			}
 			var ttl *time.Time
-			if ttlv != nil {
-				ttl = &ttlv.TTL
+			if reader.TTLValue != nil {
+				ttl = &reader.TTLValue.TTL
 			}
 			return ttl, dest.SetBytes(data)
 		}),
@@ -67,7 +68,6 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
-			// Convert duration back to TTLValue
 			ttlv := &TTLValue{TTL: *ttl, TTLKey: ttlc.TTLKey}
 			buf := bytes.NewReader(data)
 			err := underlying.Write(bundleName, buf, ttlv)
@@ -123,16 +123,19 @@ type groupcacheStore struct {
 	stat       stats.StatsReceiver
 }
 
-func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
+func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	log.Info("Read() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcacheReadLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheReadCounter).Inc(1)
 	var data []byte
-	if _, err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
-		return nil, nil, err
+	ttl, err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data))
+	if err != nil {
+		return nil, err
 	}
+	ttlv := TTLValue{TTL: *ttl, TTLKey: DefaultTTLKey}
+	rc := ioutil.NopCloser(bytes.NewReader(data))
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
-	return ioutil.NopCloser(bytes.NewReader(data)), nil, nil
+	return NewResource(rc, &ttlv), nil
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {
@@ -150,6 +153,10 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
+
+	if ttl == nil {
+		return errors.New("Cannot write nil TTLValue to groupcacheStore")
+	}
 
 	// Read data into a []byte and make a right-sized copy, as ReadAll will reserve at 2x capacity
 	b, err := ioutil.ReadAll(data)

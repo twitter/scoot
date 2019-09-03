@@ -323,7 +323,7 @@ func (s *casServer) BatchReadBlobs(
 
 			// Read and return result. We interpret read errors as Not Found
 			storeName := bazel.DigestStoreName(d)
-			r, _, openErr := s.storeConfig.Store.OpenForRead(storeName)
+			r, openErr := s.storeConfig.Store.OpenForRead(storeName)
 			if openErr != nil {
 				readRes.Status = &google_rpc_status.Status{
 					Code: int32(google_rpc_code.Code_NOT_FOUND),
@@ -428,7 +428,7 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		r = &nilReader{}
 	} else {
 		log.Infof("Opening store resource for reading: %s", storeName)
-		r, _, err = s.storeConfig.Store.OpenForRead(storeName)
+		r, err = s.storeConfig.Store.OpenForRead(storeName)
 		if err != nil {
 			// If an error occurred opening the underlying resource, we interpret this as NotFound.
 			// Although we return an error response to the caller to indicate this, we regard this
@@ -704,7 +704,7 @@ func (s *casServer) GetActionResult(ctx context.Context,
 	// Attempt to read AR from Store. If we error on opening, assume the resource was not found
 	log.Infof("Opening store resource for reading: %s", address.storeName)
 
-	r, _, err := s.storeConfig.Store.OpenForRead(address.storeName)
+	r, err := s.storeConfig.Store.OpenForRead(address.storeName)
 	if err != nil {
 		// If an error occurred opening the underlying resource, we interpret this as NotFound.
 		// Although we return an error response to the caller to indicate this, we regard this

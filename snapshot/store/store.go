@@ -10,7 +10,12 @@ import (
 )
 
 var DefaultTTL time.Duration = time.Hour * 24 * 180 //180 days. If zero, no ttl will be applied by default.
-const DefaultTTLKey string = "x-scoot-expires"      //the primary use for this is communicating ttl(RFC1123) over http.
+const (
+	// DefaultTTLKey is primarily used for communicating ttl(RFC1123) over http.
+	DefaultTTLKey string = "x-scoot-expires"
+	// DefaultTTLFormat is to specify the format for parsing ttl(RFC1123).
+	DefaultTTLFormat string = time.RFC1123
+)
 
 // Stores should generally support TTL, at this time only httpStore implements it.
 type TTLValue struct {
@@ -19,8 +24,9 @@ type TTLValue struct {
 }
 
 type TTLConfig struct {
-	TTL    time.Duration
-	TTLKey string
+	TTL       time.Duration
+	TTLKey    string
+	TTLFormat string
 }
 
 // Gets a TTLValue based on Now given a TTLConfig, or nil
@@ -44,13 +50,24 @@ func GetDurationTTL(t *TTLValue) time.Duration {
 	return d
 }
 
+// Resource is io readable as well as ttl
+type Resource struct {
+	io.ReadCloser
+	TTLValue *TTLValue
+}
+
+// NewResource constrcuts a new resource.
+func NewResource(rc io.ReadCloser, TTLValue *TTLValue) *Resource {
+	return &Resource{ReadCloser: rc, TTLValue: TTLValue}
+}
+
 // Read-only operations on store, limited for now to a couple essential functions.
 type StoreRead interface {
 	// Check if the bundle exists. Not guaranteed to be any cheaper than actually reading the bundle.
 	Exists(name string) (bool, error)
 
 	// Open the bundle for streaming read. It is the caller's responsibility to call Close().
-	OpenForRead(name string) (io.ReadCloser, *TTLValue, error)
+	OpenForRead(name string) (*Resource, error)
 
 	// Get the base location, like a directory or base URI that the Store writes to
 	Root() string

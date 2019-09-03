@@ -26,15 +26,15 @@ func MakePesterClient() *pester.Client {
 }
 
 func MakeHTTPStore(rootURI string) Store {
-	return MakeCustomHTTPStore(rootURI, MakePesterClient())
+	return MakeCustomHTTPStore(rootURI, MakePesterClient(), TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
 }
 
-func MakeCustomHTTPStore(rootURI string, client Client) Store {
+func MakeCustomHTTPStore(rootURI string, client Client, ttlc TTLConfig) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
 	log.Infof("Making new HTTP Store with root URI: %s", rootURI)
-	return &httpStore{rootURI, client}
+	return &httpStore{rootURI, client, ttlc}
 }
 
 type Client interface {
@@ -44,23 +44,23 @@ type Client interface {
 type httpStore struct {
 	rootURI string
 	client  Client
+	ttlc    TTLConfig
 }
 
-func getTTLValue(resp *http.Response) *TTLValue {
-	ttlk := http.CanonicalHeaderKey("x-ton-expires")
-	expire := resp.Header.Get(ttlk)
-	ttl, err := time.Parse(time.RFC1123, expire)
+func (s *httpStore) getTTLValue(resp *http.Response) *TTLValue {
+	expire := resp.Header.Get(s.ttlc.TTLKey)
+	ttl, err := time.Parse(s.ttlc.TTLFormat, expire)
 	if err != nil {
 		return nil
 	}
-	return &TTLValue{TTL: ttl, TTLKey: ttlk}
+	return &TTLValue{TTL: ttl, TTLKey: s.ttlc.TTLKey}
 }
 
-func (s *httpStore) OpenForRead(name string) (io.ReadCloser, *TTLValue, error) {
+func (s *httpStore) OpenForRead(name string) (*Resource, error) {
 	return s.openForRead(name, false)
 }
 
-func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, *TTLValue, error) {
+func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error) {
 	label := "Read"
 	if existCheck {
 		label = "Exist"
@@ -80,27 +80,27 @@ func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, *T
 		if !existCheck {
 			log.Infof("%s error: %s %v", label, uri, err)
 		}
-		return nil, nil, err
+		return nil, err
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
-		ttlv := getTTLValue(resp)
-		return resp.Body, ttlv, nil
+		ttlv := s.getTTLValue(resp)
+		return NewResource(resp.Body, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
 	resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil, os.ErrNotExist
+		return nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
-		return nil, nil, os.ErrInvalid
+		return nil, os.ErrInvalid
 	}
-	return nil, nil, fmt.Errorf("could not open: %+v", resp)
+	return nil, fmt.Errorf("could not open: %+v", resp)
 }
 
 func (s *httpStore) Exists(name string) (bool, error) {
-	r, ttlv, err := s.openForRead(name, true)
+	r, err := s.openForRead(name, true)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -110,7 +110,7 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	}
 	log.Infof("Exists ok: %s", name)
 	r.Close()
-	if ttlv != nil && ttlv.TTL.Before(time.Now()) {
+	if r.TTLValue != nil && r.TTLValue.TTL.Before(time.Now()) {
 		return false, nil
 	}
 	return true, nil

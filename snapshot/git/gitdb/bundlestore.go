@@ -309,7 +309,7 @@ func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
 	}
 	defer f.Close()
 
-	r, _, err := db.bundles.cfg.Store.OpenForRead(bundleName)
+	r, err := db.bundles.cfg.Store.OpenForRead(bundleName)
 	if err != nil {
 		return d.Dir, "", err
 	}
