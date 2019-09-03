@@ -58,7 +58,8 @@ func TestFindMissingBlobs(t *testing.T) {
 	expected := []*remoteexecution.Digest{dMissing1, dMissing2, dMissing3, dMissing4, dMissing5}
 
 	resourceName := bazel.DigestStoreName(dExists)
-	err := f.Write(resourceName, bytes.NewReader([]byte("")), nil)
+	buf := ioutil.NopCloser(bytes.NewReader([]byte("")))
+	err := f.Write(resourceName, store.NewResource(buf, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -94,7 +95,8 @@ func TestRead(t *testing.T) {
 	// Write a resource to underlying store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	resourceName := bazel.DigestStoreName(d)
-	err := f.Write(resourceName, bytes.NewReader(testData1), nil)
+	buf := ioutil.NopCloser(bytes.NewReader(testData1))
+	err := f.Write(resourceName, store.NewResource(buf, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -234,7 +236,8 @@ func TestWriteExisting(t *testing.T) {
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 
 	resourceName := bazel.DigestStoreName(d)
-	err := f.Write(resourceName, bytes.NewReader(testData1), nil)
+	buf := ioutil.NopCloser(bytes.NewReader(testData1))
+	err := f.Write(resourceName, store.NewResource(buf, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -393,7 +396,8 @@ func TestBatchReadBlobs(t *testing.T) {
 	for i := 0; i < len(writeHashes); i++ {
 		d := &remoteexecution.Digest{Hash: writeHashes[i], SizeBytes: writeSizes[i]}
 		resourceName := bazel.DigestStoreName(d)
-		err := f.Write(resourceName, bytes.NewReader(writeData[i]), nil)
+		buf := ioutil.NopCloser(bytes.NewReader(writeData[i]))
+		err := f.Write(resourceName, store.NewResource(buf, nil))
 		if err != nil {
 			t.Fatalf("Failed to write into FakeStore: %v", err)
 		}
@@ -494,8 +498,8 @@ func TestGetActionResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create cache result adress: %v", err)
 	}
-
-	err = f.Write(address.storeName, bytes.NewReader(arAsBytes), nil)
+	buf := ioutil.NopCloser(bytes.NewReader(arAsBytes))
+	err = f.Write(address.storeName, store.NewResource(buf, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}

@@ -77,7 +77,7 @@ type StoreRead interface {
 // If ttl config is nil then the store will use its defaults.
 type StoreWrite interface {
 	// Does a streaming write of the given bundle. There is no concept of partial writes (partial=failed).
-	Write(name string, data io.Reader, ttl *TTLValue) error
+	Write(name string, resource *Resource) error
 }
 
 // Combines read and write operations on store. This is what most of the code will use.

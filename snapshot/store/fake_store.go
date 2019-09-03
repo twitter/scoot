@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"sync"
 )
@@ -38,12 +37,12 @@ func (f *FakeStore) OpenForRead(name string) (*Resource, error) {
 
 func (f *FakeStore) Root() string { return "" }
 
-func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
-	if (f.TTL == nil) != (ttl == nil) || (ttl != nil && (f.TTL.TTLKey != ttl.TTLKey || f.TTL.TTL.Sub(ttl.TTL) != 0)) {
-		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.TTL, ttl)
+func (f *FakeStore) Write(name string, resource *Resource) error {
+	if (f.TTL == nil) != (resource.TTLValue == nil) || (resource.TTLValue != nil && (f.TTL.TTLKey != resource.TTLValue.TTLKey || f.TTL.TTL.Sub(resource.TTLValue.TTL) != 0)) {
+		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.TTL, resource.TTLValue)
 	}
 
-	b, err := ioutil.ReadAll(data)
+	b, err := ioutil.ReadAll(resource)
 	if err != nil {
 		return err
 	} else {

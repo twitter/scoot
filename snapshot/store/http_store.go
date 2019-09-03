@@ -3,7 +3,6 @@ package store
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -116,7 +115,11 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *httpStore) Write(name string, resource *Resource) error {
+	if resource == nil {
+		log.Info("Writing nil resource is a no op.")
+		return nil
+	}
 	if strings.Contains(name, "/") {
 		log.Infof("Write error: %s '/' not allowed", name)
 		return errors.New("'/' not allowed in name when writing bundles.")
@@ -124,16 +127,17 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	uri := s.rootURI + name
 
 	post := func() (*http.Response, error) {
-		req, err := http.NewRequest("POST", uri, data)
+		req, err := http.NewRequest("POST", uri, resource)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "text/plain")
+		ttl := resource.TTLValue
 		if ttl == nil {
 			ttl = &TTLValue{TTL: time.Now().Add(DefaultTTL), TTLKey: DefaultTTLKey}
 		}
 		if ttl.TTLKey != "" {
-			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(time.RFC1123)}
+			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(s.ttlc.TTLFormat)}
 		}
 		log.Infof("Writing %s: length: %d header: %v", uri, req.ContentLength, req.Header)
 		return s.client.Do(req)

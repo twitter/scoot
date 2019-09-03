@@ -2,8 +2,6 @@ package store
 
 import (
 	"bytes"
-	"errors"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -69,8 +67,9 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
 			ttlv := &TTLValue{TTL: *ttl, TTLKey: ttlc.TTLKey}
-			buf := bytes.NewReader(data)
-			err := underlying.Write(bundleName, buf, ttlv)
+			buf := ioutil.NopCloser(bytes.NewReader(data))
+			r := NewResource(buf, ttlv)
+			err := underlying.Write(bundleName, r)
 			if err != nil {
 				return err
 			}
@@ -150,24 +149,27 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *groupcacheStore) Write(name string, resource *Resource) error {
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
-
-	if ttl == nil {
-		return errors.New("Cannot write nil TTLValue to groupcacheStore")
+	if resource == nil {
+		log.Info("Writing nil resource is a no op.")
+		return nil
 	}
-
 	// Read data into a []byte and make a right-sized copy, as ReadAll will reserve at 2x capacity
-	b, err := ioutil.ReadAll(data)
+	b, err := ioutil.ReadAll(resource)
 	if err != nil {
 		return err
 	}
 	c := make([]byte, len(b))
 	copy(c, b)
 
+	var ttl *time.Time
+	if resource.TTLValue != nil {
+		ttl = &resource.TTLValue.TTL
+	}
 	log.Infof("Write() bundle %s: length: %d ttl: %s", name, len(b), ttl)
-	if err := s.cache.Put(nil, name, c, &ttl.TTL); err != nil {
+	if err := s.cache.Put(nil, name, c, ttl); err != nil {
 		return err
 	}
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)

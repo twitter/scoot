@@ -51,7 +51,11 @@ func (s *FileStore) Exists(name string) (bool, error) {
 	return false, err
 }
 
-func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *FileStore) Write(name string, resource *Resource) error {
+	if resource == nil {
+		log.Info("Writing nil resource is a no op.")
+		return nil
+	}
 	if strings.Contains(name, "/") {
 		return errors.New("'/' not allowed in name unless reading bundle contents.")
 	}
@@ -63,7 +67,7 @@ func (s *FileStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	}
 	defer f.Close()
 
-	if _, err := io.Copy(f, data); err != nil {
+	if _, err := io.Copy(f, resource); err != nil {
 		return err
 	}
 	return nil
