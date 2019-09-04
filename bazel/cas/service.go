@@ -790,7 +790,9 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 		ttl.TTL = time.Now().Add(DefaultTTL)
 	}
 
-	err = s.storeConfig.Store.Write(address.storeName, bytes.NewReader(asBytes), ttl)
+	buf := ioutil.NopCloser(bytes.NewReader(asBytes))
+	resource := store.NewResource(buf, ttl)
+	err = s.storeConfig.Store.Write(address.storeName, resource)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", address.storeName, err))
@@ -808,7 +810,7 @@ func (s *casServer) writeToStore(name string, data io.Reader) error {
 	if ttl != nil {
 		ttl.TTL = time.Now().Add(DefaultTTL)
 	}
-	if err := s.storeConfig.Store.Write(name, data, ttl); err != nil {
+	if err := s.storeConfig.Store.Write(name, store.NewResource(ioutil.NopCloser(data), ttl)); err != nil {
 		return err
 	}
 	return nil

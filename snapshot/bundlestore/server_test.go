@@ -1,16 +1,11 @@
 package bundlestore
 
 import (
-	//"bytes"
-	//"fmt"
-	//"io/ioutil"
 	"net"
 	"net/http"
-	//"reflect"
 	"testing"
 	"time"
 
-	//"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -253,7 +248,7 @@ func TestRetry(t *testing.T) {
 	client := store.MakePesterClient()
 	client.Backoff = func(_ int) time.Duration { return 500 * time.Millisecond }
 	client.MaxRetries = 3
-	hs := store.MakeCustomHTTPStore(rootUri, client)
+	hs := store.MakeCustomHTTPStore(rootUri, client, &store.TTLConfig{TTL: store.DefaultTTL, TTLKey: store.DefaultTTLKey, TTLFormat: store.DefaultTTLFormat})
 
 	if _, err := hs.OpenForRead(""); err == nil {
 		t.Fatalf("Expected err, got nil")

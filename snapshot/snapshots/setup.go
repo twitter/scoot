@@ -22,7 +22,7 @@ func (m module) Install(b *ice.MagicBag) {
 		},
 		NewViewServer,
 		func() *store.TTLConfig {
-			return &store.TTLConfig{TTL: store.DefaultTTL, TTLKey: store.DefaultTTLKey}
+			return &store.TTLConfig{TTL: store.DefaultTTL, TTLKey: store.DefaultTTLKey, TTLFormat: store.DefaultTTLFormat}
 		},
 	)
 }

@@ -2,7 +2,6 @@ package store
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -42,32 +41,35 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 	var cache = groupcache.NewGroup(
 		cfg.Name,
 		cfg.Memory_bytes,
-		groupcache.GetterFunc(func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) error {
+		groupcache.GetterFunc(func(ctx groupcache.Context, bundleName string, dest groupcache.Sink) (*time.Time, error) {
 			log.Info("Not cached, try to fetch bundle and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
 
 			reader, err := underlying.OpenForRead(bundleName)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer reader.Close()
 			data, err := ioutil.ReadAll(reader)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			return dest.SetBytes(data)
+			var ttl *time.Time
+			if reader.TTLValue != nil {
+				ttl = &reader.TTLValue.TTL
+			}
+			return ttl, dest.SetBytes(data)
 		}),
-		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl time.Duration) error {
+		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheWriteUnderlyingLatency_ms).Time().Stop()
 
-			// Convert duration back to TTLValue
-			tmpConfig := &TTLConfig{TTL: ttl, TTLKey: ttlc.TTLKey}
-			ttlv := GetTTLValue(tmpConfig)
-			buf := bytes.NewReader(data)
-			err := underlying.Write(bundleName, buf, ttlv)
+			ttlv := &TTLValue{TTL: *ttl, TTLKey: ttlc.TTLKey}
+			buf := ioutil.NopCloser(bytes.NewReader(data))
+			r := NewResource(buf, ttlv)
+			err := underlying.Write(bundleName, r)
 			if err != nil {
 				return err
 			}
@@ -120,45 +122,54 @@ type groupcacheStore struct {
 	stat       stats.StatsReceiver
 }
 
-func (s *groupcacheStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	log.Info("Read() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcacheReadLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheReadCounter).Inc(1)
 	var data []byte
-	if err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data)); err != nil {
+	ttl, err := s.cache.Get(nil, name, groupcache.AllocatingByteSliceSink(&data))
+	if err != nil {
 		return nil, err
 	}
+	ttlv := TTLValue{TTL: *ttl, TTLKey: DefaultTTLKey}
+	rc := ioutil.NopCloser(bytes.NewReader(data))
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
-	return ioutil.NopCloser(bytes.NewReader(data)), nil
+	return NewResource(rc, &ttlv), nil
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {
 	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
-	if err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{})); err != nil {
+	ttl, err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{}))
+	if err != nil || (ttl != nil && ttl.Before(time.Now().UTC())) {
 		return false, nil
 	}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)
 	return true, nil
 }
 
-func (s *groupcacheStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *groupcacheStore) Write(name string, resource *Resource) error {
 	defer s.stat.Latency(stats.GroupcacheWriteLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheWriteCounter).Inc(1)
-
+	if resource == nil {
+		log.Info("Writing nil resource is a no op.")
+		return nil
+	}
 	// Read data into a []byte and make a right-sized copy, as ReadAll will reserve at 2x capacity
-	b, err := ioutil.ReadAll(data)
+	b, err := ioutil.ReadAll(resource)
 	if err != nil {
 		return err
 	}
 	c := make([]byte, len(b))
 	copy(c, b)
 
-	d := GetDurationTTL(ttl)
-
+	var ttl *time.Time
+	if resource.TTLValue != nil {
+		ttl = &resource.TTLValue.TTL
+	}
 	log.Infof("Write() bundle %s: length: %d ttl: %s", name, len(b), ttl)
-	if err := s.cache.Put(nil, name, c, d); err != nil {
+	if err := s.cache.Put(nil, name, c, ttl); err != nil {
 		return err
 	}
 	s.stat.Counter(stats.GroupcacheWriteOkCounter).Inc(1)

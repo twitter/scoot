@@ -3,7 +3,6 @@ package store
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -26,15 +25,18 @@ func MakePesterClient() *pester.Client {
 }
 
 func MakeHTTPStore(rootURI string) Store {
-	return MakeCustomHTTPStore(rootURI, MakePesterClient())
+	return MakeCustomHTTPStore(rootURI, MakePesterClient(), &TTLConfig{TTL: DefaultTTL, TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
 }
 
-func MakeCustomHTTPStore(rootURI string, client Client) Store {
+func MakeCustomHTTPStore(rootURI string, client Client, ttlc *TTLConfig) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
+	if ttlc == nil {
+		ttlc = &TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat}
+	}
 	log.Infof("Making new HTTP Store with root URI: %s", rootURI)
-	return &httpStore{rootURI, client}
+	return &httpStore{rootURI, client, *ttlc}
 }
 
 type Client interface {
@@ -44,13 +46,23 @@ type Client interface {
 type httpStore struct {
 	rootURI string
 	client  Client
+	ttlc    TTLConfig
 }
 
-func (s *httpStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (s *httpStore) getTTLValue(resp *http.Response) *TTLValue {
+	expire := resp.Header.Get(s.ttlc.TTLKey)
+	ttl, err := time.Parse(s.ttlc.TTLFormat, expire)
+	if err != nil {
+		return nil
+	}
+	return &TTLValue{TTL: ttl, TTLKey: s.ttlc.TTLKey}
+}
+
+func (s *httpStore) OpenForRead(name string) (*Resource, error) {
 	return s.openForRead(name, false)
 }
 
-func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, error) {
+func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error) {
 	label := "Read"
 	if existCheck {
 		label = "Exist"
@@ -75,7 +87,8 @@ func (s *httpStore) openForRead(name string, existCheck bool) (io.ReadCloser, er
 
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
-		return resp.Body, nil
+		ttlv := s.getTTLValue(resp)
+		return NewResource(resp.Body, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
@@ -99,10 +112,17 @@ func (s *httpStore) Exists(name string) (bool, error) {
 	}
 	log.Infof("Exists ok: %s", name)
 	r.Close()
+	if r.TTLValue != nil && r.TTLValue.TTL.Before(time.Now()) {
+		return false, nil
+	}
 	return true, nil
 }
 
-func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
+func (s *httpStore) Write(name string, resource *Resource) error {
+	if resource == nil {
+		log.Info("Writing nil resource is a no op.")
+		return nil
+	}
 	if strings.Contains(name, "/") {
 		log.Infof("Write error: %s '/' not allowed", name)
 		return errors.New("'/' not allowed in name when writing bundles.")
@@ -110,16 +130,17 @@ func (s *httpStore) Write(name string, data io.Reader, ttl *TTLValue) error {
 	uri := s.rootURI + name
 
 	post := func() (*http.Response, error) {
-		req, err := http.NewRequest("POST", uri, data)
+		req, err := http.NewRequest("POST", uri, resource)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "text/plain")
+		ttl := resource.TTLValue
 		if ttl == nil {
-			ttl = &TTLValue{TTL: time.Now().Add(DefaultTTL), TTLKey: DefaultTTLKey}
+			ttl = &TTLValue{TTL: time.Now().Add(s.ttlc.TTL), TTLKey: s.ttlc.TTLKey}
 		}
 		if ttl.TTLKey != "" {
-			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(time.RFC1123)}
+			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(s.ttlc.TTLFormat)}
 		}
 		log.Infof("Writing %s: length: %d header: %v", uri, req.ContentLength, req.Header)
 		return s.client.Do(req)
