@@ -25,15 +25,18 @@ func MakePesterClient() *pester.Client {
 }
 
 func MakeHTTPStore(rootURI string) Store {
-	return MakeCustomHTTPStore(rootURI, MakePesterClient(), TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
+	return MakeCustomHTTPStore(rootURI, MakePesterClient(), &TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
 }
 
-func MakeCustomHTTPStore(rootURI string, client Client, ttlc TTLConfig) Store {
+func MakeCustomHTTPStore(rootURI string, client Client, ttlc *TTLConfig) Store {
 	if !strings.HasSuffix(rootURI, "/") {
 		rootURI = rootURI + "/"
 	}
+	if ttlc == nil {
+		ttlc = &TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat}
+	}
 	log.Infof("Making new HTTP Store with root URI: %s", rootURI)
-	return &httpStore{rootURI, client, ttlc}
+	return &httpStore{rootURI, client, *ttlc}
 }
 
 type Client interface {
