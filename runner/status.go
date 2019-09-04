@@ -64,33 +64,46 @@ func (p RunState) String() string {
 // Returned by the coordinator when a run request is made.
 type RunStatus struct {
 	RunID RunID
-
 	State RunState
+	tags.LogTags
+
+	// Fields below are optional and only exist for certain states
+
 	// References to stdout and stderr, not their text
 	// Runner impls may not provide valid refs for all States (e.g. failure before creation of refs)
 	StdoutRef string
 	StderrRef string
-
 	// Only valid if State == COMPLETE
 	SnapshotID string
 	// Only valid if State == (COMPLETE || FAILED)
 	ExitCode int
-
 	// Only valid if State == (COMPLETE || FAILED || ABORTED)
 	Error string
-
-	tags.LogTags
+	// Only valid if task is run on a Bazel filer
 	ActionResult *bazelapi.ActionResult
 }
 
 func (p RunStatus) String() string {
-	s := fmt.Sprintf(`RunStatus -- RunID: %s # SnapshotID: %s 
-		# State: %s # JobID: %s # TaskID: %s # Tag: %s 
-		# ExitCode: %s # Error: %s # Stdout: %s # Stderr: %s 
-		# ActionResult: %s`,
-		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID,
-		p.Tag, p.ExitCode, p.Error, p.StdoutRef, p.StderrRef,
-		p.ActionResult)
+	s := fmt.Sprintf(`RunStatus -- RunID: %s # State: %s # JobID: %s # TaskID: %s # Tag: %s`,
+		p.RunID, p.State, p.JobID, p.TaskID, p.Tag)
+	if p.StdoutRef != "" {
+		s += fmt.Sprintf(" # Stdout: %s", p.StdoutRef)
+	}
+	if p.StderrRef != "" {
+		s += fmt.Sprintf(" # Stderr: %s", p.StderrRef)
+	}
+	if p.State == COMPLETE {
+		s += fmt.Sprintf(" # SnapshotID: %s", p.SnapshotID)
+	}
+	if p.State == COMPLETE || p.State == FAILED {
+		s += fmt.Sprintf(" # ExitCode: %d", p.ExitCode)
+	}
+	if p.State == COMPLETE || p.State == FAILED || p.State == ABORTED {
+		s += fmt.Sprintf(" # Error: %s", p.Error)
+	}
+	if p.ActionResult != nil {
+		s += fmt.Sprintf(" # ActionResult: %s", p.ActionResult)
+	}
 	return s
 }
 

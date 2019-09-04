@@ -23,7 +23,7 @@ func TestCommandStringSimple(t *testing.T) {
 	expected := `runner.Command -- SnapshotID: git-abcd1234 # Argv: ["./run" "a" "--command"] # Timeout: 10m0s` +
 		` # JobID: job-abcd1234 # TaskID: task-abcd1234 # Tag: req-abcd1234 # Env:  GOOS=linux`
 	if s := c.String(); s != expected {
-		t.Errorf("Got:\n%s\nExpected:\n%s\n", s, expected)
+		t.Errorf("\nGot:\n%s\nExpected:\n%s\n", s, expected)
 	}
 }
 
@@ -40,31 +40,31 @@ func TestProcStatusStringCompleted(t *testing.T) {
 	ps.TaskID = "2"
 	ps.Tag = "tag"
 
-	expected := `RunStatus -- RunID: 12 # SnapshotID: 21 # State: COMPLETE # JobID: 46 # TaskID: 2` +
-		` # Tag: tag # ExitCode: 9 # Stdout: stdout # Stderr: stderr`
+	expected := `RunStatus -- RunID: 12 # State: COMPLETE # JobID: 46 # TaskID: 2 # Tag: tag ` +
+		`# Stdout: stdout # Stderr: stderr # SnapshotID: 21 # ExitCode: 9 # Error: `
 
 	if s := ps.String(); s != expected {
-		t.Errorf("Got:\n%s\nExpected:\n%s\n", s, expected)
+		t.Errorf("\nGot:\n%s\nExpected:\n%s\n", s, expected)
 	}
 }
 
 func TestProcStatusStringError(t *testing.T) {
 	ps := RunStatus{
-		RunID:      RunID("aaaaa"),
-		SnapshotID: "bb",
-		State:      FAILED,
-		StdoutRef:  "stdout",
-		StderrRef:  "stderr",
-		Error:      "The thing blew up.",
+		RunID:     RunID("aaaaa"),
+		State:     FAILED,
+		ExitCode:  2,
+		StdoutRef: "stdout",
+		StderrRef: "stderr",
+		Error:     "The thing blew up.",
 	}
 	ps.JobID = "cdefg"
 	ps.TaskID = "hijkl"
 	ps.Tag = "tag"
 
-	expected := `RunStatus -- RunID: aaaaa # SnapshotID: bb # State: FAILED # JobID: cdefg # TaskID: hijkl` +
-		` # Tag: tag # Error: The thing blew up. # Stdout: stdout # Stderr: stderr`
+	expected := `RunStatus -- RunID: aaaaa # State: FAILED # JobID: cdefg # TaskID: hijkl # Tag: tag ` +
+		`# Stdout: stdout # Stderr: stderr # ExitCode: 2 # Error: The thing blew up.`
 
 	if s := ps.String(); s != expected {
-		t.Errorf("Got:\n%s\nExpected:\n%s\n", s, expected)
+		t.Errorf("\nGot:\n%s\nExpected:\n%s\n", s, expected)
 	}
 }
