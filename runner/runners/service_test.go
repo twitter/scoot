@@ -39,10 +39,6 @@ func aborted() runner.RunStatus {
 	return runner.AbortStatus(runner.RunID(""), t)
 }
 
-func badRequest(errorText string) runner.RunStatus {
-	return runner.BadRequestStatus(runner.RunID(""), fmt.Errorf(errorText), t)
-}
-
 func assertRun(t *testing.T, r runner.Service, expected runner.RunStatus, args ...string) runner.RunID {
 	runId := run(t, r, args)
 	assertWait(t, r, runId, expected, args...)
@@ -66,9 +62,6 @@ func assertStatus(t *testing.T, actual runner.RunStatus, expected runner.RunStat
 		Fatalf("expected exit code %v; was: %v (cmd:%v)", expected.ExitCode, actual.ExitCode, args)
 	}
 	if expected.State == runner.FAILED && expected.Error != actual.Error {
-		Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
-	}
-	if expected.State == runner.BADREQUEST && expected.Error != actual.Error {
 		Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
 	}
 }

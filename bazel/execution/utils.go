@@ -106,22 +106,20 @@ func runStatusToExecuteOperationMetadata_Stage(rs *runStatus) remoteexecution.Ex
 		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
 	}
 	switch rs.Status {
-	case scoot.RunStatusState_UNKNOWN:
-		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
 	case scoot.RunStatusState_PENDING:
 		return remoteexecution.ExecuteOperationMetadata_QUEUED
 	case scoot.RunStatusState_RUNNING:
 		return remoteexecution.ExecuteOperationMetadata_EXECUTING
+	case scoot.RunStatusState_ABORTED:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_COMPLETE:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_FAILED:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
-	case scoot.RunStatusState_ABORTED:
-		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_TIMEDOUT:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
-	case scoot.RunStatusState_BADREQUEST:
-		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_UNKNOWN:
+		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
 	default:
 		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
 	}
@@ -135,10 +133,6 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 		return &google_rpc_status.Status{}
 	}
 	switch rs.Status {
-	case scoot.RunStatusState_UNKNOWN:
-		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_UNKNOWN),
-		}
 	case scoot.RunStatusState_PENDING:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_OK),
@@ -146,6 +140,11 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 	case scoot.RunStatusState_RUNNING:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_OK),
+		}
+		// done states
+	case scoot.RunStatusState_ABORTED:
+		return &google_rpc_status.Status{
+			Code: int32(google_rpc_code.Code_CANCELLED),
 		}
 	case scoot.RunStatusState_COMPLETE:
 		return &google_rpc_status.Status{
@@ -155,17 +154,13 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_INTERNAL),
 		}
-	case scoot.RunStatusState_ABORTED:
-		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
-		}
 	case scoot.RunStatusState_TIMEDOUT:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_DEADLINE_EXCEEDED),
 		}
-	case scoot.RunStatusState_BADREQUEST:
+	case scoot.RunStatusState_UNKNOWN:
 		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_INTERNAL),
+			Code: int32(google_rpc_code.Code_UNKNOWN),
 		}
 	default:
 		return &google_rpc_status.Status{
@@ -179,21 +174,19 @@ func runStatusToDoneBool(rs *runStatus) bool {
 		return false
 	}
 	switch rs.Status {
-	case scoot.RunStatusState_UNKNOWN:
-		return false
 	case scoot.RunStatusState_PENDING:
 		return false
 	case scoot.RunStatusState_RUNNING:
 		return false
+	case scoot.RunStatusState_ABORTED:
+		return true
 	case scoot.RunStatusState_COMPLETE:
 		return true
 	case scoot.RunStatusState_FAILED:
 		return true
-	case scoot.RunStatusState_ABORTED:
-		return true
 	case scoot.RunStatusState_TIMEDOUT:
 		return true
-	case scoot.RunStatusState_BADREQUEST:
+	case scoot.RunStatusState_UNKNOWN:
 		return true
 	default:
 		return false

@@ -297,51 +297,10 @@ var tests = []struct {
 			Error:     "",
 		},
 	},
-	{
-		12,
-		rsFromThrift,
-		nil,
-		&worker.RunStatus{
-			Status:   worker.Status_BADREQUEST,
-			RunId:    "",
-			OutUri:   nil,
-			ErrUri:   nil,
-			Error:    nil,
-			ExitCode: nil},
-		runner.RunStatus{
-			RunID:     "",
-			State:     runner.BADREQUEST,
-			StdoutRef: "",
-			StderrRef: "",
-			ExitCode:  0,
-			Error:     "",
-		},
-	},
-	{
-		13,
-		rsFromThrift,
-		rsToThrift,
-		&worker.RunStatus{
-			Status:   worker.Status_BADREQUEST,
-			RunId:    "id",
-			OutUri:   &nonemptystr,
-			ErrUri:   &nonemptystr,
-			Error:    &nonemptystr,
-			ExitCode: &nonzero,
-		},
-		runner.RunStatus{
-			RunID:     "id",
-			State:     runner.BADREQUEST,
-			StdoutRef: nonemptystr,
-			StderrRef: nonemptystr,
-			ExitCode:  int(nonzero),
-			Error:     nonemptystr,
-		},
-	},
 
 	//WorkerStatus
 	{
-		14,
+		12,
 		wsFromThrift,
 		nil,
 		&worker.WorkerStatus{
@@ -352,7 +311,7 @@ var tests = []struct {
 		},
 	},
 	{
-		15,
+		13,
 		wsFromThrift,
 		wsToThrift,
 		&worker.WorkerStatus{

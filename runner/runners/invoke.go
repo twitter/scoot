@@ -241,7 +241,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"taskID":   cmd.TaskID,
 			"checkout": co.Path(),
 		}).Info("Checkout done")
-
+	//
+	//
+	// Before this, stdout doesn't exist yet
+	//
+	//
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
 		msg := fmt.Sprintf("could not create stdout: %s", err)

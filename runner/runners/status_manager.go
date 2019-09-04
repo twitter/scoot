@@ -36,7 +36,7 @@ type queryAndCh struct {
 
 // Writer interface
 
-// NewRun creates a new RunID in state Preparing
+// NewRun creates a new RunID in state PENDING
 func (s *StatusManager) NewRun() (runner.RunStatus, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

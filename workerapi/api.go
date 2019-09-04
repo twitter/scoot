@@ -122,8 +122,6 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 		domain.State = runner.ABORTED
 	case worker.Status_TIMEDOUT:
 		domain.State = runner.TIMEDOUT
-	case worker.Status_BADREQUEST:
-		domain.State = runner.BADREQUEST
 	}
 	if thrift.OutUri != nil {
 		domain.StdoutRef = *thrift.OutUri
@@ -161,7 +159,7 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 		thrift.Status = worker.Status_UNKNOWN
 	case runner.PENDING:
 		thrift.Status = worker.Status_PENDING
-	case runner.PREPARING, runner.RUNNING:
+	case runner.RUNNING:
 		thrift.Status = worker.Status_RUNNING
 	case runner.COMPLETE:
 		thrift.Status = worker.Status_COMPLETE
@@ -171,8 +169,6 @@ func DomainRunStatusToThrift(domain runner.RunStatus) *worker.RunStatus {
 		thrift.Status = worker.Status_ABORTED
 	case runner.TIMEDOUT:
 		thrift.Status = worker.Status_TIMEDOUT
-	case runner.BADREQUEST:
-		thrift.Status = worker.Status_BADREQUEST
 	}
 	thrift.OutUri = helpers.CopyStringToPointer(domain.StdoutRef)
 	thrift.ErrUri = helpers.CopyStringToPointer(domain.StderrRef)

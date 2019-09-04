@@ -11,42 +11,39 @@ type RunID string
 type RunState int
 
 const (
-	// An unambiguous 0-value.
+	// Catch-all for indeterminate RunStates. Also an "end state"
 	UNKNOWN RunState = iota
-	// Waiting to run.
+
+	// Waiting to run
 	PENDING
-	// Preparing to run (e.g., checking out the Snapshot)
-	PREPARING
+
 	// Running
 	RUNNING
 
-	// States below are end states
-	// a Run in an end state will not change its state
+	// States below are "end states"
+	// a Run in an "end state" will not change its state
 
-	// Succeeded or failed yielding an exit code. Only state with an exit code.
+	// Succeeded or failed yielding an exit code
 	COMPLETE
-	// Run mechanism failed in an expected way and is no longer running.
+
+	// Run mechanism failed and is no longer running
 	FAILED
-	// User requested that the run be killed.
+
+	// User requested that the run be killed, or task preempted by Scheduler
 	ABORTED
-	// Operation timed out and was killed.
+
+	// Run timed out and was killed
 	TIMEDOUT
-	// Request rejected due to unexpected failure.
-	BADREQUEST
 )
 
 func (p RunState) IsDone() bool {
-	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == UNKNOWN || p == BADREQUEST
+	return p == COMPLETE || p == FAILED || p == ABORTED || p == TIMEDOUT || p == UNKNOWN
 }
 
 func (p RunState) String() string {
 	switch p {
-	case UNKNOWN:
-		return "UNKNOWN"
 	case PENDING:
 		return "PENDING"
-	case PREPARING:
-		return "PREPARING"
 	case RUNNING:
 		return "RUNNING"
 	case COMPLETE:
@@ -57,8 +54,8 @@ func (p RunState) String() string {
 		return "ABORTED"
 	case TIMEDOUT:
 		return "TIMEDOUT"
-	case BADREQUEST:
-		return "BADREQUEST"
+	case UNKNOWN:
+		return "UNKNOWN"
 	default:
 		panic(fmt.Sprintf("Unexpected RunState %v", int(p)))
 	}
@@ -70,15 +67,16 @@ type RunStatus struct {
 
 	State RunState
 	// References to stdout and stderr, not their text
-	// Runner impls shall provide valid refs for all States (but optionally may not for UNKNOWN/BADREQUEST).
+	// Runner impls may not provide valid refs for all States (e.g. failure before creation of refs)
 	StdoutRef string
 	StderrRef string
 
 	// Only valid if State == COMPLETE
 	SnapshotID string
-	ExitCode   int
+	// Only valid if State == (COMPLETE || FAILED)
+	ExitCode int
 
-	// Only valid if State == (COMPLETE || FAILED || BADREQUEST || ABORTED)
+	// Only valid if State == (COMPLETE || FAILED || ABORTED)
 	Error string
 
 	tags.LogTags
@@ -86,21 +84,13 @@ type RunStatus struct {
 }
 
 func (p RunStatus) String() string {
-	s := fmt.Sprintf("RunStatus -- RunID: %s # SnapshotID: %s # State: %s # JobID: %s # TaskID: %s # Tag: %s",
-		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID, p.Tag)
-
-	if p.State == COMPLETE {
-		s += fmt.Sprintf(" # ExitCode: %d", p.ExitCode)
-	}
-	if p.State == FAILED || p.State == BADREQUEST {
-		s += fmt.Sprintf(" # Error: %s", p.Error)
-	}
-	s += fmt.Sprintf(" # Stdout: %s # Stderr: %s", p.StdoutRef, p.StderrRef)
-
-	if p.ActionResult != nil {
-		s += fmt.Sprintf("  ActionResult=%s", p.ActionResult)
-	}
-
+	s := fmt.Sprintf(`RunStatus -- RunID: %s # SnapshotID: %s 
+		# State: %s # JobID: %s # TaskID: %s # Tag: %s 
+		# ExitCode: %s # Error: %s # Stdout: %s # Stderr: %s 
+		# ActionResult: %s`,
+		p.RunID, p.SnapshotID, p.State, p.JobID, p.TaskID,
+		p.Tag, p.ExitCode, p.Error, p.StdoutRef, p.StderrRef,
+		p.ActionResult)
 	return s
 }
 
@@ -128,14 +118,6 @@ func FailedStatus(runID RunID, err error, tags tags.LogTags) (r RunStatus) {
 	return r
 }
 
-func BadRequestStatus(runID RunID, err error, tags tags.LogTags) (r RunStatus) {
-	r.RunID = runID
-	r.State = BADREQUEST
-	r.Error = err.Error()
-	r.LogTags = tags
-	return r
-}
-
 func PendingStatus(runID RunID, tags tags.LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = PENDING
@@ -157,13 +139,6 @@ func CompleteStatus(runID RunID, snapshotID string, exitCode int, tags tags.LogT
 	r.State = COMPLETE
 	r.SnapshotID = snapshotID
 	r.ExitCode = exitCode
-	r.LogTags = tags
-	return r
-}
-
-func PreparingStatus(runID RunID, tags tags.LogTags) (r RunStatus) {
-	r.RunID = runID
-	r.State = PREPARING
 	r.LogTags = tags
 	return r
 }
