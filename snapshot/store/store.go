@@ -17,12 +17,13 @@ const (
 	DefaultTTLFormat string = time.RFC1123
 )
 
-// Stores should generally support TTL, at this time only httpStore implements it.
+// Stores should generally support TTL, at this time httpStore and groupcacheStore implement it.
 type TTLValue struct {
 	TTL    time.Time
 	TTLKey string
 }
 
+// TTLConfig configures defaults for stores.
 type TTLConfig struct {
 	TTL       time.Duration
 	TTLKey    string
@@ -50,13 +51,13 @@ func GetDurationTTL(t *TTLValue) time.Duration {
 	return d
 }
 
-// Resource is io readable as well as ttl
+// Resource is io readable as well as ttl aware.
 type Resource struct {
 	io.ReadCloser
 	TTLValue *TTLValue
 }
 
-// NewResource constrcuts a new resource.
+// NewResource constructs a new resource.
 func NewResource(rc io.ReadCloser, TTLValue *TTLValue) *Resource {
 	return &Resource{ReadCloser: rc, TTLValue: TTLValue}
 }

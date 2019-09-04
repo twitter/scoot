@@ -1,17 +1,11 @@
 package bundlestore
 
 import (
-	//"bytes"
-	//"fmt"
-	//"io/ioutil"
 	"net"
 	"net/http"
-
-	//"reflect"
 	"testing"
 	"time"
 
-	//"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
