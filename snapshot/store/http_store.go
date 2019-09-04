@@ -25,7 +25,7 @@ func MakePesterClient() *pester.Client {
 }
 
 func MakeHTTPStore(rootURI string) Store {
-	return MakeCustomHTTPStore(rootURI, MakePesterClient(), &TTLConfig{TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
+	return MakeCustomHTTPStore(rootURI, MakePesterClient(), &TTLConfig{TTL: DefaultTTL, TTLKey: DefaultTTLKey, TTLFormat: DefaultTTLFormat})
 }
 
 func MakeCustomHTTPStore(rootURI string, client Client, ttlc *TTLConfig) Store {
