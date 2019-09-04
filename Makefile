@@ -31,8 +31,12 @@ vet:
 install:
 	go install ./binaries/...
 
+tidy:
+	go mod tidy
+
+# Gets the latest version of REPO, or if left blank, updates all modules
 mod-update:
-	go get -u $(repo)
+	go get -u $(REPO)
 
 ############## dependencies
 
@@ -112,10 +116,7 @@ clean-data:
 clean-go:
 	go clean ./...
 
-clean-mod:
-	go mod tidy
-
-clean: clean-data clean-mockgen clean-go clean-mod
+clean: clean-data clean-mockgen clean-go
 
 ############## code gen for mocks, bindata configs, thrift, and protoc
 
