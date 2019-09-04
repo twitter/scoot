@@ -137,7 +137,7 @@ func (s *httpStore) Write(name string, resource *Resource) error {
 		req.Header.Set("Content-Type", "text/plain")
 		ttl := resource.TTLValue
 		if ttl == nil {
-			ttl = &TTLValue{TTL: time.Now().Add(DefaultTTL), TTLKey: DefaultTTLKey}
+			ttl = &TTLValue{TTL: time.Now().Add(s.ttlc.TTL), TTLKey: s.ttlc.TTLKey}
 		}
 		if ttl.TTLKey != "" {
 			req.Header[ttl.TTLKey] = []string{ttl.TTL.Format(s.ttlc.TTLFormat)}
