@@ -59,7 +59,7 @@ func TestFindMissingBlobs(t *testing.T) {
 
 	resourceName := bazel.DigestStoreName(dExists)
 	buf := ioutil.NopCloser(bytes.NewReader([]byte("")))
-	err := f.Write(resourceName, store.NewResource(buf, nil))
+	err := f.Write(resourceName, store.NewResource(buf, 0, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestRead(t *testing.T) {
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	resourceName := bazel.DigestStoreName(d)
 	buf := ioutil.NopCloser(bytes.NewReader(testData1))
-	err := f.Write(resourceName, store.NewResource(buf, nil))
+	err := f.Write(resourceName, store.NewResource(buf, testSize1, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestWriteExisting(t *testing.T) {
 
 	resourceName := bazel.DigestStoreName(d)
 	buf := ioutil.NopCloser(bytes.NewReader(testData1))
-	err := f.Write(resourceName, store.NewResource(buf, nil))
+	err := f.Write(resourceName, store.NewResource(buf, testSize1, nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestBatchReadBlobs(t *testing.T) {
 		d := &remoteexecution.Digest{Hash: writeHashes[i], SizeBytes: writeSizes[i]}
 		resourceName := bazel.DigestStoreName(d)
 		buf := ioutil.NopCloser(bytes.NewReader(writeData[i]))
-		err := f.Write(resourceName, store.NewResource(buf, nil))
+		err := f.Write(resourceName, store.NewResource(buf, writeSizes[i], nil))
 		if err != nil {
 			t.Fatalf("Failed to write into FakeStore: %v", err)
 		}
@@ -499,7 +499,7 @@ func TestGetActionResult(t *testing.T) {
 		t.Fatalf("Failed to create cache result adress: %v", err)
 	}
 	buf := ioutil.NopCloser(bytes.NewReader(arAsBytes))
-	err = f.Write(address.storeName, store.NewResource(buf, nil))
+	err = f.Write(address.storeName, store.NewResource(buf, int64(len(arAsBytes)), nil))
 	if err != nil {
 		t.Fatalf("Failed to write into FakeStore: %v", err)
 	}

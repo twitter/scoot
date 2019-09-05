@@ -46,18 +46,18 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
 
-			reader, err := underlying.OpenForRead(bundleName)
+			resource, err := underlying.OpenForRead(bundleName)
 			if err != nil {
 				return nil, err
 			}
-			defer reader.Close()
-			data, err := ioutil.ReadAll(reader)
+			defer resource.Close()
+			data, err := ioutil.ReadAll(resource)
 			if err != nil {
 				return nil, err
 			}
 			var ttl *time.Time
-			if reader.TTLValue != nil {
-				ttl = &reader.TTLValue.TTL
+			if resource.TTLValue != nil {
+				ttl = &resource.TTLValue.TTL
 			}
 			return ttl, dest.SetBytes(data)
 		}),
@@ -68,7 +68,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 
 			ttlv := &TTLValue{TTL: *ttl, TTLKey: ttlc.TTLKey}
 			buf := ioutil.NopCloser(bytes.NewReader(data))
-			r := NewResource(buf, ttlv)
+			r := NewResource(buf, int64(len(data)), ttlv)
 			err := underlying.Write(bundleName, r)
 			if err != nil {
 				return err
@@ -134,7 +134,7 @@ func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	ttlv := TTLValue{TTL: *ttl, TTLKey: DefaultTTLKey}
 	rc := ioutil.NopCloser(bytes.NewReader(data))
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
-	return NewResource(rc, &ttlv), nil
+	return NewResource(rc, int64(len(data)), &ttlv), nil
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {

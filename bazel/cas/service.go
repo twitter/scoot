@@ -237,7 +237,7 @@ func (s *casServer) BatchUpdateBlobs(
 
 			storeName := bazel.DigestStoreName(r.GetDigest())
 			buffer := bytes.NewReader(r.GetData())
-			writeErr := s.writeToStore(storeName, buffer)
+			writeErr := s.writeToStore(storeName, buffer, int64(buffer.Len()))
 			if writeErr != nil {
 				writeRes.Status = &google_rpc_status.Status{
 					Code:    int32(google_rpc_code.Code_INTERNAL),
@@ -608,7 +608,7 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 	}
 
 	// Write to underlying Store
-	err = s.writeToStore(storeName, buffer)
+	err = s.writeToStore(storeName, buffer, int64(buffer.Len()))
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Store failed writing to %s: %v", storeName, err))
@@ -791,7 +791,7 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 	}
 
 	buf := ioutil.NopCloser(bytes.NewReader(asBytes))
-	resource := store.NewResource(buf, ttl)
+	resource := store.NewResource(buf, int64(len(asBytes)), ttl)
 	err = s.storeConfig.Store.Write(address.storeName, resource)
 	if err != nil {
 		log.Errorf("Store failed to Write: %v", err)
@@ -804,13 +804,13 @@ func (s *casServer) UpdateActionResult(ctx context.Context,
 
 // Internal functions
 
-func (s *casServer) writeToStore(name string, data io.Reader) error {
+func (s *casServer) writeToStore(name string, data io.Reader, len int64) error {
 	// Using CAS Default TTL setting until API supports cache priority settings
 	ttl := store.GetTTLValue(s.storeConfig.TTLCfg)
 	if ttl != nil {
 		ttl.TTL = time.Now().Add(DefaultTTL)
 	}
-	if err := s.storeConfig.Store.Write(name, store.NewResource(ioutil.NopCloser(data), ttl)); err != nil {
+	if err := s.storeConfig.Store.Write(name, store.NewResource(ioutil.NopCloser(data), len, ttl)); err != nil {
 		return err
 	}
 	return nil
