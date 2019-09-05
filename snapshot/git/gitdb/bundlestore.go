@@ -338,7 +338,8 @@ func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (s
 		return "", scooterrors.NewScootError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), BundleUploadFailureExitCode)
 	}
 
-	if err := b.cfg.Store.Write(name, f, ttl); err != nil {
+	resource := store.NewResource(f, ttl)
+	if err := b.cfg.Store.Write(name, resource); err != nil {
 		return "", scooterrors.NewScootError(err, BundleUploadFailureExitCode)
 	}
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"sync"
 )
@@ -22,7 +21,7 @@ func (f *FakeStore) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
+func (f *FakeStore) OpenForRead(name string) (*Resource, error) {
 	v, ok := f.Files.Load(name)
 	if !ok {
 		return nil, errors.New("Doesn't exist :" + name)
@@ -31,17 +30,19 @@ func (f *FakeStore) OpenForRead(name string) (io.ReadCloser, error) {
 	if !ok {
 		return nil, errors.New("Couldn't read data as []byte")
 	}
-	return ioutil.NopCloser(bytes.NewBuffer(b)), nil
+	rc := ioutil.NopCloser(bytes.NewBuffer(b))
+
+	return NewResource(rc, f.TTL), nil
 }
 
 func (f *FakeStore) Root() string { return "" }
 
-func (f *FakeStore) Write(name string, data io.Reader, ttl *TTLValue) error {
-	if (f.TTL == nil) != (ttl == nil) || (ttl != nil && (f.TTL.TTLKey != ttl.TTLKey || f.TTL.TTL.Sub(ttl.TTL) != 0)) {
-		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.TTL, ttl)
+func (f *FakeStore) Write(name string, resource *Resource) error {
+	if (f.TTL == nil) != (resource.TTLValue == nil) || (resource.TTLValue != nil && (f.TTL.TTLKey != resource.TTLValue.TTLKey || f.TTL.TTL.Sub(resource.TTLValue.TTL) != 0)) {
+		return fmt.Errorf("TTL mismatch: expected: %v, got: %v", f.TTL, resource.TTLValue)
 	}
 
-	b, err := ioutil.ReadAll(data)
+	b, err := ioutil.ReadAll(resource)
 	if err != nil {
 		return err
 	} else {
