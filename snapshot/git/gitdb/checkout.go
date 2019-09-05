@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/scooterrors"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
@@ -16,26 +17,30 @@ import (
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
 	}
 
 	tmp, err := db.tmp.TempDir("readFileAll-")
 	if err != nil {
-		return "", fmt.Errorf("Failed to create TempDir: %s", err)
+		return "", scooterrors.NewScootError(fmt.Errorf("Failed to create TempDir: %s", err), ReadFileAllFailureExitCode)
 	}
 	defer os.RemoveAll(tmp.Dir)
 
 	r, err := v.DownloadTempRepo(db, tmp)
 	if err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
 	}
 	defer os.RemoveAll(r.Dir())
 
 	if v.Kind() != KindFSSnapshot {
-		return "", fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind())
+		return "", scooterrors.NewScootError(fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind()), ReadFileAllFailureExitCode)
 	}
 
-	return r.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
+	s, err := r.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
+	if err != nil {
+		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
+	}
+	return s, nil
 }
 
 // checkout creates a checkout of id.
@@ -115,23 +120,21 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 // checkoutGitCommitSnapshot checks out a commit into our work tree.
 // We could use multiple work trees, except our internal git doesn't yet have work-tree support.
 func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
-	cmds := [][]string{
-		// -d removes directories. -x ignores gitignore and removes everything.
-		// -f is force. -f the second time removes directories even if they're git repos themselves
-		{"clean", "-f", "-f", "-d", "-x"},
-		// -f overrides modified files
-		// -B resets or creates the named branch when checking out the given sha.
-		// Note: our worktree cannot be in detached head state after checkout since [Twitter] git needs a valid ref to fetch.
-		//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
-		{"checkout", "-fB", tempCheckoutBranch, sha},
-	}
+	// -d removes directories. -x ignores gitignore and removes everything.
+	// -f is force. -f the second time removes directories even if they're git repos themselves
+	cleanCmd := []string{"clean", "-f", "-f", "-d", "-x"}
+	if _, err := db.dataRepo.Run(cleanCmd...); err != nil {
+		return "", scooterrors.NewScootError(fmt.Errorf("Unable to run git %v: %v", cleanCmd, err), CleanFailureExitCode)
 
-	for _, argv := range cmds {
-		if _, err := db.dataRepo.Run(argv...); err != nil {
-			return "", fmt.Errorf("Unable to run git %v: %v", argv, err)
-		}
 	}
-
+	// -f overrides modified files
+	// -B resets or creates the named branch when checking out the given sha.
+	// Note: our worktree cannot be in detached head state after checkout since [Twitter] git needs a valid ref to fetch.
+	//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
+	checkoutCmd := []string{"checkout", "-fB", tempCheckoutBranch, sha}
+	if _, err := db.dataRepo.Run(checkoutCmd...); err != nil {
+		return "", scooterrors.NewScootError(fmt.Errorf("Unable to run git %v: %v", checkoutCmd, err), CheckoutFailureExitCode)
+	}
 	return db.dataRepo.Dir(), nil
 }
 
@@ -155,19 +158,19 @@ func (db *DB) releaseCheckout(path string) error {
 func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
 	}
 
 	if err := v.Download(db); err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
 	}
 
 	if v.Kind() != KindGitCommitSnapshot {
-		return "", fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind())
+		return "", scooterrors.NewScootError(fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind()), ExportGitCommitFailureExitCode)
 	}
 
 	if err := moveCommit(db.dataRepo, externalRepo, v.SHA()); err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
 	}
 
 	return v.SHA(), nil

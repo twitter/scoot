@@ -35,7 +35,7 @@ tidy:
 	go mod tidy
 
 # Gets the latest version of REPO, or if left blank, updates all modules
-mod-update:
+get:
 	go get -u $(REPO)
 
 ############## dependencies
@@ -71,6 +71,9 @@ fs_util:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
+test:
+	go test -count=1 -race -timeout 20s $(PKG)
+
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
 	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...) $(TRAVIS_FILTER)
@@ -84,7 +87,7 @@ test-unit:
 	# Only invoked manually so we don't need to modify output
 	go test -count=1 -race -timeout 120s $$(go list ./...)
 
-test: test-unit-property-integration coverage
+test-all: test-unit-property-integration coverage
 
 ############## standalone binary & integration tests
 
@@ -152,4 +155,4 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test
 
-travis: fs_util recoverytest swarmtest integrationtest test clean-data
+travis: fs_util recoverytest swarmtest integrationtest test-all clean-data

@@ -12,6 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
@@ -703,6 +704,7 @@ func setup() (f *dbFixture, err error) {
 func TestMain(m *testing.M) {
 	flag.Parse()
 	var err error
+	log.AddHook(hooks.NewContextHook())
 	fixture, err = setup()
 	defer fixture.close()
 	if err != nil {

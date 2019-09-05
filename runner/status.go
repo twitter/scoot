@@ -5,6 +5,7 @@ import (
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/scooterrors"
 )
 
 type RunID string
@@ -34,6 +35,13 @@ const (
 
 	// Run timed out and was killed
 	TIMEDOUT
+
+	PreProcessingFailureExitCode   int = 70
+	GenericCheckoutFailureExitCode     = 80
+	LogRefCreationFailureExitCode      = 90
+	PostProcessingFailureExitCode      = 100
+	CouldNotExecExitCode               = 110
+	PostExecFailureExitCode            = 120
 )
 
 func (p RunState) IsDone() bool {
@@ -123,10 +131,11 @@ func TimeoutStatus(runID RunID, tags tags.LogTags) (r RunStatus) {
 	return r
 }
 
-func FailedStatus(runID RunID, err error, tags tags.LogTags) (r RunStatus) {
+func FailedStatus(runID RunID, err *scooterrors.ScootError, tags tags.LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
+	r.ExitCode = err.GetExitCode()
 	r.LogTags = tags
 	return r
 }

@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/scooterrors"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
@@ -328,17 +329,17 @@ func makeBundleName(key string) string {
 func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, BundleUploadFailureExitCode)
 	}
 	defer f.Close()
 
 	name := path.Base(filePath)
 	if name == "." || name == "/" {
-		return "", fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name)
+		return "", scooterrors.NewScootError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), BundleUploadFailureExitCode)
 	}
 
 	if err := b.cfg.Store.Write(name, f, ttl); err != nil {
-		return "", err
+		return "", scooterrors.NewScootError(err, BundleUploadFailureExitCode)
 	}
 
 	return b.cfg.Store.Root() + name, nil
