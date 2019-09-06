@@ -11,6 +11,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/workerapi"
 )
 
@@ -118,6 +119,7 @@ func (r *taskRunner) run() error {
 				"sagaID": r.saga.GetState().SagaId(),
 				"err":    taskErr,
 				"tag":    r.Tag,
+				"node":   r.nodeSt.node,
 			}).Info("Error running job, dead lettering task after max retries.")
 		taskErr.st.Error += DeadLetterTrailer
 	}
@@ -138,6 +140,13 @@ func (r *taskRunner) run() error {
 			"tag":        taskErr.st.Tag,
 			"err":        taskErr,
 		}).Info("End task")
+
+	// Check if failure was due to failure to git clean. If so, kill worker
+	if st.ExitCode == gitdb.CleanFailureExitCode {
+		log.Info("Killing runner for failure to git clean.")
+		r.runner.Kill()
+	}
+
 	if !shouldLog {
 		if taskErr != nil {
 			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)

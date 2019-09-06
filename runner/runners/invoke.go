@@ -1,7 +1,7 @@
 package runners
 
 import (
-	"errors"
+	e "errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,9 +13,9 @@ import (
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	scootproto "github.com/twitter/scoot/common/proto"
-	"github.com/twitter/scoot/common/scooterrors"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
@@ -106,7 +106,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 	if _, ok := inv.filerMap[runType]; !ok {
 		return runner.FailedStatus(id,
-			scooterrors.NewScootError(fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType), runner.PreProcessingFailureExitCode),
+			errors.NewError(fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType), runner.PreProcessingFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
 
@@ -117,8 +117,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd, rts)
 		if err != nil {
 			msg := fmt.Sprintf("Error preprocessing Bazel command: %s", err)
-			failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(
-				errors.New(msg), runner.PreProcessingFailureExitCode),
+			failedStatus := runner.FailedStatus(id, errors.NewError(
+				e.New(msg), runner.PreProcessingFailureExitCode),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 
@@ -211,15 +211,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		if err != nil {
 			var failedStatus runner.RunStatus
-			scootErr, ok := err.(*scooterrors.ScootError)
+			codeErr, ok := err.(*errors.Error)
 			switch ok {
 			case true:
-				// err is of type *scootErr
-				failedStatus = runner.FailedStatus(id, scootErr,
+				// err is of type github.com/twitter/scoot/common/errors.Error
+				failedStatus = runner.FailedStatus(id, codeErr,
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			default:
-				// err is not of type *scootErr
-				failedStatus = runner.FailedStatus(id, scooterrors.NewScootError(err, runner.GenericCheckoutFailureExitCode),
+				// err is not of type github.com/twitter/scoot/common/errors.Error
+				failedStatus = runner.FailedStatus(id, errors.NewError(codeErr, runner.GenericCheckoutFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
@@ -256,7 +256,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
 		msg := fmt.Sprintf("could not create stdout: %s", err)
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.LogRefCreationFailureExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
@@ -268,7 +268,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	stderr, err := inv.output.Create(fmt.Sprintf("%s-stderr", id))
 	if err != nil {
 		msg := fmt.Sprintf("could not create stderr: %s", err)
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.LogRefCreationFailureExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
@@ -280,7 +280,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	stdlog, err := inv.output.Create(fmt.Sprintf("%s-stdlog", id))
 	if err != nil {
 		msg := fmt.Sprintf("could not create combined stdout/stderr: %s", err)
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.LogRefCreationFailureExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
@@ -306,7 +306,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				err = setupJDKSymlink(parentDir, pp.GetValue())
 				if err != nil {
 					msg := fmt.Sprintf("Failed setting up JDK symlink to %s: %s", pp.GetValue(), err)
-					failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.PostProcessingFailureExitCode),
+					failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.PostProcessingFailureExitCode),
 						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 					return failedStatus
@@ -317,7 +317,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		err = createOutputPaths(cmd, co.Path())
 		if err != nil {
 			msg := fmt.Sprintf("Failed setting up output directories: %s", err)
-			failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.PostProcessingFailureExitCode),
+			failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.PostProcessingFailureExitCode),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 			return failedStatus
@@ -350,7 +350,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	})
 	if err != nil {
 		msg := fmt.Sprintf("could not exec: %s", err)
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.CouldNotExecExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.CouldNotExecExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
@@ -431,7 +431,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		if runType == runner.RunTypeScoot {
 			tmp, err := inv.tmp.TempDir("invoke")
 			if err != nil {
-				return runner.FailedStatus(id, scooterrors.NewScootError(fmt.Errorf("error staging ingestion dir: %v", err), runner.PostExecFailureExitCode),
+				return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error staging ingestion dir: %v", err), runner.PostExecFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
@@ -445,7 +445,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			stderrName := "STDERR"
 			stdlogName := "STDLOG"
 			if err = stageLogFiles(tmp.Dir, stdoutName, stderrName, stdlogName, stdout, stderr, stdlog); err != nil {
-				return runner.FailedStatus(id, scooterrors.NewScootError(err, runner.PostExecFailureExitCode),
+				return runner.FailedStatus(id, errors.NewError(err, runner.PostExecFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
@@ -469,7 +469,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			case res := <-ingestCh:
 				switch res.(type) {
 				case error:
-					return runner.FailedStatus(id, scooterrors.NewScootError(fmt.Errorf("error ingesting results: %v", res), runner.PostExecFailureExitCode),
+					return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error ingesting results: %v", res), runner.PostExecFailureExitCode),
 						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 				}
 				snapshotID = res.(string)
@@ -518,7 +518,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				switch res.(type) {
 				case error:
 					msg := fmt.Sprintf("Error postprocessing Bazel command: %s", res)
-					failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.PostExecFailureExitCode),
+					failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.PostExecFailureExitCode),
 						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
 					return failedStatus
@@ -548,12 +548,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			return status
 		} else {
 			// should never have an unknown RunType here
-			return runner.FailedStatus(id, scooterrors.NewScootError(fmt.Errorf("Can't process Completed status for RunType %s", runType), runner.PostExecFailureExitCode),
+			return runner.FailedStatus(id, errors.NewError(fmt.Errorf("Can't process Completed status for RunType %s", runType), runner.PostExecFailureExitCode),
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
 	case execer.FAILED:
 		msg := fmt.Sprintf("error execing: %s", st.Error)
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.PostExecFailureExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.PostExecFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
@@ -561,7 +561,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		return failedStatus
 	default:
 		msg := "unexpected exec state"
-		failedStatus := runner.FailedStatus(id, scooterrors.NewScootError(errors.New(msg), runner.PostExecFailureExitCode),
+		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), runner.PostExecFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		if runType == runner.RunTypeBazel {
 			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}

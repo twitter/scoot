@@ -112,11 +112,11 @@ func runStatusToExecuteOperationMetadata_Stage(rs *runStatus) remoteexecution.Ex
 		return remoteexecution.ExecuteOperationMetadata_QUEUED
 	case scoot.RunStatusState_RUNNING:
 		return remoteexecution.ExecuteOperationMetadata_EXECUTING
-	case scoot.RunStatusState_ABORTED:
-		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_COMPLETE:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_FAILED:
+		return remoteexecution.ExecuteOperationMetadata_COMPLETED
+	case scoot.RunStatusState_ABORTED:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_TIMEDOUT:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
@@ -146,10 +146,6 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 			Code: int32(google_rpc_code.Code_OK),
 		}
 		// done states
-	case scoot.RunStatusState_ABORTED:
-		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_CANCELLED),
-		}
 	case scoot.RunStatusState_COMPLETE:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_OK),
@@ -157,6 +153,10 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 	case scoot.RunStatusState_FAILED:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_INTERNAL),
+		}
+	case scoot.RunStatusState_ABORTED:
+		return &google_rpc_status.Status{
+			Code: int32(google_rpc_code.Code_CANCELLED),
 		}
 	case scoot.RunStatusState_TIMEDOUT:
 		return &google_rpc_status.Status{
@@ -176,15 +176,16 @@ func runStatusToDoneBool(rs *runStatus) bool {
 	switch rs.Status {
 	case scoot.RunStatusState_UNKNOWN:
 		return false
+		// TODO: UNKNOWN should be true, but that breaks bazel-integration test
 	case scoot.RunStatusState_PENDING:
 		return false
 	case scoot.RunStatusState_RUNNING:
 		return false
-	case scoot.RunStatusState_ABORTED:
-		return true
 	case scoot.RunStatusState_COMPLETE:
 		return true
 	case scoot.RunStatusState_FAILED:
+		return true
+	case scoot.RunStatusState_ABORTED:
 		return true
 	case scoot.RunStatusState_TIMEDOUT:
 		return true

@@ -1,7 +1,7 @@
 package gitdb
 
 import (
-	"errors"
+	e "errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/scooterrors"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
@@ -35,7 +35,7 @@ const bundlestoreIDText = "bs"
 
 func (b *bundlestoreBackend) parseID(id snap.ID, kind SnapshotKind, extraParts []string) (snapshot, error) {
 	if b.cfg == nil {
-		return nil, errors.New("Bundlestore backend not initialized.")
+		return nil, e.New("Bundlestore backend not initialized.")
 	}
 
 	if len(extraParts) != 3 {
@@ -329,18 +329,18 @@ func makeBundleName(key string) string {
 func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", scooterrors.NewScootError(err, BundleUploadFailureExitCode)
+		return "", errors.NewError(err, BundleUploadFailureExitCode)
 	}
 	defer f.Close()
 
 	name := path.Base(filePath)
 	if name == "." || name == "/" {
-		return "", scooterrors.NewScootError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), BundleUploadFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), BundleUploadFailureExitCode)
 	}
 
 	resource := store.NewResource(f, ttl)
 	if err := b.cfg.Store.Write(name, resource); err != nil {
-		return "", scooterrors.NewScootError(err, BundleUploadFailureExitCode)
+		return "", errors.NewError(err, BundleUploadFailureExitCode)
 	}
 
 	return b.cfg.Store.Root() + name, nil

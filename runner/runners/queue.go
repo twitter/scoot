@@ -316,6 +316,11 @@ func (c *QueueController) Release() {
 	close(c.reqCh)
 }
 
+// Kills worker process
+func (c *QueueController) Kill() {
+	log.Fatal("Kill Requested")
+}
+
 // Handle requests to run and update, to provide concurrency management between the two.
 // Although we can still receive run requests, runs and updates are done blocking.
 func (c *QueueController) loop() {

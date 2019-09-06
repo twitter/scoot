@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/twitter/scoot/common/scooterrors"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
@@ -139,7 +139,7 @@ type req interface {
 }
 
 // stringAndError contains a string field, where information such as a snapshot ID, path, or file contents can be stored,
-// in addition to a ScootError field which contains both a standard error and an exit code
+// in addition to a Error field which contains both a standard error and an exit code
 type stringAndError struct {
 	str string
 	err error
@@ -354,7 +354,7 @@ func (r readFileAllReq) req() {}
 // ReadFileAll reads the contents of the file path in FSSnapshot ID, or errors
 func (db *DB) ReadFileAll(id snap.ID, path string) ([]byte, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return nil, scooterrors.NewScootError(db.err, DBInitFailureExitCode)
+		return nil, errors.NewError(db.err, DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- readFileAllReq{id: id, path: path, resultCh: resultCh}
@@ -375,7 +375,7 @@ func (db *DB) Checkout(id snap.ID) (path string, err error) {
 	log.Debugf("Checking out %s", id)
 	if <-db.initDoneCh; db.err != nil {
 		log.Error("Unable to init db")
-		return "", scooterrors.NewScootError(db.err, DBInitFailureExitCode)
+		return "", errors.NewError(db.err, DBInitFailureExitCode)
 	}
 	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
@@ -414,7 +414,7 @@ func (r exportGitCommitReq) req() {}
 // the exported commit or an error.
 func (db *DB) ExportGitCommit(id snap.ID, exportRepo *repo.Repository) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return "", scooterrors.NewScootError(db.err, DBInitFailureExitCode)
+		return "", errors.NewError(db.err, DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- exportGitCommitReq{id: id, exportRepo: exportRepo, resultCh: resultCh}
@@ -462,7 +462,7 @@ func (r uploadFileReq) req() {}
 // Returns location of stored file
 func (db *DB) UploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return "", scooterrors.NewScootError(db.err, DBInitFailureExitCode)
+		return "", errors.NewError(db.err, DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- uploadFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}

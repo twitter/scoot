@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/scooterrors"
+	"github.com/twitter/scoot/common/errors"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
@@ -17,28 +17,28 @@ import (
 func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
-		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
+		return "", errors.NewError(err, ReadFileAllFailureExitCode)
 	}
 
 	tmp, err := db.tmp.TempDir("readFileAll-")
 	if err != nil {
-		return "", scooterrors.NewScootError(fmt.Errorf("Failed to create TempDir: %s", err), ReadFileAllFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("Failed to create TempDir: %s", err), ReadFileAllFailureExitCode)
 	}
 	defer os.RemoveAll(tmp.Dir)
 
 	r, err := v.DownloadTempRepo(db, tmp)
 	if err != nil {
-		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
+		return "", errors.NewError(err, ReadFileAllFailureExitCode)
 	}
 	defer os.RemoveAll(r.Dir())
 
 	if v.Kind() != KindFSSnapshot {
-		return "", scooterrors.NewScootError(fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind()), ReadFileAllFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("can only ReadFileAll from an FSSnapshot, but %v is a %v", id, v.Kind()), ReadFileAllFailureExitCode)
 	}
 
 	s, err := r.Run("cat-file", "-p", fmt.Sprintf("%s:%s", v.SHA(), path))
 	if err != nil {
-		return "", scooterrors.NewScootError(err, ReadFileAllFailureExitCode)
+		return "", errors.NewError(err, ReadFileAllFailureExitCode)
 	}
 	return s, nil
 }
@@ -124,7 +124,7 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 	// -f is force. -f the second time removes directories even if they're git repos themselves
 	cleanCmd := []string{"clean", "-f", "-f", "-d", "-x"}
 	if _, err := db.dataRepo.Run(cleanCmd...); err != nil {
-		return "", scooterrors.NewScootError(fmt.Errorf("Unable to run git %v: %v", cleanCmd, err), CleanFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("Unable to run git %v: %v", cleanCmd, err), CleanFailureExitCode)
 
 	}
 	// -f overrides modified files
@@ -133,7 +133,7 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 	//       we use scoot's tmp branch name so here subsequent fetch operations, ex: those in stream.go, can succeed.
 	checkoutCmd := []string{"checkout", "-fB", tempCheckoutBranch, sha}
 	if _, err := db.dataRepo.Run(checkoutCmd...); err != nil {
-		return "", scooterrors.NewScootError(fmt.Errorf("Unable to run git %v: %v", checkoutCmd, err), CheckoutFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("Unable to run git %v: %v", checkoutCmd, err), CheckoutFailureExitCode)
 	}
 	return db.dataRepo.Dir(), nil
 }
@@ -158,19 +158,19 @@ func (db *DB) releaseCheckout(path string) error {
 func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string, error) {
 	v, err := db.parseID(id)
 	if err != nil {
-		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
+		return "", errors.NewError(err, ExportGitCommitFailureExitCode)
 	}
 
 	if err := v.Download(db); err != nil {
-		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
+		return "", errors.NewError(err, ExportGitCommitFailureExitCode)
 	}
 
 	if v.Kind() != KindGitCommitSnapshot {
-		return "", scooterrors.NewScootError(fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind()), ExportGitCommitFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("cannot export non-GitCommitSnapshot %v: %v", id, v.Kind()), ExportGitCommitFailureExitCode)
 	}
 
 	if err := moveCommit(db.dataRepo, externalRepo, v.SHA()); err != nil {
-		return "", scooterrors.NewScootError(err, ExportGitCommitFailureExitCode)
+		return "", errors.NewError(err, ExportGitCommitFailureExitCode)
 	}
 
 	return v.SHA(), nil

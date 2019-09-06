@@ -107,6 +107,13 @@ func (r *ChaosRunner) Release() {
 	}
 }
 
+// Kills worker process
+func (r *ChaosRunner) Kill() {
+	if r.del != nil {
+		r.del.Kill()
+	}
+}
+
 func (r *ChaosRunner) Erase(run runner.RunID) error {
 	err := r.delay()
 	if err != nil {

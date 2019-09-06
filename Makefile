@@ -31,11 +31,18 @@ vet:
 install:
 	go install ./binaries/...
 
+# Cleans go.mod and go.sum of unused dependencies
 tidy:
 	go mod tidy
 
-# Gets the latest version of REPO, or if left blank, updates all modules
+# Gets the version of REPO specified by VER
+# Usage: make get REPO=cloud.google.com/go VER=v0.45.1
 get:
+	go get $(REPO)@$(VER)
+
+# Gets the latest version of REPO, or if left blank, updates all modules,
+# Usage: make get REPO=cloud.google.com/go
+get_latest:
 	go get -u $(REPO)
 
 ############## dependencies
@@ -71,6 +78,7 @@ fs_util:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
+# Usage: make test PKG=github.com/twitter/scoot/binaries/...
 test:
 	go test -count=1 -race -timeout 20s $(PKG)
 
@@ -111,7 +119,7 @@ integrationtest: install
 ############## cleanup
 
 clean-mockgen:
-	rm */*_mock.go
+	find . -name \*_mock.go -type f -delete
 
 clean-data:
 	rm -rf ./.scootdata/*
@@ -119,7 +127,7 @@ clean-data:
 clean-go:
 	go clean ./...
 
-clean: clean-data clean-mockgen clean-go
+clean: clean-data clean-go
 
 ############## code gen for mocks, bindata configs, thrift, and protoc
 

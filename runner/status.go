@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/scooterrors"
 )
 
 type RunID string
@@ -50,6 +50,8 @@ func (p RunState) IsDone() bool {
 
 func (p RunState) String() string {
 	switch p {
+	case UNKNOWN:
+		return "UNKNOWN"
 	case PENDING:
 		return "PENDING"
 	case RUNNING:
@@ -62,8 +64,6 @@ func (p RunState) String() string {
 		return "ABORTED"
 	case TIMEDOUT:
 		return "TIMEDOUT"
-	case UNKNOWN:
-		return "UNKNOWN"
 	default:
 		panic(fmt.Sprintf("Unexpected RunState %v", int(p)))
 	}
@@ -78,7 +78,7 @@ type RunStatus struct {
 	// Fields below are optional and only exist for certain states
 
 	// References to stdout and stderr, not their text
-	// Runner impls may not provide valid refs for all States (e.g. failure before creation of refs)
+	// Runner impls might not provide valid refs for all States (e.g. failure before creation of refs)
 	StdoutRef string
 	StderrRef string
 	// Only valid if State == COMPLETE
@@ -131,7 +131,7 @@ func TimeoutStatus(runID RunID, tags tags.LogTags) (r RunStatus) {
 	return r
 }
 
-func FailedStatus(runID RunID, err *scooterrors.ScootError, tags tags.LogTags) (r RunStatus) {
+func FailedStatus(runID RunID, err *errors.Error, tags tags.LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()

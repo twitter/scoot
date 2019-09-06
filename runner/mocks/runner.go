@@ -58,6 +58,16 @@ func (mr *MockServiceMockRecorder) Erase(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Erase", reflect.TypeOf((*MockService)(nil).Erase), arg0)
 }
 
+// Kill mocks base method
+func (m *MockService) Kill() {
+	m.ctrl.Call(m, "Kill")
+}
+
+// Kill indicates an expected call of Kill
+func (mr *MockServiceMockRecorder) Kill() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kill", reflect.TypeOf((*MockService)(nil).Kill))
+}
+
 // Query mocks base method
 func (m *MockService) Query(arg0 runner.Query, arg1 runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ret := m.ctrl.Call(m, "Query", arg0, arg1)

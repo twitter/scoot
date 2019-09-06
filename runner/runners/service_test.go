@@ -5,8 +5,8 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/scooterrors"
 	"github.com/twitter/scoot/runner"
 )
 
@@ -33,7 +33,7 @@ func running() runner.RunStatus {
 }
 
 func failed(errorText string) runner.RunStatus {
-	return runner.FailedStatus(runner.RunID(""), scooterrors.NewScootError(fmt.Errorf(errorText), 1), t)
+	return runner.FailedStatus(runner.RunID(""), errors.NewError(fmt.Errorf(errorText), 1), t)
 }
 
 func aborted() runner.RunStatus {
