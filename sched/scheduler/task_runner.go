@@ -6,12 +6,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/workerapi"
 )
 
@@ -142,7 +142,7 @@ func (r *taskRunner) run() error {
 		}).Info("End task")
 
 	// Check if failure was due to failure to git clean. If so, kill worker
-	if st.ExitCode == gitdb.CleanFailureExitCode {
+	if st.ExitCode == errors.CleanFailureExitCode {
 		log.WithFields(
 			log.Fields{
 				"node":       r.nodeSt.node,

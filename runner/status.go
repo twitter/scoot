@@ -35,13 +35,6 @@ const (
 
 	// Run timed out and was killed
 	TIMEDOUT
-
-	PreProcessingFailureExitCode   int = 70
-	GenericCheckoutFailureExitCode     = 80
-	LogRefCreationFailureExitCode      = 90
-	PostProcessingFailureExitCode      = 100
-	CouldNotExecExitCode               = 110
-	PostExecFailureExitCode            = 120
 )
 
 func (p RunState) IsDone() bool {
@@ -135,7 +128,7 @@ func FailedStatus(runID RunID, err *errors.Error, tags tags.LogTags) (r RunStatu
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
-	r.ExitCode = err.GetExitCode()
+	r.ExitCode = int(err.GetExitCode())
 	r.LogTags = tags
 	return r
 }

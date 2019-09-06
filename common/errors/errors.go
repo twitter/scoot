@@ -1,20 +1,20 @@
 package errors
 
 type Error struct {
-	ExitCode int
+	code ExitCode
 	error
 }
 
-func NewError(err error, exitCode int) *Error {
+func NewError(err error, exitCode ExitCode) *Error {
 	if err == nil {
 		return nil
 	}
 	return &Error{exitCode, err}
 }
 
-func (e *Error) GetExitCode() int {
+func (e *Error) GetExitCode() ExitCode {
 	if e == nil {
 		return 0
 	}
-	return e.ExitCode
+	return e.code
 }

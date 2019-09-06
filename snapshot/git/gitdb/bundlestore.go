@@ -329,18 +329,18 @@ func makeBundleName(key string) string {
 func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", errors.NewError(err, BundleUploadFailureExitCode)
+		return "", errors.NewError(err, errors.BundleUploadFailureExitCode)
 	}
 	defer f.Close()
 
 	name := path.Base(filePath)
 	if name == "." || name == "/" {
-		return "", errors.NewError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), BundleUploadFailureExitCode)
+		return "", errors.NewError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), errors.BundleUploadFailureExitCode)
 	}
 
 	resource := store.NewResource(f, ttl)
 	if err := b.cfg.Store.Write(name, resource); err != nil {
-		return "", errors.NewError(err, BundleUploadFailureExitCode)
+		return "", errors.NewError(err, errors.BundleUploadFailureExitCode)
 	}
 
 	return b.cfg.Store.Root() + name, nil
