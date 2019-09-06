@@ -330,11 +330,11 @@ func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (s
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 
 	name := path.Base(filePath)
 	if name == "." || name == "/" {
