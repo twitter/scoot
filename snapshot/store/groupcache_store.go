@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -34,6 +35,9 @@ type GroupcacheConfig struct {
 
 // Add in-memory caching to the given store.
 func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfig, stat stats.StatsReceiver) (Store, http.Handler, error) {
+	if ttlc == nil {
+		return nil, nil, fmt.Errorf("MakeGroupcacheStore requires a non-nil TTLConfig")
+	}
 	stat = stat.Scope("bundlestoreCache")
 	go stats.StartUptimeReporting(stat, stats.BundlestoreUptime_ms, "", stats.DefaultStartupGaugeSpikeLen)
 
@@ -83,7 +87,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
 	go loop(cfg.Cluster, pool, cache, stat)
 
-	return &groupcacheStore{underlying: underlying, cache: cache, stat: stat}, pool, nil
+	return &groupcacheStore{underlying: underlying, cache: cache, stat: stat, ttlConfig: ttlc}, pool, nil
 }
 
 // Convert 'host:port' node ids to the format expected by groupcache peering, http URLs.
@@ -120,6 +124,7 @@ type groupcacheStore struct {
 	underlying Store
 	cache      *groupcache.Group
 	stat       stats.StatsReceiver
+	ttlConfig  *TTLConfig
 }
 
 func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
@@ -131,7 +136,7 @@ func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	if err != nil {
 		return nil, err
 	}
-	ttlv := TTLValue{TTL: *ttl, TTLKey: DefaultTTLKey}
+	ttlv := TTLValue{TTL: *ttl, TTLKey: s.ttlConfig.TTLKey}
 	rc := ioutil.NopCloser(bytes.NewReader(data))
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
 	return NewResource(rc, int64(len(data)), &ttlv), nil
