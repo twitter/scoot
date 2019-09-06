@@ -19,10 +19,10 @@ SCOOT_LOGLEVEL ?= info
 # Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
-default:
+build:
 	go build ./...
 
-format:
+fmt:
 	go fmt ./...
 
 vet:
@@ -153,6 +153,6 @@ bazel-proto:
 
 ############## top-level dev-fullbuild, travis targets
 
-dev-fullbuild: dev-dependencies generate test
+dev-fullbuild: dev-dependencies generate test-all
 
 travis: fs_util recoverytest swarmtest integrationtest test-all clean-data
