@@ -136,10 +136,13 @@ func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	if err != nil {
 		return nil, err
 	}
-	ttlv := TTLValue{TTL: *ttl, TTLKey: s.ttlConfig.TTLKey}
+	var ttlv *TTLValue = nil
+	if ttl != nil {
+		ttlv = &TTLValue{TTL: *ttl, TTLKey: s.ttlConfig.TTLKey}
+	}
 	rc := ioutil.NopCloser(bytes.NewReader(data))
 	s.stat.Counter(stats.GroupcacheReadOkCounter).Inc(1)
-	return NewResource(rc, int64(len(data)), &ttlv), nil
+	return NewResource(rc, int64(len(data)), ttlv), nil
 }
 
 func (s *groupcacheStore) Exists(name string) (bool, error) {
