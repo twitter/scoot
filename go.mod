@@ -34,5 +34,3 @@ require (
 	google.golang.org/grpc v1.14.0
 	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc // indirect
 )
-
-replace github.com/twitter/groupcache => ../groupcache
