@@ -56,7 +56,7 @@ func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
 }
 
 func Test_runTaskAndLog_Successful(t *testing.T) {
-	log.Info("Test_runTaskAndLog_Successful")
+	log.Debug("Test_runTaskAndLog_Successful")
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -78,7 +78,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 }
 
 func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
-	log.Info("Test_runTaskAndLog_IncludeRunningStatus")
+	log.Debug("Test_runTaskAndLog_IncludeRunningStatus")
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -105,7 +105,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 }
 
 func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
-	log.Info("Test_runTaskAndLog_FailedToLogStartTask")
+	log.Debug("Test_runTaskAndLog_FailedToLogStartTask")
 	task := sched.GenTask()
 
 	mockCtrl := gomock.NewController(t)
@@ -124,7 +124,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 }
 
 func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
-	log.Info("Test_runTaskAndLog_FailedToLogEndTask")
+	log.Debug("Test_runTaskAndLog_FailedToLogEndTask")
 	task := sched.GenTask()
 
 	mockCtrl := gomock.NewController(t)
@@ -147,7 +147,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 }
 
 func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
-	log.Info("Test_runTaskAndLog_TaskFailsToRun")
+	log.Debug("Test_runTaskAndLog_TaskFailsToRun")
 	task := sched.GenTask()
 
 	mockCtrl := gomock.NewController(t)
@@ -169,7 +169,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 }
 
 func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
-	log.Info("Test_runTaskAndLog_MarkFailedTaskAsFinished")
+	log.Debug("Test_runTaskAndLog_MarkFailedTaskAsFinished")
 	task := sched.GenTask()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -202,7 +202,7 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 }
 
 func Test_runTaskWithFailedStartTask(t *testing.T) {
-	log.Info("Test_runTaskWithFailedStartTask")
+	log.Debug("Test_runTaskWithFailedStartTask")
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -228,7 +228,7 @@ func Test_runTaskWithFailedStartTask(t *testing.T) {
 }
 
 func Test_runTaskWithRunRetry(t *testing.T) {
-	log.Info("Test_runTaskWithRunRetry")
+	log.Debug("Test_runTaskWithRunRetry")
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
@@ -271,7 +271,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 }
 
 func Test_runTaskWithQueryRetry(t *testing.T) {
-	log.Info("Test_runTaskWithQueryRetry")
+	log.Debug("Test_runTaskWithQueryRetry")
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

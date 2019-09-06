@@ -219,6 +219,6 @@ func (h *handler) Erase(runId string) error {
 func (h *handler) Kill() error {
 	h.stat.Counter(stats.WorkerServerKills).Inc(1)
 	h.updateTimeLastRpc()
-	log.Fatal("Killing worker")
+	h.run.Kill()
 	return nil
 }

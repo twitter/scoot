@@ -12,21 +12,14 @@ type StateMask uint64
 
 // Useful StateMask constants
 const (
-	PENDING_MASK StateMask = StateMask(1 << uint(PENDING))
-
-	RUNNING_MASK = 1 << uint(RUNNING)
-
-	ABORTED_MASK = 1 << uint(ABORTED)
-
-	COMPLETE_MASK = 1 << uint(COMPLETE)
-
-	FAILED_MASK = 1 << uint(FAILED)
-
-	TIMEDOUT_MASK = 1 << uint(TIMEDOUT)
-
-	UNKNOWN_MASK = 1 << uint(UNKNOWN)
-
-	DONE_MASK = (1<<uint(COMPLETE) |
+	UNKNOWN_MASK  StateMask = StateMask(1 << uint(PENDING))
+	PENDING_MASK            = 1 << uint(UNKNOWN)
+	RUNNING_MASK            = 1 << uint(RUNNING)
+	COMPLETE_MASK           = 1 << uint(COMPLETE)
+	FAILED_MASK             = 1 << uint(FAILED)
+	ABORTED_MASK            = 1 << uint(ABORTED)
+	TIMEDOUT_MASK           = 1 << uint(TIMEDOUT)
+	DONE_MASK               = (1<<uint(COMPLETE) |
 		1<<uint(FAILED) |
 		1<<uint(ABORTED) |
 		1<<uint(TIMEDOUT) |
