@@ -330,6 +330,11 @@ const (
 	WorkerServerClears = "clears"
 
 	/*
+		the number of kill requests received by the worker
+	*/
+	WorkerServerKills = "kills"
+
+	/*
 		The number of QueryWorker requests received by the worker server
 	*/
 	WorkerServerQueries = "workerQueries"

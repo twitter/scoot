@@ -61,4 +61,5 @@ service Worker {
   RunStatus Run(1: RunCommand cmd)   # Run a command and return job Status.
   RunStatus Abort(1: string runId)   # Returns ABORTED if aborted, FAILED if already ended, and UNKNOWN otherwise.
   void Erase(1: string runId)        # Remove run from the history of runs (trims WorkerStatus.ended). Optional.
+  void Kill()                        # Kills worker node
 }

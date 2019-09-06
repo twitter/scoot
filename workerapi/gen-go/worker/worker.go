@@ -28,6 +28,7 @@ type Worker interface {
 	// Parameters:
 	//  - RunId
 	Erase(runId string) (err error)
+	Kill() (err error)
 }
 
 type WorkerClient struct {
@@ -359,6 +360,78 @@ func (p *WorkerClient) recvErase() (err error) {
 	return
 }
 
+func (p *WorkerClient) Kill() (err error) {
+	if err = p.sendKill(); err != nil {
+		return
+	}
+	return p.recvKill()
+}
+
+func (p *WorkerClient) sendKill() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("Kill", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := WorkerKillArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *WorkerClient) recvKill() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "Kill" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "Kill failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Kill failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error12 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error13 error
+		error13, err = error12.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error13
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "Kill failed: invalid message type")
+		return
+	}
+	result := WorkerKillResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	return
+}
+
 type WorkerProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      Worker
@@ -379,12 +452,13 @@ func (p *WorkerProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewWorkerProcessor(handler Worker) *WorkerProcessor {
 
-	self12 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self12.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
-	self12.processorMap["Run"] = &workerProcessorRun{handler: handler}
-	self12.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
-	self12.processorMap["Erase"] = &workerProcessorErase{handler: handler}
-	return self12
+	self14 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self14.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
+	self14.processorMap["Run"] = &workerProcessorRun{handler: handler}
+	self14.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
+	self14.processorMap["Erase"] = &workerProcessorErase{handler: handler}
+	self14.processorMap["Kill"] = &workerProcessorKill{handler: handler}
+	return self14
 }
 
 func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -397,12 +471,12 @@ func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, 
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x13 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x15 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x13.Write(oprot)
+	x15.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x13
+	return false, x15
 
 }
 
@@ -578,6 +652,51 @@ func (p *workerProcessorErase) Process(seqId int32, iprot, oprot thrift.TProtoco
 		return true, err2
 	}
 	if err2 = oprot.WriteMessageBegin("Erase", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type workerProcessorKill struct {
+	handler Worker
+}
+
+func (p *workerProcessorKill) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := WorkerKillArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("Kill", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := WorkerKillResult{}
+	var err2 error
+	if err2 = p.handler.Kill(); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Kill: "+err2.Error())
+		oprot.WriteMessageBegin("Kill", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return true, err2
+	}
+	if err2 = oprot.WriteMessageBegin("Kill", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -1285,4 +1404,110 @@ func (p *WorkerEraseResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("WorkerEraseResult(%+v)", *p)
+}
+
+type WorkerKillArgs struct {
+}
+
+func NewWorkerKillArgs() *WorkerKillArgs {
+	return &WorkerKillArgs{}
+}
+
+func (p *WorkerKillArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *WorkerKillArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Kill_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *WorkerKillArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkerKillArgs(%+v)", *p)
+}
+
+type WorkerKillResult struct {
+}
+
+func NewWorkerKillResult() *WorkerKillResult {
+	return &WorkerKillResult{}
+}
+
+func (p *WorkerKillResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *WorkerKillResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("Kill_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *WorkerKillResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkerKillResult(%+v)", *p)
 }

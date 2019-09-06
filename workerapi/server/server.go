@@ -215,3 +215,10 @@ func (h *handler) Erase(runId string) error {
 	h.run.Erase(runner.RunID(runId))
 	return nil
 }
+
+func (h *handler) Kill() error {
+	h.stat.Counter(stats.WorkerServerKills).Inc(1)
+	h.updateTimeLastRpc()
+	log.Fatal("Killing worker")
+	return nil
+}

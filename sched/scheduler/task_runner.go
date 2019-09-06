@@ -143,7 +143,22 @@ func (r *taskRunner) run() error {
 
 	// Check if failure was due to failure to git clean. If so, kill worker
 	if st.ExitCode == gitdb.CleanFailureExitCode {
-		log.Info("Killing runner for failure to git clean.")
+		log.WithFields(
+			log.Fields{
+				"node":       r.nodeSt.node,
+				"log":        shouldLog,
+				"runID":      taskErr.st.RunID,
+				"state":      taskErr.st.State,
+				"stdout":     taskErr.st.StdoutRef,
+				"stderr":     taskErr.st.StderrRef,
+				"snapshotID": taskErr.st.SnapshotID,
+				"exitCode":   taskErr.st.ExitCode,
+				"error":      taskErr.st.Error,
+				"jobID":      taskErr.st.JobID,
+				"taskID":     taskErr.st.TaskID,
+				"tag":        taskErr.st.Tag,
+				"err":        taskErr,
+			}).Error("Killing runner for failure to git clean")
 		r.runner.Kill()
 	}
 

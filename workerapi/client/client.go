@@ -106,7 +106,15 @@ func (c *simpleClient) Release() {
 
 // Kills worker process
 func (c *simpleClient) Kill() {
-	log.Fatal("Kill requested")
+	workerClient, err := c.dial()
+	if err != nil {
+		log.Errorf("Unable to dial for kill request: %s", err)
+	}
+
+	err = workerClient.Kill()
+	if err != nil {
+		log.Errorf("Unable to send kill request: %s", err)
+	}
 }
 
 // Implements Scoot Worker API
