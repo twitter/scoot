@@ -69,7 +69,7 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 		}
 		break
 	}
-	if err := s.storeConfig.Store.Write(bundleName, store.NewResource(bundleData, ttl)); err != nil {
+	if err := s.storeConfig.Store.Write(bundleName, store.NewResource(bundleData, req.ContentLength, ttl)); err != nil {
 		log.Infof("Write err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error writing Bundle: %s", err), http.StatusInternalServerError)
 		s.storeConfig.Stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)

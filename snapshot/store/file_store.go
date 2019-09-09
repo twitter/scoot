@@ -34,7 +34,14 @@ type FileStore struct {
 func (s *FileStore) OpenForRead(name string) (*Resource, error) {
 	bundlePath := filepath.Join(s.bundleDir, name)
 	r, err := os.Open(bundlePath)
-	return NewResource(r, nil), err
+	if err != nil {
+		return nil, err
+	}
+	fi, err := r.Stat()
+	if err != nil {
+		return nil, err
+	}
+	return NewResource(r, fi.Size(), nil), err
 }
 
 func (s *FileStore) Exists(name string) (bool, error) {
@@ -70,6 +77,11 @@ func (s *FileStore) Write(name string, resource *Resource) error {
 	if _, err := io.Copy(f, resource); err != nil {
 		return err
 	}
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	resource.Length = fi.Size()
 	return nil
 }
 
