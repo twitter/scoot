@@ -21,7 +21,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795 // indirect
-	github.com/twitter/groupcache v0.0.0-20190830224244-7699c26b8c0c
+	github.com/twitter/groupcache v0.0.0-20190909015146-10d21707d5fe
 	golang.org/x/exp v0.0.0-20190121172915-509febef88a4 // indirect
 	golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3 // indirect
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
