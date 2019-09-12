@@ -120,13 +120,18 @@ func (bc *bzCommand) cancel() error {
 
 // Runs fsUtilCmd via an execer with appropriate flags
 func (bc *bzCommand) runCmd(args []string) ([]byte, []byte, execer.ProcessStatus, error) {
+	// local store path required
+	args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
+
+	// set connection limit
+	args = append([]string{fsUtilCmdConnLimit, fmt.Sprintf("%d", connLimit)}, args...)
+
+	// add serverAddrs if we resolved any
 	serverAddrs, err := bc.casResolver.ResolveMany(maxResolveToFSUtil)
 	if err != nil {
 		return nil, nil, execer.ProcessStatus{}, err
 	}
 
-	// localStorePath required, add serverAddrs if resolved
-	args = append([]string{fsUtilCmdLocalStore, bc.localStorePath}, args...)
 	if len(serverAddrs) > 0 {
 		for _, addr := range serverAddrs {
 			args = append([]string{fsUtilCmdServerAddr, addr}, args...)
