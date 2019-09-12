@@ -19,6 +19,7 @@ const (
 	fsUtilCmdRoot         = "--root"
 	fsUtilCmdLocalStore   = "--local-store-path"
 	fsUtilCmdServerAddr   = "--server-address"
+	fsUtilCmdConnLimit    = "--connection-limit"
 	fsUtilCmdGlobWildCard = "**"
 
 	emptyID = bazel.SnapshotIDPrefix + "-" + bazel.EmptySha + "-0"
@@ -26,4 +27,7 @@ const (
 	// limit amount of CAS addresses resolved in BzFiler calls to fs_util to this
 	// value, in order to limit number of connections
 	maxResolveToFSUtil = 5
+
+	// connection-limit fs_util flag setting
+	connLimit = 3
 )
