@@ -124,7 +124,7 @@ func TimeoutStatus(runID RunID, tags tags.LogTags) (r RunStatus) {
 	return r
 }
 
-func FailedStatus(runID RunID, err *errors.Error, tags tags.LogTags) (r RunStatus) {
+func FailedStatus(runID RunID, err *errors.ExitCodeError, tags tags.LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()

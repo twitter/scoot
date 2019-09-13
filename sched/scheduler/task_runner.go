@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
@@ -141,27 +140,6 @@ func (r *taskRunner) run() error {
 			"err":        taskErr,
 		}).Info("End task")
 
-	// Check if failure was due to failure to git clean. If so, kill worker
-	if st.ExitCode == errors.CleanFailureExitCode {
-		log.WithFields(
-			log.Fields{
-				"node":       r.nodeSt.node,
-				"log":        shouldLog,
-				"runID":      taskErr.st.RunID,
-				"state":      taskErr.st.State,
-				"stdout":     taskErr.st.StdoutRef,
-				"stderr":     taskErr.st.StderrRef,
-				"snapshotID": taskErr.st.SnapshotID,
-				"exitCode":   taskErr.st.ExitCode,
-				"error":      taskErr.st.Error,
-				"jobID":      taskErr.st.JobID,
-				"taskID":     taskErr.st.TaskID,
-				"tag":        taskErr.st.Tag,
-				"err":        taskErr,
-			}).Error("Killing runner for failure to git clean")
-		r.runner.Kill()
-	}
-
 	if !shouldLog {
 		if taskErr != nil {
 			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
@@ -202,6 +180,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			"jobID":  r.JobID,
 			"taskID": r.TaskID,
 			"tag":    r.Tag,
+			"node":   r.nodeSt.node,
 		}).Info("runAndWait()")
 
 	for {
@@ -214,6 +193,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 				}).Info("The run was aborted by the scheduler before it was sent to a worker")
 			return st, req.endTask, nil
 		}
@@ -233,6 +213,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 				}).Info("Initial run attempts aborted by the scheduler")
 			return st, req.endTask, nil
 		}
@@ -243,6 +224,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 					"err":    err,
 				}).Info("Retrying run()")
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
@@ -273,6 +255,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 					"err":    err,
 				}).Info("Retrying query")
 			time.Sleep(r.runnerRetryInterval)
@@ -317,6 +300,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 			"taskID":  r.TaskID,
 			"timeout": timeout,
 			"tag":     r.Tag,
+			"node":    r.nodeSt.node,
 		}).Infof("Query(includeRunning=%t)", includeRunning)
 
 	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
@@ -352,6 +336,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 			"msgType": msgType,
 			"jobID":   r.JobID,
 			"taskID":  r.TaskID,
+			"node":    r.nodeSt.node,
 			"tag":     r.Tag,
 		}).Info("TryLogTaskStatus")
 	var statusAsBytes []byte

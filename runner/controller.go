@@ -16,7 +16,4 @@ type Controller interface {
 
 	// Optional function to clean up process-local resources, ex: cancel goroutines, close connections, etc
 	Release()
-
-	// Kills worker process
-	Kill()
 }

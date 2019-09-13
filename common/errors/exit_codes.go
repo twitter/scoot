@@ -3,23 +3,23 @@ package errors
 type ExitCode int
 
 const (
-	PreProcessingFailureExitCode ExitCode = 70
+	PreProcessingFailureExitCode ExitCode = 200
 
 	// GitDB specific exit codes
-	GenericCheckoutFailureExitCode = 80
-	CleanFailureExitCode           = 81
-	CheckoutFailureExitCode        = 82
-	ReleaseCheckoutFailureExitCode = 83
-	BundleUploadFailureExitCode    = 84
-	ReadFileAllFailureExitCode     = 85
-	ExportGitCommitFailureExitCode = 86
-	DBInitFailureExitCode          = 87
+	GenericCheckoutFailureExitCode = 210
+	CleanFailureExitCode           = 211
+	CheckoutFailureExitCode        = 212
+	ReleaseCheckoutFailureExitCode = 213
+	BundleUploadFailureExitCode    = 214
+	ReadFileAllFailureExitCode     = 215
+	ExportGitCommitFailureExitCode = 216
+	DBInitFailureExitCode          = 217
 
-	LogRefCreationFailureExitCode = 90
+	LogRefCreationFailureExitCode = 220
 
-	PostProcessingFailureExitCode = 100
+	PostProcessingFailureExitCode = 230
 
-	CouldNotExecExitCode = 110
+	CouldNotExecExitCode = 240
 
-	PostExecFailureExitCode = 120
+	PostExecFailureExitCode = 250
 )

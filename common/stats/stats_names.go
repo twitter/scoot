@@ -330,11 +330,6 @@ const (
 	WorkerServerClears = "clears"
 
 	/*
-		the number of kill requests received by the worker
-	*/
-	WorkerServerKills = "kills"
-
-	/*
 		The number of QueryWorker requests received by the worker server
 	*/
 	WorkerServerQueries = "workerQueries"
@@ -353,6 +348,11 @@ const (
 		record when a worker service is starting
 	*/
 	WorkerServerStartedGauge = "workerStartGauge"
+
+	/*
+		record when a worker service kills itself
+	*/
+	WorkerServerKillGauge = "workerKillGauge"
 
 	/*
 		The time it takes to run the task (including snapshot handling)

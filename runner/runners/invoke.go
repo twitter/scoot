@@ -80,12 +80,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"jobID":  cmd.JobID,
 			"taskID": cmd.TaskID,
 		}).Info("*Invoker.run()")
+
 	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
+
 	defer func() {
 		taskTimer.Stop()
 		updateCh <- r
 		close(updateCh)
 	}()
+
 	start := time.Now()
 
 	// Records various stages of the run
@@ -211,7 +214,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		if err != nil {
 			var failedStatus runner.RunStatus
-			codeErr, ok := err.(*errors.Error)
+			codeErr, ok := err.(*errors.ExitCodeError)
 			switch ok {
 			case true:
 				// err is of type github.com/twitter/scoot/common/errors.Error

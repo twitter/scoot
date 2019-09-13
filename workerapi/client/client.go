@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
@@ -102,19 +100,6 @@ func (c *simpleClient) Abort(runID runner.RunID) (runner.RunStatus, error) {
 // Release local resources.
 func (c *simpleClient) Release() {
 	c.Close()
-}
-
-// Kills worker process
-func (c *simpleClient) Kill() {
-	workerClient, err := c.dial()
-	if err != nil {
-		log.Errorf("Unable to dial for kill request: %s", err)
-	}
-
-	err = workerClient.Kill()
-	if err != nil {
-		log.Errorf("Unable to send kill request: %s", err)
-	}
 }
 
 // Implements Scoot Worker API
