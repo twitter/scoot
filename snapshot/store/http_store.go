@@ -88,7 +88,7 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 		ttlv := s.getTTLValue(resp)
-		return NewResource(resp.Body, ttlv), nil
+		return NewResource(resp.Body, resp.ContentLength, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
@@ -134,6 +134,7 @@ func (s *httpStore) Write(name string, resource *Resource) error {
 		if err != nil {
 			return nil, err
 		}
+		req.ContentLength = resource.Length
 		req.Header.Set("Content-Type", "text/plain")
 		ttl := resource.TTLValue
 		if ttl == nil {

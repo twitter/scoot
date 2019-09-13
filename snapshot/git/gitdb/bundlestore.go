@@ -332,13 +332,17 @@ func (b *bundlestoreBackend) uploadFile(filePath string, ttl *store.TTLValue) (s
 		return "", errors.NewError(err, errors.BundleUploadFailureExitCode)
 	}
 	defer f.Close()
+	fi, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
 
 	name := path.Base(filePath)
 	if name == "." || name == "/" {
 		return "", errors.NewError(fmt.Errorf("Invalid path %v, base parsed to %v", filePath, name), errors.BundleUploadFailureExitCode)
 	}
 
-	resource := store.NewResource(f, ttl)
+	resource := store.NewResource(f, fi.Size(), ttl)
 	if err := b.cfg.Store.Write(name, resource); err != nil {
 		return "", errors.NewError(err, errors.BundleUploadFailureExitCode)
 	}

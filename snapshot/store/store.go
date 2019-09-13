@@ -51,15 +51,18 @@ func GetDurationTTL(t *TTLValue) time.Duration {
 	return d
 }
 
-// Resource is io readable as well as ttl aware.
+// Resource encapsulates a Store resource and embeds an io.ReadCloser around the data
+// Length: length in bytes of data to be read or written
+// TTLValue: TTL value for the resource, or nil if not supporting TTL
 type Resource struct {
 	io.ReadCloser
+	Length   int64
 	TTLValue *TTLValue
 }
 
 // NewResource constructs a new resource.
-func NewResource(rc io.ReadCloser, TTLValue *TTLValue) *Resource {
-	return &Resource{ReadCloser: rc, TTLValue: TTLValue}
+func NewResource(rc io.ReadCloser, l int64, ttlv *TTLValue) *Resource {
+	return &Resource{ReadCloser: rc, Length: l, TTLValue: ttlv}
 }
 
 // Read-only operations on store, limited for now to a couple essential functions.

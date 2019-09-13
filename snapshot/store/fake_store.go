@@ -32,7 +32,7 @@ func (f *FakeStore) OpenForRead(name string) (*Resource, error) {
 	}
 	rc := ioutil.NopCloser(bytes.NewBuffer(b))
 
-	return NewResource(rc, f.TTL), nil
+	return NewResource(rc, int64(len(b)), f.TTL), nil
 }
 
 func (f *FakeStore) Root() string { return "" }
