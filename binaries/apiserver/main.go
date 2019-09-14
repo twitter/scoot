@@ -32,6 +32,7 @@ func main() {
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes")
+	// TODO add a request buffer size. can probably remove all the grpc tuning flags if that works.
 	grpcConns := flag.Int("max_grpc_conn", cas.MaxSimultaneousConnections, "max grpc listener connections")
 	grpcRate := flag.Int("max_grpc_rps", cas.MaxRequestsPerSecond, "max grpc incoming requests per second")
 	grpcBurst := flag.Int("max_grpc_rps_burst", cas.MaxRequestsBurst, "max grpc incoming requests burst")

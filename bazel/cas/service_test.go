@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
@@ -44,7 +45,7 @@ var testData6 []byte = []byte("rrrrrrr")
 
 func TestFindMissingBlobs(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Create 6 digests, write 1 to Store, expect all missing expect 1
 	// NOTE Count of 6 intended to be > cas.BatchParallelism value
@@ -90,7 +91,7 @@ func TestFindMissingBlobs(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Write a resource to underlying store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -129,12 +130,12 @@ func TestRead(t *testing.T) {
 
 func TestReadEmpty(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Note: don't actually write the underlying resource beforehand. We expect
 	// that reading an empty blob will bypass the underlying store
 
-	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/-1", bazel.EmptySha), ReadOffset: int64(0), ReadLimit: int64(0)}
+	req := &bytestream.ReadRequest{ResourceName: fmt.Sprintf("blobs/%s/%d", bazel.EmptySha, bazel.EmptySize), ReadOffset: int64(0), ReadLimit: int64(0)}
 	r := makeFakeReadServer()
 
 	// Make actual Read request
@@ -156,7 +157,7 @@ func TestReadEmpty(t *testing.T) {
 
 func TestReadMissing(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Note: don't actually write the underlying resource beforehand. We expect
 	// that reading an empty blob will bypass the underlying store
@@ -179,7 +180,7 @@ func TestReadMissing(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	w := makeFakeWriteServer(testHash1, testSize1, testData1, 3)
 
@@ -208,7 +209,7 @@ func TestWrite(t *testing.T) {
 
 func TestWriteEmpty(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	w := makeFakeWriteServer(bazel.EmptySha, bazel.EmptySize, []byte{}, 1)
 
@@ -230,7 +231,7 @@ func TestWriteEmpty(t *testing.T) {
 
 func TestWriteExisting(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Pre-write data directly to underlying Store
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -261,7 +262,7 @@ func TestWriteExisting(t *testing.T) {
 
 func TestQueryWriteStatusStub(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	req := &bytestream.QueryWriteStatusRequest{}
 
@@ -280,7 +281,7 @@ func TestQueryWriteStatusStub(t *testing.T) {
 
 func TestBatchUpdateBlobs(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// All expected to succeeded unless otherwise indicated.
 	// NOTE Count of 6 intended to be > cas.BatchParallelism value
@@ -371,7 +372,7 @@ func TestBatchUpdateBlobs(t *testing.T) {
 
 func TestBatchReadBlobs(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// All expected to succeed unless otherwise indicated.
 	// NOTE Count of 6 intended to be > cas.BatchParallelism value
@@ -451,7 +452,7 @@ func TestBatchReadBlobs(t *testing.T) {
 }
 
 func TestGetTreeStub(t *testing.T) {
-	s := casServer{stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(&store.FakeStore{})
 	req := &remoteexecution.GetTreeRequest{}
 	gtServer := &fakeGetTreeServer{}
 
@@ -485,7 +486,7 @@ func TestMakeResultAddress(t *testing.T) {
 
 func TestGetActionResult(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	arAsBytes, err := getFakeActionResult()
 	if err != nil {
@@ -525,7 +526,7 @@ func TestGetActionResult(t *testing.T) {
 
 func TestGetActionResultMissing(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	// Make GetActionResult request
 	req := &remoteexecution.GetActionResultRequest{
@@ -550,7 +551,7 @@ func TestGetActionResultMissing(t *testing.T) {
 
 func TestUpdateActionResult(t *testing.T) {
 	f := &store.FakeStore{}
-	s := casServer{storeConfig: &store.StoreConfig{Store: f}, stat: stats.NilStatsReceiver()}
+	s := makeCasFromStore(f)
 
 	rc := int32(42)
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -711,4 +712,13 @@ func readAndCompare(f store.Store, name string, testData []byte) ([]byte, error)
 		}
 	}
 	return b, nil
+}
+
+func makeCasFromStore(s store.Store) casServer {
+	a, _ := allocator.NewAbstractAllocator(DefaultConcurrentResourceBytes)
+	return casServer{
+		storeConfig: &store.StoreConfig{Store: s},
+		stat:        stats.NilStatsReceiver(),
+		alloc:       a,
+	}
 }
