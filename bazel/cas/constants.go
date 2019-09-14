@@ -28,9 +28,6 @@ const (
 	MaxRequestsBurst           = 250  // allows this many requests in a burst faster than MaxRPS average
 	MaxConcurrentStreams       = 0    // limits concurrent streams _per client_
 
-	// Default total resource capacity for concurrent in-flight requests
-	DefaultConcurrentResourceBytes = int64(1024 * 1024 * 1024)
-
 	unableToAllocMsg = "server failed to reserve resources for request"
 )
 

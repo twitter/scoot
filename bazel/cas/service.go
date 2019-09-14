@@ -46,15 +46,15 @@ func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.Stats
 		return nil
 	}
 
+	a, err := allocator.NewAbstractAllocator(gc.ConcurrentReqSize)
+	if err != nil {
+		panic(err)
+	}
 	l, err := gc.NewListener()
 	if err != nil {
 		panic(err)
 	}
 	gs := gc.NewGRPCServer()
-	a, err := allocator.NewAbstractAllocator(1048576) //TODO 1MB; configurable size
-	if err != nil {
-		panic(err)
-	}
 	g := casServer{
 		listener:    l,
 		server:      gs,
