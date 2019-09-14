@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
@@ -35,6 +36,7 @@ type casServer struct {
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 	stat        stats.StatsReceiver
+	alloc       *allocator.AbstractAllocator
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
@@ -49,11 +51,16 @@ func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.Stats
 		panic(err)
 	}
 	gs := gc.NewGRPCServer()
+	a, err := allocator.NewAbstractAllocator(1048576) //TODO 1MB; configurable size
+	if err != nil {
+		panic(err)
+	}
 	g := casServer{
 		listener:    l,
 		server:      gs,
 		storeConfig: sc,
 		stat:        stat,
+		alloc:       a,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
@@ -74,6 +81,14 @@ func (s *casServer) Serve() error {
 	log.Info("Serving GRPC CAS API on: ", s.listener.Addr())
 	return s.server.Serve(s.listener)
 }
+
+// TODO casServer mechanism to limit in-flight requests by digest size
+// initialize with a total size
+// Actions - lease amount, release amount
+// Lease - request amount with deadline
+//	returns lease of full amount if accepted or error if deadline expires. nil deadline ok (wait forever)
+//  how to ensure resources get returned? lease returns an object. call release w/ that object, has amount embedded
+// Release - ok
 
 // CAS APIs
 
@@ -195,6 +210,8 @@ func (s *casServer) BatchUpdateBlobs(
 		}
 	}()
 
+	// TODO how the hell does this stuff work? figure out and then make batches work with allocator
+	// 	batch limits should be set such that the entire operation can be allocd at once, not per batch
 	// Perform operations in goroutines
 	for _, blobReq := range req.GetRequests() {
 		if err != nil {
@@ -302,6 +319,8 @@ func (s *casServer) BatchReadBlobs(
 		}
 	}()
 
+	// TODO how the hell does this stuff work? figure out and then make batches work with allocator
+	// 	batch limits should be set such that the entire operation can be allocd at once, not per batch
 	// Perform operations in goroutines
 	for _, digest := range req.GetDigests() {
 		if err != nil {
@@ -408,6 +427,13 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		log.Errorf("Failed to parse resource name: %v", err)
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 	}
+
+	// TODO decide on better name usage
+	allocres, err := s.allocResource(resource.Digest.GetSizeBytes())
+	if err != nil {
+		return status.Error(codes.Unavailable, unableToAllocMsg)
+	}
+	defer allocres.Release()
 
 	// Input validation per API spec
 	if req.GetReadOffset() < 0 {
@@ -543,6 +569,12 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
 			log.Debugf("Using resource name: %s", resourceName)
+
+			allocres, err := s.allocResource(resource.Digest.GetSizeBytes())
+			if err != nil {
+				return status.Error(codes.Unavailable, unableToAllocMsg)
+			}
+			defer allocres.Release()
 
 			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
 			if resource.Digest.GetHash() == bazel.EmptySha {
@@ -814,6 +846,13 @@ func (s *casServer) writeToStore(name string, data io.Reader, len int64) error {
 		return err
 	}
 	return nil
+}
+
+// TODO what should real behavior be? if error here return grpc unavailable
+func (s *casServer) allocResource(size int64) (*allocator.AbstractResource, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), WaitForResourceDuration)
+	defer cancel()
+	return s.alloc.WaitAlloc(ctx, size)
 }
 
 // Interface for reading Empty data in a normal way while bypassing the underlying store
