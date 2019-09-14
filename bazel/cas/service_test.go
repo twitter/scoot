@@ -715,7 +715,7 @@ func readAndCompare(f store.Store, name string, testData []byte) ([]byte, error)
 }
 
 func makeCasFromStore(s store.Store) casServer {
-	a, _ := allocator.NewAbstractAllocator(DefaultConcurrentResourceBytes)
+	a, _ := allocator.NewAbstractAllocator(10 * 1024 * 1024)
 	return casServer{
 		storeConfig: &store.StoreConfig{Store: s},
 		stat:        stats.NilStatsReceiver(),

@@ -35,6 +35,7 @@ type GRPCConfig struct {
 	BurstLimitPerSec  int    // Maximum per-burst incoming requests per second (within RateLimitPerSec)
 	ConcurrentStreams int    // Maximum concurrent GRPC streams allowed per client
 	MaxConnIdleMins   int    // Maximum time a connection can remain open until the server closes it
+	ConcurrentReqSize int64  // Size of resources used in concurrent requests, in bytes (Internal usage)
 }
 
 // Creates a new net.Listener with the configured address and limits
