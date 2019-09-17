@@ -36,7 +36,6 @@ enum RunStatusState {
   FAILED = 4       # Run mechanism failed and is no longer running
   ABORTED = 5      # User requested that the run be killed, or task preempted by Scheduler
   TIMEDOUT = 6     # Run timed out and was killed
-  #BADREQUEST = 7  # DEPRECATED
 }
 
 // Note, each worker has its own runId space which is unrelated to any external ids.
