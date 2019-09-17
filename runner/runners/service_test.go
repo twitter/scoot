@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"testing"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
 )
@@ -32,15 +33,11 @@ func running() runner.RunStatus {
 }
 
 func failed(errorText string) runner.RunStatus {
-	return runner.FailedStatus(runner.RunID(""), fmt.Errorf(errorText), t)
+	return runner.FailedStatus(runner.RunID(""), errors.NewError(fmt.Errorf(errorText), 1), t)
 }
 
 func aborted() runner.RunStatus {
 	return runner.AbortStatus(runner.RunID(""), t)
-}
-
-func badRequest(errorText string) runner.RunStatus {
-	return runner.BadRequestStatus(runner.RunID(""), fmt.Errorf(errorText), t)
 }
 
 func assertRun(t *testing.T, r runner.Service, expected runner.RunStatus, args ...string) runner.RunID {
@@ -66,9 +63,6 @@ func assertStatus(t *testing.T, actual runner.RunStatus, expected runner.RunStat
 		Fatalf("expected exit code %v; was: %v (cmd:%v)", expected.ExitCode, actual.ExitCode, args)
 	}
 	if expected.State == runner.FAILED && expected.Error != actual.Error {
-		Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
-	}
-	if expected.State == runner.BADREQUEST && expected.Error != actual.Error {
 		Fatalf("expected error %v; was: %v (cmd:%v)", expected.Error, actual.Error, args)
 	}
 }

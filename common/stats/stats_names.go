@@ -350,6 +350,11 @@ const (
 	WorkerServerStartedGauge = "workerStartGauge"
 
 	/*
+		record when a worker service kills itself
+	*/
+	WorkerServerKillGauge = "workerKillGauge"
+
+	/*
 		The time it takes to run the task (including snapshot handling)
 	*/
 	WorkerTaskLatency_ms = "workerTaskLatency_ms"

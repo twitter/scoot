@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
@@ -180,6 +181,9 @@ type QueueController struct {
 	runningID    runner.RunID
 	runningCmd   *runner.Command
 	runningAbort chan<- struct{}
+
+	// used to track if there is a recurring infrastructure issue
+	lastExitCode errors.ExitCode
 
 	// used to signal a cmd run request
 	reqCh chan interface{}
@@ -450,6 +454,11 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
+				if st.ExitCode == errors.CleanFailureExitCode && c.lastExitCode == errors.CleanFailureExitCode {
+					c.inv.stat.Counter(stats.WorkerServerKillGauge).Inc(1)
+					log.Fatal("Multiple git clean errors in a row recorded. Killing worker.")
+				}
+				c.lastExitCode = errors.ExitCode(st.ExitCode)
 				watchCh <- st
 				return
 			}

@@ -5,38 +5,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // TODO The interfaces and functionality here should be refactored to only use git when necessary.
 // Many operations relying on git are more inefficient than they need to be:
 // we could be using memory buffers/streams instead of using git cmds on disk to transform data.
-
-// SnapshotKind describes the kind of a Snapshot: is it an FSSnapshot or a GitCommitSnapshot
-// kind instead of type because type is a keyword
-type SnapshotKind string
-
-const (
-	KindFSSnapshot        SnapshotKind = "fs"
-	KindGitCommitSnapshot SnapshotKind = "gc"
-)
-
-var kinds = map[SnapshotKind]bool{
-	KindFSSnapshot:        true,
-	KindGitCommitSnapshot: true,
-}
-
-type AutoUploadDest int
-
-const (
-	AutoUploadNone AutoUploadDest = iota
-	AutoUploadTags
-	AutoUploadBundlestore
-)
 
 // MakeDBFromRepo makes a gitdb.DB that uses dataRepo for data and tmp for temporary directories
 func MakeDBFromRepo(
@@ -157,6 +138,13 @@ type req interface {
 	req()
 }
 
+// stringAndError contains a string field, where information such as a snapshot ID, path, or file contents can be stored,
+// in addition to a Error field which contains both a standard error and an exit code
+type stringAndError struct {
+	str string
+	err error
+}
+
 // Close stops the DB
 func (db *DB) Close() {
 	close(db.reqCh)
@@ -196,7 +184,6 @@ func (db *DB) loop(initer RepoIniter) {
 		// sending to reqCh, so we can stop serving
 		return
 	}
-
 	// Handle checkout logic separately and block until each request completes
 	checkoutCh := make(chan interface{})
 	go func() {
@@ -220,6 +207,7 @@ func (db *DB) loop(initer RepoIniter) {
 		}
 		switch req := req.(type) {
 		case ingestReq:
+			log.Debugf("processing ingestReq")
 			go func() {
 				s, err := db.ingestDir(req.dir)
 				if err == nil && db.autoUpload != nil {
@@ -232,6 +220,7 @@ func (db *DB) loop(initer RepoIniter) {
 				}
 			}()
 		case ingestGitCommitReq:
+			log.Debugf("processing ingestGitCommitReq")
 			go func() {
 				s, err := db.ingestGitCommit(req.ingestRepo, req.commitish)
 				if err == nil && db.autoUpload != nil {
@@ -244,6 +233,7 @@ func (db *DB) loop(initer RepoIniter) {
 				}
 			}()
 		case ingestGitWorkingDirReq:
+			log.Debugf("processing ingestGitWorkingDirReq")
 			go func() {
 				s, err := db.ingestGitWorkingDir(req.ingestRepo)
 				if err == nil && db.autoUpload != nil {
@@ -256,25 +246,30 @@ func (db *DB) loop(initer RepoIniter) {
 				}
 			}()
 		case uploadFileReq:
+			log.Debugf("processing uploadFileReq")
 			go func() {
 				s, err := db.bundles.uploadFile(req.filePath, req.ttl)
 				req.resultCh <- stringAndError{str: s, err: err}
 			}()
 		case readFileAllReq:
+			log.Debugf("processing readFileAllReq")
 			go func() {
 				data, err := db.readFileAll(req.id, req.path)
 				req.resultCh <- stringAndError{str: data, err: err}
 			}()
 		case checkoutReq, releaseCheckoutReq:
+			log.Debugf("processing checkoutReq, releaseCheckoutReq")
 			go func() {
 				checkoutCh <- req
 			}()
 		case exportGitCommitReq:
+			log.Debugf("processing exportGitCommitReq")
 			go func() {
 				sha, err := db.exportGitCommit(req.id, req.exportRepo)
 				req.resultCh <- stringAndError{str: sha, err: err}
 			}()
 		case updateRepoReq:
+			log.Debugf("processing updateRepoReq")
 			go func() {
 				req.resultCh <- db.updateRepo()
 			}()
@@ -356,15 +351,10 @@ type readFileAllReq struct {
 
 func (r readFileAllReq) req() {}
 
-type stringAndError struct {
-	str string
-	err error
-}
-
 // ReadFileAll reads the contents of the file path in FSSnapshot ID, or errors
 func (db *DB) ReadFileAll(id snap.ID, path string) ([]byte, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return nil, db.err
+		return nil, errors.NewError(db.err, errors.DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- readFileAllReq{id: id, path: path, resultCh: resultCh}
@@ -382,8 +372,10 @@ func (r checkoutReq) req() {}
 // Checkout puts the snapshot identified by id in the local filesystem, returning
 // the path where it lives or an error.
 func (db *DB) Checkout(id snap.ID) (path string, err error) {
+	log.Debugf("Checking out %s", id)
 	if <-db.initDoneCh; db.err != nil {
-		return "", db.err
+		log.Error("Unable to init db")
+		return "", errors.NewError(db.err, errors.DBInitFailureExitCode)
 	}
 	db.workTreeLock.Lock()
 	resultCh := make(chan stringAndError)
@@ -422,7 +414,7 @@ func (r exportGitCommitReq) req() {}
 // the exported commit or an error.
 func (db *DB) ExportGitCommit(id snap.ID, exportRepo *repo.Repository) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return "", db.err
+		return "", errors.NewError(db.err, errors.DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- exportGitCommitReq{id: id, exportRepo: exportRepo, resultCh: resultCh}
@@ -470,7 +462,7 @@ func (r uploadFileReq) req() {}
 // Returns location of stored file
 func (db *DB) UploadFile(filePath string, ttl *store.TTLValue) (string, error) {
 	if <-db.initDoneCh; db.err != nil {
-		return "", db.err
+		return "", errors.NewError(db.err, errors.DBInitFailureExitCode)
 	}
 	resultCh := make(chan stringAndError)
 	db.reqCh <- uploadFileReq{filePath: filePath, ttl: ttl, resultCh: resultCh}

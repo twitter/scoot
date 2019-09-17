@@ -10,7 +10,7 @@ env:
   - GO111MODULE=on
 
 before_script:
-  - make format
+  - make fmt
   - make vet
 
 script:

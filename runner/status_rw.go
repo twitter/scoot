@@ -12,21 +12,19 @@ type StateMask uint64
 
 // Useful StateMask constants
 const (
-	UNKNOWN_MASK    StateMask = StateMask(1 << uint(UNKNOWN))
-	PENDING_MASK              = 1 << uint(PENDING)
-	PREPARING_MASK            = 1 << uint(PREPARING)
-	RUNNING_MASK              = 1 << uint(RUNNING)
-	COMPLETE_MASK             = 1 << uint(COMPLETE)
-	FAILED_MASK               = 1 << uint(FAILED)
-	ABORTED_MASK              = 1 << uint(ABORTED)
-	TIMEDOUT_MASK             = 1 << uint(TIMEDOUT)
-	BADREQUEST_MASK           = 1 << uint(BADREQUEST)
-	DONE_MASK                 = (1<<uint(COMPLETE) |
+	UNKNOWN_MASK  StateMask = StateMask(1 << uint(PENDING))
+	PENDING_MASK            = 1 << uint(UNKNOWN)
+	RUNNING_MASK            = 1 << uint(RUNNING)
+	COMPLETE_MASK           = 1 << uint(COMPLETE)
+	FAILED_MASK             = 1 << uint(FAILED)
+	ABORTED_MASK            = 1 << uint(ABORTED)
+	TIMEDOUT_MASK           = 1 << uint(TIMEDOUT)
+	DONE_MASK               = (1<<uint(COMPLETE) |
 		1<<uint(FAILED) |
 		1<<uint(ABORTED) |
 		1<<uint(TIMEDOUT) |
-		1<<uint(UNKNOWN) |
-		1<<uint(BADREQUEST))
+		1<<uint(UNKNOWN))
+
 	ALL_MASK = math.MaxUint64
 )
 
@@ -36,8 +34,6 @@ func (sm StateMask) String() string {
 		return "UNKNOWN_MASK"
 	case PENDING_MASK:
 		return "PENDING_MASK"
-	case PREPARING_MASK:
-		return "PREPARING_MASK"
 	case RUNNING_MASK:
 		return "RUNNING_MASK"
 	case COMPLETE_MASK:
@@ -48,8 +44,6 @@ func (sm StateMask) String() string {
 		return "ABORTED_MASK"
 	case TIMEDOUT_MASK:
 		return "TIMEDOUT_MASK"
-	case BADREQUEST_MASK:
-		return "BADREQUEST_MASK"
 	case DONE_MASK:
 		return "DONE_MASK"
 	case ALL_MASK:
@@ -126,7 +120,7 @@ type StatusReader interface {
 
 // StatusWriter allows writing Statuses
 type StatusWriter interface {
-	// NewRun creates a new RunID in state Preparing
+	// NewRun creates a new RunID in state PENDING
 	NewRun() (RunStatus, error)
 
 	// Update overall service status.

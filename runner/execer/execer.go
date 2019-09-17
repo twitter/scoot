@@ -46,7 +46,7 @@ func (s ProcessState) String() string {
 }
 
 func (s ProcessState) IsDone() bool {
-	return s == COMPLETE || s == FAILED
+	return s != RUNNING
 }
 
 type Execer interface {

@@ -120,8 +120,6 @@ func runStatusToExecuteOperationMetadata_Stage(rs *runStatus) remoteexecution.Ex
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	case scoot.RunStatusState_TIMEDOUT:
 		return remoteexecution.ExecuteOperationMetadata_COMPLETED
-	case scoot.RunStatusState_BADREQUEST:
-		return remoteexecution.ExecuteOperationMetadata_COMPLETED
 	default:
 		return remoteexecution.ExecuteOperationMetadata_UNKNOWN
 	}
@@ -147,6 +145,7 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_OK),
 		}
+		// done states
 	case scoot.RunStatusState_COMPLETE:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_OK),
@@ -163,10 +162,6 @@ func runStatusToGoogleRpcStatus(rs *runStatus) *google_rpc_status.Status {
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_DEADLINE_EXCEEDED),
 		}
-	case scoot.RunStatusState_BADREQUEST:
-		return &google_rpc_status.Status{
-			Code: int32(google_rpc_code.Code_INTERNAL),
-		}
 	default:
 		return &google_rpc_status.Status{
 			Code: int32(google_rpc_code.Code_UNKNOWN),
@@ -181,6 +176,7 @@ func runStatusToDoneBool(rs *runStatus) bool {
 	switch rs.Status {
 	case scoot.RunStatusState_UNKNOWN:
 		return false
+		// TODO: UNKNOWN should be true, but that breaks bazel-integration test
 	case scoot.RunStatusState_PENDING:
 		return false
 	case scoot.RunStatusState_RUNNING:
@@ -192,8 +188,6 @@ func runStatusToDoneBool(rs *runStatus) bool {
 	case scoot.RunStatusState_ABORTED:
 		return true
 	case scoot.RunStatusState_TIMEDOUT:
-		return true
-	case scoot.RunStatusState_BADREQUEST:
 		return true
 	default:
 		return false

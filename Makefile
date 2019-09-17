@@ -19,10 +19,10 @@ SCOOT_LOGLEVEL ?= info
 # Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
 TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
 
-default:
+build:
 	go build ./...
 
-format:
+fmt:
 	go fmt ./...
 
 vet:
@@ -30,6 +30,20 @@ vet:
 
 install:
 	go install ./binaries/...
+
+# Cleans go.mod and go.sum of unused dependencies
+tidy:
+	go mod tidy
+
+# Gets the version of REPO specified by VER
+# Usage: make get REPO=cloud.google.com/go VER=v0.45.1
+get:
+	go get $(REPO)@$(VER)
+
+# Gets the latest version of REPO, or if left blank, updates all modules,
+# Usage: make get REPO=cloud.google.com/go
+get_latest:
+	go get -u $(REPO)
 
 ############## dependencies
 
@@ -64,6 +78,10 @@ fs_util:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
+# Usage: make test PKG=github.com/twitter/scoot/binaries/...
+test:
+	go test -count=1 -race -timeout 20s $(PKG)
+
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
 	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...) $(TRAVIS_FILTER)
@@ -77,7 +95,7 @@ test-unit:
 	# Only invoked manually so we don't need to modify output
 	go test -count=1 -race -timeout 120s $$(go list ./...)
 
-test: test-unit-property-integration coverage
+test-all: test-unit-property-integration coverage
 
 ############## standalone binary & integration tests
 
@@ -101,7 +119,7 @@ integrationtest: install
 ############## cleanup
 
 clean-mockgen:
-	rm */*_mock.go
+	find . -name \*_mock.go -type f -delete
 
 clean-data:
 	rm -rf ./.scootdata/*
@@ -109,7 +127,7 @@ clean-data:
 clean-go:
 	go clean ./...
 
-clean: clean-data clean-mockgen clean-go
+clean: clean-data clean-go
 
 ############## code gen for mocks, bindata configs, thrift, and protoc
 
@@ -143,6 +161,6 @@ bazel-proto:
 
 ############## top-level dev-fullbuild, travis targets
 
-dev-fullbuild: dev-dependencies generate test
+dev-fullbuild: dev-dependencies generate test-all
 
-travis: fs_util recoverytest swarmtest integrationtest test clean-data
+travis: fs_util recoverytest swarmtest integrationtest test-all clean-data

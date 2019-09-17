@@ -90,7 +90,7 @@ func (r *taskRunner) run() error {
 	completed := (st.State == runner.COMPLETE)
 	if err == nil && !completed {
 		switch st.State {
-		case runner.FAILED, runner.UNKNOWN, runner.BADREQUEST:
+		case runner.FAILED, runner.UNKNOWN:
 			// runnerErr can be thrift related above, or in this case some other failure that's likely our fault.
 			err = fmt.Errorf(st.Error)
 			taskErr.runnerErr = err
@@ -118,6 +118,7 @@ func (r *taskRunner) run() error {
 				"sagaID": r.saga.GetState().SagaId(),
 				"err":    taskErr,
 				"tag":    r.Tag,
+				"node":   r.nodeSt.node,
 			}).Info("Error running job, dead lettering task after max retries.")
 		taskErr.st.Error += DeadLetterTrailer
 	}
@@ -138,6 +139,7 @@ func (r *taskRunner) run() error {
 			"tag":        taskErr.st.Tag,
 			"err":        taskErr,
 		}).Info("End task")
+
 	if !shouldLog {
 		if taskErr != nil {
 			r.stat.Counter(stats.SchedFailedTaskCounter).Inc(1)
@@ -178,6 +180,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			"jobID":  r.JobID,
 			"taskID": r.TaskID,
 			"tag":    r.Tag,
+			"node":   r.nodeSt.node,
 		}).Info("runAndWait()")
 
 	for {
@@ -190,6 +193,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 				}).Info("The run was aborted by the scheduler before it was sent to a worker")
 			return st, req.endTask, nil
 		}
@@ -209,6 +213,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 				}).Info("Initial run attempts aborted by the scheduler")
 			return st, req.endTask, nil
 		}
@@ -219,6 +224,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 					"err":    err,
 				}).Info("Retrying run()")
 			r.stat.Counter(stats.SchedTaskStartRetries).Inc(1)
@@ -249,6 +255,7 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 					"jobID":  r.JobID,
 					"taskID": r.TaskID,
 					"tag":    r.Tag,
+					"node":   r.nodeSt.node,
 					"err":    err,
 				}).Info("Retrying query")
 			time.Sleep(r.runnerRetryInterval)
@@ -293,6 +300,7 @@ func (r *taskRunner) queryWithTimeout(id runner.RunID, endTime time.Time, includ
 			"taskID":  r.TaskID,
 			"timeout": timeout,
 			"tag":     r.Tag,
+			"node":    r.nodeSt.node,
 		}).Infof("Query(includeRunning=%t)", includeRunning)
 
 	// issue a query that blocks till get a response, w's timeout, or abort (from job kill)
@@ -328,6 +336,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 			"msgType": msgType,
 			"jobID":   r.JobID,
 			"taskID":  r.TaskID,
+			"node":    r.nodeSt.node,
 			"tag":     r.Tag,
 		}).Info("TryLogTaskStatus")
 	var statusAsBytes []byte

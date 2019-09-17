@@ -13,6 +13,9 @@ GitDB is an implementation of ScootDB (snapshot.DB) that stores local values in 
 ## Backends
 GitDB uses different Backends to identify, upload and download Snapshots.
 
+## Exit Codes
+GitDB defines a set of exit codes that are returned depending on various git related errors (see common/errors/exit_codes.go for definitive list)
+
 ## Snapshot ID format
 GitDB uses Snapshot IDs that encode the backend, kind and per-backend data, separated by '-':
 * _<backend>-<kind>(-<additional information>)+_

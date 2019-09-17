@@ -63,14 +63,13 @@ func (p *JobType) UnmarshalText(text []byte) error {
 type RunStatusState int64
 
 const (
-	RunStatusState_UNKNOWN    RunStatusState = 0
-	RunStatusState_PENDING    RunStatusState = 1
-	RunStatusState_RUNNING    RunStatusState = 2
-	RunStatusState_COMPLETE   RunStatusState = 3
-	RunStatusState_FAILED     RunStatusState = 4
-	RunStatusState_ABORTED    RunStatusState = 5
-	RunStatusState_TIMEDOUT   RunStatusState = 6
-	RunStatusState_BADREQUEST RunStatusState = 7
+	RunStatusState_UNKNOWN  RunStatusState = 0
+	RunStatusState_PENDING  RunStatusState = 1
+	RunStatusState_RUNNING  RunStatusState = 2
+	RunStatusState_COMPLETE RunStatusState = 3
+	RunStatusState_FAILED   RunStatusState = 4
+	RunStatusState_ABORTED  RunStatusState = 5
+	RunStatusState_TIMEDOUT RunStatusState = 6
 )
 
 func (p RunStatusState) String() string {
@@ -89,8 +88,6 @@ func (p RunStatusState) String() string {
 		return "ABORTED"
 	case RunStatusState_TIMEDOUT:
 		return "TIMEDOUT"
-	case RunStatusState_BADREQUEST:
-		return "BADREQUEST"
 	}
 	return "<UNSET>"
 }
@@ -111,8 +108,6 @@ func RunStatusStateFromString(s string) (RunStatusState, error) {
 		return RunStatusState_ABORTED, nil
 	case "TIMEDOUT":
 		return RunStatusState_TIMEDOUT, nil
-	case "BADREQUEST":
-		return RunStatusState_BADREQUEST, nil
 	}
 	return RunStatusState(0), fmt.Errorf("not a valid RunStatusState string")
 }
