@@ -459,12 +459,12 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
-				watchCh <- st
 				if st.ExitCode == errors.CleanFailureExitCode && c.lastExitCode == errors.CleanFailureExitCode {
 					c.inv.stat.Counter(stats.WorkerServerKillGauge).Inc(1)
 					log.Fatal("Multiple git clean errors in a row recorded. Killing worker.")
 				}
 				c.lastExitCode = errors.ExitCode(st.ExitCode)
+				watchCh <- st
 				return
 			}
 		}
