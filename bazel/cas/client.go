@@ -127,8 +127,9 @@ func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 		return nil
 	}
 	try := 1
+	prevErr := ""
 	backoff.Retry(func() error {
-		log.Debugf("Try #%d", try)
+		log.Debugf("Try #%d on %s, size(%d), prev err:%s", try, digest.Hash, digest.SizeBytes, prevErr)
 		err = byteStreamWrite(r, digest, data)
 		try += 1
 		return err
