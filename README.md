@@ -83,7 +83,8 @@ brew install thrift@0.9
 go modules will take care of this
 
 ## Install/Access Scoot Executables and libraries
-* ```sh
+Install binaries to $GOPATH/bin:
+
+```sh
 make install
 ```
-* the binaries will be installed in $GOPATH/bin
