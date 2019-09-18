@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
@@ -35,6 +36,7 @@ type casServer struct {
 	server      *grpc.Server
 	storeConfig *store.StoreConfig
 	stat        stats.StatsReceiver
+	alloc       *allocator.AbstractAllocator
 }
 
 // Creates a new GRPCServer (CASServer/ByteStreamServer/ActionCacheServer)
@@ -44,6 +46,10 @@ func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.Stats
 		return nil
 	}
 
+	a, err := allocator.NewAbstractAllocator(gc.ConcurrentReqSize)
+	if err != nil {
+		panic(err)
+	}
 	l, err := gc.NewListener()
 	if err != nil {
 		panic(err)
@@ -54,6 +60,7 @@ func MakeCASServer(gc *bazel.GRPCConfig, sc *store.StoreConfig, stat stats.Stats
 		server:      gs,
 		storeConfig: sc,
 		stat:        stat,
+		alloc:       a,
 	}
 	remoteexecution.RegisterContentAddressableStorageServer(g.server, &g)
 	remoteexecution.RegisterActionCacheServer(g.server, &g)
@@ -164,8 +171,11 @@ func (s *casServer) BatchUpdateBlobs(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	var length int64 = 0
-	var err error = nil
+	var (
+		length  int64 = 0
+		reqSize int64 = 0
+		err     error = nil
+	)
 
 	// Record metrics based on final error condition
 	defer func() {
@@ -179,6 +189,19 @@ func (s *casServer) BatchUpdateBlobs(
 		}
 	}()
 	defer s.stat.Latency(stats.BzBatchUpdateLatency_ms).Time().Stop()
+
+	// Get total size of request and check against maximum; alloc resource for request
+	for _, blobReq := range req.GetRequests() {
+		reqSize += blobReq.GetDigest().GetSizeBytes()
+	}
+	if reqSize > BatchMaxCombinedSize {
+		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
+	}
+	requestResource, err := s.getRequestResource(reqSize)
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, unableToAllocMsg)
+	}
+	defer requestResource.Release()
 
 	sem := make(chan struct{}, BatchParallelism)
 	resultCh := make(chan *remoteexecution.BatchUpdateBlobsResponse_Response)
@@ -271,8 +294,11 @@ func (s *casServer) BatchReadBlobs(
 		return nil, status.Error(codes.Internal, "Server not initialized")
 	}
 
-	var length int64 = 0
-	var err error = nil
+	var (
+		length  int64 = 0
+		reqSize int64 = 0
+		err     error = nil
+	)
 
 	// Record metrics based on final error condition
 	defer func() {
@@ -286,6 +312,19 @@ func (s *casServer) BatchReadBlobs(
 		}
 	}()
 	defer s.stat.Latency(stats.BzBatchReadLatency_ms).Time().Stop()
+
+	// Get total size of request and check against maximum; alloc resource for request
+	for _, digest := range req.GetDigests() {
+		reqSize += digest.GetSizeBytes()
+	}
+	if reqSize > BatchMaxCombinedSize {
+		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
+	}
+	requestResource, err := s.getRequestResource(reqSize)
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, unableToAllocMsg)
+	}
+	defer requestResource.Release()
 
 	sem := make(chan struct{}, BatchParallelism)
 	resultCh := make(chan *remoteexecution.BatchReadBlobsResponse_Response)
@@ -408,6 +447,12 @@ func (s *casServer) Read(req *bytestream.ReadRequest, ser bytestream.ByteStream_
 		log.Errorf("Failed to parse resource name: %v", err)
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 	}
+
+	requestResource, err := s.getRequestResource(resource.Digest.GetSizeBytes())
+	if err != nil {
+		return status.Error(codes.Unavailable, unableToAllocMsg)
+	}
+	defer requestResource.Release()
 
 	// Input validation per API spec
 	if req.GetReadOffset() < 0 {
@@ -543,6 +588,12 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%v", err))
 			}
 			log.Debugf("Using resource name: %s", resourceName)
+
+			requestResource, err := s.getRequestResource(resource.Digest.GetSizeBytes())
+			if err != nil {
+				return status.Error(codes.Unavailable, unableToAllocMsg)
+			}
+			defer requestResource.Release()
 
 			// If the client is attempting to write empty/nil/size-0 data, just return as if we succeeded
 			if resource.Digest.GetHash() == bazel.EmptySha {
@@ -814,6 +865,14 @@ func (s *casServer) writeToStore(name string, data io.Reader, len int64) error {
 		return err
 	}
 	return nil
+}
+
+// getRequestResource gets a lease on a resource from the server's allocator for handling a request.
+// Per the allocator package, this resource must be released when the caller is finished with it.
+func (s *casServer) getRequestResource(size int64) (*allocator.AbstractResource, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), WaitForResourceDuration)
+	defer cancel()
+	return s.alloc.WaitAlloc(ctx, size)
 }
 
 // Interface for reading Empty data in a normal way while bypassing the underlying store
