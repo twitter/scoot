@@ -28,7 +28,7 @@ Scoot work is broken down into independent jobs, which can consist of one or mor
 
 #### Go Version
 
-Scoot is intended to work with go modules. If this repository is on your GOPATH, please set GO111MODULE=on when
+Scoot is intended to work with go modules. If this repository is on your GOPATH, please set *GO111MODULE=on* when
 working with go tools in this repository, and preferably use the Go distribution pinned in the .travis.yml file.
 
 ### Example
@@ -83,6 +83,7 @@ brew install thrift@0.9
 go modules will take care of this
 
 ## Install/Access Scoot Executables and libraries
-*cd to scoot directory (workspace/github.com/twitter/scoot)
-*run: go install ./binaries/...
-** the binaries will be installed in workspace/bin
+* ```sh
+make install
+```
+* the binaries will be installed in $GOPATH/bin
