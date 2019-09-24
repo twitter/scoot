@@ -58,9 +58,8 @@ func (dc lastAccessedDirConfig) CleanDir() error {
 		if err != nil {
 			return errors.New(fmt.Sprintf("Failed to Cleanup dir: %s. %s", dc.GetDir(), err))
 		}
-	} else {
-		log.Infof("Not cleaning %s, usage %d(KB) under threshold %d(KB)\n", dc.GetDir(), usage, dc.LowMarkKB)
 	}
+	log.Infof("Not cleaning %s, usage %d(KB) under threshold %d(KB)\n", dc.GetDir(), usage, dc.LowMarkKB)
 	return nil
 }
 
