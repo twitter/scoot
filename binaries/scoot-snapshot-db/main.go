@@ -8,16 +8,16 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/twitter/scoot/apiserver/snapshot"
+	"github.com/twitter/scoot/apiserver/snapshot/cli"
+	"github.com/twitter/scoot/apiserver/snapshot/git/gitdb"
+	"github.com/twitter/scoot/apiserver/snapshot/git/repo"
+	"github.com/twitter/scoot/apiserver/snapshot/store"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/cli"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/twitter/scoot/scheduler/scootapi"
 )
 
 var dbTempDir string = ""

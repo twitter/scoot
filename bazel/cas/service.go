@@ -23,10 +23,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/apiserver/snapshot/store"
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/snapshot/store"
 )
 
 // Implements GRPCServer, remoteexecution.ContentAddressableStoreServer,

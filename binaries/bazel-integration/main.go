@@ -24,10 +24,10 @@ import (
 	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/scootapi/setup"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/os/temp"
+	"github.com/twitter/scoot/common/tests/testhelpers"
+	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/setup"
 )
 
 func main() {

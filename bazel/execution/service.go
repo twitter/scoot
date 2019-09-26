@@ -21,10 +21,10 @@ import (
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/server/api"
+	"github.com/twitter/scoot/scheduler/saga"
+	"github.com/twitter/scoot/scheduler/sched"
+	"github.com/twitter/scoot/scheduler/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/scootapi/server/api"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces

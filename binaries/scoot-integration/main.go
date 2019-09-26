@@ -18,9 +18,9 @@ import (
 
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/tests/testhelpers"
+	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 )
 
 func main() {

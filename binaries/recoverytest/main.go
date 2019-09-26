@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/twitter/scoot/common/tests/testhelpers"
+	"github.com/twitter/scoot/scheduler/scootapi"
 )
 
 func main() {

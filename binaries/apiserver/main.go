@@ -8,20 +8,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/apiserver/snapshot/bundlestore"
+	"github.com/twitter/scoot/apiserver/snapshot/git/gitdb"
+	"github.com/twitter/scoot/apiserver/snapshot/snapshots"
+	"github.com/twitter/scoot/apiserver/snapshot/store"
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common/cloud/cluster"
+	"github.com/twitter/scoot/common/cloud/cluster/local"
+	"github.com/twitter/scoot/common/config/jsonconfig"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/snapshot/bundlestore"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/snapshots"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/twitter/scoot/scheduler/scootapi"
 )
 
 func main() {

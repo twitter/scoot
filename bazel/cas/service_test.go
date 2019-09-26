@@ -16,10 +16,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/twitter/scoot/apiserver/snapshot/store"
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/snapshot/store"
 )
 
 var testHash1 string = "36f583dd16f4e1e201eb1e6f6d8e35a2ccb3bbe2658de46b4ffae7b0e9ed872e"

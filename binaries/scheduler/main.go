@@ -11,14 +11,14 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/binaries/scheduler/config"
+	"github.com/twitter/scoot/common/config/jsonconfig"
+	"github.com/twitter/scoot/common/config/scootconfig"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/scootapi/server"
+	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/server"
 )
 
 func main() {

@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/config/scootconfig"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 // CLI binary to talk to Cloud Scoot API

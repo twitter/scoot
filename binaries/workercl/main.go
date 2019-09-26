@@ -6,10 +6,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/twitter/scoot/common/config/scootconfig"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/workerapi/client"
 )
 
 // CLI binary to talk to Workerserver

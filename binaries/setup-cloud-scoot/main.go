@@ -5,8 +5,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi/setup"
+	"github.com/twitter/scoot/common/os/temp"
+	"github.com/twitter/scoot/scheduler/scootapi/setup"
 )
 
 // Sets up a local swarm that serves scootapi, then waits or runs

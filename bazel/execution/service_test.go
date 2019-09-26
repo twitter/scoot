@@ -14,8 +14,8 @@ import (
 
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/saga"
+	"github.com/twitter/scoot/scheduler/sched/scheduler"
 )
 
 // Determine that Execute can accept a well-formed request and returns a well-formed response

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/twitter/scoot/common/config/jsonconfig"
+	"github.com/twitter/scoot/common/ice"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/ice"
 )
 
 // Module returns a module that supports serving HTTP
