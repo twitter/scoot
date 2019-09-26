@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/twitter/scoot/scheduler/sched/scheduler"
-	"github.com/golang/mock/gomock"
 	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/twitter/scoot/scheduler/sched/scheduler"
 )
 
 /*
-*/
+ */
 func Test_SetSchedulerStatus(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
@@ -28,7 +28,7 @@ func Test_SetSchedulerStatus(t *testing.T) {
 	// test scheduler.SetSchedulerStatus
 	err = SetSchedulerStatus(s, -3)
 
-	if strings.Compare(fmt.Sprint("%v", err),"Error task limit must be > -1") != 0 {
+	if strings.Compare(fmt.Sprintf("%v", err), "Error task limit must be > -1") != 0 {
 		t.Fatalf("Expected error, got: %s", err)
 	}
 }

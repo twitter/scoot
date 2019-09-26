@@ -136,17 +136,17 @@ generate:
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/worker/workerapi/gen-go/... from worker.thrift
-	cd workerapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
-	rm -rf workerapi/gen-go/worker/worker-remote/
+	cd worker/workerapi && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ../..
+	rm -rf worker/workerapi/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/scheduler/sched/gen-go/... from sched.thrift
-	cd sched && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ..
+	cd scheduler/sched && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ../..
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scheduler/scootapi/gen-go/... from scoot.thrift
-	cd scootapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ..
-	rm -rf scootapi/gen-go/scoot/cloud_scoot-remote/
+	cd scheduler/scootapi && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../..
+	rm -rf scheduler/scootapi/gen-go/scoot/cloud_scoot-remote/
 
 thrift-bazel-go:
 	# Create generated code in github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/... from bazel.thrift
