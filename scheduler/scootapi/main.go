@@ -14,7 +14,6 @@ import (
 //		run_job [command]
 // 		get_job_status [job id]
 //		watch_job [job id]
-//		run_smoke_test
 //		get_scheduler_status
 //		set_scheduler_status [limit]
 //	Global flags:

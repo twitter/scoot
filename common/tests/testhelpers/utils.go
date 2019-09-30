@@ -2,7 +2,7 @@ package testhelpers
 
 import "os/exec"
 
-func InstallBinary(name string) {
-	cmd := exec.Command("go", "install", "./binaries/"+name)
+func InstallBinaries() {
+	cmd := exec.Command("go", "install", "./...")
 	cmd.Run()
 }

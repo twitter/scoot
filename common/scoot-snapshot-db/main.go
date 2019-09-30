@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 var dbTempDir string = ""
@@ -80,7 +80,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 	resolver := dialer.NewCompositeResolver(
 		dialer.NewConstantResolver(i.storeURL),
 		dialer.NewEnvResolver("SCOOT_BUNDLESTORE_URL"),
-		scootapi.NewBundlestoreResolver())
+		client.NewBundlestoreResolver())
 	url, err := resolver.Resolve()
 	if err != nil {
 		return nil, err

@@ -9,7 +9,7 @@ import (
 	"github.com/twitter/scoot/scheduler/scootapi/setup"
 )
 
-// Sets up a local swarm that serves scootapi, then waits or runs
+// sets up local Scoot components (scheduler, worker, and apiserver), or sets up connection to remote ones
 func main() {
 	log.AddHook(hooks.NewContextHook())
 	schedStrategy := flag.String("strategy", "local.memory", "scheduler/worker strategy to setup")

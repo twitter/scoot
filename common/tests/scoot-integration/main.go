@@ -19,7 +19,7 @@ import (
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/tests/testhelpers"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 )
 
@@ -162,8 +162,7 @@ func main() {
 }
 
 func installBinaries() {
-	testhelpers.InstallBinary("scootapi")
-	testhelpers.InstallBinary("scoot-snapshot-db")
+	testhelpers.InstallBinaries()
 }
 
 func createSnapshot(gopath string) ([]byte, error) {

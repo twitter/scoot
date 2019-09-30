@@ -1,6 +1,7 @@
-package client
+package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
@@ -10,48 +11,56 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/tests/testhelpers"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 )
 
-type smokeTestCmd struct {
-	numJobs   int
-	numTasks  int
-	timeout   time.Duration
-	storeAddr string
-}
+func main() {
+	log.AddHook(hooks.NewContextHook())
 
-func (c *smokeTestCmd) registerFlags() *cobra.Command {
-	r := &cobra.Command{
-		Use:   "run_smoke_test",
-		Short: "Smoke Test",
+	// httpAddr := flag.String("addr", "", "'host:port' addr to serve http on")
+	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
+	// storeAddr := flag.String("bundlestore", "", "address in the form of host:port")
+	numJobs := flag.Int("num_jobs", 100, "number of jobs to run")
+	numTasks := flag.Int("num_tasks", -1, "number of tasks per job, or random if -1")
+	timeout := flag.Duration("timeout", 180*time.Second, "how long to wait for the smoke test")
+	flag.Parse()
+
+	level, err := log.ParseLevel(*logLevelFlag)
+	if err != nil {
+		log.Error(err)
+		return
 	}
-	r.Flags().IntVar(&c.numJobs, "num_jobs", 100, "number of jobs to run")
-	r.Flags().IntVar(&c.numTasks, "num_tasks", -1, "number of tasks per job, or random if -1")
-	r.Flags().DurationVar(&c.timeout, "timeout", 180*time.Second, "how long to wait for the smoke test")
-	r.Flags().StringVar(&c.storeAddr, "bundlestore", "", "address in the form of host:port")
+	log.SetLevel(level)
 
-	return r
-}
+	scootClient := testhelpers.CreateScootClient(client.DefaultSched_Thrift)
+	cluster1Cmds, err := testhelpers.CreateLocalTestCluster()
+	if err != nil {
+		testhelpers.KillAndExit1(cluster1Cmds, err)
+	}
+	defer cluster1Cmds.Kill()
 
-func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+	testhelpers.WaitForClusterToBeReady(scootClient)
+
 	tmp, err := temp.TempDirDefault()
 	if err != nil {
-		return err
+		testhelpers.KillAndExit1(cluster1Cmds, err)
 	}
 	log.Info("Starting Smoke Test")
 	log.Info("** Note ** Inmemory workers not supported at time since everything they do is a nop.")
-	runner := &smokeTestRunner{cl: cl, tmp: tmp}
-	if err := runner.run(c.numJobs, c.numTasks, c.timeout); err != nil {
-		panic(err) // returning err would make cobra print out usage, which doesn't make sense to do here.
+	runner := &smokeTestRunner{cl: scootClient, tmp: tmp}
+	if err := runner.run(*numJobs, *numTasks, *timeout); err != nil {
+		testhelpers.KillAndExit1(cluster1Cmds, err)
 	}
-	return nil
+
 }
 
 type smokeTestRunner struct {
-	cl  *simpleCLIClient
+	cl  *client.CloudScootClient
 	tmp *temp.TempDir
 }
 
@@ -65,7 +74,7 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 
 	// (first job will test data)
 	t1, t2, t3, t4, t5, t6 := "id1", "id2", "id3", "id4", "id5", "id6"
-	jobs[0] = testhelpers.StartJob(r.cl.scootClient, &scoot.JobDefinition{
+	jobs[0] = testhelpers.StartJob(r.cl, &scoot.JobDefinition{
 		// Repeat tasks to better exercise Store w/groupcache.
 		Tasks: []*scoot.TaskDefinition{
 			&scoot.TaskDefinition{
@@ -101,15 +110,15 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 		}})
 
 	for i := 1; i < numJobs; i++ {
-		jobs[i] = testhelpers.StartJob(r.cl.scootClient, testhelpers.GenerateJob(numTasks, id1))
+		jobs[i] = testhelpers.StartJob(r.cl, testhelpers.GenerateJob(numTasks, id1))
 	}
 
 	// Wait for results and then verify that the results are as expected.
-	if err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout); err != nil {
+	if err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl, timeout); err != nil {
 		return err
 	}
 
-	st, err := r.cl.scootClient.GetStatus(jobs[0])
+	st, err := r.cl.GetStatus(jobs[0])
 	if err != nil {
 		return err
 	}

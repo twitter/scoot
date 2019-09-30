@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/worker/runner"
 	"github.com/twitter/scoot/worker/runner/runners"
 	"github.com/twitter/scoot/worker/workerapi"

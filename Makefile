@@ -29,7 +29,7 @@ vet:
 	go vet ./...
 
 install:
-	go install ./binaries/...
+	go install ./...
 
 # Cleans go.mod and go.sum of unused dependencies
 tidy:
@@ -78,7 +78,7 @@ fs_util:
 coverage:
 	sh testCoverage.sh $(TRAVIS_FILTER)
 
-# Usage: make test PKG=github.com/twitter/scoot/binaries/...
+# Usage: make test PKG=github.com/twitter/scoot/scheduler/...
 test:
 	go test -count=1 -race -timeout 20s $(PKG)
 
@@ -101,9 +101,9 @@ test-all: test-unit-property-integration coverage
 
 swarmtest: install
 	# Setup a local schedule against local workers (--strategy local.local)
-	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
+	# Then run (with go run) smoke-test with 10 jobs, wait 1m
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run smoke-test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
 recoverytest: install
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.

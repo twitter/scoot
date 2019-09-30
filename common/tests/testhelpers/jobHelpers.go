@@ -10,7 +10,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 )
 

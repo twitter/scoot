@@ -26,7 +26,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/tests/testhelpers"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/setup"
 )
 
@@ -44,7 +44,7 @@ func main() {
 
 	// Initialize Local Cluster
 	log.Info("Creating test cluster")
-	scootClient := testhelpers.CreateScootClient(scootapi.DefaultSched_Thrift)
+	scootClient := testhelpers.CreateScootClient(client.DefaultSched_Thrift)
 	clusterCmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Unexpected Error while Setting up Local Cluster %v", err))
@@ -71,7 +71,7 @@ func main() {
 }
 
 func installBinaries() error {
-	testhelpers.InstallBinary("bzutil")
+	testhelpers.InstallBinaries()
 	b, err := exec.Command("sh", "get_fs_util.sh").CombinedOutput()
 	if err != nil {
 		log.Error(string(b))

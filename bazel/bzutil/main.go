@@ -28,7 +28,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	scootproto "github.com/twitter/scoot/common/proto"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 var uploadCmdStr string = "upload_command"

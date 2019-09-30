@@ -21,14 +21,14 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	httpAddr := flag.String("http_addr", scootapi.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
-	grpcAddr := flag.String("grpc_addr", scootapi.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
+	httpAddr := flag.String("http_addr", client.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
+	grpcAddr := flag.String("grpc_addr", client.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes")

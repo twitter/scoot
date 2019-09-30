@@ -11,7 +11,7 @@ import (
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/ice"
 	"github.com/twitter/scoot/common/os/temp"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 type servers struct {
@@ -60,7 +60,7 @@ func Defaults() *ice.MagicBag {
 
 		func() *bazel.GRPCConfig {
 			return &bazel.GRPCConfig{
-				GRPCAddr: scootapi.DefaultApiBundlestore_GRPC,
+				GRPCAddr: client.DefaultApiBundlestore_GRPC,
 			}
 		},
 

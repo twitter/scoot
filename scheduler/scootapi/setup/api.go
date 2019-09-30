@@ -7,7 +7,7 @@ import (
 
 	"github.com/twitter/scoot/apiserver/snapshot/bundlestore"
 	"github.com/twitter/scoot/common/os/temp"
-	"github.com/twitter/scoot/scheduler/scootapi"
+	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 const DefaultApiServerCount int = 3
