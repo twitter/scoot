@@ -22,9 +22,7 @@ import (
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	// httpAddr := flag.String("addr", "", "'host:port' addr to serve http on")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
-	// storeAddr := flag.String("bundlestore", "", "address in the form of host:port")
 	numJobs := flag.Int("num_jobs", 100, "number of jobs to run")
 	numTasks := flag.Int("num_tasks", -1, "number of tasks per job, or random if -1")
 	timeout := flag.Duration("timeout", 180*time.Second, "how long to wait for the smoke test")
