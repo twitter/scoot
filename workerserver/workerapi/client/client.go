@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/twitter/scoot/common/dialer"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/workerserver/runner"
 	"github.com/twitter/scoot/workerserver/runner/runners"
 	"github.com/twitter/scoot/workerserver/workerapi"
@@ -49,7 +49,7 @@ func (c *simpleClient) Dial() error {
 func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 	if c.workerClient == nil {
 		if c.addr == "" {
-			c.addr = scootapi.DefaultWorker_Thrift
+			c.addr = client.DefaultWorker_Thrift
 		}
 
 		transport, protocolFactory, err := c.dialer.Dial(c.addr)

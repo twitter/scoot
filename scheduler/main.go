@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/scheduler/config"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/server"
 )
 
@@ -25,9 +25,9 @@ func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	// Set Flags Needed by this Server
-	thriftAddr := flag.String("thrift_addr", scootapi.DefaultSched_Thrift, "Bind address for api server")
-	httpAddr := flag.String("http_addr", scootapi.DefaultSched_HTTP, "Bind address for http server")
-	grpcAddr := flag.String("grpc_addr", scootapi.DefaultSched_GRPC, "Bind address for grpc server")
+	thriftAddr := flag.String("thrift_addr", client.DefaultSched_Thrift, "Bind address for api server")
+	httpAddr := flag.String("http_addr", client.DefaultSched_HTTP, "Bind address for http server")
+	grpcAddr := flag.String("grpc_addr", client.DefaultSched_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "local.memory", "Scheduler Config (either a filename like local.memory or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	grpcConns := flag.Int("max_grpc_conn", bazel.MaxSimultaneousConnections, "max grpc listener connections")

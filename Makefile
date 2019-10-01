@@ -108,7 +108,8 @@ swarmtest: install
 recoverytest: install
 	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/recoverytest
+	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
+	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
 integrationtest: install
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries

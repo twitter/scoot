@@ -28,7 +28,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	scootproto "github.com/twitter/scoot/common/proto"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 var uploadCmdStr string = "upload_command"
@@ -56,7 +56,7 @@ func main() {
 
 	// Upload Command
 	uploadCommand := flag.NewFlagSet(uploadCmdStr, flag.ExitOnError)
-	uploadAddr := uploadCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	uploadAddr := uploadCommand.String("cas_addr", client.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
@@ -66,7 +66,7 @@ func main() {
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
-	actionAddr := uploadAction.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	actionAddr := uploadAction.String("cas_addr", client.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
 	actionRootDigest := uploadAction.String("input_root", bazel.DigestToStr(bazel.EmptyDigest()),
 		"Input root digest as '<hash>/<size>' (default to empty)")
@@ -76,7 +76,7 @@ func main() {
 
 	// Execute
 	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
-	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	execAddr := execCommand.String("grpc_addr", client.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	execActionDigest := execCommand.String("action", "", "Action digest as '<hash>/<size>'")
 	execSkipCache := execCommand.Bool("skip_cache", false, "Skip checking for cached results")
 	execJson := execCommand.Bool("json", false, "Print operation as JSON to stdout")
@@ -84,14 +84,14 @@ func main() {
 
 	// Get Operation
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
-	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	getAddr := getCommand.String("grpc_addr", client.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
 	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout")
 	getLogLevel := getCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
 	// Cancel Operation
 	cancelCommand := flag.NewFlagSet(cancelOpCmdStr, flag.ExitOnError)
-	cancelAddr := cancelCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	cancelAddr := cancelCommand.String("grpc_addr", client.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	cancelName := cancelCommand.String("name", "", "Operation name to query")
 	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 

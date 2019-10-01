@@ -10,18 +10,18 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/twitter/scoot/common/dialer"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 )
 
 // Creates a CloudScootClient that talks to the specified address
-func CreateScootClient(addr string) *scootapi.CloudScootClient {
+func CreateScootClient(addr string) *client.CloudScootClient {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, time.Minute)
 
-	scootClient := scootapi.NewCloudScootClient(
-		scootapi.CloudScootClientConfig{
+	scootClient := client.NewCloudScootClient(
+		client.CloudScootClientConfig{
 			Addr:   addr,
 			Dialer: di,
 		})
@@ -37,7 +37,7 @@ func GenerateJob(numTasks int, snapshotID string) *scoot.JobDefinition {
 	return jobDef
 }
 
-func StartJob(client *scootapi.CloudScootClient, job *scoot.JobDefinition) string {
+func StartJob(client *client.CloudScootClient, job *scoot.JobDefinition) string {
 	for {
 		j, err := client.RunJob(job)
 		if err == nil {

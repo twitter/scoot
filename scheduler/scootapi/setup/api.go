@@ -7,7 +7,7 @@ import (
 
 	"github.com/twitter/scoot/apiserver/snapshot/bundlestore"
 	"github.com/twitter/scoot/common/os/temp"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 )
 
 const DefaultApiServerCount int = 3
@@ -76,8 +76,8 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	addrs := []string{}
 	for i := 0; i < s.apiCfg.Count; i++ {
 		// grpc port not used, but each instance needs a separate port
-		httpPort := scootapi.ApiBundlestorePorts + i
-		grpcPort := scootapi.ApiBundlestoreGRPCPorts + i
+		httpPort := client.ApiBundlestorePorts + i
+		grpcPort := client.ApiBundlestoreGRPCPorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", httpPort)
 		grpcAddr := fmt.Sprintf("localhost:%d", grpcPort)
 		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-grpc_addr", grpcAddr, "-log_level", s.apiCfg.LogLevel.String())

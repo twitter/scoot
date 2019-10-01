@@ -16,7 +16,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/scheduler/saga"
 	"github.com/twitter/scoot/scheduler/sched/scheduler"
-	scootapi "github.com/twitter/scoot/scheduler/scootapi/client"
+	"github.com/twitter/scoot/scheduler/scootapi/client"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
 	"github.com/twitter/scoot/workerserver/runner"
 )
@@ -38,7 +38,7 @@ func makeServers(
 func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(scootapi.DefaultSched_Thrift) },
+		func() (thrift.TServerTransport, error) { return thrift.NewTServerSocket(client.DefaultSched_Thrift) },
 
 		func() thrift.TTransportFactory { return thrift.NewTTransportFactory() },
 
@@ -73,7 +73,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 		},
 
 		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(endpoints.Addr(scootapi.DefaultSched_HTTP), s, nil)
+			return endpoints.NewTwitterServer(endpoints.Addr(client.DefaultSched_HTTP), s, nil)
 		},
 
 		func(t thrift.TServer, h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
@@ -90,7 +90,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 
 		func() *bazel.GRPCConfig {
 			return &bazel.GRPCConfig{
-				GRPCAddr: scootapi.DefaultSched_GRPC,
+				GRPCAddr: client.DefaultSched_GRPC,
 			}
 		},
 
