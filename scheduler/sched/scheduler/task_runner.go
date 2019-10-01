@@ -10,8 +10,8 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/scheduler/saga"
 	"github.com/twitter/scoot/scheduler/sched"
-	"github.com/twitter/scoot/worker/runner"
-	"github.com/twitter/scoot/worker/workerapi"
+	"github.com/twitter/scoot/workerserver/runner"
+	"github.com/twitter/scoot/workerserver/workerapi"
 )
 
 const DeadLetterTrailer = " -> Error(s) encountered, canceling task."

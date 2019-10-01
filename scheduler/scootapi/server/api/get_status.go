@@ -5,7 +5,7 @@ import (
 	s "github.com/twitter/scoot/scheduler/saga"
 	"github.com/twitter/scoot/scheduler/sched"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
-	"github.com/twitter/scoot/worker/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/workerserver/workerapi/gen-go/worker"
 )
 
 func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {

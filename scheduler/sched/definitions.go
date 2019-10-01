@@ -9,7 +9,7 @@ import (
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	schedthrift "github.com/twitter/scoot/scheduler/sched/gen-go/sched"
-	"github.com/twitter/scoot/worker/runner"
+	"github.com/twitter/scoot/workerserver/runner"
 )
 
 // Job is the job Scoot can schedule

@@ -60,7 +60,7 @@ func (b *GoBuilder) install() {
 	}
 	repoDir := RepoRoot(goPath)
 
-	cmd := b.cmds.Command("go", "install", "./binaries/...")
+	cmd := b.cmds.Command("go", "install", "./...")
 	cmd.Dir = repoDir
 	if err := b.cmds.RunCmd(cmd); err != nil {
 		b.err = err

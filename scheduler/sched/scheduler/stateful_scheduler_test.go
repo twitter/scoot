@@ -19,9 +19,9 @@ import (
 	"github.com/twitter/scoot/scheduler/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/sched"
 	"github.com/twitter/scoot/scheduler/sched/worker/workers"
-	"github.com/twitter/scoot/worker/runner"
-	"github.com/twitter/scoot/worker/runner/execer/execers"
-	"github.com/twitter/scoot/worker/runner/runners"
+	"github.com/twitter/scoot/workerserver/runner"
+	"github.com/twitter/scoot/workerserver/runner/execer/execers"
+	"github.com/twitter/scoot/workerserver/runner/runners"
 )
 
 //Mocks sometimes hang without useful output, this allows early exit with err msg.

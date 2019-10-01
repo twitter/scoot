@@ -18,10 +18,10 @@ import (
 	"github.com/twitter/scoot/scheduler/saga"
 	"github.com/twitter/scoot/scheduler/sched"
 	"github.com/twitter/scoot/scheduler/sched/worker/workers"
-	"github.com/twitter/scoot/worker/runner"
-	runnermock "github.com/twitter/scoot/worker/runner/mocks"
-	"github.com/twitter/scoot/worker/runner/runners"
-	"github.com/twitter/scoot/worker/workerapi"
+	"github.com/twitter/scoot/workerserver/runner"
+	runnermock "github.com/twitter/scoot/workerserver/runner/mocks"
+	"github.com/twitter/scoot/workerserver/runner/runners"
+	"github.com/twitter/scoot/workerserver/workerapi"
 )
 
 var tmp *temp.TempDir

@@ -9,7 +9,7 @@ import (
 
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/tests/testhelpers"
-	"github.com/twitter/scoot/worker/runner"
+	"github.com/twitter/scoot/workerserver/runner"
 )
 
 // Generates a Random Job with the specified Id and number of Tasks

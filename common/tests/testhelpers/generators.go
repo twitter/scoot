@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
-	"github.com/twitter/scoot/worker/runner/execer/execers"
+	"github.com/twitter/scoot/workerserver/runner/execer/execers"
 )
 
 // generates a new random number seeded with

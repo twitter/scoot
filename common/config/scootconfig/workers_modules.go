@@ -9,9 +9,9 @@ import (
 	"github.com/twitter/scoot/common/ice"
 	"github.com/twitter/scoot/common/os/temp"
 	"github.com/twitter/scoot/scheduler/sched/worker/workers"
-	"github.com/twitter/scoot/worker/runner"
-	"github.com/twitter/scoot/worker/runner/runners"
-	"github.com/twitter/scoot/worker/workerapi/client"
+	"github.com/twitter/scoot/workerserver/runner"
+	"github.com/twitter/scoot/workerserver/runner/runners"
+	"github.com/twitter/scoot/workerserver/workerapi/client"
 )
 
 type ClientTimeout time.Duration

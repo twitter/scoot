@@ -134,9 +134,9 @@ generate:
 	go generate ./...
 
 thrift-worker-go:
-	# Create generated code in github.com/twitter/scoot/worker/workerapi/gen-go/... from worker.thrift
-	cd worker/workerapi && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ../..
-	rm -rf worker/workerapi/gen-go/worker/worker-remote/
+	# Create generated code in github.com/twitter/scoot/workerserver/workerapi/gen-go/... from worker.thrift
+	cd workerserver/workerapi && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ../..
+	rm -rf workerserver/workerapi/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/scheduler/sched/gen-go/... from sched.thrift
@@ -162,4 +162,4 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test-all
 
-travis: fs_util recoverytest swarmtest integrationtest test-all clean-data
+travis: clean-data fs_util recoverytest swarmtest integrationtest test-all clean-data

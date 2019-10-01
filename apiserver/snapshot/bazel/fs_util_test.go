@@ -11,8 +11,8 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/worker/runner/execer"
-	"github.com/twitter/scoot/worker/runner/execer/execers"
+	"github.com/twitter/scoot/workerserver/runner/execer"
+	"github.com/twitter/scoot/workerserver/runner/execer/execers"
 )
 
 // uses test vars and setup/teardown defined in filer_test.go

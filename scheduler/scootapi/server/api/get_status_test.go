@@ -10,9 +10,9 @@ import (
 	s "github.com/twitter/scoot/scheduler/saga"
 	"github.com/twitter/scoot/scheduler/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/scootapi/gen-go/scoot"
-	"github.com/twitter/scoot/worker/runner"
-	"github.com/twitter/scoot/worker/workerapi"
-	"github.com/twitter/scoot/worker/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/workerserver/runner"
+	"github.com/twitter/scoot/workerserver/workerapi"
+	"github.com/twitter/scoot/workerserver/workerapi/gen-go/worker"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {

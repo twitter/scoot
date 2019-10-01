@@ -11,8 +11,8 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/worker/runner/execer"
-	osexecer "github.com/twitter/scoot/worker/runner/execer/os"
+	"github.com/twitter/scoot/workerserver/runner/execer"
+	osexecer "github.com/twitter/scoot/workerserver/runner/execer/os"
 )
 
 // Implements snapshot/bazel/bzTree

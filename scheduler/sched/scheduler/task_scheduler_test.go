@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/common/tests/testhelpers"
 	"github.com/twitter/scoot/scheduler/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/sched"
-	"github.com/twitter/scoot/worker/runner"
+	"github.com/twitter/scoot/workerserver/runner"
 )
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
