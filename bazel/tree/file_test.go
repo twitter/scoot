@@ -39,6 +39,12 @@ func TestReadFile(t *testing.T) {
 	}
 }
 
+/*
+// TODO requirements:
+//	* regular file
+//	* executable file
+//	* subdir
+//	* symlink across dirs
 func TestReadDir(t *testing.T) {
 	tmp, err := ioutil.TempDir("", "tree-test")
 	if err != nil {
@@ -57,3 +63,4 @@ func TestReadDir(t *testing.T) {
 		t.Fatalf("Digest from read dir didn't match; got: %s, want: %s", d, e)
 	}
 }
+*/
