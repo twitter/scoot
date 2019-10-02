@@ -41,6 +41,9 @@ import (
 //		needs get/put/clean interfaces
 //		nothing great on gh. just store stuff in file buckets. clean based on access time (via cleaner)
 //		memory-mapped DB? pants uses LMDB. would prefer cleanability (lmdb isn't, really, until you have to purge everything)
+//		options:
+//			simple: https://github.com/bmatsuo/lmdb-go (with wrapping LRU functionality)
+//			heavy: https://github.com/dgraph-io/badger
 //	* organize and doc and comment
 
 func ReadFile(path string) (*remoteexecution.Digest, error) {
