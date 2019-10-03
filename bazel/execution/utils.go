@@ -17,7 +17,7 @@ import (
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 func marshalAny(pb proto.Message) (*any.Any, error) {

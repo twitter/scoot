@@ -24,7 +24,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/server/api"
+	thrift "github.com/twitter/scoot/scheduler/api/thrift"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces
@@ -280,7 +280,7 @@ func (s *executionServer) CancelOperation(_ context.Context, req *longrunning.Ca
 // Internal functions
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
-	js, err := api.GetJobStatus(jobID, s.sagaCoord)
+	js, err := thrift.GetJobStatus(jobID, s.sagaCoord)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +300,7 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 }
 
 func (s *executionServer) killJobAndValidate(jobID string) error {
-	js, err := api.KillJob(jobID, s.scheduler, s.sagaCoord)
+	js, err := thrift.KillJob(jobID, s.scheduler, s.sagaCoord)
 	if err != nil {
 		return err
 	}

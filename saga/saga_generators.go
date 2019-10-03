@@ -6,7 +6,7 @@ import (
 	"github.com/leanovate/gopter/gen"
 	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/common/thrifthelpers"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"math"
 )
 

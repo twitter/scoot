@@ -17,8 +17,8 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
+	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scootapi"
-	"github.com/twitter/scoot/scootapi/server"
 )
 
 func main() {
@@ -48,7 +48,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	bag, schema := server.Defaults()
+	bag, schema := api.Defaults()
 	bag.PutMany(
 		func() (thrift.TServerTransport, error) {
 			return thrift.NewTServerSocket(*thriftAddr)
@@ -79,5 +79,5 @@ func main() {
 	)
 
 	log.Info("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
-	server.RunServer(bag, schema, configText)
+	api.RunServer(bag, schema, configText)
 }

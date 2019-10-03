@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 /**

@@ -4,7 +4,7 @@ import (
 	"github.com/twitter/scoot/common/thrifthelpers"
 	s "github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 

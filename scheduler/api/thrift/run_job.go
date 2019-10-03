@@ -7,7 +7,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 // Implementation of the RunJob API

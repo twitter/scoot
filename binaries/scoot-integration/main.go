@@ -18,7 +18,7 @@ import (
 
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/tests/testhelpers"
 )

@@ -145,8 +145,8 @@ thrift-sched-go:
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
-	cd scheduler/api && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../..
-	rm -rf scheduler/api/gen-go/scoot/cloud_scoot-remote/
+	cd scheduler/api/thrift && rm -rf gen-go && thrift -I ../../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../../..
+	rm -rf scheduler/api/thrift/gen-go/scoot/cloud_scoot-remote/
 
 thrift-bazel-go:
 	# Create generated code in github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/... from bazel.thrift
