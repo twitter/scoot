@@ -24,7 +24,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
-	thrift "github.com/twitter/scoot/scheduler/api/thrift"
+	"github.com/twitter/scoot/scheduler/api/thrift"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces

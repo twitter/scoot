@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/binaries/scheduler/config"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
@@ -18,6 +17,7 @@ import (
 	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/api"
+	"github.com/twitter/scoot/scheduler/config"
 	"github.com/twitter/scoot/scootapi"
 )
 

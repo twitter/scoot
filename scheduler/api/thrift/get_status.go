@@ -1,4 +1,4 @@
-package api
+package thrift
 
 import (
 	"github.com/twitter/scoot/common/thrifthelpers"

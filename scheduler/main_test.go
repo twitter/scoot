@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/twitter/scoot/binaries/scheduler/config"
-	apiserver "github.com/twitter/scoot/scheduler/api"
+	"github.com/twitter/scoot/scheduler/api"
+	"github.com/twitter/scoot/scheduler/config"
 	"testing"
 )
 
@@ -12,7 +12,7 @@ var tests = []string{"local.memory", "local.local"}
 // Tests to ensure config is properly specified
 // and that they parse correctly
 func TestConfigParses(t *testing.T) {
-	_, schema := apiserver.Defaults()
+	_, schema := api.Defaults()
 
 	for _, configFile := range tests {
 		config, err := config.Asset(fmt.Sprintf("config/%v", configFile))
