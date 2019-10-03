@@ -1,7 +1,8 @@
 # Scoot
 [![Build Status](https://travis-ci.org/twitter/scoot.svg?branch=master)](https://travis-ci.org/twitter/scoot)
-[![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
 [![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
+[![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
+[![GoReportCard](https://goreportcard.com/badge/github.com/twitter/scoot)](https://goreportcard.com/report/github.com/twitter/scoot)
 
 Scoot is a distributed task runner.
 The core concept of Scoot is the Snapshot, which represents an immutable filesystem state.
