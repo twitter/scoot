@@ -206,9 +206,9 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"config": &bintree{nil, map[string]*bintree{
-		"config.go":   &bintree{configConfigGo, map[string]*bintree{}},
-		"local.local": &bintree{configLocalLocal, map[string]*bintree{}},
+	"config": {nil, map[string]*bintree{
+		"config.go":   {configConfigGo, map[string]*bintree{}},
+		"local.local": {configLocalLocal, map[string]*bintree{}},
 	}},
 }}
 

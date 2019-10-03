@@ -316,7 +316,7 @@ var tests = []struct {
 		wsToThrift,
 		&worker.WorkerStatus{
 			Runs: []*worker.RunStatus{
-				&worker.RunStatus{
+				{
 					Status:   worker.Status_PENDING,
 					RunId:    "id",
 					OutUri:   &nonemptystr,
@@ -327,7 +327,7 @@ var tests = []struct {
 		},
 		WorkerStatus{
 			Runs: []runner.RunStatus{
-				runner.RunStatus{
+				{
 					RunID:     "id",
 					State:     runner.PENDING,
 					StdoutRef: nonemptystr,

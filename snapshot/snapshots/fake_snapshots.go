@@ -170,7 +170,7 @@ func (s *FakeSnapshot) Readdirents(name string) ([]snapshot.Dirent, error) {
 		r := make([]snapshot.Dirent, len(f.Children))
 		keys := make([]string, len(f.Children))
 		i := 0
-		for k, _ := range f.Children {
+		for k := range f.Children {
 			keys[i] = k
 			i++
 		}
