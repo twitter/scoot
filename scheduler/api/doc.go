@@ -1,5 +1,5 @@
 /*
-Package server implements the Scoot Cloud API. For now, running
-the Cloud Server includes the Scheduler as well.
+Package api implements the Scoot thrift API, Bazel grpc remote execution and longrunning operation APIs, and
+the TwitterServer http API.
 */
 package api
