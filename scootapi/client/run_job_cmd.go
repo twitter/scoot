@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 type runJobCmd struct {

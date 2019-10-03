@@ -11,7 +11,7 @@ import (
 	//"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/sched"
 	//"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 // TODO DISABLED TEST - time.Sleep based tests have data races and need to be refactored

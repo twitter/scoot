@@ -5,7 +5,7 @@ import (
 
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 func ReinstateWorker(req *scoot.ReinstateWorkerReq, scheduler scheduler.Scheduler) error {

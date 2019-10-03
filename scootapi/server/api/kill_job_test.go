@@ -8,7 +8,7 @@ import (
 
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 var mockCtrl *gomock.Controller

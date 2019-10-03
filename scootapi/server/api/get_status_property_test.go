@@ -11,7 +11,7 @@ import (
 	s "github.com/twitter/scoot/saga"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {

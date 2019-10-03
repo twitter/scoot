@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 type getStatusCmd struct {

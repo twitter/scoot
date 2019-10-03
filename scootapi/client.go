@@ -6,7 +6,7 @@ package scootapi
 import (
 	"fmt"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 // A struct that supports establishing and maintaining a

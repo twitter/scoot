@@ -10,7 +10,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	s "github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 	"github.com/twitter/scoot/workerapi"
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )

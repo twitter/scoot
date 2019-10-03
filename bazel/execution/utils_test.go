@@ -7,7 +7,7 @@ import (
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/gen-go/scoot"
 )
 
 var rs *runStatus
