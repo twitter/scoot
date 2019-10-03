@@ -65,7 +65,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 
 	// Sort jobs by priority and count running tasks.
 	// An array indexed by priority. The value is the subset of jobs in fifo order for the given priority.
-	priorityJobs := [][]*jobState{[]*jobState{}, []*jobState{}, []*jobState{}}
+	priorityJobs := [][]*jobState{{}, {}, {}}
 	for _, job := range jobs {
 		p := int(job.Job.Def.Priority)
 		priorityJobs[p] = append(priorityJobs[p], job)
@@ -88,8 +88,8 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// 'Optional' means tasks are associated with jobs that are already running with some minimum node quota.
 	// 'Required' means tasks are associated with jobs that haven't yet reach a minimum node quota.
 	// This distinction makes sure we don't starve lower priority jobs in the second-pass 'remaining' loop.
-	remainingOptional := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
-	remainingRequired := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
+	remainingOptional := [][][]*taskState{{}, {}, {}}
+	remainingRequired := [][][]*taskState{{}, {}, {}}
 Loop:
 	for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
 		for _, job := range priorityJobs[p] {
@@ -193,7 +193,7 @@ Loop:
 LoopRemaining:
 	// First, loop using the above percentages, and next, distribute remaining free nodes to the highest priority tasks.
 	// Do the above loops twice, once to exhaust 'required' tasks and again to exhaust 'optional' tasks.
-	for j, quota := range [][]float32{NodeScaleAdjustment, []float32{1, 1, 1}, NodeScaleAdjustment, []float32{1, 1, 1}} {
+	for j, quota := range [][]float32{NodeScaleAdjustment, {1, 1, 1}, NodeScaleAdjustment, {1, 1, 1}} {
 		remaining := &remainingRequired
 		if j > 1 {
 			remaining = &remainingOptional

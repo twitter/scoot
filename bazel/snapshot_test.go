@@ -31,7 +31,7 @@ func TestSplitIdValid(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{SnapshotIDPrefix, EmptySha, "5"}
-	for idx, _ := range result {
+	for idx := range result {
 		if result[idx] != expected[idx] {
 			t.Fatalf("Expected %v, received %v", expected, result)
 		}

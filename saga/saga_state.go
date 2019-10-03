@@ -108,7 +108,7 @@ func (state *SagaState) Job() []byte {
 func (state *SagaState) GetTaskIds() []string {
 	taskIds := make([]string, 0, len(state.taskState))
 
-	for id, _ := range state.taskState {
+	for id := range state.taskState {
 		taskIds = append(taskIds, id)
 	}
 
