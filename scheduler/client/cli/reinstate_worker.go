@@ -1,4 +1,4 @@
-package client
+package cli
 
 /**
 implements the command line entry for the reinstate worker job command

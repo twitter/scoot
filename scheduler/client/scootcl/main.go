@@ -6,7 +6,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/twitter/scoot/scheduler/client/cli"
 )
 
 // CLI binary to talk to Cloud Scoot API
@@ -28,7 +28,7 @@ func main() {
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
 	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, scootconfig.DefaultClientTimeout)
-	cl, err := client.NewSimpleCLIClient(di)
+	cl, err := cli.NewSimpleCLIClient(di)
 	if err != nil {
 		log.Fatal("Failed to create new ScootAPI CLI client: ", err)
 	}

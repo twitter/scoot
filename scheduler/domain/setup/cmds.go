@@ -2,13 +2,14 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/os/temp"
 )

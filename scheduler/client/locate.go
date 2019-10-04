@@ -1,4 +1,4 @@
-package scootapi
+package client
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package scootapi
+package client
 
 // scootapi provides client side access to the scoot services.  It is used by the
 // command line binaries to submit (thrift) requests to the scoot services.

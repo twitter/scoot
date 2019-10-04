@@ -1,4 +1,4 @@
-package client
+package cli
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 )
 
 // Scoot API Client interface that includes CLI handling
@@ -20,7 +20,7 @@ type simpleCLIClient struct {
 	addr        string
 	dial        dialer.Dialer
 	logLevel    string
-	scootClient *scootapi.CloudScootClient
+	scootClient *client.CloudScootClient
 }
 
 func (c *simpleCLIClient) Exec() error {
@@ -58,9 +58,9 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 func (c *simpleCLIClient) Init(cmd *cobra.Command, args []string) error {
 	if c.addr == "" {
 		var err error
-		c.addr, _, err = scootapi.GetScootapiAddr()
+		c.addr, _, err = client.GetScootapiAddr()
 		if err != nil {
-			return fmt.Errorf("scootapi cli addr unset and no valued in %s", scootapi.GetScootapiAddrPath())
+			return fmt.Errorf("scootapi cli addr unset and no valued in %s", client.GetScootapiAddrPath())
 		}
 	}
 
@@ -71,8 +71,8 @@ func (c *simpleCLIClient) Init(cmd *cobra.Command, args []string) error {
 	}
 	log.SetLevel(level)
 
-	c.scootClient = scootapi.NewCloudScootClient(
-		scootapi.CloudScootClientConfig{
+	c.scootClient = client.NewCloudScootClient(
+		client.CloudScootClientConfig{
 			Addr:   c.addr,
 			Dialer: c.dial,
 		})

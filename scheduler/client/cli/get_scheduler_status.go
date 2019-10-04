@@ -1,41 +1,36 @@
-package client
+package cli
+
+/**
+implements the command line entry for the get scheduler status command
+*/
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
-type getStatusCmd struct {
+type getSchedulerStatusCmd struct {
 	printAsJson bool
 }
 
-func (c *getStatusCmd) registerFlags() *cobra.Command {
+func (c *getSchedulerStatusCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:   "get_job_status",
-		Short: "GetJobStatus",
+		Use:   "get_scheduler_status",
+		Short: "GetSchedulerStatus",
 	}
 	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out status as JSON")
 	return r
 }
 
-func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *getSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Checking Status for Scoot Job", args)
+	log.Info("Checking Status for Scheduler", args)
 
-	if len(args) == 0 {
-		return errors.New("a job id must be provided")
-	}
-
-	jobId := args[0]
-
-	status, err := cl.scootClient.GetStatus(jobId)
+	status, err := cl.scootClient.GetSchedulerStatus()
 
 	if err != nil {
 		switch err := err.(type) {
@@ -57,7 +52,6 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 		fmt.Printf("%s\n", asJson) // must also go to stdout in case caller looking in stdout for the results
 	} else {
 		log.Info("Job Status:", status)
-		loghelpers.LogRunStatus(status)
 		fmt.Println("Job Status:", status) // must also go to stdout in case caller looking in stdout for the results
 	}
 

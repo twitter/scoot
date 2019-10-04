@@ -9,7 +9,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/workerapi"
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
@@ -49,7 +49,7 @@ func (c *simpleClient) Dial() error {
 func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 	if c.workerClient == nil {
 		if c.addr == "" {
-			c.addr = scootapi.DefaultWorker_Thrift
+			c.addr = client.DefaultWorker_Thrift
 		}
 
 		transport, protocolFactory, err := c.dialer.Dial(c.addr)

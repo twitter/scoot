@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 )
 
 // SchedulerStrategy will startup a Scheduler (or setup a connection to one)
@@ -48,15 +48,15 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 	}
 
 	if err := s.cmds.Start(bin,
-		"-thrift_addr", scootapi.DefaultSched_Thrift,
-		"-http_addr", scootapi.DefaultSched_HTTP,
+		"-thrift_addr", client.DefaultSched_Thrift,
+		"-http_addr", client.DefaultSched_HTTP,
 		"-log_level", s.workersCfg.LogLevel.String(),
 		"-config", config); err != nil {
 		return "", err
 	}
 
-	thriftPort, _ := strconv.Atoi(strings.Split(scootapi.DefaultSched_Thrift, ":")[1])
-	httpPort, _ := strconv.Atoi(strings.Split(scootapi.DefaultSched_HTTP, ":")[1])
+	thriftPort, _ := strconv.Atoi(strings.Split(client.DefaultSched_Thrift, ":")[1])
+	httpPort, _ := strconv.Atoi(strings.Split(client.DefaultSched_HTTP, ":")[1])
 	if err := WaitForPort(thriftPort); err != nil {
 		return "", err
 	}
@@ -64,7 +64,7 @@ func (s *LocalSchedStrategy) Startup() (string, error) {
 		return "", err
 	}
 
-	return scootapi.DefaultSched_Thrift, nil
+	return client.DefaultSched_Thrift, nil
 }
 
 // Create a SchedulerStrategy with a local scheduler and in-memory workers

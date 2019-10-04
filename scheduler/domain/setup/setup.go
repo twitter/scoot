@@ -6,7 +6,7 @@ package setup
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 )
 
 type Strategies struct {
@@ -64,7 +64,7 @@ func startup(strategies *Strategies) error {
 	}
 
 	// Save the scheduler and first apiserver addresses.
-	scootapi.SetScootapiAddr(schedAddr, apiAddrs[0])
+	client.SetScootapiAddr(schedAddr, apiAddrs[0])
 	return nil
 }
 

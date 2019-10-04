@@ -1,8 +1,4 @@
-package client
-
-/**
-implements the command line entry for the kill job command
-*/
+package cli
 
 import (
 	"encoding/json"
@@ -11,25 +7,27 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
-type killJobCmd struct {
+type getStatusCmd struct {
 	printAsJson bool
 }
 
-func (c *killJobCmd) registerFlags() *cobra.Command {
+func (c *getStatusCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:   "kill_job",
-		Short: "KillJob",
+		Use:   "get_job_status",
+		Short: "GetJobStatus",
 	}
-	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
+	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out status as JSON")
 	return r
 }
 
-func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Killing Scoot Job", args)
+	log.Info("Checking Status for Scoot Job", args)
 
 	if len(args) == 0 {
 		return errors.New("a job id must be provided")
@@ -37,7 +35,7 @@ func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string)
 
 	jobId := args[0]
 
-	status, err := cl.scootClient.KillJob(jobId)
+	status, err := cl.scootClient.GetStatus(jobId)
 
 	if err != nil {
 		switch err := err.(type) {
@@ -59,6 +57,7 @@ func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string)
 		fmt.Printf("%s\n", asJson) // must also go to stdout in case caller looking in stdout for the results
 	} else {
 		log.Info("Job Status:", status)
+		loghelpers.LogRunStatus(status)
 		fmt.Println("Job Status:", status) // must also go to stdout in case caller looking in stdout for the results
 	}
 

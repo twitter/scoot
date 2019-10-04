@@ -24,7 +24,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/bundlestore"
@@ -37,8 +37,8 @@ import (
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	thriftAddr := flag.String("thrift_addr", scootapi.DefaultWorker_Thrift, "addr to serve thrift on")
-	httpAddr := flag.String("http_addr", scootapi.DefaultWorker_HTTP, "addr to serve http on")
+	thriftAddr := flag.String("thrift_addr", client.DefaultWorker_Thrift, "addr to serve thrift on")
+	httpAddr := flag.String("http_addr", client.DefaultWorker_HTTP, "addr to serve http on")
 	configFlag := flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
@@ -97,7 +97,7 @@ func main() {
 				if strings.HasPrefix(*storeHandle, "/") {
 					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
 				} else {
-					return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(*storeHandle)), nil
+					return store.MakeHTTPStore(client.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
 			}
 			storeAddr := ""
@@ -107,11 +107,11 @@ func main() {
 				storeAddr = string(nodes[r.Intn(len(nodes))].Id())
 				log.Info("No stores specified, but successfully fetched store addr: ", nodes, " --> ", storeAddr)
 			} else {
-				_, storeAddr, _ = scootapi.GetScootapiAddr()
+				_, storeAddr, _ = client.GetScootapiAddr()
 				log.Info("No stores specified, but successfully read .cloudscootaddr: ", storeAddr)
 			}
 			if storeAddr != "" {
-				return store.MakeHTTPStore(scootapi.APIAddrToBundlestoreURI(storeAddr)), nil
+				return store.MakeHTTPStore(client.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
 			return store.MakeFileStoreInTemp(tmp)

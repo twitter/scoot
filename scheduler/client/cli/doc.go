@@ -5,4 +5,4 @@ CLI processing, and the client interface is not independent.
 The CLI client resolves the Cloud Scoot Server via a Dialer
 (common/dialer).
 */
-package client
+package cli

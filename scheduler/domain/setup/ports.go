@@ -2,10 +2,11 @@ package setup
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os/exec"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // WaitForPort waits 10 seconds for a process to listen to the port, and returns an error if

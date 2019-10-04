@@ -1,11 +1,12 @@
-package client
+package cli
 
 /**
-implements the command line entry for the get scheduler status command
+implements the command line entry for the kill job command
 */
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -13,24 +14,30 @@ import (
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
-type getSchedulerStatusCmd struct {
+type killJobCmd struct {
 	printAsJson bool
 }
 
-func (c *getSchedulerStatusCmd) registerFlags() *cobra.Command {
+func (c *killJobCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:   "get_scheduler_status",
-		Short: "GetSchedulerStatus",
+		Use:   "kill_job",
+		Short: "KillJob",
 	}
-	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out status as JSON")
+	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
 	return r
 }
 
-func (c *getSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
-	log.Info("Checking Status for Scheduler", args)
+	log.Info("Killing Scoot Job", args)
 
-	status, err := cl.scootClient.GetSchedulerStatus()
+	if len(args) == 0 {
+		return errors.New("a job id must be provided")
+	}
+
+	jobId := args[0]
+
+	status, err := cl.scootClient.KillJob(jobId)
 
 	if err != nil {
 		switch err := err.(type) {

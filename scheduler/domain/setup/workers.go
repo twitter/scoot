@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler/client"
 )
 
 const DefaultWorkerCount int = 5
@@ -71,7 +71,7 @@ func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *Loc
 		workersCfg: workersCfg,
 		builder:    builder,
 		cmds:       cmds,
-		nextPort:   scootapi.WorkerPorts,
+		nextPort:   client.WorkerPorts,
 	}
 }
 
