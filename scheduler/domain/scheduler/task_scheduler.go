@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 type taskAssignment struct {
@@ -70,9 +70,9 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 		p := int(job.Job.Def.Priority)
 		priorityJobs[p] = append(priorityJobs[p], job)
 	}
-	stat.Gauge(stats.SchedPriority0JobsGauge).Update(int64(len(priorityJobs[sched.P0])))
-	stat.Gauge(stats.SchedPriority1JobsGauge).Update(int64(len(priorityJobs[sched.P1])))
-	stat.Gauge(stats.SchedPriority2JobsGauge).Update(int64(len(priorityJobs[sched.P2])))
+	stat.Gauge(stats.SchedPriority0JobsGauge).Update(int64(len(priorityJobs[domain.P0])))
+	stat.Gauge(stats.SchedPriority1JobsGauge).Update(int64(len(priorityJobs[domain.P1])))
+	stat.Gauge(stats.SchedPriority2JobsGauge).Update(int64(len(priorityJobs[domain.P2])))
 
 	// Assign each job the minimum number of nodes until free nodes are exhausted.
 	// Priority2 jobs consume all remaining idle nodes up to a limit, and are preferred over Priority1 jobs.
@@ -91,7 +91,7 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	remainingOptional := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
 	remainingRequired := [][][]*taskState{[][]*taskState{}, [][]*taskState{}, [][]*taskState{}}
 Loop:
-	for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
+	for _, p := range []domain.Priority{domain.P2, domain.P1, domain.P0} {
 		for _, job := range priorityJobs[p] {
 			// The number of available nodes for this priority is the remaining free nodes
 			numAvailNodes := numFree
@@ -198,7 +198,7 @@ LoopRemaining:
 		if j > 1 {
 			remaining = &remainingOptional
 		}
-		for _, p := range []sched.Priority{sched.P2, sched.P1, sched.P0} {
+		for _, p := range []domain.Priority{domain.P2, domain.P1, domain.P0} {
 			if numFree == 0 {
 				break LoopRemaining
 			}

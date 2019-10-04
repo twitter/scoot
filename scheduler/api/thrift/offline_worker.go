@@ -3,9 +3,9 @@ package thrift
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 func OfflineWorker(req *scoot.OfflineWorkerReq, scheduler scheduler.Scheduler) error {
@@ -16,7 +16,7 @@ func OfflineWorker(req *scoot.OfflineWorkerReq, scheduler scheduler.Scheduler) e
 	return scheduler.OfflineWorker(schedReq)
 }
 
-func thriftOfflineReqToScoot(req *scoot.OfflineWorkerReq) (result sched.OfflineWorkerReq, err error) {
+func thriftOfflineReqToScoot(req *scoot.OfflineWorkerReq) (result domain.OfflineWorkerReq, err error) {
 	if req == nil {
 		return result, fmt.Errorf("nil OfflineWorkerRequest")
 	}

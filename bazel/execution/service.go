@@ -22,9 +22,9 @@ import (
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces
@@ -107,7 +107,7 @@ func (s *executionServer) Execute(
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("Error converting request to internal definition: %s", err))
 	}
 
-	err = sched.ValidateJob(job)
+	err = domain.ValidateJob(job)
 	if err != nil {
 		log.Errorf("Scoot Job generated from request invalid: %s", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Internal job definition invalid: %s", err))

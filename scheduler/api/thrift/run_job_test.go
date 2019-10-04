@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 

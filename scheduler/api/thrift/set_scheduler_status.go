@@ -1,7 +1,7 @@
 package thrift
 
 import (
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 /**

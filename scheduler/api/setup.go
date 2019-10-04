@@ -16,8 +16,8 @@ import (
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 	"github.com/twitter/scoot/scootapi"
 )
 

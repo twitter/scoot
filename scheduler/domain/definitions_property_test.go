@@ -1,6 +1,6 @@
 // +build property_test
 
-package sched
+package domain
 
 import (
 	"reflect"

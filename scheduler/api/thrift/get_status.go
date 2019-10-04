@@ -3,8 +3,8 @@ package thrift
 import (
 	"github.com/twitter/scoot/common/thrifthelpers"
 	s "github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
@@ -49,7 +49,7 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 	js.Status = scoot.Status_NOT_STARTED
 	js.TaskStatus = make(map[string]scoot.Status)
 	js.TaskData = make(map[string]*scoot.RunStatus)
-	if job, err := sched.DeserializeJob(sagaState.Job()); err == nil {
+	if job, err := domain.DeserializeJob(sagaState.Job()); err == nil {
 		for i, _ := range job.Def.Tasks {
 			js.TaskStatus[job.Def.Tasks[i].TaskID] = scoot.Status_NOT_STARTED
 		}

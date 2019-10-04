@@ -8,9 +8,9 @@ import (
 
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched/scheduler"
 	schedthrift "github.com/twitter/scoot/scheduler/api/thrift"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 // Creates and returns a new server Handler, which combines the scheduler,

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 	"testing"
 	"time"
 )
@@ -78,8 +78,8 @@ func Test_RecoverJobs_ActiveSagas(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	sc, slog := makeMockSagaCoord(mockCtrl)
-	job1 := sched.GenJob("saga1", 10)
-	job2 := sched.GenJob("saga2", 5)
+	job1 := domain.GenJob("saga1", 10)
+	job2 := domain.GenJob("saga2", 5)
 	job1Data, _ := (&job1).Serialize()
 	job2Data, _ := (&job2).Serialize()
 
@@ -119,7 +119,7 @@ func Test_RecoverJob_NilActiveSaga(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	sc, slog := makeMockSagaCoord(mockCtrl)
-	job := sched.GenJob("sagaId", 10)
+	job := domain.GenJob("sagaId", 10)
 	jobData, _ := (&job).Serialize()
 
 	slog.EXPECT().GetActiveSagas().Return([]string{"saga1", "saga2"}, nil)
@@ -177,7 +177,7 @@ func Test_RecoverSaga_ActiveSaga(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	sc, slog := makeMockSagaCoord(mockCtrl)
-	job := sched.GenJob("sagaId", 10)
+	job := domain.GenJob("sagaId", 10)
 	jobData, _ := (&job).Serialize()
 	slog.EXPECT().GetMessages("saga1").Return([]saga.SagaMessage{
 		saga.MakeStartSagaMessage("saga1", jobData),

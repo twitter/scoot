@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
@@ -27,12 +27,12 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	time.Sleep(50 * time.Millisecond) // let task threads run to complete
 	s.step()                          // get first set of completed tasks and start next set
 	// verify that all tasks in job1 and job 3 ran and 1 task from job2 ran and 2 are waiting
-	ok := verifyJobStatus("phase1: verify job0 still running", jobIds[0], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase1: verify job1 still running", jobIds[1], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase1: verify job2 still running", jobIds[2], sched.Completed,
-		[]sched.Status{sched.Completed}, s, t)
+	ok := verifyJobStatus("phase1: verify job0 still running", jobIds[0], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.InProgress, domain.InProgress, domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase1: verify job1 still running", jobIds[1], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase1: verify job2 still running", jobIds[2], domain.Completed,
+		[]domain.Status{domain.Completed}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 1, "jobsWaitingToStart": 0,
@@ -59,22 +59,22 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	jobIds = append(jobIds, j[:]...)
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase2: verify job3 still running", jobIds[3], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job4 still running", jobIds[4], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job5 still running", jobIds[5], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job7 waiting to start", jobIds[6], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job7 waiting to start", jobIds[7], sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase2: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.NotStarted}, s, t)
+	ok = verifyJobStatus("phase2: verify job3 still running", jobIds[3], domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.NotStarted, domain.NotStarted, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job4 still running", jobIds[4], domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.NotStarted, domain.NotStarted, domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job5 still running", jobIds[5], domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job7 waiting to start", jobIds[6], domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.NotStarted, domain.NotStarted, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job7 waiting to start", jobIds[7], domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job8 waiting to start", jobIds[8], domain.InProgress,
+		[]domain.Status{domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase2: verify job9 waiting to start", jobIds[9], domain.InProgress,
+		[]domain.Status{domain.NotStarted}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 3, "jobsWaitingToStart": 2,
@@ -89,22 +89,22 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase3: verify job3 still running", jobIds[3], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job4 still running", jobIds[4], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job5 still running", jobIds[5], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job7 waiting to start", jobIds[6], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job7 waiting to start", jobIds[7], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase3: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.NotStarted}, s, t)
+	ok = verifyJobStatus("phase3: verify job3 still running", jobIds[3], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.InProgress, domain.NotStarted, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job4 still running", jobIds[4], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.InProgress, domain.NotStarted, domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job5 still running", jobIds[5], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job7 waiting to start", jobIds[6], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.InProgress, domain.NotStarted, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job7 waiting to start", jobIds[7], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job8 waiting to start", jobIds[8], domain.InProgress,
+		[]domain.Status{domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase3: verify job9 waiting to start", jobIds[9], domain.InProgress,
+		[]domain.Status{domain.NotStarted}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 3, "jobsWaitingToStart": 2,
@@ -119,22 +119,22 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase4: verify job3 still running", jobIds[3], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job4 still running", jobIds[4], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job5 still running", jobIds[5], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job6 waiting to start", jobIds[6], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.InProgress, sched.NotStarted, sched.NotStarted,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job7 waiting to start", jobIds[7], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job8 waiting to start", jobIds[8], sched.InProgress,
-		[]sched.Status{sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase4: verify job9 waiting to start", jobIds[9], sched.InProgress,
-		[]sched.Status{sched.InProgress}, s, t)
+	ok = verifyJobStatus("phase4: verify job3 still running", jobIds[3], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.InProgress, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job4 still running", jobIds[4], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.InProgress, domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job5 still running", jobIds[5], domain.Completed,
+		[]domain.Status{domain.Completed, domain.Completed}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job6 waiting to start", jobIds[6], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.InProgress, domain.NotStarted, domain.NotStarted,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job7 waiting to start", jobIds[7], domain.Completed,
+		[]domain.Status{domain.Completed, domain.Completed}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job8 waiting to start", jobIds[8], domain.InProgress,
+		[]domain.Status{domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase4: verify job9 waiting to start", jobIds[9], domain.InProgress,
+		[]domain.Status{domain.InProgress}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 4, "jobsWaitingToStart": 0,
@@ -149,18 +149,18 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase5: verify job3 still running", jobIds[3], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.InProgress, sched.InProgress,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase5: verify job4 still running", jobIds[4], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase5: verify job6 waiting to start", jobIds[6], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.InProgress, sched.InProgress,
-			sched.NotStarted}, s, t)
-	ok = ok && verifyJobStatus("phase5: verify job8 waiting to start", jobIds[8], sched.Completed,
-		[]sched.Status{sched.Completed}, s, t)
-	ok = ok && verifyJobStatus("phase5: verify job9 waiting to start", jobIds[9], sched.Completed,
-		[]sched.Status{sched.Completed}, s, t)
+	ok = verifyJobStatus("phase5: verify job3 still running", jobIds[3], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.InProgress, domain.InProgress,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase5: verify job4 still running", jobIds[4], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase5: verify job6 waiting to start", jobIds[6], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.InProgress, domain.InProgress,
+			domain.NotStarted}, s, t)
+	ok = ok && verifyJobStatus("phase5: verify job8 waiting to start", jobIds[8], domain.Completed,
+		[]domain.Status{domain.Completed}, s, t)
+	ok = ok && verifyJobStatus("phase5: verify job9 waiting to start", jobIds[9], domain.Completed,
+		[]domain.Status{domain.Completed}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 2, "jobsWaitingToStart": 0,
@@ -175,14 +175,14 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase6: verify job3 still running", jobIds[3], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
-			sched.InProgress}, s, t)
-	ok = ok && verifyJobStatus("phase6: verify job4 still running", jobIds[4], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed}, s, t)
-	ok = ok && verifyJobStatus("phase6: verify job6 waiting to start", jobIds[6], sched.InProgress,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
-			sched.InProgress}, s, t)
+	ok = verifyJobStatus("phase6: verify job3 still running", jobIds[3], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.Completed, domain.Completed,
+			domain.InProgress}, s, t)
+	ok = ok && verifyJobStatus("phase6: verify job4 still running", jobIds[4], domain.Completed,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.Completed}, s, t)
+	ok = ok && verifyJobStatus("phase6: verify job6 waiting to start", jobIds[6], domain.InProgress,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.Completed, domain.Completed,
+			domain.InProgress}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 2, "jobsWaitingToStart": 0,
@@ -197,12 +197,12 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond) // let prior phase's tasks' threads complete
 	s.step()                          // start the next set of tasks
-	ok = verifyJobStatus("phase7: verify job3 still running", jobIds[3], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
-			sched.Completed}, s, t)
-	ok = ok && verifyJobStatus("phase7: verify job6 waiting to start", jobIds[6], sched.Completed,
-		[]sched.Status{sched.Completed, sched.Completed, sched.Completed, sched.Completed, sched.Completed,
-			sched.Completed}, s, t)
+	ok = verifyJobStatus("phase7: verify job3 still running", jobIds[3], domain.Completed,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.Completed, domain.Completed,
+			domain.Completed}, s, t)
+	ok = ok && verifyJobStatus("phase7: verify job6 waiting to start", jobIds[6], domain.Completed,
+		[]domain.Status{domain.Completed, domain.Completed, domain.Completed, domain.Completed, domain.Completed,
+			domain.Completed}, s, t)
 
 	// check the gauges
 	ok = ok && checkGauges("p0Requestor", map[string]int{"jobRunning": 0, "jobsWaitingToStart": 0,
@@ -229,7 +229,7 @@ func addRequestorTestJobsToScheduler(jobProfiles []map[string]string, s *statefu
 		numTasks, _ := strconv.Atoi(jobProfile["numTasks"])
 		priority, _ := strconv.Atoi(jobProfile["priority"])
 		jobId, _, _ := putJobInScheduler(numTasks, s, "complete 0", jobProfile["requestor"],
-			sched.Priority(priority))
+			domain.Priority(priority))
 		s.addJobs()
 		jobIds = append(jobIds, jobId)
 	}

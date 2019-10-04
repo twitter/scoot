@@ -5,19 +5,19 @@ package scheduler
 
 import (
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 type Scheduler interface {
-	ScheduleJob(jobDef sched.JobDefinition) (string, error)
+	ScheduleJob(jobDef domain.JobDefinition) (string, error)
 
 	KillJob(jobId string) error
 
 	GetSagaCoord() saga.SagaCoordinator
 
-	OfflineWorker(req sched.OfflineWorkerReq) error
+	OfflineWorker(req domain.OfflineWorkerReq) error
 
-	ReinstateWorker(req sched.ReinstateWorkerReq) error
+	ReinstateWorker(req domain.ReinstateWorkerReq) error
 
 	SetSchedulerStatus(maxTasks int) error
 

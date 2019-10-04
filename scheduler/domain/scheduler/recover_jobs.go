@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 // recovers all active sagas from the specified SagaCoordinator with ForwardRecovery.
@@ -49,7 +49,7 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 			defer wg.Done()
 			activeSaga := recoverSaga(sc, sagaId)
 			if activeSaga != nil {
-				job, err := sched.DeserializeJob(activeSaga.GetState().Job())
+				job, err := domain.DeserializeJob(activeSaga.GetState().Job())
 				if err != nil {
 					// TODO: Increment counter? A breaking change was made
 					// if this happens or data was corrupted.

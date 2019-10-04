@@ -18,8 +18,8 @@ import (
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/worker/workers"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/domain/worker"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
@@ -57,7 +57,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		clUpdates: cl.ch,
 		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
-			return workers.MakeInmemoryWorker(n, tmp)
+			return worker.MakeInmemoryWorker(n, tmp)
 		},
 		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,
@@ -106,7 +106,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, true)
 
-	jobDef := sched.GenJobDef(1)
+	jobDef := domain.GenJobDef(1)
 
 	go func() {
 		checkJobMsg := <-s.checkJobCh
@@ -132,7 +132,7 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 }
 
 func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
-	jobDef := sched.GenJobDef(1)
+	jobDef := domain.GenJobDef(1)
 
 	// mock sagalog to trigger error
 	mockCtrl := gomock.NewController(t)
@@ -170,7 +170,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, true)
 
-	jobDef := sched.GenJobDef(2)
+	jobDef := domain.GenJobDef(2)
 	go func() {
 		checkJobMsg := <-s.checkJobCh
 		checkJobMsg.resultCh <- nil
@@ -198,7 +198,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 
 // verifies that task gets retried maxRetryTimes and then marked as completed
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t *testing.T) {
-	jobDef := sched.GenJobDef(1)
+	jobDef := domain.GenJobDef(1)
 	var taskIds []string
 	for _, task := range jobDef.Tasks {
 		taskIds = append(taskIds, task.TaskID)
@@ -229,7 +229,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != domain.Completed {
 		s.step()
 	}
 
@@ -247,7 +247,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 
 // verifies that task gets retried maxRetryTimes and then marked as completed
 func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *testing.T) {
-	jobDef := sched.GenJobDef(1)
+	jobDef := domain.GenJobDef(1)
 	var taskIds []string
 	for _, task := range jobDef.Tasks {
 		taskIds = append(taskIds, task.TaskID)
@@ -280,7 +280,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	jobId, _ := s.ScheduleJob(jobDef)
 
 	// advance scheduler until job gets scheduled & marked completed
-	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != sched.Completed {
+	for len(s.inProgressJobs) == 0 || s.getJob(jobId).getJobStatus() != domain.Completed {
 		s.step()
 	}
 
@@ -299,7 +299,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 // Ensure a single job with one task runs to completion, updates
 // state correctly, and makes the expected calls to the SagaLog
 func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
-	jobDef := sched.GenJobDef(1)
+	jobDef := domain.GenJobDef(1)
 	var taskIds []string
 	for _, task := range jobDef.Tasks {
 		taskIds = append(taskIds, task.TaskID)
@@ -341,7 +341,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	s.step()
 
 	// advance scheduler verify task got added & scheduled
-	for s.getJob(jobId).getTask(taskId).Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskId).Status == domain.NotStarted {
 		s.step()
 	}
 
@@ -351,7 +351,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until the task completes
-	for s.getJob(jobId).getTask(taskId).Status == sched.InProgress {
+	for s.getJob(jobId).getTask(taskId).Status == domain.InProgress {
 		s.step()
 	}
 
@@ -361,7 +361,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.getJob(jobId).getJobStatus() != sched.Completed {
+	for s.getJob(jobId).getJobStatus() != domain.Completed {
 		s.step()
 	}
 
@@ -380,16 +380,16 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
-	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", sched.P0)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", domain.P0)
 	s.step() // get the first job in the queue
-	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == domain.NotStarted {
 		s.step()
 	}
 
 	respCh := sendKillRequest(jobId, s)
 
-	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.InProgress ||
-		s.getJob(jobId).getTask(taskIds[0]).Status == sched.NotStarted {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == domain.InProgress ||
+		s.getJob(jobId).getTask(taskIds[0]).Status == domain.NotStarted {
 		s.step()
 	}
 	errResp := <-respCh
@@ -397,13 +397,13 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	if errResp != nil {
 		t.Fatalf("Expected no error from killJob request, instead got:%s", errResp.Error())
 	}
-	verifyJobStatus("verify kill", jobId, sched.Completed, []sched.Status{sched.Completed}, s, t)
+	verifyJobStatus("verify kill", jobId, domain.Completed, []domain.Status{domain.Completed}, s, t)
 }
 
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
-	putJobInScheduler(1, s, "pause", "", sched.P0)
+	putJobInScheduler(1, s, "pause", "", domain.P0)
 
 	respCh := sendKillRequest("badJobId", s)
 
@@ -420,11 +420,11 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, true)
-	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", sched.P0)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", domain.P0)
 	s.step() // get the job in the queue
 
 	//advance scheduler until the task completes
-	for s.getJob(jobId).getTask(taskIds[0]).Status == sched.InProgress {
+	for s.getJob(jobId).getTask(taskIds[0]).Status == domain.InProgress {
 		s.step()
 	}
 
@@ -436,7 +436,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	}
 
 	// advance scheduler until job gets marked completed
-	for s.getJob(jobId).getJobStatus() != sched.Completed {
+	for s.getJob(jobId).getJobStatus() != domain.Completed {
 		s.step()
 	}
 
@@ -462,14 +462,14 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
-	jobId1, _, _ := putJobInScheduler(5, s, "pause", "", sched.P0)
+	jobId1, _, _ := putJobInScheduler(5, s, "pause", "", domain.P0)
 	s.step()
-	for !allTasksInState("job1", jobId1, s, sched.InProgress) {
+	for !allTasksInState("job1", jobId1, s, domain.InProgress) {
 		s.step()
 	}
 
-	verifyJobStatus("verify started job1", jobId1, sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
+	verifyJobStatus("verify started job1", jobId1, domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.InProgress, domain.InProgress, domain.InProgress, domain.InProgress}, s, t)
 
 	if !stats.StatsOk("first stage", statsRegistry, t,
 		map[string]stats.Rule{
@@ -480,10 +480,10 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	}
 
 	// put a job with 3 tasks in the queue - all tasks should be in NotStarted state
-	jobId2, _, _ := putJobInScheduler(3, s, "pause", "", sched.P0)
+	jobId2, _, _ := putJobInScheduler(3, s, "pause", "", domain.P0)
 	s.step()
-	verifyJobStatus("verify put job2 in scheduler", jobId2, sched.InProgress,
-		[]sched.Status{sched.NotStarted, sched.NotStarted, sched.NotStarted}, s, t)
+	verifyJobStatus("verify put job2 in scheduler", jobId2, domain.InProgress,
+		[]domain.Status{domain.NotStarted, domain.NotStarted, domain.NotStarted}, s, t)
 
 	if !stats.StatsOk("second stage", statsRegistry, t,
 		map[string]stats.Rule{
@@ -514,8 +514,8 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	}
 
 	// verify that the first job is still running
-	verifyJobStatus("verify job1 still running", jobId1, sched.InProgress,
-		[]sched.Status{sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress, sched.InProgress}, s, t)
+	verifyJobStatus("verify job1 still running", jobId1, domain.InProgress,
+		[]domain.Status{domain.InProgress, domain.InProgress, domain.InProgress, domain.InProgress, domain.InProgress}, s, t)
 
 	// cleanup
 	sendKillRequest(jobId1, s)
@@ -610,7 +610,7 @@ func checkGauges(requestor string, expectedCounts map[string]int, s *statefulSch
 	return true
 }
 
-func allTasksInState(jobName string, jobId string, s *statefulScheduler, status sched.Status) bool {
+func allTasksInState(jobName string, jobId string, s *statefulScheduler, status domain.Status) bool {
 	for _, task := range s.getJob(jobId).Tasks {
 		if task.Status != status {
 			return false
@@ -660,10 +660,10 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 // create a job definition containing numTasks tasks and put it in the scheduler.
 // usingPausingExecer is true, each task will contain the command "pause"
 func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
-	requestor string, priority sched.Priority) (string, []string, error) {
+	requestor string, priority domain.Priority) (string, []string, error) {
 	// create the job and run it to completion
 	// create the job and run it to completion
-	jobDef := sched.GenJobDef(numTasks)
+	jobDef := domain.GenJobDef(numTasks)
 	jobDef.Requestor = requestor
 	jobDef.Priority = priority
 
@@ -693,7 +693,7 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
 	return jobId, taskIds, err
 }
 
-func verifyJobStatus(tag string, jobId string, expectedJobStatus sched.Status, expectedTaskStatus []sched.Status,
+func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, expectedTaskStatus []domain.Status,
 	s *statefulScheduler, t *testing.T) bool {
 
 	jobStatus := s.getJob(jobId)

@@ -1,4 +1,4 @@
-package sched
+package domain
 
 import (
 	"reflect"
@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/thrifthelpers"
-	schedthrift "github.com/twitter/scoot/sched/gen-go/sched"
+	schedthrift "github.com/twitter/scoot/scheduler/domain/gen-go/sched"
 )
 
 func Test_FixedJob(t *testing.T) {

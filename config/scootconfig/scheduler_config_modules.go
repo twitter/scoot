@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 //TODO(jschiller): make these configurable.

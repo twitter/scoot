@@ -10,7 +10,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/workerapi"
 )
 
@@ -37,7 +37,7 @@ type taskRunner struct {
 	runnerRetryInterval   time.Duration // How long to sleep between runner req retries.
 
 	tags.LogTags
-	task   sched.TaskDefinition
+	task   domain.TaskDefinition
 	nodeSt *nodeState
 
 	abortCh      chan abortReq    // Primary channel to check for aborts

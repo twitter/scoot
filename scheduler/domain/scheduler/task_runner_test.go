@@ -19,8 +19,8 @@ import (
 	runnermock "github.com/twitter/scoot/runner/mocks"
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/worker/workers"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/domain/worker"
 	"github.com/twitter/scoot/workerapi"
 )
 
@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func get_testTaskRunner(s *saga.Saga, r runner.Service, jobId, taskId string,
-	task sched.TaskDefinition, markCompleteOnFailure bool, stat stats.StatsReceiver) *taskRunner {
+	task domain.TaskDefinition, markCompleteOnFailure bool, stat stats.StatsReceiver) *taskRunner {
 	return &taskRunner{
 		saga:   s,
 		runner: r,
@@ -60,7 +60,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	task := sched.GenTask()
+	task := domain.GenTask()
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
@@ -71,7 +71,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := get_testTaskRunner(s, workers.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
 	}
@@ -82,7 +82,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	task := sched.TaskDefinition{Command: runner.Command{
+	task := domain.TaskDefinition{Command: runner.Command{
 		Argv: []string{"sleep 500", "complete 0"},
 	},
 	}
@@ -97,7 +97,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := get_testTaskRunner(s, workers.MakeSimWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeSimWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
 	}
@@ -106,7 +106,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 
 func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	log.Debug("Test_runTaskAndLog_FailedToLogStartTask")
-	task := sched.GenTask()
+	task := domain.GenTask()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -116,7 +116,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := get_testTaskRunner(s, workers.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -125,7 +125,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 
 func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	log.Debug("Test_runTaskAndLog_FailedToLogEndTask")
-	task := sched.GenTask()
+	task := domain.GenTask()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -139,7 +139,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := get_testTaskRunner(s, workers.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")
@@ -148,7 +148,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 
 func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	log.Debug("Test_runTaskAndLog_TaskFailsToRun")
-	task := sched.GenTask()
+	task := domain.GenTask()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -170,7 +170,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 
 func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	log.Debug("Test_runTaskAndLog_MarkFailedTaskAsFinished")
-	task := sched.GenTask()
+	task := domain.GenTask()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -217,7 +217,7 @@ func Test_runTaskWithFailedStartTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(msgMatcher).Return(startTaskErr)
 
 	runMock := runnermock.NewMockService(mockCtrl)
-	err := get_testTaskRunner(s, runMock, "job1", "task1", sched.GenTask(), true, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, runMock, "job1", "task1", domain.GenTask(), true, stats.NilStatsReceiver()).run()
 	if err == nil {
 		t.Errorf("Expected error to be non-nil")
 	} else if terr, ok := err.(*taskError); !ok {
@@ -249,7 +249,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 	runErr := errors.New("RunErr")
 	runMock.EXPECT().Run(gomock.Any()).Return(runner.RunStatus{}, runErr).Times(2)
 
-	tr := get_testTaskRunner(s, runMock, "job1", "task1", sched.GenTask(), true, statsReceiver)
+	tr := get_testTaskRunner(s, runMock, "job1", "task1", domain.GenTask(), true, statsReceiver)
 	tr.runnerRetryTimeout = 3 * time.Millisecond
 	tr.runnerRetryInterval = 2 * time.Millisecond
 	err := tr.run()
@@ -292,7 +292,7 @@ func Test_runTaskWithQueryRetry(t *testing.T) {
 		[]runner.RunStatus{{}}, runner.ServiceStatus{}, queryErr).Times(2)
 	runMock.EXPECT().Abort(gomock.Any())
 
-	tr := get_testTaskRunner(s, runMock, "job1", "task1", sched.GenTask(), true, stats.NilStatsReceiver())
+	tr := get_testTaskRunner(s, runMock, "job1", "task1", domain.GenTask(), true, stats.NilStatsReceiver())
 	tr.runnerRetryTimeout = 3 * time.Millisecond
 	tr.runnerRetryInterval = 2 * time.Millisecond
 	err := tr.run()

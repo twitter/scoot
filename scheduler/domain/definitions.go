@@ -1,5 +1,5 @@
-// Package sched provides definitions for Scoot Jobs and Tasks
-package sched
+// Package domain provides definitions for Scoot Jobs and Tasks
+package domain
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
-	schedthrift "github.com/twitter/scoot/sched/gen-go/sched"
+	schedthrift "github.com/twitter/scoot/scheduler/domain/gen-go/sched"
 )
 
 // Job is the job Scoot can schedule

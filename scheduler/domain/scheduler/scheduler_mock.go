@@ -7,7 +7,7 @@ package scheduler
 import (
 	gomock "github.com/golang/mock/gomock"
 	saga "github.com/twitter/scoot/saga"
-	sched "github.com/twitter/scoot/sched"
+	domain "github.com/twitter/scoot/scheduler/domain"
 	reflect "reflect"
 )
 
@@ -35,7 +35,7 @@ func (m *MockScheduler) EXPECT() *MockSchedulerMockRecorder {
 }
 
 // ScheduleJob mocks base method
-func (m *MockScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
+func (m *MockScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, error) {
 	ret := m.ctrl.Call(m, "ScheduleJob", jobDef)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
@@ -72,7 +72,7 @@ func (mr *MockSchedulerMockRecorder) GetSagaCoord() *gomock.Call {
 }
 
 // OfflineWorker mocks base method
-func (m *MockScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
+func (m *MockScheduler) OfflineWorker(req domain.OfflineWorkerReq) error {
 	ret := m.ctrl.Call(m, "OfflineWorker", req)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -84,7 +84,7 @@ func (mr *MockSchedulerMockRecorder) OfflineWorker(req interface{}) *gomock.Call
 }
 
 // ReinstateWorker mocks base method
-func (m *MockScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error {
+func (m *MockScheduler) ReinstateWorker(req domain.ReinstateWorkerReq) error {
 	ret := m.ctrl.Call(m, "ReinstateWorker", req)
 	ret0, _ := ret[0].(error)
 	return ret0

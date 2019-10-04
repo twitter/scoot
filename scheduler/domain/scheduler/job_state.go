@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 // Contains all the information for a job in progress
 // Note: Only Job, Saga, and Tasks are provided during scheduler recovery. Anything else must be initialized separately.
 type jobState struct {
-	Job            *sched.Job
+	Job            *domain.Job
 	Saga           *saga.Saga   //saga associated with this job
 	Tasks          []*taskState //ordered list of taskState
 	EndingSaga     bool         //denotes whether an EndSagaMsg is in progress or not
@@ -26,8 +26,8 @@ type jobState struct {
 type taskState struct {
 	JobId         string
 	TaskId        string
-	Def           sched.TaskDefinition
-	Status        sched.Status
+	Def           domain.TaskDefinition
+	Status        domain.Status
 	TimeStarted   time.Time
 	NumTimesTried int
 	TaskRunner    *taskRunner
@@ -49,7 +49,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Creates a New Job State based on the specified Job and Saga
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
-func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]averageDuration) *jobState {
+func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]averageDuration) *jobState {
 	j := &jobState{
 		Job:            job,
 		Saga:           saga,
@@ -71,7 +71,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 			JobId:         job.Id,
 			TaskId:        taskDef.TaskID,
 			Def:           taskDef,
-			Status:        sched.NotStarted,
+			Status:        domain.NotStarted,
 			TimeStarted:   nilTime,
 			NumTimesTried: 0,
 			AvgDuration:   duration,
@@ -85,7 +85,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 	// are considered not done and will be rescheduled.
 	for _, taskId := range saga.GetState().GetTaskIds() {
 		if saga.GetState().IsTaskCompleted(taskId) {
-			j.getTask(taskId).Status = sched.Completed
+			j.getTask(taskId).Status = domain.Completed
 			j.TasksCompleted++
 		}
 	}
@@ -109,7 +109,7 @@ func (j *jobState) getUnScheduledTasks() []*taskState {
 	var tasksToRun []*taskState
 
 	for _, state := range j.Tasks {
-		if state.Status == sched.NotStarted {
+		if state.Status == domain.NotStarted {
 			tasksToRun = append(tasksToRun, state)
 		}
 	}
@@ -120,7 +120,7 @@ func (j *jobState) getUnScheduledTasks() []*taskState {
 // Update JobState to reflect that a Task has been started
 func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState := j.getTask(taskId)
-	taskState.Status = sched.InProgress
+	taskState.Status = domain.InProgress
 	taskState.TimeStarted = time.Now()
 	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
@@ -131,7 +131,7 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 // Running param: true if taskStarted was called for this taskId.
 func (j *jobState) taskCompleted(taskId string, running bool) {
 	taskState := j.getTask(taskId)
-	taskState.Status = sched.Completed
+	taskState.Status = domain.Completed
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksCompleted++
@@ -143,7 +143,7 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 // Update JobState to reflect that an error has occurred running this Task
 func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
-	taskState.Status = sched.NotStarted
+	taskState.Status = domain.NotStarted
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksRunning--
@@ -153,9 +153,9 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 }
 
 // Returns the Current Job Status
-func (j *jobState) getJobStatus() sched.Status {
+func (j *jobState) getJobStatus() domain.Status {
 	if j.TasksCompleted == len(j.Tasks) {
-		return sched.Completed
+		return domain.Completed
 	}
-	return sched.InProgress
+	return domain.InProgress
 }

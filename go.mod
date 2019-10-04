@@ -17,6 +17,7 @@ require (
 	github.com/sethgrid/pester v0.0.0-20190127155807-68a33a018ad0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
+	github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795 // indirect
 	github.com/twitter/groupcache v0.0.0-20190909015146-10d21707d5fe
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894

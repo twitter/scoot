@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/domain/scheduler"
 )
 
 // Implementation of the RunJob API
@@ -19,7 +19,7 @@ func RunJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.
 		return nil, err
 	}
 
-	err = sched.ValidateJob(jobDef)
+	err = domain.ValidateJob(jobDef)
 	if err != nil {
 		return nil, NewInvalidJobRequest(err.Error())
 	}
@@ -34,14 +34,14 @@ func RunJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.
 }
 
 // Translates thrift job definition message to scoot domain object
-func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err error) {
+func thriftJobToScoot(def *scoot.JobDefinition) (result domain.JobDefinition, err error) {
 	if def == nil {
 		return result, fmt.Errorf("nil job definition")
 	}
-	result.Tasks = []sched.TaskDefinition{}
+	result.Tasks = []domain.TaskDefinition{}
 
 	for _, t := range def.Tasks {
-		var task sched.TaskDefinition
+		var task domain.TaskDefinition
 		if t == nil {
 			return result, fmt.Errorf("nil task definition")
 		}
@@ -82,7 +82,7 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result sched.JobDefinition, err
 		result.Requestor = *def.Requestor
 	}
 	if def.Priority != nil {
-		result.Priority = sched.Priority(*def.Priority)
+		result.Priority = domain.Priority(*def.Priority)
 	}
 
 	return result, nil

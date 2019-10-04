@@ -7,12 +7,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 // verify that jobs are distributed evenly
 func Test_StatefulScheduler_TasksDistributedEvenly(t *testing.T) {
-	jobDef := sched.GenJobDef(1000)
+	jobDef := domain.GenJobDef(1000)
 	s := makeDefaultStatefulScheduler()
 
 	//initialize NodeMap to keep track of tasks per node

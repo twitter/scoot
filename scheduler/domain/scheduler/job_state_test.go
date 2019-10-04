@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
-	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
+	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
@@ -23,7 +23,7 @@ func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
 }
 
 func Test_NewJobState_PreviousProgress_StartedTasks(t *testing.T) {
-	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
+	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
 	jobAsBytes, _ := job.Serialize()
 
 	// Mark all tasks as started, then create jobState
@@ -40,7 +40,7 @@ func Test_NewJobState_PreviousProgress_StartedTasks(t *testing.T) {
 }
 
 func Test_NewJobState_PreviousProgress_CompletedTasks(t *testing.T) {
-	job := sched.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
+	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 1)
 	jobAsBytes, _ := job.Serialize()
 
 	// Mark all tasks as completed, then create jobState

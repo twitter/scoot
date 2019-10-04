@@ -16,8 +16,8 @@ import (
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 	scootproto "github.com/twitter/scoot/common/proto"
-	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 func marshalAny(pb proto.Message) (*any.Any, error) {
@@ -43,7 +43,7 @@ func validateExecRequest(req *remoteexecution.ExecuteRequest) error {
 
 // Extract Scoot-related job fields from request to populate a JobDef, and pass through bazel request
 func execReqToScoot(req *remoteexecution.ExecuteRequest) (
-	result sched.JobDefinition, err error) {
+	result domain.JobDefinition, err error) {
 	if err := validateExecRequest(req); err != nil {
 		return result, err
 	}
@@ -51,8 +51,8 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 	// NOTE fixed to lowest priority in early stages of Bazel support
 	// ExecuteRequests do not have priority values, but the Action portion
 	// contains Platform Properties which can be used to specify arbitary server-side behavior.
-	result.Priority = sched.P0
-	result.Tasks = []sched.TaskDefinition{}
+	result.Priority = domain.P0
+	result.Tasks = []domain.TaskDefinition{}
 
 	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
 	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
@@ -61,7 +61,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 	// ActionDigest is added for convenience and universal availability
 	// ExecutionMetadata is seeded with current time of queueing
 	now := time.Now()
-	var task sched.TaskDefinition
+	var task domain.TaskDefinition
 	task.TaskID = fmt.Sprintf("%s_%s_%d", TaskIDPrefix, req.GetActionDigest(), now.Unix())
 	task.Command.Argv = []string{CommandDefault}
 	task.Command.EnvVars = make(map[string]string)

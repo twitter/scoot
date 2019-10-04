@@ -18,7 +18,7 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
+	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/workerapi"
 )
 
@@ -76,7 +76,7 @@ const LongJobDuration = 4 * time.Hour
 const TickRate = 250 * time.Millisecond
 
 // The max job priority we respect (higher priority is untested and disabled)
-const MaxPriority = sched.P2
+const MaxPriority = domain.P2
 
 // Decrease the NodeScaleFactor by taking the percentage defined by NodeScaleAdjust[Priority].
 // Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
@@ -121,7 +121,7 @@ type SchedulerConfig struct {
 
 // Used to calculate how many tasks a job can run without adversely affecting other jobs.
 // We account for priority by decreasing the scale factor by an appropriate percentage.
-func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p sched.Priority) float32 {
+func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p domain.Priority) float32 {
 	sf := float32(numNodes) / float32(s.SoftMaxSchedulableTasks)
 	return sf * NodeScaleAdjustment[p]
 }
@@ -311,12 +311,12 @@ func NewStatefulScheduler(
 }
 
 type jobCheckMsg struct {
-	jobDef   *sched.JobDefinition
+	jobDef   *domain.JobDefinition
 	resultCh chan error
 }
 
 type jobAddedMsg struct {
-	job  *sched.Job
+	job  *domain.Job
 	saga *saga.Saga
 }
 
@@ -324,7 +324,7 @@ type jobAddedMsg struct {
 	validate the job request. If the job passes validation, the job's tasks are queued for processing as
 	per the task scheduling algorithm and an id for the job is returned, otherwise the error message is returned.
 */
-func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, error) {
+func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, error) {
 	/*
 		Put the job request and a callback channel on the check job channel.  Wait for the
 		scheduling thread to pick up the request from the check job channel, verify that it
@@ -367,7 +367,7 @@ func (s *statefulScheduler) ScheduleJob(jobDef sched.JobDefinition) (string, err
 		return "", err
 	}
 
-	job := &sched.Job{
+	job := &domain.Job{
 		Id:  generateJobId(),
 		Def: jobDef,
 	}
@@ -529,7 +529,7 @@ func (s *statefulScheduler) updateStats() {
 			jobsWaitingToStart += 1
 			s.requestorsCounts[requestor][jobsWaitingToStartKey]++
 			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks)
-		} else if job.getJobStatus() == sched.InProgress {
+		} else if job.getJobStatus() == domain.InProgress {
 			s.requestorsCounts[requestor][jobsRunningKey]++
 			s.requestorsCounts[requestor][numRunningTasksKey] += job.TasksRunning
 			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
@@ -614,7 +614,7 @@ checkLoop:
 				err = fmt.Errorf("Exceeds max number of requestors: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxRequestors)
 			} else if len(jobs) >= s.config.MaxJobsPerRequestor {
 				err = fmt.Errorf("Exceeds max jobs per requestor: %s (%d)", checkJobMsg.jobDef.Requestor, s.config.MaxJobsPerRequestor)
-			} else if checkJobMsg.jobDef.Priority < sched.P0 || checkJobMsg.jobDef.Priority > sched.P2 {
+			} else if checkJobMsg.jobDef.Priority < domain.P0 || checkJobMsg.jobDef.Priority > domain.P2 {
 				err = fmt.Errorf("Invalid priority %d, must be between 0-2 inclusive", checkJobMsg.jobDef.Priority)
 			} else {
 				// Check for duplicate task names
@@ -755,7 +755,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 	// Check For Completed Jobs & Log EndSaga Message
 	for _, jobState := range s.inProgressJobs {
-		if jobState.getJobStatus() == sched.Completed && !jobState.EndingSaga {
+		if jobState.getJobStatus() == domain.Completed && !jobState.EndingSaga {
 
 			// mark job as being completed
 			jobState.EndingSaga = true
@@ -1042,7 +1042,7 @@ func (s *statefulScheduler) GetSagaCoord() saga.SagaCoordinator {
 	return s.sagaCoord
 }
 
-func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
+func (s *statefulScheduler) OfflineWorker(req domain.OfflineWorkerReq) error {
 	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
 		return fmt.Errorf("Requestor %s unauthorized to offline worker", req.Requestor)
 	}
@@ -1055,7 +1055,7 @@ func (s *statefulScheduler) OfflineWorker(req sched.OfflineWorkerReq) error {
 	return nil
 }
 
-func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error {
+func (s *statefulScheduler) ReinstateWorker(req domain.ReinstateWorkerReq) error {
 	if !stringInSlice(req.Requestor, s.config.Admins) && len(s.config.Admins) != 0 {
 		return fmt.Errorf("Requestor %s unauthorized to reinstate worker", req.Requestor)
 	}
@@ -1114,10 +1114,10 @@ func (s *statefulScheduler) killJobs() {
 		}
 		for _, task := range jobState.Tasks {
 			logFields["taskID"] = task.TaskId
-			if task.Status == sched.InProgress {
+			if task.Status == domain.InProgress {
 				task.TaskRunner.Abort(true, UserRequestedErrStr)
 				inProgress++
-			} else if task.Status == sched.NotStarted {
+			} else if task.Status == domain.NotStarted {
 				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				st.Error = UserRequestedErrStr
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
@@ -1149,7 +1149,7 @@ func (s *statefulScheduler) killJobs() {
 // requests when the number of running and waiting tasks won't exceed the limit
 func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 
-	err := sched.ValidateMaxTasks(maxTasks)
+	err := domain.ValidateMaxTasks(maxTasks)
 	if err != nil {
 		return err
 	}
