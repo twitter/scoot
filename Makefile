@@ -164,4 +164,4 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test-all
 
-travis: fs_util install recoverytest smoketest integrationtest test-all clean-data
+travis: clean-data fs_util install recoverytest smoketest integrationtest test-all clean-data
