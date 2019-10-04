@@ -17,7 +17,7 @@ The setup of these is defined by server.Defaults(), which sets up the ice.MagicB
 * Thrift interface
 * Configuration Schema
 
-The actual implementations in scoot/scootapi/server handle Cloud Server API request handling from the Thrift interface down. The main elements here are:
+The main elements here are:
 * __MakeHandler__ - main Cloud Scoot API Handler. Implementation here includes scheduler, saga coordinator, and stats receiver.
 * __MakeServer__ - wraps the Handler with Thrift connection info and glues the API handler logic to the Thrift interface
 * __RunJob__ and __GetStatus__ - API handler implementations

@@ -101,7 +101,7 @@ test-all: test-unit-property-integration coverage
 
 smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
-	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
+	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
@@ -113,8 +113,8 @@ recoverytest:
 
 integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
-	$(FIRSTGOPATH)/bin/scoot-integration
-	$(FIRSTGOPATH)/bin/bazel-integration
+	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
+	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
 ############## cleanup
 
@@ -145,7 +145,7 @@ thrift-sched-go:
 	rm -rf scheduler/domain/gen-go/sched/sched-remote/
 
 thrift-scoot-go:
-	# Create generated code in github.com/twitter/scoot/scootapi/gen-go/... from scoot.thrift
+	# Create generated code in github.com/twitter/scoot/scheduler/api/thrift/gen-go/... from scoot.thrift
 	cd scheduler/api/thrift && rm -rf gen-go && thrift -I ../../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../../..
 	rm -rf scheduler/api/thrift/gen-go/scoot/cloud_scoot-remote/
 

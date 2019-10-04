@@ -4,7 +4,7 @@
 #
 # To Generate files, run from top level (github.com/twitter/scoot) repo directory:
 #     $ make thrift-scoot-go
-#     We remove scootapi/gen-go/scoot/cloud_scoot-remote/ due to thrift being unable to
+#     We remove gen-go/scoot/cloud_scoot-remote/ due to thrift being unable to
 #     distinguish between local and included package prefixes.
 #     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 

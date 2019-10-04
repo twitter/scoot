@@ -71,7 +71,7 @@ func main() {
 }
 
 func installBinaries() error {
-	testhelpers.InstallBinary("bzutil")
+	testhelpers.InstallBinaries()
 	b, err := exec.Command("sh", "get_fs_util.sh").CombinedOutput()
 	if err != nil {
 		log.Error(string(b))

@@ -30,11 +30,11 @@ func main() {
 	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, scootconfig.DefaultClientTimeout)
 	cl, err := cli.NewSimpleCLIClient(di)
 	if err != nil {
-		log.Fatal("Failed to create new ScootAPI CLI client: ", err)
+		log.Fatal("Failed to create new scoot CLI client: ", err)
 	}
 
 	err = cl.Exec()
 	if err != nil {
-		log.Fatal("Error running scootapi ", err)
+		log.Fatal("Error running scootcl ", err)
 	}
 }

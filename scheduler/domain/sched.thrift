@@ -1,5 +1,5 @@
 # Structures for storing the internal JobDefinition.
-# We use this structure rather than scootapi's JobDefinition (in scoot.thrift)
+# We use this structure rather than the scoot API's JobDefinition (in scoot.thrift)
 # so that we can add data to the log and not impact the client API.
 
 # See github.com/twitter/scoot/README.md for local Thrift prerequisites

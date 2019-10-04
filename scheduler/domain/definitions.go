@@ -223,7 +223,7 @@ func ValidateJob(job JobDefinition) error {
 }
 
 func ValidateMaxTasks(maxTasks int) error {
-	// validation is also implemented in scootapi/client.go.  This implementation cannot be used
+	// validation is also implemented in scheduler/client/client.go.  This implementation cannot be used
 	// there because it causes a circular dependency.  The two implementations can be consolidated
 	// when the code is restructured
 	if maxTasks < -1 {

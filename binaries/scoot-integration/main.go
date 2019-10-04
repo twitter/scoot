@@ -48,7 +48,7 @@ func main() {
 
 	testhelpers.WaitForClusterToBeReady(scootClient)
 
-	installBinaries()
+	testhelpers.InstallBinaries()
 	gopath, err := common.GetFirstGopath()
 	if err != nil {
 		testhelpers.KillAndExit1(cluster1Cmds, err)
@@ -161,17 +161,12 @@ func main() {
 	cluster1Cmds.Kill()
 }
 
-func installBinaries() {
-	testhelpers.InstallBinary("scootapi")
-	testhelpers.InstallBinary("scoot-snapshot-db")
-}
-
 func createSnapshot(gopath string) ([]byte, error) {
 	return exec.Command(gopath+"/bin/scoot-snapshot-db", "create", "ingest_dir", "--dir", ".").Output()
 }
 
 func runJob(gopath, snapshotID string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/scootapi", "run_job", "sleep", "1", "--snapshot_id", snapshotID).Output()
+	return exec.Command(gopath+"/bin/scootcl", "run_job", "sleep", "1", "--snapshot_id", snapshotID).Output()
 }
 
 func runXJobs(gopath, snapshotID string, x int) ([]string, error) {
@@ -188,13 +183,13 @@ func runXJobs(gopath, snapshotID string, x int) ([]string, error) {
 }
 
 func getStatus(gopath, jobID string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/scootapi", "get_job_status", jobID, "--json").Output()
+	return exec.Command(gopath+"/bin/scootcl", "get_job_status", jobID, "--json").Output()
 }
 
 func offlineWorker(gopath, workerID string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/scootapi", "offline_worker", workerID).Output()
+	return exec.Command(gopath+"/bin/scootcl", "offline_worker", workerID).Output()
 }
 
 func reinstateWorker(gopath, workerID string) ([]byte, error) {
-	return exec.Command(gopath+"/bin/scootapi", "reinstate_worker", workerID).Output()
+	return exec.Command(gopath+"/bin/scootcl", "reinstate_worker", workerID).Output()
 }
