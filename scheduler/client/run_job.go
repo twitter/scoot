@@ -24,7 +24,7 @@ type runJobCmd struct {
 func (c *runJobCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "run_job",
-		Short: "run a job",
+		Short: "RunJob",
 	}
 	r.Flags().StringVar(&c.streamName, "stream_name", "sm", "If passing snapshot_id=SHA, this is the global UID for the associated repo.")
 	r.Flags().StringVar(&c.snapshotId, "snapshot_id", "", "Repo checkout id: <master-sha> OR <backend>-<kind>(-<additional information>)+")

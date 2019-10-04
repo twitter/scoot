@@ -12,23 +12,22 @@ import (
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
-type setSchedulerStatus struct {
+type setSchedulerStatusCmd struct {
 	printAsJson bool
 	maxTasks    int
 }
 
-func (c *setSchedulerStatus) registerFlags() *cobra.Command {
+func (c *setSchedulerStatusCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:     "set_scheduler_status",
-		Short:   "set the scheduler status",
-		Example: "scootapi set_scheduler_status --task-throttle 20",
+		Use:   "set_scheduler_status",
+		Short: "SetSchedulerStatus",
 	}
 	r.Flags().BoolVar(&c.printAsJson, "json", false, "Print out job status as JSON")
 	r.Flags().IntVar(&c.maxTasks, "task-throttle", -1, "Set the task throttle")
 	return r
 }
 
-func (c *setSchedulerStatus) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *setSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Set the maximum number of (running + waiting) tasks we want the scheduler"+
 		" to run.  Note: the scheduler does not enforce this limit.  We expect the job"+

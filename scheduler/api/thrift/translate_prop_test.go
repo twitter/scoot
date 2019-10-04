@@ -1,6 +1,6 @@
 // +build property_test
 
-package api
+package thrift
 
 import (
 	"reflect"

@@ -6,7 +6,7 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/scootapi/client"
+	"github.com/twitter/scoot/scheduler/client"
 )
 
 // CLI binary to talk to Cloud Scoot API

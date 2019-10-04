@@ -32,8 +32,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c.dial = d
 
 	c.rootCmd = &cobra.Command{
-		Use:                "scootapi",
-		Short:              "scootapi is a command-line client to Cloud Scoot",
+		Use:                "scootcl",
+		Short:              "scootcl is a command-line client to Scoot",
 		PersistentPreRunE:  c.Init,
 		Run:                func(*cobra.Command, []string) {},
 		PersistentPostRunE: c.Close,
@@ -48,7 +48,7 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c.addCmd(&killJobCmd{})
 	c.addCmd(&offlineWorkerCmd{})
 	c.addCmd(&reinstateWorkerCmd{})
-	c.addCmd(&setSchedulerStatus{})
+	c.addCmd(&setSchedulerStatusCmd{})
 	c.addCmd(&getSchedulerStatusCmd{})
 
 	return c, nil

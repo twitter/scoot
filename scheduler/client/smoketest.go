@@ -25,8 +25,8 @@ type smokeTestCmd struct {
 
 func (c *smokeTestCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
-		Use:   "run_smoke_test",
-		Short: "Smoke Test",
+		Use:   "smoketest",
+		Short: "SmokeTest",
 	}
 	r.Flags().IntVar(&c.numJobs, "num_jobs", 100, "number of jobs to run")
 	r.Flags().IntVar(&c.numTasks, "num_tasks", -1, "number of tasks per job, or random if -1")

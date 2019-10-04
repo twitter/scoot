@@ -99,19 +99,19 @@ test-all: test-unit-property-integration coverage
 
 ############## standalone binary & integration tests
 
-swarmtest: install
+smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootapi run_smoke_test with 10 jobs, wait 1m
-	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootapi run_smoke_test --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
+	# We build the binaries because 'go run' won't consistently pass signals to our program.
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
 
-recoverytest: install
-	# Some overlap with swarmtest but focuses on sagalog recovery vs worker/checkout correctness.
-	# We build the binaries becuase 'go run' won't consistently pass signals to our program.
-	# Ignore output here to reduce travis log size. Swarmtest is more important and that still logs.
+recoverytest:
+	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
+	# We build the binaries because 'go run' won't consistently pass signals to our program.
+	# Ignore output here to reduce travis log size. Smoketest is more important and that still logs.
 	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
-integrationtest: install
+integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
 	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
@@ -163,4 +163,4 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test-all
 
-travis: fs_util recoverytest swarmtest integrationtest test-all clean-data
+travis: fs_util install recoverytest smoketest integrationtest test-all clean-data

@@ -42,7 +42,7 @@ go run ./binaries/setup-cloud-scoot/main.go --strategy local.local
 Run a series of randomly generated tests against the local scheduler and workers:
 
 ```sh
-go run ./binaries/scootapi/main.go run_smoke_test
+go run ./scheduler/client/scootcl/main.go smoke_test
 ```
 ## Scoot Integration Tests
 Scoot has a few  tests that exercise varying levels of common usages and workflows.

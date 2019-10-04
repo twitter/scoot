@@ -21,7 +21,7 @@ type watchJobCmd struct {
 func (c *watchJobCmd) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "watch_job",
-		Short: "Watch job",
+		Short: "WatchJob",
 	}
 
 	return r
