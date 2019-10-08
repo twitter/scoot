@@ -282,17 +282,17 @@ const (
 	SchedProcessMessagesLatency_ms = "schedProcessMessagesLatency_ms"
 
 	/*
-		Amount of time it takes the scheduler to complete a checkForCompletedJobs()
+		Amount of time it takes the scheduler to check if any of the in progress jobs are completed
 	*/
 	SchedCheckForCompletedLatency_ms = "schedCheckForCompletedLatency_ms"
 
 	/*
-		Amount of time it takes the scheduler to complete a killJobs()
+		Amount of time it takes the scheduler to kill all jobs requested to be killed
 	*/
 	SchedKillJobsLatency_ms = "schedKillJobsLatency_ms"
 
 	/*
-		Amount of time it takes the scheduler to complete a scheduleTasks()
+		Amount of time it takes the scheduler to figure out which tasks to schedule next and on which worker
 	*/
 	SchedScheduleTasksLatency_ms = "schedScheduleTasksLatency_ms"
 
