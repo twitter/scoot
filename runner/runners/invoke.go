@@ -222,7 +222,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			default:
 				// err is not of type github.com/twitter/scoot/common/errors.Error
-				failedStatus = runner.FailedStatus(id, errors.NewError(codeErr, errors.GenericCheckoutFailureExitCode),
+				failedStatus = runner.FailedStatus(id, errors.NewError(err, errors.GenericCheckoutFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 

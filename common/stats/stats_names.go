@@ -266,6 +266,36 @@ const (
 	*/
 	SchedStepLatency_ms = "schedStepLatency_ms"
 
+	/*
+		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+	*/
+	SchedAddJobsLatency_ms = "schedAddJobsLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to update list of removed / added nodes to its worker cluster
+	*/
+	SchedUpdateClusterLatency_ms = "schedUpdateClusterLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to process all messages in mailbox & execute callbacks (if applicable)
+	*/
+	SchedProcessMessagesLatency_ms = "schedProcessMessagesLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to check if any of the in progress jobs are completed
+	*/
+	SchedCheckForCompletedLatency_ms = "schedCheckForCompletedLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to kill all jobs requested to be killed
+	*/
+	SchedKillJobsLatency_ms = "schedKillJobsLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to figure out which tasks to schedule next and on which worker
+	*/
+	SchedScheduleTasksLatency_ms = "schedScheduleTasksLatency_ms"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running
