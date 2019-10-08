@@ -10,7 +10,7 @@ import (
 	//"github.com/twitter/scoot/common/stats"
 	//"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/domain"
-	//"github.com/twitter/scoot/scheduler/domain/scheduler"
+	//"github.com/twitter/scoot/scheduler/server"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -20,7 +20,7 @@ import (
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	s := scheduler.NewMockScheduler(mockCtrl)
+	s := server.NewMockScheduler(mockCtrl)
 	s.EXPECT().ScheduleJob(gomock.Any()).Return("mockJobId", nil)
 	s.EXPECT().KillJob(gomock.Any()).Return(nil)
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()

@@ -2,7 +2,7 @@ package thrift
 
 import (
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 /**
@@ -16,7 +16,7 @@ func NewSchedulerStatus(numTasks int, maxTasks int) *scoot.SchedulerStatus {
 	}
 }
 
-func GetSchedulerStatus(scheduler scheduler.Scheduler) (*scoot.SchedulerStatus, error) {
+func GetSchedulerStatus(scheduler server.Scheduler) (*scoot.SchedulerStatus, error) {
 
 	var numTasks int
 	var maxTasks int

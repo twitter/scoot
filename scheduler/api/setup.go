@@ -18,7 +18,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/client"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 type servers struct {
@@ -52,13 +52,13 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			cl *cluster.Cluster,
 			sc saga.SagaCoordinator,
 			rf func(cluster.Node) runner.Service,
-			config scheduler.SchedulerConfig,
-			stat stats.StatsReceiver) scheduler.Scheduler {
-			return scheduler.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
+			config server.SchedulerConfig,
+			stat stats.StatsReceiver) server.Scheduler {
+			return server.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
 		},
 
 		func(
-			s scheduler.Scheduler,
+			s server.Scheduler,
 			sc saga.SagaCoordinator,
 			stat stats.StatsReceiver) scoot.CloudScoot {
 			return NewHandler(s, sc, stat)
@@ -94,7 +94,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			}
 		},
 
-		func(gc *bazel.GRPCConfig, s scheduler.Scheduler, stat stats.StatsReceiver) bazel.GRPCServer {
+		func(gc *bazel.GRPCConfig, s server.Scheduler, stat stats.StatsReceiver) bazel.GRPCServer {
 			return execution.MakeExecutionServer(gc, s, stat)
 		},
 	)

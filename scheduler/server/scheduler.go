@@ -1,7 +1,7 @@
-// Package scheduler provides the main job scheduling interface for Scoot
-package scheduler
+// Package server provides the main job scheduling interface for Scoot
+package server
 
-//go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go
+//go:generate mockgen -source=scheduler.go -package=server -destination=scheduler_mock.go
 
 import (
 	"github.com/twitter/scoot/saga"

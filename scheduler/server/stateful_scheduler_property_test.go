@@ -1,6 +1,6 @@
 // +build property_test
 
-package scheduler
+package server
 
 import (
 	"testing"

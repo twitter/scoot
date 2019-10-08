@@ -24,7 +24,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/api/thrift"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces
@@ -32,12 +32,12 @@ type executionServer struct {
 	listener  net.Listener
 	sagaCoord saga.SagaCoordinator
 	server    *grpc.Server
-	scheduler scheduler.Scheduler
+	scheduler server.Scheduler
 	stat      stats.StatsReceiver
 }
 
 // Creates a new GRPCServer (executionServer) based on a GRPC config, scheduler, and stats, and preregisters the service
-func MakeExecutionServer(gc *bazel.GRPCConfig, s scheduler.Scheduler, stat stats.StatsReceiver) *executionServer {
+func MakeExecutionServer(gc *bazel.GRPCConfig, s server.Scheduler, stat stats.StatsReceiver) *executionServer {
 	if gc == nil {
 		return nil
 	}

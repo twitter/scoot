@@ -8,7 +8,7 @@ import (
 
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 var mockCtrl *gomock.Controller
@@ -54,9 +54,9 @@ func makeMockSagaCoordinator(t *testing.T) saga.SagaCoordinator {
 	return saga.MakeSagaCoordinator(sagaLogMock)
 }
 
-func makeMockScheduler(t *testing.T) *scheduler.MockScheduler {
+func makeMockScheduler(t *testing.T) *server.MockScheduler {
 
-	scheduler := scheduler.NewMockScheduler(mockCtrl)
+	scheduler := server.NewMockScheduler(mockCtrl)
 	scheduler.EXPECT().KillJob("err").Return(fmt.Errorf("saw kill job request in scheduler"))
 	scheduler.EXPECT().KillJob("1").Return(nil)
 

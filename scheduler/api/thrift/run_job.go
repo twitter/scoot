@@ -7,11 +7,11 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 // Implementation of the RunJob API
-func RunJob(scheduler scheduler.Scheduler, def *scoot.JobDefinition, stat stats.StatsReceiver) (*scoot.JobId, error) {
+func RunJob(scheduler server.Scheduler, def *scoot.JobDefinition, stat stats.StatsReceiver) (*scoot.JobId, error) {
 
 	jobDef, err := thriftJobToScoot(def)
 	// TODO: change to return scoot.NewInvalidRequest()

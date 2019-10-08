@@ -5,10 +5,10 @@ import (
 
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
-func ReinstateWorker(req *scoot.ReinstateWorkerReq, scheduler scheduler.Scheduler) error {
+func ReinstateWorker(req *scoot.ReinstateWorkerReq, scheduler server.Scheduler) error {
 	schedReq, err := thriftReinstateReqToScoot(req)
 	if err != nil {
 		return nil

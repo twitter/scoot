@@ -10,12 +10,12 @@ import (
 	"github.com/twitter/scoot/saga"
 	schedthrift "github.com/twitter/scoot/scheduler/api/thrift"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 // Creates and returns a new server Handler, which combines the scheduler,
 // saga coordinator and stats receivers.
-func NewHandler(scheduler scheduler.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
+func NewHandler(scheduler server.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	handler := &Handler{scheduler: scheduler, sagaCoord: sc, stat: stat}
 	go stats.StartUptimeReporting(stat, stats.SchedUptime_ms, stats.SchedServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	return handler
@@ -33,7 +33,7 @@ func MakeServer(handler scoot.CloudScoot,
 
 // Wrapping type that combines a scheduler, saga coordinator and stat receiver into a server
 type Handler struct {
-	scheduler scheduler.Scheduler
+	scheduler server.Scheduler
 	sagaCoord saga.SagaCoordinator
 	stat      stats.StatsReceiver
 }

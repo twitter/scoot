@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/twitter/scoot/scheduler/domain/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 /*
@@ -14,7 +14,7 @@ func Test_GetSchedulerStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	s := scheduler.NewMockScheduler(mockCtrl)
+	s := server.NewMockScheduler(mockCtrl)
 	s.EXPECT().GetSchedulerStatus().Return(20, -1)
 
 	// test scheduler.GetSchedulerStatus

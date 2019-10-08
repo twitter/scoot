@@ -1,5 +1,5 @@
 /*
-package scheduler provides StatefulScheduler which distributes tasks to a cluster of nodes.
+package server provides StatefulScheduler which distributes tasks to a cluster of nodes.
 
 * Concepts *
 JobPriority:
@@ -39,4 +39,4 @@ Select Node Preference:
    Free nodes not related to any current job.
    Any free node.
 */
-package scheduler
+package server
