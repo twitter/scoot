@@ -211,6 +211,7 @@ func (c *clusterState) getNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
 
 // upate cluster state to reflect added and removed nodes
 func (c *clusterState) updateCluster() {
+	defer c.stats.Latency(stats.SchedUpdateClusterLatency_ms).Time().Stop()
 	select {
 	case updates, ok := <-c.updateCh:
 		if !ok {

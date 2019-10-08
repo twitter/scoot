@@ -471,13 +471,15 @@ func (s *statefulScheduler) step() {
 	// async functions completed & invoke callbacks
 	s.addJobs()
 	s.clusterState.updateCluster()
+
+	procMessagesLatency := s.stat.Latency(stats.SchedProcessMessagesLatency_ms).Time()
 	s.asyncRunner.ProcessMessages()
+	procMessagesLatency.Stop()
 
 	// TODO: make processUpdates on scheduler state wait until an update
 	// has been received
 	// instead of just burning CPU and constantly looping while no updates
 	// have occurred
-
 	s.checkForCompletedJobs()
 	s.killJobs()
 	s.scheduleTasks()
@@ -605,6 +607,7 @@ func (s *statefulScheduler) addJobs() {
 	// pass through step() and add them to the inProgress list, order the tasks in the job by descending duration and
 	// add the job to the requestor map
 	//
+	defer s.stat.Latency(stats.SchedAddJobsLatency_ms).Time().Stop()
 checkLoop:
 	for {
 		select {
@@ -752,7 +755,7 @@ func (s *statefulScheduler) getJob(jobId string) *jobState {
 // checks if any of the in progress jobs are completed.  If a job is
 // completed log an EndSaga Message to the SagaLog asynchronously
 func (s *statefulScheduler) checkForCompletedJobs() {
-
+	l := s.stat.Latency(stats.SchedCheckForCompletedLatency_ms).Time()
 	// Check For Completed Jobs & Log EndSaga Message
 	for _, jobState := range s.inProgressJobs {
 		if jobState.getJobStatus() == sched.Completed && !jobState.EndingSaga {
@@ -793,6 +796,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 								"tag":       j.Job.Def.Tag,
 							}).Info("Job completed but failed to log")
 					}
+					l.Stop()
 				})
 		}
 	}
@@ -802,6 +806,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	// Pass nil config so taskScheduler can determine the most appropriate values itself.
+	defer s.stat.Latency(stats.SchedScheduleTasksLatency_ms).Time().Stop()
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, nil, s.stat)
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
@@ -1075,6 +1080,7 @@ func (s *statefulScheduler) ReinstateWorker(req sched.ReinstateWorkerReq) error 
 //
 // this function is part of the main scheduler loop
 func (s *statefulScheduler) killJobs() {
+	defer s.stat.Latency(stats.SchedKillJobsLatency_ms).Time().Stop()
 	var validKillRequests []jobKillRequest
 
 	// validate jobids and sending invalid ids back and building a list of valid ids
