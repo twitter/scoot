@@ -18,7 +18,7 @@ import (
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/api"
-	"github.com/twitter/scoot/scheduler/config"
+	"github.com/twitter/scoot/scheduler/main/config"
 )
 
 func main() {
