@@ -1,11 +1,15 @@
 package load_test
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/cenkalti/backoff"
 	"github.com/twitter/scoot/bazel/cas"
 	"math/rand"
+	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +27,7 @@ const (
 	KBYTE           = 1024
 )
 
-var TestDataSizes = [5]int{1, 10, 1000, 10000, 100000} // these sizes are 1kb units: 1kb, 10kb, 1m, 10m, 1g test files
+var TestDataSizes = [3]int{1, 10, 1000} // these sizes are 1kb units: 1kb, 10kb, 1m test files
 var TestDataSizesStr = strings.Trim(strings.Join(strings.Fields(fmt.Sprint(TestDataSizes)), ","), "[]")
 
 type StatusCode int
@@ -64,6 +68,9 @@ type ApiserverLoadTester struct {
 	killRequested       bool     // will be set to true if/when a kill is requested
 	killReqeuestedMu	sync.RWMutex
 	status              StatusCode
+
+	statsFile	string
+
 	// externals
 	dialer *dialer.ConstantResolver
 	stat   stats.StatsReceiver
@@ -105,6 +112,14 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 	lt.stat = statsReceiver.Scope("cas_streaming")
 
 	lt.stopTestIterations = make(chan bool)
+
+	tdir := os.TempDir()
+	_, err := os.Open(fmt.Sprintf("%scloud_exec", tdir))
+	if os.IsNotExist(err) {
+		os.Mkdir(fmt.Sprintf("%scloud_exec", tdir), 0777)
+	}
+	lt.statsFile = fmt.Sprintf("%scloud_exec/apiserver_load_test.csv", tdir)
+
 	return &lt
 }
 
@@ -201,6 +216,7 @@ func (lt *ApiserverLoadTester) drainStopChAndResetStatus() {
 func (lt *ApiserverLoadTester) runOneIteration() {
 	// create numConcurrentActs goroutines all waiting for a start request.  Each goroutine will run an action
 	// using one of the test files from the prior step
+	lt.stat.Render(false) // clear the stats
 	startCh := make(chan struct{})
 	actionDoneCh := make(chan int, lt.numConcurrentActs)
 	allDoneCh := make(chan struct{})
@@ -229,6 +245,33 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 	<-allDoneCh // wait for all actions to be finished
 	lt.status = PauseBetweenIterations
 	lt.iterCnt++
+
+	lt.writeStatsToFile()
+}
+
+func (lt *ApiserverLoadTester) writeStatsToFile() {
+	statsJson := lt.stat.RenderNoClear(false)  // get the stats (but don't reset in case we get status request)
+
+	// convert to comma delimited string
+	statsMap := make(map[string]interface{})
+	json.Unmarshal([]byte(statsJson), &statsMap)  // make into a map (statsMap)
+
+	// sort the map to print in same order each time
+	keys := make([]string, 0)
+	for k,_ := range statsMap {
+		keys = append(keys, k)
+	}
+	line := new(bytes.Buffer)
+	sort.Strings(keys)
+	for _, sKey := range(keys) {
+		fmt.Fprintf(line,"%s, %v,", sKey, statsMap[sKey])
+	}
+	fmt.Fprintf(line, "\n")
+
+	// append to the file
+	f, _ := os.OpenFile(lt.statsFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	f.Write(line.Bytes())
+	log.Infof("stats written to %s", lt.statsFile)
 }
 
 func (lt *ApiserverLoadTester) collectFinishActions(finished int, oneActionDoneCh chan int, allDoneCh chan struct{}) {
