@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/snapshot/bundlestore"
 )
 
@@ -77,8 +76,8 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 	addrs := []string{}
 	for i := 0; i < s.apiCfg.Count; i++ {
 		// grpc port not used, but each instance needs a separate port
-		httpPort := client.ApiBundlestorePorts + i
-		grpcPort := client.ApiBundlestoreGRPCPorts + i
+		httpPort := bundlestore.ApiBundlestorePorts + i
+		grpcPort := bundlestore.ApiBundlestoreGRPCPorts + i
 		httpAddr := fmt.Sprintf("localhost:%d", httpPort)
 		grpcAddr := fmt.Sprintf("localhost:%d", grpcPort)
 		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-grpc_addr", grpcAddr, "-log_level", s.apiCfg.LogLevel.String())

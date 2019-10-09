@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/twitter/scoot/workerapi"
 )
 
 // Worker API Client interface that includes CLI handling
@@ -52,7 +52,7 @@ func NewSimpleCLIClient(di dialer.Dialer) (CLIClient, error) {
 }
 
 func (c *simpleCLIClient) addCmd(cmd command, cobraCmd *cobra.Command) {
-	cobraCmd.Flags().StringVar(&c.client.addr, "addr", client.DefaultWorker_Thrift, "worker server address")
+	cobraCmd.Flags().StringVar(&c.client.addr, "addr", workerapi.DefaultWorker_Thrift, "worker server address")
 	cmd.registerFlags(cobraCmd)
 	cobraCmd.RunE = cmd.run
 	c.rootCmd.AddCommand(cobraCmd)

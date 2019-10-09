@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
@@ -31,7 +31,7 @@ func main() {
 
 	log.Infof("Creating scoot client")
 	var wg sync.WaitGroup
-	scootClient := testhelpers.CreateScootClient(client.DefaultSched_Thrift)
+	scootClient := testhelpers.CreateScootClient(scheduler.DefaultSched_Thrift)
 
 	// Initialize Local Cluster
 	log.Infof("Creating test cluster")

@@ -25,7 +25,7 @@ import (
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/domain/setup"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
@@ -44,7 +44,7 @@ func main() {
 
 	// Initialize Local Cluster
 	log.Info("Creating test cluster")
-	scootClient := testhelpers.CreateScootClient(client.DefaultSched_Thrift)
+	scootClient := testhelpers.CreateScootClient(scheduler.DefaultSched_Thrift)
 	clusterCmds, err := testhelpers.CreateLocalTestCluster()
 	if err != nil {
 		testhelpers.KillAndExit1(clusterCmds, fmt.Errorf("Unexpected Error while Setting up Local Cluster %v", err))

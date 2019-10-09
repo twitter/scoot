@@ -17,7 +17,6 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/snapshots"
@@ -27,8 +26,8 @@ import (
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	httpAddr := flag.String("http_addr", client.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
-	grpcAddr := flag.String("grpc_addr", client.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
+	httpAddr := flag.String("http_addr", bundlestore.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
+	grpcAddr := flag.String("grpc_addr", bundlestore.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes")
