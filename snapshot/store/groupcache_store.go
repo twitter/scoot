@@ -65,6 +65,22 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			}
 			return ttl, dest.SetBytes(data)
 		}),
+		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (*groupcache.Metadata, error) {
+			// TODO(apratti): Fix metrics
+			log.Info("Not cached, try to check bundle existance and populate cache metadata: ", bundleName)
+			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
+			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
+
+			s, err := underlying.Exists(bundleName)
+			if err != nil {
+				return nil, err
+			}
+			if !s.Exists {
+				return nil, nil
+			}
+			md := groupcache.NewMetadata(s.Length, s.TTL)
+			return &md, nil
+		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
@@ -145,16 +161,24 @@ func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	return NewResource(rc, int64(len(data)), ttlv), nil
 }
 
-func (s *groupcacheStore) Exists(name string) (bool, error) {
+func (s *groupcacheStore) Exists(name string) (*Stat, error) {
 	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
-	ttl, err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{}))
-	if err != nil || (ttl != nil && ttl.Before(time.Now().UTC())) {
-		return false, nil
+	md, err := s.cache.Contain(nil, name)
+	if err != nil {
+		return nil, err
 	}
+	// TODO(apratti): AYYYY
+	if md == nil {
+		return &Stat{}, nil
+	}
+	if md.TTL != nil && md.TTL.Before(time.Now().UTC()) {
+		return &Stat{}, nil
+	}
+	stat := Stat{Exists: true, Length: md.Length, TTL: md.TTL}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)
-	return true, nil
+	return &stat, nil
 }
 
 func (s *groupcacheStore) Write(name string, resource *Resource) error {

@@ -44,18 +44,18 @@ func (s *FileStore) OpenForRead(name string) (*Resource, error) {
 	return NewResource(r, fi.Size(), nil), err
 }
 
-func (s *FileStore) Exists(name string) (bool, error) {
+func (s *FileStore) Exists(name string) (*Stat, error) {
 	if strings.Contains(name, "/") {
-		return false, errors.New("'/' not allowed in name unless reading bundle contents.")
+		return nil, errors.New("'/' not allowed in name unless reading bundle contents.")
 	}
-	_, err := os.Stat(filepath.Join(s.bundleDir, name))
+	stat, err := os.Stat(filepath.Join(s.bundleDir, name))
 	if err == nil {
-		return true, nil
+		return &Stat{Exists: true, Length: stat.Size()}, nil
 	}
 	if os.IsNotExist(err) {
-		return false, nil
+		return &Stat{}, nil
 	}
-	return false, err
+	return &Stat{}, err
 }
 
 func (s *FileStore) Write(name string, resource *Resource) error {

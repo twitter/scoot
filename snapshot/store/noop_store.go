@@ -10,9 +10,9 @@ import (
 type NoopStore struct {
 }
 
-func (f *NoopStore) Exists(name string) (bool, error) {
+func (f *NoopStore) Exists(name string) (*Stat, error) {
 	log.Infof("Noop Exists returning false")
-	return false, nil
+	return &Stat{}, nil
 }
 
 func (f *NoopStore) OpenForRead(name string) (*Resource, error) {

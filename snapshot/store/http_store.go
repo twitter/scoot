@@ -3,6 +3,8 @@ package store
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -88,7 +90,13 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 		ttlv := s.getTTLValue(resp)
-		return NewResource(resp.Body, resp.ContentLength, ttlv), nil
+		var rc io.ReadCloser
+		if existCheck {
+			rc = ioutil.NopCloser(resp.Body)
+		} else {
+			rc = resp.Body
+		}
+		return NewResource(rc, resp.ContentLength, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
 
@@ -101,21 +109,21 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 	return nil, fmt.Errorf("could not open: %+v", resp)
 }
 
-func (s *httpStore) Exists(name string) (bool, error) {
+func (s *httpStore) Exists(name string) (*Stat, error) {
 	r, err := s.openForRead(name, true)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return false, nil
+			return &Stat{}, nil
 		}
 		log.Infof("Exists error: %s %v", name, err)
-		return false, err
+		return nil, err
 	}
 	log.Infof("Exists ok: %s", name)
 	r.Close()
 	if r.TTLValue != nil && r.TTLValue.TTL.Before(time.Now()) {
-		return false, nil
+		return &Stat{}, nil
 	}
-	return true, nil
+	return &Stat{Exists: true, Length: r.Length, TTL: &r.TTLValue.TTL}, nil
 }
 
 func (s *httpStore) Write(name string, resource *Resource) error {
