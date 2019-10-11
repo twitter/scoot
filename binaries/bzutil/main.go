@@ -424,7 +424,7 @@ func getContents(dir string, test bool) ([]cas.BatchUploadContent, error) {
 				if e != nil {
 					return nil, fmt.Errorf("error reading %s:%s", f.Name(), e.Error())
 				}
-				uploadContent := makeDigest(data)
+				uploadContent := makeUploadContent(data)
 				contents = append(contents, uploadContent)
 			}
 		}
@@ -434,13 +434,13 @@ func getContents(dir string, test bool) ([]cas.BatchUploadContent, error) {
 	for i := 0; i < 10; i++ {
 		data := make([]byte, (i+1)*1000)
 		rand.Read(data)
-		uploadContent := makeDigest(data)
+		uploadContent := makeUploadContent(data)
 		contents = append(contents, uploadContent)
 	}
 	return contents, nil
 }
 
-func makeDigest(data []byte) (cas.BatchUploadContent) {
+func makeUploadContent(data []byte) (cas.BatchUploadContent) {
 	sha := sha256.Sum256(data)
 	shaStr := fmt.Sprintf("%x", sha)
 	digest := &remoteexecution.Digest{

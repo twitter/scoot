@@ -1,8 +1,13 @@
 package loadtest
 /*
 start the load testers as an http server exposing the endpoints:
+
 get apiserver_test - returns the status (job running, waiting to start, etc.)
-get apiserver_test?action=<upload/download>&... - starts a load test
+
+get apiserver_test?action=<upload/download>&... - starts a load test  Note: using POST to start a test would be
+better aligned with REST philosophy, but then we would have to pass the test arguments in on the body of the
+request when we are using curl, making the curl experience more klunky.  Thus we are using GET to trigger a test.
+
 get apiserver_test/kill - kills the current running test
  */
 
