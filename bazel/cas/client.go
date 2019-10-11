@@ -46,6 +46,7 @@ func MakeCASpbClient(cc conn.ClientConnPtr) remoteexecution.ContentAddressableSt
 type CASClient struct {
 	grpcDialer conn.GRPCDialer
 	CASpbMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient
+	uploadedDigests []*remoteexecution.Digest
 }
 
 func MakeCASClient() *CASClient {
@@ -79,7 +80,7 @@ func IsNotFoundError(err error) bool {
 	return false
 }
 
-// Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
+// Read Data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
 func (casCli *CASClient)ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (bytes []byte, err error) {
@@ -143,11 +144,11 @@ func (casCli *CASClient)readFromClient(bsc bytestream.ByteStreamClient, req *byt
 					return nil, &NotFoundError{Err: grpcStatus.Message()}
 				}
 			}
-			return nil, fmt.Errorf("Failed Recv'ing data from server: %s", err)
+			return nil, fmt.Errorf("Failed Recv'ing Data from server: %s", err)
 		}
 		read := res.GetData()
 		if read == nil {
-			return nil, fmt.Errorf("Unexpected nil data from ReadResponse")
+			return nil, fmt.Errorf("Unexpected nil Data from ReadResponse")
 		}
 		data = append(data, read...)
 		bytesRead = bytesRead + int64(len(read))
@@ -155,7 +156,7 @@ func (casCli *CASClient)readFromClient(bsc bytestream.ByteStreamClient, req *byt
 	return data, nil
 }
 
-// Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
+// Write Data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte Data.
 func (casCli *CASClient)ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, b backoff.BackOff) (err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
@@ -207,7 +208,7 @@ func (casCli *CASClient)writeFromClient(bsc bytestream.ByteStreamClient, req *by
 
 	err = wc.Send(req)
 	if err != nil {
-		return fmt.Errorf("Failed to send data for write: %s", err)
+		return fmt.Errorf("Failed to send Data for write: %s", err)
 	}
 
 	res, err := wc.CloseAndRecv()
@@ -216,7 +217,7 @@ func (casCli *CASClient)writeFromClient(bsc bytestream.ByteStreamClient, req *by
 	}
 
 	if res.GetCommittedSize() != int64(len(req.GetData())) {
-		return fmt.Errorf("Committed size %d did not match data len %d", res.GetCommittedSize(), len(req.GetData()))
+		return fmt.Errorf("Committed size %d did not match Data len %d", res.GetCommittedSize(), len(req.GetData()))
 	}
 
 	return nil
@@ -315,21 +316,21 @@ func (casCli *CASClient)updateCacheFromClient(acc remoteexecution.ActionCacheCli
 
 
 type BatchUploadContent struct {
-	digest *remoteexecution.Digest
-	data []byte
+	Digest *remoteexecution.Digest
+	Data   []byte
 }
 
 /*
 client for uploading a list of digests to CAS BatchUpdateBlobs (as a single batch)
  */
-func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUploadContent, b backoff.BackOff) error {
+func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUploadContent, b backoff.BackOff) ([]*remoteexecution.Digest, error) {
 
 	// make the request object
 	requests := make([]*remoteexecution.BatchUpdateBlobsRequest_Request, 0)
 	for _, content := range contents {
 		requests = append(requests, &remoteexecution.BatchUpdateBlobsRequest_Request{
-			Digest:               content.digest,
-			Data:                 content.data,
+			Digest:               content.Digest,
+			Data:                 content.Data,
 		})
 	}
 	request := &remoteexecution.BatchUpdateBlobsRequest{
@@ -345,30 +346,31 @@ func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUplo
 	// upload with retries
 	try := 1
 	e := backoff.Retry(func() error {
+		var err error
 		log.Debugf("Try #%d", try)
-		err := casCli.batchUpdateWriter(r, request, ctx)
+		casCli.uploadedDigests, err = casCli.batchUpdateWriter(r, request, ctx)
 		try += 1
 		return err
 	}, b)
 
 	// if errors are found return an error result
 	if e != nil {
-		return fmt.Errorf("CAS BatchUpdateBlobs() returned error:%s", e.Error())
+		return casCli.uploadedDigests, fmt.Errorf("CAS BatchUpdateBlobs() returned error:%s", e.Error())
 	}
 
-	return nil
+	return casCli.uploadedDigests, nil
 }
 
 // (retryable) method for CAS batch update
-func (casCli *CASClient)batchUpdateWriter(r dialer.Resolver, request *remoteexecution.BatchUpdateBlobsRequest, ctx context.Context) error {
+func (casCli *CASClient)batchUpdateWriter(r dialer.Resolver, request *remoteexecution.BatchUpdateBlobsRequest, ctx context.Context) ([]*remoteexecution.Digest, error) {
 	// create a CAS object with connection to server
 	serverAddr, err := r.Resolve()
 	if err != nil {
-		return fmt.Errorf("Failed to resolve server address: %s", err)
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
 	}
 	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		return fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
 	}
 	defer cc.Close()
 
@@ -378,20 +380,23 @@ func (casCli *CASClient)batchUpdateWriter(r dialer.Resolver, request *remoteexec
 
 	// parse the response for errors
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	errs := make([]string, 0)
+	digests := make([]*remoteexecution.Digest, 0)
 	for _, r := range resp.Responses {
-		if rpc_code.Code(r.Status.Code) != rpc_code.Code_OK {
+		if rpc_code.Code(r.Status.Code) == rpc_code.Code_OK {
+			digests = append(digests, r.Digest)
+		} else {
 			errs = append(errs, r.Status.Message)
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("%v", errs)
+		return digests, fmt.Errorf("%v", errs)
 	}
 
-	return nil
+	return digests, nil
 }
 
 /*

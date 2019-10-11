@@ -68,7 +68,7 @@ func TestClientReadMissing(t *testing.T) {
 		t.Fatal("Unexpected success from client read")
 	}
 	if data != nil {
-		t.Fatal("Unexpected non-nil data from client read")
+		t.Fatal("Unexpected non-nil Data from client read")
 	}
 	if !IsNotFoundError(err) {
 		t.Fatalf("Expected NotFoundError, got: %v", err)
@@ -82,12 +82,12 @@ func TestClientReadEmpty(t *testing.T) {
 	}
 	data, err := MakeCASClient().ByteStreamRead(dialer.NewConstantResolver(""), digest, backoff.NewConstantBackOff(0))
 	if data != nil || err != nil {
-		t.Fatal("Expected nil data and err from empty client read")
+		t.Fatal("Expected nil Data and err from empty client read")
 	}
 }
 
 func TestClientWrite(t *testing.T) {
-	// Make a WriteRequest with known data
+	// Make a WriteRequest with known Data
 	offset, limit := int64(0), testSize1
 	uid, _ := uuid.NewV4()
 	req := &bytestream.WriteRequest{ResourceName: fmt.Sprintf("%s/blobs/%s/%d", uid, testHash1, limit), WriteOffset: offset, FinishWrite: true, Data: testData1}
@@ -148,7 +148,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 		t.Fatal("Unexpected non-nil error from GetActionResult")
 	}
 	if ar != nil {
-		t.Fatal("Unexpected non-nil data from GetActionResult")
+		t.Fatal("Unexpected non-nil Data from GetActionResult")
 	}
 	if !IsNotFoundError(err) {
 		t.Fatalf("Expected NotFoundError, got: %v", err)
@@ -271,8 +271,8 @@ func TestBatchWrite(t *testing.T) {
 			XXX_sizecache:        0,
 		}
 		uploadContent := BatchUploadContent{
-			digest: newDigest,
-			data:   theData,
+			Digest: newDigest,
+			Data:   theData,
 		}
 
 		uploadContents[i] = uploadContent
@@ -290,13 +290,14 @@ func TestBatchWrite(t *testing.T) {
 		SetCASpbMaker(caspbClienMaker)
 
 	// issue the batch write request
-	e := CASClient.BatchUpdateWrite(dialer.NewConstantResolver(""), uploadContents, backoff.NewConstantBackOff(time.Nanosecond))
+	digests, e := CASClient.BatchUpdateWrite(dialer.NewConstantResolver(""), uploadContents, backoff.NewConstantBackOff(time.Nanosecond))
 
 	// validate the results
 	assert.Equal(t, nil, e)
+	assert.Equal(t, 10, len(digests))
 }
 
-// create a random data set
+// create a random Data set
 func makeRandomData(size int) []byte {
 	data := make([]byte, size)
 	rand.Read(data)
