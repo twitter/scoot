@@ -1,24 +1,33 @@
 package cas
 
 //go:generate mockgen -destination=mock_bytestream/bsclient_mock.go google.golang.org/genproto/googleapis/bytestream ByteStreamClient,ByteStream_ReadClient,ByteStream_WriteClient
+//go:generate mockgen -destination=mock_conn_interfaces/conn_mock.go github.com/twitter/scoot/bazel/cas/conn_interfaces GRPCDialer,ClientConnPtr
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/twitter/scoot/bazel/cas/conn_interfaces"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/mock/gomock"
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
+	rpc_code "google.golang.org/genproto/googleapis/rpc/code"
+	rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
+	"github.com/twitter/scoot/bazel/cas/mock_conn_interfaces"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -34,7 +43,7 @@ func TestClientRead(t *testing.T) {
 	bsClientMock.EXPECT().Read(context.Background(), req).Return(bsReadClientMock, nil)
 	bsReadClientMock.EXPECT().Recv().Return(&bytestream.ReadResponse{Data: testData1}, nil)
 
-	data, err := readFromClient(bsClientMock, req)
+	data, err := MakeCASClient().readFromClient(bsClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from client read: %s", err)
 	}
@@ -54,7 +63,7 @@ func TestClientReadMissing(t *testing.T) {
 	bsClientMock.EXPECT().Read(context.Background(), req).Return(bsReadClientMock, nil)
 	bsReadClientMock.EXPECT().Recv().Return(nil, status.Error(codes.NotFound, ""))
 
-	data, err := readFromClient(bsClientMock, req)
+	data, err := MakeCASClient().readFromClient(bsClientMock, req)
 	if err == nil {
 		t.Fatal("Unexpected success from client read")
 	}
@@ -71,7 +80,7 @@ func TestClientReadEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	data, err := ByteStreamRead(dialer.NewConstantResolver(""), digest, backoff.NewConstantBackOff(0))
+	data, err := MakeCASClient().ByteStreamRead(dialer.NewConstantResolver(""), digest, backoff.NewConstantBackOff(0))
 	if data != nil || err != nil {
 		t.Fatal("Expected nil data and err from empty client read")
 	}
@@ -91,7 +100,7 @@ func TestClientWrite(t *testing.T) {
 	bsWriteClientMock.EXPECT().Send(req).Return(nil)
 	bsWriteClientMock.EXPECT().CloseAndRecv().Return(&bytestream.WriteResponse{CommittedSize: limit}, nil)
 
-	err := writeFromClient(bsClientMock, req)
+	err := MakeCASClient().writeFromClient(bsClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from client write: %s", err)
 	}
@@ -102,7 +111,7 @@ func TestClientWriteEmpty(t *testing.T) {
 		Hash:      bazel.EmptySha,
 		SizeBytes: bazel.EmptySize,
 	}
-	err := ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil, backoff.NewConstantBackOff(0))
+	err := MakeCASClient().ByteStreamWrite(dialer.NewConstantResolver(""), digest, nil, backoff.NewConstantBackOff(0))
 	if err != nil {
 		t.Fatal("Expected nil err from empty client write")
 	}
@@ -117,7 +126,7 @@ func TestActionCacheGet(t *testing.T) {
 
 	accClientMock.EXPECT().GetActionResult(context.Background(), req).Return(&remoteexecution.ActionResult{ExitCode: rc}, nil)
 
-	ar, err := getCacheFromClient(accClientMock, req)
+	ar, err := MakeCASClient().getCacheFromClient(accClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from get cache: %s", err)
 	}
@@ -134,7 +143,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 
 	accClientMock.EXPECT().GetActionResult(context.Background(), req).Return(nil, status.Error(codes.NotFound, ""))
 
-	ar, err := getCacheFromClient(accClientMock, req)
+	ar, err := MakeCASClient().getCacheFromClient(accClientMock, req)
 	if err == nil {
 		t.Fatal("Unexpected non-nil error from GetActionResult")
 	}
@@ -147,6 +156,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 }
 
 func TestActionCacheUpdate(t *testing.T) {
+
 	rc := int32(42)
 	ar := &remoteexecution.ActionResult{ExitCode: rc}
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -157,7 +167,7 @@ func TestActionCacheUpdate(t *testing.T) {
 
 	accClientMock.EXPECT().UpdateActionResult(context.Background(), req).Return(&remoteexecution.ActionResult{ExitCode: rc}, nil)
 
-	arRes, err := updateCacheFromClient(accClientMock, req)
+	arRes, err := MakeCASClient().updateCacheFromClient(accClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from get cache: %s", err)
 	}
@@ -165,4 +175,130 @@ func TestActionCacheUpdate(t *testing.T) {
 	if arRes.GetExitCode() != rc {
 		t.Fatalf("Unexpected result, got %d, want %d", arRes.GetExitCode(), rc)
 	}
+}
+
+func TestBatchRead(t *testing.T) {
+	// setup the mock objects for the test
+	mockCtrl := gomock.NewController(t)
+	mockConn := mock_conn_interfaces.NewMockClientConnPtr(mockCtrl)
+	mockConn.EXPECT().Close().Return(nil)
+	grpcMock := mock_conn_interfaces.NewMockGRPCDialer(mockCtrl)
+	grpcMock.EXPECT().Dial("", gomock.Any()).Return(mockConn, nil)
+
+	var caspbClientMock remoteexecution.ContentAddressableStorageClient
+	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
+	caspbClienMaker := func(cc conn_interfaces.ClientConnPtr)remoteexecution.ContentAddressableStorageClient {
+		return caspbClientMock}
+
+	// define read request and fake return values
+	mockResults := &remoteexecution.BatchReadBlobsResponse{
+		Responses:            make([] *remoteexecution.BatchReadBlobsResponse_Response, 10),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchReadBlobs(gomock.Any(), gomock.Any()).Return(mockResults, nil)
+
+	requestedDownloads := make([]*remoteexecution.Digest, 10)
+
+	for i:=0; i < 10; i++ {
+		d := &remoteexecution.Digest{
+			Hash:                 fmt.Sprintf("fakeSha%d", i),
+			SizeBytes:            int64(i),
+		}
+		requestedDownloads[i] = d
+		data := makeRandomData(i+1)
+		mockBlob := &remoteexecution.BatchReadBlobsResponse_Response{
+			Digest: d,
+			Data:   data,
+			Status: &rpc_status.Status{Code: int32(rpc_code.Code_OK),},
+		}
+		mockResults.Responses[i] = mockBlob
+	}
+
+	// create the CAS client injecting the mocks
+	CASClient := MakeCASClient().
+		SetGrpcDialer(grpcMock).
+		SetCASpbMaker(caspbClienMaker)
+
+	// issue the Read Request
+	downloadedData, e := CASClient.BatchRead(dialer.NewConstantResolver(""), requestedDownloads, backoff.NewConstantBackOff(time.Nanosecond))
+
+	// validate results
+	assert.Equal(t, nil, e)
+
+	assert.True(t, 10 == len(downloadedData))  // we should get 10 entries in the map
+
+	for i := 0; i < 10; i++ {
+		assert.Equal(t,  i+1, len(downloadedData[requestedDownloads[i].Hash]))
+	}
+
+}
+
+func TestBatchWrite(t *testing.T) {
+	// setup the test
+	mockCtrl := gomock.NewController(t)
+	mockConn := mock_conn_interfaces.NewMockClientConnPtr(mockCtrl)
+	mockConn.EXPECT().Close().Return(nil)
+	grpcMock := mock_conn_interfaces.NewMockGRPCDialer(mockCtrl)
+	grpcMock.EXPECT().Dial("", gomock.Any()).Return(mockConn, nil)
+
+	var caspbClientMock remoteexecution.ContentAddressableStorageClient
+	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
+	caspbClienMaker := func(cc conn_interfaces.ClientConnPtr)remoteexecution.ContentAddressableStorageClient {
+		return caspbClientMock}
+
+	// Make a BatchWriteRequest, and fake return values
+	uploadContents := make([]BatchUploadContent, 10)
+	uploadDigests := make([]*remoteexecution.Digest, 10)
+
+	mockResp := &remoteexecution.BatchUpdateBlobsResponse{
+		Responses:            make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+
+	for i:=0; i < 10; i++ {
+		theData := makeRandomData(i+1)
+		sha := sha256.Sum256(theData)
+		shaStr := fmt.Sprintf("%x", sha)
+		newDigest := &remoteexecution.Digest{
+			Hash:                 shaStr,
+			SizeBytes:            int64(len(theData)),
+			XXX_NoUnkeyedLiteral: struct{}{},
+			XXX_unrecognized:     nil,
+			XXX_sizecache:        0,
+		}
+		uploadContent := BatchUploadContent{
+			digest: newDigest,
+			data:   theData,
+		}
+
+		uploadContents[i] = uploadContent
+		uploadDigests[i] = newDigest
+		mockResp.Responses[i] = &remoteexecution.BatchUpdateBlobsResponse_Response{
+			Digest:               newDigest,
+			Status:               &rpc_status.Status{Code: int32(rpc_code.Code_OK)},
+		}
+	}
+	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchUpdateBlobs(gomock.Any(), gomock.Any()).Return(mockResp, nil)
+
+	// create the CAS client injecting the mocks
+	CASClient := MakeCASClient().
+		SetGrpcDialer(grpcMock).
+		SetCASpbMaker(caspbClienMaker)
+
+	// issue the batch write request
+	e := CASClient.BatchUpdateWrite(dialer.NewConstantResolver(""), uploadContents, backoff.NewConstantBackOff(time.Nanosecond))
+
+	// validate the results
+	assert.Equal(t, nil, e)
+}
+
+// create a random data set
+func makeRandomData(size int) []byte {
+	data := make([]byte, size)
+	rand.Read(data)
+	return data
 }

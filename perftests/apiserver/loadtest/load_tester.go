@@ -1,12 +1,10 @@
-package load_test
+package loadtest
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/cenkalti/backoff"
-	"github.com/twitter/scoot/bazel/cas"
 	"math/rand"
 	"os"
 	"sort"
@@ -14,8 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/stats"
@@ -73,6 +73,7 @@ type ApiserverLoadTester struct {
 
 	// externals
 	dialer *dialer.ConstantResolver
+	casCli *cas.CASClient
 	stat   stats.StatsReceiver
 
 	// channels for goroutine coordination
@@ -106,6 +107,7 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 
 	// get the cas connection
 	lt.dialer = dialer.NewConstantResolver(lt.casGrpcAddr)
+	lt.casCli = cas.MakeCASClient()
 
 	// initialize thes stats
 	statsReceiver, _ := stats.NewCustomStatsReceiver(stats.NewFinagleStatsRegistry, 0)
@@ -148,36 +150,39 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 	if lt.freq == 0 {
 		lt.runOneIteration() // run the test once
 		lt.drainStopChAndResetStatus()
-	} else {
-		// run the test once
-		lt.runOneIteration()
-		if lt.getKillRequested() {
-			lt.drainStopChAndResetStatus()
-			return nil
+		// reset for next test request
+		lt.resetStatusToWaitingToStart()
+		return nil
+	}
+
+	// run the test once
+	lt.runOneIteration()
+	if lt.getKillRequested() {
+		lt.drainStopChAndResetStatus()
+		return nil
+	}
+
+	// set up a timer to signal running the test every <freq> minutes
+	tFreq := time.Duration(lt.freq) * time.Minute
+	ticker := time.NewTicker(tFreq)
+	go func() {
+		time.Sleep(time.Duration(lt.totalTime) * time.Minute)
+		ticker.Stop()
+		if ! lt.getKillRequested() { // if we already have killRequested, don't try to put stop signal on channel
+			// stopTestIterations the test after totalTime
+			lt.stopTestIterations <- true
 		}
+	}()
 
-		// set up a timer to signal running the test every <freq> minutes
-		tFreq := time.Duration(lt.freq) * time.Minute
-		ticker := time.NewTicker(tFreq)
-		go func() {
-			time.Sleep(time.Duration(lt.totalTime) * time.Minute)
-			ticker.Stop()
-			if ! lt.getKillRequested() { // if we already have killRequested, don't try to put stop signal on channel
-				// stopTestIterations the test after totalTime
-				lt.stopTestIterations <- true
-			}
-		}()
-
-		// loop running the test on the timer signals until stop is received
-		for {
-			select {
-			case <-lt.stopTestIterations:
-				return nil
-			case <-ticker.C:
-				lt.runOneIteration()
-			default:
-				time.Sleep(2 * time.Second)
-			}
+	// loop running the test on the timer signals until stop is received
+	for {
+		select {
+		case <-lt.stopTestIterations:
+			return nil
+		case <-ticker.C:
+			lt.runOneIteration()
+		default:
+			time.Sleep(2 * time.Second)
 		}
 	}
 
@@ -340,7 +345,7 @@ func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 	}
 	log.Debugf("uploading:%v", digest)
 	defer lt.stat.Latency(UploadLatency).Time().Stop()
-	err := cas.ByteStreamWrite(lt.dialer, digest, theData[:],
+	err := lt.casCli.ByteStreamWrite(lt.dialer, digest, theData[:],
 		backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
 	if err != nil {
 		return "", fmt.Errorf("Upload error:%s", err.Error())
@@ -356,7 +361,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 	}
 	log.Debugf("downloading:%v", digest)
 	defer lt.stat.Latency(DownloadLatency).Time().Stop()
-	_, err := cas.ByteStreamRead(lt.dialer, digest,
+	_, err := lt.casCli.ByteStreamRead(lt.dialer, digest,
 		backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
 	if err != nil {
 		return fmt.Errorf("Error downloading id:%s.  Err:%s", digestId, err.Error())

@@ -6,14 +6,16 @@ import (
 	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
+	rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	conn "github.com/twitter/scoot/bazel/cas/conn_interfaces"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -26,6 +28,39 @@ import (
 // NOT_FOUND error.
 type NotFoundError struct {
 	Err string
+}
+
+type realGRPCDialer struct {}
+func (rd *realGRPCDialer) Dial(target string, opts ...grpc.DialOption) (conn.ClientConnPtr, error) {
+	return grpc.Dial(target, opts...)
+}
+
+func MakeRealGRPCDialer() *realGRPCDialer {
+	return &realGRPCDialer{}
+}
+func MakeCASpbClient(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
+	return remoteexecution.NewContentAddressableStorageClient(cc.(*grpc.ClientConn))
+}
+
+// CASClient struct with exposed (via setter) GRCP dialer, cas pb client maker for testing
+type CASClient struct {
+	grpcDialer conn.GRPCDialer
+	CASpbMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient
+}
+
+func MakeCASClient() *CASClient {
+	return &CASClient{
+		grpcDialer: MakeRealGRPCDialer(), // by default CASClient uses a real grpc dialer
+		CASpbMaker: MakeCASpbClient, // by default CASClient uses a real proto CAS Client
+	}
+}
+func (casCli *CASClient) SetGrpcDialer(dialer conn.GRPCDialer) *CASClient { // using builder pattern
+	casCli.grpcDialer = dialer
+	return casCli
+}
+func (casCli *CASClient) SetCASpbMaker(pcClientMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient) *CASClient {
+	casCli.CASpbMaker = pcClientMaker
+	return casCli
 }
 
 // Implements Error interface
@@ -47,7 +82,7 @@ func IsNotFoundError(err error) bool {
 // Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
-func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (bytes []byte, err error) {
+func (casCli *CASClient)ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (bytes []byte, err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil, nil
@@ -55,7 +90,7 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff
 	try := 1
 	backoff.Retry(func() error {
 		log.Debugf("Try #%d", try)
-		bytes, err = byteStreamRead(r, digest)
+		bytes, err = casCli.byteStreamRead(r, digest)
 		try += 1
 		if IsNotFoundError(err) {
 			return nil
@@ -65,7 +100,7 @@ func ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff
 	return bytes, err
 }
 
-func byteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
+func (casCli *CASClient)byteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -88,10 +123,10 @@ func byteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest) ([]byte, 
 	}
 
 	bsc := bytestream.NewByteStreamClient(cc)
-	return readFromClient(bsc, req)
+	return casCli.readFromClient(bsc, req)
 }
 
-func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest) ([]byte, error) {
+func (casCli *CASClient)readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest) ([]byte, error) {
 	rc, err := bsc.Read(context.Background(), req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get ReadClient: %s", err)
@@ -121,23 +156,22 @@ func readFromClient(bsc bytestream.ByteStreamClient, req *bytestream.ReadRequest
 }
 
 // Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
-func ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, b backoff.BackOff) (err error) {
+func (casCli *CASClient)ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, b backoff.BackOff) (err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
 		return nil
 	}
 	try := 1
-	prevErr := ""
 	backoff.Retry(func() error {
-		log.Debugf("Try #%d on %s, size(%d), prev err:%s", try, digest.Hash, digest.SizeBytes, prevErr)
-		err = byteStreamWrite(r, digest, data)
+		log.Debugf("Try #%d", try)
+		err = casCli.byteStreamWrite(r, digest, data)
 		try += 1
 		return err
 	}, b)
 	return err
 }
 
-func byteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
+func (casCli *CASClient)byteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte) error {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return fmt.Errorf("Failed to resolve server address: %s", err)
@@ -162,10 +196,10 @@ func byteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []b
 	}
 
 	bsc := bytestream.NewByteStreamClient(cc)
-	return writeFromClient(bsc, req)
+	return casCli.writeFromClient(bsc, req)
 }
 
-func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteRequest) error {
+func (casCli *CASClient)writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteRequest) error {
 	wc, err := bsc.Write(context.Background())
 	if err != nil {
 		return fmt.Errorf("Failed to make Write request: %s", err)
@@ -189,11 +223,11 @@ func writeFromClient(bsc bytestream.ByteStreamClient, req *bytestream.WriteReque
 }
 
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
-func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
+func (casCli *CASClient)GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
 	try := 1
 	backoff.Retry(func() error {
 		log.Debugf("Try #%d", try)
-		ar, err = getCacheResult(r, digest)
+		ar, err = casCli.getCacheResult(r, digest)
 		try += 1
 		if IsNotFoundError(err) {
 			return nil
@@ -203,7 +237,7 @@ func GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff
 	return ar, err
 }
 
-func getCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remoteexecution.ActionResult, error) {
+func (casCli *CASClient)getCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remoteexecution.ActionResult, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
@@ -218,10 +252,10 @@ func getCacheResult(r dialer.Resolver, digest *remoteexecution.Digest) (*remotee
 	req := &remoteexecution.GetActionResultRequest{ActionDigest: digest}
 
 	acc := remoteexecution.NewActionCacheClient(cc)
-	return getCacheFromClient(acc, req)
+	return casCli.getCacheFromClient(acc, req)
 }
 
-func getCacheFromClient(acc remoteexecution.ActionCacheClient,
+func (casCli *CASClient)getCacheFromClient(acc remoteexecution.ActionCacheClient,
 	req *remoteexecution.GetActionResultRequest) (*remoteexecution.ActionResult, error) {
 	ar, err := acc.GetActionResult(context.Background(), req)
 	if err != nil {
@@ -238,19 +272,19 @@ func getCacheFromClient(acc remoteexecution.ActionCacheClient,
 }
 
 // Client function for UpdateActionResult requests. Takes a Resolver for ActionCache server and Digest/ActionResult to update.
-func UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
+func (casCli *CASClient)UpdateCacheResult(r dialer.Resolver, digest *remoteexecution.Digest,
 	ar *remoteexecution.ActionResult, b backoff.BackOff) (out *remoteexecution.ActionResult, err error) {
 	try := 1
 	backoff.Retry(func() error {
 		log.Debugf("Try #%d", try)
-		out, err = updateCacheResult(r, digest, ar)
+		out, err = casCli.updateCacheResult(r, digest, ar)
 		try += 1
 		return err
 	}, b)
 	return out, err
 }
 
-func updateCacheResult(r dialer.Resolver,
+func (casCli *CASClient)updateCacheResult(r dialer.Resolver,
 	digest *remoteexecution.Digest, ar *remoteexecution.ActionResult) (*remoteexecution.ActionResult, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -266,10 +300,10 @@ func updateCacheResult(r dialer.Resolver,
 	req := &remoteexecution.UpdateActionResultRequest{ActionDigest: digest, ActionResult: ar}
 
 	acc := remoteexecution.NewActionCacheClient(cc)
-	return updateCacheFromClient(acc, req)
+	return casCli.updateCacheFromClient(acc, req)
 }
 
-func updateCacheFromClient(acc remoteexecution.ActionCacheClient,
+func (casCli *CASClient)updateCacheFromClient(acc remoteexecution.ActionCacheClient,
 	req *remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
 	ar, err := acc.UpdateActionResult(context.Background(), req)
 	if err != nil {
@@ -277,4 +311,153 @@ func updateCacheFromClient(acc remoteexecution.ActionCacheClient,
 	}
 
 	return ar, nil
+}
+
+
+type BatchUploadContent struct {
+	digest *remoteexecution.Digest
+	data []byte
+}
+
+/*
+client for uploading a list of digests to CAS BatchUpdateBlobs (as a single batch)
+ */
+func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUploadContent, b backoff.BackOff) error {
+
+	// make the request object
+	requests := make([]*remoteexecution.BatchUpdateBlobsRequest_Request, 0)
+	for _, content := range contents {
+		requests = append(requests, &remoteexecution.BatchUpdateBlobsRequest_Request{
+			Digest:               content.digest,
+			Data:                 content.data,
+		})
+	}
+	request := &remoteexecution.BatchUpdateBlobsRequest{
+		InstanceName:         bazel.DefaultInstanceName,
+		Requests:             requests,
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+
+	var ctx context.Context = context.Background()
+
+	// upload with retries
+	try := 1
+	e := backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
+		err := casCli.batchUpdateWriter(r, request, ctx)
+		try += 1
+		return err
+	}, b)
+
+	// if errors are found return an error result
+	if e != nil {
+		return fmt.Errorf("CAS BatchUpdateBlobs() returned error:%s", e.Error())
+	}
+
+	return nil
+}
+
+// (retryable) method for CAS batch update
+func (casCli *CASClient)batchUpdateWriter(r dialer.Resolver, request *remoteexecution.BatchUpdateBlobsRequest, ctx context.Context) error {
+	// create a CAS object with connection to server
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	// issue the request
+	cas := casCli.CASpbMaker(cc) // create a pb remoteexecution client
+	resp, e := cas.BatchUpdateBlobs(ctx, request)
+
+	// parse the response for errors
+	if e != nil {
+		return e
+	}
+
+	errs := make([]string, 0)
+	for _, r := range resp.Responses {
+		if rpc_code.Code(r.Status.Code) != rpc_code.Code_OK {
+			errs = append(errs, r.Status.Message)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("%v", errs)
+	}
+
+	return nil
+}
+
+/*
+client for downloading a list of digests from the CAS BatchReadBlobs (as a single batch)
+ */
+func (casCli *CASClient)BatchRead(r dialer.Resolver, digests []*remoteexecution.Digest, b backoff.BackOff) (map[string][]byte, error) {
+
+	// make the request object
+	request := &remoteexecution.BatchReadBlobsRequest{
+		InstanceName:         bazel.DefaultInstanceName,
+		Digests:              digests,
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+
+	var ctx context.Context = context.Background()
+	var content map[string][]byte
+	var err error
+
+	// download with retries
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
+		content, err = casCli.batchReader(r, request, ctx)
+		try += 1
+		return err
+	}, b)
+
+	return content, err
+}
+
+// (retryable) method for CAS batch update
+func (casCli *CASClient)batchReader(r dialer.Resolver, request *remoteexecution.BatchReadBlobsRequest, ctx context.Context) (map[string][]byte, error) {
+	// create a CAS object with connection to server
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	// issue the request
+	cas := casCli.CASpbMaker(cc) // create a pb remoteexecution client
+	resp, e := cas.BatchReadBlobs(ctx, request)
+
+	if e != nil {
+		return nil, e
+	}
+
+	// extract content and errors from the response
+	errs := make([]string, 0)
+	content := make(map[string] []byte)
+	for _, r := range resp.Responses {
+		if rpc_code.Code(r.Status.Code) != rpc_code.Code_OK {
+			errs = append(errs, r.Status.Message)
+		} else {
+			content[r.Digest.Hash] = r.Data
+		}
+	}
+
+	if len(errs) == 0 {
+		return content, nil
+	}
+	return content, fmt.Errorf("%v", errs)
 }

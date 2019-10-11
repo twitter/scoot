@@ -217,7 +217,7 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 	// upload command to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	err = cas.MakeCASClient().ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
@@ -264,7 +264,7 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 	// upload action to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	err = cas.MakeCASClient().ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
