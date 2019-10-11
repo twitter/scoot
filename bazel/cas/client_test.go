@@ -68,7 +68,7 @@ func TestClientReadMissing(t *testing.T) {
 		t.Fatal("Unexpected success from client read")
 	}
 	if data != nil {
-		t.Fatal("Unexpected non-nil Data from client read")
+		t.Fatal("Unexpected non-nil data from client read")
 	}
 	if !IsNotFoundError(err) {
 		t.Fatalf("Expected NotFoundError, got: %v", err)
@@ -82,12 +82,12 @@ func TestClientReadEmpty(t *testing.T) {
 	}
 	data, err := MakeCASClient().ByteStreamRead(dialer.NewConstantResolver(""), digest, backoff.NewConstantBackOff(0))
 	if data != nil || err != nil {
-		t.Fatal("Expected nil Data and err from empty client read")
+		t.Fatal("Expected nil data and err from empty client read")
 	}
 }
 
 func TestClientWrite(t *testing.T) {
-	// Make a WriteRequest with known Data
+	// Make a WriteRequest with known data
 	offset, limit := int64(0), testSize1
 	uid, _ := uuid.NewV4()
 	req := &bytestream.WriteRequest{ResourceName: fmt.Sprintf("%s/blobs/%s/%d", uid, testHash1, limit), WriteOffset: offset, FinishWrite: true, Data: testData1}
@@ -148,7 +148,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 		t.Fatal("Unexpected non-nil error from GetActionResult")
 	}
 	if ar != nil {
-		t.Fatal("Unexpected non-nil Data from GetActionResult")
+		t.Fatal("Unexpected non-nil data from GetActionResult")
 	}
 	if !IsNotFoundError(err) {
 		t.Fatalf("Expected NotFoundError, got: %v", err)
@@ -156,7 +156,6 @@ func TestActionCacheGetMissing(t *testing.T) {
 }
 
 func TestActionCacheUpdate(t *testing.T) {
-
 	rc := int32(42)
 	ar := &remoteexecution.ActionResult{ExitCode: rc}
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -199,14 +198,17 @@ func TestBatchRead(t *testing.T) {
 	}
 	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchReadBlobs(gomock.Any(), gomock.Any()).Return(mockResults, nil)
 
-	requestedDownloads := make([]*remoteexecution.Digest, 10)
+	requestedDownloads := make([]*remoteexecution.Digest, 10)  // list of digests for requested blobs
 
+	// request 10 sha's
 	for i:=0; i < 10; i++ {
 		d := &remoteexecution.Digest{
 			Hash:                 fmt.Sprintf("fakeSha%d", i),
 			SizeBytes:            int64(i),
 		}
 		requestedDownloads[i] = d
+
+		// make the blob that the mock will return
 		data := makeRandomData(i+1)
 		mockBlob := &remoteexecution.BatchReadBlobsResponse_Response{
 			Digest: d,
@@ -250,8 +252,8 @@ func TestBatchWrite(t *testing.T) {
 
 	// Make a BatchWriteRequest, and fake return values
 	uploadContents := make([]BatchUploadContent, 10)
-	uploadDigests := make([]*remoteexecution.Digest, 10)
 
+	// make the structure that the mock proto client will return
 	mockResp := &remoteexecution.BatchUpdateBlobsResponse{
 		Responses:            make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
 		XXX_NoUnkeyedLiteral: struct{}{},
@@ -260,6 +262,7 @@ func TestBatchWrite(t *testing.T) {
 	}
 
 	for i:=0; i < 10; i++ {
+		// create upload digest and data
 		theData := makeRandomData(i+1)
 		sha := sha256.Sum256(theData)
 		shaStr := fmt.Sprintf("%x", sha)
@@ -274,9 +277,9 @@ func TestBatchWrite(t *testing.T) {
 			Digest: newDigest,
 			Data:   theData,
 		}
-
 		uploadContents[i] = uploadContent
-		uploadDigests[i] = newDigest
+
+		// fill in the mock response
 		mockResp.Responses[i] = &remoteexecution.BatchUpdateBlobsResponse_Response{
 			Digest:               newDigest,
 			Status:               &rpc_status.Status{Code: int32(rpc_code.Code_OK)},

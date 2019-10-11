@@ -30,6 +30,8 @@ type NotFoundError struct {
 	Err string
 }
 
+
+// define default 3rd party dependencies
 type realGRPCDialer struct {}
 func (rd *realGRPCDialer) Dial(target string, opts ...grpc.DialOption) (conn.ClientConnPtr, error) {
 	return grpc.Dial(target, opts...)
@@ -42,20 +44,24 @@ func MakeCASpbClient(cc conn.ClientConnPtr) remoteexecution.ContentAddressableSt
 	return remoteexecution.NewContentAddressableStorageClient(cc.(*grpc.ClientConn))
 }
 
-// CASClient struct with exposed (via setter) GRCP dialer, cas pb client maker for testing
+// CASClient struct with exposed 3rd party dependencies (the grpcDialer and function to create protobuf CAS client)
+// to allow injecting mocks during testing
 type CASClient struct {
 	grpcDialer conn.GRPCDialer
-	CASpbMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient
+	CASpbMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient // func that returns the proto client
 	uploadedDigests []*remoteexecution.Digest
 }
 
+// make a CASClient that uses the production 3rd party libraries.  Testing will overwrite these values
+// (using the setters below) with mocks
 func MakeCASClient() *CASClient {
 	return &CASClient{
 		grpcDialer: MakeRealGRPCDialer(), // by default CASClient uses a real grpc dialer
 		CASpbMaker: MakeCASpbClient, // by default CASClient uses a real proto CAS Client
 	}
 }
-func (casCli *CASClient) SetGrpcDialer(dialer conn.GRPCDialer) *CASClient { // using builder pattern
+// setters use builder pattern (y.Set(x) returns y) for more succinct construction
+func (casCli *CASClient) SetGrpcDialer(dialer conn.GRPCDialer) *CASClient {
 	casCli.grpcDialer = dialer
 	return casCli
 }
@@ -80,7 +86,7 @@ func IsNotFoundError(err error) bool {
 	return false
 }
 
-// Read Data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
+// Read data as bytes from a CAS. Takes a Resolver for addressing and a bazel Digest to read.
 // Returns bytes read or an error. If the requested resource was not found,
 // returns a NotFoundError
 func (casCli *CASClient)ByteStreamRead(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (bytes []byte, err error) {
@@ -144,11 +150,11 @@ func (casCli *CASClient)readFromClient(bsc bytestream.ByteStreamClient, req *byt
 					return nil, &NotFoundError{Err: grpcStatus.Message()}
 				}
 			}
-			return nil, fmt.Errorf("Failed Recv'ing Data from server: %s", err)
+			return nil, fmt.Errorf("Failed Recv'ing data from server: %s", err)
 		}
 		read := res.GetData()
 		if read == nil {
-			return nil, fmt.Errorf("Unexpected nil Data from ReadResponse")
+			return nil, fmt.Errorf("Unexpected nil data from ReadResponse")
 		}
 		data = append(data, read...)
 		bytesRead = bytesRead + int64(len(read))
@@ -156,7 +162,7 @@ func (casCli *CASClient)readFromClient(bsc bytestream.ByteStreamClient, req *byt
 	return data, nil
 }
 
-// Write Data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte Data.
+// Write data as bytes to a CAS. Takes a Resolver for addressing, a bazel Digest to read, and []byte data.
 func (casCli *CASClient)ByteStreamWrite(r dialer.Resolver, digest *remoteexecution.Digest, data []byte, b backoff.BackOff) (err error) {
 	// skip request processing for empty sha
 	if digest == nil || bazel.IsEmptyDigest(digest) {
@@ -208,7 +214,7 @@ func (casCli *CASClient)writeFromClient(bsc bytestream.ByteStreamClient, req *by
 
 	err = wc.Send(req)
 	if err != nil {
-		return fmt.Errorf("Failed to send Data for write: %s", err)
+		return fmt.Errorf("Failed to send data for write: %s", err)
 	}
 
 	res, err := wc.CloseAndRecv()
@@ -217,7 +223,7 @@ func (casCli *CASClient)writeFromClient(bsc bytestream.ByteStreamClient, req *by
 	}
 
 	if res.GetCommittedSize() != int64(len(req.GetData())) {
-		return fmt.Errorf("Committed size %d did not match Data len %d", res.GetCommittedSize(), len(req.GetData()))
+		return fmt.Errorf("Committed size %d did not match data len %d", res.GetCommittedSize(), len(req.GetData()))
 	}
 
 	return nil
@@ -313,7 +319,6 @@ func (casCli *CASClient)updateCacheFromClient(acc remoteexecution.ActionCacheCli
 
 	return ar, nil
 }
-
 
 type BatchUploadContent struct {
 	Digest *remoteexecution.Digest
