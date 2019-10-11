@@ -1,6 +1,6 @@
 package execution
-
 //go:generate mockgen -destination=mock_remoteexecution/execclient_mock.go github.com/twitter/scoot/bazel/remoteexecution ExecutionClient,ActionCacheClient,ContentAddressableStorageClient
+//go:generate mockgen -destination=mock_longrunning/longrunning_mock.go google.golang.org/genproto/googleapis/longrunning OperationsClient
 
 import (
 	"reflect"
