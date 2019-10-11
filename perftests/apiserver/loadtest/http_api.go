@@ -1,4 +1,4 @@
-package load_test
+package loadtest
 /*
 start the load testers as an http server exposing the endpoints:
 get apiserver_test - returns the status (job running, waiting to start, etc.)
