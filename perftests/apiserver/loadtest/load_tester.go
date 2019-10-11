@@ -175,10 +175,11 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 	}()
 
 	// loop running the test on the timer signals until stop is received
-	for {
+	notDone := true
+	for notDone {
 		select {
 		case <-lt.stopTestIterations:
-			return nil
+			notDone = false
 		case <-ticker.C:
 			lt.runOneIteration()
 		default:
