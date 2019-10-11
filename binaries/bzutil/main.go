@@ -159,7 +159,7 @@ func main() {
 	} else if batchUpload.Parsed() {
 		parseAndSetLevel(*batchUploadLogLevel)
 		if strings.ToLower(strings.Trim(*batchUploadTest, " ")) == "true" && (*batchUploadDir != "") {
-			fmt.Sprintf("Supply either -dir or -test=true not both.")
+			fmt.Printf("Supply either -dir or -test=true not both.\n")
 			return
 		}
 		digestsStr, e := batchUploadFiles(*batchUploadAddr, *batchUploadDir,
