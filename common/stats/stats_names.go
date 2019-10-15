@@ -28,6 +28,14 @@ const (
 	BundlestoreDownloadOkCounter  = "downloadOkCounter"
 
 	/*
+		Bundlestore check metrics (Exists/Heads from top-level Bundlestore/Apiserver)
+	*/
+	BundlestoreCheckLatency_ms = "checkLatency_ms"
+	BundlestoreCheckCounter    = "checkCounter"
+	BundlestoreCheckErrCounter = "checkErrCounter"
+	BundlestoreCheckOkCounter  = "checkOkCounter"
+
+	/*
 		Bundlestore upload metrics (Writes/Puts to top-level Bundlestore/Apiserver)
 	*/
 	BundlestoreUploadCounter         = "uploadCounter"
@@ -71,6 +79,8 @@ const (
 	*/
 	GroupcacheReadUnderlyingCounter     = "readUnderlyingCounter"
 	GroupcacheReadUnderlyingLatency_ms  = "readUnderlyingLatency_ms"
+	GroupcacheExistUnderlyingCounter    = "existUnderlyingCounter"
+	GroupcacheExistUnderlyingLatency_ms = "existUnderlyingLatency_ms"
 	GroupcacheWriteUnderlyingCounter    = "writeUnderlyingCounter"
 	GroupcacheWriteUnderlyingLatency_ms = "writeUnderlyingLatency_ms"
 

@@ -66,10 +66,9 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			return ttl, dest.SetBytes(data)
 		}),
 		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (*groupcache.Metadata, error) {
-			// TODO(apratti): Fix metrics
 			log.Info("Not cached, try to check bundle existance and populate cache metadata: ", bundleName)
-			stat.Counter(stats.GroupcacheReadUnderlyingCounter).Inc(1)
-			defer stat.Latency(stats.GroupcacheReadUnderlyingLatency_ms).Time().Stop()
+			stat.Counter(stats.GroupcacheExistUnderlyingCounter).Inc(1)
+			defer stat.Latency(stats.GroupcacheExistUnderlyingLatency_ms).Time().Stop()
 
 			s, err := underlying.Exists(bundleName)
 			if err != nil {

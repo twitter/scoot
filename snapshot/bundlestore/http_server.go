@@ -81,26 +81,24 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 
 func (s *httpServer) CheckExistence(w http.ResponseWriter, req *http.Request) {
 	log.Infof("Checking Existence %v %v (from %v)", req.Host, req.URL, req.RemoteAddr)
-	// TODO(apratti): Fix stats
-	defer s.storeConfig.Stat.Latency(stats.BundlestoreDownloadLatency_ms).Time().Stop()
-	s.storeConfig.Stat.Counter(stats.BundlestoreDownloadCounter).Inc(1)
+	defer s.storeConfig.Stat.Latency(stats.BundlestoreCheckLatency_ms).Time().Stop()
+	s.storeConfig.Stat.Counter(stats.BundlestoreCheckCounter).Inc(1)
 	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
 	if err := checkBundleName(bundleName); err != nil {
 		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		//s.stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
-		s.storeConfig.Stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
+		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
 	//TODO(apratti): write stat to metadata
-	_, err := s.storeConfig.Store.Exists(bundleName)
-	if err != nil {
+	stat, err := s.storeConfig.Store.Exists(bundleName)
+	if err != nil || !stat.Exists {
 		log.Infof("Check err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
 		http.NotFound(w, req)
-		s.storeConfig.Stat.Counter(stats.BundlestoreDownloadErrCounter).Inc(1)
+		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
-	s.storeConfig.Stat.Counter(stats.BundlestoreDownloadOkCounter).Inc(1)
+	s.storeConfig.Stat.Counter(stats.BundlestoreCheckOkCounter).Inc(1)
 }
 
 func (s *httpServer) HandleDownload(w http.ResponseWriter, req *http.Request) {
