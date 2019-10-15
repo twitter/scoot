@@ -200,7 +200,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 			if err := <-checkoutCh; err != nil {
 				log.Errorf("Checkout errored: %s", err)
+				// If there was an error there should be no lingering gitdb locks, so return
+				// In addition, co should be nil, so failing to return and calling co.Release()
+				// will result in a nil pointer dereference
+				return
 			}
+			// If there was no error then we need to release this checkout.
 			co.Release()
 		}()
 		return runner.AbortStatus(id,
