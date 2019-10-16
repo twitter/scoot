@@ -168,7 +168,6 @@ func (s *groupcacheStore) Exists(name string) (*Stat, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO(apratti): AYYYY
 	if md == nil {
 		return &Stat{}, nil
 	}

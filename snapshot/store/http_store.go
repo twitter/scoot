@@ -99,8 +99,9 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 		return NewResource(rc, resp.ContentLength, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
-
-	resp.Body.Close()
+	if !existCheck {
+		resp.Body.Close()
+	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
