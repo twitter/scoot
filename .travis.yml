@@ -10,7 +10,7 @@ env:
   - GO111MODULE=on
 
 before_script:
-  - make fmt
+  - sh check_fmt.sh
   - make vet
 
 script:
