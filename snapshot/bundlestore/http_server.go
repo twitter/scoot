@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,7 +91,6 @@ func (s *httpServer) CheckExistence(w http.ResponseWriter, req *http.Request) {
 		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
-	//TODO(apratti): write stat to metadata
 	stat, err := s.storeConfig.Store.Exists(bundleName)
 	if err != nil || !stat.Exists {
 		log.Infof("Check err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
@@ -98,6 +98,8 @@ func (s *httpServer) CheckExistence(w http.ResponseWriter, req *http.Request) {
 		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Length", strconv.FormatInt(stat.Length, 10))
 	s.storeConfig.Stat.Counter(stats.BundlestoreCheckOkCounter).Inc(1)
 }
 
