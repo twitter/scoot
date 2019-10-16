@@ -71,12 +71,12 @@ endif
 # universal dep needed to run scoot
 fs_util:
 	# Fetches fs_util tool from pantsbuild binaries
-	sh get_fs_util.sh
+	bash get_fs_util.sh
 
 ############## tests and coverage
 
 coverage:
-	sh testCoverage.sh $(TRAVIS_FILTER)
+	bash testCoverage.sh $(TRAVIS_FILTER)
 
 # Usage: make test PKG=github.com/twitter/scoot/binaries/...
 test:
