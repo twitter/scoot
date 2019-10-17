@@ -31,17 +31,21 @@ import (
 	"github.com/twitter/scoot/scootapi"
 )
 
-var uploadCmdStr string = "upload_command"
-var uploadActionStr string = "upload_action"
-var execCmdStr string = "execute"
-var getOpCmdStr string = "get_operation"
-var cancelOpCmdStr string = "cancel_operation"
+var (
+	uploadCmdStr        string = "upload_command"
+	uploadActionStr     string = "upload_action"
+	execCmdStr          string = "execute"
+	getOpCmdStr         string = "get_operation"
+	cancelOpCmdStr      string = "cancel_operation"
+	findMissingOpCmdStr string = "find_missing_blobs"
+)
 var supportedCommands map[string]bool = map[string]bool{
-	uploadCmdStr:    true,
-	uploadActionStr: true,
-	execCmdStr:      true,
-	getOpCmdStr:     true,
-	cancelOpCmdStr:  true,
+	uploadCmdStr:        true,
+	uploadActionStr:     true,
+	execCmdStr:          true,
+	getOpCmdStr:         true,
+	cancelOpCmdStr:      true,
+	findMissingOpCmdStr: true,
 }
 
 func main() {
@@ -95,6 +99,13 @@ func main() {
 	cancelName := cancelCommand.String("name", "", "Operation name to query")
 	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
+	// Find Missing Blobs
+	findMissingCommand := flag.NewFlagSet(findMissingOpCmdStr, flag.ExitOnError)
+	findMissingAddr := findMissingCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	findMissingDigests := findMissingCommand.String("digests", "", "Digests to find as ','-separated '<hash>/<size>' list")
+	findMissingJson := findMissingCommand.Bool("json", false, "Print missing digests as JSON to stdout")
+	findMissingLogLevel := findMissingCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
+
 	// Parse input flags
 	if len(os.Args) < 2 {
 		printSupported()
@@ -111,6 +122,8 @@ func main() {
 		getCommand.Parse(os.Args[2:])
 	case cancelOpCmdStr:
 		cancelCommand.Parse(os.Args[2:])
+	case findMissingOpCmdStr:
+		findMissingCommand.Parse(os.Args[2:])
 	default:
 		printSupported()
 		os.Exit(1)
@@ -148,6 +161,12 @@ func main() {
 		}
 		parseAndSetLevel(*cancelLogLevel)
 		cancelOperation(*cancelAddr, *cancelName)
+	} else if findMissingCommand.Parsed() {
+		if *findMissingDigests == "" {
+			log.Fatalf("digests requred for %s", findMissingOpCmdStr)
+		}
+		parseAndSetLevel(*findMissingLogLevel)
+		findMissingBlobs(*findMissingAddr, *findMissingDigests, *findMissingJson)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -334,6 +353,39 @@ func cancelOperation(execAddr, opName string) {
 	log.Info("CancelOperation request made successfully")
 	// No output
 }
+
+func findMissingBlobs(casAddr, digestsStr string, asJson bool) {
+	// parse digests from input string
+	strs := strings.Split(digestsStr, ",")
+	digests := []*remoteexecution.Digest{}
+	for _, s := range strs {
+		d, err := bazel.DigestFromString(s)
+		if err != nil {
+			log.Fatalf("Error parsing digest from string %s: %s", s, err)
+		}
+		digests = append(digests, d)
+	}
+
+	r := dialer.NewConstantResolver(casAddr)
+	missing, err := cas.FindMissingBlobs(r, digests, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	if err != nil {
+		log.Fatalf("Error making FindMissingBlobs request: %s", err)
+	}
+
+	if asJson {
+		b, err := json.Marshal(missing)
+		if err != nil {
+			log.Fatalf("Error converting missing digests to JSON: %s", err)
+		}
+		fmt.Printf("%s\n", b)
+	} else {
+		for _, d := range missing {
+			fmt.Printf("%s/%d\n", d.GetHash(), d.GetSizeBytes())
+		}
+	}
+}
+
+// Util functions
 
 func printSupported() {
 	cmds := make([]string, 0, len(supportedCommands))

@@ -287,10 +287,8 @@ func FindMissingBlobs(r dialer.Resolver,
 		try += 1
 		return err
 	}, b)
-	if res != nil {
-		for _, d := range res.GetMissingBlobDigests() {
-			missing = append(missing, d)
-		}
+	for _, d := range res.GetMissingBlobDigests() {
+		missing = append(missing, d)
 	}
 	return missing, nil
 }

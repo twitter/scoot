@@ -64,6 +64,7 @@ func main() {
 	// TODO: WaitForClusterToBeReady should wait for CAS/ApiServers too
 	time.Sleep(3 * time.Second)
 
+	testCASOps(gopath, clusterCmds)
 	testSuccessfulCommand(gopath, clusterCmds)
 	testCancelledCommand(gopath, clusterCmds)
 
@@ -77,6 +78,10 @@ func installBinaries() error {
 		log.Error(string(b))
 	}
 	return err
+}
+
+func testCASOps(gopath string, clusterCmds *setup.Cmds) {
+	// TODO upload some blobs, find missing, check some found some weren't
 }
 
 func testSuccessfulCommand(gopath string, clusterCmds *setup.Cmds) {
