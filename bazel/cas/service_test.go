@@ -22,24 +22,26 @@ import (
 	"github.com/twitter/scoot/snapshot/store"
 )
 
-var testHash1 string = "36f583dd16f4e1e201eb1e6f6d8e35a2ccb3bbe2658de46b4ffae7b0e9ed872e"
-var testSize1 int64 = 7
-var testData1 []byte = []byte("abc1234")
-var testHash2 string = "ed1073e458620413772fcf13e3730a6392211f04b63dde663d085eb72435d56b"
-var testSize2 int64 = 7
-var testData2 []byte = []byte("efg9876")
-var testHash3 string = "67a619457aae3e869af3e7c92078424a773397c1520a9cec76fde54ee8350137"
-var testSize3 int64 = 7
-var testData3 []byte = []byte("qqqqqqq")
-var testHash4 string = "40011c325e5305a8aaab651bb4328480576bd14c2186500ca49f5c171fbe916d"
-var testSize4 int64 = 7
-var testData4 []byte = []byte("wwwwwww")
-var testHash5 string = "3de47205e772b39d369b811a8cc515a31cf310511bf1f4529b7234988509da55"
-var testSize5 int64 = 7
-var testData5 []byte = []byte("eeeeeee")
-var testHash6 string = "5252f52cb79e2276783cfdca50304fed06a0eabc8dbcc3abfe3aaac5792c4fc6"
-var testSize6 int64 = 7
-var testData6 []byte = []byte("rrrrrrr")
+var (
+	testHash1 string = "36f583dd16f4e1e201eb1e6f6d8e35a2ccb3bbe2658de46b4ffae7b0e9ed872e"
+	testSize1 int64  = 7
+	testData1 []byte = []byte("abc1234")
+	testHash2 string = "ed1073e458620413772fcf13e3730a6392211f04b63dde663d085eb72435d56b"
+	testSize2 int64  = 7
+	testData2 []byte = []byte("efg9876")
+	testHash3 string = "67a619457aae3e869af3e7c92078424a773397c1520a9cec76fde54ee8350137"
+	testSize3 int64  = 7
+	testData3 []byte = []byte("qqqqqqq")
+	testHash4 string = "40011c325e5305a8aaab651bb4328480576bd14c2186500ca49f5c171fbe916d"
+	testSize4 int64  = 7
+	testData4 []byte = []byte("wwwwwww")
+	testHash5 string = "3de47205e772b39d369b811a8cc515a31cf310511bf1f4529b7234988509da55"
+	testSize5 int64  = 7
+	testData5 []byte = []byte("eeeeeee")
+	testHash6 string = "5252f52cb79e2276783cfdca50304fed06a0eabc8dbcc3abfe3aaac5792c4fc6"
+	testSize6 int64  = 7
+	testData6 []byte = []byte("rrrrrrr")
+)
 
 // TODO make batch tests easier to programmatically test above BatchParallelism threshold
 

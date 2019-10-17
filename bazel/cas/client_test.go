@@ -126,7 +126,7 @@ func TestActionCacheGet(t *testing.T) {
 	}
 }
 
-func TestActionCacheGetMissing(t *testing.T) {
+func TestClientActionCacheGetMissing(t *testing.T) {
 	req := &remoteexecution.GetActionResultRequest{ActionDigest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}}
 
 	mockCtrl := gomock.NewController(t)
@@ -146,7 +146,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 	}
 }
 
-func TestActionCacheUpdate(t *testing.T) {
+func TestClientActionCacheUpdate(t *testing.T) {
 	rc := int32(42)
 	ar := &remoteexecution.ActionResult{ExitCode: rc}
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -164,5 +164,33 @@ func TestActionCacheUpdate(t *testing.T) {
 
 	if arRes.GetExitCode() != rc {
 		t.Fatalf("Unexpected result, got %d, want %d", arRes.GetExitCode(), rc)
+	}
+}
+
+func TestClientFindMissingBlobs(t *testing.T) {
+	digests := []*remoteexecution.Digest{
+		{Hash: testHash1, SizeBytes: testSize1},
+		{Hash: testHash2, SizeBytes: testSize2},
+	}
+	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
+	expected := &remoteexecution.FindMissingBlobsResponse{MissingBlobDigests: digests}
+
+	mockCtrl := gomock.NewController(t)
+	casClientMock := mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
+
+	casClientMock.EXPECT().FindMissingBlobs(context.Background(), req).Return(expected, nil)
+
+	fmRes, err := findMissingBlobsFromClient(casClientMock, req)
+	if err != nil {
+		t.Fatalf("Error from find missing: %s", err)
+	}
+
+	if len(fmRes.GetMissingBlobDigests()) != len(digests) {
+		t.Fatalf("Expected %d missing digests, got: %d", len(digests), len(fmRes.GetMissingBlobDigests()))
+	}
+	for i, d := range fmRes.GetMissingBlobDigests() {
+		if !bazel.DigestsEqual(d, digests[i]) {
+			t.Fatalf("Missing digests didn't match. Got: %s, want: %s", d, digests[i])
+		}
 	}
 }

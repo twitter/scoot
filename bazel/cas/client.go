@@ -274,6 +274,51 @@ func updateCacheFromClient(acc remoteexecution.ActionCacheClient,
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make UpdateActionResult request: %s", err)
 	}
-
 	return ar, nil
+}
+
+func FindMissingBlobs(r dialer.Resolver,
+	digests []*remoteexecution.Digest, b backoff.BackOff) (missing []*remoteexecution.Digest, err error) {
+	res := &remoteexecution.FindMissingBlobsResponse{}
+	try := 1
+	backoff.Retry(func() error {
+		log.Debugf("Try #%d", try)
+		res, err = findMissingBlobs(r, digests)
+		try += 1
+		return err
+	}, b)
+	if res != nil {
+		for _, d := range res.GetMissingBlobDigests() {
+			missing = append(missing, d)
+		}
+	}
+	return missing, nil
+}
+
+func findMissingBlobs(r dialer.Resolver,
+	digests []*remoteexecution.Digest) (*remoteexecution.FindMissingBlobsResponse, error) {
+	serverAddr, err := r.Resolve()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
+	}
+
+	cc, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
+	}
+	defer cc.Close()
+
+	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
+
+	casCli := remoteexecution.NewContentAddressableStorageClient(cc)
+	return findMissingBlobsFromClient(casCli, req)
+}
+
+func findMissingBlobsFromClient(casCli remoteexecution.ContentAddressableStorageClient,
+	req *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
+	res, err := casCli.FindMissingBlobs(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to make FindMissingBlobs request: %s", err)
+	}
+	return res, err
 }
