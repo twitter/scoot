@@ -66,7 +66,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			return ttl, dest.SetBytes(data)
 		}),
 		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (*groupcache.Metadata, error) {
-			log.Info("Not cached, try to check bundle existance and populate cache metadata: ", bundleName)
+			log.Info("Not cached, try to check bundle existence and populate cache metadata: ", bundleName)
 			stat.Counter(stats.GroupcacheExistUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheExistUnderlyingLatency_ms).Time().Stop()
 
