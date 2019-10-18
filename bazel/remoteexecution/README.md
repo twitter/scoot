@@ -62,7 +62,7 @@ Edit the files to normalize them for their current location under the same packa
 * remote_execution.pb.go will not need to import "build/bazel/semver" any longer
 * remote_execution.pb.go semver package references can be truncated ("semver.S" becomes "S")
 
-Run all tests to verify compatibilty.
+Run all tests to verify compatibility.
 
 #### Other Dependencies
 
