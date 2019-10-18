@@ -272,6 +272,16 @@ const (
 	SchedAddJobsLatency_ms = "schedAddJobsLatency_ms"
 
 	/*
+		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+	*/
+	SchedCheckJobsLoopLatency_ms = "schedCheckJobsLoopLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+	*/
+	SchedAddJobsLoopLatency_ms = "schedAddJobsLoopLatency_ms"
+
+	/*
 		Amount of time it takes the scheduler to update list of removed / added nodes to its worker cluster
 	*/
 	SchedUpdateClusterLatency_ms = "schedUpdateClusterLatency_ms"
