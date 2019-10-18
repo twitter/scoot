@@ -15,7 +15,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -76,7 +75,6 @@ func main() {
 	batchUpload := flag.NewFlagSet(batchUploadStr, flag.ExitOnError)
 	batchUploadAddr := batchUpload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	batchUploadDir := batchUpload.String("dir", "", "dir containing files to upload: '/dir'")
-	batchUploadTest := batchUpload.String("test", "false", "when true, will upload 10 files randomly ranging from 1k to 1m")
 	batchUploadLogLevel := batchUpload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
 
 	// Batch Download
@@ -158,16 +156,9 @@ func main() {
 		uploadBzAction(*actionAddr, *actionCommandDigest, *actionRootDigest, *actionNoCache, *actionJson)
 	} else if batchUpload.Parsed() {
 		parseAndSetLevel(*batchUploadLogLevel)
-		if strings.ToLower(strings.Trim(*batchUploadTest, " ")) == "true" && (*batchUploadDir != "") {
-			fmt.Printf("Supply either -dir or -test=true not both.\n")
-			return
-		}
-		digestsStr, e := batchUploadFiles(*batchUploadAddr, *batchUploadDir,
-			strings.ToLower(strings.Trim(*batchUploadTest, " ")) == "true")
+		e := batchUploadFiles(*batchUploadAddr, *batchUploadDir)
 		if e != nil {
 			log.Fatalf("batch update returned %s", e.Error())
-		} else {
-			fmt.Printf("the following digests were uploaded:\n%s\n", digestsStr)
 		}
 	} else if batchDownload.Parsed() {
 		parseAndSetLevel(*batchDownloadLogLevel)
@@ -390,57 +381,49 @@ func printSupported() {
 }
 
 // use batch upload, print the list of digests that were uploaded
-func batchUploadFiles(casAddr string, uploadDir string, testUpload bool) (string, error) {
+func batchUploadFiles(casAddr string, uploadDir string) error {
 	casClient := cas.MakeCASClient()
 	resolver := dialer.NewConstantResolver(casAddr)
 	// set up the contents for upload
-	contents, e := getContents(uploadDir, testUpload)
+	contents, e := getContents(uploadDir)
 	if e != nil {
-		return "", e
+		return e
 	}
 
 	// request the upload
 	digests, e := casClient.BatchUpdateWrite(resolver, contents, &backoff.ConstantBackOff{Interval:time.Millisecond})
 	if e != nil {
-		return "", e
+		return e
 	}
 
 	// handle response
-	asStr, e := json.Marshal(digests)
-	return string(asStr), e
+	for _, digest := range digests {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
+	}
+	return e
 }
 
 // get batch upload contents from either the files in a directory, or test set of 10 blobs
-func getContents(dir string, test bool) ([]cas.BatchUploadContent, error) {
+func getContents(dir string) ([]cas.BatchUploadContent, error) {
 	contents := make([]cas.BatchUploadContent, 0)
-	if !test {
-		fileList, e := ioutil.ReadDir(dir)
-		if e != nil {
-			return nil, e
-		}
-		for _, f := range fileList {
-			if ! f.IsDir() {
-				data, e := ioutil.ReadFile(f.Name())
-				if e != nil {
-					return nil, fmt.Errorf("error reading %s:%s", f.Name(), e.Error())
-				}
-				uploadContent := makeUploadContent(data)
-				contents = append(contents, uploadContent)
-			}
-		}
-		return contents, nil
+	fileList, e := ioutil.ReadDir(dir)
+	if e != nil {
+		return nil, e
 	}
-
-	for i := 0; i < 10; i++ {
-		data := make([]byte, (i+1)*1000)
-		rand.Read(data)
-		uploadContent := makeUploadContent(data)
-		contents = append(contents, uploadContent)
+	for _, f := range fileList {
+		if ! f.IsDir() {
+			data, e := ioutil.ReadFile(f.Name())
+			if e != nil {
+				return nil, fmt.Errorf("error reading %s:%s", f.Name(), e.Error())
+			}
+			uploadContent := makeBatchUploadContentEntry(data)
+			contents = append(contents, uploadContent)
+		}
 	}
 	return contents, nil
 }
 
-func makeUploadContent(data []byte) (cas.BatchUploadContent) {
+func makeBatchUploadContentEntry(data []byte) (cas.BatchUploadContent) {
 	sha := sha256.Sum256(data)
 	shaStr := fmt.Sprintf("%x", sha)
 	digest := &remoteexecution.Digest{
