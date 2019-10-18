@@ -24,3 +24,5 @@ require (
 	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
 	google.golang.org/grpc v1.14.0
 )
+
+replace github.com/twitter/groupcache => github.com/twitter/groupcache v0.0.0-20191018153510-579d56c43ff4
