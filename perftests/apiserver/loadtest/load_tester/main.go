@@ -1,19 +1,22 @@
 /*
-This is the apiserver load tester.
+load_tester is the cli  for generating load on the apiserver.
 
-It is a cli that generates load on the apiserver.
 The load scenario is parameterized in terms of action (upload/download/both),
 file size (min, max), number of (concurrent) actions, frequency for running a scenario (once, every N minutes)
 
+The command line options allow the user to request that the test be run to:
+	- place a one time upload/download load on the api server,
+	- repeatedly place an upload/download load on the apiserver
+	- can be run as an http service waiting get requests to trigger the test.  See perftests/apiserver/loadtest/http_api
+
 sample run:
-load_tester -action=both -cas_addr=<apiserver> -log_level=info -max_data_size=10000 -min_data_size=10 -num_times=30
+load_tester -action=both -cas_addr=<apiserver> -log_level=info -max_data_size=1000 -min_data_size=10 -num_times=30
 */
 package main
 
 import (
 	"flag"
 	"fmt"
-	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/perftests/apiserver/loadtest"
 	"strings"
 
@@ -47,10 +50,7 @@ func main() {
 
 	// start the server or run the one-time test
 	if startAsServer { // start as http service, waiting for run requests
-		handlers := lt.GetEndpointHandlers()
-		addr := endpoints.Addr(fmt.Sprintf("%s:%s", server, port))
-		server := endpoints.NewTwitterServer(addr, lt.GetStatsReceiver(), handlers)
-		err = server.Serve()
+		err = lt.StartHttpServer(server, port)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -73,24 +73,26 @@ func argParse() (*loadtest.Args, bool, string, string, error) {
 	dataSizeMaxFlag := flag.Int("max_data_size", 1,
 		fmt.Sprintf("maximum data size (in K bytes) for testing. Must be one of %s", loadtest.TestDataSizesStr))
 	numTimes := flag.Int("num_times", 10, "number of times the action should be taken (concurrently)")
+	batch := flag.Bool("batch", false, "Use the batch api consolidating all upload or download actions in one CAS call. (default false)")
 	frequencyFlag := flag.Int("freq", 0,
 		"0 requests to run the test once, > 0 requests to run 100 iterations of the test every <freq> minutes")
 	totalTime := flag.Int("total_time", 30, "Total number of minutes to allow the test to run (default 30)")
 	casGrpcAddr := flag.String("cas_addr", "", "cas grpc address")
-	startAsServerFlag := flag.Bool("start_as_http_server", false, "start an http service listening for get/put. Default false.")
+	startAsServerFlag := flag.Bool("start_as_http_server", false, "start an http service listening for get to trigger the test. Default false.")
 	serverNameFlag := flag.String("server_name", "localhost", "name for this load test server. Default localhost")
 	portFlag := flag.String("port", "", "The (load test) server's portFlag.")
 	flag.Parse()
 
 	a := &loadtest.Args{
-		LogLevel:      *logLevelFlag,
-		Action:        *actionFlag,
+		LogLevel:      strings.ToLower(*logLevelFlag),
+		Action:        strings.ToLower(*actionFlag),
 		DataSizeMin:   *dataSizeMinFlag,
 		DataSizeMax:   *dataSizeMaxFlag,
 		NumTimes:      *numTimes,
 		Freq:          *frequencyFlag,
 		TotalTime:     *totalTime,
 		CasGrpcAddr:   *casGrpcAddr,
+		Batch:		   *batch,
 	}
 	if ! validateArgs(a, *startAsServerFlag, *portFlag) {
 		return a, false, "", "", fmt.Errorf("bad arugment value(s)")
@@ -117,8 +119,8 @@ func validateArgs(a *loadtest.Args, startAsServer bool, port string) bool {
 		log.Fatalf("max_file_size must be one of %s", loadtest.TestDataSizesStr)
 		err = true
 	}
-	if !(strings.ToLower(a.Action) == "upload" || strings.ToLower(a.Action) == "download" ||
-		strings.ToLower(a.Action) == "both") {
+	if !(a.Action == "upload" || a.Action == "download" ||
+		a.Action == "both") {
 		log.Fatalf("action must be one of upload, download or both.")
 		err = true
 	}
@@ -132,6 +134,10 @@ func validateArgs(a *loadtest.Args, startAsServer bool, port string) bool {
 	}
 	if a.TotalTime <= 0 {
 		log.Fatalf("totalTime must be > 0.")
+		err = true
+	}
+	if a.Batch && a.Action == "both" {
+		log.Fatalf("batch cannot be used with 'both' action pick one of upload/download.")
 		err = true
 	}
 

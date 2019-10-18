@@ -1,19 +1,9 @@
 package loadtest
-/*
-start the load testers as an http server exposing the endpoints:
-
-get apiserver_test - returns the status (job running, waiting to start, etc.)
-
-get apiserver_test?action=<upload/download>&... - starts a load test  Note: using POST to start a test would be
-better aligned with REST philosophy, but then we would have to pass the test arguments in on the body of the
-request when we are using curl, making the curl experience more klunky.  Thus we are using GET to trigger a test.
-
-get apiserver_test/kill - kills the current running test
- */
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/twitter/scoot/common/endpoints"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,13 +11,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+/*
+Process the /apiserver_test and /apiserver_test/kill service endpoints.
+
+Example requests:
+ - $ curl localhost:8080/apiserver_test?action=download&max_data_size=1000&min_data_size=10&num_times=20
+ - $ curl localhost:8080/apiserver_test
+ - $ curl localhost:8080/apiserver_test/kill
+ */
 func (lt *ApiserverLoadTester) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		if strings.Contains(r.RequestURI, "/kill") {
-			lt.KillEndpoint(w, r)
+			lt.killEndpoint(w, r)
 		} else {
-			lt.GetEndpoint(w, r)
+			lt.getEndpoint(w, r)
 		}
 	default:
 		resp := fmt.Sprintf("Method %s not implemented", r.Method)
@@ -35,27 +33,27 @@ func (lt *ApiserverLoadTester) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (lt *ApiserverLoadTester) GetEndpoint(w http.ResponseWriter, r *http.Request) {
+func (lt *ApiserverLoadTester) getEndpoint(w http.ResponseWriter, r *http.Request) {
 	a := lt.getStringParam("action", "noAction", r)
 	if a == "noAction" {
-		lt.GetTestResultEndpoint(w, r)
+		lt.getTestResultEndpoint(w, r)
 	} else {
-		lt.StartTestEndpoint(w, r)
+		lt.startTest(w, r)
 	}
 }
 
-func (lt *ApiserverLoadTester) GetTestResultEndpoint(w http.ResponseWriter, r *http.Request) {
+func (lt *ApiserverLoadTester) getTestResultEndpoint(w http.ResponseWriter, r *http.Request) {
 	status := lt.GetStatus()
 	resp := status.String()
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (lt *ApiserverLoadTester) StartTestEndpoint(w http.ResponseWriter, r *http.Request) {
+func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request) {
 	// get the test parameters from the request
 	lt.action = lt.getStringParam("action", "download", r)
 	lt.minDataSetSize = lt.getIntParam("min_data_size", 1, r)
 	lt.maxDataSetSize = lt.getIntParam("max_data_size", 1, r)
-	lt.numConcurrentActs = lt.getIntParam("num_times", 10, r)
+	lt.numActions = lt.getIntParam("num_times", 10, r)
 	lt.freq = lt.getIntParam("freq", 0, r)
 	lt.totalTime = lt.getIntParam("total_time", 30, r)
 
@@ -68,7 +66,7 @@ func (lt *ApiserverLoadTester) StartTestEndpoint(w http.ResponseWriter, r *http.
 }
 
 
-func (lt *ApiserverLoadTester) KillEndpoint(w http.ResponseWriter, r *http.Request) {
+func (lt *ApiserverLoadTester) killEndpoint(w http.ResponseWriter, r *http.Request) {
 	lt.KillTest()
 	resp := "Killing test.  Use GET to confirm that the test has stopped."
 	json.NewEncoder(w).Encode(resp)
@@ -78,14 +76,17 @@ func (lt *ApiserverLoadTester) KillEndpoint(w http.ResponseWriter, r *http.Reque
 func (lt *ApiserverLoadTester) getStringParam(name string, deflt string, r *http.Request) string {
 	t, ok := r.URL.Query()[name]
 	if !ok {
+		log.Infof("couldn't find param %s in query, defaulting to %s", name, deflt)
 		return deflt
 	}
+	log.Infof("param %s in query, had value %s", name, t[0])
 	return t[0]
 }
 
 func (lt *ApiserverLoadTester) getIntParam(name string, deflt int, r *http.Request) int {
 	t := r.URL.Query()[name]
 	if len(t) == 0 {
+		log.Infof("couldn't find param %s in query, defaulting to %d", name, deflt)
 		return deflt
 	}
 	n, err := strconv.Atoi(t[0])
@@ -94,12 +95,24 @@ func (lt *ApiserverLoadTester) getIntParam(name string, deflt int, r *http.Reque
 			name, t, deflt)
 		return deflt
 	}
+	log.Infof("param %s in query, had value %d", name, n)
 	return n
 }
 
-func (lt *ApiserverLoadTester) GetEndpointHandlers() map[string]http.Handler {
+/*
+getEndpointHandlers exposes the /apiserver_test and /apiserver_test/kill endpoints.
+ */
+func (lt *ApiserverLoadTester) getEndpointHandlers() map[string]http.Handler {
 	handlers := map[string]http.Handler{}
 	handlers["/apiserver_test/kill"] = http.Handler(lt)
 	handlers["/apiserver_test"] = http.Handler(lt)
 	return handlers
+}
+
+// Start the HTTP service.
+func (lt *ApiserverLoadTester) StartHttpServer(host string, port string) error {
+	handlers := lt.getEndpointHandlers()
+	addr := endpoints.Addr(fmt.Sprintf("%s:%s", host, port))
+	server := endpoints.NewTwitterServer(addr, lt.getStatsReceiver(), handlers)
+	return server.Serve()
 }

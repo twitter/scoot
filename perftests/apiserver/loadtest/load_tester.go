@@ -51,13 +51,14 @@ ApiserverLoadTester is the object that runs the load test.  The RunLoadTest() fu
 */
 type ApiserverLoadTester struct {
 	// cli args
-	action            string // the test's action (upload, download, both)
-	minDataSetSize    int    // the minimum data set size to use during the test
-	maxDataSetSize    int    // the maximium data set size to use during the test
-	numConcurrentActs int    // the number of concurrent upload/downloads we want to trigger
-	freq              int    // the frequency to repeat the test (0 = run once)
-	totalTime         int    // the total elapsed time to allow repeating tests to run
-	casGrpcAddr       string // the cas addr (<hostname>:<port>)
+	action         string // the test's action (upload, download, both)
+	useBatchApi    bool   // use the CAS batch api
+	minDataSetSize int    // the minimum data set size to use during the test
+	maxDataSetSize int    // the maximium data set size to use during the test
+	numActions     int    // the number of concurrent upload/downloads we want to trigger
+	freq           int    // the frequency to repeat the test (0 = run once)
+	totalTime      int    // the total elapsed time to allow repeating tests to run
+	casGrpcAddr    string // the cas addr (<hostname>:<port>)
 
 	// data set fields
 	data                []byte   // the raw data set all uploads are derived from
@@ -68,6 +69,7 @@ type ApiserverLoadTester struct {
 	killRequested       bool     // will be set to true if/when a kill is requested
 	killReqeuestedMu	sync.RWMutex
 	status              StatusCode
+	batchContents       []*cas.BatchUploadContent
 
 	statsFile	string
 
@@ -89,20 +91,22 @@ type Args struct {
 	Freq        int
 	TotalTime   int
 	CasGrpcAddr string
+	Batch       bool
 }
 
 func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 	lt := ApiserverLoadTester{
-		action:            a.Action,
-		minDataSetSize:    a.DataSizeMin,
-		maxDataSetSize:    a.DataSizeMax,
-		numConcurrentActs: a.NumTimes,
-		freq:              a.Freq,
-		totalTime:         a.TotalTime,
-		casGrpcAddr:       a.CasGrpcAddr,
-		killRequested:     false,
-		status:            WaitingToStart,
-		iterCnt:           0,
+		action:         a.Action,
+		useBatchApi:    a.Batch,
+		minDataSetSize: a.DataSizeMin,
+		maxDataSetSize: a.DataSizeMax,
+		numActions:     a.NumTimes,
+		freq:           a.Freq,
+		totalTime:      a.TotalTime,
+		casGrpcAddr:    a.CasGrpcAddr,
+		killRequested:  false,
+		status:         WaitingToStart,
+		iterCnt:        0,
 	}
 
 	// get the cas connection
@@ -220,18 +224,18 @@ func (lt *ApiserverLoadTester) drainStopChAndResetStatus() {
 }
 
 func (lt *ApiserverLoadTester) runOneIteration() {
-	// create numConcurrentActs goroutines all waiting for a start request.  Each goroutine will run an action
+	// create numActions goroutines all waiting for a start request.  Each goroutine will run an action
 	// using one of the test files from the prior step
 	lt.stat.Render(false) // clear the stats
 	startCh := make(chan struct{})
-	actionDoneCh := make(chan int, lt.numConcurrentActs)
+	actionDoneCh := make(chan int, lt.numActions)
 	allDoneCh := make(chan struct{})
 
 	log.Infof("starting waiting go routines")
 	// create all goroutines waiting for start action
 	lt.status = CreatingGoRoutines
 	lt.completedCnt = 0
-	for i := 0; i < lt.numConcurrentActs; i++ {
+	for i := 0; i < lt.numActions; i++ {
 		if lt.getKillRequested() {
 			break
 		}
@@ -239,10 +243,14 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 		if len(lt.initUploadDigestIds) > 1 {
 			dIdx = int(rand.Float32() * float32(len(lt.initUploadDigestIds)))
 		}
-		go lt.performTestAction(dIdx, startCh, actionDoneCh)
+		if lt.useBatchApi {
+			lt.accumulateBatchContent(lt.dataSizes[dIdx])
+		} else {
+			go lt.performTestAction(dIdx, startCh, actionDoneCh)
+		}
 	}
 	// create go routine collecting done count
-	go lt.collectFinishActions(lt.numConcurrentActs, actionDoneCh, allDoneCh)
+	go lt.collectFinishActions(actionDoneCh, allDoneCh)
 
 	log.Infof("triggering the go routines to start uploads/downloads")
 	close(startCh) // signal start all actions
@@ -280,11 +288,15 @@ func (lt *ApiserverLoadTester) writeStatsToFile() {
 	log.Infof("stats written to %s", lt.statsFile)
 }
 
-func (lt *ApiserverLoadTester) collectFinishActions(finished int, oneActionDoneCh chan int, allDoneCh chan struct{}) {
+func (lt *ApiserverLoadTester) collectFinishActions(oneActionDoneCh chan int, allDoneCh chan struct{}) {
 	// collect finished actions
 
 	stopLooping := false
-	for cnt := 0; cnt < finished && !stopLooping; {
+	numActions := lt.numActions
+	if lt.useBatchApi {
+		numActions = 1
+	}
+	for cnt := 0; cnt < numActions && !stopLooping; {
 		select {
 		case completed := <-oneActionDoneCh:
 			lt.completedCnt += completed
@@ -323,24 +335,35 @@ func (lt *ApiserverLoadTester) performTestAction(dataIdx int, startCh chan struc
 	} else {
 		doneCh <- 1
 	}
+}
 
+func (lt *ApiserverLoadTester) accumulateBatchContent(dataIdx int) error {
+	var digest *remoteexecution.Digest
+	var theData []byte
+	if lt.action == "upload" {
+		theData, digest = lt.makeUploadContent(lt.dataSizes[dataIdx])
+	} else {
+		digest = &remoteexecution.Digest{
+			Hash:                 lt.initUploadDigestIds[dataIdx],
+			SizeBytes:            int64(lt.dataSizes[dataIdx]),
+		}
+	}
+
+	if lt.getKillRequested() {
+		return fmt.Errorf("Kill request received, batch upload skipped")
+	}
+	lt.batchContents = append(lt.batchContents, &cas.BatchUploadContent{
+		Digest: digest,
+		Data:   theData,
+	})
+
+	return nil
 }
 
 func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 
 	// make the upload content unique: update the first KBYTE bytes of the common data set with a random set of values
-	size := int64(numKBytes * KBYTE)
-	theData := make([]byte, 0)
-	uniqPref := lt.makeDummyData(KBYTE)
-	theData = append(theData, uniqPref[:]...)
-	if size > KBYTE {
-		theData = append(theData, lt.data[0:size-KBYTE]...)
-	}
-	t := sha256.Sum256(theData)
-	dataSha := fmt.Sprintf("%x", t)
-
-	// create the upload request data structure
-	digest := &remoteexecution.Digest{Hash: dataSha, SizeBytes: size}
+	theData, digest := lt.makeUploadContent(numKBytes)
 	if lt.getKillRequested() {
 		return "", fmt.Errorf("Kill request received, upload skipped")
 	}
@@ -351,7 +374,23 @@ func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Upload error:%s", err.Error())
 	}
-	return dataSha, nil
+	return digest.Hash, nil
+}
+
+// make a unique data set and digest for it
+func (lt *ApiserverLoadTester) makeUploadContent(numKBytes int) ([]byte, *remoteexecution.Digest) {
+	size := int64(numKBytes * KBYTE)
+	theData := make([]byte, 0)
+	uniqPref := lt.makeDummyData(KBYTE)
+	theData = append(theData, uniqPref[:]...)
+	if size > KBYTE {
+		theData = append(theData, lt.data[0:size-KBYTE]...)
+	}
+	t := sha256.Sum256(theData)
+	dataSha := fmt.Sprintf("%x", t)
+	// create the upload request data structure
+	digest := &remoteexecution.Digest{Hash: dataSha, SizeBytes: size}
+	return theData, digest
 }
 
 func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
@@ -415,7 +454,7 @@ func (lt *ApiserverLoadTester) initTestData() error {
 	return nil
 }
 
-func (lt *ApiserverLoadTester) GetStatsReceiver() stats.StatsReceiver {
+func (lt *ApiserverLoadTester) getStatsReceiver() stats.StatsReceiver {
 	return lt.stat
 }
 
@@ -433,7 +472,7 @@ func (lt *ApiserverLoadTester) GetStatus() Status {
 		return Status{CreatingGoRoutines, fmt.Sprintf("Iteration %d: Creating goroutines to run the test actions.", lt.iterCnt)}
 	case RunningActions:
 		return Status{RunningActions, fmt.Sprintf("Iteration %d: Running actions %d of %d have finished.",
-			lt.iterCnt, lt.completedCnt, lt.numConcurrentActs)}
+			lt.iterCnt, lt.completedCnt, lt.numActions)}
 	case PauseBetweenIterations:
 		return Status{PauseBetweenIterations, fmt.Sprintf("Iteration %d: Pause after iteration.", lt.iterCnt)}
 	default:

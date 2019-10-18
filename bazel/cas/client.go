@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
-	conn "github.com/twitter/scoot/bazel/cas/conn_interfaces"
+	conn "github.com/twitter/scoot/bazel/cas/connection-api"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -31,7 +31,7 @@ type NotFoundError struct {
 }
 
 
-// define default 3rd party dependencies
+// the following are the CASClient's default connection-api components
 type realGRPCDialer struct {}
 func (rd *realGRPCDialer) Dial(target string, opts ...grpc.DialOption) (conn.ClientConnPtr, error) {
 	return grpc.Dial(target, opts...)
@@ -49,7 +49,6 @@ func MakeCASpbClient(cc conn.ClientConnPtr) remoteexecution.ContentAddressableSt
 type CASClient struct {
 	grpcDialer conn.GRPCDialer
 	CASpbMaker func(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient // func that returns the proto client
-	uploadedDigests []*remoteexecution.Digest
 }
 
 // make a CASClient that uses the production 3rd party libraries.  Testing will overwrite these values
@@ -341,29 +340,27 @@ func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUplo
 	request := &remoteexecution.BatchUpdateBlobsRequest{
 		InstanceName:         bazel.DefaultInstanceName,
 		Requests:             requests,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	}
 
 	var ctx context.Context = context.Background()
 
 	// upload with retries
 	try := 1
+	var successfulUploads []*remoteexecution.Digest
 	e := backoff.Retry(func() error {
 		var err error
 		log.Debugf("Try #%d", try)
-		casCli.uploadedDigests, err = casCli.batchUpdateWriter(r, request, ctx)
+		successfulUploads, err = casCli.batchUpdateWriter(r, request, ctx)
 		try += 1
 		return err
 	}, b)
 
 	// if errors are found return an error result
 	if e != nil {
-		return casCli.uploadedDigests, fmt.Errorf("CAS BatchUpdateBlobs() returned error:%s", e.Error())
+		return successfulUploads, fmt.Errorf("CAS BatchUpdateBlobs() returned error:%s", e.Error())
 	}
 
-	return casCli.uploadedDigests, nil
+	return successfulUploads, nil
 }
 
 // (retryable) method for CAS batch update

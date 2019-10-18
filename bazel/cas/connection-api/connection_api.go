@@ -1,4 +1,4 @@
-package conn_interfaces
+package connection_api
 /*
 Interfaces needed to allow testing to mock out grpc connection behavior
  */
