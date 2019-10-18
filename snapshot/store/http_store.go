@@ -110,21 +110,21 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 	return nil, fmt.Errorf("could not open: %+v", resp)
 }
 
-func (s *httpStore) Exists(name string) (*Stat, error) {
+func (s *httpStore) Exists(name string) (bool, error) {
 	r, err := s.openForRead(name, true)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Stat{}, nil
+			return false, nil
 		}
 		log.Infof("Exists error: %s %v", name, err)
-		return nil, err
+		return false, err
 	}
 	log.Infof("Exists ok: %s", name)
 	r.Close()
 	if r.TTLValue != nil && r.TTLValue.TTL.Before(time.Now()) {
-		return &Stat{}, nil
+		return false, nil
 	}
-	return &Stat{Exists: true, Length: r.Length, TTL: &r.TTLValue.TTL}, nil
+	return true, nil
 }
 
 func (s *httpStore) Write(name string, resource *Resource) error {

@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -36,14 +35,14 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 	bundleData := req.Body
 
-	stat, err := s.storeConfig.Store.Exists(bundleName)
+	ok, err := s.storeConfig.Store.Exists(bundleName)
 	if err != nil {
 		log.Infof("Exists err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error checking if bundle exists: %s", err), http.StatusInternalServerError)
 		s.storeConfig.Stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 		return
 	}
-	if stat.Exists {
+	if ok {
 		s.storeConfig.Stat.Counter(stats.BundlestoreUploadExistingCounter).Inc(1)
 		fmt.Fprintf(w, "Bundle %s already exists, no-op and return\n", bundleName)
 		return
@@ -91,15 +90,14 @@ func (s *httpServer) CheckExistence(w http.ResponseWriter, req *http.Request) {
 		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
-	stat, err := s.storeConfig.Store.Exists(bundleName)
-	if err != nil || !stat.Exists {
+	ok, err := s.storeConfig.Store.Exists(bundleName)
+	if err != nil || !ok {
 		log.Infof("Check err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
 		http.NotFound(w, req)
 		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Content-Length", strconv.FormatInt(stat.Length, 10))
 	s.storeConfig.Stat.Counter(stats.BundlestoreCheckOkCounter).Inc(1)
 }
 

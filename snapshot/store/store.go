@@ -51,13 +51,6 @@ func GetDurationTTL(t *TTLValue) time.Duration {
 	return d
 }
 
-// Stat encapsulates metadata about a bundle.
-type Stat struct {
-	Exists bool
-	Length int64
-	TTL    *time.Time
-}
-
 // Resource encapsulates a Store resource and embeds an io.ReadCloser around the data
 // Length: length in bytes of data to be read or written
 // TTLValue: TTL value for the resource, or nil if not supporting TTL
@@ -75,7 +68,7 @@ func NewResource(rc io.ReadCloser, l int64, ttlv *TTLValue) *Resource {
 // Read-only operations on store, limited for now to a couple essential functions.
 type StoreRead interface {
 	// Check if the bundle exists. Not guaranteed to be any cheaper than actually reading the bundle.
-	Exists(name string) (*Stat, error)
+	Exists(name string) (bool, error)
 
 	// Open the bundle for streaming read. It is the caller's responsibility to call Close().
 	OpenForRead(name string) (*Resource, error)

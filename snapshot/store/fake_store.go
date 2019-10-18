@@ -14,11 +14,11 @@ type FakeStore struct {
 	TTL   *TTLValue
 }
 
-func (f *FakeStore) Exists(name string) (*Stat, error) {
+func (f *FakeStore) Exists(name string) (bool, error) {
 	if _, ok := f.Files.Load(name); !ok {
-		return &Stat{}, nil
+		return false, nil
 	}
-	return &Stat{Exists: true}, nil
+	return true, nil
 }
 
 func (f *FakeStore) OpenForRead(name string) (*Resource, error) {

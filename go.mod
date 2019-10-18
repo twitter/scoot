@@ -25,4 +25,4 @@ require (
 	google.golang.org/grpc v1.14.0
 )
 
-replace github.com/twitter/groupcache => github.com/twitter/groupcache v0.0.0-20191018153510-579d56c43ff4
+replace github.com/twitter/groupcache => github.com/twitter/groupcache v0.0.0-20191018191131-ff99f50376fd

@@ -74,6 +74,8 @@ github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/twitter/groupcache v0.0.0-20190909015146-10d21707d5fe h1:ZmIHV9MFVGpXXZtAmd/tjgoGe8s7EwlQvs+RUJaY7Kc=
 github.com/twitter/groupcache v0.0.0-20190909015146-10d21707d5fe/go.mod h1:fcAzz9dBuUo1tHcNFsXFI7dRwSAAKsjCraVFeByrhUc=
+github.com/twitter/groupcache v0.0.0-20191018191131-ff99f50376fd h1:0ifotc5Ku3H7OS0iLTQNa8T1O1ZHzbJKh9bPapX3is0=
+github.com/twitter/groupcache v0.0.0-20191018191131-ff99f50376fd/go.mod h1:fcAzz9dBuUo1tHcNFsXFI7dRwSAAKsjCraVFeByrhUc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 h1:3SVOIvH7Ae1KRYyQWRjXWJEA9sS/c/pjvH++55Gr648=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 h1:ESFSdwYZvkeru3RtdrYueztKhOBCSAAzS4Gf+k0tEow=

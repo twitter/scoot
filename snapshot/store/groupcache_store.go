@@ -65,20 +65,16 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			}
 			return ttl, dest.SetBytes(data)
 		}),
-		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (*groupcache.Metadata, error) {
+		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (bool, error) {
 			log.Info("Not cached, try to check bundle existence and populate cache metadata: ", bundleName)
 			stat.Counter(stats.GroupcacheExistUnderlyingCounter).Inc(1)
 			defer stat.Latency(stats.GroupcacheExistUnderlyingLatency_ms).Time().Stop()
 
-			s, err := underlying.Exists(bundleName)
+			ok, err := underlying.Exists(bundleName)
 			if err != nil {
-				return nil, err
+				return false, err
 			}
-			if !s.Exists {
-				return nil, nil
-			}
-			md := groupcache.Metadata{Length: s.Length, TTL: s.TTL}
-			return &md, nil
+			return ok, nil
 		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
@@ -160,23 +156,19 @@ func (s *groupcacheStore) OpenForRead(name string) (*Resource, error) {
 	return NewResource(rc, int64(len(data)), ttlv), nil
 }
 
-func (s *groupcacheStore) Exists(name string) (*Stat, error) {
+func (s *groupcacheStore) Exists(name string) (bool, error) {
 	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
-	md, err := s.cache.Contain(nil, name)
+	ok, err := s.cache.Contain(nil, name)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	if md == nil {
-		return &Stat{}, nil
+	if !ok {
+		return false, nil
 	}
-	if md.TTL != nil && md.TTL.Before(time.Now().UTC()) {
-		return &Stat{}, nil
-	}
-	stat := Stat{Exists: true, Length: md.Length, TTL: md.TTL}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)
-	return &stat, nil
+	return true, nil
 }
 
 func (s *groupcacheStore) Write(name string, resource *Resource) error {
