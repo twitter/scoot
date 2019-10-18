@@ -50,7 +50,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 
 	// NOTE fixed to lowest priority in early stages of Bazel support
 	// ExecuteRequests do not have priority values, but the Action portion
-	// contains Platform Properties which can be used to specify arbitary server-side behavior.
+	// contains Platform Properties which can be used to specify arbitrary server-side behavior.
 	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
 
