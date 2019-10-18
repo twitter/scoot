@@ -77,7 +77,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			if !s.Exists {
 				return nil, nil
 			}
-			md := groupcache.NewMetadata(s.Length, s.TTL)
+			md := groupcache.Metadata{Length: s.Length, TTL: s.TTL}
 			return &md, nil
 		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
