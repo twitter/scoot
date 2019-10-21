@@ -5,7 +5,7 @@ package async
 //
 // Often times we may spawn go routines in an event loop to do some concurrent work,
 // go routines provide no way to return a response, however we may want
-// to be notified if the work the go routine was doing completed succesfully
+// to be notified if the work the go routine was doing completed successfully
 // or unsuccessfully, and then take some action based on that result.
 // AsyncMailbox provides a construct to do this.
 //
@@ -92,7 +92,7 @@ func (bx *Mailbox) Count() int {
 	return len(bx.msgs)
 }
 
-// Creates a NewAsyncError and assocaites the supplied callback with it.
+// Creates a NewAsyncError and associates the supplied callback with it.
 // Once the AsyncError has been completed, SetValue called, the callback
 // will be invoked on the next execution of ProcessMessages
 func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {

@@ -55,7 +55,7 @@ func (r *EnvResolver) Resolve() (string, error) {
 	return os.Getenv(r.key), nil
 }
 
-// ResolveMany retuns the env key in a slice
+// ResolveMany returns the env key in a slice
 func (r *EnvResolver) ResolveMany(n int) ([]string, error) {
 	all := []string{}
 	s, err := r.Resolve()

@@ -200,7 +200,12 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 			if err := <-checkoutCh; err != nil {
 				log.Errorf("Checkout errored: %s", err)
+				// If there was an error there should be no lingering gitdb locks, so return
+				// In addition, co should be nil, so failing to return and calling co.Release()
+				// will result in a nil pointer dereference
+				return
 			}
+			// If there was no error then we need to release this checkout.
 			co.Release()
 		}()
 		return runner.AbortStatus(id,
@@ -222,11 +227,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			default:
 				// err is not of type github.com/twitter/scoot/common/errors.Error
-				failedStatus = runner.FailedStatus(id, errors.NewError(codeErr, errors.GenericCheckoutFailureExitCode),
+				failedStatus = runner.FailedStatus(id, errors.NewError(err, errors.GenericCheckoutFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
-			// For Checkout errors from Bazel commands that indicate non-existance, we set a GRPC
+			// For Checkout errors from Bazel commands that indicate non-existence, we set a GRPC
 			// Status error indicating that the InputRoot data could not be found.
 			if runType == runner.RunTypeBazel {
 				msg := fmt.Sprintf("Failed to checkout Snapshot: %s", err)
