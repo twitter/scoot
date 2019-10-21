@@ -18,7 +18,7 @@ Example requests:
  - $ curl localhost:8080/apiserver_test?action=download&max_data_size=1000&min_data_size=10&num_times=20
  - $ curl localhost:8080/apiserver_test
  - $ curl localhost:8080/apiserver_test/kill
- */
+*/
 func (lt *ApiserverLoadTester) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -59,19 +59,17 @@ func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request)
 
 	go func() {
 		lt.RunLoadTest()
-	} ()
+	}()
 
 	resp := "Starting load test."
 	json.NewEncoder(w).Encode(resp)
 }
-
 
 func (lt *ApiserverLoadTester) killEndpoint(w http.ResponseWriter, r *http.Request) {
 	lt.KillTest()
 	resp := "Killing test.  Use GET to confirm that the test has stopped."
 	json.NewEncoder(w).Encode(resp)
 }
-
 
 func (lt *ApiserverLoadTester) getStringParam(name string, deflt string, r *http.Request) string {
 	t, ok := r.URL.Query()[name]
@@ -101,7 +99,7 @@ func (lt *ApiserverLoadTester) getIntParam(name string, deflt int, r *http.Reque
 
 /*
 getEndpointHandlers exposes the /apiserver_test and /apiserver_test/kill endpoints.
- */
+*/
 func (lt *ApiserverLoadTester) getEndpointHandlers() map[string]http.Handler {
 	handlers := map[string]http.Handler{}
 	handlers["/apiserver_test/kill"] = http.Handler(lt)

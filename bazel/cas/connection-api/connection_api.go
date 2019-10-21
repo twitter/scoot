@@ -1,7 +1,8 @@
 package connection_api
+
 /*
 Interfaces needed to allow testing to mock out grpc connection behavior
- */
+*/
 import (
 	"google.golang.org/grpc"
 )

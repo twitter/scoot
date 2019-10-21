@@ -67,11 +67,11 @@ type ApiserverLoadTester struct {
 	completedCnt        int      // track number of completed test actions
 	iterCnt             int      // track number of tests run (for freq != 0)
 	killRequested       bool     // will be set to true if/when a kill is requested
-	killReqeuestedMu	sync.RWMutex
+	killReqeuestedMu    sync.RWMutex
 	status              StatusCode
 	batchContents       []*cas.BatchUploadContent
 
-	statsFile	string
+	statsFile string
 
 	// externals
 	dialer *dialer.ConstantResolver
@@ -134,10 +134,10 @@ Start the load test
 */
 func (lt *ApiserverLoadTester) RunLoadTest() error {
 	/*
-	if its a repeating test (freq > 0) run the first iteration of the test in this process, start a goroutine
-	timing the frequency, then in this process loop running the next iterations when a timer sends a signal on its
-	channel, or stopping when time is up or a kill request is received
-	 */
+		if its a repeating test (freq > 0) run the first iteration of the test in this process, start a goroutine
+		timing the frequency, then in this process loop running the next iterations when a timer sends a signal on its
+		channel, or stopping when time is up or a kill request is received
+	*/
 	lt.status = Initializing
 
 	// initialize the data sizes and data set for the test
@@ -172,7 +172,7 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 	go func() {
 		time.Sleep(time.Duration(lt.totalTime) * time.Minute)
 		ticker.Stop()
-		if ! lt.getKillRequested() { // if we already have killRequested, don't try to put stop signal on channel
+		if !lt.getKillRequested() { // if we already have killRequested, don't try to put stop signal on channel
 			// stopTestIterations the test after totalTime
 			lt.stopTestIterations <- true
 		}
@@ -264,21 +264,21 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 }
 
 func (lt *ApiserverLoadTester) writeStatsToFile() {
-	statsJson := lt.stat.RenderNoClear(false)  // get the stats (but don't reset in case we get status request)
+	statsJson := lt.stat.RenderNoClear(false) // get the stats (but don't reset in case we get status request)
 
 	// convert to comma delimited string
 	statsMap := make(map[string]interface{})
-	json.Unmarshal([]byte(statsJson), &statsMap)  // make into a map (statsMap)
+	json.Unmarshal([]byte(statsJson), &statsMap) // make into a map (statsMap)
 
 	// sort the map to print in same order each time
 	keys := make([]string, 0)
-	for k,_ := range statsMap {
+	for k, _ := range statsMap {
 		keys = append(keys, k)
 	}
 	line := new(bytes.Buffer)
 	sort.Strings(keys)
-	for _, sKey := range(keys) {
-		fmt.Fprintf(line,"%s, %v,", sKey, statsMap[sKey])
+	for _, sKey := range keys {
+		fmt.Fprintf(line, "%s, %v,", sKey, statsMap[sKey])
 	}
 	fmt.Fprintf(line, "\n")
 
@@ -344,8 +344,8 @@ func (lt *ApiserverLoadTester) accumulateBatchContent(dataIdx int) error {
 		theData, digest = lt.makeUploadContent(lt.dataSizes[dataIdx])
 	} else {
 		digest = &remoteexecution.Digest{
-			Hash:                 lt.initUploadDigestIds[dataIdx],
-			SizeBytes:            int64(lt.dataSizes[dataIdx]),
+			Hash:      lt.initUploadDigestIds[dataIdx],
+			SizeBytes: int64(lt.dataSizes[dataIdx]),
 		}
 	}
 

@@ -314,7 +314,7 @@ func (s *defaultStatsReceiver) Render(pretty bool) []byte {
 /*
 Render the stats in the registry without clearing the registry.  This is used by performance testing
 to allow users to query stats at random times and not impact the overall test's stats handling.
- */
+*/
 func (s *defaultStatsReceiver) RenderNoClear(pretty bool) []byte {
 	return s.render(pretty)
 }
@@ -358,9 +358,9 @@ func (s *nilStatsReceiver) Histogram(name ...string) Histogram {
 func (s *nilStatsReceiver) Latency(name ...string) Latency {
 	return newNilLatency()
 }
-func (s *nilStatsReceiver) Remove(name ...string)     {}
-func (s *nilStatsReceiver) Render(pretty bool) []byte { return []byte{} }
-func (s *nilStatsReceiver) RenderNoClear(pretty bool) []byte {return []byte{}}
+func (s *nilStatsReceiver) Remove(name ...string)            {}
+func (s *nilStatsReceiver) Render(pretty bool) []byte        { return []byte{} }
+func (s *nilStatsReceiver) RenderNoClear(pretty bool) []byte { return []byte{} }
 
 //
 // Minimally mirror go-metrics instruments.
