@@ -186,34 +186,35 @@ func TestBatchRead(t *testing.T) {
 
 	var caspbClientMock remoteexecution.ContentAddressableStorageClient
 	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
-	caspbClienMaker := func(cc connection_api.ClientConnPtr)remoteexecution.ContentAddressableStorageClient {
-		return caspbClientMock}
+	caspbClienMaker := func(cc connection_api.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
+		return caspbClientMock
+	}
 
 	// define read request and fake return values
 	mockResults := &remoteexecution.BatchReadBlobsResponse{
-		Responses:            make([] *remoteexecution.BatchReadBlobsResponse_Response, 10),
+		Responses:            make([]*remoteexecution.BatchReadBlobsResponse_Response, 10),
 		XXX_NoUnkeyedLiteral: struct{}{},
 		XXX_unrecognized:     nil,
 		XXX_sizecache:        0,
 	}
 	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchReadBlobs(gomock.Any(), gomock.Any()).Return(mockResults, nil)
 
-	requestedDownloads := make([]*remoteexecution.Digest, 10)  // list of digests for requested blobs
+	requestedDownloads := make([]*remoteexecution.Digest, 10) // list of digests for requested blobs
 
 	// request 10 sha's
-	for i:=0; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 		d := &remoteexecution.Digest{
-			Hash:                 fmt.Sprintf("fakeSha%d", i),
-			SizeBytes:            int64(i),
+			Hash:      fmt.Sprintf("fakeSha%d", i),
+			SizeBytes: int64(i),
 		}
 		requestedDownloads[i] = d
 
 		// make the blob that the mock will return
-		data := makeRandomData(i+1)
+		data := makeRandomData(i + 1)
 		mockBlob := &remoteexecution.BatchReadBlobsResponse_Response{
 			Digest: d,
 			Data:   data,
-			Status: &rpc_status.Status{Code: int32(rpc_code.Code_OK),},
+			Status: &rpc_status.Status{Code: int32(rpc_code.Code_OK)},
 		}
 		mockResults.Responses[i] = mockBlob
 	}
@@ -229,10 +230,10 @@ func TestBatchRead(t *testing.T) {
 	// validate results
 	assert.Equal(t, nil, e)
 
-	assert.True(t, 10 == len(downloadedData))  // we should get 10 entries in the map
+	assert.True(t, 10 == len(downloadedData)) // we should get 10 entries in the map
 
 	for i := 0; i < 10; i++ {
-		assert.Equal(t,  i+1, len(downloadedData[requestedDownloads[i].Hash]))
+		assert.Equal(t, i+1, len(downloadedData[requestedDownloads[i].Hash]))
 	}
 
 }
@@ -247,8 +248,9 @@ func TestBatchWrite(t *testing.T) {
 
 	var caspbClientMock remoteexecution.ContentAddressableStorageClient
 	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
-	caspbClienMaker := func(cc connection_api.ClientConnPtr)remoteexecution.ContentAddressableStorageClient {
-		return caspbClientMock}
+	caspbClienMaker := func(cc connection_api.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
+		return caspbClientMock
+	}
 
 	// Make a BatchWriteRequest, and fake return values
 	uploadContents := make([]BatchUploadContent, 10)
@@ -261,9 +263,9 @@ func TestBatchWrite(t *testing.T) {
 		XXX_sizecache:        0,
 	}
 
-	for i:=0; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 		// create upload digest and data
-		theData := makeRandomData(i+1)
+		theData := makeRandomData(i + 1)
 		sha := sha256.Sum256(theData)
 		shaStr := fmt.Sprintf("%x", sha)
 		newDigest := &remoteexecution.Digest{
@@ -281,8 +283,8 @@ func TestBatchWrite(t *testing.T) {
 
 		// fill in the mock response
 		mockResp.Responses[i] = &remoteexecution.BatchUpdateBlobsResponse_Response{
-			Digest:               newDigest,
-			Status:               &rpc_status.Status{Code: int32(rpc_code.Code_OK)},
+			Digest: newDigest,
+			Status: &rpc_status.Status{Code: int32(rpc_code.Code_OK)},
 		}
 	}
 	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchUpdateBlobs(gomock.Any(), gomock.Any()).Return(mockResp, nil)

@@ -27,7 +27,7 @@ import (
 
 /*
 This is the main for the apiserver load tester
- */
+*/
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
@@ -64,7 +64,6 @@ func main() {
 	log.Info("load test completed.")
 }
 
-
 func argParse() (*loadtest.Args, bool, string, string, error) {
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	actionFlag := flag.String("action", "download", "upload/download/both: request testing upload, download or an equal mix of both.")
@@ -84,17 +83,17 @@ func argParse() (*loadtest.Args, bool, string, string, error) {
 	flag.Parse()
 
 	a := &loadtest.Args{
-		LogLevel:      strings.ToLower(*logLevelFlag),
-		Action:        strings.ToLower(*actionFlag),
-		DataSizeMin:   *dataSizeMinFlag,
-		DataSizeMax:   *dataSizeMaxFlag,
-		NumTimes:      *numTimes,
-		Freq:          *frequencyFlag,
-		TotalTime:     *totalTime,
-		CasGrpcAddr:   *casGrpcAddr,
-		Batch:		   *batch,
+		LogLevel:    strings.ToLower(*logLevelFlag),
+		Action:      strings.ToLower(*actionFlag),
+		DataSizeMin: *dataSizeMinFlag,
+		DataSizeMax: *dataSizeMaxFlag,
+		NumTimes:    *numTimes,
+		Freq:        *frequencyFlag,
+		TotalTime:   *totalTime,
+		CasGrpcAddr: *casGrpcAddr,
+		Batch:       *batch,
 	}
-	if ! validateArgs(a, *startAsServerFlag, *portFlag) {
+	if !validateArgs(a, *startAsServerFlag, *portFlag) {
 		return a, false, "", "", fmt.Errorf("bad arugment value(s)")
 	}
 
@@ -164,4 +163,3 @@ func validateFileSize(size int) bool {
 	}
 	return ok
 }
-

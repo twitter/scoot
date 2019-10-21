@@ -24,5 +24,4 @@ const (
 
 	// Batch API max combined blobs inlined request size
 	BatchMaxCombinedSize = 10 * 1024 * 1024
-
 )

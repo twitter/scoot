@@ -43,13 +43,13 @@ var execCmdStr string = "execute"
 var getOpCmdStr string = "get_operation"
 var cancelOpCmdStr string = "cancel_operation"
 var supportedCommands map[string]bool = map[string]bool{
-	uploadCmdStr:    true,
-	uploadActionStr: true,
-	batchUploadStr:  true,
-	batchDownloadStr:true,
-	execCmdStr:      true,
-	getOpCmdStr:     true,
-	cancelOpCmdStr:  true,
+	uploadCmdStr:     true,
+	uploadActionStr:  true,
+	batchUploadStr:   true,
+	batchDownloadStr: true,
+	execCmdStr:       true,
+	getOpCmdStr:      true,
+	cancelOpCmdStr:   true,
 }
 
 func main() {
@@ -395,7 +395,7 @@ func batchUploadFiles(casAddr string, uploadDir string) error {
 	}
 
 	// request the upload
-	digests, e := casClient.BatchUpdateWrite(resolver, contents, &backoff.ConstantBackOff{Interval:time.Millisecond})
+	digests, e := casClient.BatchUpdateWrite(resolver, contents, &backoff.ConstantBackOff{Interval: time.Millisecond})
 	if e != nil {
 		return e
 	}
@@ -415,7 +415,7 @@ func getContents(dir string) ([]cas.BatchUploadContent, error) {
 		return nil, e
 	}
 	for _, f := range fileList {
-		if ! f.IsDir() {
+		if !f.IsDir() {
 			data, e := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, f.Name()))
 			if e != nil {
 				return nil, fmt.Errorf("error reading %s/%s:%s", dir, f.Name(), e.Error())
@@ -427,7 +427,7 @@ func getContents(dir string) ([]cas.BatchUploadContent, error) {
 	return contents, nil
 }
 
-func makeBatchUploadContentEntry(data []byte) (cas.BatchUploadContent) {
+func makeBatchUploadContentEntry(data []byte) cas.BatchUploadContent {
 	sha := sha256.Sum256(data)
 	shaStr := fmt.Sprintf("%x", sha)
 	digest := &remoteexecution.Digest{
@@ -461,14 +461,14 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 			return fmt.Errorf("error converting size from digest %s to integer. %s", entry, e.Error())
 		}
 		digestsPtr[i] = &remoteexecution.Digest{
-			Hash:                 digestParts[0],
-			SizeBytes:            int64(sz),
+			Hash:      digestParts[0],
+			SizeBytes: int64(sz),
 		}
 
 	}
 
 	// request batch download
-	contents, e := casClient.BatchRead(resolver, digestsPtr, &backoff.ConstantBackOff{Interval:time.Millisecond})
+	contents, e := casClient.BatchRead(resolver, digestsPtr, &backoff.ConstantBackOff{Interval: time.Millisecond})
 
 	if _, err := os.Open(toDir); os.IsNotExist(err) {
 		os.Mkdir(toDir, 0777)
