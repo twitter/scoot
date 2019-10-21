@@ -229,7 +229,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
-			// For Checkout errors from Bazel commands that indicate non-existance, we set a GRPC
+			// For Checkout errors from Bazel commands that indicate non-existence, we set a GRPC
 			// Status error indicating that the InputRoot data could not be found.
 			if runType == runner.RunTypeBazel {
 				msg := fmt.Sprintf("Failed to checkout Snapshot: %s", err)

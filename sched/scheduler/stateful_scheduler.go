@@ -953,7 +953,7 @@ func (s *statefulScheduler) scheduleTasks() {
 							"tag":       tag,
 						}).Info(msg)
 
-					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
+					// If the task completed successfully but sagalog failed, start a goroutine to retry until it succeeds.
 					if taskErr.sagaErr != nil && taskErr.st.RunID != "" && taskErr.runnerErr == nil && taskErr.resultErr == nil {
 						log.WithFields(
 							log.Fields{
