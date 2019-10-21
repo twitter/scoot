@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,7 +81,7 @@ func main() {
 	// Batch Download
 	batchDownload := flag.NewFlagSet(batchDownloadStr, flag.ExitOnError)
 	batchDownloadAddr := batchDownload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
-	batchDownloadDigests := batchDownload.String("digests", "", "digests identifying the contents to download: '[{Hash:<hash>, SizeBytes:<size>},...]")
+	batchDownloadDigests := batchDownload.String("digests", "", "digests identifying the contents to download: '<hash1>/<size1>,<hash2>/<size2>,...")
 	batchDownloadDir := batchDownload.String("dir", "./bazel_batch_downloads", "directory to write the download files.  (File names will be the contents sha.)")
 	batchDownloadLogLevel := batchDownload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
 
@@ -156,9 +157,12 @@ func main() {
 		uploadBzAction(*actionAddr, *actionCommandDigest, *actionRootDigest, *actionNoCache, *actionJson)
 	} else if batchUpload.Parsed() {
 		parseAndSetLevel(*batchUploadLogLevel)
+		if *batchUploadDir == "" {
+			log.Fatalf("Must supply an upload dir")
+		}
 		e := batchUploadFiles(*batchUploadAddr, *batchUploadDir)
 		if e != nil {
-			log.Fatalf("batch update returned %s", e.Error())
+			log.Fatalf("batch upload returned %s", e.Error())
 		}
 	} else if batchDownload.Parsed() {
 		parseAndSetLevel(*batchDownloadLogLevel)
@@ -166,7 +170,7 @@ func main() {
 		if e != nil {
 			log.Fatal(e)
 		}
-		fmt.Printf("contents downloaded to: %s", *batchDownloadDir)
+		log.Infof("contents downloaded to: %s", *batchDownloadDir)
 	} else if execCommand.Parsed() {
 		if *execActionDigest == "" {
 			log.Fatalf("action digest required for %s", execCmdStr)
@@ -412,9 +416,9 @@ func getContents(dir string) ([]cas.BatchUploadContent, error) {
 	}
 	for _, f := range fileList {
 		if ! f.IsDir() {
-			data, e := ioutil.ReadFile(f.Name())
+			data, e := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, f.Name()))
 			if e != nil {
-				return nil, fmt.Errorf("error reading %s:%s", f.Name(), e.Error())
+				return nil, fmt.Errorf("error reading %s/%s:%s", dir, f.Name(), e.Error())
 			}
 			uploadContent := makeBatchUploadContentEntry(data)
 			contents = append(contents, uploadContent)
@@ -440,28 +444,43 @@ func makeBatchUploadContentEntry(data []byte) (cas.BatchUploadContent) {
 	return uploadContent
 }
 
-func downloadTheBatch(casAddr string, digestStr string, toDir string) error {
+func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 	casClient := cas.MakeCASClient()
 	resolver := dialer.NewConstantResolver(casAddr)
 
 	// parse the digests into []*Digests
-	var digests []remoteexecution.Digest
-	e := json.Unmarshal([]byte(digestStr), &digests)
-	if e != nil {
-		return e
-	}
-	digestsPtr := make([]*remoteexecution.Digest, len(digests))
-	for i, _ := range digests {
-		digestsPtr[i] = &digests[i]
+	entries := strings.Split(digestsStr, ",")
+	digestsPtr := make([]*remoteexecution.Digest, len(entries))
+	for i, entry := range entries {
+		digestParts := strings.Split(entry, "/")
+		if len(digestParts) != 2 {
+			return fmt.Errorf("invalid digest %s, must be sha/size.", entry)
+		}
+		sz, e := strconv.Atoi(digestParts[1])
+		if e != nil {
+			return fmt.Errorf("error converting size from digest %s to integer. %s", entry, e.Error())
+		}
+		digestsPtr[i] = &remoteexecution.Digest{
+			Hash:                 digestParts[0],
+			SizeBytes:            int64(sz),
+		}
+
 	}
 
 	// request batch download
 	contents, e := casClient.BatchRead(resolver, digestsPtr, &backoff.ConstantBackOff{Interval:time.Millisecond})
 
+	if _, err := os.Open(toDir); os.IsNotExist(err) {
+		os.Mkdir(toDir, 0777)
+	}
+
 	// write any contents returned to toDir
 	for sha, content := range contents {
 		fname := fmt.Sprintf("%s/%s", toDir, sha)
-		f, _ := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0666)
+		f, e := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0666)
+		if e != nil {
+			return fmt.Errorf("error downloading %s to %s: %s", sha, fname, e.Error())
+		}
 		f.Write(content)
 		f.Close()
 	}
