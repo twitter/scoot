@@ -35,14 +35,14 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 	bundleData := req.Body
 
-	exists, err := s.storeConfig.Store.Exists(bundleName)
+	ok, err := s.storeConfig.Store.Exists(bundleName)
 	if err != nil {
 		log.Infof("Exists err: %v --> StatusInternalServerError (from %v)", err, req.RemoteAddr)
 		http.Error(w, fmt.Sprintf("Error checking if bundle exists: %s", err), http.StatusInternalServerError)
 		s.storeConfig.Stat.Counter(stats.BundlestoreUploadErrCounter).Inc(1)
 		return
 	}
-	if exists {
+	if ok {
 		s.storeConfig.Stat.Counter(stats.BundlestoreUploadExistingCounter).Inc(1)
 		fmt.Fprintf(w, "Bundle %s already exists, no-op and return\n", bundleName)
 		return
@@ -77,6 +77,28 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Fprintf(w, "Successfully wrote bundle %s\n", bundleName)
 	s.storeConfig.Stat.Counter(stats.BundlestoreUploadOkCounter).Inc(1)
+}
+
+func (s *httpServer) CheckExistence(w http.ResponseWriter, req *http.Request) {
+	log.Infof("Checking Existence %v %v (from %v)", req.Host, req.URL, req.RemoteAddr)
+	defer s.storeConfig.Stat.Latency(stats.BundlestoreCheckLatency_ms).Time().Stop()
+	s.storeConfig.Stat.Counter(stats.BundlestoreCheckCounter).Inc(1)
+	bundleName := strings.TrimPrefix(req.URL.Path, "/bundle/")
+	if err := checkBundleName(bundleName); err != nil {
+		log.Infof("Bundlename err: %v --> StatusBadRequest (from %v)", err, req.RemoteAddr)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
+		return
+	}
+	ok, err := s.storeConfig.Store.Exists(bundleName)
+	if err != nil || !ok {
+		log.Infof("Check err: %v --> StatusNotFound (from %v)", err, req.RemoteAddr)
+		http.NotFound(w, req)
+		s.storeConfig.Stat.Counter(stats.BundlestoreCheckErrCounter).Inc(1)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	s.storeConfig.Stat.Counter(stats.BundlestoreCheckOkCounter).Inc(1)
 }
 
 func (s *httpServer) HandleDownload(w http.ResponseWriter, req *http.Request) {

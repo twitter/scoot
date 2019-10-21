@@ -47,7 +47,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case "POST":
 		s.httpServer.HandleUpload(w, req)
 	case "HEAD":
-		fallthrough
+		s.httpServer.CheckExistence(w, req)
 	case "GET":
 		s.httpServer.HandleDownload(w, req)
 	default:

@@ -3,6 +3,8 @@ package store
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -88,11 +90,18 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 	if resp.StatusCode == http.StatusOK {
 		log.Infof("%s result %s %v", label, uri, resp.StatusCode)
 		ttlv := s.getTTLValue(resp)
-		return NewResource(resp.Body, resp.ContentLength, ttlv), nil
+		var rc io.ReadCloser
+		if existCheck {
+			rc = ioutil.NopCloser(resp.Body)
+		} else {
+			rc = resp.Body
+		}
+		return NewResource(rc, resp.ContentLength, ttlv), nil
 	}
 	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
-
-	resp.Body.Close()
+	if !existCheck {
+		resp.Body.Close()
+	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	} else if resp.StatusCode == http.StatusBadRequest {
