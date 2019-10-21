@@ -21,4 +21,8 @@ const (
 	MaxRequestsBurst           = 0 // allows this many requests in a burst faster than MaxRPS average
 	MaxConcurrentStreams       = 0 // limits concurrent streams _per client_
 	MaxConnIdleMins            = 1 // limits open idle connections before the server closes them
+
+	// Batch API max combined blobs inlined request size
+	BatchMaxCombinedSize = 10 * 1024 * 1024
+
 )

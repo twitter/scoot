@@ -331,12 +331,20 @@ func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUplo
 
 	// make the request object
 	requests := make([]*remoteexecution.BatchUpdateBlobsRequest_Request, 0)
+	totalSize := int64(0)
 	for _, content := range contents {
 		requests = append(requests, &remoteexecution.BatchUpdateBlobsRequest_Request{
 			Digest:               content.Digest,
 			Data:                 content.Data,
 		})
+		log.Infof("uploading: %v", content.Digest)
+		totalSize += content.Digest.SizeBytes
 	}
+
+	if totalSize > bazel.BatchMaxCombinedSize {
+		return nil, fmt.Errorf("batch size too big. %d > the max %d", totalSize, bazel.BatchMaxCombinedSize)
+	}
+
 	request := &remoteexecution.BatchUpdateBlobsRequest{
 		InstanceName:         bazel.DefaultInstanceName,
 		Requests:             requests,
@@ -351,6 +359,9 @@ func (casCli *CASClient)BatchUpdateWrite(r dialer.Resolver, contents []BatchUplo
 		var err error
 		log.Debugf("Try #%d", try)
 		successfulUploads, err = casCli.batchUpdateWriter(r, request, ctx)
+		if err != nil {
+			log.Infof("try:#%d upload error:%s", try, err.Error())
+		}
 		try += 1
 		return err
 	}, b)
@@ -370,7 +381,9 @@ func (casCli *CASClient)batchUpdateWriter(r dialer.Resolver, request *remoteexec
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
 	}
-	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure())
+	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(bazel.BatchMaxCombinedSize),
+									grpc.MaxCallSendMsgSize(bazel.BatchMaxCombinedSize)))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
 	}
@@ -438,7 +451,9 @@ func (casCli *CASClient)batchReader(r dialer.Resolver, request *remoteexecution.
 	if err != nil {
 		return nil, fmt.Errorf("Failed to resolve server address: %s", err)
 	}
-	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure())
+	cc, err := casCli.grpcDialer.Dial(serverAddr, grpc.WithInsecure(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(bazel.BatchMaxCombinedSize),
+									grpc.MaxCallSendMsgSize(bazel.BatchMaxCombinedSize)))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial server %s: %s", serverAddr, err)
 	}

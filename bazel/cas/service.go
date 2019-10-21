@@ -194,7 +194,7 @@ func (s *casServer) BatchUpdateBlobs(
 	for _, blobReq := range req.GetRequests() {
 		reqSize += blobReq.GetDigest().GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)
@@ -317,7 +317,7 @@ func (s *casServer) BatchReadBlobs(
 	for _, digest := range req.GetDigests() {
 		reqSize += digest.GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)
