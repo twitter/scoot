@@ -43,7 +43,6 @@ func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, g
 // Implements http.Handler interface
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.storeConfig.Stat.Counter(stats.BundlestoreRequestCounter).Inc(1)
-	//TODO(apratti): write ttl in headers in each of these
 	switch req.Method {
 	case "POST":
 		s.httpServer.HandleUpload(w, req)
