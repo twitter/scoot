@@ -102,16 +102,21 @@ const (
 		Groupcache library - per-group metrics (overall metrics for a groupcache on a single Apiserver)
 	*/
 	GroupcacheGetCounter              = "cacheGetCounter"
+	GroupcacheContainCounter          = "cacheContainCounter"
 	GroupcachePutCounter              = "cachePutCounter"
 	GroupcacheHitCounter              = "cacheHitCounter"
 	GroupcacheLoadCounter             = "cacheLoadCounter"
+	GroupcacheCheckCounter            = "cacheCheckCounter"
 	GroupcacheStoreCounter            = "cacheStoreCounter"
 	GroupcacheIncomingRequestsCounter = "cacheIncomingRequestsCounter"
 	GroupcacheLocalLoadErrCounter     = "cacheLocalLoadErrCounter"
 	GroupcacheLocalLoadCounter        = "cacheLocalLoadCounter"
+	GroupcacheLocalCheckErrCounter    = "cacheLocalCheckErrCounter"
+	GroupcacheLocalCheckCounter       = "cacheLocalCheckCounter"
 	GroupcacheLocalStoreErrCounter    = "cacheLocalStoreErrCounter"
 	GroupcacheLocalStoreCounter       = "cacheLocalStoreCounter"
 	GroupcachePeerGetsCounter         = "cachePeerGetsCounter"
+	GroupcachePeerChecksCounter       = "cachePeerChecksCounter"
 	GroupcachePeerPutsCounter         = "cachePeerPutsCounter"
 	GroupcachPeerErrCounter           = "cachePeerErrCounter"
 
