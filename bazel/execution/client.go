@@ -91,7 +91,7 @@ func Execute(r dialer.Resolver, actionDigest *remoteexecution.Digest, skipCache 
 	return execFromClient(ec, req)
 }
 
-// By convention, execute client recieves first Operation from stream and closes
+// By convention, execute client receives first Operation from stream and closes
 func execFromClient(ec remoteexecution.ExecutionClient, req *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
 	execClient, err := ec.Execute(context.Background(), req)
 	if err != nil {

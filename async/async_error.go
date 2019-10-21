@@ -1,7 +1,7 @@
 package async
 
 // AsyncError is an async value that will eventually return an error
-// It is similair to a Promise/Future which returns an error
+// It is similar to a Promise/Future which returns an error
 // The value is supplied by calling SetValue.
 // Once the value is supplied AsyncError is considered completed
 // The value can be retrieved once AsyncError is completed via TryGetValue

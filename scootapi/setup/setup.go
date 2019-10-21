@@ -39,7 +39,7 @@ func startup(strategies *Strategies) error {
 	api, ok := strategies.Api[strategies.ApiStrategy]
 	if !ok {
 		var apiKeys []string
-		for k, _ := range strategies.Api {
+		for k := range strategies.Api {
 			apiKeys = append(apiKeys, k)
 		}
 		return fmt.Errorf("--strategy=%q is not a valid api strategy; valid choices are %v", strategies.ApiStrategy, apiKeys)
@@ -53,7 +53,7 @@ func startup(strategies *Strategies) error {
 	sched, ok := strategies.Sched[strategies.SchedStrategy]
 	if !ok {
 		var schedKeys []string
-		for k, _ := range strategies.Sched {
+		for k := range strategies.Sched {
 			schedKeys = append(schedKeys, k)
 		}
 		return fmt.Errorf("--strategy=%q is not a valid sched strategy; valid choices are %v", strategies.SchedStrategy, schedKeys)

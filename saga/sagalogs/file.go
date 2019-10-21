@@ -240,7 +240,7 @@ func (log *fileSagaLog) GetMessages(sagaId string) ([]saga.SagaMessage, error) {
 	return msgs, nil
 }
 
-// Helper Function that Parses a SagaMessage.  Returns a message if succesfully parsed
+// Helper Function that Parses a SagaMessage.  Returns a message if successfully parsed
 // Returns and error otherwise
 func parseMessage(sagaId string, scanner *bufio.Scanner) (saga.SagaMessage, error) {
 
