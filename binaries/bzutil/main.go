@@ -10,20 +10,22 @@ package main
 // * longrunning.GetOperation polling of operation/scootjob by name and pretty print of result
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -33,15 +35,19 @@ import (
 
 var uploadCmdStr string = "upload_command"
 var uploadActionStr string = "upload_action"
+var batchUploadStr string = "batch_upload"
+var batchDownloadStr string = "batch_download"
 var execCmdStr string = "execute"
 var getOpCmdStr string = "get_operation"
 var cancelOpCmdStr string = "cancel_operation"
 var supportedCommands map[string]bool = map[string]bool{
-	uploadCmdStr:    true,
-	uploadActionStr: true,
-	execCmdStr:      true,
-	getOpCmdStr:     true,
-	cancelOpCmdStr:  true,
+	uploadCmdStr:     true,
+	uploadActionStr:  true,
+	batchUploadStr:   true,
+	batchDownloadStr: true,
+	execCmdStr:       true,
+	getOpCmdStr:      true,
+	cancelOpCmdStr:   true,
 }
 
 func main() {
@@ -63,6 +69,19 @@ func main() {
 	uploadPlatformProps := uploadCommand.String("platform_props", "", "comma-separated command platoform properties, i.e. \"key1=val1,key2=val2\"")
 	uploadJson := uploadCommand.Bool("json", false, "Print command digest as JSON to stdout")
 	uploadLogLevel := uploadCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
+
+	// Batch Upload
+	batchUpload := flag.NewFlagSet(batchUploadStr, flag.ExitOnError)
+	batchUploadAddr := batchUpload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	batchUploadDir := batchUpload.String("dir", "", "dir containing files to upload: '/dir'")
+	batchUploadLogLevel := batchUpload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
+
+	// Batch Download
+	batchDownload := flag.NewFlagSet(batchDownloadStr, flag.ExitOnError)
+	batchDownloadAddr := batchDownload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	batchDownloadDigests := batchDownload.String("digests", "", "digests identifying the contents to download: '<hash1>/<size1>,<hash2>/<size2>,...")
+	batchDownloadDir := batchDownload.String("dir", "./bazel_batch_downloads", "directory to write the download files.  (File names will be the contents sha.)")
+	batchDownloadLogLevel := batchDownload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
@@ -103,8 +122,12 @@ func main() {
 	switch os.Args[1] {
 	case uploadCmdStr:
 		uploadCommand.Parse(os.Args[2:])
+	case batchUploadStr:
+		batchUpload.Parse(os.Args[2:])
 	case uploadActionStr:
 		uploadAction.Parse(os.Args[2:])
+	case batchDownloadStr:
+		batchDownload.Parse(os.Args[2:])
 	case execCmdStr:
 		execCommand.Parse(os.Args[2:])
 	case getOpCmdStr:
@@ -130,6 +153,22 @@ func main() {
 		}
 		parseAndSetLevel(*actionLogLevel)
 		uploadBzAction(*actionAddr, *actionCommandDigest, *actionRootDigest, *actionNoCache, *actionJson)
+	} else if batchUpload.Parsed() {
+		parseAndSetLevel(*batchUploadLogLevel)
+		if *batchUploadDir == "" {
+			log.Fatalf("Must supply an upload dir")
+		}
+		e := batchUploadFiles(*batchUploadAddr, *batchUploadDir)
+		if e != nil {
+			log.Fatalf("batch upload returned %s", e.Error())
+		}
+	} else if batchDownload.Parsed() {
+		parseAndSetLevel(*batchDownloadLogLevel)
+		e := downloadTheBatch(*batchDownloadAddr, *batchDownloadDigests, *batchDownloadDir)
+		if e != nil {
+			log.Fatal(e)
+		}
+		log.Infof("contents downloaded to: %s", *batchDownloadDir)
 	} else if execCommand.Parsed() {
 		if *execActionDigest == "" {
 			log.Fatalf("action digest required for %s", execCmdStr)
@@ -217,7 +256,7 @@ func uploadBzCommand(cmdArgs []string, casAddr, env, outputFilesStr, outputDirsS
 	// upload command to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	err = cas.MakeCASClient().ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
@@ -264,7 +303,7 @@ func uploadBzAction(casAddr, commandDigestStr, rootDigestStr string, noCache, ac
 	// upload action to CAS
 	r := dialer.NewConstantResolver(casAddr)
 	digest := &remoteexecution.Digest{Hash: hash, SizeBytes: size}
-	err = cas.ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	err = cas.MakeCASClient().ByteStreamWrite(r, digest, bytes, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		log.Fatalf("Error writing to CAS: %s", err)
 	}
@@ -341,4 +380,102 @@ func printSupported() {
 		cmds = append(cmds, k)
 	}
 	fmt.Printf("Supported commands: %s\n", strings.Join(cmds, ", "))
+}
+
+// use batch upload, print the list of digests that were uploaded
+func batchUploadFiles(casAddr string, uploadDir string) error {
+	casClient := cas.MakeCASClient()
+	resolver := dialer.NewConstantResolver(casAddr)
+	// set up the contents for upload
+	contents, e := getContents(uploadDir)
+	if e != nil {
+		return e
+	}
+
+	// request the upload
+	digests, e := casClient.BatchUpdateWrite(resolver, contents, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	if e != nil {
+		return e
+	}
+
+	// handle response
+	for _, digest := range digests {
+		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
+	}
+	return e
+}
+
+// get batch upload contents from either the files in a directory, or test set of 10 blobs
+func getContents(dir string) ([]cas.BatchUploadContent, error) {
+	contents := make([]cas.BatchUploadContent, 0)
+	fileList, e := ioutil.ReadDir(dir)
+	if e != nil {
+		return nil, e
+	}
+	for _, f := range fileList {
+		if !f.IsDir() {
+			data, e := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, f.Name()))
+			if e != nil {
+				return nil, fmt.Errorf("error reading %s/%s:%s", dir, f.Name(), e.Error())
+			}
+			uploadContent := makeBatchUploadContentEntry(data)
+			contents = append(contents, uploadContent)
+		}
+	}
+	return contents, nil
+}
+
+func makeBatchUploadContentEntry(data []byte) cas.BatchUploadContent {
+	sha := sha256.Sum256(data)
+	shaStr := fmt.Sprintf("%x", sha)
+	digest := &remoteexecution.Digest{
+		Hash:                 shaStr,
+		SizeBytes:            int64(len(data)),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	uploadContent := cas.BatchUploadContent{
+		Digest: digest,
+		Data:   data,
+	}
+	return uploadContent
+}
+
+func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
+	casClient := cas.MakeCASClient()
+	resolver := dialer.NewConstantResolver(casAddr)
+
+	// parse the digests into []*Digests
+	entries := strings.Split(digestsStr, ",")
+	digestsPtr := make([]*remoteexecution.Digest, len(entries))
+	for i, entry := range entries {
+		d, e := bazel.DigestFromString(entry)
+		if e != nil {
+			return e
+		}
+		digestsPtr[i] = d
+
+	}
+
+	// request batch download
+	contents, e := casClient.BatchRead(resolver, digestsPtr, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+
+	if _, err := os.Open(toDir); os.IsNotExist(err) {
+		os.Mkdir(toDir, 0777)
+	}
+
+	// write any contents returned to toDir
+	for sha, content := range contents {
+		fname := fmt.Sprintf("%s/%s", toDir, sha)
+		f, e := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0666)
+		if e != nil {
+			return fmt.Errorf("error downloading %s to %s: %s", sha, fname, e.Error())
+		}
+		f.Write(content)
+		f.Close()
+	}
+
+	// return any error
+	return e
 }

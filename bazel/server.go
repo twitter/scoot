@@ -77,6 +77,12 @@ func (c *GRPCConfig) NewGRPCServer() *grpc.Server {
 		serverOpts = append(serverOpts, kpOpt)
 	}
 
+	log.Infof("setting MaxRecvMsgSize: %d", BatchMaxCombinedSize)
+	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(BatchMaxCombinedSize))
+
+	log.Infof("setting MaxSendMsgSize: %d", BatchMaxCombinedSize)
+	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(BatchMaxCombinedSize))
+
 	return grpchelpers.NewServer(serverOpts...)
 }
 

@@ -5,9 +5,9 @@
 package mock_longrunning
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	empty "github.com/golang/protobuf/ptypes/empty"
-	context "golang.org/x/net/context"
 	longrunning "google.golang.org/genproto/googleapis/longrunning"
 	grpc "google.golang.org/grpc"
 	reflect "reflect"

@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc"
 
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/dialer"
 )
 

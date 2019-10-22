@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
