@@ -4,6 +4,7 @@ package scheduler
 //go:generate mockgen -source=scheduler.go -package=scheduler -destination=scheduler_mock.go
 
 import (
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/sched"
 )
@@ -22,4 +23,8 @@ type Scheduler interface {
 	SetSchedulerStatus(maxTasks int) error
 
 	GetSchedulerStatus() (int, int)
+}
+
+type SchedulingAlgorithm interface {
+	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState
 }

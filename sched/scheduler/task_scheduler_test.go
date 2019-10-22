@@ -25,7 +25,8 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil, nil, nil)
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil, nil, nil,
+		&OrigSchedulingAlg{})
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -36,7 +37,8 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil, nil, nil)
+	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil, nil, nil,
+		&OrigSchedulingAlg{})
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -57,7 +59,8 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	unScheduledTasks := js.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, stats.NilStatsReceiver())
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, stats.NilStatsReceiver(),
+		&OrigSchedulingAlg{})
 
 	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
@@ -78,9 +81,11 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		{TaskId: "task4", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		{TaskId: "task5", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
-	js := &jobState{Job: &sched.Job{}, Tasks: tasks}
+	js := &jobState{Job: &sched.Job{}, Tasks: tasks, Running: make(map[string]*taskState),
+		Completed: make(map[string]*taskState), NotStarted: make(map[string]*taskState)}
 	req := map[string][]*jobState{"": {js}}
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
+	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil,
+		&OrigSchedulingAlg{})
 	if len(assignments) != 3 {
 		t.Errorf("Expected first three tasks to be assigned, got %v", len(assignments))
 	}
@@ -101,7 +106,8 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	cs.update([]cluster.NodeUpdate{
 		{UpdateType: cluster.NodeAdded, Id: "node4", Node: cluster.NewIdNode("node4")},
 	})
-	assignments, _ = getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
+	assignments, _ = getTaskAssignments(cs, []*jobState{js}, req, nil, nil,
+		&OrigSchedulingAlg{})
 	for _, as := range assignments {
 		if as.task.TaskId == "task4" {
 			if as.nodeSt.node.Id() != taskNodes["task2"] {
@@ -162,7 +168,8 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	}
 	NodeScaleAdjustment = []float32{1, 1, 1} // Setting this global value explicitly for test consistency.
 
-	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
+	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
+		&OrigSchedulingAlg{})
 	if len(assignments) != 5 {
 		t.Errorf("Expected all five tasks to be assigned, got %v", len(assignments))
 	}
@@ -200,18 +207,30 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 		{
 			Job:   makeJob("job1", sched.P0),
 			Tasks: makeTasks("job1"),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 		{
 			Job:   makeJob("job2", sched.P1),
 			Tasks: makeTasks("job2"),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 		{
 			Job:   makeJob("job3", sched.P2),
 			Tasks: makeTasks("job3"),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 		{
 			Job:   makeJob("job4", sched.P0),
 			Tasks: makeTasks("job4"),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 	}
 
@@ -225,7 +244,8 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 
 	req := map[string][]*jobState{"": js}
 
-	assignments, _ := getTaskAssignments(cs, js, req, nil, nil)
+	assignments, _ := getTaskAssignments(cs, js, req, nil, nil,
+		&OrigSchedulingAlg{})
 	if len(assignments) != numNodes {
 		t.Errorf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
 	}
@@ -241,7 +261,8 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 
 	// Complete first job and get remaining P0 scheduled
 	js[2].taskCompleted(assignments[0].task.TaskId, true)
-	assignments, _ = getTaskAssignments(cs, js[2:], req, nil, nil)
+	assignments, _ = getTaskAssignments(cs, js[2:], req, nil, nil,
+		&OrigSchedulingAlg{})
 
 	if len(assignments) != 1 {
 		t.Errorf("Expected additional assignment after previous completion, got: %d", len(assignments))
@@ -272,14 +293,23 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		{
 			Job:   makeJob("job1", sched.P0),
 			Tasks: makeTasks(10, "job1", sched.P0),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 		{
 			Job:   makeJob("job2", sched.P1),
 			Tasks: makeTasks(10, "job2", sched.P1),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 		{
 			Job:   makeJob("job3", sched.P2),
 			Tasks: makeTasks(10, "job3", sched.P2),
+			Running: make(map[string]*taskState),
+			Completed: make(map[string]*taskState),
+			NotStarted: make(map[string]*taskState),
 		},
 	}
 
@@ -298,7 +328,8 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
 
 	// Check for 7 P2, 2 P1, and 1 P0 tasks
-	assignments, _ := getTaskAssignments(cs, js, req, config, nil)
+	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
+		&OrigSchedulingAlg{})
 	if len(assignments) != numNodes {
 		t.Fatalf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
 	}

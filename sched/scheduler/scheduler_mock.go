@@ -6,6 +6,7 @@ package scheduler
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	stats "github.com/twitter/scoot/common/stats"
 	saga "github.com/twitter/scoot/saga"
 	sched "github.com/twitter/scoot/sched"
 	reflect "reflect"
@@ -118,4 +119,39 @@ func (m *MockScheduler) GetSchedulerStatus() (int, int) {
 // GetSchedulerStatus indicates an expected call of GetSchedulerStatus
 func (mr *MockSchedulerMockRecorder) GetSchedulerStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerStatus", reflect.TypeOf((*MockScheduler)(nil).GetSchedulerStatus))
+}
+
+// MockSchedulingAlgorithm is a mock of SchedulingAlgorithm interface
+type MockSchedulingAlgorithm struct {
+	ctrl     *gomock.Controller
+	recorder *MockSchedulingAlgorithmMockRecorder
+}
+
+// MockSchedulingAlgorithmMockRecorder is the mock recorder for MockSchedulingAlgorithm
+type MockSchedulingAlgorithmMockRecorder struct {
+	mock *MockSchedulingAlgorithm
+}
+
+// NewMockSchedulingAlgorithm creates a new mock instance
+func NewMockSchedulingAlgorithm(ctrl *gomock.Controller) *MockSchedulingAlgorithm {
+	mock := &MockSchedulingAlgorithm{ctrl: ctrl}
+	mock.recorder = &MockSchedulingAlgorithmMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockSchedulingAlgorithm) EXPECT() *MockSchedulingAlgorithmMockRecorder {
+	return m.recorder
+}
+
+// GetTasksToBeAssigned mocks base method
+func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
+	ret := m.ctrl.Call(m, "GetTasksToBeAssigned", jobs, stat, cs, requestors, cfg)
+	ret0, _ := ret[0].([]*taskState)
+	return ret0
+}
+
+// GetTasksToBeAssigned indicates an expected call of GetTasksToBeAssigned
+func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors, cfg interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors, cfg)
 }

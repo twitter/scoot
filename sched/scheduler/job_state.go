@@ -20,6 +20,11 @@ type jobState struct {
 	JobKilled      bool         //indicates the job was killed
 	TimeCreated    time.Time    //when was this job first created
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
+
+	// track tasks by state (completed, running, not started) for new scheduling alg
+	Completed	   map[string]*taskState
+	Running		   map[string]*taskState
+	NotStarted	   map[string]*taskState
 }
 
 // Contains all the information for a specified task
@@ -60,6 +65,9 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 		JobKilled:      false,
 		TimeCreated:    time.Now(),
 		TimeMarker:     time.Now(),
+		Completed:      make(map[string]*taskState),
+		Running:        make(map[string]*taskState),
+		NotStarted:     make(map[string]*taskState),
 	}
 
 	for _, taskDef := range job.Def.Tasks {
@@ -77,6 +85,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 			AvgDuration:   duration,
 		}
 		j.Tasks = append(j.Tasks, task)
+		j.NotStarted[task.TaskId] = task
 	}
 
 	// Assumes Forward Recovery only, tasks are either
@@ -87,6 +96,13 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 		if saga.GetState().IsTaskCompleted(taskId) {
 			j.getTask(taskId).Status = sched.Completed
 			j.TasksCompleted++
+			if _, ok := j.Running[taskId]; ok {
+				delete(j.Running,taskId)
+			} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
+				delete(j.NotStarted, taskId)
+			}
+			j.Completed[taskId] = j.getTask(taskId)
+
 		}
 	}
 
@@ -125,6 +141,12 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
 	j.TasksRunning++
+	if _, ok := j.NotStarted[taskId]; ok {
+		delete(j.NotStarted,taskId)
+	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
+		delete(j.Completed, taskId)
+	}
+	j.Running[taskId] = taskState
 }
 
 // Update JobState to reflect that a Task has been completed
@@ -138,6 +160,12 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	if running {
 		j.TasksRunning--
 	}
+	if _, ok := j.Running[taskId]; ok {
+		delete(j.Running,taskId)
+	} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
+		delete(j.NotStarted, taskId)
+	}
+	j.Completed[taskId] = taskState
 }
 
 // Update JobState to reflect that an error has occurred running this Task
@@ -150,6 +178,12 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	if preempted {
 		taskState.NumTimesTried--
 	}
+	if _, ok := j.Running[taskId]; ok {
+		delete(j.Running,taskId)
+	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
+		delete(j.Completed, taskId)
+	}
+	j.NotStarted[taskId] = taskState
 }
 
 // Returns the Current Job Status
