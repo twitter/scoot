@@ -6,10 +6,11 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
+
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 func TestDomainThriftDomainExecReq(t *testing.T) {
@@ -49,7 +50,7 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 func TestDomainThriftDomainActionRes(t *testing.T) {
 	pcf := &google_rpc_errdetails.PreconditionFailure{
 		Violations: []*google_rpc_errdetails.PreconditionFailure_Violation{
-			{
+			&google_rpc_errdetails.PreconditionFailure_Violation{
 				Type:    PreconditionMissing,
 				Subject: "blobs/abc123/99",
 			},
@@ -67,14 +68,14 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 			StdoutRaw:    []byte("durant"),
 			StderrRaw:    []byte("lynch"),
 			OutputFiles: []*remoteexecution.OutputFile{
-				{
+				&remoteexecution.OutputFile{
 					Digest:       &remoteexecution.Digest{Hash: "green", SizeBytes: 23},
 					Path:         "crabtree",
 					IsExecutable: true,
 				},
 			},
 			OutputDirectories: []*remoteexecution.OutputDirectory{
-				{
+				&remoteexecution.OutputDirectory{
 					TreeDigest: &remoteexecution.Digest{Hash: "cooper", SizeBytes: 89},
 					Path:       "iguodala",
 				},

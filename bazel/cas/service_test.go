@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -17,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
@@ -287,30 +287,30 @@ func TestBatchUpdateBlobs(t *testing.T) {
 	// NOTE Count of 6 intended to be > cas.BatchParallelism value
 	req := &remoteexecution.BatchUpdateBlobsRequest{
 		Requests: []*remoteexecution.BatchUpdateBlobsRequest_Request{
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1},
 				Data:   testData1,
 			},
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2},
 				Data:   testData2,
 			},
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3},
 				Data:   testData3,
 			},
 			// empty (should still succeed)
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: bazel.EmptySha, SizeBytes: bazel.EmptySize},
 				Data:   []byte{},
 			},
 			// mismatch data sha
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: testHash4, SizeBytes: testSize4},
 				Data:   testData2,
 			},
 			// mismatch data length
-			{
+			&remoteexecution.BatchUpdateBlobsRequest_Request{
 				Digest: &remoteexecution.Digest{Hash: testHash5, SizeBytes: testSize5 + 1},
 				Data:   testData5,
 			},
@@ -378,15 +378,15 @@ func TestBatchReadBlobs(t *testing.T) {
 	// NOTE Count of 6 intended to be > cas.BatchParallelism value
 	req := &remoteexecution.BatchReadBlobsRequest{
 		Digests: []*remoteexecution.Digest{
-			{Hash: testHash1, SizeBytes: testSize1},
-			{Hash: testHash2, SizeBytes: testSize2},
-			{Hash: testHash3, SizeBytes: testSize3},
+			&remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1},
+			&remoteexecution.Digest{Hash: testHash2, SizeBytes: testSize2},
+			&remoteexecution.Digest{Hash: testHash3, SizeBytes: testSize3},
 			// empty (should still succeed)
-			{Hash: bazel.EmptySha, SizeBytes: bazel.EmptySize},
+			&remoteexecution.Digest{Hash: bazel.EmptySha, SizeBytes: bazel.EmptySize},
 			// mismatch length
-			{Hash: testHash4, SizeBytes: testSize4 + 1},
+			&remoteexecution.Digest{Hash: testHash4, SizeBytes: testSize4 + 1},
 			// non exist
-			{Hash: testHash5, SizeBytes: testSize5},
+			&remoteexecution.Digest{Hash: testHash5, SizeBytes: testSize5},
 		},
 	}
 
@@ -669,10 +669,10 @@ func getFakeActionResult() ([]byte, error) {
 	d := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	ar := &remoteexecution.ActionResult{
 		OutputFiles: []*remoteexecution.OutputFile{
-			{Path: "/dir/file", Digest: d},
+			&remoteexecution.OutputFile{Path: "/dir/file", Digest: d},
 		},
 		OutputDirectories: []*remoteexecution.OutputDirectory{
-			{Path: "/dir", TreeDigest: d},
+			&remoteexecution.OutputDirectory{Path: "/dir", TreeDigest: d},
 		},
 		ExitCode:     int32(12),
 		StdoutDigest: d,

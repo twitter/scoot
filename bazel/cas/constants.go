@@ -17,8 +17,6 @@ const (
 	// NOTE experimental/arbitrary setting. Consider adding a mechanism to set via StoreConfigs
 	// NOTE if service implementation is changed, retest with setting <= 5
 	BatchParallelism = 5
-	// Batch API max combined blobs inlined request size
-	BatchMaxCombinedSize = 10 * 1024 * 1024
 
 	// ActionCache constants
 	ResultAddressKey = "ActionCacheResult"
