@@ -141,10 +141,10 @@ func (s *casServer) FindMissingBlobs(
 			}
 
 			storeName := bazel.DigestStoreName(d)
-			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
+			if ok, err := s.storeConfig.Store.Exists(storeName); err != nil {
 				log.Errorf("Error checking existence of %s: %v", storeName, err)
 				err = fmt.Errorf("Store failed checking existence of one or more digests")
-			} else if !exists {
+			} else if !ok {
 				resultCh <- d
 				return
 			}
@@ -613,10 +613,10 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			// If data Exists, terminate immediately with size of existing data (Store is immutable)
 			// Note that Store does not support `stat`, so we trust client-provided size to avoid reading the data
 			storeName = bazel.DigestStoreName(resource.Digest)
-			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
+			if ok, err := s.storeConfig.Store.Exists(storeName); err != nil {
 				log.Errorf("Error checking existence: %v", err)
 				return status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
-			} else if exists {
+			} else if ok {
 				log.Infof("Resource exists in store: %s. Using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
 				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
 				err = ser.SendAndClose(res)
