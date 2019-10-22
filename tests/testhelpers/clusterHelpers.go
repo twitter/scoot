@@ -7,7 +7,7 @@ import (
 
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/domain/setup"
+	"github.com/twitter/scoot/scheduler/setup"
 )
 
 // Spins up a new Local Test Cluster in a separate

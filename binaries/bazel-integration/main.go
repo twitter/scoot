@@ -26,7 +26,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler"
-	"github.com/twitter/scoot/scheduler/domain/setup"
+	"github.com/twitter/scoot/scheduler/setup"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
