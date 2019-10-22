@@ -47,6 +47,7 @@ func ParseExecuteOperation(op *longrunning.Operation) (*remoteexecution.ExecuteO
 	return eom, st, res, nil
 }
 
+// TODO - used by bazel-integration, may be possible to replace with OperationToJson via bzutil and remove this
 // JSON unmarshalling doesn't work for Operations with nested Results, as they're of unexported type isOperation_Result.
 // Thus, we need custom unmarshalling logic.
 func ExtractOpFromJson(opBytes []byte) (*longrunning.Operation, error) {
@@ -150,6 +151,48 @@ func ExtractOpFromJson(opBytes []byte) (*longrunning.Operation, error) {
 		}
 	}
 	return op, nil
+}
+
+// Converts a longrunning.Operation to a Json-encoded []byte. Because an Operation is not natively compatible
+// with json.Marshal, this does the minimum necessary extraction of nested data and wrapping with custom
+// types so that it can be used with Marshal.
+func OperationToJson(op *longrunning.Operation) ([]byte, error) {
+	if op == nil {
+		return nil, nil
+	}
+
+	eom, st, res, err := ParseExecuteOperation(op)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonResult := &operationResultWrapper{}
+	if res != nil {
+		jsonResult.Error = nil
+		jsonResult.Response = res
+	} else {
+		jsonResult.Error = st
+		jsonResult.Response = nil
+	}
+	ow := &operationWrapper{
+		Name:     op.GetName(),
+		Metadata: eom,
+		Done:     op.GetDone(),
+		Result:   jsonResult,
+	}
+	return json.Marshal(ow)
+}
+
+type operationWrapper struct {
+	Name     string
+	Metadata *remoteexecution.ExecuteOperationMetadata
+	Done     bool
+	Result   *operationResultWrapper
+}
+
+type operationResultWrapper struct {
+	Error    *status.Status
+	Response *remoteexecution.ExecuteResponse
 }
 
 // Create error for failing to deserialize a field as an expected type
