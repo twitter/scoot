@@ -355,7 +355,7 @@ func (lt *ApiserverLoadTester) performBatchAction(startCh chan struct{}, doneCh 
 		log.Debugf("uploading:%d entries", len(lt.batchContents))
 		defer lt.stat.Latency(BatchUploadLatency).Time().Stop()
 		_, err := lt.casCli.BatchUpdateWrite(lt.dialer, lt.batchContents,
-			backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
+			backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 		if err != nil {
 			doneCh <- 0
 			return fmt.Errorf("batch upload error:%s", err.Error())
@@ -364,7 +364,7 @@ func (lt *ApiserverLoadTester) performBatchAction(startCh chan struct{}, doneCh 
 		log.Debugf("downloading:%d entries", len(lt.batchContents))
 		defer lt.stat.Latency(BatchDownloadLatency).Time().Stop()
 		_, err := lt.casCli.BatchRead(lt.dialer, lt.batchDigests,
-			backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
+			backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 		if err != nil {
 			doneCh <- 0
 			return fmt.Errorf("batch download error:%s", err.Error())
@@ -408,7 +408,7 @@ func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 	log.Debugf("uploading:%v", digest)
 	defer lt.stat.Latency(UploadLatency).Time().Stop()
 	err := lt.casCli.ByteStreamWrite(lt.dialer, digest, theData[:],
-		backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
+		backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		return "", fmt.Errorf("Upload error:%s", err.Error())
 	}
@@ -440,7 +440,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 	log.Debugf("downloading:%v", digest)
 	defer lt.stat.Latency(DownloadLatency).Time().Stop()
 	_, err := lt.casCli.ByteStreamRead(lt.dialer, digest,
-		backoff.WithMaxRetries(&backoff.ZeroBackOff{}, 1))
+		backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
 		return fmt.Errorf("Error downloading id:%s.  Err:%s", digestId, err.Error())
 	}

@@ -17,7 +17,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
@@ -394,7 +393,7 @@ func batchUploadFiles(casAddr string, uploadDir string) error {
 	}
 
 	// request the upload
-	digests, e := casClient.BatchUpdateWrite(resolver, contents, &backoff.ConstantBackOff{Interval: time.Millisecond})
+	digests, e := casClient.BatchUpdateWrite(resolver, contents, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if e != nil {
 		return e
 	}
@@ -460,7 +459,7 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 	}
 
 	// request batch download
-	contents, e := casClient.BatchRead(resolver, digestsPtr, &backoff.ConstantBackOff{Interval: time.Millisecond})
+	contents, e := casClient.BatchRead(resolver, digestsPtr, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 
 	if _, err := os.Open(toDir); os.IsNotExist(err) {
 		os.Mkdir(toDir, 0777)
