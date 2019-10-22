@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/twitter/scoot/common/endpoints"
 )
 

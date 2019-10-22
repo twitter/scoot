@@ -456,7 +456,6 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 			return e
 		}
 		digestsPtr[i] = d
-
 	}
 
 	// request batch download

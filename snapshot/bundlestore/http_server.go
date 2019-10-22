@@ -53,7 +53,7 @@ func (s *httpServer) HandleUpload(w http.ResponseWriter, req *http.Request) {
 	if s.storeConfig.TTLCfg != nil {
 		ttl = &store.TTLValue{TTL: time.Now().Add(s.storeConfig.TTLCfg.TTL), TTLKey: s.storeConfig.TTLCfg.TTLKey}
 	}
-	for k, _ := range req.Header {
+	for k := range req.Header {
 		if !strings.EqualFold(k, store.DefaultTTLKey) {
 			continue
 		}

@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/twitter/scoot/bazel/cas/connection"
 	"math/rand"
 	"testing"
 	"time"
@@ -24,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/cas/connection"
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
 	"github.com/twitter/scoot/bazel/cas/mock_connection"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
