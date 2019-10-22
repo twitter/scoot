@@ -50,7 +50,7 @@ func TestDomainThriftDomainExecReq(t *testing.T) {
 func TestDomainThriftDomainActionRes(t *testing.T) {
 	pcf := &google_rpc_errdetails.PreconditionFailure{
 		Violations: []*google_rpc_errdetails.PreconditionFailure_Violation{
-			&google_rpc_errdetails.PreconditionFailure_Violation{
+			{
 				Type:    PreconditionMissing,
 				Subject: "blobs/abc123/99",
 			},
@@ -68,14 +68,14 @@ func TestDomainThriftDomainActionRes(t *testing.T) {
 			StdoutRaw:    []byte("durant"),
 			StderrRaw:    []byte("lynch"),
 			OutputFiles: []*remoteexecution.OutputFile{
-				&remoteexecution.OutputFile{
+				{
 					Digest:       &remoteexecution.Digest{Hash: "green", SizeBytes: 23},
 					Path:         "crabtree",
 					IsExecutable: true,
 				},
 			},
 			OutputDirectories: []*remoteexecution.OutputDirectory{
-				&remoteexecution.OutputDirectory{
+				{
 					TreeDigest: &remoteexecution.Digest{Hash: "cooper", SizeBytes: 89},
 					Path:       "iguodala",
 				},

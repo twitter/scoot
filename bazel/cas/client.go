@@ -46,7 +46,7 @@ type CASClient struct {
 func MakeCASClient() *CASClient {
 	return &CASClient{
 		grpcDialer: conn.MakeRealGRPCDialer(), // by default CASClient uses a real grpc dialer
-		CASpbMaker: MakeCASpbClient,      // by default CASClient uses a real proto CAS Client
+		CASpbMaker: MakeCASpbClient,           // by default CASClient uses a real proto CAS Client
 	}
 }
 

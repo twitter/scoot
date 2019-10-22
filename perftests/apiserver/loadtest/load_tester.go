@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	UploadLatency   = "write_latency"
-	DownloadLatency = "read_latency"
-	BatchUploadLatency = "batch_write_latency"
+	UploadLatency        = "write_latency"
+	DownloadLatency      = "read_latency"
+	BatchUploadLatency   = "batch_write_latency"
 	BatchDownloadLatency = "batch_read_latency"
-	KBYTE           = 1024
+	KBYTE                = 1024
 )
 
 var TestDataSizes = [3]int{1, 10, 1000} // these sizes are 1kb units: 1kb, 10kb, 1m test files
@@ -250,7 +250,7 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 		}
 		if lt.useBatchApi {
 			lt.accumulateBatchContent(dIdx)
-			if i == lt.numActions - 1 {
+			if i == lt.numActions-1 {
 				go lt.performBatchAction(startCh, actionDoneCh)
 			}
 		} else {
@@ -280,7 +280,7 @@ func (lt *ApiserverLoadTester) writeStatsToFile() {
 
 	// sort the map to print in same order each time
 	keys := make([]string, 0)
-	for k, _ := range statsMap {
+	for k := range statsMap {
 		keys = append(keys, k)
 	}
 	line := new(bytes.Buffer)
@@ -349,8 +349,8 @@ func (lt *ApiserverLoadTester) performTestAction(dataIdx int, startCh chan struc
 	}
 }
 
-func (lt *ApiserverLoadTester) performBatchAction(startCh chan struct {}, doneCh chan int) error {
-	<- startCh
+func (lt *ApiserverLoadTester) performBatchAction(startCh chan struct{}, doneCh chan int) error {
+	<-startCh
 	if lt.action == "upload" {
 		log.Debugf("uploading:%d entries", len(lt.batchContents))
 		defer lt.stat.Latency(BatchUploadLatency).Time().Stop()
