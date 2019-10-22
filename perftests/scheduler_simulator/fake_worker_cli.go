@@ -1,12 +1,10 @@
 package scheduler_simulator
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
 )
@@ -32,48 +30,7 @@ func makeFakeWorker(n cluster.Node) *FakeWorker {
 
 func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	fw.cmdId = cmd.TaskID
-	if len(cmd.Argv) != 3 {
-		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
-		}, fmt.Errorf("expected cmd's Argv to have 3 entries: <anything>, <task duration>")
-	}
-	duration, err := strconv.Atoi(cmd.Argv[1])
-	if err != nil {
-		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
-		}, fmt.Errorf("didn't get a valid (int) task duration value from cmd.Argv's first param:%s", cmd.Argv[1])
-	}
-	exitCode, err := strconv.Atoi(cmd.Argv[2])
-	if err != nil {
-		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
-		}, fmt.Errorf("didn't get a valid (int) exit code value from cmd.Argv's first param:%s", cmd.Argv[2])
-	}
-
+	duration, _ := strconv.Atoi(cmd.Argv[1])
 	fw.state = runner.RUNNING
 	go func(fw *FakeWorker) {
 		time.Sleep(time.Duration(duration) * time.Second)
@@ -81,6 +38,7 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	}(fw)
 
 	<-fw.doneCh // pause till done
+	exitCode, _ := strconv.Atoi(cmd.Argv[2])
 	fw.state = runner.COMPLETE
 	rs := runner.RunStatus{
 		RunID:        runner.RunID(fw.cmdId),
@@ -89,7 +47,7 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 		StdoutRef:    "",
 		StderrRef:    "",
 		SnapshotID:   "",
-		ExitCode:     errors.ExitCode(exitCode),
+		ExitCode:     exitCode,
 		Error:        "",
 		ActionResult: nil,
 	}

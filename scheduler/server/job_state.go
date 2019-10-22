@@ -21,8 +21,7 @@ type jobState struct {
 	TimeCreated    time.Time    //when was this job first created
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
 
-	// track tasks by state (completed, running, not started) for priority based scheduling algorithm
-	// TODO remove if we don't use the priority based scheduling algorithm
+	// track tasks by state (completed, running, not started) for new scheduling alg
 	Completed  map[string]*taskState
 	Running    map[string]*taskState
 	NotStarted map[string]*taskState
