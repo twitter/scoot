@@ -51,7 +51,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
 	js := newJobState(&job, saga, nil)
-	req := map[string][]*jobState{"": []*jobState{js}}
+	req := map[string][]*jobState{"": {js}}
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
@@ -72,14 +72,14 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	tasks := []*taskState{
-		&taskState{TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task3", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
-		&taskState{TaskId: "task4", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task5", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task3", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task4", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task5", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
 	js := &jobState{Job: &domain.Job{}, Tasks: tasks}
-	req := map[string][]*jobState{"": []*jobState{js}}
+	req := map[string][]*jobState{"": {js}}
 	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
 	if len(assignments) != 3 {
 		t.Errorf("Expected first three tasks to be assigned, got %v", len(assignments))
@@ -99,7 +99,7 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 
 	// Add a new idle node and then confirm that task4, task5 are assigned based on affinity.
 	cs.update([]cluster.NodeUpdate{
-		cluster.NodeUpdate{UpdateType: cluster.NodeAdded, Id: "node4", Node: cluster.NewIdNode("node4")},
+		{UpdateType: cluster.NodeAdded, Id: "node4", Node: cluster.NewIdNode("node4")},
 	})
 	assignments, _ = getTaskAssignments(cs, []*jobState{js}, req, nil, nil)
 	for _, as := range assignments {
@@ -118,33 +118,33 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 // We want to see three tasks with TagX scheduled first, followed by one TagY, then the final TagX
 func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	js := []*jobState{
-		&jobState{
+		{
 			Job: &domain.Job{
 				Id:  "job1",
 				Def: domain.JobDefinition{Tag: "TagX"},
 			},
 			Tasks: []*taskState{
-				&taskState{JobId: "job1", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-				&taskState{JobId: "job1", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+				{JobId: "job1", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+				{JobId: "job1", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 			},
 		},
-		&jobState{
+		{
 			Job: &domain.Job{
 				Id:  "job2",
 				Def: domain.JobDefinition{Tag: "TagY"},
 			},
 			Tasks: []*taskState{
-				&taskState{JobId: "job2", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+				{JobId: "job2", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 			},
 		},
-		&jobState{
+		{
 			Job: &domain.Job{
 				Id:  "job3",
 				Def: domain.JobDefinition{Tag: "TagX"},
 			},
 			Tasks: []*taskState{
-				&taskState{JobId: "job3", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-				&taskState{JobId: "job3", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+				{JobId: "job3", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+				{JobId: "job3", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 			},
 		},
 	}
@@ -193,23 +193,23 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	}
 	makeTasks := func(jobId string) []*taskState {
 		return []*taskState{
-			&taskState{JobId: jobId, TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+			{JobId: jobId, TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		}
 	}
 	js := []*jobState{
-		&jobState{
+		{
 			Job:   makeJob("job1", domain.P0),
 			Tasks: makeTasks("job1"),
 		},
-		&jobState{
+		{
 			Job:   makeJob("job2", domain.P1),
 			Tasks: makeTasks("job2"),
 		},
-		&jobState{
+		{
 			Job:   makeJob("job3", domain.P2),
 			Tasks: makeTasks("job3"),
 		},
-		&jobState{
+		{
 			Job:   makeJob("job4", domain.P0),
 			Tasks: makeTasks("job4"),
 		},
@@ -269,15 +269,15 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		return tasks
 	}
 	js := []*jobState{
-		&jobState{
+		{
 			Job:   makeJob("job1", domain.P0),
 			Tasks: makeTasks(10, "job1", domain.P0),
 		},
-		&jobState{
+		{
 			Job:   makeJob("job2", domain.P1),
 			Tasks: makeTasks(10, "job2", domain.P1),
 		},
-		&jobState{
+		{
 			Job:   makeJob("job3", domain.P2),
 			Tasks: makeTasks(10, "job3", domain.P2),
 		},

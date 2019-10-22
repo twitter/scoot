@@ -53,7 +53,6 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 	// contains Platform Properties which can be used to specify arbitary server-side behavior.
 	result.Priority = domain.P0
 	result.Tasks = []domain.TaskDefinition{}
-
 	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
 	// per Bazel API this data must be made available by the client in the CAS before submitting this request.
 	// To prevent increasing load and complexity in the Scheduler, this lookup is done at run time on the Worker

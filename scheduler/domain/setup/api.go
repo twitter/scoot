@@ -53,7 +53,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		s.apiCfg.Count = DefaultApiServerCount
 	}
 
-	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to suppress all log output
 	// besides log.Panic, so we set a default of Info.
 	if s.apiCfg.LogLevel <= 0 {
 		s.apiCfg.LogLevel = DefaultApiServerLogLevel

@@ -75,7 +75,7 @@ func isSagaInSafeState(state *SagaState) bool {
 		return true
 	}
 
-	for taskId, _ := range state.taskState {
+	for taskId := range state.taskState {
 		if state.IsTaskStarted(taskId) && !state.IsTaskCompleted(taskId) {
 			return false
 		}

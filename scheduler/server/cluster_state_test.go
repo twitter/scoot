@@ -319,20 +319,20 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	cs.taskScheduled("node2", "job1", "task2", "snapA")
 	cs.taskScheduled("node3", "job1", "task3", "snapB")
 	expectedGroups := map[string]*nodeGroup{
-		"": &nodeGroup{
+		"": {
 			idle: map[cluster.NodeId]*nodeState{
 				"node4": cs.nodes["node4"],
 			},
 			busy: map[cluster.NodeId]*nodeState{},
 		},
-		"snapA": &nodeGroup{
+		"snapA": {
 			idle: map[cluster.NodeId]*nodeState{},
 			busy: map[cluster.NodeId]*nodeState{
 				"node1": cs.nodes["node1"],
 				"node2": cs.nodes["node2"],
 			},
 		},
-		"snapB": &nodeGroup{
+		"snapB": {
 			idle: map[cluster.NodeId]*nodeState{},
 			busy: map[cluster.NodeId]*nodeState{
 				"node3": cs.nodes["node3"],

@@ -593,22 +593,14 @@ func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
 	return total, completed, running
 }
 
-// Checks if any new jobs have been requested since the last loop and adds
-// them to the jobs the scheduler is handling
-func (s *statefulScheduler) addJobs() {
-	// For all new job requests (on the check job channel) that have come in since the last iteration of the step() loop,
-	// verify the job request: it doesn't exceed the requestor's limits or number of requestors, has a valid priority and
-	// doesn't duplicate tasks in another new job request.
-	//
-	// If the job fails the validation, put an error on the job's callback channel, otherwise put nil on the job's callback
-	// channel.
-	//
-	// after all new job requests have been verified, get all jobs that were put in the add job channel since the last
-	// pass through step() and add them to the inProgress list, order the tasks in the job by descending duration and
-	// add the job to the requestor map
-	//
-	defer s.stat.Latency(stats.SchedAddJobsLatency_ms).Time().Stop()
-checkLoop:
+// Checks all new job requests (on the check job channel) that have come in since the last iteration of the step() loop,
+// verify the job request: it doesn't exceed the requestor's limits or number of requestors, has a valid priority and
+// doesn't duplicate tasks in another new job request.
+//
+// If the job fails the validation, put an error on the job's callback channel, otherwise put nil on the job's callback
+// channel.
+func (s *statefulScheduler) checkJobsLoop() {
+	defer s.stat.Latency(stats.SchedCheckJobsLoopLatency_ms).Time().Stop()
 	for {
 		select {
 		case checkJobMsg := <-s.checkJobCh:
@@ -646,13 +638,22 @@ checkLoop:
 			}
 			checkJobMsg.resultCh <- err
 		default:
-			break checkLoop
+			return
 		}
 	}
+}
 
-	receivedJob := false
-	var total, completed, running int
-addLoop:
+// after all new job requests have been verified, get all jobs that were put in the add job channel since the last
+// pass through step() and add them to the inProgress list, order the tasks in the job by descending duration and
+// add the job to the requestor map
+func (s *statefulScheduler) addJobsLoop() {
+	defer s.stat.Latency(stats.SchedAddJobsLoopLatency_ms).Time().Stop()
+	var (
+		receivedJob bool
+		total       int
+		completed   int
+		running     int
+	)
 	for {
 		select {
 		case newJobMsg := <-s.addJobCh:
@@ -707,20 +708,27 @@ addLoop:
 			s.requestorMap[req] = append(s.requestorMap[req], js)
 			log.WithFields(lf).Info("Created new job")
 		default:
-			break addLoop
+			if receivedJob {
+				total, completed, running = s.getSchedulerTaskCounts()
+				log.WithFields(
+					log.Fields{
+						"unscheduledTasks": total - completed - running,
+						"runningTasks":     running,
+						"completedTasks":   completed,
+						"totalTasks":       total,
+					}).Info("Added jobs")
+			}
+			return
 		}
 	}
+}
 
-	if receivedJob {
-		total, completed, running = s.getSchedulerTaskCounts()
-		log.WithFields(
-			log.Fields{
-				"unscheduledTasks": total - completed - running,
-				"runningTasks":     running,
-				"completedTasks":   completed,
-				"totalTasks":       total,
-			}).Info("Added jobs")
-	}
+// Checks if any new jobs have been requested since the last loop and adds
+// them to the jobs the scheduler is handling
+func (s *statefulScheduler) addJobs() {
+	defer s.stat.Latency(stats.SchedAddJobsLatency_ms).Time().Stop()
+	s.checkJobsLoop()
+	s.addJobsLoop()
 }
 
 // Helpers, assumes that jobId is present given a consistent scheduler state.
@@ -755,7 +763,7 @@ func (s *statefulScheduler) getJob(jobId string) *jobState {
 // checks if any of the in progress jobs are completed.  If a job is
 // completed log an EndSaga Message to the SagaLog asynchronously
 func (s *statefulScheduler) checkForCompletedJobs() {
-	l := s.stat.Latency(stats.SchedCheckForCompletedLatency_ms).Time()
+	defer s.stat.Latency(stats.SchedCheckForCompletedLatency_ms).Time().Stop()
 	// Check For Completed Jobs & Log EndSaga Message
 	for _, jobState := range s.inProgressJobs {
 		if jobState.getJobStatus() == domain.Completed && !jobState.EndingSaga {
@@ -796,7 +804,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 								"tag":       j.Job.Def.Tag,
 							}).Info("Job completed but failed to log")
 					}
-					l.Stop()
 				})
 		}
 	}
@@ -946,7 +953,7 @@ func (s *statefulScheduler) scheduleTasks() {
 							"tag":       tag,
 						}).Info(msg)
 
-					// If the task completed succesfully but sagalog failed, start a goroutine to retry until it succeeds.
+					// If the task completed successfully but sagalog failed, start a goroutine to retry until it succeeds.
 					if taskErr.sagaErr != nil && taskErr.st.RunID != "" && taskErr.runnerErr == nil && taskErr.resultErr == nil {
 						log.WithFields(
 							log.Fields{

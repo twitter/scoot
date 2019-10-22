@@ -26,7 +26,7 @@ type Server struct {
 
 // Make a new server that delegates to an underlying store.
 // TTL may be nil, in which case defaults are applied downstream.
-// TTL may be overriden by request headers, but we always pass this TTLKey to the store.
+// TTL may be overridden by request headers, but we always pass this TTLKey to the store.
 func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, gc *bazel.GRPCConfig) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
 	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
@@ -47,7 +47,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case "POST":
 		s.httpServer.HandleUpload(w, req)
 	case "HEAD":
-		fallthrough
+		s.httpServer.CheckExistence(w, req)
 	case "GET":
 		s.httpServer.HandleDownload(w, req)
 	default:

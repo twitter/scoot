@@ -671,7 +671,7 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
 
 	if command != "" {
 		//change command to pause.
-		for i, _ := range jobDef.Tasks {
+		for i := range jobDef.Tasks {
 			// set the command to pause
 			jobDef.Tasks[i].Argv = []string{command}
 		}

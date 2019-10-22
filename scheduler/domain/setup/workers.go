@@ -46,7 +46,7 @@ func (s *InMemoryWorkersStrategy) StartupWorkers() (string, error) {
 	if s.workersCfg.Count == 0 {
 		s.workersCfg.Count = 10
 	}
-	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to suppress all log output
 	// besides log.Panic, so we set a default of Info.
 	if s.workersCfg.LogLevel <= 0 {
 		s.workersCfg.LogLevel = DefaultWorkerLogLevel
@@ -83,7 +83,7 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 		s.workersCfg.Count = DefaultWorkerCount
 	}
 
-	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to surpress all log output
+	// A log level of 0 corresponds to Panic. Default behavior shouldn't be to suppress all log output
 	// besides log.Panic, so we set a default of Info.
 	if s.workersCfg.LogLevel <= 0 {
 		s.workersCfg.LogLevel = DefaultWorkerLogLevel

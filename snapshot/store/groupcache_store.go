@@ -65,6 +65,17 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 			}
 			return ttl, dest.SetBytes(data)
 		}),
+		groupcache.ContainerFunc(func(ctx groupcache.Context, bundleName string) (bool, error) {
+			log.Info("Not cached, try to check bundle existence: ", bundleName)
+			stat.Counter(stats.GroupcacheExistUnderlyingCounter).Inc(1)
+			defer stat.Latency(stats.GroupcacheExistUnderlyingLatency_ms).Time().Stop()
+
+			ok, err := underlying.Exists(bundleName)
+			if err != nil {
+				return false, err
+			}
+			return ok, nil
+		}),
 		groupcache.PutterFunc(func(ctx groupcache.Context, bundleName string, data []byte, ttl *time.Time) error {
 			log.Info("New bundle, write and populate cache: ", bundleName)
 			stat.Counter(stats.GroupcacheWriteUnderlyingCounter).Inc(1)
@@ -149,8 +160,11 @@ func (s *groupcacheStore) Exists(name string) (bool, error) {
 	log.Info("Exists() checking for cached bundle: ", name)
 	defer s.stat.Latency(stats.GroupcachExistsLatency_ms).Time().Stop()
 	s.stat.Counter(stats.GroupcacheExistsCounter).Inc(1)
-	ttl, err := s.cache.Get(nil, name, groupcache.TruncatingByteSliceSink(&[]byte{}))
-	if err != nil || (ttl != nil && ttl.Before(time.Now().UTC())) {
+	ok, err := s.cache.Contain(nil, name)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
 		return false, nil
 	}
 	s.stat.Counter(stats.GroupcacheExistsOkCounter).Inc(1)
@@ -204,15 +218,20 @@ func updateCacheStats(cache *groupcache.Group, stat stats.StatsReceiver) {
 	stat.Counter(stats.GroupcacheHotEvictionsCounter).Update(cache.CacheStats(groupcache.HotCache).Evictions)
 
 	stat.Counter(stats.GroupcacheGetCounter).Update(cache.Stats.Gets.Get())
+	stat.Counter(stats.GroupcacheContainCounter).Update(cache.Stats.Contains.Get())
 	stat.Counter(stats.GroupcachePutCounter).Update(cache.Stats.Puts.Get())
 	stat.Counter(stats.GroupcacheHitCounter).Update(cache.Stats.CacheHits.Get())
 	stat.Counter(stats.GroupcacheLoadCounter).Update(cache.Stats.Loads.Get())
+	stat.Counter(stats.GroupcacheCheckCounter).Update(cache.Stats.Checks.Get())
 	stat.Counter(stats.GroupcacheStoreCounter).Update(cache.Stats.Stores.Get())
 	stat.Counter(stats.GroupcachePeerGetsCounter).Update(cache.Stats.PeerLoads.Get())
+	stat.Counter(stats.GroupcachePeerChecksCounter).Update(cache.Stats.PeerChecks.Get())
 	stat.Counter(stats.GroupcachePeerPutsCounter).Update(cache.Stats.PeerStores.Get())
 	stat.Counter(stats.GroupcachPeerErrCounter).Update(cache.Stats.PeerErrors.Get())
 	stat.Counter(stats.GroupcacheLocalLoadCounter).Update(cache.Stats.LocalLoads.Get())
 	stat.Counter(stats.GroupcacheLocalLoadErrCounter).Update(cache.Stats.LocalLoadErrs.Get())
+	stat.Counter(stats.GroupcacheLocalCheckCounter).Update(cache.Stats.LocalChecks.Get())
+	stat.Counter(stats.GroupcacheLocalCheckErrCounter).Update(cache.Stats.LocalCheckErrs.Get())
 	stat.Counter(stats.GroupcacheLocalStoreCounter).Update(cache.Stats.LocalStores.Get())
 	stat.Counter(stats.GroupcacheLocalStoreErrCounter).Update(cache.Stats.LocalStoreErrs.Get())
 	stat.Counter(stats.GroupcacheIncomingRequestsCounter).Update(cache.Stats.ServerRequests.Get())

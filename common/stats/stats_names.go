@@ -28,6 +28,14 @@ const (
 	BundlestoreDownloadOkCounter  = "downloadOkCounter"
 
 	/*
+		Bundlestore check metrics (Exists/Heads from top-level Bundlestore/Apiserver)
+	*/
+	BundlestoreCheckLatency_ms = "checkLatency_ms"
+	BundlestoreCheckCounter    = "checkCounter"
+	BundlestoreCheckErrCounter = "checkErrCounter"
+	BundlestoreCheckOkCounter  = "checkOkCounter"
+
+	/*
 		Bundlestore upload metrics (Writes/Puts to top-level Bundlestore/Apiserver)
 	*/
 	BundlestoreUploadCounter         = "uploadCounter"
@@ -71,6 +79,8 @@ const (
 	*/
 	GroupcacheReadUnderlyingCounter     = "readUnderlyingCounter"
 	GroupcacheReadUnderlyingLatency_ms  = "readUnderlyingLatency_ms"
+	GroupcacheExistUnderlyingCounter    = "existUnderlyingCounter"
+	GroupcacheExistUnderlyingLatency_ms = "existUnderlyingLatency_ms"
 	GroupcacheWriteUnderlyingCounter    = "writeUnderlyingCounter"
 	GroupcacheWriteUnderlyingLatency_ms = "writeUnderlyingLatency_ms"
 
@@ -92,16 +102,21 @@ const (
 		Groupcache library - per-group metrics (overall metrics for a groupcache on a single Apiserver)
 	*/
 	GroupcacheGetCounter              = "cacheGetCounter"
+	GroupcacheContainCounter          = "cacheContainCounter"
 	GroupcachePutCounter              = "cachePutCounter"
 	GroupcacheHitCounter              = "cacheHitCounter"
 	GroupcacheLoadCounter             = "cacheLoadCounter"
+	GroupcacheCheckCounter            = "cacheCheckCounter"
 	GroupcacheStoreCounter            = "cacheStoreCounter"
 	GroupcacheIncomingRequestsCounter = "cacheIncomingRequestsCounter"
 	GroupcacheLocalLoadErrCounter     = "cacheLocalLoadErrCounter"
 	GroupcacheLocalLoadCounter        = "cacheLocalLoadCounter"
+	GroupcacheLocalCheckErrCounter    = "cacheLocalCheckErrCounter"
+	GroupcacheLocalCheckCounter       = "cacheLocalCheckCounter"
 	GroupcacheLocalStoreErrCounter    = "cacheLocalStoreErrCounter"
 	GroupcacheLocalStoreCounter       = "cacheLocalStoreCounter"
 	GroupcachePeerGetsCounter         = "cachePeerGetsCounter"
+	GroupcachePeerChecksCounter       = "cachePeerChecksCounter"
 	GroupcachePeerPutsCounter         = "cachePeerPutsCounter"
 	GroupcachPeerErrCounter           = "cachePeerErrCounter"
 
@@ -270,6 +285,16 @@ const (
 		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
 	*/
 	SchedAddJobsLatency_ms = "schedAddJobsLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+	*/
+	SchedCheckJobsLoopLatency_ms = "schedCheckJobsLoopLatency_ms"
+
+	/*
+		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+	*/
+	SchedAddJobsLoopLatency_ms = "schedAddJobsLoopLatency_ms"
 
 	/*
 		Amount of time it takes the scheduler to update list of removed / added nodes to its worker cluster
