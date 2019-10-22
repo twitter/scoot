@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -17,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"

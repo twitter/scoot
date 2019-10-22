@@ -3,10 +3,10 @@ package execution
 import (
 	"testing"
 
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
 )
 

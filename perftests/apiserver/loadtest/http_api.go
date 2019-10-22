@@ -3,12 +3,13 @@ package loadtest
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/twitter/scoot/common/endpoints"
 	"net/http"
 	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/endpoints"
 )
 
 /*

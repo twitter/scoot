@@ -17,12 +17,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/twitter/scoot/perftests/apiserver/loadtest"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/perftests/apiserver/loadtest"
 )
 
 /*

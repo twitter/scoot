@@ -16,18 +16,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/bazel/remoteexecution"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/bazel/execution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -452,18 +451,11 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 	entries := strings.Split(digestsStr, ",")
 	digestsPtr := make([]*remoteexecution.Digest, len(entries))
 	for i, entry := range entries {
-		digestParts := strings.Split(entry, "/")
-		if len(digestParts) != 2 {
-			return fmt.Errorf("invalid digest %s, must be sha/size.", entry)
-		}
-		sz, e := strconv.Atoi(digestParts[1])
+		d, e := bazel.DigestFromString(entry)
 		if e != nil {
-			return fmt.Errorf("error converting size from digest %s to integer. %s", entry, e.Error())
+			return e
 		}
-		digestsPtr[i] = &remoteexecution.Digest{
-			Hash:      digestParts[0],
-			SizeBytes: int64(sz),
-		}
+		digestsPtr[i] = d
 
 	}
 

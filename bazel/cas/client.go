@@ -6,7 +6,6 @@ import (
 	"github.com/cenkalti/backoff"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -15,7 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
-	conn "github.com/twitter/scoot/bazel/cas/connection-api"
+	conn "github.com/twitter/scoot/bazel/cas/connection"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/dialer"
 )
 
@@ -30,16 +30,6 @@ type NotFoundError struct {
 	Err string
 }
 
-// the following are the CASClient's default connection-api components
-type realGRPCDialer struct{}
-
-func (rd *realGRPCDialer) Dial(target string, opts ...grpc.DialOption) (conn.ClientConnPtr, error) {
-	return grpc.Dial(target, opts...)
-}
-
-func MakeRealGRPCDialer() *realGRPCDialer {
-	return &realGRPCDialer{}
-}
 func MakeCASpbClient(cc conn.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
 	return remoteexecution.NewContentAddressableStorageClient(cc.(*grpc.ClientConn))
 }
@@ -55,7 +45,7 @@ type CASClient struct {
 // (using the setters below) with mocks
 func MakeCASClient() *CASClient {
 	return &CASClient{
-		grpcDialer: MakeRealGRPCDialer(), // by default CASClient uses a real grpc dialer
+		grpcDialer: conn.MakeRealGRPCDialer(), // by default CASClient uses a real grpc dialer
 		CASpbMaker: MakeCASpbClient,      // by default CASClient uses a real proto CAS Client
 	}
 }

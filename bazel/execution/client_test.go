@@ -10,7 +10,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/genproto/googleapis/rpc/status"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/twitter/scoot/bazel/execution/mock_longrunning"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 func TestClientGetOperation(t *testing.T) {

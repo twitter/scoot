@@ -1,14 +1,14 @@
 package cas
 
 //go:generate mockgen -destination=mock_bytestream/bsclient_mock.go google.golang.org/genproto/googleapis/bytestream ByteStreamClient,ByteStream_ReadClient,ByteStream_WriteClient
-//go:generate mockgen -destination=mock_connection_api/connection_api_mock.go github.com/twitter/scoot/bazel/cas/connection-api GRPCDialer,ClientConnPtr
+//go:generate mockgen -destination=mock_connection/connection_mock.go github.com/twitter/scoot/bazel/cas/connection GRPCDialer,ClientConnPtr
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/twitter/scoot/bazel/cas/connection-api"
+	"github.com/twitter/scoot/bazel/cas/connection"
 	"math/rand"
 	"testing"
 	"time"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas/mock_bytestream"
-	"github.com/twitter/scoot/bazel/cas/mock_connection_api"
+	"github.com/twitter/scoot/bazel/cas/mock_connection"
 	"github.com/twitter/scoot/bazel/execution/mock_remoteexecution"
 	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/dialer"
@@ -179,14 +179,14 @@ func TestActionCacheUpdate(t *testing.T) {
 func TestBatchRead(t *testing.T) {
 	// setup the mock objects for the test
 	mockCtrl := gomock.NewController(t)
-	mockConn := mock_connection_api.NewMockClientConnPtr(mockCtrl)
+	mockConn := mock_connection.NewMockClientConnPtr(mockCtrl)
 	mockConn.EXPECT().Close().Return(nil)
-	grpcMock := mock_connection_api.NewMockGRPCDialer(mockCtrl)
+	grpcMock := mock_connection.NewMockGRPCDialer(mockCtrl)
 	grpcMock.EXPECT().Dial("", gomock.Any()).Return(mockConn, nil)
 
 	var caspbClientMock remoteexecution.ContentAddressableStorageClient
 	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
-	caspbClienMaker := func(cc connection_api.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
+	caspbClienMaker := func(cc connection.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
 		return caspbClientMock
 	}
 
@@ -241,14 +241,14 @@ func TestBatchRead(t *testing.T) {
 func TestBatchWrite(t *testing.T) {
 	// setup the test
 	mockCtrl := gomock.NewController(t)
-	mockConn := mock_connection_api.NewMockClientConnPtr(mockCtrl)
+	mockConn := mock_connection.NewMockClientConnPtr(mockCtrl)
 	mockConn.EXPECT().Close().Return(nil)
-	grpcMock := mock_connection_api.NewMockGRPCDialer(mockCtrl)
+	grpcMock := mock_connection.NewMockGRPCDialer(mockCtrl)
 	grpcMock.EXPECT().Dial("", gomock.Any()).Return(mockConn, nil)
 
 	var caspbClientMock remoteexecution.ContentAddressableStorageClient
 	caspbClientMock = mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
-	caspbClienMaker := func(cc connection_api.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
+	caspbClienMaker := func(cc connection.ClientConnPtr) remoteexecution.ContentAddressableStorageClient {
 		return caspbClientMock
 	}
 
