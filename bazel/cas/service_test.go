@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -17,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
@@ -499,7 +499,7 @@ func TestGetActionResult(t *testing.T) {
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
 	address, err := makeCacheResultAddress(ad)
 	if err != nil {
-		t.Fatalf("Failed to create cache result adress: %v", err)
+		t.Fatalf("Failed to create cache result address: %v", err)
 	}
 	buf := ioutil.NopCloser(bytes.NewReader(arAsBytes))
 	err = f.Write(address.storeName, store.NewResource(buf, int64(len(arAsBytes)), nil))
@@ -568,7 +568,7 @@ func TestUpdateActionResult(t *testing.T) {
 	// Read from underlying store
 	address, err := makeCacheResultAddress(ad)
 	if err != nil {
-		t.Fatalf("Failed to create cache result adress: %v", err)
+		t.Fatalf("Failed to create cache result address: %v", err)
 	}
 
 	b, err := readAndCompare(f, address.storeName, nil)

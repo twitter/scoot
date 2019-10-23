@@ -194,20 +194,18 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	select {
 	case <-abortCh:
-		go func() {
-			if err := inv.filerMap[runType].Filer.CancelCheckout(); err != nil {
-				log.Errorf("Error canceling checkout: %s", err)
-			}
-			if err := <-checkoutCh; err != nil {
-				log.Errorf("Checkout errored: %s", err)
-				// If there was an error there should be no lingering gitdb locks, so return
-				// In addition, co should be nil, so failing to return and calling co.Release()
-				// will result in a nil pointer dereference
-				return
-			}
+		if err := inv.filerMap[runType].Filer.CancelCheckout(); err != nil {
+			log.Errorf("Error canceling checkout: %s", err)
+		}
+		if err := <-checkoutCh; err != nil {
+			log.Errorf("Checkout errored: %s", err)
+			// If there was an error there should be no lingering gitdb locks, so return
+			// In addition, co should be nil, so failing to return and calling co.Release()
+			// will result in a nil pointer dereference
+		} else {
 			// If there was no error then we need to release this checkout.
 			co.Release()
-		}()
+		}
 		return runner.AbortStatus(id,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	case err := <-checkoutCh:
@@ -231,7 +229,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
-			// For Checkout errors from Bazel commands that indicate non-existance, we set a GRPC
+			// For Checkout errors from Bazel commands that indicate non-existence, we set a GRPC
 			// Status error indicating that the InputRoot data could not be found.
 			if runType == runner.RunTypeBazel {
 				msg := fmt.Sprintf("Failed to checkout Snapshot: %s", err)

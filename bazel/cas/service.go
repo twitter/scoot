@@ -14,7 +14,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -24,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
@@ -165,7 +165,7 @@ func (s *casServer) FindMissingBlobs(
 func (s *casServer) BatchUpdateBlobs(
 	ctx context.Context,
 	req *remoteexecution.BatchUpdateBlobsRequest) (*remoteexecution.BatchUpdateBlobsResponse, error) {
-	log.Debugf("Received CAS BatchUpdateBlobs request: %s", req)
+	log.Debugf("Received CAS BatchUpdateBlobs request")
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -192,9 +192,11 @@ func (s *casServer) BatchUpdateBlobs(
 
 	// Get total size of request and check against maximum; alloc resource for request
 	for _, blobReq := range req.GetRequests() {
-		reqSize += blobReq.GetDigest().GetSizeBytes()
+		d := blobReq.GetDigest()
+		log.Debugf("updating: hash: %s, size: %d", d.GetHash(), d.GetSizeBytes())
+		reqSize += d.GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)
@@ -317,7 +319,7 @@ func (s *casServer) BatchReadBlobs(
 	for _, digest := range req.GetDigests() {
 		reqSize += digest.GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)

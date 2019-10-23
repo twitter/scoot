@@ -30,6 +30,7 @@ vet:
 
 install:
 	go install ./binaries/...
+	go install ./perftests/...
 
 # Cleans go.mod and go.sum of unused dependencies
 tidy:

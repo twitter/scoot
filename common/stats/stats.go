@@ -124,6 +124,9 @@ type StatsReceiver interface {
 
 	// Construct a JSON string by marshaling the registry.
 	Render(pretty bool) []byte
+
+	// Construct a JSON string from the registry (ignore latching) without resetting the registry
+	RenderNoClear(pretty bool) []byte
 }
 
 //
@@ -280,7 +283,7 @@ func (s *defaultStatsReceiver) Remove(name ...string) {
 	s.registry.Unregister(s.scopedName(name...))
 }
 
-func (s *defaultStatsReceiver) Render(pretty bool) []byte {
+func (s *defaultStatsReceiver) render(pretty bool) []byte {
 	reg := s.registry
 	if s.latchCh != nil {
 		reg = requestCapture(s.latchCh).captured
@@ -297,10 +300,23 @@ func (s *defaultStatsReceiver) Render(pretty bool) []byte {
 	if err != nil {
 		panic("StatsRegistry bug, cannot be marshaled")
 	}
+	return bytes
+}
+
+func (s *defaultStatsReceiver) Render(pretty bool) []byte {
+	stats := s.render(pretty)
 	if s.latchCh == nil {
 		clear(s.registry) // reset on every call to render when not latched.
 	}
-	return bytes
+	return stats
+}
+
+/*
+Render the stats in the registry without clearing the registry.  This is used by performance testing
+to allow users to query stats at random times and not impact the overall test's stats handling.
+*/
+func (s *defaultStatsReceiver) RenderNoClear(pretty bool) []byte {
+	return s.render(pretty)
 }
 
 // Append to existing scope and scrub slashes
@@ -342,8 +358,9 @@ func (s *nilStatsReceiver) Histogram(name ...string) Histogram {
 func (s *nilStatsReceiver) Latency(name ...string) Latency {
 	return newNilLatency()
 }
-func (s *nilStatsReceiver) Remove(name ...string)     {}
-func (s *nilStatsReceiver) Render(pretty bool) []byte { return []byte{} }
+func (s *nilStatsReceiver) Remove(name ...string)            {}
+func (s *nilStatsReceiver) Render(pretty bool) []byte        { return []byte{} }
+func (s *nilStatsReceiver) RenderNoClear(pretty bool) []byte { return []byte{} }
 
 //
 // Minimally mirror go-metrics instruments.

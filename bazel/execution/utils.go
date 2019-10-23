@@ -8,13 +8,13 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/scootapi/gen-go/scoot"
@@ -50,7 +50,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 
 	// NOTE fixed to lowest priority in early stages of Bazel support
 	// ExecuteRequests do not have priority values, but the Action portion
-	// contains Platform Properties which can be used to specify arbitary server-side behavior.
+	// contains Platform Properties which can be used to specify arbitrary server-side behavior.
 	result.Priority = sched.P0
 	result.Tasks = []sched.TaskDefinition{}
 

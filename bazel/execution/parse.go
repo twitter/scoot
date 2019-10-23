@@ -9,12 +9,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/twitter/scoot/bazel/remoteexecution"
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/proto"
 )
 

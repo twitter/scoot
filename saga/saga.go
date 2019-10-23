@@ -77,7 +77,7 @@ func (s *Saga) GetState() *SagaState {
 // Log an End Saga Message to the log, returns updated SagaState
 // Returns the resulting SagaState or an error if it fails
 //
-// Once EndSaga is succesfully called, trying to log additional
+// Once EndSaga is successfully called, trying to log additional
 // messages will result in a panic.
 func (s *Saga) EndSaga() error {
 	return s.updateSagaState(MakeEndSagaMessage(s.id))
