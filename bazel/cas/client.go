@@ -412,8 +412,8 @@ func (casCli *CASClient) BatchRead(r dialer.Resolver, digests []*remoteexecution
 
 	// make the request object
 	request := &remoteexecution.BatchReadBlobsRequest{
-		InstanceName:         bazel.DefaultInstanceName,
-		Digests:              digests,
+		InstanceName: bazel.DefaultInstanceName,
+		Digests:      digests,
 	}
 
 	var ctx context.Context = context.Background()

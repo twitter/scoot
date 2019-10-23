@@ -471,8 +471,8 @@ func makeBatchUploadContentEntry(data []byte) cas.BatchUploadContent {
 	sha := sha256.Sum256(data)
 	shaStr := fmt.Sprintf("%x", sha)
 	digest := &remoteexecution.Digest{
-		Hash:                 shaStr,
-		SizeBytes:            int64(len(data)),
+		Hash:      shaStr,
+		SizeBytes: int64(len(data)),
 	}
 	uploadContent := cas.BatchUploadContent{
 		Digest: digest,

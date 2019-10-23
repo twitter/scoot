@@ -192,7 +192,7 @@ func TestClientBatchRead(t *testing.T) {
 
 	// define read request and fake return values
 	mockResults := &remoteexecution.BatchReadBlobsResponse{
-		Responses:            make([]*remoteexecution.BatchReadBlobsResponse_Response, 10),
+		Responses: make([]*remoteexecution.BatchReadBlobsResponse_Response, 10),
 	}
 	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchReadBlobs(gomock.Any(), gomock.Any()).Return(mockResults, nil)
 
@@ -254,7 +254,7 @@ func TestClientBatchWrite(t *testing.T) {
 
 	// make the structure that the mock proto client will return
 	mockResp := &remoteexecution.BatchUpdateBlobsResponse{
-		Responses:            make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
+		Responses: make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
 	}
 
 	for i := 0; i < 10; i++ {
@@ -263,8 +263,8 @@ func TestClientBatchWrite(t *testing.T) {
 		sha := sha256.Sum256(theData)
 		shaStr := fmt.Sprintf("%x", sha)
 		newDigest := &remoteexecution.Digest{
-			Hash:                 shaStr,
-			SizeBytes:            int64(len(theData)),
+			Hash:      shaStr,
+			SizeBytes: int64(len(theData)),
 		}
 		uploadContent := BatchUploadContent{
 			Digest: newDigest,
