@@ -306,7 +306,7 @@ func TestClientFindMissingBlobs(t *testing.T) {
 
 	casClientMock.EXPECT().FindMissingBlobs(context.Background(), req).Return(expected, nil)
 
-	fmRes, err := findMissingBlobsFromClient(casClientMock, req)
+	fmRes, err := MakeCASClient().findMissingBlobsFromClient(casClientMock, req)
 	if err != nil {
 		t.Fatalf("Error from find missing: %s", err)
 	}

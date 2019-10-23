@@ -220,7 +220,8 @@ func (casCli *CASClient) writeFromClient(bsc bytestream.ByteStreamClient, req *b
 }
 
 // Client function for GetActionResult requests. Takes a Resolver for ActionCache server and Digest to get.
-func (casCli *CASClient) GetCacheResult(r dialer.Resolver, digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
+func (casCli *CASClient) GetCacheResult(r dialer.Resolver,
+	digest *remoteexecution.Digest, b backoff.BackOff) (ar *remoteexecution.ActionResult, err error) {
 	try := 1
 	backoff.Retry(func() error {
 		log.Debugf("Try #%d", try)
@@ -318,8 +319,8 @@ type BatchUploadContent struct {
 /*
 client for uploading a list of digests to CAS BatchUpdateBlobs (as a single batch)
 */
-func (casCli *CASClient) BatchUpdateWrite(r dialer.Resolver, contents []BatchUploadContent, b backoff.BackOff) ([]*remoteexecution.Digest, error) {
-
+func (casCli *CASClient) BatchUpdateWrite(r dialer.Resolver,
+	contents []BatchUploadContent, b backoff.BackOff) ([]*remoteexecution.Digest, error) {
 	// make the request object
 	requests := make([]*remoteexecution.BatchUpdateBlobsRequest_Request, 0)
 	totalSize := int64(0)
@@ -366,7 +367,8 @@ func (casCli *CASClient) BatchUpdateWrite(r dialer.Resolver, contents []BatchUpl
 }
 
 // (retryable) method for CAS batch update
-func (casCli *CASClient) batchUpdateWriter(r dialer.Resolver, request *remoteexecution.BatchUpdateBlobsRequest, ctx context.Context) ([]*remoteexecution.Digest, error) {
+func (casCli *CASClient) batchUpdateWriter(r dialer.Resolver,
+	request *remoteexecution.BatchUpdateBlobsRequest, ctx context.Context) ([]*remoteexecution.Digest, error) {
 	// create a CAS object with connection to server
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -408,8 +410,8 @@ func (casCli *CASClient) batchUpdateWriter(r dialer.Resolver, request *remoteexe
 /*
 client for downloading a list of digests from the CAS BatchReadBlobs (as a single batch)
 */
-func (casCli *CASClient) BatchRead(r dialer.Resolver, digests []*remoteexecution.Digest, b backoff.BackOff) (map[string][]byte, error) {
-
+func (casCli *CASClient) BatchRead(r dialer.Resolver,
+	digests []*remoteexecution.Digest, b backoff.BackOff) (map[string][]byte, error) {
 	// make the request object
 	request := &remoteexecution.BatchReadBlobsRequest{
 		InstanceName: bazel.DefaultInstanceName,
@@ -433,7 +435,8 @@ func (casCli *CASClient) BatchRead(r dialer.Resolver, digests []*remoteexecution
 }
 
 // (retryable) method for CAS batch update
-func (casCli *CASClient) batchReader(r dialer.Resolver, request *remoteexecution.BatchReadBlobsRequest, ctx context.Context) (map[string][]byte, error) {
+func (casCli *CASClient) batchReader(r dialer.Resolver,
+	request *remoteexecution.BatchReadBlobsRequest, ctx context.Context) (map[string][]byte, error) {
 	// create a CAS object with connection to server
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -472,15 +475,14 @@ func (casCli *CASClient) batchReader(r dialer.Resolver, request *remoteexecution
 	return content, fmt.Errorf("%v", errs)
 }
 
-// TODO convert to casClient???
 // Make a FindMissingBlobs request to a CAS given a set of digests. Returns digests that are missing on the server.
-func FindMissingBlobs(r dialer.Resolver,
+func (casCli *CASClient) FindMissingBlobs(r dialer.Resolver,
 	digests []*remoteexecution.Digest, b backoff.BackOff) (missing []*remoteexecution.Digest, err error) {
 	res := &remoteexecution.FindMissingBlobsResponse{}
 	try := 1
 	backoff.Retry(func() error {
 		log.Debugf("Try #%d", try)
-		res, err = findMissingBlobs(r, digests)
+		res, err = casCli.findMissingBlobs(r, digests)
 		try += 1
 		return err
 	}, b)
@@ -490,7 +492,7 @@ func FindMissingBlobs(r dialer.Resolver,
 	return missing, nil
 }
 
-func findMissingBlobs(r dialer.Resolver,
+func (casCli *CASClient) findMissingBlobs(r dialer.Resolver,
 	digests []*remoteexecution.Digest) (*remoteexecution.FindMissingBlobsResponse, error) {
 	serverAddr, err := r.Resolve()
 	if err != nil {
@@ -505,13 +507,13 @@ func findMissingBlobs(r dialer.Resolver,
 
 	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
 
-	casCli := remoteexecution.NewContentAddressableStorageClient(cc)
-	return findMissingBlobsFromClient(casCli, req)
+	casc := remoteexecution.NewContentAddressableStorageClient(cc)
+	return casCli.findMissingBlobsFromClient(casc, req)
 }
 
-func findMissingBlobsFromClient(casCli remoteexecution.ContentAddressableStorageClient,
+func (casCli *CASClient) findMissingBlobsFromClient(casc remoteexecution.ContentAddressableStorageClient,
 	req *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
-	res, err := casCli.FindMissingBlobs(context.Background(), req)
+	res, err := casc.FindMissingBlobs(context.Background(), req)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to make FindMissingBlobs request: %s", err)
 	}
