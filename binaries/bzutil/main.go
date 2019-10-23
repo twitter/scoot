@@ -109,7 +109,8 @@ func main() {
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
 	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
-	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout")
+	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout (some data remains serialized)")
+	getJsonFull := getCommand.Bool("json_full", false, "Print full operation as JSON to stdout (format not guaranteed canonical)")
 	getLogLevel := getCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
 	// Cancel Operation
@@ -186,7 +187,10 @@ func main() {
 			log.Fatalf("name required for %s", getOpCmdStr)
 		}
 		parseAndSetLevel(*getLogLevel)
-		getOperation(*getAddr, *getName, *getJson)
+		if *getJson && *getJsonFull {
+			log.Fatal("Can only specify one of: json, json_full")
+		}
+		getOperation(*getAddr, *getName, *getJson, *getJsonFull)
 	} else if cancelCommand.Parsed() {
 		if *cancelName == "" {
 			log.Fatalf("name required for %s", cancelOpCmdStr)
@@ -357,18 +361,26 @@ func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
 	}
 }
 
-func getOperation(execAddr, opName string, getJson bool) {
+func getOperation(execAddr, opName string, getJson, getJsonFull bool) {
 	r := dialer.NewConstantResolver(execAddr)
 	operation, err := execution.GetOperation(r, opName)
 	if err != nil {
 		log.Fatalf("Error making GetOperation request: %s", err)
 	}
 	log.Info(execution.ExecuteOperationToStr(operation))
-	// We only use default Marshalling, which leaves most nested fields serialized
 	if getJson {
+		// We only use default Marshalling, which leaves most nested fields serialized
 		b, err := json.Marshal(operation)
 		if err != nil {
 			log.Fatalf("Error converting operation to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	} else if getJsonFull {
+		// Gets the "full" deserialized json representation, although to do this custom extraction/parsing is used,
+		// which means that the resulting format could possibly deviate from the canonical data types.
+		b, err := execution.OperationToJson(operation)
+		if err != nil {
+			log.Fatalf("Error parsing operation full JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
 	} else {
