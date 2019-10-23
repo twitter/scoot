@@ -153,9 +153,9 @@ func ExtractOpFromJson(opBytes []byte) (*longrunning.Operation, error) {
 	return op, nil
 }
 
-// Converts a longrunning.Operation to a Json-encoded []byte. Because an Operation is not natively compatible
-// with json.Marshal, this does the minimum necessary extraction of nested data and wrapping with custom
-// types so that it can be used with Marshal.
+// Converts a longrunning.Operation to a Json-encoded []byte. Because an Operation's Result field is not
+// natively compatible with json.Marshal, this does the minimum necessary extraction of nested data and
+// wrapping with custom types so that it can be used with Marshal.
 func OperationToJson(op *longrunning.Operation) ([]byte, error) {
 	if op == nil {
 		return nil, nil
@@ -166,19 +166,14 @@ func OperationToJson(op *longrunning.Operation) ([]byte, error) {
 		return nil, err
 	}
 
-	jsonResult := &operationResultWrapper{}
-	if res != nil {
-		jsonResult.Error = nil
-		jsonResult.Response = res
-	} else {
-		jsonResult.Error = st
-		jsonResult.Response = nil
-	}
 	ow := &operationWrapper{
 		Name:     op.GetName(),
 		Metadata: eom,
 		Done:     op.GetDone(),
-		Result:   jsonResult,
+		Result: &operationResultWrapper{
+			Error:    st,
+			Response: res,
+		},
 	}
 	return json.Marshal(ow)
 }
