@@ -87,7 +87,7 @@ func makeDummyTasks() []sched.TaskDefinition {
 			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "dummyTag"},
 			ExecuteRequest: nil,
 		}
-		tasks[i] = sched.TaskDefinition{td}
+		tasks[i] = sched.TaskDefinition{Command: td}
 	}
 
 	return tasks
