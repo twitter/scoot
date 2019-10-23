@@ -287,12 +287,12 @@ const (
 	SchedAddJobsLatency_ms = "schedAddJobsLatency_ms"
 
 	/*
-		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+		Amount of time it takes the scheduler to check newly requested jobs for validity
 	*/
 	SchedCheckJobsLoopLatency_ms = "schedCheckJobsLoopLatency_ms"
 
 	/*
-		Amount of time it takes the scheduler to add newly requested jobs to list of jobs currently being handled by scheduler
+		Amount of time it takes the scheduler to add newly verified jobs from add job channel to list of jobs currently being handled by scheduler
 	*/
 	SchedAddJobsLoopLatency_ms = "schedAddJobsLoopLatency_ms"
 

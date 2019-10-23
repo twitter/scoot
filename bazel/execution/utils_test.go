@@ -7,7 +7,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
-	"github.com/twitter/scoot/scootapi/gen-go/scoot"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 var rs *runStatus

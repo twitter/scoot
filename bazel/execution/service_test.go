@@ -15,14 +15,14 @@ import (
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 // Determine that Execute can accept a well-formed request and returns a well-formed response
 func TestExecute(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	sc := scheduler.NewMockScheduler(mockCtrl)
+	sc := server.NewMockScheduler(mockCtrl)
 	sc.EXPECT().ScheduleJob(gomock.Any()).Return("testJobID", nil)
 
 	s := executionServer{scheduler: sc, stat: stats.NilStatsReceiver()}
@@ -53,7 +53,7 @@ func TestExecute(t *testing.T) {
 func TestGetOperation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	sc := scheduler.NewMockScheduler(mockCtrl)
+	sc := server.NewMockScheduler(mockCtrl)
 	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
 	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
 	mockSagaLog.EXPECT().GetMessages(gomock.Any()).Return([]saga.SagaMessage{}, nil)
@@ -97,7 +97,7 @@ func TestGetOperation(t *testing.T) {
 func TestCancelOperation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	sc := scheduler.NewMockScheduler(mockCtrl)
+	sc := server.NewMockScheduler(mockCtrl)
 	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
 	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
 	var wg sync.WaitGroup

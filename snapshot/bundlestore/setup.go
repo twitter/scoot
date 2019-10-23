@@ -10,7 +10,6 @@ import (
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -60,7 +59,7 @@ func Defaults() *ice.MagicBag {
 
 		func() *bazel.GRPCConfig {
 			return &bazel.GRPCConfig{
-				GRPCAddr: scootapi.DefaultApiBundlestore_GRPC,
+				GRPCAddr: DefaultApiBundlestore_GRPC,
 			}
 		},
 

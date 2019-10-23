@@ -22,9 +22,9 @@ import (
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
-	"github.com/twitter/scoot/scootapi/server/api"
+	"github.com/twitter/scoot/scheduler/api/thrift"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 // Implements GRPCServer, remoteexecution.ExecutionServer, and longrunning.OperationsServer interfaces
@@ -32,12 +32,12 @@ type executionServer struct {
 	listener  net.Listener
 	sagaCoord saga.SagaCoordinator
 	server    *grpc.Server
-	scheduler scheduler.Scheduler
+	scheduler server.Scheduler
 	stat      stats.StatsReceiver
 }
 
 // Creates a new GRPCServer (executionServer) based on a GRPC config, scheduler, and stats, and preregisters the service
-func MakeExecutionServer(gc *bazel.GRPCConfig, s scheduler.Scheduler, stat stats.StatsReceiver) *executionServer {
+func MakeExecutionServer(gc *bazel.GRPCConfig, s server.Scheduler, stat stats.StatsReceiver) *executionServer {
 	if gc == nil {
 		return nil
 	}
@@ -107,7 +107,7 @@ func (s *executionServer) Execute(
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("Error converting request to internal definition: %s", err))
 	}
 
-	err = sched.ValidateJob(job)
+	err = domain.ValidateJob(job)
 	if err != nil {
 		log.Errorf("Scoot Job generated from request invalid: %s", err)
 		return status.Error(codes.Internal, fmt.Sprintf("Internal job definition invalid: %s", err))
@@ -280,7 +280,7 @@ func (s *executionServer) CancelOperation(_ context.Context, req *longrunning.Ca
 // Internal functions
 
 func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, error) {
-	js, err := api.GetJobStatus(jobID, s.sagaCoord)
+	js, err := thrift.GetJobStatus(jobID, s.sagaCoord)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +300,7 @@ func (s *executionServer) getRunStatusAndValidate(jobID string) (*runStatus, err
 }
 
 func (s *executionServer) killJobAndValidate(jobID string) error {
-	js, err := api.KillJob(jobID, s.scheduler, s.sagaCoord)
+	js, err := thrift.KillJob(jobID, s.scheduler, s.sagaCoord)
 	if err != nil {
 		return err
 	}
