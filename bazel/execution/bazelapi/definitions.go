@@ -10,10 +10,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
 
 	bazelthrift "github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 const PreconditionMissing = "MISSING"

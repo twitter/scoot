@@ -2,7 +2,7 @@ package testhelpers
 
 import "os/exec"
 
-func InstallBinaries() {
+func InstallBinaries() error {
 	cmd := exec.Command("go", "install", "./...")
-	cmd.Run()
+	return cmd.Run()
 }

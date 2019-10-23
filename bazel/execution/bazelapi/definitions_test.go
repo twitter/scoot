@@ -6,10 +6,11 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
 	google_rpc_errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 	google_rpc_status "google.golang.org/genproto/googleapis/rpc/status"
+
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 )
 
 func TestDomainThriftDomainExecReq(t *testing.T) {

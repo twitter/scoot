@@ -64,3 +64,22 @@ func TestEmptyDigest(t *testing.T) {
 		t.Fatal("Non-empty hash/size false positive")
 	}
 }
+
+func TestDigestsEqual(t *testing.T) {
+	var d0 *remoteexecution.Digest
+	d1 := &remoteexecution.Digest{
+		Hash:      "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+		SizeBytes: 123,
+	}
+	d2 := &remoteexecution.Digest{
+		Hash:      "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+		SizeBytes: 123,
+	}
+
+	if DigestsEqual(d0, d1) {
+		t.Fatalf("Digests not equal, wanted equal (%s, %s)", d0, d1)
+	}
+	if !DigestsEqual(d1, d2) {
+		t.Fatalf("Digests equal, wanted not equal (%s, %s)", d1, d2)
+	}
+}

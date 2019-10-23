@@ -14,7 +14,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"golang.org/x/net/context"
 	"google.golang.org/genproto/googleapis/bytestream"
 	google_rpc_code "google.golang.org/genproto/googleapis/rpc/code"
@@ -24,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/twitter/scoot/bazel"
+	remoteexecution "github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common/allocator"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
@@ -141,10 +141,10 @@ func (s *casServer) FindMissingBlobs(
 			}
 
 			storeName := bazel.DigestStoreName(d)
-			if ok, err := s.storeConfig.Store.Exists(storeName); err != nil {
+			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
 				log.Errorf("Error checking existence of %s: %v", storeName, err)
 				err = fmt.Errorf("Store failed checking existence of one or more digests")
-			} else if !ok {
+			} else if !exists {
 				resultCh <- d
 				return
 			}
@@ -165,7 +165,7 @@ func (s *casServer) FindMissingBlobs(
 func (s *casServer) BatchUpdateBlobs(
 	ctx context.Context,
 	req *remoteexecution.BatchUpdateBlobsRequest) (*remoteexecution.BatchUpdateBlobsResponse, error) {
-	log.Debugf("Received CAS BatchUpdateBlobs request: %s", req)
+	log.Debugf("Received CAS BatchUpdateBlobs request")
 
 	if !s.IsInitialized() {
 		return nil, status.Error(codes.Internal, "Server not initialized")
@@ -192,9 +192,11 @@ func (s *casServer) BatchUpdateBlobs(
 
 	// Get total size of request and check against maximum; alloc resource for request
 	for _, blobReq := range req.GetRequests() {
-		reqSize += blobReq.GetDigest().GetSizeBytes()
+		d := blobReq.GetDigest()
+		log.Debugf("updating: hash: %s, size: %d", d.GetHash(), d.GetSizeBytes())
+		reqSize += d.GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)
@@ -317,7 +319,7 @@ func (s *casServer) BatchReadBlobs(
 	for _, digest := range req.GetDigests() {
 		reqSize += digest.GetSizeBytes()
 	}
-	if reqSize > BatchMaxCombinedSize {
+	if reqSize > bazel.BatchMaxCombinedSize {
 		return nil, status.Error(codes.InvalidArgument, exceedBatchMaxMsg)
 	}
 	requestResource, err := s.getRequestResource(reqSize)
@@ -613,10 +615,10 @@ func (s *casServer) Write(ser bytestream.ByteStream_WriteServer) error {
 			// If data Exists, terminate immediately with size of existing data (Store is immutable)
 			// Note that Store does not support `stat`, so we trust client-provided size to avoid reading the data
 			storeName = bazel.DigestStoreName(resource.Digest)
-			if ok, err := s.storeConfig.Store.Exists(storeName); err != nil {
+			if exists, err := s.storeConfig.Store.Exists(storeName); err != nil {
 				log.Errorf("Error checking existence: %v", err)
 				return status.Error(codes.Internal, fmt.Sprintf("Store failed checking existence of %s: %v", storeName, err))
-			} else if ok {
+			} else if exists {
 				log.Infof("Resource exists in store: %s. Using client digest size: %d", storeName, resource.Digest.GetSizeBytes())
 				res := &bytestream.WriteResponse{CommittedSize: resource.Digest.GetSizeBytes()}
 				err = ser.SendAndClose(res)
