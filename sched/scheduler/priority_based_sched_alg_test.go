@@ -2,12 +2,12 @@ package scheduler
 
 import (
 	"fmt"
-	"github.com/twitter/scoot/common/log/tags"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/sched"
 )
@@ -23,7 +23,7 @@ func TestSchedulingStandardProgression(t *testing.T) {
 		nodes:            nil,
 		suspendedNodes:   nil,
 		offlinedNodes:    nil,
-		nodeGroups:       makeIdleGroup(5),  // always have 5 idle nodes
+		nodeGroups:       makeIdleGroup(5), // always have 5 idle nodes
 		maxLostDuration:  0,
 		maxFlakyDuration: 0,
 		readyFn:          nil,
@@ -47,7 +47,7 @@ func TestSchedulingStandardProgression(t *testing.T) {
 		Admins:                  nil,
 	}
 
-	for i:=0; i < 11; i++ {
+	for i := 0; i < 11; i++ {
 		tasks := pbs.GetTasksToBeAssigned(jobs, nil, cluster, nil, sc)
 
 		if len(tasks) != 5 {
@@ -97,14 +97,13 @@ func makeJobStates() []*jobState {
 		jobStates[i] = js
 	}
 
-
 	return jobStates
 
 }
 
 func makeTaskMap(tasks []*taskState) map[string]*taskState {
 	rVal := make(map[string]*taskState)
-	for _, t := range(tasks) {
+	for _, t := range tasks {
 		rVal[t.TaskId] = t
 	}
 	return rVal
@@ -114,21 +113,21 @@ func makeDummyTasks(jobId string, numTasks int) ([]sched.TaskDefinition, []*task
 
 	tasks := make([]sched.TaskDefinition, int(numTasks))
 	tasksState := make([]*taskState, int(numTasks))
-	for i := 0; i < numTasks ; i++ {
+	for i := 0; i < numTasks; i++ {
 
 		td := runner.Command{
 			Argv:           []string{""},
 			EnvVars:        nil,
 			Timeout:        0,
 			SnapshotID:     "",
-			LogTags: tags.LogTags{TaskID: fmt.Sprintf("%d", i),Tag:"dummyTag",},
+			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "dummyTag"},
 			ExecuteRequest: nil,
 		}
 		tasks[i] = sched.TaskDefinition{td}
 
 		tasksState[i] = &taskState{
-			JobId: jobId,
-			TaskId:  fmt.Sprintf("task%d",i),
+			JobId:  jobId,
+			TaskId: fmt.Sprintf("task%d", i),
 			Status: sched.NotStarted,
 		}
 	}
@@ -139,7 +138,7 @@ func makeDummyTasks(jobId string, numTasks int) ([]sched.TaskDefinition, []*task
 func makeIdleGroup(n int) map[string]*nodeGroup {
 	idle := make(map[cluster.NodeId]*nodeState)
 	for i := 0; i < n; i++ {
-		idle[cluster.NodeId(fmt.Sprintf("node%d", i))] = &nodeState{	}
+		idle[cluster.NodeId(fmt.Sprintf("node%d", i))] = &nodeState{}
 	}
 	idleGroup := &nodeGroup{}
 	idleGroup.idle = idle
@@ -150,9 +149,9 @@ func makeIdleGroup(n int) map[string]*nodeGroup {
 }
 
 func moveToCompleted(tasks []*taskState, jobs []*jobState) {
-	for _, task := range(tasks) {
+	for _, task := range tasks {
 		jid := task.JobId
-		for _, js := range(jobs) {
+		for _, js := range jobs {
 			if js.Job.Id == jid {
 				js.Completed[task.TaskId] = task
 				delete(js.NotStarted, task.TaskId)

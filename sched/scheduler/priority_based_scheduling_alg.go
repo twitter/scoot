@@ -2,24 +2,26 @@ package scheduler
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/stats"
 	"math"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 type PriorityBasedAlg struct {
-	PriorityRatios      []int  // array of priority ratios where array index == priority
-	taskModCounter      float64
-	jobsByPriority	    [][]*jobState  // list of jobs at each priority
-	runRatios           []float64 // when to run each priority
-	roundRobinJobIndex  []int     // for each priority, track the index of the job whose task should be assigned next
-	numBarredFromLowPriority int  // number of nodes reserved for non-lowest priority tasks
+	PriorityRatios           []int // array of priority ratios where array index == priority
+	taskModCounter           float64
+	jobsByPriority           [][]*jobState // list of jobs at each priority
+	runRatios                []float64     // when to run each priority
+	roundRobinJobIndex       []int         // for each priority, track the index of the job whose task should be assigned next
+	numBarredFromLowPriority int           // number of nodes reserved for non-lowest priority tasks
 }
 
 func MakePriorityBasedAlg(ratios []int) *PriorityBasedAlg {
 	pbs := &PriorityBasedAlg{
-		PriorityRatios:      ratios,
-		taskModCounter:      1,
+		PriorityRatios: ratios,
+		taskModCounter: 1,
 	}
 
 	// initialize the runRatios array
@@ -42,34 +44,34 @@ It returns the list of tasks that should be assigned to nodes as per the
 algorithm documented at
 https://docs.google.com/document/d/1MqN2oAKRHHi_k29fYyUdYfw7oDN8sii0B3yB1_Yqk34/edit
 TODO - fix the prior link if ported to confluence
- */
+*/
 func (pbs *PriorityBasedAlg) GetTasksToBeAssigned(jobs []*jobState, statNotUsed stats.StatsReceiver, cs *clusterState, jobsByRequestorNotUsed map[string][]*jobState, cfgNotUsed SchedulerConfig) []*taskState {
 	idleNodeCnt := cs.numFree()
-	pbs.numBarredFromLowPriority = 0  // TODO make this 10% of num nodes
-	tasksToAssign := make([] *taskState, 0)
-	selectedTasks := make(map[string] *taskState)
+	pbs.numBarredFromLowPriority = 0 // TODO make this 10% of num nodes
+	tasksToAssign := make([]*taskState, 0)
+	selectedTasks := make(map[string]*taskState)
 
 	// build the list of jobs at each priority
-	for i:=0; i < len(pbs.PriorityRatios); i++ {  // initialize priority to jobs array
+	for i := 0; i < len(pbs.PriorityRatios); i++ { // initialize priority to jobs array
 		pbs.jobsByPriority = make([][]*jobState, len(pbs.PriorityRatios))
 	}
-	for _, job := range(jobs) {
-		if job.TasksCompleted + job.TasksRunning < len(job.Tasks) {
+	for _, job := range jobs {
+		if job.TasksCompleted+job.TasksRunning < len(job.Tasks) {
 			// the job still has tasks to assign
 			priority := int(job.Job.Def.Priority)
 			if pbs.jobsByPriority[priority] == nil {
 				pbs.jobsByPriority[priority] = make([]*jobState, 0)
 			}
-			pbs.jobsByPriority[priority] = append(pbs.jobsByPriority[priority], job )
+			pbs.jobsByPriority[priority] = append(pbs.jobsByPriority[priority], job)
 		}
 	}
 
 	// reset the priority based job round robin index
-	for i := 0; i < len(pbs.PriorityRatios) ; i++ {
+	for i := 0; i < len(pbs.PriorityRatios); i++ {
 		pbs.roundRobinJobIndex[i] = 0
 	}
 
-	assignByPriorityCnts := make(map[int] int)   // map to track the number of assignments by priority
+	assignByPriorityCnts := make(map[int]int) // map to track the number of assignments by priority
 	for i := 0; i < idleNodeCnt; i++ {
 		p := pbs.getPriorityToAssign(i, idleNodeCnt)
 		task, taskPriority := pbs.getNextTask(p, pbs.jobsByPriority, selectedTasks, i, idleNodeCnt)
@@ -159,16 +161,16 @@ func (pbs *PriorityBasedAlg) getTaskFromRRJobs(priority int, currentSelectedTask
 
 // get a task that has not started, add it to currentSelectedTasks so it won't be
 // selected again in this iteration of GetTasksToBeAssigned()
-func(pbs *PriorityBasedAlg) getUnscheduledTaskInJob(job *jobState,
+func (pbs *PriorityBasedAlg) getUnscheduledTaskInJob(job *jobState,
 	currentSelectedTasks map[string]*taskState) *taskState {
 
 	// get the next not started task in the job
 	for taskId, task := range job.NotStarted {
 		key := fmt.Sprintf("%stask%s", job.Job.Id, taskId)
 		if _, ok := currentSelectedTasks[key]; ok {
-			continue  // the task is already selected
+			continue // the task is already selected
 		}
-		currentSelectedTasks[key]=task
+		currentSelectedTasks[key] = task
 		return task
 	}
 	return nil
@@ -189,13 +191,13 @@ func (pbs *PriorityBasedAlg) getNextPriority(currentPriority, origPriority,
 	}
 
 	withinReservedNodes := (totalIdleNodes - idleNodeIdx) < pbs.numBarredFromLowPriority
-	if withinReservedNodes && nextPriority == len(pbs.PriorityRatios) - 1 {
+	if withinReservedNodes && nextPriority == len(pbs.PriorityRatios)-1 {
 		return -1
 	}
 
 	if nextPriority < len(pbs.PriorityRatios) {
-			return nextPriority
-		}
+		return nextPriority
+	}
 
 	return -1
 }
@@ -225,13 +227,13 @@ func (pbs *PriorityBasedAlg) getPriorityToAssign(idleNodeIdx, totalIdleNodes int
 	} else {
 		for i := len(pbs.runRatios) - 1; i >= 0 && nextPriority == -1; i-- {
 			if math.Mod(pbs.taskModCounter, pbs.runRatios[i]) == 0 &&
-				! (withinReservedNodes && i == len(pbs.runRatios) - 1) {
+				!(withinReservedNodes && i == len(pbs.runRatios)-1) {
 				nextPriority = i
 			}
 		}
 	}
 	pbs.taskModCounter++
-	if pbs.taskModCounter > pbs.runRatios[len(pbs.runRatios) - 1] {
+	if pbs.taskModCounter > pbs.runRatios[len(pbs.runRatios)-1] {
 		pbs.taskModCounter = 1
 	}
 	return nextPriority

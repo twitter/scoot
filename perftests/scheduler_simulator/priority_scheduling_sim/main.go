@@ -24,7 +24,7 @@ import (
 func main() {
 
 	log.SetReportCaller(true)
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.WarnLevel)
 
 	var jobDefs map[int][]*sched.JobDefinition
 	var pRatios []int
@@ -46,7 +46,7 @@ func main() {
 	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, pRatios[:], 5)
 	e := schedAlg.RunTest()
 	if e != nil {
-		fmt.Sprintf("%s\n", e.Error())
+		fmt.Printf("%s\n", e.Error())
 	}
 }
 
