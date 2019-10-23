@@ -20,7 +20,7 @@ import (
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/domain/worker"
+	"github.com/twitter/scoot/scheduler/setup/worker"
 	"github.com/twitter/scoot/workerapi"
 )
 
