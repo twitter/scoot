@@ -170,7 +170,8 @@ type statefulScheduler struct {
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
 	// stats
-	stat stats.StatsReceiver
+	stat     stats.StatsReceiver
+	SchedAlg SchedulingAlgorithm
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -290,6 +291,7 @@ func NewStatefulScheduler(
 		taskDurations:    make(map[string]averageDuration),
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
+		SchedAlg:         &OrigSchedulingAlg{},
 	}
 
 	if !config.DebugMode {
@@ -815,7 +817,7 @@ func (s *statefulScheduler) scheduleTasks() {
 	// Pass nil config so taskScheduler can determine the most appropriate values itself.
 	defer s.stat.Latency(stats.SchedScheduleTasksLatency_ms).Time().Stop()
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, nil,
-		s.stat,	s.SchedAlg)
+		s.stat, s.SchedAlg)
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
 	}

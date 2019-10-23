@@ -2,13 +2,15 @@ package scheduler
 
 import (
 	log "github.com/sirupsen/logrus"
+
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/sched"
 )
 
-type OrigSchedulingAlg struct {}
+type OrigSchedulingAlg struct{}
 
-func (oa *OrigSchedulingAlg) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
+func (oa *OrigSchedulingAlg) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
+	requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
 	// Sort jobs by priority and count running tasks.
 	// An array indexed by priority. The value is the subset of jobs in fifo order for the given priority.
 	priorityJobs := [][]*jobState{{}, {}, {}}

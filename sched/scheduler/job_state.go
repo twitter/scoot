@@ -22,9 +22,9 @@ type jobState struct {
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
 
 	// track tasks by state (completed, running, not started) for new scheduling alg
-	Completed	   map[string]*taskState
-	Running		   map[string]*taskState
-	NotStarted	   map[string]*taskState
+	Completed  map[string]*taskState
+	Running    map[string]*taskState
+	NotStarted map[string]*taskState
 }
 
 // Contains all the information for a specified task
@@ -97,7 +97,7 @@ func newJobState(job *sched.Job, saga *saga.Saga, taskDurations map[string]avera
 			j.getTask(taskId).Status = sched.Completed
 			j.TasksCompleted++
 			if _, ok := j.Running[taskId]; ok {
-				delete(j.Running,taskId)
+				delete(j.Running, taskId)
 			} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
 				delete(j.NotStarted, taskId)
 			}
@@ -142,7 +142,7 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState.NumTimesTried++
 	j.TasksRunning++
 	if _, ok := j.NotStarted[taskId]; ok {
-		delete(j.NotStarted,taskId)
+		delete(j.NotStarted, taskId)
 	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
 		delete(j.Completed, taskId)
 	}
@@ -161,7 +161,7 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 		j.TasksRunning--
 	}
 	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running,taskId)
+		delete(j.Running, taskId)
 	} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
 		delete(j.NotStarted, taskId)
 	}
@@ -179,7 +179,7 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 		taskState.NumTimesTried--
 	}
 	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running,taskId)
+		delete(j.Running, taskId)
 	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
 		delete(j.Completed, taskId)
 	}

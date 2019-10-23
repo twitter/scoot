@@ -26,5 +26,6 @@ type Scheduler interface {
 }
 
 type SchedulingAlgorithm interface {
-	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState
+	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
+		requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState
 }

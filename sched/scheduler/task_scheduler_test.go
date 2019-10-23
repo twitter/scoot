@@ -7,6 +7,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/luci/go-render/render"
+
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
@@ -205,31 +206,31 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	}
 	js := []*jobState{
 		{
-			Job:   makeJob("job1", sched.P0),
-			Tasks: makeTasks("job1"),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job1", sched.P0),
+			Tasks:      makeTasks("job1"),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:   makeJob("job2", sched.P1),
-			Tasks: makeTasks("job2"),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job2", sched.P1),
+			Tasks:      makeTasks("job2"),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:   makeJob("job3", sched.P2),
-			Tasks: makeTasks("job3"),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job3", sched.P2),
+			Tasks:      makeTasks("job3"),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:   makeJob("job4", sched.P0),
-			Tasks: makeTasks("job4"),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job4", sched.P0),
+			Tasks:      makeTasks("job4"),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 	}
@@ -291,24 +292,24 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 	js := []*jobState{
 		{
-			Job:   makeJob("job1", sched.P0),
-			Tasks: makeTasks(10, "job1", sched.P0),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job1", sched.P0),
+			Tasks:      makeTasks(10, "job1", sched.P0),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:   makeJob("job2", sched.P1),
-			Tasks: makeTasks(10, "job2", sched.P1),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job2", sched.P1),
+			Tasks:      makeTasks(10, "job2", sched.P1),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:   makeJob("job3", sched.P2),
-			Tasks: makeTasks(10, "job3", sched.P2),
-			Running: make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Job:        makeJob("job3", sched.P2),
+			Tasks:      makeTasks(10, "job3", sched.P2),
+			Running:    make(map[string]*taskState),
+			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 	}
