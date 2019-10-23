@@ -33,21 +33,25 @@ import (
 	"github.com/twitter/scoot/scootapi"
 )
 
-var uploadCmdStr string = "upload_command"
-var uploadActionStr string = "upload_action"
-var batchUploadStr string = "batch_upload"
-var batchDownloadStr string = "batch_download"
-var execCmdStr string = "execute"
-var getOpCmdStr string = "get_operation"
-var cancelOpCmdStr string = "cancel_operation"
+var (
+	uploadCmdStr        string = "upload_command"
+	uploadActionStr     string = "upload_action"
+	execCmdStr          string = "execute"
+	batchUploadStr      string = "batch_upload"
+	batchDownloadStr    string = "batch_download"
+	getOpCmdStr         string = "get_operation"
+	cancelOpCmdStr      string = "cancel_operation"
+	findMissingOpCmdStr string = "find_missing_blobs"
+)
 var supportedCommands map[string]bool = map[string]bool{
-	uploadCmdStr:     true,
-	uploadActionStr:  true,
-	batchUploadStr:   true,
-	batchDownloadStr: true,
-	execCmdStr:       true,
-	getOpCmdStr:      true,
-	cancelOpCmdStr:   true,
+	uploadCmdStr:        true,
+	uploadActionStr:     true,
+	batchUploadStr:      true,
+	batchDownloadStr:    true,
+	execCmdStr:          true,
+	getOpCmdStr:         true,
+	cancelOpCmdStr:      true,
+	findMissingOpCmdStr: true,
 }
 
 func main() {
@@ -114,6 +118,13 @@ func main() {
 	cancelName := cancelCommand.String("name", "", "Operation name to query")
 	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
+	// Find Missing Blobs
+	findMissingCommand := flag.NewFlagSet(findMissingOpCmdStr, flag.ExitOnError)
+	findMissingAddr := findMissingCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	findMissingDigests := findMissingCommand.String("digests", "", "Digests to find as ','-separated '<hash>/<size>' list")
+	findMissingJson := findMissingCommand.Bool("json", false, "Print missing digests as JSON to stdout")
+	findMissingLogLevel := findMissingCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
+
 	// Parse input flags
 	if len(os.Args) < 2 {
 		printSupported()
@@ -134,6 +145,8 @@ func main() {
 		getCommand.Parse(os.Args[2:])
 	case cancelOpCmdStr:
 		cancelCommand.Parse(os.Args[2:])
+	case findMissingOpCmdStr:
+		findMissingCommand.Parse(os.Args[2:])
 	default:
 		printSupported()
 		os.Exit(1)
@@ -158,17 +171,10 @@ func main() {
 		if *batchUploadDir == "" {
 			log.Fatalf("Must supply an upload dir")
 		}
-		e := batchUploadFiles(*batchUploadAddr, *batchUploadDir)
-		if e != nil {
-			log.Fatalf("batch upload returned %s", e.Error())
-		}
+		batchUploadFiles(*batchUploadAddr, *batchUploadDir)
 	} else if batchDownload.Parsed() {
 		parseAndSetLevel(*batchDownloadLogLevel)
-		e := downloadTheBatch(*batchDownloadAddr, *batchDownloadDigests, *batchDownloadDir)
-		if e != nil {
-			log.Fatal(e)
-		}
-		log.Infof("contents downloaded to: %s", *batchDownloadDir)
+		batchDownloadFiles(*batchDownloadAddr, *batchDownloadDigests, *batchDownloadDir)
 	} else if execCommand.Parsed() {
 		if *execActionDigest == "" {
 			log.Fatalf("action digest required for %s", execCmdStr)
@@ -187,6 +193,12 @@ func main() {
 		}
 		parseAndSetLevel(*cancelLogLevel)
 		cancelOperation(*cancelAddr, *cancelName)
+	} else if findMissingCommand.Parsed() {
+		if *findMissingDigests == "" {
+			log.Fatalf("digests requred for %s", findMissingOpCmdStr)
+		}
+		parseAndSetLevel(*findMissingLogLevel)
+		findMissingBlobs(*findMissingAddr, *findMissingDigests, *findMissingJson)
 	} else {
 		log.Fatal("No expected commands parsed")
 	}
@@ -374,49 +386,71 @@ func cancelOperation(execAddr, opName string) {
 	// No output
 }
 
-func printSupported() {
-	cmds := make([]string, 0, len(supportedCommands))
-	for k := range supportedCommands {
-		cmds = append(cmds, k)
+func findMissingBlobs(casAddr, digestsStr string, asJson bool) {
+	// parse digests from input string
+	strs := strings.Split(digestsStr, ",")
+	digests := []*remoteexecution.Digest{}
+	for _, s := range strs {
+		d, err := bazel.DigestFromString(s)
+		if err != nil {
+			log.Fatalf("Error parsing digest from string %s: %s", s, err)
+		}
+		digests = append(digests, d)
 	}
-	fmt.Printf("Supported commands: %s\n", strings.Join(cmds, ", "))
+
+	r := dialer.NewConstantResolver(casAddr)
+	missing, err := cas.MakeCASClient().FindMissingBlobs(r, digests, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	if err != nil {
+		log.Fatalf("Error making FindMissingBlobs request: %s", err)
+	}
+
+	if asJson {
+		b, err := json.Marshal(missing)
+		if err != nil {
+			log.Fatalf("Error converting missing digests to JSON: %s", err)
+		}
+		fmt.Printf("%s\n", b)
+	} else {
+		for _, d := range missing {
+			fmt.Printf("%s/%d\n", d.GetHash(), d.GetSizeBytes())
+		}
+	}
 }
 
 // use batch upload, print the list of digests that were uploaded
-func batchUploadFiles(casAddr string, uploadDir string) error {
+func batchUploadFiles(casAddr string, uploadDir string) {
 	casClient := cas.MakeCASClient()
 	resolver := dialer.NewConstantResolver(casAddr)
 	// set up the contents for upload
-	contents, e := getContents(uploadDir)
-	if e != nil {
-		return e
+	contents, err := getContents(uploadDir)
+	if err != nil {
+		log.Fatalf("Failed to batchUpload: %s", err)
 	}
 
 	// request the upload
-	digests, e := casClient.BatchUpdateWrite(resolver, contents, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
-	if e != nil {
-		return e
+	digests, err := casClient.BatchUpdateWrite(resolver, contents, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	if err != nil {
+		log.Fatalf("Failed to batchUpload: %s", err)
 	}
 
 	// handle response
 	for _, digest := range digests {
 		fmt.Printf("%s/%d\n", digest.GetHash(), digest.GetSizeBytes())
 	}
-	return e
 }
 
 // get batch upload contents from either the files in a directory, or test set of 10 blobs
 func getContents(dir string) ([]cas.BatchUploadContent, error) {
 	contents := make([]cas.BatchUploadContent, 0)
-	fileList, e := ioutil.ReadDir(dir)
-	if e != nil {
-		return nil, e
+	fileList, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 	for _, f := range fileList {
 		if !f.IsDir() {
-			data, e := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, f.Name()))
-			if e != nil {
-				return nil, fmt.Errorf("error reading %s/%s:%s", dir, f.Name(), e.Error())
+			data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", dir, f.Name()))
+			if err != nil {
+				return nil, fmt.Errorf("error reading %s/%s: %s", dir, f.Name(), err)
 			}
 			uploadContent := makeBatchUploadContentEntry(data)
 			contents = append(contents, uploadContent)
@@ -429,11 +463,8 @@ func makeBatchUploadContentEntry(data []byte) cas.BatchUploadContent {
 	sha := sha256.Sum256(data)
 	shaStr := fmt.Sprintf("%x", sha)
 	digest := &remoteexecution.Digest{
-		Hash:                 shaStr,
-		SizeBytes:            int64(len(data)),
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+		Hash:      shaStr,
+		SizeBytes: int64(len(data)),
 	}
 	uploadContent := cas.BatchUploadContent{
 		Digest: digest,
@@ -442,7 +473,7 @@ func makeBatchUploadContentEntry(data []byte) cas.BatchUploadContent {
 	return uploadContent
 }
 
-func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
+func batchDownloadFiles(casAddr string, digestsStr string, toDir string) {
 	casClient := cas.MakeCASClient()
 	resolver := dialer.NewConstantResolver(casAddr)
 
@@ -450,16 +481,18 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 	entries := strings.Split(digestsStr, ",")
 	digestsPtr := make([]*remoteexecution.Digest, len(entries))
 	for i, entry := range entries {
-		d, e := bazel.DigestFromString(entry)
-		if e != nil {
-			return e
+		d, err := bazel.DigestFromString(entry)
+		if err != nil {
+			log.Fatalf("Failed to batchDownload: %s", err)
 		}
 		digestsPtr[i] = d
-
 	}
 
 	// request batch download
-	contents, e := casClient.BatchRead(resolver, digestsPtr, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	contents, err := casClient.BatchRead(resolver, digestsPtr, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
+	if err != nil {
+		log.Fatalf("Failed to batchDownload: %s", err)
+	}
 
 	if _, err := os.Open(toDir); os.IsNotExist(err) {
 		os.Mkdir(toDir, 0777)
@@ -468,14 +501,22 @@ func downloadTheBatch(casAddr string, digestsStr string, toDir string) error {
 	// write any contents returned to toDir
 	for sha, content := range contents {
 		fname := fmt.Sprintf("%s/%s", toDir, sha)
-		f, e := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0666)
-		if e != nil {
-			return fmt.Errorf("error downloading %s to %s: %s", sha, fname, e.Error())
+		f, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			log.Fatalf("Error during batchDownload %s to %s: %s", sha, fname, err)
 		}
+		defer f.Close()
 		f.Write(content)
-		f.Close()
 	}
+	log.Infof("Contents downloaded to: %s", toDir)
+}
 
-	// return any error
-	return e
+// Util functions
+
+func printSupported() {
+	cmds := make([]string, 0, len(supportedCommands))
+	for k := range supportedCommands {
+		cmds = append(cmds, k)
+	}
+	fmt.Printf("Supported commands: %s\n", strings.Join(cmds, ", "))
 }

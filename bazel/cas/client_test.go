@@ -117,7 +117,7 @@ func TestClientWriteEmpty(t *testing.T) {
 	}
 }
 
-func TestActionCacheGet(t *testing.T) {
+func TestClientActionCacheGet(t *testing.T) {
 	rc := int32(42)
 	req := &remoteexecution.GetActionResultRequest{ActionDigest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}}
 
@@ -135,7 +135,7 @@ func TestActionCacheGet(t *testing.T) {
 	}
 }
 
-func TestActionCacheGetMissing(t *testing.T) {
+func TestClientActionCacheGetMissing(t *testing.T) {
 	req := &remoteexecution.GetActionResultRequest{ActionDigest: &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}}
 
 	mockCtrl := gomock.NewController(t)
@@ -155,7 +155,7 @@ func TestActionCacheGetMissing(t *testing.T) {
 	}
 }
 
-func TestActionCacheUpdate(t *testing.T) {
+func TestClientActionCacheUpdate(t *testing.T) {
 	rc := int32(42)
 	ar := &remoteexecution.ActionResult{ExitCode: rc}
 	ad := &remoteexecution.Digest{Hash: testHash1, SizeBytes: testSize1}
@@ -176,7 +176,7 @@ func TestActionCacheUpdate(t *testing.T) {
 	}
 }
 
-func TestBatchRead(t *testing.T) {
+func TestClientBatchRead(t *testing.T) {
 	// setup the mock objects for the test
 	mockCtrl := gomock.NewController(t)
 	mockConn := mock_connection.NewMockClientConnPtr(mockCtrl)
@@ -192,10 +192,7 @@ func TestBatchRead(t *testing.T) {
 
 	// define read request and fake return values
 	mockResults := &remoteexecution.BatchReadBlobsResponse{
-		Responses:            make([]*remoteexecution.BatchReadBlobsResponse_Response, 10),
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+		Responses: make([]*remoteexecution.BatchReadBlobsResponse_Response, 10),
 	}
 	caspbClientMock.(*mock_remoteexecution.MockContentAddressableStorageClient).EXPECT().BatchReadBlobs(gomock.Any(), gomock.Any()).Return(mockResults, nil)
 
@@ -238,7 +235,7 @@ func TestBatchRead(t *testing.T) {
 
 }
 
-func TestBatchWrite(t *testing.T) {
+func TestClientBatchWrite(t *testing.T) {
 	// setup the test
 	mockCtrl := gomock.NewController(t)
 	mockConn := mock_connection.NewMockClientConnPtr(mockCtrl)
@@ -257,10 +254,7 @@ func TestBatchWrite(t *testing.T) {
 
 	// make the structure that the mock proto client will return
 	mockResp := &remoteexecution.BatchUpdateBlobsResponse{
-		Responses:            make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+		Responses: make([]*remoteexecution.BatchUpdateBlobsResponse_Response, 10),
 	}
 
 	for i := 0; i < 10; i++ {
@@ -269,11 +263,8 @@ func TestBatchWrite(t *testing.T) {
 		sha := sha256.Sum256(theData)
 		shaStr := fmt.Sprintf("%x", sha)
 		newDigest := &remoteexecution.Digest{
-			Hash:                 shaStr,
-			SizeBytes:            int64(len(theData)),
-			XXX_NoUnkeyedLiteral: struct{}{},
-			XXX_unrecognized:     nil,
-			XXX_sizecache:        0,
+			Hash:      shaStr,
+			SizeBytes: int64(len(theData)),
 		}
 		uploadContent := BatchUploadContent{
 			Digest: newDigest,
@@ -300,6 +291,34 @@ func TestBatchWrite(t *testing.T) {
 	// validate the results
 	assert.Equal(t, nil, e)
 	assert.Equal(t, 10, len(digests))
+}
+
+func TestClientFindMissingBlobs(t *testing.T) {
+	digests := []*remoteexecution.Digest{
+		{Hash: testHash1, SizeBytes: testSize1},
+		{Hash: testHash2, SizeBytes: testSize2},
+	}
+	req := &remoteexecution.FindMissingBlobsRequest{BlobDigests: digests}
+	expected := &remoteexecution.FindMissingBlobsResponse{MissingBlobDigests: digests}
+
+	mockCtrl := gomock.NewController(t)
+	casClientMock := mock_remoteexecution.NewMockContentAddressableStorageClient(mockCtrl)
+
+	casClientMock.EXPECT().FindMissingBlobs(context.Background(), req).Return(expected, nil)
+
+	fmRes, err := MakeCASClient().findMissingBlobsFromClient(casClientMock, req)
+	if err != nil {
+		t.Fatalf("Error from find missing: %s", err)
+	}
+
+	if len(fmRes.GetMissingBlobDigests()) != len(digests) {
+		t.Fatalf("Expected %d missing digests, got: %d", len(digests), len(fmRes.GetMissingBlobDigests()))
+	}
+	for i, d := range fmRes.GetMissingBlobDigests() {
+		if !bazel.DigestsEqual(d, digests[i]) {
+			t.Fatalf("Missing digests didn't match. Got: %s, want: %s", d, digests[i])
+		}
+	}
 }
 
 // create a random Data set

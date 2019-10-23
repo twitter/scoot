@@ -56,3 +56,7 @@ func EmptyDigest() *remoteexecution.Digest {
 func IsEmptyDigest(d *remoteexecution.Digest) bool {
 	return d.GetHash() == EmptySha
 }
+
+func DigestsEqual(a, b *remoteexecution.Digest) bool {
+	return a.GetHash() == b.GetHash() && a.GetSizeBytes() == b.GetSizeBytes()
+}
