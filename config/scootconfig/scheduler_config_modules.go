@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 //TODO(jschiller): make these configurable.
@@ -29,7 +29,7 @@ const DefaultReadyFnBackoff = 5 * time.Second
 //             from the sagalog, and restarts them.
 // DefaultTaskTimeout - default timeout for tasks, human readable ex: "30m"
 //
-// See scheduler.SchedulerConfig for comments on the remaining fields.
+// See server.SchedulerConfig for comments on the remaining fields.
 type StatefulSchedulerConfig struct {
 	Type                 string
 	MaxRetriesPerTask    int
@@ -46,20 +46,20 @@ func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
-func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
+func (c *StatefulSchedulerConfig) Create() (server.SchedulerConfig, error) {
 	var err error
 	var dtt time.Duration
 	if c.DefaultTaskTimeout != "" {
 		dtt, err = time.ParseDuration(c.DefaultTaskTimeout)
 		if err != nil {
-			return scheduler.SchedulerConfig{}, err
+			return server.SchedulerConfig{}, err
 		}
 	}
 	var tto time.Duration
 	if c.TaskTimeoutOverhead != "" {
 		tto, err = time.ParseDuration(c.TaskTimeoutOverhead)
 		if err != nil {
-			return scheduler.SchedulerConfig{}, err
+			return server.SchedulerConfig{}, err
 		}
 	}
 	admins := []string{}
@@ -69,7 +69,7 @@ func (c *StatefulSchedulerConfig) Create() (scheduler.SchedulerConfig, error) {
 		}
 	}
 
-	return scheduler.SchedulerConfig{
+	return server.SchedulerConfig{
 		MaxRetriesPerTask:    c.MaxRetriesPerTask,
 		DebugMode:            c.DebugMode,
 		RecoverJobsOnStartup: c.RecoverJobsOnStartup,

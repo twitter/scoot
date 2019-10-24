@@ -35,8 +35,8 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/sched"
-	"github.com/twitter/scoot/sched/scheduler"
+	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 type externalDeps struct {
@@ -74,7 +74,7 @@ type SchedulingAlgTester struct {
 	testsStart         time.Time
 	testsEnd           time.Time
 	realStart          time.Time
-	jobDefsMap         map[int][]*sched.JobDefinition
+	jobDefsMap         map[int][]*domain.JobDefinition
 	pRatios            []int
 	clusterSize        int
 	finishTimeFilename string
@@ -90,7 +90,7 @@ jobDefsMap is a map of relative start time (seconds) -> a job definition where e
 contains the number of seconds the task should take during the simulation
 
 */
-func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*sched.JobDefinition,
+func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*domain.JobDefinition,
 	pRatios []int, clusterSize int) *SchedulingAlgTester {
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
 	if _, err := os.Stat(tDir); os.IsNotExist(err) {
@@ -127,7 +127,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 	st.extDeps = st.getExternals(st.clusterSize)
 
 	config := st.getTestConfig()
-	s := scheduler.NewStatefulScheduler(
+	s := server.NewStatefulScheduler(
 		st.extDeps.initialCl,
 		st.extDeps.clUpdates,
 		st.extDeps.sc,
@@ -136,7 +136,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.statsReceiver,
 	)
 
-	s.SchedAlg = scheduler.MakePriorityBasedAlg(st.pRatios[:]) // use the priority based algorithm
+	s.SchedAlg = server.MakePriorityBasedAlg(st.pRatios[:]) // use the priority based algorithm
 
 	rm := st.getRequestorMap(st.jobDefsMap)
 
@@ -279,7 +279,7 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 /*
 store the production duration and the test start time for a job id in the ComparisonMapEntry
 */
-func (st *SchedulingAlgTester) makeTimeSummary(jobDef *sched.JobDefinition, jobId string) error {
+func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, jobId string) error {
 	re := regexp.MustCompile("url:(.*), elapsedMin:([0-9]+)")
 	m := re.FindStringSubmatch(jobDef.Tag)
 	buildUrl := m[1]
@@ -303,7 +303,7 @@ func (st *SchedulingAlgTester) makeTimeSummary(jobDef *sched.JobDefinition, jobI
 /*
 extract the time from Basis field
 */
-func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *sched.JobDefinition) (time.Duration, error) {
+func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *domain.JobDefinition) (time.Duration, error) {
 	d, e := strconv.Atoi(jobDef.Basis)
 	if e != nil {
 		return time.Duration(0), fmt.Errorf("couldn't parse duration from job def basis:%s", e.Error())
@@ -334,7 +334,7 @@ func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 }
 
 // use in a goroutine to print stats every minute
-func (st *SchedulingAlgTester) printStats(deps *externalDeps, stopCh chan bool, rm map[sched.Priority]string) {
+func (st *SchedulingAlgTester) printStats(deps *externalDeps, stopCh chan bool, rm map[domain.Priority]string) {
 	ticker := time.NewTicker(deps.latchTime)
 
 	for true {
@@ -347,7 +347,7 @@ func (st *SchedulingAlgTester) printStats(deps *externalDeps, stopCh chan bool, 
 	}
 }
 
-func (st *SchedulingAlgTester) writeStatsToFile(deps *externalDeps, rm map[sched.Priority]string) {
+func (st *SchedulingAlgTester) writeStatsToFile(deps *externalDeps, rm map[domain.Priority]string) {
 	t := time.Now()
 	elapsed := t.Sub(st.realStart)
 	simTime := st.testsStart.Add(elapsed)
@@ -357,7 +357,7 @@ func (st *SchedulingAlgTester) writeStatsToFile(deps *externalDeps, rm map[sched
 	json.Unmarshal(statsJson, &s)
 	line := make([]byte, 0)
 	for priority := 0; priority < len(rm); priority++ {
-		req := rm[sched.Priority(priority)]
+		req := rm[domain.Priority(priority)]
 		runningStatName := fmt.Sprintf("schedNumRunningTasksGauge_%s", req)
 		waitingStatName := fmt.Sprintf("schedNumWaitingTasksGauge_%s", req)
 		runningCnt := s[runningStatName]
@@ -407,8 +407,8 @@ func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
 	return h
 }
 
-func (st *SchedulingAlgTester) getTestConfig() scheduler.SchedulerConfig {
-	return scheduler.SchedulerConfig{
+func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfig {
+	return server.SchedulerConfig{
 		MaxRetriesPerTask:       0,
 		DebugMode:               false,
 		RecoverJobsOnStartup:    false,
@@ -425,8 +425,8 @@ func (st *SchedulingAlgTester) getTestConfig() scheduler.SchedulerConfig {
 	}
 }
 
-func (st *SchedulingAlgTester) getRequestorMap(jobDefsMap map[int][]*sched.JobDefinition) map[sched.Priority]string {
-	m := make(map[sched.Priority]string)
+func (st *SchedulingAlgTester) getRequestorMap(jobDefsMap map[int][]*domain.JobDefinition) map[domain.Priority]string {
+	m := make(map[domain.Priority]string)
 
 	var r string
 	for _, jobDefs := range jobDefsMap {

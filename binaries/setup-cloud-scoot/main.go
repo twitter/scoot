@@ -6,7 +6,7 @@ import (
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/os/temp"
-	"github.com/twitter/scoot/scootapi/setup"
+	"github.com/twitter/scoot/scheduler/setup"
 )
 
 // Sets up a local swarm that serves scootapi, then waits or runs

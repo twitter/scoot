@@ -30,7 +30,8 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	scootproto "github.com/twitter/scoot/common/proto"
-	"github.com/twitter/scoot/scootapi"
+	"github.com/twitter/scoot/scheduler"
+	"github.com/twitter/scoot/snapshot/bundlestore"
 )
 
 var (
@@ -66,7 +67,7 @@ func main() {
 
 	// Upload Command
 	uploadCommand := flag.NewFlagSet(uploadCmdStr, flag.ExitOnError)
-	uploadAddr := uploadCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	uploadAddr := uploadCommand.String("cas_addr", bundlestore.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	uploadEnv := uploadCommand.String("env", "", "comma-separated command environment variables, i.e. \"key1=val1,key2=val2\"")
 	uploadOutputFiles := uploadCommand.String("output_files", "", "Output files to ingest as comma-separated list: '/file1,/dir/file2'")
 	uploadOutputDirs := uploadCommand.String("output_dirs", "", "Output dirs to ingest as comma-separated list: '/dir'")
@@ -76,20 +77,20 @@ func main() {
 
 	// Batch Upload
 	batchUpload := flag.NewFlagSet(batchUploadStr, flag.ExitOnError)
-	batchUploadAddr := batchUpload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	batchUploadAddr := batchUpload.String("cas_addr", bundlestore.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	batchUploadDir := batchUpload.String("dir", "", "dir containing files to upload: '/dir'")
 	batchUploadLogLevel := batchUpload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
 
 	// Batch Download
 	batchDownload := flag.NewFlagSet(batchDownloadStr, flag.ExitOnError)
-	batchDownloadAddr := batchDownload.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	batchDownloadAddr := batchDownload.String("cas_addr", bundlestore.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	batchDownloadDigests := batchDownload.String("digests", "", "digests identifying the contents to download: '<hash1>/<size1>,<hash2>/<size2>,...")
 	batchDownloadDir := batchDownload.String("dir", "./bazel_batch_downloads", "directory to write the download files.  (File names will be the contents sha.)")
 	batchDownloadLogLevel := batchDownload.String("log_level", "info", "Log everything at this level and above (error|info|debug), default info")
 
 	// Upload Action
 	uploadAction := flag.NewFlagSet(uploadActionStr, flag.ExitOnError)
-	actionAddr := uploadAction.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	actionAddr := uploadAction.String("cas_addr", bundlestore.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	actionCommandDigest := uploadAction.String("command", "", "Command digest as '<hash>/<size>'")
 	actionRootDigest := uploadAction.String("input_root", bazel.DigestToStr(bazel.EmptyDigest()),
 		"Input root digest as '<hash>/<size>' (default to empty)")
@@ -99,7 +100,7 @@ func main() {
 
 	// Execute
 	execCommand := flag.NewFlagSet(execCmdStr, flag.ExitOnError)
-	execAddr := execCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	execAddr := execCommand.String("grpc_addr", scheduler.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	execActionDigest := execCommand.String("action", "", "Action digest as '<hash>/<size>'")
 	execSkipCache := execCommand.Bool("skip_cache", false, "Skip checking for cached results")
 	execJson := execCommand.Bool("json", false, "Print operation as JSON to stdout")
@@ -107,20 +108,21 @@ func main() {
 
 	// Get Operation
 	getCommand := flag.NewFlagSet(getOpCmdStr, flag.ExitOnError)
-	getAddr := getCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	getAddr := getCommand.String("grpc_addr", scheduler.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	getName := getCommand.String("name", "", "Operation name to query")
-	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout")
+	getJson := getCommand.Bool("json", false, "Print operation as JSON to stdout (some data remains serialized)")
+	getJsonFull := getCommand.Bool("json_full", false, "Print full operation as JSON to stdout (format not guaranteed canonical)")
 	getLogLevel := getCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
 	// Cancel Operation
 	cancelCommand := flag.NewFlagSet(cancelOpCmdStr, flag.ExitOnError)
-	cancelAddr := cancelCommand.String("grpc_addr", scootapi.DefaultSched_GRPC, "'host:port' of grpc Exec server")
+	cancelAddr := cancelCommand.String("grpc_addr", scheduler.DefaultSched_GRPC, "'host:port' of grpc Exec server")
 	cancelName := cancelCommand.String("name", "", "Operation name to query")
 	cancelLogLevel := cancelCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
 
 	// Find Missing Blobs
 	findMissingCommand := flag.NewFlagSet(findMissingOpCmdStr, flag.ExitOnError)
-	findMissingAddr := findMissingCommand.String("cas_addr", scootapi.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
+	findMissingAddr := findMissingCommand.String("cas_addr", bundlestore.DefaultApiBundlestore_GRPC, "'host:port' of grpc CAS server")
 	findMissingDigests := findMissingCommand.String("digests", "", "Digests to find as ','-separated '<hash>/<size>' list")
 	findMissingJson := findMissingCommand.Bool("json", false, "Print missing digests as JSON to stdout")
 	findMissingLogLevel := findMissingCommand.String("log_level", "", "Log everything at this level and above (error|info|debug)")
@@ -186,7 +188,10 @@ func main() {
 			log.Fatalf("name required for %s", getOpCmdStr)
 		}
 		parseAndSetLevel(*getLogLevel)
-		getOperation(*getAddr, *getName, *getJson)
+		if *getJson && *getJsonFull {
+			log.Fatal("Can only specify one of: json, json_full")
+		}
+		getOperation(*getAddr, *getName, *getJson, *getJsonFull)
 	} else if cancelCommand.Parsed() {
 		if *cancelName == "" {
 			log.Fatalf("name required for %s", cancelOpCmdStr)
@@ -357,18 +362,26 @@ func execute(execAddr, actionDigestStr string, skipCache bool, execJson bool) {
 	}
 }
 
-func getOperation(execAddr, opName string, getJson bool) {
+func getOperation(execAddr, opName string, getJson, getJsonFull bool) {
 	r := dialer.NewConstantResolver(execAddr)
 	operation, err := execution.GetOperation(r, opName)
 	if err != nil {
 		log.Fatalf("Error making GetOperation request: %s", err)
 	}
 	log.Info(execution.ExecuteOperationToStr(operation))
-	// We only use default Marshalling, which leaves most nested fields serialized
 	if getJson {
+		// We only use default Marshalling, which leaves most nested fields serialized
 		b, err := json.Marshal(operation)
 		if err != nil {
 			log.Fatalf("Error converting operation to JSON: %v", err)
+		}
+		fmt.Printf("%s\n", b)
+	} else if getJsonFull {
+		// Gets the "full" deserialized json representation, although to do this custom extraction/parsing is used,
+		// which means that the resulting format could possibly deviate from the canonical data types.
+		b, err := execution.OperationToJson(operation)
+		if err != nil {
+			log.Fatalf("Error parsing operation full JSON: %v", err)
 		}
 		fmt.Printf("%s\n", b)
 	} else {

@@ -43,34 +43,39 @@ go run ./binaries/setup-cloud-scoot/main.go --strategy local.local
 Run a series of randomly generated tests against the local scheduler and workers:
 
 ```sh
-go run ./binaries/scootapi/main.go run_smoke_test
+go run ./scheduler/client/scootcl/main.go smoke_test
 ```
 ## Scoot Integration Tests
 Scoot has a few  tests that exercise varying levels of common usages and workflows.
 
-### Smoketest/Swarmtest
-Invokes a scootapi client directly to run jobs against a local cluster and waits for the 
+### Smoketest
+Invokes a scoot client directly to run jobs against a local cluster and waits for the 
 scheduled jobs to complete.
 
-(./scootapi/client/smoke_test_cmd.go)
+(./scheduler/client/cli/smoketest.go)
 
 ### Recoverytest
-Invokes a scootapi client directly to run jobs against a local cluster, kills the cluster, 
+Invokes a scoot client directly to run jobs against a local cluster, kills the cluster, 
 attempts to spin up a new one, and waits for the originally scheduled jobs to complete.
 
 (./binaries/recoverytest/main.go)
 
 ### Integration
-Invokes a scootapi and scoot-snapshot-db client via CLI to run a job against a local cluster 
+Invokes a scoot and scoot-snapshot-db client via CLI to run a job against a local cluster 
 and waits for the job to complete
 
-(./tests/integration_test.go)
+(./binaries/scoot-integration/main.go)
+
+Invokes a scoot bazel client (bzutil & fs_util) via CLI to run a job against a local cluster
+using the bazel API grpc endpoints
+
+(./binaries/bazel-integration/main.go)
 
 ## Scoot Thrift Code
 __Thrift Prerequisites__
 Install the Thrift tool and golang thrift repository locally using the following section.
 
-__Generating thrift files (scootapi used as an example)__
+__Generating thrift files__
 See documentation in thrift definition files for specific generation instructions, or `make thrift`.
 
 # Development Installation Instructions
