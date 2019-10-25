@@ -11,9 +11,8 @@ import (
 
 type PriorityBasedAlg struct {
 	PriorityRatios           []int // array of priority ratios where array index == priority
-	taskModCounter           float64
+	taskModCounter           int
 	jobsByPriority           [][]*jobState // list of jobs at each priority
-	runRatios                []float64     // when to run each priority
 	roundRobinJobIndex       []int         // for each priority, track the index of the job whose task should be assigned next
 	numBarredFromLowPriority int           // number of nodes reserved for non-lowest priority tasks
 }
@@ -24,17 +23,6 @@ func MakePriorityBasedAlg(ratios []int) *PriorityBasedAlg {
 		taskModCounter: 1,
 	}
 
-	// initialize the runRatios array
-	// runRatio[pN] represents that we want to run tasks for pN 1 out of runRatio[pN] tasks
-	// when taskModCounter == runRatio[pN] a task from a job with that priority will be scheduled
-	pbs.runRatios = make([]float64, len(pbs.PriorityRatios))
-	pbs.runRatios[0] = 1
-	pbs.roundRobinJobIndex = make([]int, len(pbs.PriorityRatios))
-	for i := 1; i < len(pbs.PriorityRatios); i++ {
-		pbs.runRatios[i] = pbs.runRatios[i-1] * float64(pbs.PriorityRatios[i])
-	}
-
-	log.Infof("priority ratios:%v, translate to run ratios:%v", pbs.PriorityRatios, pbs.runRatios)
 	return pbs
 }
 
@@ -55,6 +43,8 @@ func (pbs *PriorityBasedAlg) GetTasksToBeAssigned(jobs []*jobState, statNotUsed 
 	for i := 0; i < len(pbs.PriorityRatios); i++ { // initialize priority to jobs array
 		pbs.jobsByPriority = make([][]*jobState, len(pbs.PriorityRatios))
 	}
+	pbs.roundRobinJobIndex = make([]int, len(pbs.jobsByPriority))
+
 	for _, job := range jobs {
 		if job.TasksCompleted+job.TasksRunning < len(job.Tasks) {
 			// the job still has tasks to assign
@@ -225,15 +215,15 @@ func (pbs *PriorityBasedAlg) getPriorityToAssign(idleNodeIdx, totalIdleNodes int
 	if pbs.taskModCounter == 1 {
 		nextPriority = 0
 	} else {
-		for i := len(pbs.runRatios) - 1; i >= 0 && nextPriority == -1; i-- {
-			if math.Mod(pbs.taskModCounter, pbs.runRatios[i]) == 0 &&
-				!(withinReservedNodes && i == len(pbs.runRatios)-1) {
+		for i := len(pbs.PriorityRatios) - 1; i >= 0 && nextPriority == -1; i-- {
+			if math.Mod(float64(pbs.taskModCounter), float64(pbs.PriorityRatios[i])) == 0 &&
+				!(withinReservedNodes && i == len(pbs.PriorityRatios)-1) {
 				nextPriority = i
 			}
 		}
 	}
 	pbs.taskModCounter++
-	if pbs.taskModCounter > pbs.runRatios[len(pbs.runRatios)-1] {
+	if pbs.taskModCounter > pbs.PriorityRatios[len(pbs.PriorityRatios)-1] {
 		pbs.taskModCounter = 1
 	}
 	return nextPriority

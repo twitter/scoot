@@ -92,6 +92,7 @@ contains the number of seconds the task should take during the simulation
 */
 func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*domain.JobDefinition,
 	pRatios []int, clusterSize int) *SchedulingAlgTester {
+
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
 	if _, err := os.Stat(tDir); os.IsNotExist(err) {
 		os.Mkdir(tDir, 0777)
@@ -124,6 +125,10 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 }
 
 func (st *SchedulingAlgTester) RunTest() error {
+	if err := st.verifyRatios(); err != nil {
+		return err
+	}
+
 	st.extDeps = st.getExternals(st.clusterSize)
 
 	config := st.getTestConfig()
@@ -479,4 +484,22 @@ func (st *SchedulingAlgTester) writeFirstLines() {
 		st.testsEnd.Format("2006-01-02 15:04 MST"), st.pRatios)
 	f.Write([]byte(line))
 	f1.Write([]byte(line))
+}
+
+func (st *SchedulingAlgTester) verifyRatios() error {
+	// verify the pRatios values start with 1, are ascending and no duplicates
+	vals := make(map[int]int)
+	for i, ratio := range st.pRatios {
+		if i == 0 && ratio != 1 {
+			return fmt.Errorf("first ratio must be 1 not %d", ratio)
+		} else {
+			if i > 0 && st.pRatios[i] < st.pRatios[i-1] {
+				return fmt.Errorf("ratios must be asencing %d, %d not allowed", st.pRatios[i-1], st.pRatios[i])
+			}
+		}
+		if _, ok := vals[ratio]; ok {
+			return fmt.Errorf("ratio %d is duplicated.  No duplicate ratios allowed", ratio)
+		}
+	}
+	return nil
 }
