@@ -57,6 +57,12 @@ func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request)
 	lt.numActions = lt.getIntParam("num_times", 10, r)
 	lt.freq = lt.getIntParam("freq", 0, r)
 	lt.totalTime = lt.getIntParam("total_time", 30, r)
+	lt.casGrpcAddr = lt.getStringParam("cas_addr", "", r)
+	if lt.casGrpcAddr == "" {
+		resp := "cas_addr parameter must be supplied"
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
 
 	go func() {
 		lt.RunLoadTest()
