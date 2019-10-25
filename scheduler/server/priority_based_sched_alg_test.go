@@ -123,7 +123,7 @@ func makeDummyTasks(jobId string, numTasks int) ([]domain.TaskDefinition, []*tas
 			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "dummyTag"},
 			ExecuteRequest: nil,
 		}
-		tasks[i] = domain.TaskDefinition{Command:td}
+		tasks[i] = domain.TaskDefinition{Command: td}
 
 		tasksState[i] = &taskState{
 			JobId:  jobId,
