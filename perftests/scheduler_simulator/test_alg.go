@@ -106,6 +106,7 @@ contains the number of seconds the task should take during the simulation
 */		
 func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*sched.JobDefinition,
 	pRatios []int, clusterSize int) *SchedulingAlgTester {
+
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
 	if _, err := os.Stat(tDir); os.IsNotExist(err) {
 		os.Mkdir(tDir, 0777)
