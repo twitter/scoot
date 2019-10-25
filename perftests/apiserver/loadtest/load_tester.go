@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"sort"
@@ -123,11 +124,11 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 	lt.stopTestIterations = make(chan bool)
 
 	tdir := os.TempDir()
-	_, err := os.Open(fmt.Sprintf("%scloud_exec", tdir))
+	_, err := os.Open(fmt.Sprintf("%sCloudExec", tdir))
 	if os.IsNotExist(err) {
-		os.Mkdir(fmt.Sprintf("%scloud_exec", tdir), 0777)
+		os.Mkdir(fmt.Sprintf("%sCloudExec", tdir), 0777)
 	}
-	lt.statsFile = fmt.Sprintf("%scloud_exec/apiserver_load_test.csv", tdir)
+	lt.statsFile = fmt.Sprintf("%sCloudExec/apiserver_load_test.csv", tdir)
 
 	return &lt
 }
@@ -143,8 +144,13 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 	*/
 	lt.status = Initializing
 
+	_, err := os.Stat(lt.statsFile)
+	if os.IsExist(err) {
+		os.Remove(lt.statsFile)
+	}
+
 	// initialize the data sizes and data set for the test
-	err := lt.initTestData()
+	err = lt.initTestData()
 	if err != nil {
 		return fmt.Errorf("couldn't initialize the test data:%s", err.Error())
 	}
@@ -272,7 +278,7 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 }
 
 func (lt *ApiserverLoadTester) writeStatsToFile() {
-	statsJson := lt.stat.RenderNoClear(false) // get the stats (but don't reset in case we get status request)
+	statsJson := lt.stat.Render(false) // get the stats (but don't reset in case we get status request)
 
 	// convert to comma delimited string
 	statsMap := make(map[string]interface{})
@@ -296,6 +302,7 @@ func (lt *ApiserverLoadTester) writeStatsToFile() {
 
 	// append to the file
 	f, _ := os.OpenFile(lt.statsFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer f.Close()
 	f.Write(line.Bytes())
 	log.Infof("stats written to %s", lt.statsFile)
 }
@@ -449,6 +456,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 
 // create a random data set
 func (lt *ApiserverLoadTester) makeDummyData(size int) []byte {
+	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, size)
 	rand.Read(data)
 	return data
@@ -514,8 +522,11 @@ func (lt *ApiserverLoadTester) GetStatus() Status {
 	case PauseBetweenIterations:
 		return Status{PauseBetweenIterations, fmt.Sprintf("Iteration %d: Pause after iteration.", lt.iterCnt)}
 	default:
-		collectedStats := lt.stat.RenderNoClear(true)
-		return Status{WaitingToStart, fmt.Sprintf("Stats:\n%s\nIteration %d: Waiting to start", collectedStats, lt.iterCnt)}
+		stats, err := ioutil.ReadFile(lt.statsFile)
+		if err != nil {
+			return Status{code: WaitingToStart, desc: fmt.Sprintf("%s", err.Error())}
+		}
+		return Status{code: WaitingToStart, desc:string(stats)}
 	}
 }
 
