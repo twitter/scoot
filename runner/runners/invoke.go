@@ -503,6 +503,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 			// Process Bazel uploads of std* output and other data to CAS
 			ingestCh := make(chan interface{})
+			// TODO ASYNC
 			go func() {
 				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st, rts, inv.rID)
 				if err != nil {

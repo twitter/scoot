@@ -154,6 +154,10 @@ func (bc *bzCommand) runCmd(args []string) ([]byte, []byte, execer.ProcessStatus
 	return stdout.Bytes(), stderr.Bytes(), st, nil
 }
 
+// TODO we can have "cancel()" sent when we aren't in a critical section - what happens then?
+// how can that ultimately lead to a nil channel close panic?
+// intent is to not be able to reuse this - the ch's don't really guarantee that.
+// Bug was, somehow uploading outputs at the same time we were doing a checkout (happened after an Abort during prev output upload)
 func (bc *bzCommand) exec(c execer.Command) execer.ProcessStatus {
 	bc.startupCh()
 	p, err := bc.execer.Exec(c)
