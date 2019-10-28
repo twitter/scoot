@@ -179,9 +179,9 @@ func OperationToJson(op *longrunning.Operation) ([]byte, error) {
 }
 
 type operationWrapper struct {
-	Name     string
-	Metadata *remoteexecution.ExecuteOperationMetadata
-	Done     bool
+	Name     string                                    `json:"name"`
+	Metadata *remoteexecution.ExecuteOperationMetadata `json:"metadata"`
+	Done     bool                                      `json:"done"`
 	Result   *operationResultWrapper
 }
 
