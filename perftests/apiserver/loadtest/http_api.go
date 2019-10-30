@@ -37,13 +37,13 @@ func (lt *ApiserverLoadTester) ServeHTTP(w http.ResponseWriter, r *http.Request)
 func (lt *ApiserverLoadTester) getEndpoint(w http.ResponseWriter, r *http.Request) {
 	a := lt.getStringParam("action", "noAction", r)
 	if a == "noAction" {
-		lt.getTestResultEndpoint(w, r)
+		lt.getTestStatus(w, r)
 	} else {
 		lt.startTest(w, r)
 	}
 }
 
-func (lt *ApiserverLoadTester) getTestResultEndpoint(w http.ResponseWriter, r *http.Request) {
+func (lt *ApiserverLoadTester) getTestStatus(w http.ResponseWriter, r *http.Request) {
 	status := lt.GetStatus()
 	resp := status.String()
 	json.NewEncoder(w).Encode(resp)
@@ -58,6 +58,14 @@ func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request)
 	lt.freq = lt.getIntParam("freq", 0, r)
 	lt.totalTime = lt.getIntParam("total_time", 30, r)
 	lt.casGrpcAddr = lt.getStringParam("cas_addr", "", r)
+	level := lt.getStringParam("log_level", lt.log_level.String(), r)
+	llevel, err := log.ParseLevel(level)
+	if err != nil {
+		resp := fmt.Sprintf("bad log_level %s", level)
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+	lt.log_level = llevel
 	if lt.casGrpcAddr == "" {
 		resp := "cas_addr parameter must be supplied"
 		json.NewEncoder(w).Encode(resp)
@@ -116,6 +124,7 @@ func (lt *ApiserverLoadTester) getEndpointHandlers() map[string]http.Handler {
 
 // Start the HTTP service.
 func (lt *ApiserverLoadTester) StartHttpServer(host string, port string) error {
+	lt.ResetStatsFile()
 	handlers := lt.getEndpointHandlers()
 	addr := endpoints.Addr(fmt.Sprintf("%s:%s", host, port))
 	server := endpoints.NewTwitterServer(addr, lt.getStatsReceiver(), handlers)
