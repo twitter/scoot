@@ -124,7 +124,6 @@ type StatsReceiver interface {
 
 	// Construct a JSON string by marshaling the registry.
 	Render(pretty bool) []byte
-
 }
 
 //
