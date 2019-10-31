@@ -28,6 +28,7 @@ const (
 	BatchUploadLatency   = "batch_write_latency"
 	BatchDownloadLatency = "batch_read_latency"
 	KBYTE                = 1024
+	MaxTestSize          = 2000000000 // 2gb max data size for a test
 )
 
 var TestDataSizes = [3]int{1, 10, 1000} // these sizes are 1kb units: 1kb, 10kb, 1m test files
@@ -491,6 +492,11 @@ func (lt *ApiserverLoadTester) makeDummyData(size int) []byte {
 
 // fill the dataSizes array in ApiserverLoadTester with the data sizes selected for the test
 func (lt *ApiserverLoadTester) initTestData() error {
+
+	if lt.maxDataSetSize*lt.numActions > MaxTestSize {
+		return fmt.Errorf("the test scenario exceeds the %d limit, please reduce the data sizes or number of actions",
+			MaxTestSize)
+	}
 
 	// get data set sizes from cli min,max range
 	j := 0
