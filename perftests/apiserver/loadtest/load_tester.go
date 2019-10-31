@@ -142,9 +142,9 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 	lt.stat = statsReceiver.Scope("cas_streaming")
 
 	tdir := os.TempDir()
-	_, err := os.Open(fmt.Sprintf("%sCloudExec", tdir))
+	_, err := os.Open(fmt.Sprintf("%sscoot", tdir))
 	if os.IsNotExist(err) {
-		os.Mkdir(fmt.Sprintf("%sCloudExec", tdir), 0777)
+		os.Mkdir(fmt.Sprintf("%sscoot", tdir), 0777)
 	}
 	lt.statsFile = fmt.Sprintf("%sCloudExec/apiserver_load_test.csv", tdir)
 
@@ -196,7 +196,7 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 		return nil
 	}
 
-	// set up a timer to signal running the test every <freq> minutes
+	// set up a timer to signal running the test every <freq> seconds
 	tFreq := time.Duration(lt.freq) * time.Second
 	ticker := time.NewTicker(tFreq)
 	go func() {
