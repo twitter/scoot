@@ -742,3 +742,16 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 	}, nil
 
 }
+
+func TestUpdateAvgDuration(t *testing.T) {
+	taskDurations := make(map[string]*averageDuration)
+	taskDurations["foo"] = &averageDuration{
+		count:    1,
+		duration: 5 * time.Second,
+	}
+	taskDurations["foo"].update(21 * time.Second)
+	taskDurations["foo"].update(25 * time.Second)
+	if taskDurations["foo"].duration != 17*time.Second {
+		t.Fatalf("Expected 17 seconds, got %v", taskDurations["foo"].duration)
+	}
+}
