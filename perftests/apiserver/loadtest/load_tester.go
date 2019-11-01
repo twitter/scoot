@@ -142,11 +142,11 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 	lt.stat = statsReceiver.Scope("cas_streaming")
 
 	tdir := os.TempDir()
-	_, err := os.Open(fmt.Sprintf("%sscoot", tdir))
+	_, err := os.Open(fmt.Sprintf("%s", tdir))
 	if os.IsNotExist(err) {
-		os.Mkdir(fmt.Sprintf("%sscoot", tdir), 0777)
+		os.Mkdir(fmt.Sprintf("%s", tdir), 0777)
 	}
-	lt.statsFile = fmt.Sprintf("%sCloudExec/apiserver_load_test.csv", tdir)
+	lt.statsFile = fmt.Sprintf("%s/apiserver_load_test.csv", tdir)
 
 	return &lt
 }
