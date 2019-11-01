@@ -32,5 +32,5 @@ const (
 	connLimit = 3
 
 	// max time execd fs_util commands can run before timing them out
-	fsUtilTimeoutSec = 1800
+	fsUtilTimeoutSec = 600
 )
