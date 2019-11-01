@@ -28,12 +28,30 @@ func MakePriorityBasedAlg(ratios []int) *PriorityBasedAlg {
 
 /*
 This is the entry point to the scheduling algorithm
-It returns the list of tasks that should be assigned to nodes as per the
-algorithm documented at
-https://docs.google.com/document/d/1MqN2oAKRHHi_k29fYyUdYfw7oDN8sii0B3yB1_Yqk34/edit
-TODO - fix the prior link if ported to confluence
+It returns the list of tasks that should be assigned to nodes as per the following description:
+
+Use priority-based task run ratios, P0-Pn, where each task run ratio, Pi, has the semantic that we want to start a
+task from a job with priority i, 1 out of every Pi tasks.
+Eg: given task run ratios: [1, 10, 50]
+ - jobs will have priorities 0, 1, 2 and
+ - we will schedule
+ - a task from a job with priority 2, 1 out of every 50 times a task is started,
+ - a task from a job with priority 1, 1 out of every 10 times a task is started, otherwise
+ - schedule a task from a job with priority 0 all other times a task is started
+Note: the priority task run ratio array should be a list of ratios with increasing, non-repeating values - lower
+priority job tasks run less frequently than higher priority job tasks.
+
+The algorithm also uses a round robin approach to selecting tasks at a given priority level. For the jobs at a given
+priority level, each time a task should be scheduled from that priority level, the algorithm picks one task from a job
+at that priority level, then picks one task from all other jobs (at that priority level) before returning to select
+another task from the original job.  This will prevent any one job from being stalled by other jobs.
+
+When no tasks are available at the priority level whose turn it is, the algorithm will try to find a task at the next
+higher priority level, repeatedly looking at the next highest priority level till it has reached priority 0.  If no
+waiting task is still found, it will then look successively down the priority levels.
 */
-func (pbs *PriorityBasedAlg) GetTasksToBeAssigned(jobs []*jobState, statNotUsed stats.StatsReceiver, cs *clusterState, jobsByRequestorNotUsed map[string][]*jobState, cfgNotUsed SchedulerConfig) []*taskState {
+func (pbs *PriorityBasedAlg) GetTasksToBeAssigned(jobs []*jobState, statNotUsed stats.StatsReceiver, cs *clusterState,
+	jobsByRequestorNotUsed map[string][]*jobState, cfgNotUsed SchedulerConfig) []*taskState {
 	idleNodeCnt := cs.numFree()
 	pbs.numBarredFromLowPriority = 0 // TODO make this 10% of num nodes
 	tasksToAssign := make([]*taskState, 0)
@@ -86,16 +104,18 @@ func (pbs *PriorityBasedAlg) GetTasksToBeAssigned(jobs []*jobState, statNotUsed 
 	return tasksToAssign
 }
 
-// We are looking for the 'next' unscheduled task at the given priority.
-// The next task at a given priority level uses a round robin approach to get one
-// task from each of the jobs at that priority level.
-// If there are no unscheduled tasks at a given priority level, look for a task at the next
-// higher priority level.
-// If there are no higher level priority tasks, then start looking for a lower level priority task
-// params:
-// priority : we are trying to fill a task at this priority level
-// jobs: the list of jobs at this priority level
-// currentSelectedTasks: tasks already selected for scheduling
+/*
+We are looking for the 'next' unscheduled task at the given priority.
+The next task at a given priority level uses a round robin approach to get one
+task from each of the jobs at that priority level.
+If there are no unscheduled tasks at a given priority level, look for a task at the next
+higher priority level.
+If there are no higher level priority tasks, then start looking for a lower level priority task
+params:
+priority : we are trying to fill a task at this priority level
+jobs: the list of jobs at this priority level
+currentSelectedTasks: tasks already selected for scheduling
+*/
 func (pbs *PriorityBasedAlg) getNextTask(priority int, jobsByPriority [][]*jobState,
 	currentSelectedTasks map[string]*taskState, idleNodeIdx, totalIdleNodes int) (*taskState, int) {
 	// find the next job at priority whose turn it is to have a task scheduled
@@ -115,6 +135,9 @@ func (pbs *PriorityBasedAlg) getNextTask(priority int, jobsByPriority [][]*jobSt
 	return nil, -1
 }
 
+/*
+get the next task using a round robin approach to selecting tasks from jobs a the given priority level
+ */
 func (pbs *PriorityBasedAlg) getTaskFromRRJobs(priority int, currentSelectedTasks map[string]*taskState) *taskState {
 
 	if len(pbs.jobsByPriority[priority]) == 0 {
@@ -149,8 +172,10 @@ func (pbs *PriorityBasedAlg) getTaskFromRRJobs(priority int, currentSelectedTask
 	return nil
 }
 
-// get a task that has not started, add it to currentSelectedTasks so it won't be
-// selected again in this iteration of GetTasksToBeAssigned()
+/*
+get a task that has not started, add it to currentSelectedTasks so it won't be
+selected again in this iteration of GetTasksToBeAssigned()
+*/
 func (pbs *PriorityBasedAlg) getUnscheduledTaskInJob(job *jobState,
 	currentSelectedTasks map[string]*taskState) *taskState {
 
@@ -166,8 +191,10 @@ func (pbs *PriorityBasedAlg) getUnscheduledTaskInJob(job *jobState,
 	return nil
 }
 
-// get the next priority level to assign... work from origPriority down to 0, then
-// from origPriority to last priority value
+/*
+get the next priority level to assign... work from origPriority down to 0, then
+from origPriority to last priority value
+*/
 func (pbs *PriorityBasedAlg) getNextPriority(currentPriority, origPriority,
 	idleNodeIdx, totalIdleNodes int) int {
 	var nextPriority int
