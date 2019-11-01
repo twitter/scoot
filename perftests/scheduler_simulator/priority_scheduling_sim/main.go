@@ -46,7 +46,7 @@ func main() {
 	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, pRatios[:], 5)
 	e := schedAlg.RunTest()
 	if e != nil {
-		fmt.Printf("%s\n", e.Error())
+		log.Fatalf("%s\n", e.Error())
 	}
 }
 
