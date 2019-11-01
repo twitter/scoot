@@ -267,7 +267,6 @@ func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error)
 	return st, nil
 }
 
-// TODO is it possible to Abort and start a new Run while something hasn't totally exited?
 // Abort kills the given run, returning its final status.
 func (c *QueueController) Abort(run runner.RunID) (runner.RunStatus, error) {
 	resultCh := make(chan result)
