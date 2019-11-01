@@ -137,7 +137,7 @@ func (pbs *PriorityBasedAlg) getNextTask(priority int, jobsByPriority [][]*jobSt
 
 /*
 get the next task using a round robin approach to selecting tasks from jobs a the given priority level
- */
+*/
 func (pbs *PriorityBasedAlg) getTaskFromRRJobs(priority int, currentSelectedTasks map[string]*taskState) *taskState {
 
 	if len(pbs.jobsByPriority[priority]) == 0 {
