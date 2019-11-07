@@ -258,3 +258,36 @@ func TestCancelOperation(t *testing.T) {
 		t.Fatal("Hit unexpected timeout waiting for bzCommand exec to finish/abort")
 	}
 }
+
+// test timeout functionality
+func TestTimeoutCommand(t *testing.T) {
+	_, err := tmpTest.TempDir("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bf := makeTestingFiler()
+	bc := bf.tree.(*bzCommand)
+	// Override timeout on bzCommand
+	bc.timeout = 1 * time.Millisecond
+	// Override bf's bzCommand's execer with a sim execer
+	bc.execer = execers.NewSimExecer()
+
+	cmd := execer.Command{
+		Argv: []string{"pause", "complete 0"},
+	}
+	doneCh := make(chan execer.ProcessStatus)
+
+	go func() {
+		doneCh <- bc.exec(cmd)
+	}()
+
+	select {
+	case st := <-doneCh:
+		if st.State != execer.FAILED {
+			t.Fatalf("Expected state after Abort: %s, got: %s", execer.FAILED, st.State)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Hit unexpected timeout waiting for bzCommand exec to finish/abort")
+	}
+}

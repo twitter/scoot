@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -28,6 +29,7 @@ type bzCommand struct {
 	execer  execer.Execer
 	mu      sync.Mutex
 	abortCh chan struct{}
+	timeout time.Duration
 }
 
 func makeBzCommand(storePath string, resolver dialer.Resolver) *bzCommand {
@@ -35,6 +37,7 @@ func makeBzCommand(storePath string, resolver dialer.Resolver) *bzCommand {
 		localStorePath: storePath,
 		casResolver:    resolver,
 		execer:         osexecer.NewExecer(),
+		timeout:        fsUtilTimeoutSec * time.Second,
 	}
 }
 
@@ -156,6 +159,7 @@ func (bc *bzCommand) runCmd(args []string) ([]byte, []byte, execer.ProcessStatus
 
 func (bc *bzCommand) exec(c execer.Command) execer.ProcessStatus {
 	bc.startupCh()
+
 	p, err := bc.execer.Exec(c)
 
 	if err != nil {
@@ -168,6 +172,10 @@ func (bc *bzCommand) exec(c execer.Command) execer.ProcessStatus {
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
 	var st execer.ProcessStatus
+
+	// triggers a send on abortCh if timeout is reached
+	timeoutTimer := time.AfterFunc(bc.timeout, func() { bc.cancel() })
+	defer timeoutTimer.Stop()
 
 	select {
 	case st = <-processCh:

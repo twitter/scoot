@@ -132,7 +132,7 @@ type averageDuration struct {
 	duration time.Duration
 }
 
-func (ad averageDuration) update(d time.Duration) {
+func (ad *averageDuration) update(d time.Duration) {
 	ad.count++
 	ad.duration = ad.duration + time.Duration(int64(d-ad.duration)/ad.count)
 }
@@ -163,9 +163,9 @@ type statefulScheduler struct {
 	clusterState   *clusterState
 	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
 	// no tasks have started yet.
-	requestorMap     map[string][]*jobState     // map of requestor to all its jobs. Default requestor="" is ok.
-	requestorHistory map[string][]string        // map of join(requestor, basis) to new tags in the order received.
-	taskDurations    map[string]averageDuration // map of taskId to averageDuration (note: we unconditionally dereference this).
+	requestorMap     map[string][]*jobState      // map of requestor to all its jobs. Default requestor="" is ok.
+	requestorHistory map[string][]string         // map of join(requestor, basis) to new tags in the order received.
+	taskDurations    map[string]*averageDuration // map of taskId to averageDuration
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
@@ -288,7 +288,7 @@ func NewStatefulScheduler(
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
 		requestorHistory: make(map[string][]string),
-		taskDurations:    make(map[string]averageDuration),
+		taskDurations:    make(map[string]*averageDuration),
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
 		SchedAlg:         &OrigSchedulingAlg{},

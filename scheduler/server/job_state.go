@@ -55,7 +55,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Creates a New Job State based on the specified Job and Saga
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
-func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]averageDuration) *jobState {
+func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]*averageDuration) *jobState {
 	j := &jobState{
 		Job:            job,
 		Saga:           saga,
@@ -72,9 +72,13 @@ func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]aver
 	}
 
 	for _, taskDef := range job.Def.Tasks {
-		duration := taskDurations[taskDef.TaskID].duration // This is safe since the map value is not a pointer.
-		if duration == 0 {
-			duration = math.MaxInt64 // Set max duration if we don't have the average duration.
+		var duration time.Duration
+		if taskDurations != nil {
+			if avgDur, ok := taskDurations[taskDef.TaskID]; !ok || avgDur.duration == 0 {
+				taskDurations[taskDef.TaskID] = &averageDuration{}
+				taskDurations[taskDef.TaskID].update(math.MaxInt64) // Set max duration if we don't have the average duration.
+			}
+			duration = taskDurations[taskDef.TaskID].duration
 		}
 		task := &taskState{
 			JobId:         job.Id,
