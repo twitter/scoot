@@ -50,6 +50,14 @@ func (lt *ApiserverLoadTester) getTestStatus(w http.ResponseWriter, r *http.Requ
 }
 
 func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request) {
+	if lt.status != WaitingToStart {
+		resp := fmt.Sprintf("A test is already running (action:%s, num_times:%d, batch:%t, freq:%d, "+
+			"total_time:%d, min_size:%d, max_size:%d\nplease kill it before starting another.", lt.action,
+			lt.numActions, lt.useBatchApi, lt.freq, lt.totalTime, lt.minDataSetSize, lt.maxDataSetSize)
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
 	// get the test parameters from the request
 	lt.action = lt.getStringParam("action", "download", r)
 	lt.minDataSetSize = lt.getIntParam("min_data_size", 1, r)
@@ -58,6 +66,7 @@ func (lt *ApiserverLoadTester) startTest(w http.ResponseWriter, r *http.Request)
 	lt.freq = lt.getIntParam("freq", 0, r)
 	lt.totalTime = lt.getIntParam("total_time", 30, r)
 	lt.casGrpcAddr = lt.getStringParam("cas_addr", "", r)
+	lt.useBatchApi = lt.getBoolParam("batch", false, r)
 	level := lt.getStringParam("log_level", lt.log_level.String(), r)
 	llevel, err := log.ParseLevel(level)
 	if err != nil {
@@ -109,6 +118,22 @@ func (lt *ApiserverLoadTester) getIntParam(name string, deflt int, r *http.Reque
 		return deflt
 	}
 	log.Infof("param %s in query, had value %d", name, n)
+	return n
+}
+
+func (lt *ApiserverLoadTester) getBoolParam(name string, deflt bool, r *http.Request) bool {
+	t := r.URL.Query()[name]
+	if len(t) == 0 {
+		log.Infof("couldn't find param %s in query, defaulting to %t", name, deflt)
+		return deflt
+	}
+	n, err := strconv.ParseBool(t[0])
+	if err != nil {
+		log.Errorf("%s, with value %s could not be converted to bool, using default:%t",
+			name, t, deflt)
+		return deflt
+	}
+	log.Infof("param %s in query, had value %t", name, n)
 	return n
 }
 
