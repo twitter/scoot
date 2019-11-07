@@ -471,6 +471,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
 					log.Errorf("Error canceling ingest: %s", err)
 				}
+				// Cancel call above should cause ingest to exit sooner, but still wait for return to release worker
+				<-ingestCh
 				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			case res := <-ingestCh:
 				switch res.(type) {
@@ -515,10 +517,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			var actionResult *bazelapi.ActionResult
 			select {
 			case <-abortCh:
-				// postProcessBazel actions here can be calling Filer.Ingest on Bazel OutputFiles/Dirs
 				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
 					log.Errorf("Error canceling ingest: %s", err)
 				}
+				// Cancel call above should cause ingest to exit sooner, but still wait for return to release worker
+				<-ingestCh
 				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			case res := <-ingestCh:
 				switch res.(type) {
