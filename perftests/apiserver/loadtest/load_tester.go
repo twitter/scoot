@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"sort"
@@ -27,6 +28,7 @@ const (
 	BatchUploadLatency   = "batch_write_latency"
 	BatchDownloadLatency = "batch_read_latency"
 	KBYTE                = 1024
+	MaxTestSize          = 2000000000 // 2gb max data size for a test
 )
 
 var TestDataSizes = [3]int{1, 10, 1000} // these sizes are 1kb units: 1kb, 10kb, 1m test files
@@ -43,6 +45,23 @@ const (
 	PauseBetweenIterations
 )
 
+func (sc StatusCode) String() string {
+	if sc == WaitingToStart {
+		return "WaitingToStart"
+	} else if sc == Initializing {
+		return "Initializing"
+	} else if sc == InitUpload {
+		return "InitUpload"
+	} else if sc == CreatingGoRoutines {
+		return "CreatingGoRoutines"
+	} else if sc == RunningActions {
+		return "RunningActions"
+	} else if sc == PauseBetweenIterations {
+		return "PauseBetweenIterations"
+	}
+	return fmt.Sprintf("bad status code: %d", sc)
+}
+
 type Status struct {
 	code StatusCode
 	desc string
@@ -53,14 +72,15 @@ ApiserverLoadTester is the object that runs the load test.  The RunLoadTest() fu
 */
 type ApiserverLoadTester struct {
 	// cli args
-	action         string // the test's action (upload, download, both)
-	useBatchApi    bool   // use the CAS batch api
-	minDataSetSize int    // the minimum data set size to use during the test
-	maxDataSetSize int    // the maximium data set size to use during the test
-	numActions     int    // the number of concurrent upload/downloads we want to trigger
-	freq           int    // the frequency to repeat the test (0 = run once)
-	totalTime      int    // the total elapsed time to allow repeating tests to run
-	casGrpcAddr    string // the cas addr (<hostname>:<port>)
+	action         string    // the test's action (upload, download, both)
+	useBatchApi    bool      // use the CAS batch api
+	minDataSetSize int       // the minimum data set size to use during the test
+	maxDataSetSize int       // the maximium data set size to use during the test
+	numActions     int       // the number of concurrent upload/downloads we want to trigger
+	freq           int       // the frequency to repeat the test (0 = run once)
+	totalTime      int       // the total elapsed time to allow repeating tests to run
+	casGrpcAddr    string    // the cas addr (<hostname>:<port>)
+	log_level      log.Level // current log level
 
 	// data set fields
 	data                []byte   // the raw data set all uploads are derived from
@@ -86,7 +106,7 @@ type ApiserverLoadTester struct {
 }
 
 type Args struct {
-	LogLevel    string
+	LogLevel    log.Level
 	Action      string
 	DataSizeMin int
 	DataSizeMax int
@@ -110,24 +130,23 @@ func MakeApiserverLoadTester(a *Args) *ApiserverLoadTester {
 		killRequested:  false,
 		status:         WaitingToStart,
 		iterCnt:        0,
+		log_level:      a.LogLevel,
 	}
 
 	// get the cas connection
-	lt.dialer = dialer.NewConstantResolver(lt.casGrpcAddr)
+	log.Debugf("creating dialer with addr:%s", lt.casGrpcAddr)
 	lt.casCli = cas.MakeCASClient()
 
 	// initialize thes stats
 	statsReceiver, _ := stats.NewCustomStatsReceiver(stats.NewFinagleStatsRegistry, 0)
 	lt.stat = statsReceiver.Scope("cas_streaming")
 
-	lt.stopTestIterations = make(chan bool)
-
 	tdir := os.TempDir()
-	_, err := os.Open(fmt.Sprintf("%scloud_exec", tdir))
+	_, err := os.Open(fmt.Sprintf("%s", tdir))
 	if os.IsNotExist(err) {
-		os.Mkdir(fmt.Sprintf("%scloud_exec", tdir), 0777)
+		os.Mkdir(fmt.Sprintf("%s", tdir), 0777)
 	}
-	lt.statsFile = fmt.Sprintf("%scloud_exec/apiserver_load_test.csv", tdir)
+	lt.statsFile = fmt.Sprintf("%s/apiserver_load_test.csv", tdir)
 
 	return &lt
 }
@@ -141,23 +160,31 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 		timing the frequency, then in this process loop running the next iterations when a timer sends a signal on its
 		channel, or stopping when time is up or a kill request is received
 	*/
+	log.SetLevel(lt.log_level)
+
 	lt.status = Initializing
+
+	log.Debugf("creating dialer: %s", lt.casGrpcAddr)
+	lt.dialer = dialer.NewConstantResolver(lt.casGrpcAddr)
+
+	lt.ResetStatsFile()
+
+	lt.stopTestIterations = make(chan bool)
 
 	// initialize the data sizes and data set for the test
 	err := lt.initTestData()
 	if err != nil {
+		lt.resetStatusToWaitingToStart()
 		return fmt.Errorf("couldn't initialize the test data:%s", err.Error())
 	}
 
 	if lt.getKillRequested() {
-		lt.drainStopChAndResetStatus()
+		lt.resetStatusToWaitingToStart()
 		return nil
 	}
 
 	if lt.freq == 0 {
 		lt.runOneIteration() // run the test once
-		lt.drainStopChAndResetStatus()
-		// reset for next test request
 		lt.resetStatusToWaitingToStart()
 		return nil
 	}
@@ -165,38 +192,43 @@ func (lt *ApiserverLoadTester) RunLoadTest() error {
 	// run the test once
 	lt.runOneIteration()
 	if lt.getKillRequested() {
-		lt.drainStopChAndResetStatus()
+		lt.resetStatusToWaitingToStart()
 		return nil
 	}
 
-	// set up a timer to signal running the test every <freq> minutes
-	tFreq := time.Duration(lt.freq) * time.Minute
+	// set up a timer to signal running the test every <freq> seconds
+	tFreq := time.Duration(lt.freq) * time.Second
 	ticker := time.NewTicker(tFreq)
 	go func() {
 		time.Sleep(time.Duration(lt.totalTime) * time.Minute)
 		ticker.Stop()
-		if !lt.getKillRequested() { // if we already have killRequested, don't try to put stop signal on channel
-			// stopTestIterations the test after totalTime
-			lt.stopTestIterations <- true
-		}
+		lt.stopTestIterations <- true
 	}()
 
 	// loop running the test on the timer signals until stop is received
-	notDone := true
-	for notDone {
+	cnt := 0
+	for {
 		select {
 		case <-lt.stopTestIterations:
-			notDone = false
+			log.Infof("stopping after %d iterations", cnt)
+			lt.resetStatusToWaitingToStart()
+			return nil
 		case <-ticker.C:
 			lt.runOneIteration()
+			log.Infof("%d iteration done, waiting up to %d seconds for next iteration", cnt, lt.freq)
+			cnt++
 		default:
 			time.Sleep(2 * time.Second)
 		}
 	}
+}
 
-	// reset for next test request
-	lt.resetStatusToWaitingToStart()
-	return nil
+func (lt *ApiserverLoadTester) ResetStatsFile() error {
+	_, err := os.Stat(lt.statsFile)
+	if !os.IsNotExist(err) {
+		os.Remove(lt.statsFile)
+	}
+	return err
 }
 
 func (lt *ApiserverLoadTester) getKillRequested() bool {
@@ -212,18 +244,10 @@ func (lt *ApiserverLoadTester) setKillRequested(val bool) {
 }
 
 func (lt *ApiserverLoadTester) resetStatusToWaitingToStart() {
+	log.Infof("reset status to waiting to start")
 	lt.status = WaitingToStart
 	lt.setKillRequested(false)
 	lt.iterCnt = 0
-}
-
-func (lt *ApiserverLoadTester) drainStopChAndResetStatus() {
-	select {
-	case <-lt.stopTestIterations: // drain the lt.stopTestIterations channel
-	default:
-	}
-	log.Infof("kill request channel was drained")
-	lt.resetStatusToWaitingToStart()
 }
 
 func (lt *ApiserverLoadTester) runOneIteration() {
@@ -249,9 +273,18 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 			dIdx = int(rand.Float32() * float32(len(lt.initUploadDigestIds)))
 		}
 		if lt.useBatchApi {
-			lt.accumulateBatchContent(dIdx)
+			err := lt.accumulateBatchContent(dIdx)
+			if err != nil {
+				log.Error(err)
+				return
+			}
 			if i == lt.numActions-1 {
-				go lt.performBatchAction(startCh, actionDoneCh)
+				go func() {
+					err := lt.performBatchAction(startCh, actionDoneCh)
+					if err != nil {
+						log.Error(err)
+					}
+				}()
 			}
 		} else {
 			go lt.performTestAction(dIdx, startCh, actionDoneCh)
@@ -272,11 +305,11 @@ func (lt *ApiserverLoadTester) runOneIteration() {
 }
 
 func (lt *ApiserverLoadTester) writeStatsToFile() {
-	statsJson := lt.stat.RenderNoClear(false) // get the stats (but don't reset in case we get status request)
+	statsJson := lt.stat.Render(false) // get the stats (but don't reset in case we get status request)
 
 	// convert to comma delimited string
 	statsMap := make(map[string]interface{})
-	json.Unmarshal([]byte(statsJson), &statsMap) // make into a map (statsMap)
+	json.Unmarshal(statsJson, &statsMap) // make into a map (statsMap)
 
 	// sort the map to print in same order each time
 	keys := make([]string, 0)
@@ -296,6 +329,7 @@ func (lt *ApiserverLoadTester) writeStatsToFile() {
 
 	// append to the file
 	f, _ := os.OpenFile(lt.statsFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer f.Close()
 	f.Write(line.Bytes())
 	log.Infof("stats written to %s", lt.statsFile)
 }
@@ -352,7 +386,8 @@ func (lt *ApiserverLoadTester) performTestAction(dataIdx int, startCh chan struc
 func (lt *ApiserverLoadTester) performBatchAction(startCh chan struct{}, doneCh chan int) error {
 	<-startCh
 	if lt.action == "upload" {
-		log.Debugf("uploading:%d entries", len(lt.batchContents))
+		addr, _ := lt.dialer.Resolve()
+		log.Debugf("uploading:%d entries to addr %s", len(lt.batchContents), addr)
 		defer lt.stat.Latency(BatchUploadLatency).Time().Stop()
 		_, err := lt.casCli.BatchUpdateWrite(lt.dialer, lt.batchContents,
 			backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
@@ -392,7 +427,7 @@ func (lt *ApiserverLoadTester) accumulateBatchContent(dataIdx int) error {
 	}
 
 	if lt.getKillRequested() {
-		return fmt.Errorf("Kill request received, batch upload skipped")
+		return fmt.Errorf("kill request received, batch upload skipped")
 	}
 
 	return nil
@@ -403,14 +438,14 @@ func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 	// make the upload content unique: update the first KBYTE bytes of the common data set with a random set of values
 	theData, digest := lt.makeUploadContent(numKBytes)
 	if lt.getKillRequested() {
-		return "", fmt.Errorf("Kill request received, upload skipped")
+		return "", fmt.Errorf("kill request received, upload skipped")
 	}
 	log.Debugf("uploading:%v", digest)
 	defer lt.stat.Latency(UploadLatency).Time().Stop()
 	err := lt.casCli.ByteStreamWrite(lt.dialer, digest, theData[:],
 		backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 5))
 	if err != nil {
-		return "", fmt.Errorf("Upload error:%s", err.Error())
+		return "", fmt.Errorf("upload error:%s", err.Error())
 	}
 	return digest.Hash, nil
 }
@@ -435,7 +470,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 	digest := &remoteexecution.Digest{Hash: digestId}
 
 	if lt.getKillRequested() {
-		return fmt.Errorf("Kill request received, download skipped")
+		return fmt.Errorf("kill request received, download skipped")
 	}
 	log.Debugf("downloading:%v", digest)
 	defer lt.stat.Latency(DownloadLatency).Time().Stop()
@@ -449,6 +484,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 
 // create a random data set
 func (lt *ApiserverLoadTester) makeDummyData(size int) []byte {
+	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, size)
 	rand.Read(data)
 	return data
@@ -456,6 +492,11 @@ func (lt *ApiserverLoadTester) makeDummyData(size int) []byte {
 
 // fill the dataSizes array in ApiserverLoadTester with the data sizes selected for the test
 func (lt *ApiserverLoadTester) initTestData() error {
+
+	if lt.maxDataSetSize*lt.numActions > MaxTestSize {
+		return fmt.Errorf("the test scenario exceeds the %d limit, please reduce the data sizes or number of actions",
+			MaxTestSize)
+	}
 
 	// get data set sizes from cli min,max range
 	j := 0
@@ -477,18 +518,20 @@ func (lt *ApiserverLoadTester) initTestData() error {
 	lt.data = lt.makeDummyData(lt.dataSizes[len(lt.dataSizes)-1] * KBYTE) // assume TestDataSizes in ascending order
 
 	if lt.action == "download" || lt.action == "both" {
+		log.Infof("uploading dummy files for downloads")
 		lt.status = InitUpload
 		lt.initUploadDigestIds = make([]string, len(lt.dataSizes))
 		for i := 0; i < len(lt.dataSizes); i++ {
 			// upload the data so it is available for download
 			digestId, err := lt.uploadADataSet(lt.dataSizes[i])
 			if err != nil {
-				return fmt.Errorf("Couldn't upload the %d sized initial data set:%s", lt.dataSizes[i], err.Error())
+				return fmt.Errorf("couldn't upload the %d sized initial data set:%s", lt.dataSizes[i], err.Error())
 			}
 			lt.initUploadDigestIds[i] = digestId
 		}
 	}
 
+	log.Infof("dummy files have been uploaded")
 	return nil
 }
 
@@ -514,13 +557,16 @@ func (lt *ApiserverLoadTester) GetStatus() Status {
 	case PauseBetweenIterations:
 		return Status{PauseBetweenIterations, fmt.Sprintf("Iteration %d: Pause after iteration.", lt.iterCnt)}
 	default:
-		collectedStats := lt.stat.RenderNoClear(true)
-		return Status{WaitingToStart, fmt.Sprintf("Stats:\n%s\nIteration %d: Waiting to start", collectedStats, lt.iterCnt)}
+		statsF, err := ioutil.ReadFile(lt.statsFile)
+		if err != nil {
+			return Status{code: WaitingToStart, desc: fmt.Sprintf("%s", err.Error())}
+		}
+		return Status{code: WaitingToStart, desc: string(statsF)}
 	}
 }
 
 func (s Status) String() string {
-	return fmt.Sprintf("{'code': %d; 'desc':'%s'}", s.code, s.desc)
+	return fmt.Sprintf("{'code': %s; 'desc':'%s'}", s.code.String(), s.desc)
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
-load_tester is the cli  for generating load on the apiserver.
+apiserver_benchmarker is the cli  for generating load on the apiserver.
 
 The load scenario is parameterized in terms of action (upload/download/both),
 file size (min, max), number of (concurrent) actions, frequency for running a scenario (once, every N minutes)
@@ -10,7 +10,7 @@ The command line options allow the user to request that the test be run to:
 	- can be run as an http service waiting get requests to trigger the test.  See perftests/apiserver/loadtest/http_api
 
 sample run:
-load_tester -action=both -cas_addr=<apiserver> -log_level=info -max_data_size=1000 -min_data_size=10 -num_times=30
+apiserver_benchmarker -action=both -cas_addr=<apiserver> -log_level=info -max_data_size=1000 -min_data_size=10 -num_times=30
 */
 package main
 
@@ -34,16 +34,11 @@ func main() {
 	// parse the arguments
 	a, startAsServer, server, port, err := argParse()
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf(err.Error())
 		return
 	}
 
-	level, err := log.ParseLevel(a.LogLevel)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	log.SetLevel(level)
+	log.SetLevel(a.LogLevel)
 
 	// make the load tester
 	lt := loadtest.MakeApiserverLoadTester(a)
@@ -57,7 +52,7 @@ func main() {
 	} else { // run the test directly from cli
 		e := lt.RunLoadTest()
 		if e != nil {
-			log.Errorf("%s", e.Error())
+			log.Fatal(e)
 		}
 	}
 
@@ -74,7 +69,7 @@ func argParse() (*loadtest.Args, bool, string, string, error) {
 	numTimes := flag.Int("num_times", 10, "number of times the action should be taken (concurrently)")
 	batch := flag.Bool("batch", false, "Use the batch api consolidating all upload or download actions in one CAS call. (default false)")
 	frequencyFlag := flag.Int("freq", 0,
-		"0 requests to run the test once, > 0 requests to run 100 iterations of the test every <freq> minutes")
+		"0 requests to run the test once, > 0 requests to run 100 iterations of the test every <freq> seconds")
 	totalTime := flag.Int("total_time", 30, "Total number of minutes to allow the test to run (default 30)")
 	casGrpcAddr := flag.String("cas_addr", "", "cas grpc address")
 	startAsServerFlag := flag.Bool("start_as_http_server", false, "start an http service listening for get to trigger the test. Default false.")
@@ -82,8 +77,14 @@ func argParse() (*loadtest.Args, bool, string, string, error) {
 	portFlag := flag.String("port", "", "The (load test) server's portFlag.")
 	flag.Parse()
 
+	level, levelErr := log.ParseLevel(*logLevelFlag)
+	if levelErr != nil {
+		log.Error(levelErr)
+		level = log.InfoLevel // giving it a valid value so we can verify the rest of the args
+	}
+
 	a := &loadtest.Args{
-		LogLevel:    strings.ToLower(*logLevelFlag),
+		LogLevel:    level,
 		Action:      strings.ToLower(*actionFlag),
 		DataSizeMin: *dataSizeMinFlag,
 		DataSizeMax: *dataSizeMaxFlag,
@@ -93,7 +94,7 @@ func argParse() (*loadtest.Args, bool, string, string, error) {
 		CasGrpcAddr: *casGrpcAddr,
 		Batch:       *batch,
 	}
-	if !validateArgs(a, *startAsServerFlag, *portFlag) {
+	if !validateArgs(a, *startAsServerFlag, *portFlag) || levelErr != nil {
 		return a, false, "", "", fmt.Errorf("bad arugment value(s)")
 	}
 
@@ -106,51 +107,52 @@ validate the command line arguments values
 func validateArgs(a *loadtest.Args, startAsServer bool, port string) bool {
 	err := false
 	if a.DataSizeMax < a.DataSizeMin {
-		log.Fatalf("max_file_size must be > min_file_size.")
+		log.Errorf("max_file_size must be > min_file_size.")
 		err = true
 	}
 	if ok := validateFileSize(a.DataSizeMin); !ok {
-		log.Fatalf("min_file_size must be one of %s", loadtest.TestDataSizesStr)
+		log.Errorf("min_file_size must be one of %s", loadtest.TestDataSizesStr)
 		err = true
 	}
 
 	if ok := validateFileSize(a.DataSizeMax); !ok {
-		log.Fatalf("max_file_size must be one of %s", loadtest.TestDataSizesStr)
+		log.Errorf("max_file_size must be one of %s", loadtest.TestDataSizesStr)
 		err = true
 	}
 	if !(a.Action == "upload" || a.Action == "download" ||
 		a.Action == "both") {
-		log.Fatalf("action must be one of upload, download or both.")
+		log.Errorf("action must be one of upload, download or both.")
 		err = true
 	}
 	if a.Action == "both" && a.Batch {
-		log.Fatalf("action must be upload or download on batch runs.")
+		log.Errorf("action must be upload or download on batch runs.")
 		err = true
 	}
 	if a.NumTimes < 1 {
-		log.Fatalf("num_times must be > 0.")
+		log.Errorf("num_times must be > 0.")
 		err = true
 	}
 	if a.Freq < 0 {
-		log.Fatalf("frequency must be >= 0.")
+		log.Errorf("frequency must be >= 0.")
 		err = true
 	}
 	if a.TotalTime <= 0 {
-		log.Fatalf("totalTime must be > 0.")
+		log.Errorf("totalTime must be > 0.")
 		err = true
 	}
 	if a.Batch && a.Action == "both" {
-		log.Fatalf("batch cannot be used with 'both' action pick one of upload/download.")
+		log.Errorf("batch cannot be used with 'both' action pick one of upload/download.")
 		err = true
 	}
 
-	if startAsServer {
+	if !startAsServer {
 		if a.CasGrpcAddr == "" {
-			log.Fatalf("casGrpcAddr must be defined.")
+			log.Errorf("casGrpcAddr must be defined.")
 			err = true
 		}
+	} else {
 		if port == "" {
-			log.Fatalf("port must be defined.")
+			log.Errorf("port must be defined.")
 			err = true
 		}
 	}
