@@ -454,9 +454,13 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
-				if st.ExitCode == errors.CleanFailureExitCode && c.lastExitCode == errors.CleanFailureExitCode {
+				if st.ExitCode == int(c.lastExitCode) &&
+					(st.ExitCode == errors.CleanFailureExitCode ||
+					st.ExitCode == errors.CheckoutFailureExitCode ||
+					st.ExitCode == errors.GenericCheckoutFailureExitCode ||
+					st.ExitCode == errors.ReleaseCheckoutFailureExitCode) {
 					c.inv.stat.Counter(stats.WorkerServerKillGauge).Inc(1)
-					log.Fatal("Multiple git clean errors in a row recorded. Killing worker.")
+					log.Fatalf("Multiple git-based errors (%d) in a row recorded. Killing worker.", st.ExitCode)
 				}
 				c.lastExitCode = errors.ExitCode(st.ExitCode)
 				watchCh <- st
