@@ -456,9 +456,9 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 			if st.State.IsDone() {
 				if st.ExitCode == int(c.lastExitCode) &&
 					(st.ExitCode == errors.CleanFailureExitCode ||
-					st.ExitCode == errors.CheckoutFailureExitCode ||
-					st.ExitCode == errors.GenericCheckoutFailureExitCode ||
-					st.ExitCode == errors.ReleaseCheckoutFailureExitCode) {
+						st.ExitCode == errors.CheckoutFailureExitCode ||
+						st.ExitCode == errors.GenericCheckoutFailureExitCode ||
+						st.ExitCode == errors.ReleaseCheckoutFailureExitCode) {
 					c.inv.stat.Counter(stats.WorkerServerKillGauge).Inc(1)
 					log.Fatalf("Multiple git-based errors (%d) in a row recorded. Killing worker.", st.ExitCode)
 				}
