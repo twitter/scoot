@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
@@ -133,7 +134,7 @@ func ThriftRunStatusToDomain(thrift *worker.RunStatus) runner.RunStatus {
 		domain.Error = *thrift.Error
 	}
 	if thrift.ExitCode != nil {
-		domain.ExitCode = int(*thrift.ExitCode)
+		domain.ExitCode = errors.ExitCode(*thrift.ExitCode)
 	}
 	if thrift.SnapshotId != nil {
 		domain.SnapshotID = *thrift.SnapshotId

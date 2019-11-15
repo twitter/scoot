@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/runner/execer"
 )
 
@@ -67,7 +68,7 @@ func assertStatus(t *testing.T, expected execer.ProcessStatus, p execer.Process,
 	}
 }
 
-func complete(exitCode int) execer.ProcessStatus {
+func complete(exitCode errors.ExitCode) execer.ProcessStatus {
 	r := execer.ProcessStatus{}
 	r.State = execer.COMPLETE
 	r.ExitCode = exitCode

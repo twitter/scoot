@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
@@ -332,7 +333,7 @@ var tests = []struct {
 					State:     runner.PENDING,
 					StdoutRef: nonemptystr,
 					StderrRef: nonemptystr,
-					ExitCode:  int(nonzero),
+					ExitCode:  errors.ExitCode(int(nonzero)),
 					Error:     nonemptystr,
 				},
 			},
