@@ -472,10 +472,7 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 killForPersistentError returns true when one of the critical errors has occurred 2 times in a row.
 */
 func (c *QueueController) killForPersistenError(exitCode errors.ExitCode) bool {
-	if exitCode == c.lastExitCode &&
+	return exitCode == c.lastExitCode &&
 		(exitCode == errors.CleanFailureExitCode ||
-			exitCode == errors.CheckoutFailureExitCode) {
-		return true
-	}
-	return false
+			exitCode == errors.CheckoutFailureExitCode)
 }

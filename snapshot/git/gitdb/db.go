@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO verify that we really use this code - is this only used by FSSnapshot?  Are we using FSSnapshot?
+
 // TODO The interfaces and functionality here should be refactored to only use git when necessary.
 // Many operations relying on git are more inefficient than they need to be:
 // we could be using memory buffers/streams instead of using git cmds on disk to transform data.
