@@ -77,7 +77,7 @@ type RunStatus struct {
 	// Only valid if State == COMPLETE
 	SnapshotID string
 	// Only valid if State == (COMPLETE || FAILED)
-	ExitCode int
+	ExitCode errors.ExitCode
 	// Only valid if State == (COMPLETE || FAILED || ABORTED)
 	Error string
 	// Only valid if task is run on a Bazel filer
@@ -128,7 +128,7 @@ func FailedStatus(runID RunID, err *errors.ExitCodeError, tags tags.LogTags) (r 
 	r.RunID = runID
 	r.State = FAILED
 	r.Error = err.Error()
-	r.ExitCode = int(err.GetExitCode())
+	r.ExitCode = err.GetExitCode()
 	r.LogTags = tags
 	return r
 }
@@ -149,7 +149,7 @@ func RunningStatus(runID RunID, stdoutRef, stderrRef string, tags tags.LogTags) 
 	return r
 }
 
-func CompleteStatus(runID RunID, snapshotID string, exitCode int, tags tags.LogTags) (r RunStatus) {
+func CompleteStatus(runID RunID, snapshotID string, exitCode errors.ExitCode, tags tags.LogTags) (r RunStatus) {
 	r.RunID = runID
 	r.State = COMPLETE
 	r.SnapshotID = snapshotID

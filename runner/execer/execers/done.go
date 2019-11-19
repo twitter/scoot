@@ -1,6 +1,9 @@
 package execers
 
-import "github.com/twitter/scoot/runner/execer"
+import (
+	"github.com/twitter/scoot/common/errors"
+	"github.com/twitter/scoot/runner/execer"
+)
 
 // Creates a new doneExecer.
 func NewDoneExecer() *DoneExecer {
@@ -12,7 +15,7 @@ func NewDoneExecer() *DoneExecer {
 // doneExecer finishes something as soon as its run
 type DoneExecer struct {
 	State     execer.ProcessState
-	ExitCode  int
+	ExitCode  errors.ExitCode
 	ExecError error
 }
 

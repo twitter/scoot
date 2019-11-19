@@ -9,7 +9,7 @@ const (
 	GenericCheckoutFailureExitCode = 210
 	CleanFailureExitCode           = 211
 	CheckoutFailureExitCode        = 212
-	ReleaseCheckoutFailureExitCode = 213
+	ReleaseCheckoutFailureCode     = 213
 	BundleUploadFailureExitCode    = 214
 	ReadFileAllFailureExitCode     = 215
 	ExportGitCommitFailureExitCode = 216

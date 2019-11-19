@@ -3,6 +3,7 @@ package execer
 import (
 	"io"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 )
 
@@ -66,6 +67,6 @@ type Process interface {
 // TODO when are these valid in what cases?
 type ProcessStatus struct {
 	State    ProcessState
-	ExitCode int
+	ExitCode errors.ExitCode
 	Error    string
 }

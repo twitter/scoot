@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	scooterror "github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner/execer"
@@ -386,7 +387,7 @@ func (p *osProcess) Wait() (result execer.ProcessStatus) {
 		// we can get the commands exit code
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
 			result.State = execer.COMPLETE
-			result.ExitCode = status.ExitStatus()
+			result.ExitCode = scooterror.ExitCode(status.ExitStatus())
 			// stdout and stderr are collected and set by (invoke.go) runner
 			return result
 		}
@@ -558,7 +559,7 @@ func (p *osProcess) KillAndWait(resultError string) {
 	_, err = p.cmd.Process.Wait()
 	if err, ok := err.(*exec.ExitError); ok {
 		if status, ok := err.Sys().(syscall.WaitStatus); ok {
-			p.result.ExitCode = status.ExitStatus()
+			p.result.ExitCode = scooterror.ExitCode(status.ExitStatus())
 		}
 	}
 }

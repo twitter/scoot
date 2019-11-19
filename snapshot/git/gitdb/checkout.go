@@ -147,12 +147,17 @@ func (db *DB) releaseCheckout(path string) error {
 	if exists := db.checkouts[path]; !exists {
 		return nil
 	}
+
 	err := os.RemoveAll(path)
 	if err == nil {
 		return nil
 	}
+
+	// TODO - this looks suspicious....
+	// why don't we delete the path entry in db.checkouts when we've successfully removed that dir (in if statement
+	// up at ln 152)?
 	delete(db.checkouts, path)
-	return err
+	return errors.NewError(fmt.Errorf("Error:%v, Releasing checkout path: %v", err, path), errors.ReleaseCheckoutFailureCode)
 }
 
 func (db *DB) exportGitCommit(id snap.ID, externalRepo *repo.Repository) (string, error) {

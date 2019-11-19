@@ -454,9 +454,10 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
-				if st.ExitCode == errors.CleanFailureExitCode && c.lastExitCode == errors.CleanFailureExitCode {
-					c.inv.stat.Counter(stats.WorkerServerKillGauge).Inc(1)
-					log.Fatal("Multiple git clean errors in a row recorded. Killing worker.")
+				if c.killForPersistenError(st.ExitCode) {
+					// not incrementing the worker kill stat, since we kill the worker immediately, before the increment
+					// can be reported
+					log.Fatalf("Errors (%d) occurred multiple times in a row recorded. Killing worker.", st.ExitCode)
 				}
 				c.lastExitCode = errors.ExitCode(st.ExitCode)
 				watchCh <- st
@@ -465,4 +466,13 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 		}
 	}()
 	return watchCh
+}
+
+/*
+killForPersistentError returns true when one of the critical errors has occurred 2 times in a row.
+*/
+func (c *QueueController) killForPersistenError(exitCode errors.ExitCode) bool {
+	return exitCode == c.lastExitCode &&
+		(exitCode == errors.CleanFailureExitCode ||
+			exitCode == errors.CheckoutFailureExitCode)
 }

@@ -20,7 +20,7 @@ func teardown(t *testing.T) {
 
 var t tags.LogTags
 
-func complete(exitCode int) runner.RunStatus {
+func complete(exitCode errors.ExitCode) runner.RunStatus {
 	return runner.CompleteStatus(runner.RunID(""), "", exitCode, t)
 }
 

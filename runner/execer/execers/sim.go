@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/runner/execer"
 )
 
@@ -78,7 +79,7 @@ func (e *SimExecer) parseArg(arg string) (simStep, error) {
 			t := fmt.Errorf("error parsing <n> in complete <n>:%s", err.Error())
 			return nil, t
 		}
-		return &completeStep{i}, nil
+		return &completeStep{errors.ExitCode(i)}, nil
 	case "pause":
 		return &pauseStep{e.resumeCh}, nil
 	case "sleep":
@@ -153,7 +154,7 @@ type simStep interface {
 }
 
 type completeStep struct {
-	exitCode int
+	exitCode errors.ExitCode
 }
 
 func (s *completeStep) run(status execer.ProcessStatus, p *simProcess) execer.ProcessStatus {
