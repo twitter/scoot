@@ -153,7 +153,9 @@ func (db *DB) releaseCheckout(path string) error {
 		return nil
 	}
 
-	// TODO - this looks suspicious.... why don't we delete the path entry in db.checkouts when we've successfully removed that dir?
+	// TODO - this looks suspicious....
+	// why don't we delete the path entry in db.checkouts when we've successfully removed that dir (in if statement
+	// up at ln 152)?
 	delete(db.checkouts, path)
 	return errors.NewError(fmt.Errorf("Error:%v, Releasing checkout path: %v", err, path), errors.ReleaseCheckoutFailureCode)
 }
