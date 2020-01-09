@@ -166,6 +166,8 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				let currTimeout = minTimeout;
 				// 15 minutes
 				let maxTimeout = 15 * 60 * 1000;
+				// Read 1280KB chunks until the entire resource is consumed, and wait for updates
+				// up to one hour after last modified date
 				while (true) {
 					let next = Math.min(curr + offset, length);
 					// if curr == next then we have reached the end of our file
