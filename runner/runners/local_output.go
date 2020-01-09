@@ -223,8 +223,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		<body>
 			<div id="output" style="white-space: pre-wrap"></div>
 		</body>
-	</html>
-	
+	</html>	
 `
 	if strings.TrimSuffix(r.URL.Path, "/")+"/" == s.HttpPath() {
 		http.StripPrefix(s.HttpPath(), http.FileServer(http.Dir(s.tmp.Dir))).ServeHTTP(w, r)
