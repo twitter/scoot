@@ -178,7 +178,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						});
 						length = Number.parseInt(resp.headers.get("Content-Length"));
 						// Date.parse and Date.now returns epoch time
-						lastModified = Date.parse(resp.headers.get("Content-Length"));
+						lastModified = Date.parse(resp.headers.get("Last-Modified"));
 						if (Date.now() - lastModified > oneHour) {
 							// log hasn't been update in over 1 hour
 							// so stop fetching
