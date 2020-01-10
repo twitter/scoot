@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
@@ -29,7 +28,6 @@ type localOutputCreator struct {
 	httpUri  string
 	httpPath string
 	pathMap  map[string]string
-	mutex    sync.Mutex
 }
 
 // Takes a tempdir to place new files and optionally an httpUri, ex: 'http://HOST:PORT/ENDPOINT/', to use instead of 'file://HOST/PATH'
@@ -84,58 +82,150 @@ func (s *localOutputCreator) Create(id string) (runner.Output, error) {
 // When '?content=true' is specified, this serves the content directly without ajax.
 // Does not check the request path, either it finds the local file or 404s.
 func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
 	clientHtml :=
 		`<html>
-<script type="text/javascript">
-  var prevLength = 0
-  var resourceId = ''
-  checkAtBottom = function() {
-    //scrolling: http://stackoverflow.com/a/22394544
-    var scrollTop = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-    var scrollHeight = (document.documentElement && document.documentElement.scrollHeight) || document.body.scrollHeight;
-    return (scrollTop + window.innerHeight) >= scrollHeight;
-  }
-  gotoBottom = function() {
-    var scrollHeight = (document.documentElement && document.documentElement.scrollHeight) || document.body.scrollHeight;
-    var scrollLeft = (document.documentElement && document.documentElement.scrollLeft) || document.body.scrollLeft;
-    window.scrollTo(scrollLeft, scrollHeight);
-  }
-  sendRequest = function() {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function () {
-      var DONE=4, OK=200;
-      if (xhr.readyState === DONE && xhr.status == OK) {
-        var id = xhr.getResponseHeader('X-Resource-Id')
-        var txt = xhr.responseText.substring(prevLength);
-        prevLength = xhr.responseText.length
-        if (resourceId == '')
-          resourceId = id
-        if (id != resourceId) {
-          txt = Date() + ': Underlying resource changed! Quitting.'
-        }
-        var wasAtBottom = checkAtBottom()
-        var div = document.getElementById("output");
-        var content = document.createTextNode(txt);
-        div.appendChild(content);
-        if (wasAtBottom)
-          gotoBottom()
-        if (id != resourceId) {
-          throw new Error('ResourceId mismatch.')
-        }
-      }
-    }
-    //TODO: request range to get delta.
-    xhr.open("GET", location.href + (location.search=="" ? "?" : "&") + "content=true");
-    xhr.send();
-  };
-  sendRequest()
-  setInterval(sendRequest, 5000)
-</script>
-<body><div id="output" style="white-space: pre-wrap"></div></body>
-</html>
+		<script type="text/javascript">
+			// This code makes use of ES6+ constructs, such as
+			//   arrow functions: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions
+			//   async await: https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Asynchronous/Async_await
+			//   promise: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
+			//   typed arrays: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Typed_arrays
+			let resourceId = "";
+			const oneHour = 60 * 60 * 1000;
+			const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+			const checkAtBottom = () => {
+				//scrolling: http://stackoverflow.com/a/22394544
+				let scrollTop =
+					(document.documentElement && document.documentElement.scrollTop) ||
+					document.body.scrollTop;
+				let scrollHeight =
+					(document.documentElement && document.documentElement.scrollHeight) ||
+					document.body.scrollHeight;
+				return scrollTop + window.innerHeight >= scrollHeight;
+			};
+	
+			const gotoBottom = () => {
+				let scrollHeight =
+					(document.documentElement && document.documentElement.scrollHeight) ||
+					document.body.scrollHeight;
+				let scrollLeft =
+					(document.documentElement && document.documentElement.scrollLeft) ||
+					document.body.scrollLeft;
+				window.scrollTo(scrollLeft, scrollHeight);
+			};
+	
+			// parseLength parses the Content-Range http header for the size of the resource
+			const parseLength = resp => {
+				let contentRange = resp.headers.get("Content-Range");
+				let idx = contentRange.lastIndexOf("/") + 1;
+				return contentRange.slice(idx);
+			};
+	
+			const copyBuffer = (oldBuffer, length) => {
+				buffer = new Uint8Array(length);
+				buffer.set(oldBuffer);
+				return {
+					buffer,
+					length
+				};
+			};
+	
+			const writeBuffer = (mainBuffer, arrayBuffer, offset) => {
+				let bytes = new Uint8Array(arrayBuffer);
+				for (let i = 0; i < bytes.byteLength; i++) {
+					mainBuffer[i + offset] = bytes[i];
+				}
+			};
+	
+			const updateText = buffer => {
+				let wasAtBottom = checkAtBottom();
+				let div = document.getElementById("output");
+				div.innerText = new TextDecoder("utf-8").decode(buffer);
+				if (wasAtBottom) {
+					gotoBottom();
+				}
+			};
+	
+			const increaseTimeout = currTimeout => Math.trunc((currTimeout * 3) / 2);
+			sendRequest = async () => {
+				let url =
+					location.href + (location.search == "" ? "?" : "&") + "content=true";
+				let resp = await fetch(url, {
+					method: "HEAD"
+				});
+				let length = Number.parseInt(resp.headers.get("Content-Length"));
+				// buffer is an Uint8Array to preserve utf-8 encoding
+				let buffer = new Uint8Array(length);
+				let curr = 0;
+				// 1280KB was chosen as it would be larger than most small files, and
+				// for larger files, say around 20MB, would be able to be retrieved in
+				// approximately 20 calls.
+				// 1280KB == 1310720 bytes
+				let offset = 1310720;
+				let minTimeout = 50;
+				let currTimeout = minTimeout;
+				// 15 minutes
+				let maxTimeout = 15 * 60 * 1000;
+				// Read 1280KB chunks until the entire resource is consumed, and wait for updates
+				// up to one hour after last modified date
+				while (true) {
+					let next = Math.min(curr + offset, length);
+					// if curr == next then we have reached the end of our file
+					// and need to wait for updates to be written
+					if (curr == next) {
+						let resp = await fetch(url, {
+							method: "HEAD"
+						});
+						length = Number.parseInt(resp.headers.get("Content-Length"));
+						// Date.parse and Date.now returns epoch time
+						lastModified = Date.parse(resp.headers.get("Last-Modified"));
+						if (Date.now() - lastModified > oneHour) {
+							// log hasn't been update in over 1 hour
+							// so stop fetching
+							break;
+						}
+						currTimeout = increaseTimeout(currTimeout);
+					} else {
+						// Make an HTTP Range Request
+						// https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
+						resp = await fetch(url, {
+							headers: new Headers({
+								Range: "bytes=" + curr + "-" + next
+							})
+						});
+						if (200 <= resp.status && resp.status < 300) {
+							let id = resp.headers.get("X-Resource-Id");
+							let newLength = parseLength(resp);
+							// if newLength != length that means the file is still being written to
+							// so increase the time between retries
+							if (newLength != length) {
+								minTimeout = 5000;
+								({ buffer, length } = copyBuffer(buffer, newLength));
+							}
+							writeBuffer(buffer, await resp.arrayBuffer(), curr);
+							updateText(buffer);
+							if (resourceId == "") {
+								resourceId = id;
+							}
+							if (id != resourceId) {
+								alert("Underlying resource changed! Quitting");
+								break;
+							}
+							currTimeout = minTimeout;
+							curr = next;
+						} else {
+							currTimeout = increaseTimeout(currTimeout);
+						}
+					}
+					await sleep(Math.min(currTimeout, maxTimeout));
+				}
+			};
+			sendRequest();
+		</script>
+		<body>
+			<div id="output" style="white-space: pre-wrap"></div>
+		</body>
+	</html>	
 `
 	if strings.TrimSuffix(r.URL.Path, "/")+"/" == s.HttpPath() {
 		http.StripPrefix(s.HttpPath(), http.FileServer(http.Dir(s.tmp.Dir))).ServeHTTP(w, r)
@@ -153,6 +243,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("X-Resource-Id", filepath)
 		if r.URL.Query().Get("content") == "true" {
+			w.Header().Set("Cache-Control", "no-store")
 			http.ServeContent(w, r, "", info.ModTime(), resource)
 		} else {
 			fmt.Fprintf(w, clientHtml)
