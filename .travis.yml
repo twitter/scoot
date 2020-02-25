@@ -4,7 +4,7 @@ dist: trusty
 language: go
 
 go:
-  - "1.12.7"
+  - "1.13.8"
 
 env:
   - GO111MODULE=on
