@@ -7,7 +7,6 @@ import (
 )
 
 func TestMakeSaga(t *testing.T) {
-
 	id := "testSaga"
 	var job []byte
 
@@ -50,7 +49,6 @@ func TestMakeSagaLogError(t *testing.T) {
 }
 
 func TestStartup_ReturnsError(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -98,7 +96,6 @@ func TestStartup_ReturnsIds(t *testing.T) {
 }
 
 func TestRecoverSagaState(t *testing.T) {
-
 	sagaId := "saga1"
 	taskId := "task1"
 

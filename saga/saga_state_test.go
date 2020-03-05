@@ -7,7 +7,6 @@ import (
 )
 
 func TestSagaStateFactory(t *testing.T) {
-
 	sagaId := "testSaga"
 	job := []byte{0, 1, 2, 3, 4, 5}
 

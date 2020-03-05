@@ -23,7 +23,6 @@ const (
 // Recovers SagaState from SagaLog messages
 //
 func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
-
 	// Get Logged Messages For this Saga from the Log.
 	msgs, err := saga.log.GetMessages(sagaId)
 	if err != nil {
@@ -70,7 +69,6 @@ func recoverState(sagaId string, saga SagaCoordinator) (*SagaState, error) {
 // actions have started to be applied.
 //
 func isSagaInSafeState(state *SagaState) bool {
-
 	if state.IsSagaAborted() {
 		return true
 	}

@@ -46,13 +46,11 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	// for an EndSaga message to be valid.
 	properties.Property("EndSaga message is Valid or returns an error", prop.ForAll(
 		func(state *SagaState) bool {
-
 			msg := MakeEndSagaMessage(state.SagaId())
 			newState, err := updateSagaStateCompat(state, msg)
 
 			validTransition := true
 			for _, id := range state.GetTaskIds() {
-
 				// if aborted all comp tasks must be completed for all tasks started
 				// if not aborted all started tasks must be completed
 				if state.IsSagaAborted() {
@@ -107,9 +105,7 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 	// StartTask messages are valid unless a Saga has been Completed or Aborted
 	properties.Property("StartTask message is valid or returns an Error", prop.ForAll(
-
 		func(pair StateTaskPair, data []byte) bool {
-
 			state := pair.state
 			taskId := pair.taskId
 
@@ -138,7 +134,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 	// has not been aborted or completed
 	properties.Property("EndTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
-
 			state := pair.state
 			taskId := pair.taskId
 
@@ -166,7 +161,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 	properties.Property("StartCompTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
-
 			state := pair.state
 			taskId := pair.taskId
 
@@ -194,7 +188,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 	properties.Property("EndCompTask message is valid or returns an Error", prop.ForAll(
 		func(pair StateTaskPair, data []byte) bool {
-
 			state := pair.state
 			taskId := pair.taskId
 
@@ -222,7 +215,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 
 	properties.Property("String method returns correct representation of SagaState", prop.ForAll(
 		func(state *SagaState) bool {
-
 			str := state.String()
 
 			if !strings.Contains(str, fmt.Sprintf("SagaId: %v", state.SagaId())) {
@@ -250,7 +242,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 				taskString := strings.Split(taskSplit[1], ",")
 
 				for _, taskStr := range taskString {
-
 					split := strings.Split(taskStr, ": ")
 
 					if len(split) >= 2 {
@@ -258,7 +249,6 @@ func Test_ValidateUpdateSagaState(t *testing.T) {
 						taskStates := strings.Split(split[1], "|")
 
 						for _, taskState := range taskStates {
-
 							ts := strings.TrimSpace(taskState)
 							switch ts {
 							case "Started":

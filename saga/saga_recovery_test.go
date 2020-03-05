@@ -8,7 +8,6 @@ import (
 )
 
 func TestRecoverState_GetMessagesReturnsError(t *testing.T) {
-
 	sagaId := "sagaId"
 
 	mockCtrl := gomock.NewController(t)

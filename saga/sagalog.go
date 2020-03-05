@@ -10,7 +10,6 @@ import (
  *  SagaLog Interface
  */
 type SagaLog interface {
-
 	/*
 	 * Log a Start Saga Message message to the log.
 	 * Returns an error if it fails.

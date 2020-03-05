@@ -21,7 +21,6 @@ type Saga struct {
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
 // returns a Saga, or an error if one occurs
 func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
-
 	state, err := makeSagaState(sagaId, job)
 	if err != nil {
 		return nil, err
@@ -198,7 +197,6 @@ type sagaUpdate struct {
 // original.
 //
 func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
-
 	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
 	// we'll need to revert to the old state.
 	oldState := copySagaState(state)
@@ -221,7 +219,6 @@ func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, err
 // Returns true if the error is a FatalErr.
 // Returns false if the error is transient and a retry might succeed
 func FatalErr(err error) bool {
-
 	switch err.(type) {
 	// InvalidSagaState is an unrecoverable error. This indicates a fatal bug in the code
 	// which is asking for an impossible transition.

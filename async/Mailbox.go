@@ -104,10 +104,8 @@ func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
 // Processes the mailbox.  For all messages with completed AsyncErrors
 // the callback function and removes the message from the mailbox
 func (bx *Mailbox) ProcessMessages() {
-
 	var unCompletedMsgs []message
 	for _, msg := range bx.msgs {
-
 		ok, err := msg.Err.TryGetValue()
 
 		// if a AsyncErr's value has been set, invoke the callback
