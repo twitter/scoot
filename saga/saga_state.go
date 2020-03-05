@@ -261,7 +261,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 		return NewInvalidSagaStateError("Cannot apply a StartSaga Message to an already existing Saga")
 
 	case EndSaga:
-
 		//A Successfully Completed Saga must have StartTask/EndTask pairs for all messages or
 		//an aborted Saga must have StartTask/StartCompTask/EndCompTask pairs for all messages
 		for taskId := range state.taskState {
@@ -279,7 +278,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 		state.sagaCompleted = true
 
 	case AbortSaga:
-
 		if state.IsSagaCompleted() {
 			return NewInvalidSagaStateError("AbortSaga Message cannot be applied to a Completed Saga")
 		}
@@ -395,7 +393,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 		}
 
 		state.taskState[msg.TaskId] = state.taskState[msg.TaskId] | CompTaskCompleted
-
 	}
 
 	return nil
