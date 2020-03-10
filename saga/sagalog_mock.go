@@ -56,6 +56,18 @@ func (mr *MockSagaLogMockRecorder) LogMessage(message interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogMessage", reflect.TypeOf((*MockSagaLog)(nil).LogMessage), message)
 }
 
+// LogBatchMessages mocks base method
+func (m *MockSagaLog) LogBatchMessages(messages []SagaMessage) error {
+	ret := m.ctrl.Call(m, "LogBatchMessages", messages)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LogBatchMessages indicates an expected call of LogBatchMessages
+func (mr *MockSagaLogMockRecorder) LogBatchMessages(messages interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogBatchMessages", reflect.TypeOf((*MockSagaLog)(nil).LogBatchMessages), messages)
+}
+
 // GetMessages mocks base method
 func (m *MockSagaLog) GetMessages(sagaId string) ([]SagaMessage, error) {
 	ret := m.ctrl.Call(m, "GetMessages", sagaId)

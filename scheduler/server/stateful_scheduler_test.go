@@ -48,7 +48,6 @@ type schedulerDeps struct {
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
-
 	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
@@ -373,7 +372,6 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
-
 }
 
 func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
@@ -594,6 +592,32 @@ func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
 	}
 }
 
+func TestUpdateAvgDuration(t *testing.T) {
+	taskDurations := make(map[string]*averageDuration)
+	taskDurations["foo"] = &averageDuration{
+		count:    1,
+		duration: 5 * time.Second,
+	}
+	taskDurations["foo"].update(21 * time.Second)
+	taskDurations["foo"].update(25 * time.Second)
+	if taskDurations["foo"].duration != 17*time.Second {
+		t.Fatalf("Expected 17 seconds, got %v", taskDurations["foo"].duration)
+	}
+}
+
+func BenchmarkProcessKillJobsRequests(b *testing.B) {
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	s, _, _ := initializeServices(sc, false)
+
+	for i := 0; i < b.N; i++ {
+		jobId, _, _ := putJobInScheduler(10000, s, "pause", "", domain.P0)
+		s.step()
+
+		validKillRequests := []jobKillRequest{{jobId: jobId, responseCh: make(chan error, 1)}}
+		s.processKillJobRequests(validKillRequests)
+	}
+}
+
 func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
 	t *testing.T, statsRegistry stats.StatsRegistry) bool {
 	// check the gauges
@@ -635,7 +659,6 @@ func waitForResponse(respCh chan error, s *statefulScheduler) error {
 }
 
 func sendKillRequest(jobId string, s *statefulScheduler) chan error {
-
 	respCh := make(chan error)
 	go func(respCh chan error) {
 		respCh <- s.KillJob(jobId)
@@ -695,7 +718,6 @@ func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
 
 func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, expectedTaskStatus []domain.Status,
 	s *statefulScheduler, t *testing.T) bool {
-
 	jobStatus := s.getJob(jobId)
 
 	if jobStatus.getJobStatus() != expectedJobStatus {
@@ -713,11 +735,9 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, 
 	}
 
 	return true
-
 }
 
 func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
-
 	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
@@ -740,18 +760,4 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 		},
 		statsRegistry: stats.NewFinagleStatsRegistry(),
 	}, nil
-
-}
-
-func TestUpdateAvgDuration(t *testing.T) {
-	taskDurations := make(map[string]*averageDuration)
-	taskDurations["foo"] = &averageDuration{
-		count:    1,
-		duration: 5 * time.Second,
-	}
-	taskDurations["foo"].update(21 * time.Second)
-	taskDurations["foo"].update(25 * time.Second)
-	if taskDurations["foo"].duration != 17*time.Second {
-		t.Fatalf("Expected 17 seconds, got %v", taskDurations["foo"].duration)
-	}
 }

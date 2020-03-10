@@ -44,7 +44,6 @@ func recoverJobs(sc saga.SagaCoordinator, addJobCh chan jobAddedMsg) {
 	// do recovery in parallel by making multiple requests
 	// TODO: limit max parallel requests to RecoverSagaState?
 	for _, sagaId := range activeSagas {
-
 		go func(sagaId string) {
 			defer wg.Done()
 			activeSaga := recoverSaga(sc, sagaId)

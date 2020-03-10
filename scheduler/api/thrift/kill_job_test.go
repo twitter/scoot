@@ -21,7 +21,6 @@ difficult to do with this test being in the server package and stateful_schedule
 private to the scheduler package
 */
 func Test_KillJob(t *testing.T) {
-
 	sc := makeMockSagaCoordinator(t)
 	s := makeMockScheduler(t)
 
@@ -39,7 +38,6 @@ func Test_KillJob(t *testing.T) {
 	if st.Status != scoot.Status_COMPLETED {
 		t.Fatalf("Expected status to be completed, instead got %s", st.Status.String())
 	}
-
 }
 
 func makeMockSagaCoordinator(t *testing.T) saga.SagaCoordinator {
@@ -55,7 +53,6 @@ func makeMockSagaCoordinator(t *testing.T) saga.SagaCoordinator {
 }
 
 func makeMockScheduler(t *testing.T) *server.MockScheduler {
-
 	scheduler := server.NewMockScheduler(mockCtrl)
 	scheduler.EXPECT().KillJob("err").Return(fmt.Errorf("saw kill job request in scheduler"))
 	scheduler.EXPECT().KillJob("1").Return(nil)

@@ -97,6 +97,10 @@ func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]*ave
 	// done or not done.  Scheduler currently doesn't support
 	// scheduling compensating tasks.  In Progress tasks
 	// are considered not done and will be rescheduled.
+	// TODO test this bullshit
+	// sagaState := saga.GetState()
+	// for _, taskId := range sagaState.GetTaskIds() {
+	//	if sagaState.IsTaskCompleted(taskId) {
 	for _, taskId := range saga.GetState().GetTaskIds() {
 		if saga.GetState().IsTaskCompleted(taskId) {
 			j.getTask(taskId).Status = domain.Completed
@@ -126,7 +130,6 @@ func (j *jobState) getTask(taskId string) *taskState {
 
 // Returns a list of taskIds that can be scheduled currently.
 func (j *jobState) getUnScheduledTasks() []*taskState {
-
 	var tasksToRun []*taskState
 
 	for _, state := range j.Tasks {

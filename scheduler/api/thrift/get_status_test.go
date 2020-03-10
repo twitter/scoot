@@ -16,7 +16,6 @@ import (
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -41,7 +40,6 @@ func Test_GetJobStatus_InternalLogError(t *testing.T) {
 }
 
 func Test_GetJobStatus_InvalidRequestError(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -132,7 +130,6 @@ func runStatusEqual(scootRunStatus *scoot.RunStatus, workerRunStatus *worker.Run
 
 // TODO should this be in a utility somewhere (does one already exist)?
 func strPtrCompare(s1 *string, s2 *string) bool {
-
 	if s1 == nil && s2 == nil {
 		return true
 	}

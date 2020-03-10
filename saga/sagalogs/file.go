@@ -164,7 +164,16 @@ func (log *fileSagaLog) StartSaga(sagaId string, job []byte) error {
 // Update the State of the Saga by Logging a message.
 // Returns an error if it fails.
 func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
-	fileName := log.getSagaLogFileName(message.SagaId)
+	return log.logMessages([]saga.SagaMessage{message})
+}
+
+// Log a batch of messages in one transaction. Assumes messages are for the same saga.
+func (log *fileSagaLog) LogBatchMessages(msgs []saga.SagaMessage) error {
+	return log.logMessages(msgs)
+}
+
+func (log *fileSagaLog) logMessages(msgs []saga.SagaMessage) error {
+	fileName := log.getSagaLogFileName(msgs[0].SagaId)
 
 	// Get file handle for Saga if it doesn't exist return error,
 	// Saga wasn't started.  OpenFile so we can append to it
@@ -174,33 +183,35 @@ func (log *fileSagaLog) LogMessage(message saga.SagaMessage) error {
 		return err
 	}
 
-	// Write MessageType
-	msg := []byte(fmt.Sprintf("%v\n", message.MsgType.String()))
+	for _, message := range msgs {
+		// Write MessageType
+		msg := []byte(fmt.Sprintf("%v\n", message.MsgType.String()))
 
-	// If its a Task Type Write the TaskId and Data
-	if message.MsgType == saga.StartTask ||
-		message.MsgType == saga.EndTask ||
-		message.MsgType == saga.StartCompTask ||
-		message.MsgType == saga.EndCompTask {
+		// If its a Task Type Write the TaskId and Data
+		if message.MsgType == saga.StartTask ||
+			message.MsgType == saga.EndTask ||
+			message.MsgType == saga.StartCompTask ||
+			message.MsgType == saga.EndCompTask {
 
-		// write task data to file
-		dataFileName := log.createTaskDataFileName(
-			message.SagaId, message.TaskId, message.MsgType)
-		err = ioutil.WriteFile(dataFileName, message.Data, os.ModePerm)
+			// write task data to file
+			dataFileName := log.createTaskDataFileName(
+				message.SagaId, message.TaskId, message.MsgType)
+			err = ioutil.WriteFile(dataFileName, message.Data, os.ModePerm)
+			if err != nil {
+				return err
+			}
+
+			// update log message
+			msg = append(msg, []byte(
+				fmt.Sprintf("%v\n%v\n",
+					message.TaskId,
+					dataFileName))...)
+		}
+
+		_, err = logFile.Write(msg)
 		if err != nil {
 			return err
 		}
-
-		// update log message
-		msg = append(msg, []byte(
-			fmt.Sprintf("%v\n%v\n",
-				message.TaskId,
-				dataFileName))...)
-	}
-
-	_, err = logFile.Write(msg)
-	if err != nil {
-		return err
 	}
 
 	logFile.Sync()

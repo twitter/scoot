@@ -23,6 +23,11 @@ type SagaLog interface {
 	LogMessage(message SagaMessage) error
 
 	/*
+	 * Log multiple messages to a single saga in one call.
+	 */
+	LogBatchMessages(messages []SagaMessage) error
+
+	/*
 	 * Returns all of the messages logged so far for the
 	 * specified saga. Does not return an error if the
 	 * saga does not exist.

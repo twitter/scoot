@@ -79,16 +79,29 @@ func (slog *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 // Log a SagaMessage to an existing Saga in the log
 func (slog *inMemorySagaLog) LogMessage(msg saga.SagaMessage) error {
+	return slog.logMessages([]saga.SagaMessage{msg})
+}
+
+// Log a batch of messages in one transaction. Assumes messages are for the same saga.
+func (slog *inMemorySagaLog) LogBatchMessages(msgs []saga.SagaMessage) error {
+	return slog.logMessages(msgs)
+}
+
+func (slog *inMemorySagaLog) logMessages(msgs []saga.SagaMessage) error {
+	if len(msgs) == 0 {
+		return errors.New("Empty messages slice passed to logMessages")
+	}
+
 	slog.mutex.Lock()
 	defer slog.mutex.Unlock()
 
-	sagaId := msg.SagaId
+	sagaId := msgs[0].SagaId
 	ld, ok := slog.sagas[sagaId]
 	if !ok {
 		return errors.New(fmt.Sprintf("Saga: %s does not exist in the Log", sagaId))
 	}
 
-	ld.messages = append(ld.messages, msg)
+	ld.messages = append(ld.messages, msgs...)
 	return nil
 }
 

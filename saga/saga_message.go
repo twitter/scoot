@@ -1,5 +1,9 @@
 package saga
 
+import (
+	"fmt"
+)
+
 type SagaMessageType int
 
 const (
@@ -44,6 +48,10 @@ type SagaMessage struct {
 	MsgType SagaMessageType
 	Data    []byte
 	TaskId  string
+}
+
+func (s SagaMessage) String() string {
+	return fmt.Sprintf("Message %s: Saga %s, Task %s", s.MsgType, s.SagaId, s.TaskId)
 }
 
 /*

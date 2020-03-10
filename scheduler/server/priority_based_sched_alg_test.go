@@ -110,11 +110,9 @@ func makeTaskMap(tasks []*taskState) map[string]*taskState {
 }
 
 func makeDummyTasks(jobId string, numTasks int) ([]domain.TaskDefinition, []*taskState) {
-
 	tasks := make([]domain.TaskDefinition, int(numTasks))
 	tasksState := make([]*taskState, int(numTasks))
 	for i := 0; i < numTasks; i++ {
-
 		td := runner.Command{
 			Argv:           []string{""},
 			EnvVars:        nil,

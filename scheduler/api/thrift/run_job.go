@@ -12,7 +12,6 @@ import (
 
 // Implementation of the RunJob API
 func RunJob(scheduler server.Scheduler, def *scoot.JobDefinition, stat stats.StatsReceiver) (*scoot.JobId, error) {
-
 	jobDef, err := thriftJobToScoot(def)
 	// TODO: change to return scoot.NewInvalidRequest()
 	if err != nil {

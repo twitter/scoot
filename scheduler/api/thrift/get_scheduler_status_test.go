@@ -10,7 +10,6 @@ import (
 /*
  */
 func Test_GetSchedulerStatus(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

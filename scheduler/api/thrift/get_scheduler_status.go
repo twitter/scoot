@@ -17,7 +17,6 @@ func NewSchedulerStatus(numTasks int, maxTasks int) *scoot.SchedulerStatus {
 }
 
 func GetSchedulerStatus(scheduler server.Scheduler) (*scoot.SchedulerStatus, error) {
-
 	var numTasks int
 	var maxTasks int
 

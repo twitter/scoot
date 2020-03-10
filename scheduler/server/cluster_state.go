@@ -231,7 +231,6 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	for _, update := range updates {
 		var newNode *nodeState
 		switch update.UpdateType {
-
 		case cluster.NodeAdded:
 			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {

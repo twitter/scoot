@@ -135,7 +135,6 @@ func TestFullSaga(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected Error Logging Msg: %+v, Error: %v", msg, err)
 		}
-
 	}
 
 	rtnMsgs, err := slog.GetMessages(sagaId)
