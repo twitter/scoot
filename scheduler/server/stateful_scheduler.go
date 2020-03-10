@@ -392,7 +392,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 	}
 
 	// Log StartSaga Message
-	// TODO every ScheduleJob call does MakeSaga - which has to lock the inmem log?
 	sagaObj, err := s.sagaCoord.MakeSaga(job.Id, asBytes)
 	if err != nil {
 		log.WithFields(
@@ -464,8 +463,6 @@ func (s *statefulScheduler) loop() {
 	}
 }
 
-// TODO note saga impact on each function in here
-// then note all significant sources of async saga updates that could be happening
 // run one loop iteration
 func (s *statefulScheduler) step() {
 	defer s.stat.Latency(stats.SchedStepLatency_ms).Time().Stop()
@@ -486,31 +483,9 @@ func (s *statefulScheduler) step() {
 	// have occurred
 	s.checkForCompletedJobs()
 	s.killJobs()
-	// TODO starts tasks all async/immediate. They all start doing StartTask saga updates.
-	// EndTask update in same goroutine when it's done
 	s.scheduleTasks()
 
 	s.updateStats()
-
-	// --------------------------- SAGA UPDATE DETAILS
-	//---------------------------- all saga updates currently require a full saga copy as well as locking
-	// addJobs
-	//		addJobsLoop calls newJobState for each, which for new jobs should be cheap
-	// ProcessMessages
-	//		process job deletion (no saga update), can trigger saga update retry (very rare)
-	//		process taskRunner.run callbacks (no saga update), can trigger saga update retry (very rare)
-	// checkForCompletedJobs
-	//		kicks off EndSaga async updates with callback for deletion
-	// killJobs
-	//		each kill makes a StartTask and EndTask separate saga update per job in task. running tasks get Abort,
-	//			which will make taskRunner maybe send a final saga update
-	// scheduleTasks
-	//		starts the taskRunner.run async immediate
-	// --------------------------- ASYNC SAGA UPDATES
-	// 		RunJob API requests hit ScheduleJob which calls MakeSaga async
-	// 		taskRunner.run will call StartTask and EndTask as a task runs async with callback for post-proc
-	// 		checkForCompletedJobs calls async EndSaga updates per job
-	//		Get Job Status requests can come at any time and fetch a dump of a whole saga
 }
 
 //update the stats monitoring values:
@@ -788,7 +763,6 @@ func (s *statefulScheduler) getJob(jobId string) *jobState {
 
 // checks if any of the in progress jobs are completed.  If a job is
 // completed log an EndSaga Message to the SagaLog asynchronously
-// TODO why end the sagas here async?
 func (s *statefulScheduler) checkForCompletedJobs() {
 	defer s.stat.Latency(stats.SchedCheckForCompletedLatency_ms).Time().Stop()
 	// Check For Completed Jobs & Log EndSaga Message
@@ -803,11 +777,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 			s.asyncRunner.RunAsync(
 				func() error {
 					// FIXME: seeing panic on closed channel here after killjob().
-					// TODO check how kill does end saga - because end here is async/
-					// is it possible that killJobs (immediately after checkForCompleted) could double up?
-					// any other kill entry point (basis/tag match preemption?)
-					// NOTE that the end saga here is async immediate. then the callback below with s.deleteJob happens
-					// syncronously when ProcessMessages is called
 					return j.Saga.EndSaga()
 				},
 				func(err error) {
@@ -822,7 +791,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						// This job is fully processed remove from InProgressJobs
 						s.deleteJob(j.Job.Id)
 					} else {
-						// TODO probably never used. so what if end saga failed? can't find instances of this
 						// set the jobState flag to false, will retry logging
 						// EndSaga message on next scheduler loop
 						j.EndingSaga = false
@@ -913,7 +881,6 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		s.asyncRunner.RunAsync(
 			tRunner.run,
-			// TODO these functions run synchronously when ProcessMessages is called
 			func(err error) {
 				defer rs.Release()
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
@@ -994,8 +961,7 @@ func (s *statefulScheduler) scheduleTasks() {
 								"jobId":  jobID,
 								"taskId": taskID,
 							}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
-						//TODO this may result in closed channel panic due to sending endSaga to sagalog (below) before endTask
-						// TODO why would we expect retries to work
+						// TODO this may result in closed channel panic due to sending endSaga to sagalog (below) before endTask
 						go func() {
 							for err := errors.New(""); err != nil; err = tRunner.logTaskStatus(&taskErr.st, saga.EndTask) {
 								time.Sleep(time.Second)
@@ -1120,7 +1086,6 @@ func (s *statefulScheduler) ReinstateWorker(req domain.ReinstateWorkerReq) error
 // kill all the jobs with a valid ID
 //
 // this function is part of the main scheduler loop
-// TODO based on analysis, expensive
 func (s *statefulScheduler) killJobs() {
 	defer s.stat.Latency(stats.SchedKillJobsLatency_ms).Time().Stop()
 	var validKillRequests []jobKillRequest
@@ -1130,7 +1095,6 @@ func (s *statefulScheduler) killJobs() {
 		select {
 		case req := <-s.killJobCh:
 			// can we find the job?
-			// TODO for every request this will iterate through all jobs
 			jobState := s.getJob(req.jobId)
 			if jobState == nil {
 				req.responseCh <- fmt.Errorf("Cannot kill Job Id %s, not found."+
@@ -1156,10 +1120,8 @@ func (s *statefulScheduler) killJobs() {
 }
 
 func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
-	// TODO calling getJob and iterating through each job on every log field
 	for _, req := range reqs {
 		jobState := s.getJob(req.jobId)
-		inProgress, notStarted := 0, 0
 		logFields := log.Fields{
 			"jobID":     req.jobId,
 			"requestor": s.getJob(req.jobId).Job.Def.Requestor,
@@ -1171,9 +1133,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 			logFields["taskID"] = task.TaskId
 			if task.Status == domain.InProgress {
 				task.TaskRunner.Abort(true, UserRequestedErrStr)
-				inProgress++
 			} else if task.Status == domain.NotStarted {
-				// TODO generate the start and end messages for each task? then below if len > 0 call BulkUpdate?
 				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				st.Error = UserRequestedErrStr
 				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
@@ -1183,16 +1143,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
 				updateMessages = append(updateMessages, saga.MakeStartTaskMessage(jobState.Saga.ID(), task.TaskId, nil))
 				updateMessages = append(updateMessages, saga.MakeEndTaskMessage(jobState.Saga.ID(), task.TaskId, statusAsBytes))
-				/*if err := jobState.Saga.StartTask(task.TaskId, nil); err != nil {
-					logFields["err"] = err
-					log.WithFields(logFields).Info("killJobs saga.StartTask failure.")
-				}
-				if err := jobState.Saga.EndTask(task.TaskId, statusAsBytes); err != nil {
-					logFields["err"] = err
-					log.WithFields(logFields).Info("killJobs saga.EndTask failure.")
-				}*/
 				jobState.taskCompleted(task.TaskId, false)
-				notStarted++
 			}
 		}
 

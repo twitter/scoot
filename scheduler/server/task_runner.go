@@ -265,7 +265,6 @@ func (r *taskRunner) runAndWait() (runner.RunStatus, bool, error) {
 			// its status, so a watcher can go investigate. Strictly speaking this is optional
 			// in that we've already logged a start task and our only obligation is to log a
 			// corresponding end task.
-			// TODO what the fuck? what the fuck is a watcher? can successive start tasks even succeed?
 			log.WithFields(
 				log.Fields{
 					"jobID":     r.JobID,

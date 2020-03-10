@@ -103,8 +103,6 @@ func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
 
 // Processes the mailbox.  For all messages with completed AsyncErrors
 // the callback function and removes the message from the mailbox
-// TODO iterate through all messages checking if they're done instead of when done, adds them to a done msg list?
-// also callback is done synchronously which is kind of important
 func (bx *Mailbox) ProcessMessages() {
 	var unCompletedMsgs []message
 	for _, msg := range bx.msgs {

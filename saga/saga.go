@@ -9,8 +9,6 @@ import (
 	"sync"
 )
 
-// TODO why do we care about a strict saga pattern? who cares if an end is logged before a start?
-
 // Concurrent Object Representing a Saga
 // Methods update the state of the saga or
 // Provide access to the Current State
@@ -127,7 +125,6 @@ func (s *Saga) EndTask(taskId string, results []byte) error {
 	return s.updateSagaState([]SagaMessage{MakeEndTaskMessage(s.id, taskId, results)})
 }
 
-// TODO consider removing compensating tasks
 //
 // Log a Start Compensating Task Message to the log. Should only be logged after a Saga
 // has been avoided and in Rollback Recovery Mode. Should not be used in ForwardRecovery Mode
@@ -198,7 +195,6 @@ func (s *Saga) updateSagaStateLoop() {
 }
 
 // updateSaga updates the saga s by applying update atomically and sending any error to the requester
-// TODO mutex, really needed when updates go through a channel loop? could these be batched somehow?
 func (s *Saga) updateSaga(update sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -217,7 +213,6 @@ type sagaUpdate struct {
 // if msg is an invalid transition, it will neither log nor update internal state
 // always returns the new SagaState that should be used, either the mutated one or a copy of the
 // original.
-// TODO we copy a whole state every time we log a message???
 func logMessages(state *SagaState, msgs []SagaMessage, log SagaLog) (*SagaState, error) {
 	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
 	// we'll need to revert to the old state.

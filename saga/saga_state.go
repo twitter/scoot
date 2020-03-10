@@ -402,7 +402,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
  * Creates a copy of mutable saga state.  Does not copy
  * binary data, only pointers to it.
  */
-// TODO expensive
 func copySagaState(s *SagaState) *SagaState {
 	newS := &SagaState{
 		sagaId:        s.sagaId,
