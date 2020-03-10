@@ -2,6 +2,7 @@ package sagalogs
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -173,6 +174,9 @@ func (log *fileSagaLog) LogBatchMessages(msgs []saga.SagaMessage) error {
 }
 
 func (log *fileSagaLog) logMessages(msgs []saga.SagaMessage) error {
+	if len(msgs) == 0 {
+		return errors.New("Empty messages slice passed to logMessages")
+	}
 	fileName := log.getSagaLogFileName(msgs[0].SagaId)
 
 	// Get file handle for Saga if it doesn't exist return error,
