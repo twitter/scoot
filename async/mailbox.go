@@ -58,7 +58,7 @@ package async
 //
 // A Mailbox is not a concurrent structure and should only
 // ever be accessed from a single go routine.  This ensures that the callbacks
-// are always executed within the same context and only one at at ime.
+// are always executed within the same context and only one at a time.
 // A Mailbox for keeping track of in progress AsyncMessages.
 // This structure is not thread-safe.
 type Mailbox struct {
@@ -104,10 +104,8 @@ func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
 // Processes the mailbox.  For all messages with completed AsyncErrors
 // the callback function and removes the message from the mailbox
 func (bx *Mailbox) ProcessMessages() {
-
 	var unCompletedMsgs []message
 	for _, msg := range bx.msgs {
-
 		ok, err := msg.Err.TryGetValue()
 
 		// if a AsyncErr's value has been set, invoke the callback

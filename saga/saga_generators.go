@@ -101,7 +101,6 @@ func genSagaState(genParams *gopter.GenParameters, includeJob bool) *SagaState {
 }
 
 func genTaskCompletedData(state *SagaState, taskID string, genParams *gopter.GenParameters) error {
-
 	runStatus := scoot.RunStatus{}
 	runStatus.RunId = taskID
 	var statusVal scoot.RunStatusState

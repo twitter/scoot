@@ -10,7 +10,6 @@ import (
  *  SagaLog Interface
  */
 type SagaLog interface {
-
 	/*
 	 * Log a Start Saga Message message to the log.
 	 * Returns an error if it fails.
@@ -22,6 +21,11 @@ type SagaLog interface {
 	 * Returns an error if it fails.
 	 */
 	LogMessage(message SagaMessage) error
+
+	/*
+	 * Log multiple messages to a single saga in one call.
+	 */
+	LogBatchMessages(messages []SagaMessage) error
 
 	/*
 	 * Returns all of the messages logged so far for the

@@ -218,7 +218,6 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 ) *statefulScheduler {
-
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
 		st, svc, err := run.StatusAll()
@@ -769,7 +768,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 	// Check For Completed Jobs & Log EndSaga Message
 	for _, jobState := range s.inProgressJobs {
 		if jobState.getJobStatus() == domain.Completed && !jobState.EndingSaga {
-
 			// mark job as being completed
 			jobState.EndingSaga = true
 
@@ -778,7 +776,7 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 
 			s.asyncRunner.RunAsync(
 				func() error {
-					//FIXME: seeing panic on closed channel here after killjob().
+					// FIXME: seeing panic on closed channel here after killjob().
 					return j.Saga.EndSaga()
 				},
 				func(err error) {
@@ -963,7 +961,7 @@ func (s *statefulScheduler) scheduleTasks() {
 								"jobId":  jobID,
 								"taskId": taskID,
 							}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
-						//TODO -this may results in closed channel panic due to sending endSaga to sagalog (below) before endTask
+						// TODO this may result in closed channel panic due to sending endSaga to sagalog (below) before endTask
 						go func() {
 							for err := errors.New(""); err != nil; err = tRunner.logTaskStatus(&taskErr.st, saga.EndTask) {
 								time.Sleep(time.Second)
@@ -1041,7 +1039,6 @@ func (s *statefulScheduler) scheduleTasks() {
 //Put the kill request on channel that is processed by the main
 //scheduler loop, and wait for the response
 func (s *statefulScheduler) KillJob(jobID string) error {
-
 	log.WithFields(
 		log.Fields{
 			"jobID": jobID,
@@ -1119,20 +1116,23 @@ func (s *statefulScheduler) killJobs() {
 	}
 
 	// kill the jobs with valid ids
-	for _, req := range validKillRequests {
+	s.processKillJobRequests(validKillRequests)
+}
+
+func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
+	for _, req := range reqs {
 		jobState := s.getJob(req.jobId)
-		inProgress, notStarted := 0, 0
 		logFields := log.Fields{
 			"jobID":     req.jobId,
 			"requestor": s.getJob(req.jobId).Job.Def.Requestor,
 			"jobType":   s.getJob(req.jobId).Job.Def.JobType,
 			"tag":       s.getJob(req.jobId).Job.Def.Tag,
 		}
+		var updateMessages []saga.SagaMessage
 		for _, task := range jobState.Tasks {
 			logFields["taskID"] = task.TaskId
 			if task.Status == domain.InProgress {
 				task.TaskRunner.Abort(true, UserRequestedErrStr)
-				inProgress++
 			} else if task.Status == domain.NotStarted {
 				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 				st.Error = UserRequestedErrStr
@@ -1141,18 +1141,17 @@ func (s *statefulScheduler) killJobs() {
 					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
 				}
 				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
-				if err := jobState.Saga.StartTask(task.TaskId, nil); err != nil {
-					logFields["err"] = err
-					log.WithFields(logFields).Info("killJobs saga.StartTask failure.")
-				}
-				if err := jobState.Saga.EndTask(task.TaskId, statusAsBytes); err != nil {
-					logFields["err"] = err
-					log.WithFields(logFields).Info("killJobs saga.EndTask failure.")
-				}
+				updateMessages = append(updateMessages, saga.MakeStartTaskMessage(jobState.Saga.ID(), task.TaskId, nil))
+				updateMessages = append(updateMessages, saga.MakeEndTaskMessage(jobState.Saga.ID(), task.TaskId, statusAsBytes))
 				jobState.taskCompleted(task.TaskId, false)
-				notStarted++
 			}
 		}
+
+		if err := jobState.Saga.BulkMessage(updateMessages); err != nil {
+			logFields["err"] = err
+			log.WithFields(logFields).Error("killJobs saga.BulkMessage failure")
+		}
+
 		delete(logFields, "err")
 		delete(logFields, "taskID")
 		log.WithFields(logFields).Info("killJobs summary")
@@ -1164,7 +1163,6 @@ func (s *statefulScheduler) killJobs() {
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job
 // requests when the number of running and waiting tasks won't exceed the limit
 func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
-
 	err := domain.ValidateMaxTasks(maxTasks)
 	if err != nil {
 		return err

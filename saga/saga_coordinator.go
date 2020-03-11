@@ -35,7 +35,6 @@ func (s SagaCoordinator) GetSagaState(sagaId string) (*SagaState, error) {
 // Returns a Slice of In Progress SagaIds
 //
 func (s SagaCoordinator) Startup() ([]string, error) {
-
 	ids, err := s.log.GetActiveSagas()
 	if err != nil {
 		return nil, err

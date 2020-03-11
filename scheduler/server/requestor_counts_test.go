@@ -223,7 +223,6 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 }
 
 func addRequestorTestJobsToScheduler(jobProfiles []map[string]string, s *statefulScheduler) []string {
-
 	jobIds := []string{}
 	for _, jobProfile := range jobProfiles {
 		numTasks, _ := strconv.Atoi(jobProfile["numTasks"])

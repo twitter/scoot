@@ -15,14 +15,12 @@ import (
 )
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {
-
 	parameters := gopter.DefaultTestParameters()
 	parameters.MinSuccessfulTests = 1000
 	properties := gopter.NewProperties(parameters)
 
 	properties.Property("SagaState Converted To Job Status Correctly", prop.ForAll(
 		func(state *s.SagaState) bool {
-
 			jobStatus := convertSagaStateToJobStatus(state)
 
 			// Verify JobId Set Correctly
@@ -79,7 +77,6 @@ func Test_ConvertSagaStateToJobStatus(t *testing.T) {
 
 			// Verify TaskStatus
 			for _, id := range state.GetTaskIds() {
-
 				switch jobStatus.TaskStatus[id] {
 				case scoot.Status_COMPLETED:
 					if state.IsSagaAborted() {

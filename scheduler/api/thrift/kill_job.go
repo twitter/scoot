@@ -12,12 +12,10 @@ that it was killed.  Return a job status indicating that the job was successfull
 killed or one of the following errors
 */
 func KillJob(jobId string, scheduler server.Scheduler, sc saga.SagaCoordinator) (*scoot.JobStatus, error) {
-
 	err := scheduler.KillJob(jobId)
 	if err != nil {
 		return nil, err
 	}
 
 	return GetJobStatus(jobId, sc)
-
 }

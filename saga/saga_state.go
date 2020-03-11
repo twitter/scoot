@@ -223,7 +223,6 @@ func (state *SagaState) IsSagaCompleted() bool {
  * can be recovered.  It is opaque to sagas but useful to persist for applications.
  */
 func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data []byte) {
-
 	tData, ok := state.taskData[taskId]
 	if !ok {
 		tData = &taskData{}
@@ -258,16 +257,13 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 	}
 
 	switch msg.MsgType {
-
 	case StartSaga:
 		return NewInvalidSagaStateError("Cannot apply a StartSaga Message to an already existing Saga")
 
 	case EndSaga:
-
 		//A Successfully Completed Saga must have StartTask/EndTask pairs for all messages or
 		//an aborted Saga must have StartTask/StartCompTask/EndCompTask pairs for all messages
 		for taskId := range state.taskState {
-
 			if state.sagaAborted {
 				if !(state.IsCompTaskStarted(taskId) && state.IsCompTaskCompleted(taskId)) {
 					return NewInvalidSagaStateError(fmt.Sprintf("End Saga Message cannot be applied to an aborted Saga where Task %s has not completed its compensating Tasks", taskId))
@@ -282,7 +278,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 		state.sagaCompleted = true
 
 	case AbortSaga:
-
 		if state.IsSagaCompleted() {
 			return NewInvalidSagaStateError("AbortSaga Message cannot be applied to a Completed Saga")
 		}
@@ -398,7 +393,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
 		}
 
 		state.taskState[msg.TaskId] = state.taskState[msg.TaskId] | CompTaskCompleted
-
 	}
 
 	return nil
@@ -409,7 +403,6 @@ func updateSagaState(state *SagaState, msg SagaMessage) error {
  * binary data, only pointers to it.
  */
 func copySagaState(s *SagaState) *SagaState {
-
 	newS := &SagaState{
 		sagaId:        s.sagaId,
 		sagaAborted:   s.sagaAborted,
@@ -462,7 +455,6 @@ func validateTaskId(taskId string) error {
  * Initialize a SagaState for the specified saga, and default data.
  */
 func makeSagaState(sagaId string, job []byte) (*SagaState, error) {
-
 	state := initializeSagaState()
 
 	err := validateSagaId(sagaId)
@@ -480,14 +472,12 @@ func makeSagaState(sagaId string, job []byte) (*SagaState, error) {
  * Custom ToString function for SagaState
  */
 func (state *SagaState) String() string {
-
 	fmtString := "{ SagaId: %v, " +
 		"SagaAborted: %v, " +
 		"SagaCompleted: %v, " +
 		"Tasks: [ "
 
 	for _, id := range state.GetTaskIds() {
-
 		taskState := ""
 
 		if state.IsTaskStarted(id) {

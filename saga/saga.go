@@ -5,7 +5,9 @@
 // https://speakerdeck.com/caitiem20/applying-the-saga-pattern
 package saga
 
-import "sync"
+import (
+	"sync"
+)
 
 // Concurrent Object Representing a Saga
 // Methods update the state of the saga or
@@ -21,7 +23,6 @@ type Saga struct {
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
 // returns a Saga, or an error if one occurs
 func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
-
 	state, err := makeSagaState(sagaId, job)
 	if err != nil {
 		return nil, err
@@ -66,6 +67,10 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 	return s
 }
 
+func (s *Saga) ID() string {
+	return s.id
+}
+
 // Returns the Current Saga State
 func (s *Saga) GetState() *SagaState {
 	s.mutex.RLock()
@@ -73,17 +78,15 @@ func (s *Saga) GetState() *SagaState {
 	return copySagaState(s.state)
 }
 
-//
 // Log an End Saga Message to the log, returns updated SagaState
 // Returns the resulting SagaState or an error if it fails
 //
 // Once EndSaga is successfully called, trying to log additional
 // messages will result in a panic.
 func (s *Saga) EndSaga() error {
-	return s.updateSagaState(MakeEndSagaMessage(s.id))
+	return s.updateSagaState([]SagaMessage{MakeEndSagaMessage(s.id)})
 }
 
-//
 // Log an AbortSaga message.  This indicates that the
 // Saga has failed and all execution should be stopped
 // and compensating transactions should be applied.
@@ -91,10 +94,9 @@ func (s *Saga) EndSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) AbortSaga() error {
-	return s.updateSagaState(MakeAbortSagaMessage(s.id))
+	return s.updateSagaState([]SagaMessage{MakeAbortSagaMessage(s.id)})
 }
 
-//
 // Log a StartTask Message to the log.  Returns
 // an error if it fails.
 //
@@ -104,10 +106,9 @@ func (s *Saga) AbortSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) StartTask(taskId string, data []byte) error {
-	return s.updateSagaState(MakeStartTaskMessage(s.id, taskId, data))
+	return s.updateSagaState([]SagaMessage{MakeStartTaskMessage(s.id, taskId, data)})
 }
 
-//
 // Log an EndTask Message to the log.  Indicates that this task
 // has been successfully completed. Returns an error if it fails.
 //
@@ -117,10 +118,9 @@ func (s *Saga) StartTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndTask(taskId string, results []byte) error {
-	return s.updateSagaState(MakeEndTaskMessage(s.id, taskId, results))
+	return s.updateSagaState([]SagaMessage{MakeEndTaskMessage(s.id, taskId, results)})
 }
 
-//
 // Log a Start Compensating Task Message to the log. Should only be logged after a Saga
 // has been avoided and in Rollback Recovery Mode. Should not be used in ForwardRecovery Mode
 // returns an error if it fails
@@ -131,10 +131,9 @@ func (s *Saga) EndTask(taskId string, results []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
-	return s.updateSagaState(MakeStartCompTaskMessage(s.id, taskId, data))
+	return s.updateSagaState([]SagaMessage{MakeStartCompTaskMessage(s.id, taskId, data)})
 }
 
-//
 // Log an End Compensating Task Message to the log when a Compensating Task
 // has been successfully completed. Returns an error if it fails.
 //
@@ -144,15 +143,24 @@ func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndCompensatingTask(taskId string, results []byte) error {
-	return s.updateSagaState(MakeEndCompTaskMessage(s.id, taskId, results))
+	return s.updateSagaState([]SagaMessage{MakeEndCompTaskMessage(s.id, taskId, results)})
+}
+
+// BulkMessage takes a slice of SagaMessages to be applied.
+// The messages update the saga state and log in the order given.
+// The update is done "atomically", within a single
+// Saga mutex lock. Note that the underlying log update will be
+// SagaLog implementation dependent.
+func (s *Saga) BulkMessage(messages []SagaMessage) error {
+	return s.updateSagaState(messages)
 }
 
 // adds a message for updateSagaStateLoop to execute to the channel for the
 // specified saga.  blocks until the message has been applied
-func (s *Saga) updateSagaState(msg SagaMessage) error {
+func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 	resultCh := make(chan error, 0)
 	s.updateCh <- sagaUpdate{
-		msg:      msg,
+		msgs:     msgs,
 		resultCh: resultCh,
 	}
 
@@ -160,8 +168,11 @@ func (s *Saga) updateSagaState(msg SagaMessage) error {
 
 	// after we successfully log an EndSaga message close the channel
 	// no more messages should be logged
-	if msg.MsgType == EndSaga {
-		close(s.updateCh)
+	for _, msg := range msgs {
+		if msg.MsgType == EndSaga {
+			close(s.updateCh)
+			break
+		}
 	}
 
 	return result
@@ -182,34 +193,38 @@ func (s *Saga) updateSaga(update sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	var err error
-	s.state, err = logMessage(s.state, update.msg, s.log)
+	s.state, err = logMessages(s.state, update.msgs, s.log)
 	update.resultCh <- err
 }
 
 type sagaUpdate struct {
-	msg      SagaMessage
+	msgs     []SagaMessage
 	resultCh chan error
 }
 
-//
 // checks the message is a valid transition and logs the specified message durably to the SagaLog
 // if msg is an invalid transition, it will neither log nor update internal state
 // always returns the new SagaState that should be used, either the mutated one or a copy of the
 // original.
-//
-func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, error) {
-
+func logMessages(state *SagaState, msgs []SagaMessage, log SagaLog) (*SagaState, error) {
 	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
 	// we'll need to revert to the old state.
 	oldState := copySagaState(state)
-	//verify that the applied message results in a valid state
-	err := updateSagaState(state, msg)
-	if err != nil {
-		return oldState, err
+	// verify that the applied message results in a valid state
+	var err error
+	for _, msg := range msgs {
+		err = updateSagaState(state, msg)
+		if err != nil {
+			return oldState, err
+		}
 	}
 
-	//try durably storing the message
-	err = log.LogMessage(msg)
+	// try durably storing the message
+	if len(msgs) == 1 {
+		err = log.LogMessage(msgs[0])
+	} else {
+		err = log.LogBatchMessages(msgs)
+	}
 	if err != nil {
 		return oldState, err
 	}
@@ -221,7 +236,6 @@ func logMessage(state *SagaState, msg SagaMessage, log SagaLog) (*SagaState, err
 // Returns true if the error is a FatalErr.
 // Returns false if the error is transient and a retry might succeed
 func FatalErr(err error) bool {
-
 	switch err.(type) {
 	// InvalidSagaState is an unrecoverable error. This indicates a fatal bug in the code
 	// which is asking for an impossible transition.

@@ -42,7 +42,6 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) 
 
 // Converts a SagaState to a corresponding JobStatus
 func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
-
 	js := scoot.NewJobStatus()
 
 	js.ID = sagaState.SagaId()
@@ -57,7 +56,6 @@ func convertSagaStateToJobStatus(sagaState *s.SagaState) *scoot.JobStatus {
 
 	// NotStarted Tasks will not have a logged value
 	for _, id := range sagaState.GetTaskIds() {
-
 		taskStatus := scoot.Status_NOT_STARTED
 
 		if sagaState.IsSagaAborted() {
