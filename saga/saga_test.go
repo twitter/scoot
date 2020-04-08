@@ -294,7 +294,7 @@ func TestEndCompTaskLogError(t *testing.T) {
 	}
 }
 
-func TestMessageAfterEndSagaPanics(t *testing.T) {
+func TestMessageAfterEndSagaDoesntPanic(t *testing.T) {
 	entry := MakeEndSagaMessage("testSaga")
 
 	mockCtrl := gomock.NewController(t)
@@ -307,13 +307,7 @@ func TestMessageAfterEndSagaPanics(t *testing.T) {
 	s, _ := newSaga("testSaga", nil, sagaLogMock)
 	_ = s.EndSaga()
 
-	defer func() {
-		if r := recover(); r != nil {
-		}
-	}()
 	s.StartTask("task1", nil)
-
-	t.Errorf("Expected sneding a message after edning a Saga to panic")
 }
 
 func TestFatalError_InvalidSagaState(t *testing.T) {
