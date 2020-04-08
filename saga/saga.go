@@ -6,6 +6,7 @@
 package saga
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -18,6 +19,8 @@ type Saga struct {
 	state    *SagaState
 	updateCh chan sagaUpdate
 	mutex    sync.RWMutex // mutex controls access to Saga.state
+	chMutex  sync.RWMutex // controls send and close of channel
+	closed   bool
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
@@ -41,6 +44,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		state:    state,
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
+		chMutex:  sync.RWMutex{},
 	}
 
 	go s.updateSagaStateLoop()
@@ -58,6 +62,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 		state:    state,
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
+		chMutex:  sync.RWMutex{},
 	}
 
 	if !state.IsSagaCompleted() {
@@ -159,10 +164,15 @@ func (s *Saga) BulkMessage(messages []SagaMessage) error {
 // specified saga.  blocks until the message has been applied
 func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 	resultCh := make(chan error, 0)
+	s.chMutex.RLock()
+	if s.closed {
+		return fmt.Errorf("Trying to update saga %s that has closed channel", s.id)
+	}
 	s.updateCh <- sagaUpdate{
 		msgs:     msgs,
 		resultCh: resultCh,
 	}
+	s.chMutex.RUnlock()
 
 	result := <-resultCh
 
@@ -170,7 +180,10 @@ func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 	// no more messages should be logged
 	for _, msg := range msgs {
 		if msg.MsgType == EndSaga {
+			s.chMutex.Lock()
 			close(s.updateCh)
+			s.closed = true
+			s.chMutex.Unlock()
 			break
 		}
 	}

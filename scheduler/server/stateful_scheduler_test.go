@@ -605,12 +605,17 @@ func TestUpdateAvgDuration(t *testing.T) {
 	}
 }
 
+// Respectable figures from a 2018 13" Macbook Pro 2.7Ghz Quad core i7:
+// tasksInJob = 100:   181 iterations, ~6,000,000 ns/op
+// tasksInJob = 1000:  50  iterations, ~22,000,000 ns/op
+// tasksInJob = 10000: 4   iterations, ~300,000,000 ns/op
 func BenchmarkProcessKillJobsRequests(b *testing.B) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
+	tasksInJob := 10000
 
 	for i := 0; i < b.N; i++ {
-		jobId, _, _ := putJobInScheduler(10000, s, "pause", "", domain.P0)
+		jobId, _, _ := putJobInScheduler(tasksInJob, s, "pause", "", domain.P0)
 		s.step()
 
 		validKillRequests := []jobKillRequest{{jobId: jobId, responseCh: make(chan error, 1)}}

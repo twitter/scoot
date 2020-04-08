@@ -1147,9 +1147,11 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 			}
 		}
 
-		if err := jobState.Saga.BulkMessage(updateMessages); err != nil {
-			logFields["err"] = err
-			log.WithFields(logFields).Error("killJobs saga.BulkMessage failure")
+		if len(updateMessages) > 0 {
+			if err := jobState.Saga.BulkMessage(updateMessages); err != nil {
+				logFields["err"] = err
+				log.WithFields(logFields).Error("killJobs saga.BulkMessage failure")
+			}
 		}
 
 		delete(logFields, "err")
