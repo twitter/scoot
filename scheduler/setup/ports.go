@@ -30,5 +30,5 @@ func WaitForPortTimeout(port int, timeout time.Duration) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return fmt.Errorf("port %v is not up after 5s", port)
+	return fmt.Errorf("port %v is not up after %v", port, timeout)
 }
