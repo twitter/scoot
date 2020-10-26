@@ -83,28 +83,13 @@ type SchedulingAlgTester struct {
 	timeout            time.Duration
 }
 
-type SchedulingAlgTester struct {
-	extDeps            *externalDeps
-	statsFileName      string
-	testsStart         time.Time
-	testsEnd           time.Time
-	realStart          time.Time
-	jobDefsMap         map[int][]*sched.JobDefinition
-	pRatios            []int
-	clusterSize        int
-	finishTimeFilename string
-	comparisonMap map[string]*timeSummary
-	comparisonMapMu sync.RWMutex
-	timeout time.Duration
-}
-
 /*
 Make a SchedulingAlgTester object
 
 jobDefsMap is a map of relative start time (seconds) -> a job definition where each task in the job definition
 contains the number of seconds the task should take during the simulation
-*/		
-func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*sched.JobDefinition,
+*/
+func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*domain.JobDefinition,
 	pRatios []int, clusterSize int) *SchedulingAlgTester {
 
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
@@ -114,7 +99,6 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 
 	statsFile := fmt.Sprintf("%s/newAlgStats.csv", tDir)
 	finishTimesFilename := fmt.Sprintf("%s/newAlgJobTimes.csv", tDir)
-
 
 	log.Warn(".........................")
 	log.Warnf("Stats are being written to %s", statsFile)
@@ -156,7 +140,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.statsReceiver,
 	)
 
-	s.SchedAlg = server.MakePriorityBasedAlg(st.pRatios[:]) // use the priority based algorithm
+	s.SetSchedulingAlg(server.MakePriorityBasedAlg(st.pRatios[:])) // use the priority based algorithm
 
 	rm := st.getRequestorMap(st.jobDefsMap)
 
@@ -238,7 +222,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 	stopStatsCh <- true // stop the timed stats collection/printing
 
 	st.writeStatsToFile(st.extDeps, rm) // write the final stats
-	st.extDeps.statsCancelFn()  // stop stats collectors
+	st.extDeps.statsCancelFn()          // stop stats collectors
 
 	for _, timeSummary := range st.comparisonMap {
 		if timeSummary.testEnd == time.Unix(0, 0) {
@@ -261,15 +245,6 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 		jobIds := st.getComparisonMapKeys()
 		select {
 		case <-allJobsStartedCh:
-func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
-	allJobsDoneCh chan bool, sc saga.SagaCoordinator) {
-	finishedJobs := make(map[string]bool) // if the job is in this map, it has finished
-	allDone := false
-	finalCnt := -1
-	for !allDone {
-		jobIds := st.getComparisonMapKeys()
-		select {
-		case <- allJobsStartedCh:
 			finalCnt = len(jobIds)
 		default:
 		}
@@ -315,7 +290,6 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 store the production duration and the test start time for a job id in the ComparisonMapEntry
 */
 func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, jobId string) error {
-func (st *SchedulingAlgTester) makeTimeSummary(jobDef *sched.JobDefinition, jobId string) error {
 	re := regexp.MustCompile("url:(.*), elapsedMin:([0-9]+)")
 	m := re.FindStringSubmatch(jobDef.Tag)
 	buildUrl := m[1]
@@ -330,12 +304,6 @@ func (st *SchedulingAlgTester) makeTimeSummary(jobDef *sched.JobDefinition, jobI
 		testStart:    time.Now(),
 		testEnd:      time.Unix(0, 0),
 	}
-	ts := &timeSummary{
-		buildUrl:     buildUrl,
-		prodDuration: time.Duration(prodDuration) * time.Minute,
-		testStart:		time.Now(),
-		testEnd: time.Unix(0, 0),
-	}
 
 	st.setComparisonMapEntry(ts, jobId)
 
@@ -346,7 +314,6 @@ func (st *SchedulingAlgTester) makeTimeSummary(jobDef *sched.JobDefinition, jobI
 extract the time from Basis field
 */
 func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *domain.JobDefinition) (time.Duration, error) {
-func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *sched.JobDefinition) (time.Duration, error) {
 	d, e := strconv.Atoi(jobDef.Basis)
 	if e != nil {
 		return time.Duration(0), fmt.Errorf("couldn't parse duration from job def basis:%s", e.Error())

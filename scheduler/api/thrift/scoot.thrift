@@ -158,4 +158,18 @@ service CloudScoot {
     1: InvalidRequest ir
     2: ScootServerError err
   )
+  map<string, i32> GetClassLoadPcts() throws (
+    1: InvalidRequest ir
+  )
+  void SetClassLoadPcts (1: map<string, i32> loadPcts) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  map<string, string> GetRequestorToClassMap() throws (
+    1: InvalidRequest ir
+  )
+  void SetRequestorToClassMap (1: map<string, string> requestorToClassMap) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
 }

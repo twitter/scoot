@@ -321,6 +321,17 @@ const (
 	*/
 	SchedScheduleTasksLatency_ms = "schedScheduleTasksLatency_ms"
 
+	/*--------------------- load based scheduler stats ---------------------------*/
+	/*
+		number of time Load Based Scheduler saw an unrecognized requestor
+	*/
+	SchedLBSUnknownJobCnt = "schedLBSUnknownJobCnt"
+
+	/*
+	   number of jobs ignored because the load % is 0
+	*/
+	SchedLBSIgnoredJobCnt = "schedLBSIgnoredJobCnt"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running

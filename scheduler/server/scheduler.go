@@ -23,6 +23,14 @@ type Scheduler interface {
 	SetSchedulerStatus(maxTasks int) error
 
 	GetSchedulerStatus() (int, int)
+
+	GetClassLoadPcts() map[string]int32
+
+	SetClassLoadPcts(classLoads map[string]int32)
+
+	GetRequestorToClassMap() map[string]string
+
+	SetRequestorToClassMap(requestorToClassMap map[string]string)
 }
 
 type SchedulingAlgorithm interface {

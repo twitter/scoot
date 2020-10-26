@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -221,6 +222,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
+
 	go func() {
 		checkJobMsg := <-s.checkJobCh
 		checkJobMsg.resultCh <- nil
@@ -520,22 +522,22 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
-	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float64{.05, .2, .75} // Setting this global value explicitly for test consistency.
 	s := &SchedulerConfig{SoftMaxSchedulableTasks: 200}
 	numNodes := 21
-	numTasks := float32(1)
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 1 {
+	numTasks := 1.0
+	if n := int(math.Ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0))); n != 1 {
 		t.Errorf("Expected 1, got %d", n)
 	}
 
-	numTasks = float32(100)
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 1 {
+	numTasks = 100.0
+	if n := int(math.Ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0))); n != 1 {
 		t.Errorf("Expected 1, got %d", n)
 	}
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 1)); n != 3 {
+	if n := int(math.Ceil(numTasks * s.GetNodeScaleFactor(numNodes, 1))); n != 3 {
 		t.Errorf("Expected 3, got %d", n)
 	}
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 2)); n != 8 {
+	if n := int(math.Ceil(numTasks * s.GetNodeScaleFactor(numNodes, 2))); n != 8 {
 		t.Errorf("Expected 8, got %d", n)
 	}
 }

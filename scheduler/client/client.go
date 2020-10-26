@@ -5,6 +5,7 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
@@ -164,6 +165,72 @@ func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) 
 		c.closeConnection()
 	}
 	return schedulerStatus, err
+}
+
+/*
+GetClassLoadPcts get the target load pcts for the classes
+*/
+func (c *CloudScootClient) GetClassLoadPcts() (map[string]int32, error) {
+	err := c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	classLoadPcts, err := c.client.GetClassLoadPcts()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return classLoadPcts, err
+}
+
+/*
+SetClassLoadPcts set the target worker load % for each job class
+*/
+func (c *CloudScootClient) SetClassLoadPcts(classLoads map[string]int32) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.SetClassLoadPcts(classLoads)
+	return err
+}
+
+/*
+GetRequestorToClassMap get map of requestor (reg exp) to class load pct
+*/
+func (c *CloudScootClient) GetRequestorToClassMap() (map[string]string, error) {
+	err := c.checkForClient()
+	if err != nil {
+		return nil, err
+	}
+	requestorToClassMap, err := c.client.GetRequestorToClassMap()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return requestorToClassMap, err
+}
+
+/*
+SetRequestorToClassMap set the map of requestor (requestor value is reg exp) to class name
+*/
+func (c *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.SetRequestorToClassMap(requestorToClassMap)
+	return err
 }
 
 // helper method to check for a non-nil client / create one

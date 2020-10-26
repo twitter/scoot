@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -153,7 +154,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 // Number of free nodes that are not in a suspended state.
 func (c *clusterState) numFree() int {
 	// This can go negative due to lost nodes, set lower bound at zero.
-	return max(0, len(c.nodes)-c.numRunning)
+	return int(math.Max(0.0, float64(len(c.nodes)-c.numRunning)))
 }
 
 // Update ClusterState to reflect that a task has been scheduled on a particular node

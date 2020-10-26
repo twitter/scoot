@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
 )
@@ -88,7 +89,7 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 		StdoutRef:    "",
 		StderrRef:    "",
 		SnapshotID:   "",
-		ExitCode:     exitCode,
+		ExitCode:     errors.ExitCode(exitCode),
 		Error:        "",
 		ActionResult: nil,
 	}

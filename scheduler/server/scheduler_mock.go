@@ -121,6 +121,50 @@ func (mr *MockSchedulerMockRecorder) GetSchedulerStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerStatus", reflect.TypeOf((*MockScheduler)(nil).GetSchedulerStatus))
 }
 
+// GetClassLoadPcts mocks base method
+func (m *MockScheduler) GetClassLoadPcts() map[string]int32 {
+	ret := m.ctrl.Call(m, "GetClassLoadPcts")
+	ret0, _ := ret[0].(map[string]int32)
+	return ret0
+}
+
+// GetClassLoadPcts indicates an expected call of GetClassLoadPcts
+func (mr *MockSchedulerMockRecorder) GetClassLoadPcts() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).GetClassLoadPcts))
+}
+
+// SetClassLoadPcts mocks base method
+func (m *MockScheduler) SetClassLoadPcts(classLoads map[string]int32) {
+	m.ctrl.Call(m, "SetClassLoadPcts", classLoads)
+}
+
+// SetClassLoadPcts indicates an expected call of SetClassLoadPcts
+func (mr *MockSchedulerMockRecorder) SetClassLoadPcts(classLoads interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).SetClassLoadPcts), classLoads)
+}
+
+// GetRequestorToClassMap mocks base method
+func (m *MockScheduler) GetRequestorToClassMap() map[string]string {
+	ret := m.ctrl.Call(m, "GetRequestorToClassMap")
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// GetRequestorToClassMap indicates an expected call of GetRequestorToClassMap
+func (mr *MockSchedulerMockRecorder) GetRequestorToClassMap() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).GetRequestorToClassMap))
+}
+
+// SetRequestorToClassMap mocks base method
+func (m *MockScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) {
+	m.ctrl.Call(m, "SetRequestorToClassMap", requestorToClassMap)
+}
+
+// SetRequestorToClassMap indicates an expected call of SetRequestorToClassMap
+func (mr *MockSchedulerMockRecorder) SetRequestorToClassMap(requestorToClassMap interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).SetRequestorToClassMap), requestorToClassMap)
+}
+
 // MockSchedulingAlgorithm is a mock of SchedulingAlgorithm interface
 type MockSchedulingAlgorithm struct {
 	ctrl     *gomock.Controller

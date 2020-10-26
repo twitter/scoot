@@ -12,7 +12,6 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/sched"
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
@@ -77,13 +76,13 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3")
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
 	tasks := []*taskState{
-		{TaskId: "task1", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task2", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task3", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
-		{TaskId: "task4", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task5", Def: sched.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task3", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task4", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task5", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
-	js := &jobState{Job: &sched.Job{}, Tasks: tasks, Running: make(map[string]*taskState),
+	js := &jobState{Job: &domain.Job{}, Tasks: tasks, Running: make(map[string]*taskState),
 		Completed: make(map[string]*taskState), NotStarted: make(map[string]*taskState)}
 	req := map[string][]*jobState{"": {js}}
 	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil,
@@ -168,7 +167,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{1, 1, 1} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float64{1, 1, 1} // Setting this global value explicitly for test consistency.
 
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
 		&OrigSchedulingAlg{})
@@ -207,28 +206,28 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	}
 	js := []*jobState{
 		{
-			Job:        makeJob("job1", sched.P0),
+			Job:        makeJob("job1", domain.P0),
 			Tasks:      makeTasks("job1"),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:        makeJob("job2", sched.P1),
+			Job:        makeJob("job2", domain.P1),
 			Tasks:      makeTasks("job2"),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:        makeJob("job3", sched.P2),
+			Job:        makeJob("job3", domain.P2),
 			Tasks:      makeTasks("job3"),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:        makeJob("job4", sched.P0),
+			Job:        makeJob("job4", domain.P0),
 			Tasks:      makeTasks("job4"),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
@@ -293,22 +292,22 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 	js := []*jobState{
 		{
-			Job:        makeJob("job1", sched.P0),
-			Tasks:      makeTasks(10, "job1", sched.P0),
+			Job:        makeJob("job1", domain.P0),
+			Tasks:      makeTasks(10, "job1", domain.P0),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:        makeJob("job2", sched.P1),
-			Tasks:      makeTasks(10, "job2", sched.P1),
+			Job:        makeJob("job2", domain.P1),
+			Tasks:      makeTasks(10, "job2", domain.P1),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
 		},
 		{
-			Job:        makeJob("job3", sched.P2),
-			Tasks:      makeTasks(10, "job3", sched.P2),
+			Job:        makeJob("job3", domain.P2),
+			Tasks:      makeTasks(10, "job3", domain.P2),
 			Running:    make(map[string]*taskState),
 			Completed:  make(map[string]*taskState),
 			NotStarted: make(map[string]*taskState),
@@ -327,7 +326,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	config := &SchedulerConfig{
 		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
 	}
-	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
+	NodeScaleAdjustment = []float64{.05, .2, .75} // Setting this global value explicitly for test consistency.
 
 	// Check for 7 P2, 2 P1, and 1 P0 tasks
 	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
