@@ -176,7 +176,7 @@ func TestRandomScenario(t *testing.T) {
 			numRunningTasks = rand.Intn(workersToUse + 1)
 		}
 		waitingTasks := rand.Intn(totalWorkers * 2)
-		aTest.classes[className] = classState{numRunningTasks: numRunningTasks, numWaitingTasks: waitingTasks, numJobs: int(math.Min(100.0, float64(numRunningTasks)))}
+		aTest.classes[className] = classState{numRunningTasks: numRunningTasks, numWaitingTasks: waitingTasks, numJobs: int(math.Max(1.0, math.Min(100.0, float64(numRunningTasks))))}
 		workersToUse -= numRunningTasks
 		totalWaitingTasks += waitingTasks
 	}
