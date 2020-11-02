@@ -163,7 +163,8 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	jobsByRequestor map[string][]*jobState, cfgNotUsed SchedulerConfig) []*taskState {
 	log.Infof("in LoadBasedAlg.GetTasksToBeAssigned")
 
-	lbs.initOrigNumTargetedWorkers(len(cs.nodes))
+	numWorkers := len(cs.nodes)
+	lbs.initOrigNumTargetedWorkers(numWorkers)
 
 	lbs.initJobClassesMap(jobsByRequestor)
 
@@ -172,6 +173,16 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 
 	// add the tasks to be started to the return list
 	tasksToStart := lbs.buildTaskStartList()
+
+	// record the assignment stats
+	for _, jc := range lbs.jobClasses {
+		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassTasksStarting, jc.className)).Update(int64(jc.numTasksToStart))
+		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassTasksWaiting, jc.className)).Update(int64(jc.origNumWaitingTasks - jc.numTasksToStart))
+		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassTasksRunning, jc.className)).Update(int64(jc.origNumRunningTasks))
+		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassDefinedPct, jc.className)).Update(int64(jc.origTargetLoadPct))
+		finalPct := int(math.Round(float64(jc.origNumRunningTasks+jc.numTasksToStart) / float64(int64(numWorkers)*100.0)))
+		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassActualPct, jc.className)).Update(int64(finalPct))
+	}
 
 	return tasksToStart
 }

@@ -332,6 +332,31 @@ const (
 	*/
 	SchedLBSIgnoredJobCnt = "schedLBSIgnoredJobCnt"
 
+	/*
+		number of tasks starting by job class (after the last run of lbs)
+	*/
+	SchedJobClassTasksStarting = "schedStartingTasks_"
+
+	/*
+		number of tasks already running by job class (before starting tasks as per lbs)
+	*/
+	SchedJobClassTasksRunning = "schedRunningTasks_"
+
+	/*
+		number of tasks still waiting by job class after the tasks identified by lbs have started
+	*/
+	SchedJobClassTasksWaiting = "schedWaitingTasks_"
+
+	/*
+		job class % (set via scheduler api)
+	*/
+	SchedJobClassDefinedPct = "schedClassTargetPct_"
+
+	/*
+		job class actual %
+	*/
+	SchedJobClassActualPct = "schedClassActualPct_"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running
