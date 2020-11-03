@@ -15,6 +15,7 @@ func Test_StatefulSchedulerRequestorCounts(t *testing.T) {
 	log.SetLevel(log.ErrorLevel)
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, statsRegistry := initializeServices(sc, false)
+	s.SetSchedulingAlg(&OrigSchedulingAlg{})
 
 	// create a series of p0 through p2 tasks and run one scheduling iteration
 	phase1Profiles := []map[string]string{

@@ -141,7 +141,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.statsReceiver,
 	)
 
-	s.SchedAlg = server.MakePriorityBasedAlg(st.pRatios[:]) // use the priority based algorithm
+	s.SetSchedulingAlg(server.MakePriorityBasedAlg(st.pRatios[:])) // use the priority based algorithm
 
 	rm := st.getRequestorMap(st.jobDefsMap)
 

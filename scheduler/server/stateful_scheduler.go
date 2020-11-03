@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -170,8 +171,12 @@ type statefulScheduler struct {
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
 	// stats
-	stat     stats.StatsReceiver
-	SchedAlg SchedulingAlgorithm
+	stat                    stats.StatsReceiver
+	classLoadPcts           map[string]int32
+	classLoadPctsMu         sync.RWMutex
+	requestorReToClassMap   map[string]string
+	requestorReToClassMapMU sync.RWMutex
+	schedulingAlg           SchedulingAlgorithm
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -283,14 +288,15 @@ func NewStatefulScheduler(
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 		stepTicker:    time.NewTicker(TickRate),
 
-		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
-		inProgressJobs:   make([]*jobState, 0),
-		requestorMap:     make(map[string][]*jobState),
-		requestorHistory: make(map[string][]string),
-		taskDurations:    make(map[string]*averageDuration),
-		requestorsCounts: make(map[string]map[string]int),
-		stat:             stat,
-		SchedAlg:         &OrigSchedulingAlg{},
+		clusterState:          newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
+		inProgressJobs:        make([]*jobState, 0),
+		requestorMap:          make(map[string][]*jobState),
+		requestorHistory:      make(map[string][]string),
+		taskDurations:         make(map[string]*averageDuration),
+		requestorsCounts:      make(map[string]map[string]int),
+		stat:                  stat,
+		classLoadPcts:         DefaultLoadBasedSchedulerClassPcts,
+		requestorReToClassMap: DefaultRequestorToClassMap,
 	}
 
 	if !config.DebugMode {
@@ -814,8 +820,14 @@ func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	// Pass nil config so taskScheduler can determine the most appropriate values itself.
 	defer s.stat.Latency(stats.SchedScheduleTasksLatency_ms).Time().Stop()
+	var schedAlg SchedulingAlgorithm
+	if s.schedulingAlg == nil || fmt.Sprintf("%T", s.schedulingAlg) == "*server.LoadBasedAlg" {
+		schedAlg = NewLoadBasedAlg(s.GetClassLoadPcts(), s.GetRequestorToClassMap(), s.stat)
+	} else {
+		schedAlg = s.schedulingAlg
+	}
 	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, nil,
-		s.stat, s.SchedAlg)
+		s.stat, schedAlg)
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
 	}
@@ -1181,4 +1193,50 @@ func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
 	var task_cnt = total - completed
 	return task_cnt, s.config.TaskThrottle
+}
+
+func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
+	s.schedulingAlg = sa
+}
+
+// GetClassLoadPcts return a copy of the ClassLoadPcts
+func (s *statefulScheduler) GetClassLoadPcts() map[string]int32 {
+	s.classLoadPctsMu.RLock()
+	defer s.classLoadPctsMu.RUnlock()
+	copy := map[string]int32{}
+	for k, v := range s.classLoadPcts {
+		copy[k] = v
+	}
+	return copy
+}
+
+// SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
+func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) {
+	s.classLoadPctsMu.Lock()
+	defer s.classLoadPctsMu.Unlock()
+	s.classLoadPcts = map[string]int32{}
+	for k, v := range classLoadPcts {
+		s.classLoadPcts[k] = v
+	}
+}
+
+// GetRequestorToClassMap return a copy of the RequestorToClassMap
+func (s *statefulScheduler) GetRequestorToClassMap() map[string]string {
+	s.requestorReToClassMapMU.RLock()
+	defer s.requestorReToClassMapMU.RUnlock()
+	copy := map[string]string{}
+	for k, v := range s.requestorReToClassMap {
+		copy[k] = v
+	}
+	return copy
+}
+
+// SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
+func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) {
+	s.requestorReToClassMapMU.Lock()
+	defer s.requestorReToClassMapMU.Unlock()
+	s.requestorReToClassMap = map[string]string{}
+	for k, v := range requestorToClassMap {
+		s.requestorReToClassMap[k] = v
+	}
 }

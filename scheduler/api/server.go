@@ -78,3 +78,25 @@ func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 	return schedthrift.SetSchedulerStatus(h.scheduler, maxNumTasks)
 }
+
+// Implements GetClassLoadPcts Cloud Scoot API
+func (h *Handler) GetClassLoadPcts() (map[string]int32, error) {
+	return schedthrift.GetClassLoadPcts(h.scheduler), nil
+}
+
+// Implements SetClassLoadPcts Cloud Scoot API
+func (h *Handler) SetClassLoadPcts(classLoadPcts map[string]int32) error {
+	schedthrift.SetClassLoadPcts(h.scheduler, classLoadPcts)
+	return nil
+}
+
+// Implements GetRequestorToClassMap Cloud Scoot API
+func (h *Handler) GetRequestorToClassMap() (map[string]string, error) {
+	return schedthrift.GetRequestorToClassMap(h.scheduler), nil
+}
+
+// Implements SetRequestorToClassMap Cloud Scoot API
+func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) error {
+	schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
+	return nil
+}
