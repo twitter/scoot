@@ -141,8 +141,6 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.statsReceiver,
 	)
 
-	s.SetSchedulingAlg(server.MakePriorityBasedAlg(st.pRatios[:])) // use the priority based algorithm
-
 	rm := st.getRequestorMap(st.jobDefsMap)
 
 	sc := s.GetSagaCoord()
@@ -414,19 +412,18 @@ func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
 
 func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfig {
 	return server.SchedulerConfig{
-		MaxRetriesPerTask:       0,
-		DebugMode:               false,
-		RecoverJobsOnStartup:    false,
-		DefaultTaskTimeout:      0,
-		TaskTimeoutOverhead:     0,
-		RunnerRetryTimeout:      0,
-		RunnerRetryInterval:     0,
-		ReadyFnBackoff:          0,
-		MaxRequestors:           1000,
-		MaxJobsPerRequestor:     1000,
-		SoftMaxSchedulableTasks: 0,
-		TaskThrottle:            0,
-		Admins:                  nil,
+		MaxRetriesPerTask:    0,
+		DebugMode:            false,
+		RecoverJobsOnStartup: false,
+		DefaultTaskTimeout:   0,
+		TaskTimeoutOverhead:  0,
+		RunnerRetryTimeout:   0,
+		RunnerRetryInterval:  0,
+		ReadyFnBackoff:       0,
+		MaxRequestors:        1000,
+		MaxJobsPerRequestor:  1000,
+		TaskThrottle:         0,
+		Admins:               nil,
 	}
 }
 

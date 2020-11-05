@@ -33,7 +33,9 @@ type Scheduler interface {
 	SetRequestorToClassMap(requestorToClassMap map[string]string)
 }
 
+// SchedulingAlgorithm interface for the scheduling algorithm.  Implementations will compute the list of
+// tasks to start and stop
 type SchedulingAlgorithm interface {
 	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
-		requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState
+		requestors map[string][]*jobState) (startTasks []*taskState, stopTasks []*taskState)
 }

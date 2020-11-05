@@ -20,33 +20,29 @@ type taskAssignment struct {
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func getTaskAssignments(cs *clusterState, jobs []*jobState,
-	requestors map[string][]*jobState, config *SchedulerConfig, stat stats.StatsReceiver,
-	schedAlg SchedulingAlgorithm) (
+func (s *statefulScheduler) getTaskAssignments() (
 	[]taskAssignment, map[string]*nodeGroup,
 ) {
+	cs := s.clusterState
+	jobs := s.inProgressJobs
+	requestors := s.requestorMap
+	stat := s.stat
+
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
+	defer s.stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
 	// Exit if there are no unscheduled tasks.
-	totalOutstandingTasks := 0
-	totalUnschedTasks := 0
+	unscheduledTasks := false
 	for _, j := range jobs {
-		totalOutstandingTasks += (len(j.Tasks) - j.TasksCompleted)
-		totalUnschedTasks += (len(j.Tasks) - j.TasksCompleted - j.TasksRunning)
+		if len(j.NotStarted) > 0 {
+			unscheduledTasks = true
+			break
+		}
 	}
-	if totalUnschedTasks == 0 {
+	if !unscheduledTasks {
 		return nil, nil
-	}
-
-	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
-	// Setting the max to num healthy nodes means that each job can be fully scheduled.
-	// (This gets used in config.GetNodeScaleFactor())
-	cfg := SchedulerConfig{SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes))}
-	if config != nil {
-		cfg = *config
 	}
 
 	// Create a copy of cs.nodeGroups to modify based on new scheduling.
@@ -63,10 +59,28 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 		clusterSnapshotIds = append(clusterSnapshotIds, snapId)
 	}
 
-	tasks := schedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors, cfg)
+	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors)
 	// Exit if no tasks qualify to be scheduled.
 	if len(tasks) == 0 {
 		return nil, nil
+	}
+
+	// stop the tasks in stopTasks (we are rebalancing the workers)
+	for _, task := range stopTasks {
+		jobState := s.getJob(task.JobId)
+		logFields := log.Fields{
+			"jobID":     task.JobId,
+			"requestor": jobState.Job.Def.Requestor,
+			"jobType":   jobState.Job.Def.JobType,
+			"tag":       jobState.Job.Def.Tag,
+		}
+		msgs := s.abortTask(jobState, task, logFields)
+		if len(msgs) > 0 {
+			if err := jobState.Saga.BulkMessage(msgs); err != nil {
+				logFields["err"] = err
+				log.WithFields(logFields).Error("abortTask saga.BulkMessage failure")
+			}
+		}
 	}
 
 	// Loop over all cluster snapshotIds looking for a usable node. Prefer, in order:
@@ -74,22 +88,13 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
 	assignments := assign(cs, tasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
-	if len(assignments) == totalUnschedTasks {
-		log.WithFields(
-			log.Fields{
-				"numTasks": len(tasks),
-				"tag":      tasks[0].Def.Tag,
-				"jobID":    tasks[0].Def.JobID,
-			}).Info("Scheduled all tasks")
-	} else {
-		log.WithFields(
-			log.Fields{
-				"numAssignments": len(assignments),
-				"numTasks":       totalUnschedTasks,
-				"tag":            tasks[0].Def.Tag,
-				"jobID":          tasks[0].Def.JobID,
-			}).Info("Unable to schedule all tasks")
-	}
+	log.WithFields(
+		log.Fields{
+			"numAssignments": len(assignments),
+			"numTasks":       len(tasks),
+			"tag":            tasks[0].Def.Tag,
+			"jobID":          tasks[0].Def.JobID,
+		}).Infof("Scheduled %d tasks", len(assignments))
 	return assignments, nodeGroups
 }
 
@@ -143,7 +148,7 @@ func assign(
 				"numAssignments": len(assignments),
 				"numTasks":       len(tasks),
 				"tag":            task.Def.Tag,
-			}).Info("Scheduled job")
+			}).Info("Scheduling task")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments

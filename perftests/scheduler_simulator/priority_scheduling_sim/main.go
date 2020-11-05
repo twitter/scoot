@@ -63,7 +63,7 @@ func makeJobDefs() map[int][]*domain.JobDefinition {
 		jd[i].Requestor = fmt.Sprintf("dummyRequestor%d", i)
 		jd[i].Tag = "{url:dummy_job, elapsedMin:3}"
 		jd[i].Priority = domain.Priority(i)
-		jd[i].Tasks = makeDummyTasks()
+		jd[i].Tasks = makeTestTasks()
 		t := int(time.Now().Add(time.Duration(-1*i) * time.Minute).Unix())
 		m[t] = make([]*domain.JobDefinition, 1)
 		m[t][0] = &jd[i]
@@ -72,7 +72,7 @@ func makeJobDefs() map[int][]*domain.JobDefinition {
 	return m
 }
 
-func makeDummyTasks() []domain.TaskDefinition {
+func makeTestTasks() []domain.TaskDefinition {
 	//cnt := int(rand.Float64() * 10)+ 1
 	cnt := 6
 

@@ -189,13 +189,14 @@ func (m *MockSchedulingAlgorithm) EXPECT() *MockSchedulingAlgorithmMockRecorder 
 }
 
 // GetTasksToBeAssigned mocks base method
-func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
-	ret := m.ctrl.Call(m, "GetTasksToBeAssigned", jobs, stat, cs, requestors, cfg)
+func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState) ([]*taskState, []*taskState) {
+	ret := m.ctrl.Call(m, "GetTasksToBeAssigned", jobs, stat, cs, requestors)
 	ret0, _ := ret[0].([]*taskState)
-	return ret0
+	ret1, _ := ret[1].([]*taskState)
+	return ret0, ret1
 }
 
 // GetTasksToBeAssigned indicates an expected call of GetTasksToBeAssigned
-func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors, cfg interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors, cfg)
+func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors)
 }

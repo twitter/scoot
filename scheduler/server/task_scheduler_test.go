@@ -2,17 +2,16 @@ package server
 
 import (
 	"fmt"
-	"strings"
 	"testing"
+	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/luci/go-render/render"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/setup/worker"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
@@ -21,13 +20,12 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
-	js := newJobState(&job, saga, nil)
+	js := newJobState(&job, "", saga, nil, nil)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, nil, nil, nil,
-		&OrigSchedulingAlg{})
+	s := getDebugStatefulScheduler(testCluster)
+	assignments, _ := getTaskAssignments(testCluster, []*jobState{js}, s)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -37,9 +35,8 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-	assignments, _ := getTaskAssignments(cs, []*jobState{}, nil, nil, nil,
-		&OrigSchedulingAlg{})
+	s := getDebugStatefulScheduler(testCluster)
+	assignments, _ := getTaskAssignments(testCluster, []*jobState{}, s)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -53,15 +50,13 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
-	js := newJobState(&job, saga, nil)
-	req := map[string][]*jobState{"": {js}}
+	js := newJobState(&job, "", saga, nil, nil)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
+	s := getDebugStatefulScheduler(testCluster)
 	unScheduledTasks := js.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, stats.NilStatsReceiver(),
-		&OrigSchedulingAlg{})
+	assignments, _ := getTaskAssignments(testCluster, []*jobState{js}, s)
 
 	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
@@ -73,271 +68,92 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 }
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
-	testCluster := makeTestCluster("node1", "node2", "node3")
+	testCluster := makeTestCluster("node1", "node2")
+	s := getDebugStatefulScheduler(testCluster)
 	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-	tasks := []*taskState{
-		{TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task3", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
-		{TaskId: "task4", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task5", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+	// put the tasks in different jobs to make sure the first assignment has 1 task from job1 and 1 from job2
+	// giving us tasks with different snapshotIDs
+	j1Tasks := []*taskState{
+		&taskState{TaskId: "task1", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		&taskState{TaskId: "task2", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 	}
-	js := &jobState{Job: &domain.Job{}, Tasks: tasks, Running: make(map[string]*taskState),
-		Completed: make(map[string]*taskState), NotStarted: make(map[string]*taskState)}
-	req := map[string][]*jobState{"": {js}}
-	assignments, _ := getTaskAssignments(cs, []*jobState{js}, req, nil, nil,
-		&OrigSchedulingAlg{})
-	if len(assignments) != 3 {
+	j1s := &jobState{Job: &domain.Job{Id: "job1"}, Tasks: j1Tasks, Running: make(map[string]*taskState),
+		Completed: make(map[string]*taskState), NotStarted: map[string]*taskState{"task1": j1Tasks[0], "task2": j1Tasks[1]}}
+
+	j2Tasks := []*taskState{
+		{TaskId: "task3", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task4", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+	}
+	j2s := &jobState{Job: &domain.Job{Id: "job2"}, Tasks: j2Tasks, Running: make(map[string]*taskState),
+		Completed: make(map[string]*taskState), NotStarted: map[string]*taskState{"task3": j2Tasks[0], "task4": j2Tasks[1]}}
+
+	assignments, _ := getTaskAssignments(testCluster, []*jobState{j1s, j2s}, s)
+	if len(assignments) != 2 {
 		t.Errorf("Expected first three tasks to be assigned, got %v", len(assignments))
 	}
 
-	// Schedule the first three tasks and complete task2, task3.
+	// Schedule the first two tasks (one from each job) and complete the task from job1.
 	taskNodes := map[string]cluster.NodeId{}
 	for _, as := range assignments {
 		taskNodes[as.task.TaskId] = as.nodeSt.node.Id()
-		cs.taskScheduled(as.nodeSt.node.Id(), "job1", as.task.TaskId, as.task.Def.SnapshotID)
-		js.taskStarted(as.task.TaskId, &taskRunner{})
-		if as.task.TaskId != "task1" {
+		cs.taskScheduled(as.nodeSt.node.Id(), as.task.JobId, as.task.TaskId, as.task.Def.SnapshotID)
+		if as.task.JobId == "job1" {
+			j1s.taskStarted(as.task.TaskId, &taskRunner{})
 			cs.taskCompleted(as.nodeSt.node.Id(), false)
-			js.taskCompleted(as.task.TaskId, true)
-		}
-	}
-
-	// Add a new idle node and then confirm that task4, task5 are assigned based on affinity.
-	cs.update([]cluster.NodeUpdate{
-		{UpdateType: cluster.NodeAdded, Id: "node4", Node: cluster.NewIdNode("node4")},
-	})
-	assignments, _ = getTaskAssignments(cs, []*jobState{js}, req, nil, nil,
-		&OrigSchedulingAlg{})
-	for _, as := range assignments {
-		if as.task.TaskId == "task4" {
-			if as.nodeSt.node.Id() != taskNodes["task2"] {
-				t.Errorf("Expected task4 to take over task2's node: %v", render.Render(as))
-			}
+			j1s.taskCompleted(as.task.TaskId, true)
 		} else {
-			if as.nodeSt.node.Id() != taskNodes["task3"] {
-				t.Errorf("Expected task5 to take over task3's node: %v", render.Render(as))
-			}
+			j2s.taskStarted(as.task.TaskId, &taskRunner{})
+		}
+	}
+
+	// Add a new idle node, assign tasks and confirm that job1's task is assigned to
+	// the same node as the prior job1 task
+	testCluster.add("node3")
+	assignments, _ = getTaskAssignments(testCluster, []*jobState{j1s, j2s}, s)
+	if len(assignments) != 2 {
+		t.Errorf("Expected 2 tasks to be assigned, got %v", len(assignments))
+	}
+
+	for _, as := range assignments {
+		if as.task.TaskId == "task2" {
+			assert.Equal(t, fmt.Sprintf("%s", taskNodes["task1"]), fmt.Sprintf("%s", as.nodeSt.node.Id()), "expected task2 to be assigned to task1's node")
 		}
 	}
 }
 
-// We want to see three tasks with TagX scheduled first, followed by one TagY, then the final TagX
-func Test_TaskAssignments_RequestorBatching(t *testing.T) {
-	js := []*jobState{
-		{
-			Job: &domain.Job{
-				Id:  "job1",
-				Def: domain.JobDefinition{Tag: "TagX"},
-			},
-			Tasks: []*taskState{
-				{JobId: "job1", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-				{JobId: "job1", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-			},
-		},
-		{
-			Job: &domain.Job{
-				Id:  "job2",
-				Def: domain.JobDefinition{Tag: "TagY"},
-			},
-			Tasks: []*taskState{
-				{JobId: "job2", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-			},
-		},
-		{
-			Job: &domain.Job{
-				Id:  "job3",
-				Def: domain.JobDefinition{Tag: "TagX"},
-			},
-			Tasks: []*taskState{
-				{JobId: "job3", TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-				{JobId: "job3", TaskId: "task2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-			},
-		},
+func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
+	rfn := func() stats.StatsRegistry { return stats.NewFinagleStatsRegistry() }
+	statsReceiver, _ := stats.NewCustomStatsReceiver(rfn, 0)
+	rf := func(n cluster.Node) runner.Service {
+		return worker.MakeInmemoryWorker(n, tmp)
 	}
-
-	nodes := []string{}
-	for i := 0; i < 6; i++ {
-		nodes = append(nodes, fmt.Sprintf("node%d", i))
+	sc := SchedulerConfig{
+		MaxRetriesPerTask:    0,
+		DebugMode:            true,
+		RecoverJobsOnStartup: false,
+		DefaultTaskTimeout:   time.Second,
 	}
-	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-
-	req := map[string][]*jobState{"": js}
-	config := &SchedulerConfig{
-		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
-	}
-	NodeScaleAdjustment = []float32{1, 1, 1} // Setting this global value explicitly for test consistency.
-
-	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
-		&OrigSchedulingAlg{})
-	if len(assignments) != 5 {
-		t.Errorf("Expected all five tasks to be assigned, got %v", len(assignments))
-	}
-	if assignments[0].task.JobId != "job3" || assignments[0].task.TaskId != "task1" {
-		t.Errorf("Expected 0:job1.task1, got: %v", spew.Sdump(assignments[0]))
-	}
-	if assignments[1].task.JobId != "job3" || assignments[1].task.TaskId != "task2" {
-		t.Errorf("Expected 1:job1.task2, got: %v", spew.Sdump(assignments[1]))
-	}
-	if assignments[2].task.JobId != "job1" || assignments[2].task.TaskId != "task1" {
-		t.Errorf("Expected 2:job3.task1, got: %v", spew.Sdump(assignments[2]))
-	}
-	if assignments[3].task.JobId != "job2" || assignments[3].task.TaskId != "task1" {
-		t.Errorf("Expected 3:job2.task1, got: %v", spew.Sdump(assignments[3]))
-	}
-	if assignments[4].task.JobId != "job1" || assignments[4].task.TaskId != "task2" {
-		t.Errorf("Expected 4:job3.task2, got: %v", spew.Sdump(assignments[4]))
-	}
+	s := NewStatefulScheduler(tc.nodes, tc.ch,
+		sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		rf,
+		sc,
+		statsReceiver,
+	)
+	return s
 }
 
-/*
-Add Job1.P0, Job2.P1 Job3.P2, Job4.P0
-With 3 nodes, expect: scheduled Job3, Job2, Job1
-*/
-func Test_TaskAssignments_PrioritySimple(t *testing.T) {
-	makeJob := func(jobId string, prio domain.Priority) *domain.Job {
-		return &domain.Job{Id: jobId, Def: domain.JobDefinition{Priority: prio, Tag: jobId}}
-	}
-	makeTasks := func(jobId string) []*taskState {
-		return []*taskState{
-			{JobId: jobId, TaskId: "task1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+func getTaskAssignments(tc *testCluster, js []*jobState, s *statefulScheduler) ([]taskAssignment, map[string]*nodeGroup) {
+
+	s.inProgressJobs = js
+	reqMap := map[string][]*jobState{}
+	for _, j := range js {
+		if _, ok := reqMap[j.Job.Def.Requestor]; !ok {
+			reqMap[j.Job.Def.Requestor] = []*jobState{}
 		}
+		reqMap[j.Job.Def.Requestor] = append(reqMap[j.Job.Def.Requestor], j)
+		j.tasksByJobClassAndStartTimeSec = s.tasksByJobClassAndStartTimeSec
 	}
-	js := []*jobState{
-		{
-			Job:        makeJob("job1", domain.P0),
-			Tasks:      makeTasks("job1"),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-		{
-			Job:        makeJob("job2", domain.P1),
-			Tasks:      makeTasks("job2"),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-		{
-			Job:        makeJob("job3", domain.P2),
-			Tasks:      makeTasks("job3"),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-		{
-			Job:        makeJob("job4", domain.P0),
-			Tasks:      makeTasks("job4"),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-	}
+	s.requestorMap = reqMap
 
-	numNodes := 3
-	nodes := []string{}
-	for i := 0; i < numNodes; i++ {
-		nodes = append(nodes, fmt.Sprintf("node%d", i))
-	}
-	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-
-	req := map[string][]*jobState{"": js}
-
-	assignments, _ := getTaskAssignments(cs, js, req, nil, nil,
-		&OrigSchedulingAlg{})
-	if len(assignments) != numNodes {
-		t.Errorf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
-	}
-	if assignments[0].task.JobId != "job3" {
-		t.Errorf("Expected 0:job3: %v", spew.Sdump(assignments[0]))
-	}
-	if assignments[1].task.JobId != "job2" {
-		t.Errorf("Expected 1:job2, got: %v", spew.Sdump(assignments[1]))
-	}
-	if assignments[2].task.JobId != "job1" {
-		t.Errorf("Expected 2:job1, got: %v", spew.Sdump(assignments[2]))
-	}
-
-	// Complete first job and get remaining P0 scheduled
-	js[2].taskCompleted(assignments[0].task.TaskId, true)
-	assignments, _ = getTaskAssignments(cs, js[2:], req, nil, nil,
-		&OrigSchedulingAlg{})
-
-	if len(assignments) != 1 {
-		t.Errorf("Expected additional assignment after previous completion, got: %d", len(assignments))
-	}
-	if assignments[0].task.JobId != "job4" {
-		t.Errorf("Expected 0:job4, got: %v", spew.Sdump(assignments[0]))
-	}
-}
-
-/*
-Set NodeScaleFactor=.2 (10 NumConfiguredNodes / 50 SoftMaxSchedulableTasks) to get the following scheduling.
-Add jobs: (10 P2 Tasks), (10 P1 Tasks), (10 P0 Tasks)
-With 10 nodes: assign nodes for 7 P2, 2 P1, and 1 P0 tasks
-*/
-func Test_TaskAssignments_PriorityStages(t *testing.T) {
-	makeJob := func(jobId string, prio domain.Priority) *domain.Job {
-		return &domain.Job{Id: jobId, Def: domain.JobDefinition{Priority: prio, Tag: jobId}}
-	}
-	makeTasks := func(num int, jobId string, prio domain.Priority) []*taskState {
-		tasks := []*taskState{}
-		for i := 0; i < num; i++ {
-			def := domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}
-			tasks = append(tasks, &taskState{JobId: jobId, TaskId: fmt.Sprintf("task%d_P%d", i, prio), Def: def})
-		}
-		return tasks
-	}
-	js := []*jobState{
-		{
-			Job:        makeJob("job1", domain.P0),
-			Tasks:      makeTasks(10, "job1", domain.P0),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-		{
-			Job:        makeJob("job2", domain.P1),
-			Tasks:      makeTasks(10, "job2", domain.P1),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-		{
-			Job:        makeJob("job3", domain.P2),
-			Tasks:      makeTasks(10, "job3", domain.P2),
-			Running:    make(map[string]*taskState),
-			Completed:  make(map[string]*taskState),
-			NotStarted: make(map[string]*taskState),
-		},
-	}
-
-	numNodes := 10
-	nodes := []string{}
-	for i := 0; i < numNodes; i++ {
-		nodes = append(nodes, fmt.Sprintf("node%d", i))
-	}
-	testCluster := makeTestCluster(nodes...)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
-
-	req := map[string][]*jobState{"": js}
-	config := &SchedulerConfig{
-		SoftMaxSchedulableTasks: 50, // We want numTasks*GetNodeScaleFactor()==2 to define a specific order for scheduling.
-	}
-	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
-
-	// Check for 7 P2, 2 P1, and 1 P0 tasks
-	assignments, _ := getTaskAssignments(cs, js, req, config, nil,
-		&OrigSchedulingAlg{})
-	if len(assignments) != numNodes {
-		t.Fatalf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
-	}
-	expected := []string{"P2", "P2", "P1", "P0", "P2", "P2", "P2", "P2", "P2", "P1"}
-	for i, assignment := range assignments {
-		if !strings.HasSuffix(assignment.task.TaskId, expected[i]) {
-			t.Fatalf("Idx=%d, expected %s task, got %v", i, expected[i], spew.Sdump(assignment))
-		}
-	}
+	return s.getTaskAssignments()
 }

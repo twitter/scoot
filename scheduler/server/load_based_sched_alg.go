@@ -5,6 +5,8 @@ import (
 	"math"
 	"regexp"
 	"sort"
+	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -19,6 +21,21 @@ const (
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
 var DefaultLoadBasedSchedulerClassPcts = map[string]int32{"c0": 100}
 var DefaultRequestorToClassMap = map[string]string{".*": "c0"}
+var DefaultMinRebalanceTime = time.Duration(4 * time.Minute)
+var MaxTaskDuration = time.Duration(4 * time.Hour)
+
+type LoadBasedAlgConfig struct {
+	classLoadPcts           map[string]int
+	classLoadPctsMu         sync.RWMutex
+	requestorReToClassMap   map[string]string
+	requestorReToClassMapMU sync.RWMutex
+
+	minRebalanceTime time.Duration // minimum time that must pass between rebalancing workers
+
+	classByDescLoadPct []string
+
+	stat stats.StatsReceiver
+}
 
 // LoadBasedAlg the scheduling algorithm allocates job tasks to workers using a class map as
 // follows:
@@ -43,61 +60,30 @@ var DefaultRequestorToClassMap = map[string]string{".*": "c0"}
 // allocation meets the original targets.
 //
 type LoadBasedAlg struct {
-	jobClasses         map[string]*jobClass
-	classByDescLoadPct []string
+	config     LoadBasedAlgConfig
+	jobClasses map[string]*jobClass
 
-	requestorToClassMap map[string]string
-
-	// intermediate values
 	totalUnusedEntitlement int
+	lastRebalanceTime      time.Time
 
-	stat stats.StatsReceiver
+	// local copy of load pcts and requestor map to use during assignment computation
+	// to insulate the computation from external changes to the configuration
+	classLoadPcts         map[string]int
+	requestorReToClassMap map[string]string
+
+	classByDescLoadPct             []string
+	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState
 }
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
 // the %'s will be adjusted and an error will be returned with the alg object
-func NewLoadBasedAlg(loadTargets map[string]int32, requestorToClassMap map[string]string, stat stats.StatsReceiver) *LoadBasedAlg {
-	lbs := &LoadBasedAlg{jobClasses: map[string]*jobClass{}, stat: stat}
-	var pctTotal int
-	for className, val := range loadTargets {
-		lbs.jobClasses[className] = NewJobClass(className, int(val))
-		pctTotal += int(val)
+func NewLoadBasedAlg(config LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) *LoadBasedAlg {
+	lbs := &LoadBasedAlg{
+		config:                         config,
+		jobClasses:                     map[string]*jobClass{},
+		lastRebalanceTime:              time.Now(),
+		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
 	}
-
-	// build a list that orders the classes by descending pct.
-	keys := []string{}
-	for key := range lbs.jobClasses {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return lbs.jobClasses[keys[i]].origTargetLoadPct > lbs.jobClasses[keys[j]].origTargetLoadPct
-	})
-	lbs.classByDescLoadPct = keys
-
-	// normalize the %s to 100% (as needed)
-	if pctTotal != 100 {
-		log.Errorf("LoadBalanced scheduling %%'s don't add up to 100, normalizing them")
-		newPcts := map[string]int{}
-		totalNormalizedPct := 0
-		firstClass := true
-		for _, className := range lbs.classByDescLoadPct {
-			if firstClass {
-				firstClass = false
-				continue // skip the first class (highest %), it will be given the difference between 100 and the sum of the other %'s
-			}
-			class := lbs.jobClasses[className]
-			normalizedLoadPct := int(math.Floor(float64(class.origTargetLoadPct) / float64(pctTotal)))
-			newPcts[className] = normalizedLoadPct
-			lbs.jobClasses[className].origTargetLoadPct = normalizedLoadPct
-			totalNormalizedPct += normalizedLoadPct
-		}
-		lbs.jobClasses[lbs.classByDescLoadPct[0]].origTargetLoadPct = 100 - totalNormalizedPct
-		newPcts[lbs.classByDescLoadPct[0]] = lbs.jobClasses[lbs.classByDescLoadPct[0]].origTargetLoadPct
-		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", newPcts)
-	}
-
-	lbs.requestorToClassMap = requestorToClassMap
-
 	return lbs
 }
 
@@ -123,7 +109,7 @@ type jobClass struct {
 	origTargetLoadPct      int // the target % of workers for this class
 	origNumTargetedWorkers int // the original number of workers allocated for this class by target % (total workers * origTargetLoadPct)
 
-	numTasksToStart int // number of tasks that can be started
+	numTasksToStart int // number of tasks that can be started (when negative -> number of tasks to stop)
 	numWaitingTasks int // number of tasks still waiting to be started
 
 	tempEntitlement   int // temporary field to hold intermediate entitled num workers
@@ -163,20 +149,29 @@ func NewJobClass(name string, targetLoadPct int) *jobClass {
 // Jobs within a class are binned by the number of running tasks (ranking jobs by the number of active tasks).
 // When starting tasks for a class, the tasks are first pulled from jobs with the least number of active tasks.
 func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stats.StatsReceiver, cs *clusterState,
-	jobsByRequestor map[string][]*jobState, cfgNotUsed SchedulerConfig) []*taskState {
-	log.Infof("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
-	lbs.ppJBR(jobsByRequestor)
+	jobsByRequestor map[string][]*jobState) ([]*taskState, []*taskState) {
+	log.Debugf("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
+
+	// make local copies of the load pct structures
+	lbs.classLoadPcts = lbs.LocalCopyClassLoadPcts()
+	lbs.requestorReToClassMap = lbs.GetRequestorToClassMap()
+	lbs.classByDescLoadPct = lbs.GetClassByDescLoadPct()
 
 	numWorkers := len(cs.nodes)
 	lbs.initOrigNumTargetedWorkers(numWorkers)
 
 	lbs.initJobClassesMap(jobsByRequestor)
-	for _, jc := range lbs.jobClasses {
-		log.Info(jc.String())
-	}
+	lbs.ppJobClasses()
 
-	// compute the number of tasks to be started for each class
-	lbs.computeNumTasksToStart(cs.numFree())
+	// currentPctSpread is the delta between the highest and lowest
+	currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
+	var stopTasks []*taskState
+	if currentPctSpread > 50 && time.Now().Sub(lbs.lastRebalanceTime) > lbs.config.minRebalanceTime {
+		stopTasks = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
+	} else {
+		// compute the number of tasks to be started for each class
+		lbs.computeNumTasksToStart(cs.numFree())
+	}
 
 	// add the tasks to be started to the return list
 	tasksToStart := lbs.buildTaskStartList()
@@ -191,25 +186,23 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassActualPct, jc.className)).Update(int64(finalPct))
 	}
 
-	log.Info("****************")
-	log.Info("****************")
-	log.Info("****************")
-	log.Info("****************")
-	log.Infof("Returning %d tasks", len(tasksToStart))
-	return tasksToStart
+	log.Debugf("Returning %d start tasks, %d stop tasks", len(tasksToStart), len(stopTasks))
+	return tasksToStart, stopTasks
 }
 
 // initOrigNumTargetedWorkers computes the number of workers targeted for each class as per the class's
 // original target load pct
 func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
+	lbs.jobClasses = map[string]*jobClass{}
 	totalWorkers := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
+		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPcts[className], jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
+		lbs.jobClasses[className] = jc
 		if firstClass {
 			firstClass = false
 			continue
 		}
-		jc := lbs.jobClasses[className]
 		targetNumWorkers := int(math.Floor(float64(numWorkers) * float64(jc.origTargetLoadPct) / 100.0))
 		jc.origNumTargetedWorkers = targetNumWorkers
 		totalWorkers += targetNumWorkers
@@ -226,24 +219,24 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 	for requestor, jobs := range jobsByRequestor {
 		var jc *jobClass
 		var ok bool
-		className := lbs.getRequestorClass(requestor)
+		className := GetRequestorClass(requestor, lbs.requestorReToClassMap)
 		if className != "" {
 			jc, ok = lbs.jobClasses[className]
 			if !ok {
 				// the class name was not recognized, use the lowest priority class
-				lbs.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
+				lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
 				jc = lbs.jobClasses[classNameWithLeastWorkers]
 				log.Errorf("%s is not a recognized job class assigning to lowest priority class (%s)", className, classNameWithLeastWorkers)
 			}
 		} else {
 			// if the requestor is not recognized, use the lowest priority class
-			lbs.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
+			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
 			jc = lbs.jobClasses[classNameWithLeastWorkers]
 			log.Errorf("%s is not a recognized requestor assigning to lowest priority class (%s)", className, classNameWithLeastWorkers)
 		}
 		if jc.origTargetLoadPct == 0 {
 			log.Errorf("%s worker allocation (load %% is 0), ignoring %d jobs", requestor, len(jobs))
-			lbs.stat.Counter(stats.SchedLBSIgnoredJobCnt).Inc(1)
+			lbs.config.stat.Counter(stats.SchedLBSIgnoredJobCnt).Inc(1)
 			continue
 		}
 
@@ -272,11 +265,11 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 	}
 }
 
-// getRequestorClass find the requestorToClass entry for requestor
+// GetRequestorClass find the requestorToClass entry for requestor
 // keys in requestorToClassEntry are regular expressions
 // if no match is found, return "" for the class name
-func (lbs *LoadBasedAlg) getRequestorClass(requestor string) string {
-	for reqRe, className := range lbs.requestorToClassMap {
+func GetRequestorClass(requestor string, requestorToClassMap map[string]string) string {
+	for reqRe, className := range requestorToClassMap {
 		if m, _ := regexp.Match(reqRe, []byte(requestor)); m {
 			return className
 		}
@@ -291,14 +284,14 @@ func (lbs *LoadBasedAlg) computeNumTasksToStart(numIdleWorkers int) {
 
 	var haveUnallocatedTasks bool
 
-	numIdleWorkers, haveUnallocatedTasks = lbs.entitlementWorkerAllocation(numIdleWorkers)
+	numIdleWorkers, haveUnallocatedTasks = lbs.entitlementTasksToStart(numIdleWorkers)
 
 	if numIdleWorkers > 0 && haveUnallocatedTasks {
 		lbs.workerLoanAllocation(numIdleWorkers)
 	}
 }
 
-// entitlementWorkerAllocation compute the number of tasks we can start for each class based on each classes original targeted
+// entitlementTasksToStart compute the number of tasks we can start for each class based on each classes original targeted
 // number of workers (origNumTargetedWorkers)
 // Note: this is an iterative computation that converges on the number of tasks to start within number of class's iterations.
 //
@@ -313,11 +306,10 @@ func (lbs *LoadBasedAlg) computeNumTasksToStart(numIdleWorkers int) {
 // entitlement.  We compute this by repeating steps 1-3 till all idle workers have been allocated, all waiting tasks have been
 // allocated or all classes entitlements have been met.  Each iteration either uses up all idle workers, all of a class's waiting tasks
 // or fully allocates at least one class's task entitlement.   This means that the we will not iterate more than the number of classes.
-func (lbs *LoadBasedAlg) entitlementWorkerAllocation(numIdleWorkers int) (int, bool) {
+func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool) {
 	i := 0
 	haveWaitingTasks := true
 	for ; i < len(lbs.jobClasses); i++ {
-		lbs.ppAllocationState(fmt.Sprintf("entitlement loop:%d", i), numIdleWorkers)
 		// compute the class's current entitlement: number of tasks we would like to start for each class as per the class's
 		// target load % and number of waiting tasks.  We'll use this to compute normalized entitlement %s below.
 		totalEntitlements := 0
@@ -344,7 +336,7 @@ func (lbs *LoadBasedAlg) entitlementWorkerAllocation(numIdleWorkers int) (int, b
 		// compute worker allocations as per the normalized entitlement %s
 		numTasksAllocated := 0
 		workersToAllocate := min(numIdleWorkers, totalEntitlements)
-		numTasksAllocated, haveWaitingTasks = lbs.allocateWorkers(workersToAllocate)
+		numTasksAllocated, haveWaitingTasks = lbs.getTaskAllocations(workersToAllocate)
 
 		numIdleWorkers -= numTasksAllocated
 
@@ -355,7 +347,6 @@ func (lbs *LoadBasedAlg) entitlementWorkerAllocation(numIdleWorkers int) (int, b
 			break
 		}
 	}
-	lbs.ppAllocationState(fmt.Sprintf("end of entitlement allocation (after %d loops)", i), numIdleWorkers)
 	return numIdleWorkers, haveWaitingTasks
 }
 
@@ -374,11 +365,10 @@ func (lbs *LoadBasedAlg) entitlementWorkerAllocation(numIdleWorkers int) (int, b
 func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 	i := 0
 	for ; i < len(lbs.jobClasses); i++ {
-		lbs.ppAllocationState(fmt.Sprintf("loan loop:%d", i), numIdleWorkers)
 		lbs.computeLoanPcts()
 
 		// compute loan %'s and allocate idle workers
-		numTasksAllocated, haveWaitingTasks := lbs.allocateWorkers(numIdleWorkers)
+		numTasksAllocated, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
 
 		numIdleWorkers -= numTasksAllocated
 
@@ -392,11 +382,11 @@ func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 	lbs.ppAllocationState(fmt.Sprintf("ended loan allocation after %d loops", i), numIdleWorkers)
 }
 
-// allocateWorkers given the normalized allocation %s for each class, working from highest % (largest allocation) to smallest,
+// getTaskAllocations given the normalized allocation %s for each class, working from highest % (largest allocation) to smallest,
 // allocate that class's % of the idle workers (update the class's numTasksToStart and numWaitingTasks), but not to exceed the
-// classes number of waiting tasks. Return the total number of tasks allocated to workers and a boolean indicating if there are
+// classs' number of waiting tasks. Return the total number of tasks allocated to workers and a boolean indicating if there are
 // still tasks waiting to be allocated
-func (lbs *LoadBasedAlg) allocateWorkers(numIdleWorkers int) (int, bool) {
+func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
 	totalTasksAllocated := 0
 	haveWaitingTasks := false
 
@@ -484,7 +474,7 @@ func (lbs *LoadBasedAlg) computeLoanPcts() {
 func (lbs *LoadBasedAlg) buildTaskStartList() []*taskState {
 	tasks := []*taskState{}
 	for _, jc := range lbs.jobClasses {
-		if jc.numTasksToStart == 0 {
+		if jc.numTasksToStart <= 0 {
 			continue
 		}
 		classTasks := lbs.getTasksToStartForJobClass(jc)
@@ -538,10 +528,47 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	return tasks // note: we should never hit this line
 }
 
+// buildTaskStopList builds the list of tasks to be stopped.
+func (lbs *LoadBasedAlg) buildTaskStopList() []*taskState {
+	tasks := []*taskState{}
+	for _, jc := range lbs.jobClasses {
+		if jc.numTasksToStart >= 0 {
+			continue
+		}
+		classTasks := lbs.getTasksToStopForJobClass(jc)
+		tasks = append(tasks, classTasks...)
+	}
+	return tasks
+}
+
+// getTasksToStopForJobClass for each job class return the abs(numTasksToStart) most recently started
+// tasks.  (numTasksToStart will be a negative number)
+func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskState {
+	earliest := time.Now().Add(-1 * MaxTaskDuration)
+	startTimeSec := time.Now().Truncate(time.Second)
+	numTasksToStop := jobClass.numTasksToStart * -1
+	stopTasks := []*taskState{}
+	for len(stopTasks) < numTasksToStop {
+		tasks := GetTasksByJobClassAndStart(lbs.tasksByJobClassAndStartTimeSec, jobClass.className, startTimeSec)
+		for _, task := range tasks {
+			stopTasks = append(stopTasks, task)
+			if len(stopTasks) == numTasksToStop {
+				break
+			}
+		}
+		startTimeSec = startTimeSec.Add(-1 * time.Second).Truncate(time.Second)
+		if startTimeSec.Before(earliest) {
+			break
+		}
+	}
+	return stopTasks
+}
+
 func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
 	return lbs.jobClasses[requestor].numTasksToStart
 }
 
+// ppAllocationState pretty print the jobClasses
 func (lbs *LoadBasedAlg) ppAllocationState(tag string, unallocatedWorkers int) {
 	log.Debugf("*******%s, %d workers left to be allocated", tag, unallocatedWorkers)
 	for _, className := range lbs.classByDescLoadPct {
@@ -550,19 +577,173 @@ func (lbs *LoadBasedAlg) ppAllocationState(tag string, unallocatedWorkers int) {
 	}
 }
 
+// ppJBR pretty print the jobsByRequestor map
 func (lbs *LoadBasedAlg) ppJBR(jbr map[string][]*jobState) {
 	for k, v := range jbr {
 		log.Infof("requestor: %s, %d jobs", k, len(v))
 	}
 }
 
-// // rebalanceClassTasks compute the tasks that should be deleted to allow the scheduling algorithm
-// // to start tasks in better alignment with the original targeted task load percents.
-// // The function returns the list of tasks to start and the list of tasks to stop
-// func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int, numIdleWorkers int) ([]*taskState, []*taskState) {
+// rebalanceClassTasks compute the tasks that should be deleted to allow the scheduling algorithm
+// to start tasks in better alignment with the original targeted task load percents.
+// The function returns the list of tasks to stop and updates the jobClass objects with the number
+// of tasks to start
+func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int, numIdleWorkers int) []*taskState {
 
-// 	lbs.initJobClassesMap(jobsByRequestor)
+	totalTasks := 0
+	// compute number tasks as per the each class's entitlement and waiting tasks
+	// will be negative when a class is over its entitlement
+	for _, jc := range lbs.jobClasses {
+		if jc.origNumRunningTasks > jc.origNumTargetedWorkers {
+			// the number of tasks that could be started to bring the class up to its entitlement
+			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
+		} else if jc.origNumRunningTasks+jc.origNumWaitingTasks < jc.origNumTargetedWorkers {
+			// the waiting tasks won't put the class over its entitlement
+			jc.numTasksToStart = jc.origNumWaitingTasks
+		} else {
+			// the class is running more than its entitled workers, numTasksToStart is number of tasks
+			// to stop to bring back to its entitlement (it will be a negative number)
+			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
+		}
+		jc.numWaitingTasks = jc.origNumWaitingTasks - jc.numTasksToStart
+		totalTasks += jc.origNumRunningTasks + jc.numTasksToStart
+	}
 
-// 	lbs.entitlementWorkerAllocation(numIdleWorkers)
+	if totalTasks < totalWorkers {
+		// some classes are not using their full allocation, we can loan workers
+		lbs.computeLoanPcts()
 
-// }
+		lbs.getTaskAllocations(totalWorkers - totalTasks)
+	}
+
+	stopTasks := lbs.buildTaskStopList()
+
+	return stopTasks
+}
+
+// getCurrentPctsSpread is used to measure how well the current worker assignment matches the target loads.
+// It computes each class's difference between the target load pct and actual load pct.  The 'spread' value
+// is the difference between the min and max differences across the classes.  Eg: if 30% was the load target
+// for class A and class A is using 50% of the workers, A's pct difference is -20%.  If class B has a target
+// of 15% and is only using 5% of workers, B's pct difference is 10%.  If A and B are the only classes, the
+// pctSpread is 25% (5% - -20%).
+func (lbs *LoadBasedAlg) getCurrentPctsSpread(totalWorkers int) int {
+	if len(lbs.jobClasses) < 2 {
+		return 0
+	}
+	minPct := 0
+	maxPct := 0
+	for _, className := range lbs.classByDescLoadPct {
+		jc := lbs.jobClasses[className]
+		currPct := int(math.Floor(float64(jc.origNumRunningTasks) * 100.0 / float64(totalWorkers)))
+		pctDiff := jc.origTargetLoadPct - currPct
+		minPct = min(minPct, pctDiff)
+		maxPct = max(maxPct, pctDiff)
+	}
+
+	return maxPct - minPct
+}
+
+// GetClassByDescLoadPct get a copy of the config's class by descending load pcts
+func (lbs *LoadBasedAlg) GetClassByDescLoadPct() []string {
+	lbs.config.classLoadPctsMu.RLock()
+	defer lbs.config.classLoadPctsMu.RUnlock()
+	copy := []string{}
+	for _, v := range lbs.config.classByDescLoadPct {
+		copy = append(copy, v)
+	}
+	return copy
+}
+
+// GetClassLoadPcts return a copy of the ClassLoadPcts converting to int32
+func (lbs *LoadBasedAlg) GetClassLoadPcts() map[string]int32 {
+	lbs.config.classLoadPctsMu.RLock()
+	defer lbs.config.classLoadPctsMu.RUnlock()
+	copy := map[string]int32{}
+	for k, v := range lbs.config.classLoadPcts {
+		copy[k] = int32(v)
+	}
+	return copy
+}
+
+// LocalCopyClassLoadPcts return a copy of the ClassLoadPcts leaving as int
+func (lbs *LoadBasedAlg) LocalCopyClassLoadPcts() map[string]int {
+	lbs.config.classLoadPctsMu.RLock()
+	defer lbs.config.classLoadPctsMu.RUnlock()
+	copy := map[string]int{}
+	for k, v := range lbs.config.classLoadPcts {
+		copy[k] = v
+	}
+	return copy
+}
+
+// SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
+func (lbs *LoadBasedAlg) SetClassLoadPcts(classLoadPcts map[string]int32) {
+	lbs.config.classLoadPctsMu.Lock()
+	defer lbs.config.classLoadPctsMu.Unlock()
+
+	// build a list that orders the classes by descending pct.
+	keys := []string{}
+	for key := range classLoadPcts {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return classLoadPcts[keys[i]] > classLoadPcts[keys[j]]
+	})
+	lbs.config.classByDescLoadPct = keys
+
+	// set the load pcts - normalizing them if the don't add up to 100
+	lbs.config.classLoadPcts = map[string]int{}
+	pctTotal := 0
+	for _, val := range classLoadPcts {
+		pctTotal += int(val)
+	}
+	if pctTotal != 100 {
+		log.Errorf("LoadBalanced scheduling %%'s don't add up to 100, normalizing them")
+		totalNormalizedPct := 0
+		firstClass := true
+		for _, className := range lbs.config.classByDescLoadPct {
+			if firstClass {
+				firstClass = false
+				continue // skip the first class (highest %), it will be given the difference between 100 and the sum of the other %'s
+			}
+			classPct := classLoadPcts[className]
+			lbs.config.classLoadPcts[className] = int(math.Floor(float64(classPct) / float64(pctTotal)))
+			totalNormalizedPct += lbs.config.classLoadPcts[className]
+		}
+		lbs.config.classLoadPcts[lbs.config.classByDescLoadPct[0]] = 100 - totalNormalizedPct
+		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPcts)
+	} else {
+		for k, v := range classLoadPcts {
+			lbs.config.classLoadPcts[k] = int(v)
+		}
+	}
+}
+
+// GetRequestorToClassMap return a copy of the RequestorToClassMap
+func (lbs *LoadBasedAlg) GetRequestorToClassMap() map[string]string {
+	lbs.config.requestorReToClassMapMU.RLock()
+	defer lbs.config.requestorReToClassMapMU.RUnlock()
+	copy := map[string]string{}
+	for k, v := range lbs.config.requestorReToClassMap {
+		copy[k] = v
+	}
+	return copy
+}
+
+// SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
+func (lbs *LoadBasedAlg) SetRequestorToClassMap(requestorToClassMap map[string]string) {
+	lbs.config.requestorReToClassMapMU.Lock()
+	defer lbs.config.requestorReToClassMapMU.Unlock()
+	lbs.config.requestorReToClassMap = map[string]string{}
+	for k, v := range requestorToClassMap {
+		lbs.config.requestorReToClassMap[k] = v
+	}
+}
+
+func (lbs *LoadBasedAlg) ppJobClasses() {
+	log.Info("job class definitions:")
+	for class, jc := range lbs.jobClasses {
+		log.Infof("%s:%s", class, jc)
+	}
+}

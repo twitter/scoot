@@ -6,7 +6,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -79,10 +78,6 @@ const TickRate = 250 * time.Millisecond
 // The max job priority we respect (higher priority is untested and disabled)
 const MaxPriority = domain.P2
 
-// Decrease the NodeScaleFactor by taking the percentage defined by NodeScaleAdjust[Priority].
-// Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
-var NodeScaleAdjustment = []float32{.15, .3, .55}
-
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //     marking it as completed.
@@ -105,26 +100,21 @@ var NodeScaleAdjustment = []float32{.15, .3, .55}
 //	   requestors will try not to schedule jobs that make the scheduler exceed
 //     the TaskThrottle.  Note: Sickle may exceed it with retries.
 type SchedulerConfig struct {
-	MaxRetriesPerTask       int
-	DebugMode               bool
-	RecoverJobsOnStartup    bool
-	DefaultTaskTimeout      time.Duration
-	TaskTimeoutOverhead     time.Duration
-	RunnerRetryTimeout      time.Duration
-	RunnerRetryInterval     time.Duration
-	ReadyFnBackoff          time.Duration
-	MaxRequestors           int
-	MaxJobsPerRequestor     int
-	SoftMaxSchedulableTasks int
-	TaskThrottle            int
-	Admins                  []string
-}
+	MaxRetriesPerTask    int
+	DebugMode            bool
+	RecoverJobsOnStartup bool
+	DefaultTaskTimeout   time.Duration
+	TaskTimeoutOverhead  time.Duration
+	RunnerRetryTimeout   time.Duration
+	RunnerRetryInterval  time.Duration
+	ReadyFnBackoff       time.Duration
+	MaxRequestors        int
+	MaxJobsPerRequestor  int
+	TaskThrottle         int
+	Admins               []string
 
-// Used to calculate how many tasks a job can run without adversely affecting other jobs.
-// We account for priority by decreasing the scale factor by an appropriate percentage.
-func (s *SchedulerConfig) GetNodeScaleFactor(numNodes int, p domain.Priority) float32 {
-	sf := float32(numNodes) / float32(s.SoftMaxSchedulableTasks)
-	return sf * NodeScaleAdjustment[p]
+	SchedAlgConfig interface{}
+	SchedAlg       SchedulingAlgorithm
 }
 
 // Used to keep a running average of duration for a specific task.
@@ -170,13 +160,10 @@ type statefulScheduler struct {
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
+	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState // map of tasks by their class and start time
+
 	// stats
-	stat                    stats.StatsReceiver
-	classLoadPcts           map[string]int32
-	classLoadPctsMu         sync.RWMutex
-	requestorReToClassMap   map[string]string
-	requestorReToClassMapMU sync.RWMutex
-	schedulingAlg           SchedulingAlgorithm
+	stat stats.StatsReceiver
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -272,11 +259,20 @@ func NewStatefulScheduler(
 	if config.MaxJobsPerRequestor == 0 {
 		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
 	}
-	if config.SoftMaxSchedulableTasks == 0 {
-		config.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
+	config.TaskThrottle = -1
+
+	config.SchedAlgConfig = LoadBasedAlgConfig{
+		minRebalanceTime: DefaultMinRebalanceTime,
+		stat:             stat,
 	}
 
-	config.TaskThrottle = -1
+	// create the load base scheduling algorithm
+	tasksByClassAndStartMap := map[string]map[time.Time]map[string]*taskState{}
+	sa := NewLoadBasedAlg(config.SchedAlgConfig.(LoadBasedAlgConfig), tasksByClassAndStartMap)
+	sa.SetClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
+	sa.SetRequestorToClassMap(DefaultRequestorToClassMap)
+	config.SchedAlg = sa
+	config.SchedAlgConfig = sa.config
 
 	sched := &statefulScheduler{
 		config:        &config,
@@ -288,15 +284,15 @@ func NewStatefulScheduler(
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 		stepTicker:    time.NewTicker(TickRate),
 
-		clusterState:          newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
-		inProgressJobs:        make([]*jobState, 0),
-		requestorMap:          make(map[string][]*jobState),
-		requestorHistory:      make(map[string][]string),
-		taskDurations:         make(map[string]*averageDuration),
-		requestorsCounts:      make(map[string]map[string]int),
-		stat:                  stat,
-		classLoadPcts:         DefaultLoadBasedSchedulerClassPcts,
-		requestorReToClassMap: DefaultRequestorToClassMap,
+		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
+		inProgressJobs:   make([]*jobState, 0),
+		requestorMap:     make(map[string][]*jobState),
+		requestorHistory: make(map[string][]string),
+		taskDurations:    make(map[string]*averageDuration),
+		requestorsCounts: make(map[string]map[string]int),
+		stat:             stat,
+
+		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 	}
 
 	if !config.DebugMode {
@@ -704,7 +700,8 @@ func (s *statefulScheduler) addJobsLoop() {
 				newJobMsg.job.Def.Priority = MaxPriority
 			}
 
-			js := newJobState(newJobMsg.job, newJobMsg.saga, s.taskDurations)
+			jc := GetRequestorClass(newJobMsg.job.Def.Requestor, s.GetRequestorToClassMap())
+			js := newJobState(newJobMsg.job, jc, newJobMsg.saga, s.taskDurations, s.tasksByJobClassAndStartTimeSec)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 
 			sort.Sort(sort.Reverse(taskStatesByDuration(js.Tasks)))
@@ -820,14 +817,7 @@ func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	// Pass nil config so taskScheduler can determine the most appropriate values itself.
 	defer s.stat.Latency(stats.SchedScheduleTasksLatency_ms).Time().Stop()
-	var schedAlg SchedulingAlgorithm
-	if s.schedulingAlg == nil || fmt.Sprintf("%T", s.schedulingAlg) == "*server.LoadBasedAlg" {
-		schedAlg = NewLoadBasedAlg(s.GetClassLoadPcts(), s.GetRequestorToClassMap(), s.stat)
-	} else {
-		schedAlg = s.schedulingAlg
-	}
-	taskAssignments, nodeGroups := getTaskAssignments(s.clusterState, s.inProgressJobs, s.requestorMap, nil,
-		s.stat, schedAlg)
+	taskAssignments, nodeGroups := s.getTaskAssignments()
 	if taskAssignments != nil {
 		s.clusterState.nodeGroups = nodeGroups
 	}
@@ -835,15 +825,15 @@ func (s *statefulScheduler) scheduleTasks() {
 		// Set up variables for async functions & callback
 		task := ta.task
 		nodeSt := ta.nodeSt
-		jobID := task.JobId
 		taskID := task.TaskId
-		requestor := s.getJob(jobID).Job.Def.Requestor
-		jobType := s.getJob(jobID).Job.Def.JobType
-		tag := s.getJob(jobID).Job.Def.Tag
+		jobID := task.JobId
+		jobState := s.getJob(jobID)
+		requestor := jobState.Job.Def.Requestor
+		jobType := jobState.Job.Def.JobType
+		tag := jobState.Job.Def.Tag
 		taskDef := task.Def
 		taskDef.JobID = jobID
 		taskDef.Tag = tag
-		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
 
@@ -1136,27 +1126,14 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 		jobState := s.getJob(req.jobId)
 		logFields := log.Fields{
 			"jobID":     req.jobId,
-			"requestor": s.getJob(req.jobId).Job.Def.Requestor,
-			"jobType":   s.getJob(req.jobId).Job.Def.JobType,
-			"tag":       s.getJob(req.jobId).Job.Def.Tag,
+			"requestor": jobState.Job.Def.Requestor,
+			"jobType":   jobState.Job.Def.JobType,
+			"tag":       jobState.Job.Def.Tag,
 		}
 		var updateMessages []saga.SagaMessage
 		for _, task := range jobState.Tasks {
-			logFields["taskID"] = task.TaskId
-			if task.Status == domain.InProgress {
-				task.TaskRunner.Abort(true, UserRequestedErrStr)
-			} else if task.Status == domain.NotStarted {
-				st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
-				st.Error = UserRequestedErrStr
-				statusAsBytes, err := workerapi.SerializeProcessStatus(st)
-				if err != nil {
-					s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
-				}
-				s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
-				updateMessages = append(updateMessages, saga.MakeStartTaskMessage(jobState.Saga.ID(), task.TaskId, nil))
-				updateMessages = append(updateMessages, saga.MakeEndTaskMessage(jobState.Saga.ID(), task.TaskId, statusAsBytes))
-				jobState.taskCompleted(task.TaskId, false)
-			}
+			msgs := s.abortTask(jobState, task, logFields)
+			updateMessages = append(updateMessages, msgs...)
 		}
 
 		if len(updateMessages) > 0 {
@@ -1172,6 +1149,27 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 
 		req.responseCh <- nil
 	}
+}
+
+func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFields log.Fields) []saga.SagaMessage {
+	logFields["taskID"] = task.TaskId
+	var updateMessages []saga.SagaMessage
+
+	if task.Status == domain.InProgress {
+		task.TaskRunner.Abort(true, UserRequestedErrStr)
+	} else if task.Status == domain.NotStarted {
+		st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
+		st.Error = UserRequestedErrStr
+		statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+		if err != nil {
+			s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
+		}
+		s.stat.Counter(stats.SchedCompletedTaskCounter).Inc(1)
+		updateMessages = append(updateMessages, saga.MakeStartTaskMessage(jobState.Saga.ID(), task.TaskId, nil))
+		updateMessages = append(updateMessages, saga.MakeEndTaskMessage(jobState.Saga.ID(), task.TaskId, statusAsBytes))
+		jobState.taskCompleted(task.TaskId, false)
+	}
+	return updateMessages
 }
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job
@@ -1191,52 +1189,48 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 // - the max number of tasks the scheduler will handle, -1 -> there is no max number
 func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
-	var task_cnt = total - completed
-	return task_cnt, s.config.TaskThrottle
+	var taskCnt = total - completed
+	return taskCnt, s.config.TaskThrottle
 }
 
 func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
-	s.schedulingAlg = sa
+	s.config.SchedAlg = sa
 }
 
 // GetClassLoadPcts return a copy of the ClassLoadPcts
 func (s *statefulScheduler) GetClassLoadPcts() map[string]int32 {
-	s.classLoadPctsMu.RLock()
-	defer s.classLoadPctsMu.RUnlock()
-	copy := map[string]int32{}
-	for k, v := range s.classLoadPcts {
-		copy[k] = v
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return map[string]int32{}
 	}
-	return copy
+	return sched.GetClassLoadPcts()
 }
 
 // SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
 func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) {
-	s.classLoadPctsMu.Lock()
-	defer s.classLoadPctsMu.Unlock()
-	s.classLoadPcts = map[string]int32{}
-	for k, v := range classLoadPcts {
-		s.classLoadPcts[k] = v
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return
 	}
+	sched.SetClassLoadPcts(classLoadPcts)
+	return
 }
 
 // GetRequestorToClassMap return a copy of the RequestorToClassMap
 func (s *statefulScheduler) GetRequestorToClassMap() map[string]string {
-	s.requestorReToClassMapMU.RLock()
-	defer s.requestorReToClassMapMU.RUnlock()
-	copy := map[string]string{}
-	for k, v := range s.requestorReToClassMap {
-		copy[k] = v
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return map[string]string{}
 	}
-	return copy
+	return sched.GetRequestorToClassMap()
 }
 
 // SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
 func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) {
-	s.requestorReToClassMapMU.Lock()
-	defer s.requestorReToClassMapMU.Unlock()
-	s.requestorReToClassMap = map[string]string{}
-	for k, v := range requestorToClassMap {
-		s.requestorReToClassMap[k] = v
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return
 	}
+	sched.SetRequestorToClassMap(requestorToClassMap)
+	return
 }
