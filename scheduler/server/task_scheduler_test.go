@@ -74,8 +74,8 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	// put the tasks in different jobs to make sure the first assignment has 1 task from job1 and 1 from job2
 	// giving us tasks with different snapshotIDs
 	j1Tasks := []*taskState{
-		&taskState{TaskId: "task1", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		&taskState{TaskId: "task2", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task1", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task2", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 	}
 	j1s := &jobState{Job: &domain.Job{Id: "job1"}, Tasks: j1Tasks, Running: make(map[string]*taskState),
 		Completed: make(map[string]*taskState), NotStarted: map[string]*taskState{"task1": j1Tasks[0], "task2": j1Tasks[1]}}
