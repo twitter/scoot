@@ -107,6 +107,10 @@ func assign(
 	snapIds []string,
 	stat stats.StatsReceiver,
 ) (assignments []taskAssignment) {
+	log.WithFields(
+		log.Fields{
+			"numTasks": len(tasks),
+		}).Info("assigning tasks to nodes")
 	for _, task := range tasks {
 		var snapshotId string
 		var nodeSt *nodeState
@@ -146,7 +150,6 @@ func assign(
 				"taskID":         task.TaskId,
 				"node":           nodeSt.node,
 				"numAssignments": len(assignments),
-				"numTasks":       len(tasks),
 				"tag":            task.Def.Tag,
 			}).Info("Scheduling task")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)

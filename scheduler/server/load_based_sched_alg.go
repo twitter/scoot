@@ -60,7 +60,7 @@ type LoadBasedAlgConfig struct {
 // allocation meets the original targets.
 //
 type LoadBasedAlg struct {
-	config     LoadBasedAlgConfig
+	config     *LoadBasedAlgConfig
 	jobClasses map[string]*jobClass
 
 	totalUnusedEntitlement int
@@ -77,7 +77,7 @@ type LoadBasedAlg struct {
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
 // the %'s will be adjusted and an error will be returned with the alg object
-func NewLoadBasedAlg(config LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) *LoadBasedAlg {
+func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
 		config:                         config,
 		jobClasses:                     map[string]*jobClass{},
@@ -379,7 +379,6 @@ func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 			break
 		}
 	}
-	lbs.ppAllocationState(fmt.Sprintf("ended loan allocation after %d loops", i), numIdleWorkers)
 }
 
 // getTaskAllocations given the normalized allocation %s for each class, working from highest % (largest allocation) to smallest,
@@ -566,22 +565,6 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 
 func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
 	return lbs.jobClasses[requestor].numTasksToStart
-}
-
-// ppAllocationState pretty print the jobClasses
-func (lbs *LoadBasedAlg) ppAllocationState(tag string, unallocatedWorkers int) {
-	log.Debugf("*******%s, %d workers left to be allocated", tag, unallocatedWorkers)
-	for _, className := range lbs.classByDescLoadPct {
-		jc := lbs.jobClasses[className]
-		log.Debugf("%s", jc)
-	}
-}
-
-// ppJBR pretty print the jobsByRequestor map
-func (lbs *LoadBasedAlg) ppJBR(jbr map[string][]*jobState) {
-	for k, v := range jbr {
-		log.Infof("requestor: %s, %d jobs", k, len(v))
-	}
 }
 
 // rebalanceClassTasks compute the tasks that should be deleted to allow the scheduling algorithm

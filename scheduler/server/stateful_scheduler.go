@@ -261,14 +261,14 @@ func NewStatefulScheduler(
 	}
 	config.TaskThrottle = -1
 
-	config.SchedAlgConfig = LoadBasedAlgConfig{
+	config.SchedAlgConfig = &LoadBasedAlgConfig{
 		minRebalanceTime: DefaultMinRebalanceTime,
 		stat:             stat,
 	}
 
 	// create the load base scheduling algorithm
 	tasksByClassAndStartMap := map[string]map[time.Time]map[string]*taskState{}
-	sa := NewLoadBasedAlg(config.SchedAlgConfig.(LoadBasedAlgConfig), tasksByClassAndStartMap)
+	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
 	sa.SetClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
 	sa.SetRequestorToClassMap(DefaultRequestorToClassMap)
 	config.SchedAlg = sa
