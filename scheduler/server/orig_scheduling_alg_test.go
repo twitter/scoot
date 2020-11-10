@@ -63,7 +63,7 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 		SoftMaxSchedulableTasks: 10, // We want numTasks*GetNodeScaleFactor()==3 to define a specific order for scheduling.
 		NodeScaleAdjustment:     nodeScaleAdjustment,
 	}
-	assignments, _ := getOrigShedAlgTaskAssignments(testCluster, js, config)
+	assignments := getOrigShedAlgTaskAssignments(testCluster, js, config)
 	if len(assignments) != 5 {
 		t.Errorf("Expected all five tasks to be assigned, got %v", len(assignments))
 	}
@@ -138,7 +138,7 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 	}
 	testCluster := makeTestCluster(nodes...)
 
-	assignments, _ := getOrigShedAlgTaskAssignments(testCluster, js, nil)
+	assignments := getOrigShedAlgTaskAssignments(testCluster, js, nil)
 	if len(assignments) != numNodes {
 		t.Errorf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
 	}
@@ -154,7 +154,7 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 
 	// Complete first job and get remaining P0 scheduled
 	js[2].taskCompleted(assignments[0].task.TaskId, true)
-	assignments, _ = getOrigShedAlgTaskAssignments(testCluster, js[2:], nil)
+	assignments = getOrigShedAlgTaskAssignments(testCluster, js[2:], nil)
 
 	if len(assignments) != 1 {
 		t.Errorf("Expected additional assignment after previous completion, got: %d", len(assignments))
@@ -223,7 +223,7 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 	}
 
 	// Check for 7 P2, 2 P1, and 1 P0 tasks
-	assignments, _ := getOrigShedAlgTaskAssignments(testCluster, js, config)
+	assignments := getOrigShedAlgTaskAssignments(testCluster, js, config)
 	if len(assignments) != numNodes {
 		t.Fatalf("Expected %d tasks to be assigned, got %d", numNodes, len(assignments))
 	}
@@ -256,7 +256,7 @@ func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
 	}
 }
 
-func getOrigShedAlgTaskAssignments(tc *testCluster, js []*jobState, config *OrigSchedulingAlgConfig) ([]taskAssignment, map[string]*nodeGroup) {
+func getOrigShedAlgTaskAssignments(tc *testCluster, js []*jobState, config *OrigSchedulingAlgConfig) []taskAssignment {
 
 	rfn := func() stats.StatsRegistry { return stats.NewFinagleStatsRegistry() }
 	statsReceiver, _ := stats.NewCustomStatsReceiver(rfn, 0)

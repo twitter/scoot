@@ -182,6 +182,7 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 func (j *jobState) taskCompleted(taskId string, running bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = domain.Completed
+	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksCompleted++
@@ -196,7 +197,6 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	j.Completed[taskId] = taskState
 
 	// remove the task from the map of tasks by start time
-	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
 }
 
@@ -204,6 +204,7 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = domain.NotStarted
+	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksRunning--
@@ -217,7 +218,6 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	}
 	j.NotStarted[taskId] = taskState
 
-	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
 }
 
@@ -251,11 +251,11 @@ func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, start
 		return
 	}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[j.jobClass][startTimeSec]; !ok {
-		log.Errorf("no %s start time bucket found for the time %s. Skipping removing task from it", j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		log.Errorf("no %s start time bucket found for the time %s. Skipping removing task %s_%s from it", j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"), jobID, taskID)
 		return
 	}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[j.jobClass][startTimeSec][fmt.Sprintf("%s_%s", jobID, taskID)]; !ok {
-		log.Errorf("task %s was not found in %s time bucket found for the job %s.  Skipping removing task from it", taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		log.Errorf("task %s_%s was not found in %s time bucket found for the job %s.  Skipping removing task from it", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
 		return
 	}
 	delete(j.tasksByJobClassAndStartTimeSec[j.jobClass][startTimeSec], fmt.Sprintf("%s_%s", jobID, taskID))

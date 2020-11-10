@@ -817,10 +817,7 @@ func (s *statefulScheduler) scheduleTasks() {
 	// Calculate a list of Tasks to Node Assignments & start running all those jobs
 	// Pass nil config so taskScheduler can determine the most appropriate values itself.
 	defer s.stat.Latency(stats.SchedScheduleTasksLatency_ms).Time().Stop()
-	taskAssignments, nodeGroups := s.getTaskAssignments()
-	if taskAssignments != nil {
-		s.clusterState.nodeGroups = nodeGroups
-	}
+	taskAssignments := s.getTaskAssignments()
 	for _, ta := range taskAssignments {
 		// Set up variables for async functions & callback
 		task := ta.task
@@ -839,8 +836,6 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
-		// Mark Task as Started in the cluster
-		s.clusterState.taskScheduled(nodeSt.node.Id(), jobID, taskID, taskDef.SnapshotID)
 		log.WithFields(
 			log.Fields{
 				"jobID":     jobID,
@@ -850,7 +845,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				"jobType":   jobType,
 				"tag":       tag,
 				"taskDef":   taskDef,
-			}).Info("Task scheduled")
+			}).Info("Starting taskRunner")
 
 		tRunner := &taskRunner{
 			saga:   sa,

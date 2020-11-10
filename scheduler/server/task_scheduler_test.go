@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -25,7 +24,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
 	s := getDebugStatefulScheduler(testCluster)
-	assignments, _ := getTaskAssignments(testCluster, []*jobState{js}, s)
+	assignments := getTaskAssignments([]*jobState{js}, s)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -36,7 +35,7 @@ func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	s := getDebugStatefulScheduler(testCluster)
-	assignments, _ := getTaskAssignments(testCluster, []*jobState{}, s)
+	assignments := getTaskAssignments([]*jobState{}, s)
 
 	if len(assignments) != 0 {
 		t.Errorf("Assignments on a cluster with no nodes should not return any assignments")
@@ -56,7 +55,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	s := getDebugStatefulScheduler(testCluster)
 	unScheduledTasks := js.getUnScheduledTasks()
-	assignments, _ := getTaskAssignments(testCluster, []*jobState{js}, s)
+	assignments := getTaskAssignments([]*jobState{js}, s)
 
 	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
@@ -68,57 +67,83 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 }
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
-	testCluster := makeTestCluster("node1", "node2")
-	s := getDebugStatefulScheduler(testCluster)
-	cs := newClusterState(testCluster.nodes, testCluster.ch, nil, stats.NilStatsReceiver())
+	// testCluster := makeTestCluster("node1", "node2", "node3")
+	// s := getDebugStatefulScheduler(testCluster)
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	s, _, _ := initializeServices(sc, false)
+	cs := s.clusterState
 	// put the tasks in different jobs to make sure the first assignment has 1 task from job1 and 1 from job2
 	// giving us tasks with different snapshotIDs
 	j1Tasks := []*taskState{
-		{TaskId: "task1", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
-		{TaskId: "task2", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task11", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task12", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task13", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
+		{TaskId: "task14", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 	}
 	j1s := &jobState{Job: &domain.Job{Id: "job1"}, Tasks: j1Tasks, Running: make(map[string]*taskState),
-		Completed: make(map[string]*taskState), NotStarted: map[string]*taskState{"task1": j1Tasks[0], "task2": j1Tasks[1]}}
+		Completed: make(map[string]*taskState),
+		NotStarted: map[string]*taskState{
+			"task11": j1Tasks[0],
+			"task12": j1Tasks[1],
+			"task13": j1Tasks[2],
+			"task14": j1Tasks[3],
+		}}
 
 	j2Tasks := []*taskState{
-		{TaskId: "task3", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
-		{TaskId: "task4", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task21", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task22", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task23", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
+		{TaskId: "task24", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
 	j2s := &jobState{Job: &domain.Job{Id: "job2"}, Tasks: j2Tasks, Running: make(map[string]*taskState),
-		Completed: make(map[string]*taskState), NotStarted: map[string]*taskState{"task3": j2Tasks[0], "task4": j2Tasks[1]}}
+		Completed: make(map[string]*taskState),
+		NotStarted: map[string]*taskState{
+			"task21": j2Tasks[0],
+			"task22": j2Tasks[1],
+			"task23": j2Tasks[2],
+			"task24": j2Tasks[3],
+		}}
 
-	assignments, _ := getTaskAssignments(testCluster, []*jobState{j1s, j2s}, s)
-	if len(assignments) != 2 {
-		t.Errorf("Expected first three tasks to be assigned, got %v", len(assignments))
+	assignments1 := getTaskAssignments([]*jobState{j1s, j2s}, s)
+	if len(assignments1) != 5 {
+		t.Errorf("Expected 5 tasks to be assigned, got %v", len(assignments1))
 	}
 
-	// Schedule the first two tasks (one from each job) and complete the task from job1.
+	// complete one task from each job.
 	taskNodes := map[string]cluster.NodeId{}
-	for _, as := range assignments {
+	completedTasksByJob := map[string]string{}
+	for _, as := range assignments1 {
 		taskNodes[as.task.TaskId] = as.nodeSt.node.Id()
-		cs.taskScheduled(as.nodeSt.node.Id(), as.task.JobId, as.task.TaskId, as.task.Def.SnapshotID)
-		if as.task.JobId == "job1" {
-			j1s.taskStarted(as.task.TaskId, &taskRunner{})
+		job := j1s
+		if as.task.JobId == "job2" {
+			job = j2s
+		}
+		job.taskStarted(as.task.TaskId, &taskRunner{nodeSt: as.nodeSt})
+		if _, ok := completedTasksByJob[as.task.JobId]; !ok {
 			cs.taskCompleted(as.nodeSt.node.Id(), false)
-			j1s.taskCompleted(as.task.TaskId, true)
-		} else {
-			j2s.taskStarted(as.task.TaskId, &taskRunner{})
+			job.taskCompleted(as.task.TaskId, true)
+			completedTasksByJob[as.task.JobId] = as.task.TaskId
 		}
 	}
 
-	// Add a new idle node, assign tasks and confirm that job1's task is assigned to
-	// the same node as the prior job1 task
-	testCluster.add("node3")
-	assignments, _ = getTaskAssignments(testCluster, []*jobState{j1s, j2s}, s)
-	if len(assignments) != 2 {
-		t.Errorf("Expected 2 tasks to be assigned, got %v", len(assignments))
+	// run a second task assignment, the task should go to the node with the matching snapshot id
+	assignments2 := getTaskAssignments([]*jobState{j1s, j2s}, s)
+	if len(assignments2) != 2 {
+		t.Errorf("Expected 2 tasks to be assigned, got %v", len(assignments2))
 	}
 
-	for _, as := range assignments {
-		if as.task.TaskId == "task2" {
-			assert.Equal(t, fmt.Sprintf("%s", taskNodes["task1"]), fmt.Sprintf("%s", as.nodeSt.node.Id()), "expected task2 to be assigned to task1's node")
+	// check the task assignment is to the correct node
+	haveNodeMatch := false
+	for _, as2 := range assignments2 {
+		for _, as1 := range assignments1 {
+			if as2.task.JobId == as1.task.JobId && as2.nodeSt.node.Id() == as1.nodeSt.node.Id() {
+				haveNodeMatch = true
+				break
+			}
 		}
 	}
+
+	assert.True(t, haveNodeMatch)
 }
 
 func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
@@ -142,7 +167,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 	return s
 }
 
-func getTaskAssignments(tc *testCluster, js []*jobState, s *statefulScheduler) ([]taskAssignment, map[string]*nodeGroup) {
+func getTaskAssignments(js []*jobState, s *statefulScheduler) []taskAssignment {
 
 	s.inProgressJobs = js
 	reqMap := map[string][]*jobState{}

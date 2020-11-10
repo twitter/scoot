@@ -20,9 +20,7 @@ type taskAssignment struct {
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func (s *statefulScheduler) getTaskAssignments() (
-	[]taskAssignment, map[string]*nodeGroup,
-) {
+func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	cs := s.clusterState
 	jobs := s.inProgressJobs
 	requestors := s.requestorMap
@@ -42,27 +40,13 @@ func (s *statefulScheduler) getTaskAssignments() (
 		}
 	}
 	if !unscheduledTasks {
-		return nil, nil
-	}
-
-	// Create a copy of cs.nodeGroups to modify based on new scheduling.
-	clusterSnapshotIds := []string{}
-	nodeGroups := map[string]*nodeGroup{}
-	for snapId, groups := range cs.nodeGroups {
-		nodeGroups[snapId] = newNodeGroup()
-		for nodeId, node := range groups.idle {
-			nodeGroups[snapId].idle[nodeId] = node
-		}
-		for nodeId, node := range groups.busy {
-			nodeGroups[snapId].busy[nodeId] = node
-		}
-		clusterSnapshotIds = append(clusterSnapshotIds, snapId)
+		return nil
 	}
 
 	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors)
 	// Exit if no tasks qualify to be scheduled.
 	if len(tasks) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	// stop the tasks in stopTasks (we are rebalancing the workers)
@@ -88,7 +72,7 @@ func (s *statefulScheduler) getTaskAssignments() (
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
-	assignments := assign(cs, tasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
+	assignments := assign(cs, tasks, stat)
 	log.WithFields(
 		log.Fields{
 			"numAssignments": len(assignments),
@@ -96,7 +80,7 @@ func (s *statefulScheduler) getTaskAssignments() (
 			"tag":            tasks[0].Def.Tag,
 			"jobID":          tasks[0].Def.JobID,
 		}).Infof("Scheduled %d tasks", len(assignments))
-	return assignments, nodeGroups
+	return assignments
 }
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
@@ -104,36 +88,44 @@ func (s *statefulScheduler) getTaskAssignments() (
 func assign(
 	cs *clusterState,
 	tasks []*taskState,
-	nodeGroups map[string]*nodeGroup,
-	snapIds []string,
 	stat stats.StatsReceiver,
 ) (assignments []taskAssignment) {
-	nodeGroupKeys := ""
-	for k := range nodeGroups {
-		nodeGroupKeys = nodeGroupKeys + k + ","
+	idleNodeGroupIDs := map[string]string{}
+	for groupID, group := range cs.nodeGroups {
+		if len(group.idle) > 0 {
+			idleNodeGroupIDs[groupID] = groupID
+		}
 	}
-	log.WithFields(
-		log.Fields{
-			"numTasks":   len(tasks),
-			"nodeGroups": nodeGroupKeys,
-		}).Info("assigning tasks to nodes")
 	for _, task := range tasks {
-		var snapshotId string
+		var idleNodeGroupID string
 		var nodeSt *nodeState
-	SnapshotsLoop:
-		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
-			if groups, ok := nodeGroups[snapId]; ok {
-				for _, ns := range groups.idle {
-					if ns.suspended() || cs.isOfflined(ns) {
+
+		// is there a node group (with idle node) for this snapshot?
+		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; ok {
+			nodeSt = findIdleNodeInGroup(cs, task.Def.SnapshotID)
+		}
+		if nodeSt != nil {
+			idleNodeGroupID = task.Def.SnapshotID
+		} else {
+			// could not find any free nodes in node group for the task's snapshot id.  Look for a free node in the other
+			// node groups, starting with the "" node group
+			if _, ok := idleNodeGroupIDs[""]; ok {
+				nodeSt = findIdleNodeInGroup(cs, "")
+			}
+			if nodeSt == nil {
+				for groupID := range idleNodeGroupIDs {
+					if groupID == "" {
 						continue
 					}
-					snapshotId = snapId
-					nodeSt = ns
-					break SnapshotsLoop
+					nodeSt = findIdleNodeInGroup(cs, groupID)
+					if nodeSt != nil {
+						idleNodeGroupID = groupID
+						break
+					}
 				}
 			}
 		}
-		// Could not find any more free nodes
+		// Could not find any free nodes
 		if nodeSt == nil {
 			log.WithFields(
 				log.Fields{
@@ -144,12 +136,28 @@ func assign(
 			continue
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
-		if _, ok := nodeGroups[snapshotId]; !ok {
-			nodeGroups[snapshotId] = newNodeGroup()
+
+		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; !ok {
+			cs.nodeGroups[task.Def.SnapshotID] = newNodeGroup()
 		}
-		nodeId := nodeSt.node.Id()
-		nodeGroups[snapshotId].busy[nodeId] = nodeSt
-		delete(nodeGroups[snapshotId].idle, nodeId)
+		nodeID := nodeSt.node.Id()
+		if idleNodeGroupID != task.Def.SnapshotID {
+			// move the idle node to the task's node group, taskScheduled (called below) moves the nodesSt
+			// from the task group's idle node list to busy
+			delete(cs.nodeGroups[idleNodeGroupID].idle, nodeID)
+			cs.nodeGroups[task.Def.SnapshotID].idle[nodeID] = nodeSt
+			nodeSt.snapshotId = task.Def.SnapshotID
+			// if all nodes have been moved from this node group, delete the nodeGroup from the clusterState nodeGroups map
+			if len(cs.nodeGroups[idleNodeGroupID].idle) == 0 && len(cs.nodeGroups[idleNodeGroupID].busy) == 0 {
+				delete(cs.nodeGroups, idleNodeGroupID)
+				if _, ok := idleNodeGroupIDs[idleNodeGroupID]; ok {
+					delete(idleNodeGroupIDs, idleNodeGroupID)
+				}
+			}
+		}
+		// Mark Task as Started in the cluster
+		cs.taskScheduled(nodeSt.node.Id(), task.JobId, task.Def.TaskID, task.Def.SnapshotID)
+
 		log.WithFields(
 			log.Fields{
 				"jobID":          task.JobId,
@@ -161,6 +169,16 @@ func assign(
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments
+}
+
+func findIdleNodeInGroup(cs *clusterState, groupID string) *nodeState {
+	for _, ns := range cs.nodeGroups[groupID].idle {
+		if ns.suspended() || cs.isOfflined(ns) {
+			continue
+		}
+		return ns
+	}
+	return nil
 }
 
 // Helpers.
