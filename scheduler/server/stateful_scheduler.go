@@ -1153,6 +1153,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 
 func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFields log.Fields) []saga.SagaMessage {
 	logFields["taskID"] = task.TaskId
+	log.WithFields(logFields).Info("aborting task")
 	var updateMessages []saga.SagaMessage
 
 	if task.Status == domain.InProgress {

@@ -467,7 +467,6 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 		assert.Equal(t, cState.numRunningTasks, totalRunningTasks, "invalid test setup, did not create correct number of running tasks for %s", className)
 	}
 
-	ppTasksByJobClassAndStartTimeSec(tasksByClassAndStartMap)
 	return jobStates
 }
 

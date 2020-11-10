@@ -66,6 +66,7 @@ func (s *statefulScheduler) getTaskAssignments() (
 	}
 
 	// stop the tasks in stopTasks (we are rebalancing the workers)
+	log.WithFields(log.Fields{"numTasks": len(stopTasks)}).Info("stopping tasks")
 	for _, task := range stopTasks {
 		jobState := s.getJob(task.JobId)
 		logFields := log.Fields{
@@ -107,9 +108,14 @@ func assign(
 	snapIds []string,
 	stat stats.StatsReceiver,
 ) (assignments []taskAssignment) {
+	nodeGroupKeys := ""
+	for k := range nodeGroups {
+		nodeGroupKeys = nodeGroupKeys + k + ","
+	}
 	log.WithFields(
 		log.Fields{
-			"numTasks": len(tasks),
+			"numTasks":   len(tasks),
+			"nodeGroups": nodeGroupKeys,
 		}).Info("assigning tasks to nodes")
 	for _, task := range tasks {
 		var snapshotId string

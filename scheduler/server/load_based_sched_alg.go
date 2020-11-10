@@ -161,7 +161,6 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	lbs.initOrigNumTargetedWorkers(numWorkers)
 
 	lbs.initJobClassesMap(jobsByRequestor)
-	lbs.ppJobClasses()
 
 	// currentPctSpread is the delta between the highest and lowest
 	currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
@@ -721,12 +720,5 @@ func (lbs *LoadBasedAlg) SetRequestorToClassMap(requestorToClassMap map[string]s
 	lbs.config.requestorReToClassMap = map[string]string{}
 	for k, v := range requestorToClassMap {
 		lbs.config.requestorReToClassMap[k] = v
-	}
-}
-
-func (lbs *LoadBasedAlg) ppJobClasses() {
-	log.Info("job class definitions:")
-	for class, jc := range lbs.jobClasses {
-		log.Infof("%s:%s", class, jc)
 	}
 }
