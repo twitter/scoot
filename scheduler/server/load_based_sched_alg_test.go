@@ -120,7 +120,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg) {
 	jobsByJobID := map[string]*jobState{}
 	for _, testDef := range testsDefs {
 		// reinitialize the task start times since this test will be creating new tasks
-		lbs.tasksByJobClassAndStartTimeSec = map[string]map[time.Time]map[string]*taskState{}
+		lbs.tasksByJobClassAndStartTimeSec = tasksByClassAndStartTimeSec{}
 		totalWorkers := testDef.totalWorkers
 		usedWorkers := 0
 		jobsByRequestor := map[string][]*jobState{}
@@ -205,7 +205,7 @@ func TestEmptyRequestor(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	tasksByClassAndStartMap := map[string]map[time.Time]map[string]*taskState{}
+	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
 
 	jobsByJobID := map[string]*jobState{}
 	jobsByRequestor := map[string][]*jobState{}
@@ -261,7 +261,7 @@ func TestRandomScenario(t *testing.T) {
 		totalWaitingTasks += waitingTasks
 	}
 
-	tasksByJobClassAndStartMap := map[string]map[time.Time]map[string]*taskState{}
+	tasksByJobClassAndStartMap := tasksByClassAndStartTimeSec{}
 
 	// create jobState objects for each class
 	usedWorkers := 0
@@ -388,7 +388,7 @@ func generatePcts() map[string]int32 {
 // makeJobStateFromClassStates make a list of jobStates for the class.  The classState will contain the number of
 // jobStates to create and the total number of running and waiting tasks to distribute across the jobStates.
 func makeJobStatesFromClassStates(t *testing.T, className string, cState classState, jobsByJobID map[string]*jobState,
-	tasksByClassAndStartMap map[string]map[time.Time]map[string]*taskState) []*jobState {
+	tasksByClassAndStartMap tasksByClassAndStartTimeSec) []*jobState {
 	jobStates := make([]*jobState, cState.numJobs)
 	requestor := fmt.Sprintf("requestor%s", className)
 

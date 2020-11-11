@@ -46,18 +46,18 @@ type LoadBasedAlgConfig struct {
 // per a class's defined % as the number of 'entitled' workers for the class.
 // (The class is entitled to use class % * total number of workers to run job tasks from jobs
 // assigned to the class.)
-// When there are not enough tasks to use all of the workers allotted to a class, the algorithm
-// will allow other classes to run their tasks on the unused number of workers.  We refer to
-// this as loaning worker counts to another class.
+// When there are not enough tasks to use all of the class's entitled workers, the algorithm
+// will allow other classes to run their tasks on the unused workers.  We refer to
+// this as loaning worker to other classes.
 // Note: workers are not assigned to specific classes.  The class % concept is simply a counting
 // mechanism.
 //
-// Each scheduling iteration tries to bring the task allocation back to the original class %
-// assignment.  But, it could be the case that long running tasks slowly create an imbalance in
-// the worker to class numbers.  As such, the algorithm periodically rebalances the running
-// workers back toward the original target %s by canceling tasks that have been started on
-// loaned workers.  It will cancel the most recently started tasks till the running task to class
-// allocation meets the original targets.
+// Each scheduling iteration tries to bring the task allocation back to the original class
+// entitlement as defined in the class %s. It could be the case that long running tasks slowly create
+// an imbalance in the worker to class numbers (long running tasks accumulate loaned workers).
+// As such, the algorithm periodically rebalances the running workers back toward the original target
+// %s by stopping tasks that have been started on loaned workers.  It will stop the most recently started
+// tasks till the running task to class allocation meets the original entitlement targets.
 //
 type LoadBasedAlg struct {
 	config     *LoadBasedAlgConfig
@@ -72,12 +72,12 @@ type LoadBasedAlg struct {
 	requestorReToClassMap map[string]string
 
 	classByDescLoadPct             []string
-	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState
+	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec
 }
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
 // the %'s will be adjusted and an error will be returned with the alg object
-func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) *LoadBasedAlg {
+func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
 		config:                         config,
 		jobClasses:                     map[string]*jobClass{},

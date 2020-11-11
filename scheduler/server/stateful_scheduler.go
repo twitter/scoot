@@ -160,7 +160,7 @@ type statefulScheduler struct {
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
-	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState // map of tasks by their class and start time
+	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec // map of tasks by their class and start time
 
 	// stats
 	stat stats.StatsReceiver
@@ -267,7 +267,7 @@ func NewStatefulScheduler(
 	}
 
 	// create the load base scheduling algorithm
-	tasksByClassAndStartMap := map[string]map[time.Time]map[string]*taskState{}
+	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
 	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
 	sa.SetClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
 	sa.SetRequestorToClassMap(DefaultRequestorToClassMap)
@@ -1203,13 +1203,13 @@ func (s *statefulScheduler) GetClassLoadPcts() map[string]int32 {
 }
 
 // SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
-func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) {
+func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) error {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
-		return
+		return fmt.Errorf("not using load based scheduler, class load pcts ignored")
 	}
 	sched.SetClassLoadPcts(classLoadPcts)
-	return
+	return nil
 }
 
 // GetRequestorToClassMap return a copy of the RequestorToClassMap
@@ -1222,11 +1222,11 @@ func (s *statefulScheduler) GetRequestorToClassMap() map[string]string {
 }
 
 // SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
-func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) {
+func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
-		return
+		return fmt.Errorf("not using load based scheduler, requestor to class map ignored")
 	}
 	sched.SetRequestorToClassMap(requestorToClassMap)
-	return
+	return nil
 }

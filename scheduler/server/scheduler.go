@@ -26,11 +26,11 @@ type Scheduler interface {
 
 	GetClassLoadPcts() map[string]int32
 
-	SetClassLoadPcts(classLoads map[string]int32)
+	SetClassLoadPcts(classLoads map[string]int32) error
 
 	GetRequestorToClassMap() map[string]string
 
-	SetRequestorToClassMap(requestorToClassMap map[string]string)
+	SetRequestorToClassMap(requestorToClassMap map[string]string) error
 }
 
 // SchedulingAlgorithm interface for the scheduling algorithm.  Implementations will compute the list of

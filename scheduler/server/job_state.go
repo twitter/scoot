@@ -30,7 +30,7 @@ type jobState struct {
 	NotStarted map[string]*taskState
 
 	jobClass                       string
-	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState
+	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec
 }
 
 // Contains all the information for a specified task
@@ -47,8 +47,13 @@ type taskState struct {
 
 type taskStatesByDuration []*taskState
 
-// GetTasksByJobClassAndStart get the tasks for the given class with start time matching the input value
-func GetTasksByJobClassAndStart(tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState, class string, start time.Time) map[string]*taskState {
+// the following types are used to access task State objects by class, startTime, taskID
+type taskStateByTaskID map[string]*taskState
+type taskTimeBuckets map[time.Time]taskStateByTaskID
+type tasksByClassAndStartTimeSec map[string]taskTimeBuckets
+
+// GetTasksByJobClassAndStart get the tasks for the given class with start time matching the input
+func GetTasksByJobClassAndStart(tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec, class string, start time.Time) map[string]*taskState {
 	if _, ok := tasksByJobClassAndStartTimeSec[class]; !ok {
 		return nil
 	}
@@ -73,7 +78,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
 func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations map[string]*averageDuration,
-	tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) *jobState {
+	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec) *jobState {
 	j := &jobState{
 		Job:                            job,
 		Saga:                           saga,
@@ -234,7 +239,7 @@ func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, start
 		return
 	}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[jobClass]; !ok {
-		j.tasksByJobClassAndStartTimeSec[jobClass] = map[time.Time]map[string]*taskState{}
+		j.tasksByJobClassAndStartTimeSec[jobClass] = taskTimeBuckets{}
 	}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec]; !ok {
 		j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec] = map[string]*taskState{}

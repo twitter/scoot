@@ -35,17 +35,12 @@ func (oa *OrigSchedulingAlg) GetTasksToBeAssigned(jobs []*jobState, stat stats.S
 	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
 	// Setting the max to num healthy nodes means that each job can be fully scheduled.
 	// (This gets used in config.GetNodeScaleFactor())
-	var cfg OrigSchedulingAlgConfig
+	cfg := OrigSchedulingAlgConfig{
+		SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes)),
+		NodeScaleAdjustment:     DefaultNodeScaleAdjustment,
+	}
 	if oa.Config != nil {
 		cfg = *oa.Config
-		if cfg.SoftMaxSchedulableTasks == 0 {
-			cfg.SoftMaxSchedulableTasks = DefaultSoftMaxSchedulableTasks
-		}
-	} else {
-		cfg = OrigSchedulingAlgConfig{
-			SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes)),
-			NodeScaleAdjustment:     DefaultNodeScaleAdjustment,
-		}
 	}
 
 	// Sort jobs by priority and count running tasks.

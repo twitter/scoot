@@ -134,8 +134,10 @@ func (mr *MockSchedulerMockRecorder) GetClassLoadPcts() *gomock.Call {
 }
 
 // SetClassLoadPcts mocks base method
-func (m *MockScheduler) SetClassLoadPcts(classLoads map[string]int32) {
-	m.ctrl.Call(m, "SetClassLoadPcts", classLoads)
+func (m *MockScheduler) SetClassLoadPcts(classLoads map[string]int32) error {
+	ret := m.ctrl.Call(m, "SetClassLoadPcts", classLoads)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // SetClassLoadPcts indicates an expected call of SetClassLoadPcts
@@ -156,8 +158,10 @@ func (mr *MockSchedulerMockRecorder) GetRequestorToClassMap() *gomock.Call {
 }
 
 // SetRequestorToClassMap mocks base method
-func (m *MockScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) {
-	m.ctrl.Call(m, "SetRequestorToClassMap", requestorToClassMap)
+func (m *MockScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
+	ret := m.ctrl.Call(m, "SetRequestorToClassMap", requestorToClassMap)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // SetRequestorToClassMap indicates an expected call of SetRequestorToClassMap
