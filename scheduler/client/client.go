@@ -167,9 +167,7 @@ func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) 
 	return schedulerStatus, err
 }
 
-/*
-GetClassLoadPcts get the target load pcts for the classes
-*/
+// GetClassLoadPcts get the target load pcts for the classes
 func (c *CloudScootClient) GetClassLoadPcts() (map[string]int32, error) {
 	err := c.checkForClient()
 	if err != nil {
@@ -187,9 +185,7 @@ func (c *CloudScootClient) GetClassLoadPcts() (map[string]int32, error) {
 	return classLoadPcts, err
 }
 
-/*
-SetClassLoadPcts set the target worker load % for each job class
-*/
+// SetClassLoadPcts set the target worker load % for each job class
 func (c *CloudScootClient) SetClassLoadPcts(classLoads map[string]int32) error {
 	err := c.checkForClient()
 	if err != nil {
@@ -200,9 +196,7 @@ func (c *CloudScootClient) SetClassLoadPcts(classLoads map[string]int32) error {
 	return err
 }
 
-/*
-GetRequestorToClassMap get map of requestor (reg exp) to class load pct
-*/
+// GetRequestorToClassMap get map of requestor (reg exp) to class load pct
 func (c *CloudScootClient) GetRequestorToClassMap() (map[string]string, error) {
 	err := c.checkForClient()
 	if err != nil {
@@ -220,9 +214,7 @@ func (c *CloudScootClient) GetRequestorToClassMap() (map[string]string, error) {
 	return requestorToClassMap, err
 }
 
-/*
-SetRequestorToClassMap set the map of requestor (requestor value is reg exp) to class name
-*/
+// SetRequestorToClassMap set the map of requestor (requestor value is reg exp) to class name
 func (c *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
 	err := c.checkForClient()
 	if err != nil {
