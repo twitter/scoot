@@ -325,7 +325,6 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 		if totalEntitlements == 0 {
 			// the class's task allocations have used up each class's entitlement, break
 			// so we can move on to calculating loaned workers
-			log.Infof("no more entitlements to allocate")
 			break
 		}
 

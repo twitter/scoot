@@ -48,9 +48,9 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	if len(tasks) == 0 {
 		return nil
 	}
+	log.WithFields(log.Fields{"numStartingTasks": len(tasks), "numStoppingTasks": len(stopTasks)}).Info("scheduling returned")
 
 	// stop the tasks in stopTasks (we are rebalancing the workers)
-	log.WithFields(log.Fields{"numTasks": len(stopTasks)}).Info("stopping tasks")
 	for _, task := range stopTasks {
 		jobState := s.getJob(task.JobId)
 		logFields := log.Fields{
@@ -79,7 +79,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 			"numTasks":       len(tasks),
 			"tag":            tasks[0].Def.Tag,
 			"jobID":          tasks[0].Def.JobID,
-		}).Infof("Scheduled %d tasks", len(assignments))
+		}).Infof("Assigned %d tasks", len(assignments))
 	return assignments
 }
 
