@@ -700,7 +700,8 @@ func (s *statefulScheduler) addJobsLoop() {
 				newJobMsg.job.Def.Priority = MaxPriority
 			}
 
-			jc := GetRequestorClass(newJobMsg.job.Def.Requestor, s.GetRequestorToClassMap())
+			reqToClassMap, _ := s.GetRequestorToClassMap()
+			jc := GetRequestorClass(newJobMsg.job.Def.Requestor, reqToClassMap)
 			js := newJobState(newJobMsg.job, jc, newJobMsg.saga, s.taskDurations, s.tasksByJobClassAndStartTimeSec)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 
@@ -1194,12 +1195,12 @@ func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
 }
 
 // GetClassLoadPcts return a copy of the ClassLoadPcts
-func (s *statefulScheduler) GetClassLoadPcts() map[string]int32 {
+func (s *statefulScheduler) GetClassLoadPcts() (map[string]int32, error) {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
-		return map[string]int32{}
+		return nil, fmt.Errorf("not using load based scheduler, no load percents")
 	}
-	return sched.GetClassLoadPcts()
+	return sched.GetClassLoadPcts(), nil
 }
 
 // SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
@@ -1213,12 +1214,12 @@ func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) err
 }
 
 // GetRequestorToClassMap return a copy of the RequestorToClassMap
-func (s *statefulScheduler) GetRequestorToClassMap() map[string]string {
+func (s *statefulScheduler) GetRequestorToClassMap() (map[string]string, error) {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
-		return map[string]string{}
+		return nil, fmt.Errorf("not using load based scheduler, no class map")
 	}
-	return sched.GetRequestorToClassMap()
+	return sched.GetRequestorToClassMap(), nil
 }
 
 // SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map

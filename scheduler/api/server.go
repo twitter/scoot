@@ -74,29 +74,28 @@ func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 	return schedthrift.GetSchedulerStatus(h.scheduler)
 }
 
-// Implements SetSchedulerStatus Cloud Scoot API
+// SetSchedulerStatus  Implements SetSchedulerStatus Cloud Scoot API
 func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 	return schedthrift.SetSchedulerStatus(h.scheduler, maxNumTasks)
 }
 
-// Implements GetClassLoadPcts Cloud Scoot API
+// GetClassLoadPcts Implements GetClassLoadPcts Cloud Scoot API
 func (h *Handler) GetClassLoadPcts() (map[string]int32, error) {
-	return schedthrift.GetClassLoadPcts(h.scheduler), nil
+	return schedthrift.GetClassLoadPcts(h.scheduler)
 }
 
-// Implements SetClassLoadPcts Cloud Scoot API
+// SetClassLoadPcts Implements SetClassLoadPcts Cloud Scoot API
 func (h *Handler) SetClassLoadPcts(classLoadPcts map[string]int32) error {
-	schedthrift.SetClassLoadPcts(h.scheduler, classLoadPcts)
-	return nil
+	return schedthrift.SetClassLoadPcts(h.scheduler, classLoadPcts)
 }
 
-// Implements GetRequestorToClassMap Cloud Scoot API
+// GetRequestorToClassMap Implements GetRequestorToClassMap Cloud Scoot API
 func (h *Handler) GetRequestorToClassMap() (map[string]string, error) {
-	return schedthrift.GetRequestorToClassMap(h.scheduler), nil
+	return schedthrift.GetRequestorToClassMap(h.scheduler)
 }
 
-// Implements SetRequestorToClassMap Cloud Scoot API
+// SetRequestorToClassMap Implements SetRequestorToClassMap Cloud Scoot API
 func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) error {
-	schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
-	return nil
+	return schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
+
 }

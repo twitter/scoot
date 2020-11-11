@@ -24,11 +24,11 @@ type Scheduler interface {
 
 	GetSchedulerStatus() (int, int)
 
-	GetClassLoadPcts() map[string]int32
+	GetClassLoadPcts() (map[string]int32, error)
 
 	SetClassLoadPcts(classLoads map[string]int32) error
 
-	GetRequestorToClassMap() map[string]string
+	GetRequestorToClassMap() (map[string]string, error)
 
 	SetRequestorToClassMap(requestorToClassMap map[string]string) error
 }
