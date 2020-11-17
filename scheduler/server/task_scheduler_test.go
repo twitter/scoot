@@ -80,9 +80,9 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		{TaskId: "task13", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 		{TaskId: "task14", JobId: "job1", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapA"}}},
 	}
-	j1s := &jobState{Job: &domain.Job{Id: "job1"}, Tasks: j1Tasks, Running: make(map[string]*taskState),
-		Completed: make(map[string]*taskState),
-		NotStarted: map[string]*taskState{
+	j1s := &jobState{Job: &domain.Job{Id: "job1"}, Tasks: j1Tasks, Running: make(taskStateByTaskID),
+		Completed: make(taskStateByTaskID),
+		NotStarted: taskStateByTaskID{
 			"task11": j1Tasks[0],
 			"task12": j1Tasks[1],
 			"task13": j1Tasks[2],
@@ -95,9 +95,9 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		{TaskId: "task23", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 		{TaskId: "task24", JobId: "job2", Def: domain.TaskDefinition{Command: runner.Command{SnapshotID: "snapB"}}},
 	}
-	j2s := &jobState{Job: &domain.Job{Id: "job2"}, Tasks: j2Tasks, Running: make(map[string]*taskState),
-		Completed: make(map[string]*taskState),
-		NotStarted: map[string]*taskState{
+	j2s := &jobState{Job: &domain.Job{Id: "job2"}, Tasks: j2Tasks, Running: make(taskStateByTaskID),
+		Completed: make(taskStateByTaskID),
+		NotStarted: taskStateByTaskID{
 			"task21": j2Tasks[0],
 			"task22": j2Tasks[1],
 			"task23": j2Tasks[2],

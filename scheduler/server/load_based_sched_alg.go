@@ -157,8 +157,8 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 
 	// make local copies of the load pct structures
 	lbs.classLoadPcts = lbs.LocalCopyClassLoadPcts()
-	lbs.requestorReToClassMap = lbs.GetRequestorToClassMap()
-	lbs.classByDescLoadPct = lbs.GetClassByDescLoadPct()
+	lbs.requestorReToClassMap = lbs.getRequestorToClassMap()
+	lbs.classByDescLoadPct = lbs.getClassByDescLoadPct()
 
 	numWorkers := len(cs.nodes)
 	lbs.initOrigNumTargetedWorkers(numWorkers)
@@ -167,10 +167,10 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 
 	rebalanced := false
 	var stopTasks []*taskState
-	if lbs.GetRebalanceMinDuration() > 0 && lbs.GetRebalanceThreshold() > 0 {
+	if lbs.getRebalanceMinDuration() > 0 && lbs.getRebalanceThreshold() > 0 {
 		// currentPctSpread is the delta between the highest and lowest
 		currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
-		if currentPctSpread > lbs.GetRebalanceThreshold() {
+		if currentPctSpread > lbs.getRebalanceThreshold() {
 			nilTime := time.Time{}
 			if lbs.exceededRebalanceThresholdStart == nilTime {
 				lbs.exceededRebalanceThresholdStart = time.Now()
@@ -573,7 +573,7 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 	numTasksToStop := jobClass.numTasksToStart * -1
 	stopTasks := []*taskState{}
 	for len(stopTasks) < numTasksToStop {
-		tasks := GetTasksByJobClassAndStart(lbs.tasksByJobClassAndStartTimeSec, jobClass.className, startTimeSec)
+		tasks := getTasksByJobClassAndStart(lbs.tasksByJobClassAndStartTimeSec, jobClass.className, startTimeSec)
 		for _, task := range tasks {
 			stopTasks = append(stopTasks, task)
 			if len(stopTasks) == numTasksToStop {
@@ -655,8 +655,8 @@ func (lbs *LoadBasedAlg) getCurrentPctsSpread(totalWorkers int) int {
 	return maxPct - minPct
 }
 
-// GetClassByDescLoadPct get a copy of the config's class by descending load pcts
-func (lbs *LoadBasedAlg) GetClassByDescLoadPct() []string {
+// getClassByDescLoadPct get a copy of the config's class by descending load pcts
+func (lbs *LoadBasedAlg) getClassByDescLoadPct() []string {
 	lbs.config.classLoadPctsMu.RLock()
 	defer lbs.config.classLoadPctsMu.RUnlock()
 	copy := []string{}
@@ -666,8 +666,8 @@ func (lbs *LoadBasedAlg) GetClassByDescLoadPct() []string {
 	return copy
 }
 
-// GetClassLoadPcts return a copy of the ClassLoadPcts converting to int32
-func (lbs *LoadBasedAlg) GetClassLoadPcts() map[string]int32 {
+// getClassLoadPcts return a copy of the ClassLoadPcts converting to int32
+func (lbs *LoadBasedAlg) getClassLoadPcts() map[string]int32 {
 	lbs.config.classLoadPctsMu.RLock()
 	defer lbs.config.classLoadPctsMu.RUnlock()
 	copy := map[string]int32{}
@@ -688,8 +688,8 @@ func (lbs *LoadBasedAlg) LocalCopyClassLoadPcts() map[string]int {
 	return copy
 }
 
-// SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
-func (lbs *LoadBasedAlg) SetClassLoadPcts(classLoadPcts map[string]int32) {
+// setClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
+func (lbs *LoadBasedAlg) setClassLoadPcts(classLoadPcts map[string]int32) {
 	lbs.config.classLoadPctsMu.Lock()
 	defer lbs.config.classLoadPctsMu.Unlock()
 
@@ -731,8 +731,8 @@ func (lbs *LoadBasedAlg) SetClassLoadPcts(classLoadPcts map[string]int32) {
 	}
 }
 
-// GetRequestorToClassMap return a copy of the RequestorToClassMap
-func (lbs *LoadBasedAlg) GetRequestorToClassMap() map[string]string {
+// getRequestorToClassMap return a copy of the RequestorToClassMap
+func (lbs *LoadBasedAlg) getRequestorToClassMap() map[string]string {
 	lbs.config.requestorReToClassMapMU.RLock()
 	defer lbs.config.requestorReToClassMapMU.RUnlock()
 	copy := map[string]string{}
@@ -742,8 +742,8 @@ func (lbs *LoadBasedAlg) GetRequestorToClassMap() map[string]string {
 	return copy
 }
 
-// SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
-func (lbs *LoadBasedAlg) SetRequestorToClassMap(requestorToClassMap map[string]string) {
+// setRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
+func (lbs *LoadBasedAlg) setRequestorToClassMap(requestorToClassMap map[string]string) {
 	lbs.config.requestorReToClassMapMU.Lock()
 	defer lbs.config.requestorReToClassMapMU.Unlock()
 	lbs.config.requestorReToClassMap = map[string]string{}
@@ -752,29 +752,29 @@ func (lbs *LoadBasedAlg) SetRequestorToClassMap(requestorToClassMap map[string]s
 	}
 }
 
-// GetRebalanceMinDuration get the rebalance duration
-func (lbs *LoadBasedAlg) GetRebalanceMinDuration() int {
+// getRebalanceMinDuration get the rebalance duration
+func (lbs *LoadBasedAlg) getRebalanceMinDuration() int {
 	lbs.config.rebalanceMinDurationMu.RLock()
 	defer lbs.config.rebalanceMinDurationMu.RUnlock()
 	return int(lbs.config.rebalanceMinDuration.Minutes())
 }
 
-// SetRebalanceMinDuration set the rebalance duration
-func (lbs *LoadBasedAlg) SetRebalanceMinDuration(rebalanceMinDuration int) {
+// setRebalanceMinDuration set the rebalance duration
+func (lbs *LoadBasedAlg) setRebalanceMinDuration(rebalanceMinDuration int) {
 	lbs.config.rebalanceMinDurationMu.Lock()
 	defer lbs.config.rebalanceMinDurationMu.Unlock()
 	lbs.config.rebalanceMinDuration = time.Duration(rebalanceMinDuration) * time.Minute
 }
 
-// GetRebalanceThreshold get the rebalance threshold
-func (lbs *LoadBasedAlg) GetRebalanceThreshold() int {
+// getRebalanceThreshold get the rebalance threshold
+func (lbs *LoadBasedAlg) getRebalanceThreshold() int {
 	lbs.config.rebalanceThresholdMu.RLock()
 	defer lbs.config.rebalanceThresholdMu.RUnlock()
 	return lbs.config.rebalanceThreshold
 }
 
-// SetRebalanceThreshold set the rebalance thresold
-func (lbs *LoadBasedAlg) SetRebalanceThreshold(rebalanceThreshold int) {
+// setRebalanceThreshold set the rebalance thresold
+func (lbs *LoadBasedAlg) setRebalanceThreshold(rebalanceThreshold int) {
 	lbs.config.rebalanceThresholdMu.Lock()
 	defer lbs.config.rebalanceThresholdMu.Unlock()
 	lbs.config.rebalanceThreshold = rebalanceThreshold

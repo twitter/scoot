@@ -50,9 +50,9 @@ func Test_TaskAssignments_RequestorBatching(t *testing.T) {
 			},
 		},
 	}
-	js[0].NotStarted = map[string]*taskState{"task1": js[0].Tasks[0], "task2": js[0].Tasks[1]}
-	js[1].NotStarted = map[string]*taskState{"task1": js[1].Tasks[0]}
-	js[2].NotStarted = map[string]*taskState{"task1": js[2].Tasks[0], "task2": js[2].Tasks[1]}
+	js[0].NotStarted = taskStateByTaskID{"task1": js[0].Tasks[0], "task2": js[0].Tasks[1]}
+	js[1].NotStarted = taskStateByTaskID{"task1": js[1].Tasks[0]}
+	js[2].NotStarted = taskStateByTaskID{"task1": js[2].Tasks[0], "task2": js[2].Tasks[1]}
 
 	nodes := []string{}
 	for i := 0; i < 6; i++ {
@@ -103,30 +103,30 @@ func Test_TaskAssignments_PrioritySimple(t *testing.T) {
 		{
 			Job:       makeJob("job1", domain.P0),
 			Tasks:     makeTasks("job1"),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 		{
 			Job:       makeJob("job2", domain.P1),
 			Tasks:     makeTasks("job2"),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 		{
 			Job:       makeJob("job3", domain.P2),
 			Tasks:     makeTasks("job3"),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 		{
 			Job:       makeJob("job4", domain.P0),
 			Tasks:     makeTasks("job4"),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 	}
 	for _, j := range js {
-		nsMap := map[string]*taskState{}
+		nsMap := taskStateByTaskID{}
 		for _, t := range j.Tasks {
 			nsMap[t.TaskId] = t
 		}
@@ -187,24 +187,24 @@ func Test_TaskAssignments_PriorityStages(t *testing.T) {
 		{
 			Job:       makeJob("job1", domain.P0),
 			Tasks:     makeTasks(10, "job1", domain.P0),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 		{
 			Job:       makeJob("job2", domain.P1),
 			Tasks:     makeTasks(10, "job2", domain.P1),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 		{
 			Job:       makeJob("job3", domain.P2),
 			Tasks:     makeTasks(10, "job3", domain.P2),
-			Running:   make(map[string]*taskState),
-			Completed: make(map[string]*taskState),
+			Running:   make(taskStateByTaskID),
+			Completed: make(taskStateByTaskID),
 		},
 	}
 	for _, j := range js {
-		nsMap := map[string]*taskState{}
+		nsMap := taskStateByTaskID{}
 		for _, t := range j.Tasks {
 			nsMap[t.TaskId] = t
 		}

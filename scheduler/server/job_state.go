@@ -10,6 +10,8 @@ import (
 	"github.com/twitter/scoot/scheduler/domain"
 )
 
+type taskStateByTaskID map[string]*taskState
+
 // Contains all the information for a job in progress
 // Note: Only Job, Saga, and Tasks are provided during scheduler recovery. Anything else must be initialized separately.
 type jobState struct {
@@ -25,9 +27,9 @@ type jobState struct {
 
 	// track tasks by state (completed, running, not started) for priority based scheduling algorithm
 	// Completed and Running are only used by priority based scheduling algorithm
-	Completed  map[string]*taskState
-	Running    map[string]*taskState
-	NotStarted map[string]*taskState
+	Completed  taskStateByTaskID
+	Running    taskStateByTaskID
+	NotStarted taskStateByTaskID
 
 	jobClass                       string
 	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec
@@ -48,16 +50,15 @@ type taskState struct {
 type taskStatesByDuration []*taskState
 
 // the following types are used to access task State objects by class, startTime, taskID
-type taskStateByTaskID map[string]*taskState
 type taskTimeBuckets map[time.Time]taskStateByTaskID
 type tasksByClassAndStartTimeSec map[string]taskTimeBuckets
 
-// GetTasksByJobClassAndStart get the tasks for the given class with start time matching the input
-func GetTasksByJobClassAndStart(tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec, class string, start time.Time) map[string]*taskState {
-	if _, ok := tasksByJobClassAndStartTimeSec[class]; !ok {
+// getTasksByJobClassAndStart get the tasks for the given class with start time matching the input
+func getTasksByJobClassAndStart(classTasksByStartTime tasksByClassAndStartTimeSec, class string, start time.Time) taskStateByTaskID {
+	if _, ok := classTasksByStartTime[class]; !ok {
 		return nil
 	}
-	if tasks, ok := tasksByJobClassAndStartTimeSec[class][start]; ok {
+	if tasks, ok := classTasksByStartTime[class][start]; ok {
 		return tasks
 	}
 
@@ -89,9 +90,9 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		JobKilled:                      false,
 		TimeCreated:                    time.Now(),
 		TimeMarker:                     time.Now(),
-		Completed:                      make(map[string]*taskState),
-		Running:                        make(map[string]*taskState),
-		NotStarted:                     make(map[string]*taskState),
+		Completed:                      make(taskStateByTaskID),
+		Running:                        make(taskStateByTaskID),
+		NotStarted:                     make(taskStateByTaskID),
 		jobClass:                       jobClass,
 		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
 	}
@@ -242,7 +243,7 @@ func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, start
 		j.tasksByJobClassAndStartTimeSec[jobClass] = taskTimeBuckets{}
 	}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec]; !ok {
-		j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec] = map[string]*taskState{}
+		j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec] = taskStateByTaskID{}
 	}
 	j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec][fmt.Sprintf("%s_%s", task.JobId, task.TaskId)] = task
 }

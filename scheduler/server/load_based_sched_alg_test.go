@@ -155,8 +155,8 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 		}
 		cluster.nodes = cluster.nodeGroups["idle"].idle
 
-		lbs.SetClassLoadPcts(loadPcts)
-		lbs.SetRequestorToClassMap(requestorToClass)
+		lbs.setClassLoadPcts(loadPcts)
+		lbs.setRequestorToClassMap(requestorToClass)
 
 		tasksToBeAssigned, stopTasks := lbs.GetTasksToBeAssigned(nil, lbs.config.stat, cluster, jobsByRequestor)
 
@@ -229,8 +229,8 @@ func TestEmptyRequestor(t *testing.T) {
 
 	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByClassAndStartMap)
-	lbs.SetClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
-	lbs.SetRequestorToClassMap(DefaultRequestorToClassMap)
+	lbs.setClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
+	lbs.setRequestorToClassMap(DefaultRequestorToClassMap)
 
 	tasksToBeAssigned, stopTasks := lbs.GetTasksToBeAssigned(nil, statsReceiver, cluster, jobsByRequestor)
 
@@ -296,8 +296,8 @@ func TestRandomScenario(t *testing.T) {
 	// run the test
 	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByJobClassAndStartMap)
-	lbs.SetClassLoadPcts(loadPcts)
-	lbs.SetRequestorToClassMap(requestorToClass)
+	lbs.setClassLoadPcts(loadPcts)
+	lbs.setRequestorToClassMap(requestorToClass)
 	tasks, stopTasks := lbs.GetTasksToBeAssigned(nil, statsReceiver, cluster, jobsByRequestor)
 
 	// verify the results: we don't know what to expect for each class (since it was randomly generated), so
@@ -434,7 +434,7 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 			JobKilled:                      false,
 			TimeCreated:                    time.Time{},
 			TimeMarker:                     time.Time{},
-			Completed:                      make(map[string]*taskState),
+			Completed:                      make(taskStateByTaskID),
 			Running:                        nil,
 			NotStarted:                     nil,
 			jobClass:                       className,
@@ -545,15 +545,15 @@ func makeIdleGroup(n int) map[string]*nodeGroup {
 	return rVal
 }
 
-func makeTaskMap(tasks []*taskState) map[string]*taskState {
-	rVal := make(map[string]*taskState)
+func makeTaskMap(tasks []*taskState) taskStateByTaskID {
+	rVal := make(taskStateByTaskID)
 	for _, t := range tasks {
 		rVal[t.TaskId] = t
 	}
 	return rVal
 }
 
-func ppTasksByJobClassAndStartTimeSec(tasksByJobClassAndStartTimeSec map[string]map[time.Time]map[string]*taskState) {
+func ppTasksByJobClassAndStartTimeSec(tasksByJobClassAndStartTimeSec map[string]map[time.Time]taskStateByTaskID) {
 	log.Infof("********** tasks by job class and start time")
 	for k, v := range tasksByJobClassAndStartTimeSec {
 		log.Infof("class:%s has %d time buckets:", k, len(v))
