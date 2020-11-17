@@ -30,7 +30,10 @@ type LoadBasedAlgConfig struct {
 	requestorReToClassMap   map[string]string
 	requestorReToClassMapMU sync.RWMutex
 
-	minRebalanceTime time.Duration // minimum time that must pass between rebalancing workers
+	rebalanceThreshold     int
+	rebalanceThresholdMu   sync.RWMutex
+	rebalanceMinDuration   time.Duration
+	rebalanceMinDurationMu sync.RWMutex
 
 	classByDescLoadPct []string
 
@@ -63,8 +66,8 @@ type LoadBasedAlg struct {
 	config     *LoadBasedAlgConfig
 	jobClasses map[string]*jobClass
 
-	totalUnusedEntitlement int
-	lastRebalanceTime      time.Time
+	totalUnusedEntitlement          int
+	exceededRebalanceThresholdStart time.Time
 
 	// local copy of load pcts and requestor map to use during assignment computation
 	// to insulate the computation from external changes to the configuration
@@ -79,10 +82,10 @@ type LoadBasedAlg struct {
 // the %'s will be adjusted and an error will be returned with the alg object
 func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
-		config:                         config,
-		jobClasses:                     map[string]*jobClass{},
-		lastRebalanceTime:              time.Now(),
-		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
+		config:                          config,
+		jobClasses:                      map[string]*jobClass{},
+		exceededRebalanceThresholdStart: time.Time{},
+		tasksByJobClassAndStartTimeSec:  tasksByJobClassAndStartTimeSec,
 	}
 	return lbs
 }
@@ -162,12 +165,24 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 
 	lbs.initJobClassesMap(jobsByRequestor)
 
-	// currentPctSpread is the delta between the highest and lowest
-	currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
+	rebalanced := false
 	var stopTasks []*taskState
-	if currentPctSpread > 50 && time.Now().Sub(lbs.lastRebalanceTime) > lbs.config.minRebalanceTime {
-		stopTasks = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
-	} else {
+	if lbs.GetRebalanceMinDuration() > 0 && lbs.GetRebalanceThreshold() > 0 {
+		// currentPctSpread is the delta between the highest and lowest
+		currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
+		if currentPctSpread > lbs.GetRebalanceThreshold() {
+			nilTime := time.Time{}
+			if lbs.exceededRebalanceThresholdStart == nilTime {
+				lbs.exceededRebalanceThresholdStart = time.Now()
+			} else if time.Now().Sub(lbs.exceededRebalanceThresholdStart) > lbs.config.rebalanceMinDuration {
+				stopTasks = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
+				lbs.exceededRebalanceThresholdStart = time.Time{}
+				rebalanced = true
+			}
+		}
+	}
+
+	if !rebalanced {
 		// compute the number of tasks to be started for each class
 		lbs.computeNumTasksToStart(cs.numFree())
 	}
@@ -503,8 +518,12 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 		// each job in this list.  As we allocate a task for a job, move the job to the end of jc.jobsByNumRunningTasks[numRunningTasks+1].
 		for _, job := range jobs {
 			if job.waitingTaskIDs != nil && len(job.waitingTaskIDs) > 0 {
-				tasks = append(tasks, job.jobState.NotStarted[job.waitingTaskIDs[0]])
+				// get the next task to start from the job
+				tasks = append(tasks, lbs.getJobsNextTask(job))
 
+				// move the job to jobsByRunning tasks with numRunningTasks + 1 entry.  Note: we don't have to pull it from
+				// its current numRunningTasks bucket since this is a 1 time pass through the jobsByNumRunningTasks map.  The map
+				// will be rebuilt with the next scheduling iteration
 				if len(job.waitingTaskIDs) > 1 {
 					job.waitingTaskIDs = job.waitingTaskIDs[1:]
 					jc.jobsByNumRunningTasks[numRunningTasks+1] = append(jc.jobsByNumRunningTasks[numRunningTasks+1], job)
@@ -523,6 +542,14 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	}
 
 	return tasks // note: we should never hit this line
+}
+
+// getJobsNextTask get the next task to start from the job
+func (lbs *LoadBasedAlg) getJobsNextTask(job jobWaitingTaskIds) *taskState {
+	task := job.jobState.NotStarted[job.waitingTaskIDs[0]]
+	job.waitingTaskIDs = job.waitingTaskIDs[1:]
+
+	return task
 }
 
 // buildTaskStopList builds the list of tasks to be stopped.
@@ -558,6 +585,7 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 			break
 		}
 	}
+	lbs.config.stat.Gauge(fmt.Sprintf("%s%s", stats.SchedStoppingTasks, jobClass.className)).Update(int64(numTasksToStop))
 	return stopTasks
 }
 
@@ -618,8 +646,10 @@ func (lbs *LoadBasedAlg) getCurrentPctsSpread(totalWorkers int) int {
 		jc := lbs.jobClasses[className]
 		currPct := int(math.Floor(float64(jc.origNumRunningTasks) * 100.0 / float64(totalWorkers)))
 		pctDiff := jc.origTargetLoadPct - currPct
-		minPct = min(minPct, pctDiff)
-		maxPct = max(maxPct, pctDiff)
+		if pctDiff < 0 || jc.numWaitingTasks > 0 { // only consider classes using loaned workers, or with waiting tasks
+			minPct = min(minPct, pctDiff)
+			maxPct = max(maxPct, pctDiff)
+		}
 	}
 
 	return maxPct - minPct
@@ -720,4 +750,32 @@ func (lbs *LoadBasedAlg) SetRequestorToClassMap(requestorToClassMap map[string]s
 	for k, v := range requestorToClassMap {
 		lbs.config.requestorReToClassMap[k] = v
 	}
+}
+
+// GetRebalanceMinDuration get the rebalance duration
+func (lbs *LoadBasedAlg) GetRebalanceMinDuration() int {
+	lbs.config.rebalanceMinDurationMu.RLock()
+	defer lbs.config.rebalanceMinDurationMu.RUnlock()
+	return int(lbs.config.rebalanceMinDuration.Minutes())
+}
+
+// SetRebalanceMinDuration set the rebalance duration
+func (lbs *LoadBasedAlg) SetRebalanceMinDuration(rebalanceMinDuration int) {
+	lbs.config.rebalanceMinDurationMu.Lock()
+	defer lbs.config.rebalanceMinDurationMu.Unlock()
+	lbs.config.rebalanceMinDuration = time.Duration(rebalanceMinDuration) * time.Minute
+}
+
+// GetRebalanceThreshold get the rebalance threshold
+func (lbs *LoadBasedAlg) GetRebalanceThreshold() int {
+	lbs.config.rebalanceThresholdMu.RLock()
+	defer lbs.config.rebalanceThresholdMu.RUnlock()
+	return lbs.config.rebalanceThreshold
+}
+
+// SetRebalanceThreshold set the rebalance thresold
+func (lbs *LoadBasedAlg) SetRebalanceThreshold(rebalanceThreshold int) {
+	lbs.config.rebalanceThresholdMu.Lock()
+	defer lbs.config.rebalanceThresholdMu.Unlock()
+	lbs.config.rebalanceThreshold = rebalanceThreshold
 }

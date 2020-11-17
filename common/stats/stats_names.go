@@ -357,6 +357,11 @@ const (
 	*/
 	SchedJobClassActualPct = "schedClassActualPct_"
 
+	/*
+		number of tasks being stopped for the class (due to rebalancing)
+	*/
+	SchedStoppingTasks = "schedStoppingTasks_"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running

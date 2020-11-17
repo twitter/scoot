@@ -31,6 +31,14 @@ type Scheduler interface {
 	GetRequestorToClassMap() (map[string]string, error)
 
 	SetRequestorToClassMap(requestorToClassMap map[string]string) error
+
+	GetRebalanceMinDuration() (int32, error)
+
+	SetRebalanceMinDuration(durationMin int32) error
+
+	GetRebalanceThreshold() (int32, error)
+
+	SetRebalanceThreshold(durationMin int32) error
 }
 
 // SchedulingAlgorithm interface for the scheduling algorithm.  Implementations will compute the list of

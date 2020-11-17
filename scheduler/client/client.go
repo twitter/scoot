@@ -225,6 +225,48 @@ func (c *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string
 	return err
 }
 
+// GetRebalanceMinDuration
+func (c *CloudScootClient) GetRebalanceMinDuration() (int32, error) {
+	err := c.checkForClient()
+	if err != nil {
+		return 0, err
+	}
+
+	return c.client.GetRebalanceMinDuration()
+}
+
+// GetRebalanceMinDuration
+func (c *CloudScootClient) SetRebalanceMinDuration(durationMin int32) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.SetRebalanceMinDuration(durationMin)
+	return err
+}
+
+// GetRebalanceThreshold
+func (c *CloudScootClient) GetRebalanceThreshold() (int32, error) {
+	err := c.checkForClient()
+	if err != nil {
+		return 0, err
+	}
+
+	return c.client.GetRebalanceThreshold()
+}
+
+// SetRebalanceThreshold
+func (c *CloudScootClient) SetRebalanceThreshold(threshold int32) error {
+	err := c.checkForClient()
+	if err != nil {
+		return err
+	}
+
+	err = c.client.SetRebalanceThreshold(threshold)
+	return err
+}
+
 // helper method to check for a non-nil client / create one
 func (c *CloudScootClient) checkForClient() (err error) {
 	if c.client == nil {

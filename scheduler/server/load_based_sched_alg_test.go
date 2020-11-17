@@ -110,17 +110,18 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	config := &LoadBasedAlgConfig{stat: statsReceiver, minRebalanceTime: DefaultMinRebalanceTime}
+	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, nil)
 
-	runTests(t, testsDefs, lbs)
+	runTests(t, testsDefs, lbs, 0*time.Minute)
 }
 
-func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg) {
+func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExceededDuration time.Duration) {
 	jobsByJobID := map[string]*jobState{}
 	for _, testDef := range testsDefs {
 		// reinitialize the task start times since this test will be creating new tasks
 		lbs.tasksByJobClassAndStartTimeSec = tasksByClassAndStartTimeSec{}
+		lbs.exceededRebalanceThresholdStart = time.Now().Add(-1 * rebalanceExceededDuration)
 		totalWorkers := testDef.totalWorkers
 		usedWorkers := 0
 		jobsByRequestor := map[string][]*jobState{}
@@ -226,7 +227,7 @@ func TestEmptyRequestor(t *testing.T) {
 	}
 	cluster.nodes = cluster.nodeGroups["idle"].idle
 
-	config := &LoadBasedAlgConfig{stat: statsReceiver, minRebalanceTime: DefaultMinRebalanceTime}
+	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByClassAndStartMap)
 	lbs.SetClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
 	lbs.SetRequestorToClassMap(DefaultRequestorToClassMap)
@@ -293,7 +294,7 @@ func TestRandomScenario(t *testing.T) {
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
 	// run the test
-	config := &LoadBasedAlgConfig{stat: statsReceiver, minRebalanceTime: DefaultMinRebalanceTime}
+	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByJobClassAndStartMap)
 	lbs.SetClassLoadPcts(loadPcts)
 	lbs.SetRequestorToClassMap(requestorToClass)
@@ -354,10 +355,10 @@ func Test_Rebalance(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	config := &LoadBasedAlgConfig{stat: statsReceiver, minRebalanceTime: 0 * time.Second}
+	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 1 * time.Minute, rebalanceThreshold: 50}
 	lbs := NewLoadBasedAlg(config, nil)
 
-	runTests(t, testsDefs, lbs)
+	runTests(t, testsDefs, lbs, 2*time.Minute)
 }
 
 func generatePcts() map[string]int32 {

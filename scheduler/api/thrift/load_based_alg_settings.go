@@ -23,3 +23,27 @@ func GetRequestorToClassMap(scheduler server.Scheduler) (map[string]string, erro
 func SetRequestorToClassMap(scheduler server.Scheduler, requestorToClassMap map[string]string) error {
 	return scheduler.SetRequestorToClassMap(requestorToClassMap)
 }
+
+// GetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
+// triggering rebalance.  <= 0 implies no rebalancing
+func GetRebalanceMinDuration(scheduler server.Scheduler) (int32, error) {
+	return scheduler.GetRebalanceMinDuration()
+}
+
+// SetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
+// triggering rebalance.  <= 0 implies no rebalancing
+func SetRebalanceMinDuration(scheduler server.Scheduler, duration int32) error {
+	return scheduler.SetRebalanceMinDuration(duration)
+}
+
+// GetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
+// to trigger rebalance.  <= 0 implies no rebalancing
+func GetRebalanceThreshold(scheduler server.Scheduler) (int32, error) {
+	return scheduler.GetRebalanceMinDuration()
+}
+
+// SetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
+// to trigger rebalance.  <= 0 implies no rebalancing
+func SetRebalanceThreshold(scheduler server.Scheduler, duration int32) error {
+	return scheduler.SetRebalanceMinDuration(duration)
+}

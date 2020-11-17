@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/client"
 )
 
@@ -21,6 +22,18 @@ type simpleCLIClient struct {
 	dial        dialer.Dialer
 	logLevel    string
 	scootClient *client.CloudScootClient
+}
+
+// returnError extend the error with Invalid Request, Scoot server error, or Error getting status message
+func getReturnError(err error) error {
+	switch err := err.(type) {
+	case *scoot.InvalidRequest:
+		return fmt.Errorf("Invalid Request: %v", err.GetMessage())
+	case *scoot.ScootServerError:
+		return fmt.Errorf("Scoot server error: %v", err.Error())
+	default:
+		return fmt.Errorf("Error getting status: %v", err.Error())
+	}
 }
 
 func (c *simpleCLIClient) Exec() error {
@@ -50,6 +63,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c.addCmd(&reinstateWorkerCmd{})
 	c.addCmd(&setSchedulerStatusCmd{})
 	c.addCmd(&getSchedulerStatusCmd{})
+	c.addCmd(&getLBSSchedAlgParams{})
+	c.addCmd(&lbsSchedAlgParams{})
 
 	return c, nil
 }

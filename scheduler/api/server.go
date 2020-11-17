@@ -99,3 +99,27 @@ func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) er
 	return schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
 
 }
+
+// GetRebalanceMinDuration get the duration(minutes) that the scheduler needs to be exceeding
+// the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
+func (h *Handler) GetRebalanceMinDuration() (int32, error) {
+	return schedthrift.GetRebalanceMinDuration(h.scheduler)
+}
+
+// SetRebalanceMinDuration set the duration(minutes) that the scheduler needs to be exceeding
+// the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
+func (h *Handler) SetRebalanceMinDuration(durationMin int32) error {
+	return schedthrift.SetRebalanceMinDuration(h.scheduler, durationMin)
+}
+
+// GetRebalanceThreshold the % spread threshold that must be exceeded to trigger rebalance
+// <= 0 implies no rebalancing
+func (h *Handler) GetRebalanceThreshold() (int32, error) {
+	return schedthrift.GetRebalanceThreshold(h.scheduler)
+}
+
+// SetRebalanceThreshold the % spread threshold that must be exceeded to trigger rebalance
+// <= 0 implies no rebalancing
+func (h *Handler) SetRebalanceThreshold(threshold int32) error {
+	return schedthrift.SetRebalanceThreshold(h.scheduler, threshold)
+}

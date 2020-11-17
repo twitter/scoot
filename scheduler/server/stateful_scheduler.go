@@ -262,8 +262,9 @@ func NewStatefulScheduler(
 	config.TaskThrottle = -1
 
 	config.SchedAlgConfig = &LoadBasedAlgConfig{
-		minRebalanceTime: DefaultMinRebalanceTime,
-		stat:             stat,
+		rebalanceThreshold:   0,
+		rebalanceMinDuration: 0 * time.Minute,
+		stat:                 stat,
 	}
 
 	// create the load base scheduling algorithm
@@ -1229,5 +1230,43 @@ func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[strin
 		return fmt.Errorf("not using load based scheduler, requestor to class map ignored")
 	}
 	sched.SetRequestorToClassMap(requestorToClassMap)
+	return nil
+}
+
+// GetRebalanceMinDuration
+func (s *statefulScheduler) GetRebalanceMinDuration() (int32, error) {
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return 0, fmt.Errorf("not using load based scheduler, no rebalance min duration")
+	}
+	return int32(sched.GetRebalanceMinDuration()), nil
+}
+
+// GetRebalanceMinDuration
+func (s *statefulScheduler) SetRebalanceMinDuration(durationMin int32) error {
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return fmt.Errorf("not using load based scheduler, requestor to rebalance min duration ignored")
+	}
+	sched.SetRebalanceMinDuration(int(durationMin))
+	return nil
+}
+
+// GetRebalanceThreshold
+func (s *statefulScheduler) GetRebalanceThreshold() (int32, error) {
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return 0, fmt.Errorf("not using load based scheduler, no rebalance threshold")
+	}
+	return int32(sched.GetRebalanceThreshold()), nil
+}
+
+// SetRebalanceThreshold
+func (s *statefulScheduler) SetRebalanceThreshold(threshold int32) error {
+	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		return fmt.Errorf("not using load based scheduler, requestor to rebalance threshold ignored")
+	}
+	sched.SetRebalanceThreshold(int(threshold))
 	return nil
 }

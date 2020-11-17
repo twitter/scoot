@@ -171,6 +171,56 @@ func (mr *MockSchedulerMockRecorder) SetRequestorToClassMap(requestorToClassMap 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).SetRequestorToClassMap), requestorToClassMap)
 }
 
+// GetRebalanceMinDuration mocks base method
+func (m *MockScheduler) GetRebalanceMinDuration() (int32, error) {
+	ret := m.ctrl.Call(m, "GetRebalanceMinDuration")
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRebalanceMinDuration indicates an expected call of GetRebalanceMinDuration
+func (mr *MockSchedulerMockRecorder) GetRebalanceMinDuration() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceMinDuration))
+}
+
+// SetRebalanceMinDuration mocks base method
+func (m *MockScheduler) SetRebalanceMinDuration(durationMin int32) error {
+	ret := m.ctrl.Call(m, "SetRebalanceMinDuration", durationMin)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRebalanceMinDuration indicates an expected call of SetRebalanceMinDuration
+func (mr *MockSchedulerMockRecorder) SetRebalanceMinDuration(durationMin interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceMinDuration), durationMin)
+}
+
+// GetRebalanceThreshold mocks base method
+func (m *MockScheduler) GetRebalanceThreshold() (int32, error) {
+	ret := m.ctrl.Call(m, "GetRebalanceThreshold")
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRebalanceThreshold indicates an expected call of GetRebalanceThreshold
+func (mr *MockSchedulerMockRecorder) GetRebalanceThreshold() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceThreshold", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceThreshold))
+}
+
+// SetRebalanceThreshold mocks base method
+func (m *MockScheduler) SetRebalanceThreshold(durationMin int32) error {
+	ret := m.ctrl.Call(m, "SetRebalanceThreshold", durationMin)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRebalanceThreshold indicates an expected call of SetRebalanceThreshold
+func (mr *MockSchedulerMockRecorder) SetRebalanceThreshold(durationMin interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceThreshold", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceThreshold), durationMin)
+}
+
 // MockSchedulingAlgorithm is a mock of SchedulingAlgorithm interface
 type MockSchedulingAlgorithm struct {
 	ctrl     *gomock.Controller
