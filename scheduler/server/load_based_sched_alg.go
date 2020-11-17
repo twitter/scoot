@@ -237,16 +237,16 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 		if className != "" {
 			jc, ok = lbs.jobClasses[className]
 			if !ok {
-				// the class name was not recognized, use the lowest priority class
+				// the class name was not recognized, use the class with the least number of workers (lowest %)
 				lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
 				jc = lbs.jobClasses[classNameWithLeastWorkers]
-				log.Errorf("%s is not a recognized job class assigning to lowest priority class (%s)", className, classNameWithLeastWorkers)
+				log.Errorf("%s is not a recognized job class assigning to class (%s)", className, classNameWithLeastWorkers)
 			}
 		} else {
-			// if the requestor is not recognized, use the lowest priority class
+			// if the requestor is not recognized, use the class with the least number of workers (lowest %)
 			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
 			jc = lbs.jobClasses[classNameWithLeastWorkers]
-			log.Errorf("%s is not a recognized requestor assigning to lowest priority class (%s)", className, classNameWithLeastWorkers)
+			log.Errorf("%s is not a recognized requestor assigning to class (%s)", className, classNameWithLeastWorkers)
 		}
 		if jc.origTargetLoadPct == 0 {
 			log.Errorf("%s worker allocation (load %% is 0), ignoring %d jobs", requestor, len(jobs))
@@ -428,8 +428,8 @@ func (lbs *LoadBasedAlg) computeEntitlementPcts() {
 		entitlementTotal += jc.tempEntitlement
 	}
 
-	// compute the % for all but the highest priority class.  Add up all computed %s and assign
-	// 100 - sum of % to the highest priority class (this eliminates rounding errors, forcing the
+	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
+	// 100 - sum of % to the class with largest % (this eliminates rounding errors, forcing the
 	// % to add up to 100%)
 	totalPcts := 0
 	firstClass := true
@@ -459,8 +459,8 @@ func (lbs *LoadBasedAlg) computeLoanPcts() {
 		return
 	}
 
-	// compute the % for all but the highest priority class.  Add up all computed %s and assign
-	// 100 - sum of % to the highest class from the range (this eliminates rounding errors, forcing the
+	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
+	// 100 - sum of % to the class with the largest % from the range (this eliminates rounding errors, forcing the
 	// sum or % to go to 100%)
 	totalPcts := 0
 	firstClass := true
@@ -614,7 +614,6 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 			// to stop to bring back to its entitlement (it will be a negative number)
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		}
-		jc.numWaitingTasks = jc.origNumWaitingTasks - jc.numTasksToStart
 		totalTasks += jc.origNumRunningTasks + jc.numTasksToStart
 	}
 
