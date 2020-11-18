@@ -39,11 +39,11 @@ func SetRebalanceMinDuration(scheduler server.Scheduler, duration int32) error {
 // GetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
 // to trigger rebalance.  <= 0 implies no rebalancing
 func GetRebalanceThreshold(scheduler server.Scheduler) (int32, error) {
-	return scheduler.GetRebalanceMinDuration()
+	return scheduler.GetRebalanceThreshold()
 }
 
 // SetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
 // to trigger rebalance.  <= 0 implies no rebalancing
 func SetRebalanceThreshold(scheduler server.Scheduler, duration int32) error {
-	return scheduler.SetRebalanceMinDuration(duration)
+	return scheduler.SetRebalanceThreshold(duration)
 }
