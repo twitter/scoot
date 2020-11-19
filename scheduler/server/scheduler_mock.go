@@ -121,6 +121,106 @@ func (mr *MockSchedulerMockRecorder) GetSchedulerStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerStatus", reflect.TypeOf((*MockScheduler)(nil).GetSchedulerStatus))
 }
 
+// GetClassLoadPcts mocks base method
+func (m *MockScheduler) GetClassLoadPcts() (map[string]int32, error) {
+	ret := m.ctrl.Call(m, "GetClassLoadPcts")
+	ret0, _ := ret[0].(map[string]int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClassLoadPcts indicates an expected call of GetClassLoadPcts
+func (mr *MockSchedulerMockRecorder) GetClassLoadPcts() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).GetClassLoadPcts))
+}
+
+// SetClassLoadPcts mocks base method
+func (m *MockScheduler) SetClassLoadPcts(classLoads map[string]int32) error {
+	ret := m.ctrl.Call(m, "SetClassLoadPcts", classLoads)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetClassLoadPcts indicates an expected call of SetClassLoadPcts
+func (mr *MockSchedulerMockRecorder) SetClassLoadPcts(classLoads interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).SetClassLoadPcts), classLoads)
+}
+
+// GetRequestorToClassMap mocks base method
+func (m *MockScheduler) GetRequestorToClassMap() (map[string]string, error) {
+	ret := m.ctrl.Call(m, "GetRequestorToClassMap")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRequestorToClassMap indicates an expected call of GetRequestorToClassMap
+func (mr *MockSchedulerMockRecorder) GetRequestorToClassMap() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).GetRequestorToClassMap))
+}
+
+// SetRequestorToClassMap mocks base method
+func (m *MockScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
+	ret := m.ctrl.Call(m, "SetRequestorToClassMap", requestorToClassMap)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRequestorToClassMap indicates an expected call of SetRequestorToClassMap
+func (mr *MockSchedulerMockRecorder) SetRequestorToClassMap(requestorToClassMap interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).SetRequestorToClassMap), requestorToClassMap)
+}
+
+// GetRebalanceMinDuration mocks base method
+func (m *MockScheduler) GetRebalanceMinDuration() (int32, error) {
+	ret := m.ctrl.Call(m, "GetRebalanceMinDuration")
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRebalanceMinDuration indicates an expected call of GetRebalanceMinDuration
+func (mr *MockSchedulerMockRecorder) GetRebalanceMinDuration() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceMinDuration))
+}
+
+// SetRebalanceMinDuration mocks base method
+func (m *MockScheduler) SetRebalanceMinDuration(durationMin int32) error {
+	ret := m.ctrl.Call(m, "SetRebalanceMinDuration", durationMin)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRebalanceMinDuration indicates an expected call of SetRebalanceMinDuration
+func (mr *MockSchedulerMockRecorder) SetRebalanceMinDuration(durationMin interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceMinDuration), durationMin)
+}
+
+// GetRebalanceThreshold mocks base method
+func (m *MockScheduler) GetRebalanceThreshold() (int32, error) {
+	ret := m.ctrl.Call(m, "GetRebalanceThreshold")
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRebalanceThreshold indicates an expected call of GetRebalanceThreshold
+func (mr *MockSchedulerMockRecorder) GetRebalanceThreshold() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceThreshold", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceThreshold))
+}
+
+// SetRebalanceThreshold mocks base method
+func (m *MockScheduler) SetRebalanceThreshold(durationMin int32) error {
+	ret := m.ctrl.Call(m, "SetRebalanceThreshold", durationMin)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRebalanceThreshold indicates an expected call of SetRebalanceThreshold
+func (mr *MockSchedulerMockRecorder) SetRebalanceThreshold(durationMin interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceThreshold", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceThreshold), durationMin)
+}
+
 // MockSchedulingAlgorithm is a mock of SchedulingAlgorithm interface
 type MockSchedulingAlgorithm struct {
 	ctrl     *gomock.Controller
@@ -145,13 +245,14 @@ func (m *MockSchedulingAlgorithm) EXPECT() *MockSchedulingAlgorithmMockRecorder 
 }
 
 // GetTasksToBeAssigned mocks base method
-func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
-	ret := m.ctrl.Call(m, "GetTasksToBeAssigned", jobs, stat, cs, requestors, cfg)
+func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState, requestors map[string][]*jobState) ([]*taskState, []*taskState) {
+	ret := m.ctrl.Call(m, "GetTasksToBeAssigned", jobs, stat, cs, requestors)
 	ret0, _ := ret[0].([]*taskState)
-	return ret0
+	ret1, _ := ret[1].([]*taskState)
+	return ret0, ret1
 }
 
 // GetTasksToBeAssigned indicates an expected call of GetTasksToBeAssigned
-func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors, cfg interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors, cfg)
+func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors)
 }

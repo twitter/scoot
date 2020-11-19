@@ -519,27 +519,6 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	sendKillRequest(jobId1, s)
 }
 
-func Test_StatefulScheduler_NodeScaleFactor(t *testing.T) {
-	NodeScaleAdjustment = []float32{.05, .2, .75} // Setting this global value explicitly for test consistency.
-	s := &SchedulerConfig{SoftMaxSchedulableTasks: 200}
-	numNodes := 21
-	numTasks := float32(1)
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 1 {
-		t.Errorf("Expected 1, got %d", n)
-	}
-
-	numTasks = float32(100)
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 0)); n != 1 {
-		t.Errorf("Expected 1, got %d", n)
-	}
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 1)); n != 3 {
-		t.Errorf("Expected 3, got %d", n)
-	}
-	if n := ceil(numTasks * s.GetNodeScaleFactor(numNodes, 2)); n != 8 {
-		t.Errorf("Expected 8, got %d", n)
-	}
-}
-
 func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)

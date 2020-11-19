@@ -7,10 +7,42 @@ import (
 	"github.com/twitter/scoot/scheduler/domain"
 )
 
-type OrigSchedulingAlg struct{}
+// Decrease the NodeScaleFactor by taking the percentage defined by NodeScaleAdjust[Priority].
+// Note: the use case here is to hit an SLA for each job priority, and this is a coarse way to do so.
+var DefaultNodeScaleAdjustment = []float32{.15, .3, .55}
 
+// OrigSchedulingAlgConfig configuration for the original scheduling algorithm
+type OrigSchedulingAlgConfig struct {
+	SoftMaxSchedulableTasks int
+	NodeScaleAdjustment     []float32
+}
+
+// OrigSchedulingAlg the original scheduling algorithm
+type OrigSchedulingAlg struct {
+	Config *OrigSchedulingAlgConfig
+}
+
+// GetTasksToBeAssigned the the tasks to be started
 func (oa *OrigSchedulingAlg) GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
-	requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState {
+	requestors map[string][]*jobState) (startTasks []*taskState, stopTasks []*taskState) {
+
+	// Exit if there are no unscheduled tasks.
+	totalOutstandingTasks := 0
+	for _, j := range jobs {
+		totalOutstandingTasks += (len(j.Tasks) - j.TasksCompleted)
+	}
+
+	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
+	// Setting the max to num healthy nodes means that each job can be fully scheduled.
+	// (This gets used in config.GetNodeScaleFactor())
+	cfg := OrigSchedulingAlgConfig{
+		SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes)),
+		NodeScaleAdjustment:     DefaultNodeScaleAdjustment,
+	}
+	if oa.Config != nil {
+		cfg = *oa.Config
+	}
+
 	// Sort jobs by priority and count running tasks.
 	// An array indexed by priority. The value is the subset of jobs in fifo order for the given priority.
 	priorityJobs := [][]*jobState{{}, {}, {}}
@@ -139,7 +171,7 @@ Loop:
 LoopRemaining:
 	// First, loop using the above percentages, and next, distribute remaining free nodes to the highest priority tasks.
 	// Do the above loops twice, once to exhaust 'required' tasks and again to exhaust 'optional' tasks.
-	for j, quota := range [][]float32{NodeScaleAdjustment, {1, 1, 1}, NodeScaleAdjustment, {1, 1, 1}} {
+	for j, quota := range [][]float32{cfg.NodeScaleAdjustment, {1, 1, 1}, cfg.NodeScaleAdjustment, {1, 1, 1}} {
 		remaining := &remainingRequired
 		if j > 1 {
 			remaining = &remainingOptional
@@ -179,5 +211,14 @@ LoopRemaining:
 			}
 		}
 	}
-	return tasks
+
+	log.Debugf("orig scheduling algorithm returning %d tasks", len(tasks))
+	return tasks, nil
+}
+
+// GetNodeScaleFactor Is used to calculate how many tasks a job can run without adversely affecting other jobs.
+// We account for priority by decreasing the scale factor by an appropriate percentage.
+func (oac *OrigSchedulingAlgConfig) GetNodeScaleFactor(numNodes int, p domain.Priority) float32 {
+	sf := float32(numNodes) / float32(oac.SoftMaxSchedulableTasks)
+	return sf * oac.NodeScaleAdjustment[p]
 }

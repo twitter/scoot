@@ -19,6 +19,7 @@ import (
 	"github.com/twitter/scoot/perftests/scheduler_simulator"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 func main() {
@@ -27,15 +28,12 @@ func main() {
 	log.SetLevel(log.WarnLevel)
 
 	var jobDefs map[int][]*domain.JobDefinition
-	var pRatios []int
 
 	log.Warn("****************************************")
 	log.Warn("********* Building Job Defs ************")
 	log.Warn("****************************************")
 	testsStart := time.Now()
 	var testsEnd time.Time
-	t := [...]int{1, 5, 3}
-	pRatios = t[:]
 
 	jobDefs = makeJobDefs()
 	testsEnd = testsStart.Add(30 * time.Second)
@@ -43,7 +41,7 @@ func main() {
 	log.Warn("****************************************")
 	log.Warn("******** Starting Simulation ***********")
 	log.Warn("****************************************")
-	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, pRatios[:], 5)
+	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, 5, server.DefaultLoadBasedSchedulerClassPcts, server.DefaultRequestorToClassMap)
 	e := schedAlg.RunTest()
 	if e != nil {
 		log.Fatalf("%s\n", e.Error())
@@ -63,7 +61,7 @@ func makeJobDefs() map[int][]*domain.JobDefinition {
 		jd[i].Requestor = fmt.Sprintf("dummyRequestor%d", i)
 		jd[i].Tag = "{url:dummy_job, elapsedMin:3}"
 		jd[i].Priority = domain.Priority(i)
-		jd[i].Tasks = makeDummyTasks()
+		jd[i].Tasks = makeTestTasks()
 		t := int(time.Now().Add(time.Duration(-1*i) * time.Minute).Unix())
 		m[t] = make([]*domain.JobDefinition, 1)
 		m[t][0] = &jd[i]
@@ -72,7 +70,7 @@ func makeJobDefs() map[int][]*domain.JobDefinition {
 	return m
 }
 
-func makeDummyTasks() []domain.TaskDefinition {
+func makeTestTasks() []domain.TaskDefinition {
 	//cnt := int(rand.Float64() * 10)+ 1
 	cnt := 6
 

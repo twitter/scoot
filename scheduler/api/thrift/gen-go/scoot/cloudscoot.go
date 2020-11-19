@@ -37,6 +37,22 @@ type CloudScoot interface {
 	// Parameters:
 	//  - MaxTasks
 	SetSchedulerStatus(maxTasks int32) (err error)
+	GetClassLoadPcts() (r map[string]int32, err error)
+	// Parameters:
+	//  - LoadPcts
+	SetClassLoadPcts(loadPcts map[string]int32) (err error)
+	GetRequestorToClassMap() (r map[string]string, err error)
+	// Parameters:
+	//  - RequestorToClassMap
+	SetRequestorToClassMap(requestorToClassMap map[string]string) (err error)
+	GetRebalanceMinDuration() (r int32, err error)
+	// Parameters:
+	//  - DurationMin
+	SetRebalanceMinDuration(durationMin int32) (err error)
+	GetRebalanceThreshold() (r int32, err error)
+	// Parameters:
+	//  - Threshold
+	SetRebalanceThreshold(threshold int32) (err error)
 }
 
 type CloudScootClient struct {
@@ -643,6 +659,646 @@ func (p *CloudScootClient) recvSetSchedulerStatus() (err error) {
 	return
 }
 
+func (p *CloudScootClient) GetClassLoadPcts() (r map[string]int32, err error) {
+	if err = p.sendGetClassLoadPcts(); err != nil {
+		return
+	}
+	return p.recvGetClassLoadPcts()
+}
+
+func (p *CloudScootClient) sendGetClassLoadPcts() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("GetClassLoadPcts", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootGetClassLoadPctsArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvGetClassLoadPcts() (value map[string]int32, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "GetClassLoadPcts" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetClassLoadPcts failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetClassLoadPcts failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error22 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error23 error
+		error23, err = error22.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error23
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetClassLoadPcts failed: invalid message type")
+		return
+	}
+	result := CloudScootGetClassLoadPctsResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - LoadPcts
+func (p *CloudScootClient) SetClassLoadPcts(loadPcts map[string]int32) (err error) {
+	if err = p.sendSetClassLoadPcts(loadPcts); err != nil {
+		return
+	}
+	return p.recvSetClassLoadPcts()
+}
+
+func (p *CloudScootClient) sendSetClassLoadPcts(loadPcts map[string]int32) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("SetClassLoadPcts", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootSetClassLoadPctsArgs{
+		LoadPcts: loadPcts,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvSetClassLoadPcts() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "SetClassLoadPcts" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetClassLoadPcts failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetClassLoadPcts failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error24 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error25 error
+		error25, err = error24.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error25
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetClassLoadPcts failed: invalid message type")
+		return
+	}
+	result := CloudScootSetClassLoadPctsResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	return
+}
+
+func (p *CloudScootClient) GetRequestorToClassMap() (r map[string]string, err error) {
+	if err = p.sendGetRequestorToClassMap(); err != nil {
+		return
+	}
+	return p.recvGetRequestorToClassMap()
+}
+
+func (p *CloudScootClient) sendGetRequestorToClassMap() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("GetRequestorToClassMap", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootGetRequestorToClassMapArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvGetRequestorToClassMap() (value map[string]string, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "GetRequestorToClassMap" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetRequestorToClassMap failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetRequestorToClassMap failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error26 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error27 error
+		error27, err = error26.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error27
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetRequestorToClassMap failed: invalid message type")
+		return
+	}
+	result := CloudScootGetRequestorToClassMapResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - RequestorToClassMap
+func (p *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string]string) (err error) {
+	if err = p.sendSetRequestorToClassMap(requestorToClassMap); err != nil {
+		return
+	}
+	return p.recvSetRequestorToClassMap()
+}
+
+func (p *CloudScootClient) sendSetRequestorToClassMap(requestorToClassMap map[string]string) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("SetRequestorToClassMap", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootSetRequestorToClassMapArgs{
+		RequestorToClassMap: requestorToClassMap,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvSetRequestorToClassMap() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "SetRequestorToClassMap" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetRequestorToClassMap failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetRequestorToClassMap failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error28 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error29 error
+		error29, err = error28.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error29
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetRequestorToClassMap failed: invalid message type")
+		return
+	}
+	result := CloudScootSetRequestorToClassMapResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	return
+}
+
+func (p *CloudScootClient) GetRebalanceMinDuration() (r int32, err error) {
+	if err = p.sendGetRebalanceMinDuration(); err != nil {
+		return
+	}
+	return p.recvGetRebalanceMinDuration()
+}
+
+func (p *CloudScootClient) sendGetRebalanceMinDuration() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootGetRebalanceMinDurationArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvGetRebalanceMinDuration() (value int32, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "GetRebalanceMinDuration" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetRebalanceMinDuration failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetRebalanceMinDuration failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error30 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error31 error
+		error31, err = error30.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error31
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetRebalanceMinDuration failed: invalid message type")
+		return
+	}
+	result := CloudScootGetRebalanceMinDurationResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - DurationMin
+func (p *CloudScootClient) SetRebalanceMinDuration(durationMin int32) (err error) {
+	if err = p.sendSetRebalanceMinDuration(durationMin); err != nil {
+		return
+	}
+	return p.recvSetRebalanceMinDuration()
+}
+
+func (p *CloudScootClient) sendSetRebalanceMinDuration(durationMin int32) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootSetRebalanceMinDurationArgs{
+		DurationMin: durationMin,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvSetRebalanceMinDuration() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "SetRebalanceMinDuration" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetRebalanceMinDuration failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetRebalanceMinDuration failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error32 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error33 error
+		error33, err = error32.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error33
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetRebalanceMinDuration failed: invalid message type")
+		return
+	}
+	result := CloudScootSetRebalanceMinDurationResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	return
+}
+
+func (p *CloudScootClient) GetRebalanceThreshold() (r int32, err error) {
+	if err = p.sendGetRebalanceThreshold(); err != nil {
+		return
+	}
+	return p.recvGetRebalanceThreshold()
+}
+
+func (p *CloudScootClient) sendGetRebalanceThreshold() (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("GetRebalanceThreshold", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootGetRebalanceThresholdArgs{}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvGetRebalanceThreshold() (value int32, err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "GetRebalanceThreshold" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetRebalanceThreshold failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetRebalanceThreshold failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error34 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error35 error
+		error35, err = error34.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error35
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetRebalanceThreshold failed: invalid message type")
+		return
+	}
+	result := CloudScootGetRebalanceThresholdResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	}
+	value = result.GetSuccess()
+	return
+}
+
+// Parameters:
+//  - Threshold
+func (p *CloudScootClient) SetRebalanceThreshold(threshold int32) (err error) {
+	if err = p.sendSetRebalanceThreshold(threshold); err != nil {
+		return
+	}
+	return p.recvSetRebalanceThreshold()
+}
+
+func (p *CloudScootClient) sendSetRebalanceThreshold(threshold int32) (err error) {
+	oprot := p.OutputProtocol
+	if oprot == nil {
+		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.OutputProtocol = oprot
+	}
+	p.SeqId++
+	if err = oprot.WriteMessageBegin("SetRebalanceThreshold", thrift.CALL, p.SeqId); err != nil {
+		return
+	}
+	args := CloudScootSetRebalanceThresholdArgs{
+		Threshold: threshold,
+	}
+	if err = args.Write(oprot); err != nil {
+		return
+	}
+	if err = oprot.WriteMessageEnd(); err != nil {
+		return
+	}
+	return oprot.Flush()
+}
+
+func (p *CloudScootClient) recvSetRebalanceThreshold() (err error) {
+	iprot := p.InputProtocol
+	if iprot == nil {
+		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+		p.InputProtocol = iprot
+	}
+	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return
+	}
+	if method != "SetRebalanceThreshold" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetRebalanceThreshold failed: wrong method name")
+		return
+	}
+	if p.SeqId != seqId {
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetRebalanceThreshold failed: out of sequence response")
+		return
+	}
+	if mTypeId == thrift.EXCEPTION {
+		error36 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		var error37 error
+		error37, err = error36.Read(iprot)
+		if err != nil {
+			return
+		}
+		if err = iprot.ReadMessageEnd(); err != nil {
+			return
+		}
+		err = error37
+		return
+	}
+	if mTypeId != thrift.REPLY {
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetRebalanceThreshold failed: invalid message type")
+		return
+	}
+	result := CloudScootSetRebalanceThresholdResult{}
+	if err = result.Read(iprot); err != nil {
+		return
+	}
+	if err = iprot.ReadMessageEnd(); err != nil {
+		return
+	}
+	if result.Ir != nil {
+		err = result.Ir
+		return
+	} else if result.Err != nil {
+		err = result.Err
+		return
+	}
+	return
+}
+
 type CloudScootProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      CloudScoot
@@ -663,15 +1319,23 @@ func (p *CloudScootProcessor) ProcessorMap() map[string]thrift.TProcessorFunctio
 
 func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 
-	self22 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self22.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
-	self22.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
-	self22.processorMap["KillJob"] = &cloudScootProcessorKillJob{handler: handler}
-	self22.processorMap["OfflineWorker"] = &cloudScootProcessorOfflineWorker{handler: handler}
-	self22.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
-	self22.processorMap["GetSchedulerStatus"] = &cloudScootProcessorGetSchedulerStatus{handler: handler}
-	self22.processorMap["SetSchedulerStatus"] = &cloudScootProcessorSetSchedulerStatus{handler: handler}
-	return self22
+	self38 := &CloudScootProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self38.processorMap["RunJob"] = &cloudScootProcessorRunJob{handler: handler}
+	self38.processorMap["GetStatus"] = &cloudScootProcessorGetStatus{handler: handler}
+	self38.processorMap["KillJob"] = &cloudScootProcessorKillJob{handler: handler}
+	self38.processorMap["OfflineWorker"] = &cloudScootProcessorOfflineWorker{handler: handler}
+	self38.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
+	self38.processorMap["GetSchedulerStatus"] = &cloudScootProcessorGetSchedulerStatus{handler: handler}
+	self38.processorMap["SetSchedulerStatus"] = &cloudScootProcessorSetSchedulerStatus{handler: handler}
+	self38.processorMap["GetClassLoadPcts"] = &cloudScootProcessorGetClassLoadPcts{handler: handler}
+	self38.processorMap["SetClassLoadPcts"] = &cloudScootProcessorSetClassLoadPcts{handler: handler}
+	self38.processorMap["GetRequestorToClassMap"] = &cloudScootProcessorGetRequestorToClassMap{handler: handler}
+	self38.processorMap["SetRequestorToClassMap"] = &cloudScootProcessorSetRequestorToClassMap{handler: handler}
+	self38.processorMap["GetRebalanceMinDuration"] = &cloudScootProcessorGetRebalanceMinDuration{handler: handler}
+	self38.processorMap["SetRebalanceMinDuration"] = &cloudScootProcessorSetRebalanceMinDuration{handler: handler}
+	self38.processorMap["GetRebalanceThreshold"] = &cloudScootProcessorGetRebalanceThreshold{handler: handler}
+	self38.processorMap["SetRebalanceThreshold"] = &cloudScootProcessorSetRebalanceThreshold{handler: handler}
+	return self38
 }
 
 func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -684,12 +1348,12 @@ func (p *CloudScootProcessor) Process(iprot, oprot thrift.TProtocol) (success bo
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x23 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x39 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x23.Write(oprot)
+	x39.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x23
+	return false, x39
 
 }
 
@@ -1050,6 +1714,426 @@ func (p *cloudScootProcessorSetSchedulerStatus) Process(seqId int32, iprot, opro
 		}
 	}
 	if err2 = oprot.WriteMessageBegin("SetSchedulerStatus", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorGetClassLoadPcts struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorGetClassLoadPcts) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetClassLoadPctsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetClassLoadPcts", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootGetClassLoadPctsResult{}
+	var retval map[string]int32
+	var err2 error
+	if retval, err2 = p.handler.GetClassLoadPcts(); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetClassLoadPcts: "+err2.Error())
+			oprot.WriteMessageBegin("GetClassLoadPcts", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetClassLoadPcts", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorSetClassLoadPcts struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorSetClassLoadPcts) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetClassLoadPctsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SetClassLoadPcts", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootSetClassLoadPctsResult{}
+	var err2 error
+	if err2 = p.handler.SetClassLoadPcts(args.LoadPcts); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetClassLoadPcts: "+err2.Error())
+			oprot.WriteMessageBegin("SetClassLoadPcts", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	}
+	if err2 = oprot.WriteMessageBegin("SetClassLoadPcts", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorGetRequestorToClassMap struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorGetRequestorToClassMap) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetRequestorToClassMapArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetRequestorToClassMap", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootGetRequestorToClassMapResult{}
+	var retval map[string]string
+	var err2 error
+	if retval, err2 = p.handler.GetRequestorToClassMap(); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetRequestorToClassMap: "+err2.Error())
+			oprot.WriteMessageBegin("GetRequestorToClassMap", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetRequestorToClassMap", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorSetRequestorToClassMap struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorSetRequestorToClassMap) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetRequestorToClassMapArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SetRequestorToClassMap", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootSetRequestorToClassMapResult{}
+	var err2 error
+	if err2 = p.handler.SetRequestorToClassMap(args.RequestorToClassMap); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetRequestorToClassMap: "+err2.Error())
+			oprot.WriteMessageBegin("SetRequestorToClassMap", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	}
+	if err2 = oprot.WriteMessageBegin("SetRequestorToClassMap", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorGetRebalanceMinDuration struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorGetRebalanceMinDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetRebalanceMinDurationArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootGetRebalanceMinDurationResult{}
+	var retval int32
+	var err2 error
+	if retval, err2 = p.handler.GetRebalanceMinDuration(); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetRebalanceMinDuration: "+err2.Error())
+			oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = &retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorSetRebalanceMinDuration struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorSetRebalanceMinDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetRebalanceMinDurationArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootSetRebalanceMinDurationResult{}
+	var err2 error
+	if err2 = p.handler.SetRebalanceMinDuration(args.DurationMin); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetRebalanceMinDuration: "+err2.Error())
+			oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	}
+	if err2 = oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorGetRebalanceThreshold struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorGetRebalanceThreshold) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetRebalanceThresholdArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetRebalanceThreshold", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootGetRebalanceThresholdResult{}
+	var retval int32
+	var err2 error
+	if retval, err2 = p.handler.GetRebalanceThreshold(); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetRebalanceThreshold: "+err2.Error())
+			oprot.WriteMessageBegin("GetRebalanceThreshold", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	} else {
+		result.Success = &retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetRebalanceThreshold", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type cloudScootProcessorSetRebalanceThreshold struct {
+	handler CloudScoot
+}
+
+func (p *cloudScootProcessorSetRebalanceThreshold) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetRebalanceThresholdArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("SetRebalanceThreshold", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush()
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := CloudScootSetRebalanceThresholdResult{}
+	var err2 error
+	if err2 = p.handler.SetRebalanceThreshold(args.Threshold); err2 != nil {
+		switch v := err2.(type) {
+		case *InvalidRequest:
+			result.Ir = v
+		case *ScootServerError:
+			result.Err = v
+		default:
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetRebalanceThreshold: "+err2.Error())
+			oprot.WriteMessageBegin("SetRebalanceThreshold", thrift.EXCEPTION, seqId)
+			x.Write(oprot)
+			oprot.WriteMessageEnd()
+			oprot.Flush()
+			return true, err2
+		}
+	}
+	if err2 = oprot.WriteMessageBegin("SetRebalanceThreshold", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -2847,4 +3931,1866 @@ func (p *CloudScootSetSchedulerStatusResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("CloudScootSetSchedulerStatusResult(%+v)", *p)
+}
+
+type CloudScootGetClassLoadPctsArgs struct {
+}
+
+func NewCloudScootGetClassLoadPctsArgs() *CloudScootGetClassLoadPctsArgs {
+	return &CloudScootGetClassLoadPctsArgs{}
+}
+
+func (p *CloudScootGetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetClassLoadPcts_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetClassLoadPctsArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Ir
+type CloudScootGetClassLoadPctsResult struct {
+	Success map[string]int32 `thrift:"success,0" json:"success,omitempty"`
+	Ir      *InvalidRequest  `thrift:"ir,1" json:"ir,omitempty"`
+}
+
+func NewCloudScootGetClassLoadPctsResult() *CloudScootGetClassLoadPctsResult {
+	return &CloudScootGetClassLoadPctsResult{}
+}
+
+var CloudScootGetClassLoadPctsResult_Success_DEFAULT map[string]int32
+
+func (p *CloudScootGetClassLoadPctsResult) GetSuccess() map[string]int32 {
+	return p.Success
+}
+
+var CloudScootGetClassLoadPctsResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootGetClassLoadPctsResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootGetClassLoadPctsResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+func (p *CloudScootGetClassLoadPctsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) readField0(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]int32, size)
+	p.Success = tMap
+	for i := 0; i < size; i++ {
+		var _key40 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key40 = v
+		}
+		var _val41 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_val41 = v
+		}
+		p.Success[_key40] = _val41
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetClassLoadPcts_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetClassLoadPctsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.MAP, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.Success)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.Success {
+			if err := oprot.WriteString(string(k)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+			if err := oprot.WriteI32(int32(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetClassLoadPctsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetClassLoadPctsResult(%+v)", *p)
+}
+
+// Attributes:
+//  - LoadPcts
+type CloudScootSetClassLoadPctsArgs struct {
+	LoadPcts map[string]int32 `thrift:"loadPcts,1" json:"loadPcts"`
+}
+
+func NewCloudScootSetClassLoadPctsArgs() *CloudScootSetClassLoadPctsArgs {
+	return &CloudScootSetClassLoadPctsArgs{}
+}
+
+func (p *CloudScootSetClassLoadPctsArgs) GetLoadPcts() map[string]int32 {
+	return p.LoadPcts
+}
+func (p *CloudScootSetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsArgs) readField1(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]int32, size)
+	p.LoadPcts = tMap
+	for i := 0; i < size; i++ {
+		var _key42 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key42 = v
+		}
+		var _val43 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_val43 = v
+		}
+		p.LoadPcts[_key42] = _val43
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetClassLoadPcts_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("loadPcts", thrift.MAP, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:loadPcts: ", p), err)
+	}
+	if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.LoadPcts)); err != nil {
+		return thrift.PrependError("error writing map begin: ", err)
+	}
+	for k, v := range p.LoadPcts {
+		if err := oprot.WriteString(string(k)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(v)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+	}
+	if err := oprot.WriteMapEnd(); err != nil {
+		return thrift.PrependError("error writing map end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:loadPcts: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootSetClassLoadPctsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetClassLoadPctsArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Ir
+//  - Err
+type CloudScootSetClassLoadPctsResult struct {
+	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootSetClassLoadPctsResult() *CloudScootSetClassLoadPctsResult {
+	return &CloudScootSetClassLoadPctsResult{}
+}
+
+var CloudScootSetClassLoadPctsResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootSetClassLoadPctsResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootSetClassLoadPctsResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootSetClassLoadPctsResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootSetClassLoadPctsResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootSetClassLoadPctsResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootSetClassLoadPctsResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetClassLoadPcts_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetClassLoadPctsResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetClassLoadPctsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetClassLoadPctsResult(%+v)", *p)
+}
+
+type CloudScootGetRequestorToClassMapArgs struct {
+}
+
+func NewCloudScootGetRequestorToClassMapArgs() *CloudScootGetRequestorToClassMapArgs {
+	return &CloudScootGetRequestorToClassMapArgs{}
+}
+
+func (p *CloudScootGetRequestorToClassMapArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRequestorToClassMap_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRequestorToClassMapArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Ir
+type CloudScootGetRequestorToClassMapResult struct {
+	Success map[string]string `thrift:"success,0" json:"success,omitempty"`
+	Ir      *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+}
+
+func NewCloudScootGetRequestorToClassMapResult() *CloudScootGetRequestorToClassMapResult {
+	return &CloudScootGetRequestorToClassMapResult{}
+}
+
+var CloudScootGetRequestorToClassMapResult_Success_DEFAULT map[string]string
+
+func (p *CloudScootGetRequestorToClassMapResult) GetSuccess() map[string]string {
+	return p.Success
+}
+
+var CloudScootGetRequestorToClassMapResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootGetRequestorToClassMapResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootGetRequestorToClassMapResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+func (p *CloudScootGetRequestorToClassMapResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) readField0(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]string, size)
+	p.Success = tMap
+	for i := 0; i < size; i++ {
+		var _key44 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key44 = v
+		}
+		var _val45 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_val45 = v
+		}
+		p.Success[_key44] = _val45
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRequestorToClassMap_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.MAP, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Success)); err != nil {
+			return thrift.PrependError("error writing map begin: ", err)
+		}
+		for k, v := range p.Success {
+			if err := oprot.WriteString(string(k)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+			if err := oprot.WriteString(string(v)); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return thrift.PrependError("error writing map end: ", err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRequestorToClassMapResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRequestorToClassMapResult(%+v)", *p)
+}
+
+// Attributes:
+//  - RequestorToClassMap
+type CloudScootSetRequestorToClassMapArgs struct {
+	RequestorToClassMap map[string]string `thrift:"requestorToClassMap,1" json:"requestorToClassMap"`
+}
+
+func NewCloudScootSetRequestorToClassMapArgs() *CloudScootSetRequestorToClassMapArgs {
+	return &CloudScootSetRequestorToClassMapArgs{}
+}
+
+func (p *CloudScootSetRequestorToClassMapArgs) GetRequestorToClassMap() map[string]string {
+	return p.RequestorToClassMap
+}
+func (p *CloudScootSetRequestorToClassMapArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapArgs) readField1(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return thrift.PrependError("error reading map begin: ", err)
+	}
+	tMap := make(map[string]string, size)
+	p.RequestorToClassMap = tMap
+	for i := 0; i < size; i++ {
+		var _key46 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_key46 = v
+		}
+		var _val47 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_val47 = v
+		}
+		p.RequestorToClassMap[_key46] = _val47
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return thrift.PrependError("error reading map end: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRequestorToClassMap_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("requestorToClassMap", thrift.MAP, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:requestorToClassMap: ", p), err)
+	}
+	if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.RequestorToClassMap)); err != nil {
+		return thrift.PrependError("error writing map begin: ", err)
+	}
+	for k, v := range p.RequestorToClassMap {
+		if err := oprot.WriteString(string(k)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteString(string(v)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+	}
+	if err := oprot.WriteMapEnd(); err != nil {
+		return thrift.PrependError("error writing map end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:requestorToClassMap: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootSetRequestorToClassMapArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRequestorToClassMapArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Ir
+//  - Err
+type CloudScootSetRequestorToClassMapResult struct {
+	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootSetRequestorToClassMapResult() *CloudScootSetRequestorToClassMapResult {
+	return &CloudScootSetRequestorToClassMapResult{}
+}
+
+var CloudScootSetRequestorToClassMapResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootSetRequestorToClassMapResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootSetRequestorToClassMapResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootSetRequestorToClassMapResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootSetRequestorToClassMapResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootSetRequestorToClassMapResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootSetRequestorToClassMapResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRequestorToClassMap_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRequestorToClassMapResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRequestorToClassMapResult(%+v)", *p)
+}
+
+type CloudScootGetRebalanceMinDurationArgs struct {
+}
+
+func NewCloudScootGetRebalanceMinDurationArgs() *CloudScootGetRebalanceMinDurationArgs {
+	return &CloudScootGetRebalanceMinDurationArgs{}
+}
+
+func (p *CloudScootGetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceMinDuration_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRebalanceMinDurationArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Ir
+type CloudScootGetRebalanceMinDurationResult struct {
+	Success *int32          `thrift:"success,0" json:"success,omitempty"`
+	Ir      *InvalidRequest `thrift:"ir,1" json:"ir,omitempty"`
+}
+
+func NewCloudScootGetRebalanceMinDurationResult() *CloudScootGetRebalanceMinDurationResult {
+	return &CloudScootGetRebalanceMinDurationResult{}
+}
+
+var CloudScootGetRebalanceMinDurationResult_Success_DEFAULT int32
+
+func (p *CloudScootGetRebalanceMinDurationResult) GetSuccess() int32 {
+	if !p.IsSetSuccess() {
+		return CloudScootGetRebalanceMinDurationResult_Success_DEFAULT
+	}
+	return *p.Success
+}
+
+var CloudScootGetRebalanceMinDurationResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootGetRebalanceMinDurationResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootGetRebalanceMinDurationResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+func (p *CloudScootGetRebalanceMinDurationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) readField0(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 0: ", err)
+	} else {
+		p.Success = &v
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceMinDuration_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.I32, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Success)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRebalanceMinDurationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRebalanceMinDurationResult(%+v)", *p)
+}
+
+// Attributes:
+//  - DurationMin
+type CloudScootSetRebalanceMinDurationArgs struct {
+	DurationMin int32 `thrift:"durationMin,1" json:"durationMin"`
+}
+
+func NewCloudScootSetRebalanceMinDurationArgs() *CloudScootSetRebalanceMinDurationArgs {
+	return &CloudScootSetRebalanceMinDurationArgs{}
+}
+
+func (p *CloudScootSetRebalanceMinDurationArgs) GetDurationMin() int32 {
+	return p.DurationMin
+}
+func (p *CloudScootSetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationArgs) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.DurationMin = v
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceMinDuration_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("durationMin", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:durationMin: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.DurationMin)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.durationMin (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:durationMin: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceMinDurationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRebalanceMinDurationArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Ir
+//  - Err
+type CloudScootSetRebalanceMinDurationResult struct {
+	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootSetRebalanceMinDurationResult() *CloudScootSetRebalanceMinDurationResult {
+	return &CloudScootSetRebalanceMinDurationResult{}
+}
+
+var CloudScootSetRebalanceMinDurationResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootSetRebalanceMinDurationResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootSetRebalanceMinDurationResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootSetRebalanceMinDurationResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootSetRebalanceMinDurationResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootSetRebalanceMinDurationResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootSetRebalanceMinDurationResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceMinDuration_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceMinDurationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRebalanceMinDurationResult(%+v)", *p)
+}
+
+type CloudScootGetRebalanceThresholdArgs struct {
+}
+
+func NewCloudScootGetRebalanceThresholdArgs() *CloudScootGetRebalanceThresholdArgs {
+	return &CloudScootGetRebalanceThresholdArgs{}
+}
+
+func (p *CloudScootGetRebalanceThresholdArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceThreshold_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRebalanceThresholdArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+//  - Ir
+type CloudScootGetRebalanceThresholdResult struct {
+	Success *int32          `thrift:"success,0" json:"success,omitempty"`
+	Ir      *InvalidRequest `thrift:"ir,1" json:"ir,omitempty"`
+}
+
+func NewCloudScootGetRebalanceThresholdResult() *CloudScootGetRebalanceThresholdResult {
+	return &CloudScootGetRebalanceThresholdResult{}
+}
+
+var CloudScootGetRebalanceThresholdResult_Success_DEFAULT int32
+
+func (p *CloudScootGetRebalanceThresholdResult) GetSuccess() int32 {
+	if !p.IsSetSuccess() {
+		return CloudScootGetRebalanceThresholdResult_Success_DEFAULT
+	}
+	return *p.Success
+}
+
+var CloudScootGetRebalanceThresholdResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootGetRebalanceThresholdResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootGetRebalanceThresholdResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+func (p *CloudScootGetRebalanceThresholdResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if err := p.readField0(iprot); err != nil {
+				return err
+			}
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) readField0(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 0: ", err)
+	} else {
+		p.Success = &v
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceThreshold_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField0(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.I32, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteI32(int32(*p.Success)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootGetRebalanceThresholdResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootGetRebalanceThresholdResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Threshold
+type CloudScootSetRebalanceThresholdArgs struct {
+	Threshold int32 `thrift:"threshold,1" json:"threshold"`
+}
+
+func NewCloudScootSetRebalanceThresholdArgs() *CloudScootSetRebalanceThresholdArgs {
+	return &CloudScootSetRebalanceThresholdArgs{}
+}
+
+func (p *CloudScootSetRebalanceThresholdArgs) GetThreshold() int32 {
+	return p.Threshold
+}
+func (p *CloudScootSetRebalanceThresholdArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdArgs) readField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Threshold = v
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceThreshold_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("threshold", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:threshold: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Threshold)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.threshold (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:threshold: ", p), err)
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceThresholdArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRebalanceThresholdArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Ir
+//  - Err
+type CloudScootSetRebalanceThresholdResult struct {
+	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
+	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
+}
+
+func NewCloudScootSetRebalanceThresholdResult() *CloudScootSetRebalanceThresholdResult {
+	return &CloudScootSetRebalanceThresholdResult{}
+}
+
+var CloudScootSetRebalanceThresholdResult_Ir_DEFAULT *InvalidRequest
+
+func (p *CloudScootSetRebalanceThresholdResult) GetIr() *InvalidRequest {
+	if !p.IsSetIr() {
+		return CloudScootSetRebalanceThresholdResult_Ir_DEFAULT
+	}
+	return p.Ir
+}
+
+var CloudScootSetRebalanceThresholdResult_Err_DEFAULT *ScootServerError
+
+func (p *CloudScootSetRebalanceThresholdResult) GetErr() *ScootServerError {
+	if !p.IsSetErr() {
+		return CloudScootSetRebalanceThresholdResult_Err_DEFAULT
+	}
+	return p.Err
+}
+func (p *CloudScootSetRebalanceThresholdResult) IsSetIr() bool {
+	return p.Ir != nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if err := p.readField1(iprot); err != nil {
+				return err
+			}
+		case 2:
+			if err := p.readField2(iprot); err != nil {
+				return err
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) readField1(iprot thrift.TProtocol) error {
+	p.Ir = &InvalidRequest{}
+	if err := p.Ir.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) readField2(iprot thrift.TProtocol) error {
+	p.Err = &ScootServerError{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceThreshold_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if err := p.writeField1(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField2(oprot); err != nil {
+		return err
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIr() {
+		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
+		}
+		if err := p.Ir.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Ir), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 1:ir: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetErr() {
+		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
+		}
+		if err := p.Err.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:err: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *CloudScootSetRebalanceThresholdResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CloudScootSetRebalanceThresholdResult(%+v)", *p)
 }

@@ -23,9 +23,27 @@ type Scheduler interface {
 	SetSchedulerStatus(maxTasks int) error
 
 	GetSchedulerStatus() (int, int)
+
+	GetClassLoadPcts() (map[string]int32, error)
+
+	SetClassLoadPcts(classLoads map[string]int32) error
+
+	GetRequestorToClassMap() (map[string]string, error)
+
+	SetRequestorToClassMap(requestorToClassMap map[string]string) error
+
+	GetRebalanceMinDuration() (int32, error)
+
+	SetRebalanceMinDuration(durationMin int32) error
+
+	GetRebalanceThreshold() (int32, error)
+
+	SetRebalanceThreshold(durationMin int32) error
 }
 
+// SchedulingAlgorithm interface for the scheduling algorithm.  Implementations will compute the list of
+// tasks to start and stop
 type SchedulingAlgorithm interface {
 	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
-		requestors map[string][]*jobState, cfg SchedulerConfig) []*taskState
+		requestors map[string][]*jobState) (startTasks []*taskState, stopTasks []*taskState)
 }
