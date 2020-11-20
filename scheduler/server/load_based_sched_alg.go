@@ -238,19 +238,19 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 			jc, ok = lbs.jobClasses[className]
 			if !ok {
 				// the class name was not recognized, use the class with the least number of workers (lowest %)
-				lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
+				lbs.config.stat.Counter(stats.SchedLBSUnknownJobCounter).Inc(1)
 				jc = lbs.jobClasses[classNameWithLeastWorkers]
 				log.Errorf("%s is not a recognized job class assigning to class (%s)", className, classNameWithLeastWorkers)
 			}
 		} else {
 			// if the requestor is not recognized, use the class with the least number of workers (lowest %)
-			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCnt).Inc(1)
+			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCounter).Inc(1)
 			jc = lbs.jobClasses[classNameWithLeastWorkers]
 			log.Errorf("%s is not a recognized requestor assigning to class (%s)", className, classNameWithLeastWorkers)
 		}
 		if jc.origTargetLoadPct == 0 {
 			log.Errorf("%s worker allocation (load %% is 0), ignoring %d jobs", requestor, len(jobs))
-			lbs.config.stat.Counter(stats.SchedLBSIgnoredJobCnt).Inc(1)
+			lbs.config.stat.Counter(stats.SchedLBSIgnoredJobCounter).Inc(1)
 			continue
 		}
 

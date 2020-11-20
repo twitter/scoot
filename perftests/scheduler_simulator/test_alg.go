@@ -62,13 +62,12 @@ type testCluster struct {
 
 type timeSummary struct {
 	// structure for storing summary info about the job
-	buildURL     string        // the original build url
+	buildUrl     string        // the original build url
 	prodDuration time.Duration // the production duration from the log
 	testStart    time.Time     // when the build was started in the test
 	testEnd      time.Time
 }
 
-// SchedulingAlgTester runs the scheduling algorithm collecting load/throughput summaries
 type SchedulingAlgTester struct {
 	extDeps             *externalDeps
 	statsFileName       string
@@ -87,7 +86,7 @@ type SchedulingAlgTester struct {
 }
 
 /*
-MakeSchedulingAlgTester Make a SchedulingAlgTester object
+Make a SchedulingAlgTester object
 
 jobDefsMap is a map of relative start time (seconds) -> a job definition where each task in the job definition
 contains the number of seconds the task should take during the simulation
@@ -129,7 +128,6 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 	return st
 }
 
-// RunTest start running the test
 func (st *SchedulingAlgTester) RunTest() error {
 	st.extDeps = st.getExternals(st.clusterSize)
 
@@ -157,7 +155,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 	go st.watchForAllDone(allJobsStartedCh, allJobsDoneCh, sc)
 
 	// initialize structures for running the jobs
-	shadowStart := time.Now()
+	simStart := time.Now()
 	// sort the job map so we run them in ascending time order
 	keys := make([]int, 0)
 	for k := range st.jobDefsMap {
@@ -166,39 +164,35 @@ func (st *SchedulingAlgTester) RunTest() error {
 	sort.Ints(keys)
 
 	// now start running the jobs at the same frequency that they were run in production
-	log.Warnf("%s: Starting %d jobs.", shadowStart.Format(time.RFC3339), len(st.jobDefsMap))
+	log.Warnf("%s: Starting %d jobs.", simStart.Format(time.RFC3339), len(st.jobDefsMap))
 	if len(st.jobDefsMap) == 0 {
 		log.Errorf("no jobs")
 		return nil
 	}
-	for _, key := range keys {
-		jobDefs := st.jobDefsMap[key]
-		for secondsAfterStart, jobDef := range jobDefs {
+	for _, secondsAfterStart := range keys {
+		jobDefs := st.jobDefsMap[secondsAfterStart]
+		for _, jobDef := range jobDefs {
 			select {
 			case <-allJobsDoneCh:
 				// if an error occurred in watchForAllDone, abort the test
 				return fmt.Errorf("error reported looking for completed jobs.  See log")
 			default:
 			}
-			// // pause to simulate the frequency in which the jobs arrived in production
-			// deltaFromStart, e := st.extractWaitDurationFromJobDef(jobDef)
-			// if e != nil {
-			// 	return fmt.Errorf("Couldn't get deltaStartDuration:%s, skipping job", e.Error())
-			// }
-			n := time.Now()
-			startTime := shadowStart.Add(time.Duration(secondsAfterStart) * time.Second)
-			if startTime.After(n) {
-				sleepDuration := startTime.Sub(n)
-				time.Sleep(sleepDuration) // this pause emulates the jobs' run frequency
+			// pause to simulate the frequency in which the jobs arrived in production
+			jobStart := simStart.Add(time.Duration(secondsAfterStart) * time.Second)
+			if time.Now().Before(jobStart) {
+				log.Warnf("now: %s, job start: %s", time.Now().Format(time.RFC3339), jobStart.Format(time.RFC3339))
+				<-time.After(jobStart.Sub(time.Now())) // wait till time reaches startTime0				<-
 			}
 
 			// give the job to the scheduler
+			log.Warnf("%s submitting job:jobType:%s, req:%s, tag:%s, basis: %s, tasks:%d", time.Now().Format(time.RFC3339), jobDef.JobType, jobDef.Requestor, jobDef.Tag, jobDef.Basis, len(jobDef.Tasks))
 			id, err := s.ScheduleJob(*jobDef)
 			if err != nil {
 				return fmt.Errorf("Expected job to be Scheduled Successfully %v", err)
 			}
 			if id == "" {
-				return fmt.Errorf("Expected successfully scheduled job to return non empty job string")
+				return fmt.Errorf("Expected successfully scheduled job to return non empty job string!")
 			}
 
 			err = st.makeTimeSummary(jobDef, id) // record job start time, and production elapsed time
@@ -222,7 +216,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 
 	for _, timeSummary := range st.comparisonMap {
 		if timeSummary.testEnd == time.Unix(0, 0) {
-			log.Errorf("didn't get and end time for %s", timeSummary.buildURL)
+			log.Errorf("didn't get and end time for %s", timeSummary.buildUrl)
 		}
 	}
 	return nil
@@ -263,7 +257,7 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 					// timeout the unfinished job?
 					timeSummary := st.getComparisonMapEntry(id)
 					if time.Now().Sub(timeSummary.testStart) > st.timeout {
-						log.Warnf("timing out job %s", timeSummary.buildURL)
+						log.Warnf("timing out job %s", timeSummary.buildUrl)
 						finishedJobs[id] = true
 						st.recordJobEndTime(id, true)
 					}
@@ -285,35 +279,26 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 /*
 store the production duration and the test start time for a job id in the ComparisonMapEntry
 */
-func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, jobID string) error {
+func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, jobId string) error {
 	re := regexp.MustCompile("url:(.*), elapsedMin:([0-9]+)")
 	m := re.FindStringSubmatch(jobDef.Tag)
-	buildURL := m[1]
+	buildUrl := m[1]
 	prodDurationStr := m[2]
 	prodDuration, e := strconv.Atoi(prodDurationStr)
 	if e != nil {
 		return fmt.Errorf("couldn't parse elapsedMin value:%s, %s", prodDurationStr, e.Error())
 	}
 	ts := &timeSummary{
-		buildURL:     buildURL,
+		buildUrl:     buildUrl,
 		prodDuration: time.Duration(prodDuration) * time.Minute,
 		testStart:    time.Now(),
 		testEnd:      time.Unix(0, 0),
 	}
 
-	st.setComparisonMapEntry(ts, jobID)
+	st.setComparisonMapEntry(ts, jobId)
 
 	return nil
 }
-
-// // extract the time from Basis field
-// func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *domain.JobDefinition) (time.Duration, error) {
-// 	d, e := strconv.Atoi(jobDef.Basis)
-// 	if e != nil {
-// 		return time.Duration(0), fmt.Errorf("couldn't parse duration from job def basis:%s", e.Error())
-// 	}
-// 	return time.Duration(d), nil
-// }
 
 func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 
@@ -356,9 +341,9 @@ func (st *SchedulingAlgTester) writeStatsToFile() {
 	elapsed := t.Sub(st.realStart)
 	simTime := st.testsStart.Add(elapsed)
 	timePP := simTime.Format(time.RFC3339)
-	statsJSON := st.extDeps.statsReceiver.Render(false)
+	statsJson := st.extDeps.statsReceiver.Render(false)
 	var s map[string]interface{}
-	json.Unmarshal(statsJSON, &s)
+	json.Unmarshal(statsJson, &s)
 	line := make([]byte, 0)
 	for className, loadPct := range st.classLoadPcts {
 		runningStatName := fmt.Sprintf("schedNumRunningTasksGauge_%s", className)
@@ -378,19 +363,19 @@ func (st *SchedulingAlgTester) writeStatsToFile() {
 	log.Warnf("%s\n", line)
 }
 
-func (st *SchedulingAlgTester) recordJobEndTime(jobID string, timedOut bool) error {
+func (st *SchedulingAlgTester) recordJobEndTime(jobId string, timedOut bool) error {
 	finish := time.Now()
-	timeSummary := st.getComparisonMapEntry(jobID)
+	timeSummary := st.getComparisonMapEntry(jobId)
 	timeSummary.testEnd = finish
 	testTime := finish.Sub(timeSummary.testStart)
 	delta := timeSummary.prodDuration - testTime
 	var line string
 	if timedOut {
 		line = fmt.Sprintf("%s, delta,%d, prod,%d, (seconds), test, %d, (seconds), timedOut\n",
-			timeSummary.buildURL, int(delta.Seconds()), int(timeSummary.prodDuration.Seconds()), int(testTime.Seconds()))
+			timeSummary.buildUrl, int(delta.Seconds()), int(timeSummary.prodDuration.Seconds()), int(testTime.Seconds()))
 	} else {
 		line = fmt.Sprintf("%s, delta,%d, prod,%d, (seconds), test, %d, (seconds)\n",
-			timeSummary.buildURL, int(delta.Seconds()), int(timeSummary.prodDuration.Seconds()), int(testTime.Seconds()))
+			timeSummary.buildUrl, int(delta.Seconds()), int(timeSummary.prodDuration.Seconds()), int(testTime.Seconds()))
 	}
 
 	f, _ := os.OpenFile(st.finishTimeFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
@@ -467,10 +452,10 @@ func (st *SchedulingAlgTester) getComparisonMapKeys() []string {
 	return keys
 }
 
-func (st *SchedulingAlgTester) setComparisonMapEntry(ts *timeSummary, jobID string) {
+func (st *SchedulingAlgTester) setComparisonMapEntry(ts *timeSummary, jobId string) {
 	st.comparisonMapMu.Lock()
 	defer st.comparisonMapMu.Unlock()
-	st.comparisonMap[jobID] = ts
+	st.comparisonMap[jobId] = ts
 }
 
 func (st *SchedulingAlgTester) writeFirstLines() {

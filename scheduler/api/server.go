@@ -14,7 +14,7 @@ import (
 	"github.com/twitter/scoot/scheduler/server"
 )
 
-// NewHandler Creates and returns a new server Handler, which combines the scheduler,
+// Creates and returns a new server Handler, which combines the scheduler,
 // saga coordinator and stats receivers.
 func NewHandler(scheduler server.Scheduler, sc saga.SagaCoordinator, stat stats.StatsReceiver) scoot.CloudScoot {
 	handler := &Handler{scheduler: scheduler, sagaCoord: sc, stat: stat}
@@ -22,7 +22,7 @@ func NewHandler(scheduler server.Scheduler, sc saga.SagaCoordinator, stat stats.
 	return handler
 }
 
-// MakeServer Creates a Thrift server given a Handler and Thrift connection information
+// Creates a Thrift server given a Handler and Thrift connection information
 func MakeServer(handler scoot.CloudScoot,
 	transport thrift.TServerTransport,
 	transportFactory thrift.TTransportFactory,
@@ -32,50 +32,50 @@ func MakeServer(handler scoot.CloudScoot,
 		transport, transportFactory, protocolFactory)
 }
 
-// Handler Wrapping type that combines a scheduler, saga coordinator and stat receiver into a server
+// Wrapping type that combines a scheduler, saga coordinator and stat receiver into a server
 type Handler struct {
 	scheduler server.Scheduler
 	sagaCoord saga.SagaCoordinator
 	stat      stats.StatsReceiver
 }
 
-// RunJob Implements RunJob Cloud Scoot API
+// Implements RunJob Cloud Scoot API
 func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 	defer h.stat.Latency(stats.SchedServerRunJobLatency_ms).Time().Stop() // TODO errata metric - remove if unused
 	h.stat.Counter(stats.SchedServerRunJobCounter).Inc(1)                 // TODO errata metric - remove if unused
 	return schedthrift.RunJob(h.scheduler, def, h.stat)
 }
 
-// GetStatus Implements GetStatus Cloud Scoot API
-func (h *Handler) GetStatus(jobID string) (*scoot.JobStatus, error) {
+// Implements GetStatus Cloud Scoot API
+func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobStatusLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobStatusCounter).Inc(1)
-	return schedthrift.GetJobStatus(jobID, h.sagaCoord)
+	return schedthrift.GetJobStatus(jobId, h.sagaCoord)
 }
 
-// KillJob Implements KillJob Cloud Scoot API
-func (h *Handler) KillJob(jobID string) (*scoot.JobStatus, error) {
+// Implements KillJob Cloud Scoot API
+func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobKillLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
-	return schedthrift.KillJob(jobID, h.scheduler, h.sagaCoord)
+	return schedthrift.KillJob(jobId, h.scheduler, h.sagaCoord)
 }
 
-// OfflineWorker Implements OfflineWorker Cloud Scoot API
+// Implements OfflineWorker Cloud Scoot API
 func (h *Handler) OfflineWorker(req *scoot.OfflineWorkerReq) error {
 	return schedthrift.OfflineWorker(req, h.scheduler)
 }
 
-// ReinstateWorker Implements ReinstateWorker Cloud Scoot API
+// Implements ReinstateWorker Cloud Scoot API
 func (h *Handler) ReinstateWorker(req *scoot.ReinstateWorkerReq) error {
 	return schedthrift.ReinstateWorker(req, h.scheduler)
 }
 
-// GetSchedulerStatus Implements GetSchedulerStatus Cloud Scoot API
+// Implements GetSchedulerStatus Cloud Scoot API
 func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 	return schedthrift.GetSchedulerStatus(h.scheduler)
 }
 
-// SetSchedulerStatus  Implements SetSchedulerStatus Cloud Scoot API
+// Implements SetSchedulerStatus Cloud Scoot API
 func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 	return schedthrift.SetSchedulerStatus(h.scheduler, maxNumTasks)
 }

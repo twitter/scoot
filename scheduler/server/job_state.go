@@ -235,6 +235,7 @@ func (j *jobState) getJobStatus() domain.Status {
 	return domain.InProgress
 }
 
+// addTaskToStartTimeMap add the running task to the map that bins running tasks by their start time
 func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, startTimeSec time.Time) {
 	if j.tasksByJobClassAndStartTimeSec == nil {
 		return
@@ -248,6 +249,7 @@ func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, start
 	j.tasksByJobClassAndStartTimeSec[jobClass][startTimeSec][fmt.Sprintf("%s_%s", task.JobId, task.TaskId)] = task
 }
 
+// removeTaskFromStartTimeMap remove the completed task from the map that bins running tasks by their start time
 func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, startTimeSec time.Time) {
 	if j.tasksByJobClassAndStartTimeSec == nil {
 		return

@@ -259,13 +259,13 @@ func NewStatefulScheduler(
 	if config.MaxJobsPerRequestor == 0 {
 		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
 	}
-	config.TaskThrottle = -1
-
 	config.SchedAlgConfig = &LoadBasedAlgConfig{
 		rebalanceThreshold:   0,
 		rebalanceMinDuration: 0 * time.Minute,
 		stat:                 stat,
 	}
+
+	config.TaskThrottle = -1
 
 	// create the load base scheduling algorithm
 	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
@@ -824,15 +824,15 @@ func (s *statefulScheduler) scheduleTasks() {
 		// Set up variables for async functions & callback
 		task := ta.task
 		nodeSt := ta.nodeSt
-		taskID := task.TaskId
 		jobID := task.JobId
-		jobState := s.getJob(jobID)
-		requestor := jobState.Job.Def.Requestor
-		jobType := jobState.Job.Def.JobType
-		tag := jobState.Job.Def.Tag
+		taskID := task.TaskId
+		requestor := s.getJob(jobID).Job.Def.Requestor
+		jobType := s.getJob(jobID).Job.Def.JobType
+		tag := s.getJob(jobID).Job.Def.Tag
 		taskDef := task.Def
 		taskDef.JobID = jobID
 		taskDef.Tag = tag
+		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
 
@@ -1128,7 +1128,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 			"tag":       jobState.Job.Def.Tag,
 		}
 		var updateMessages []saga.SagaMessage
-		for _, task := range jobState.Tasks {
+		for _, task := range s.getJob(req.jobId).Tasks {
 			msgs := s.abortTask(jobState, task, logFields)
 			updateMessages = append(updateMessages, msgs...)
 		}
@@ -1148,6 +1148,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 	}
 }
 
+// abortTask abort a task - will be triggered by killing a job and when the scheduling algorithm rebalances the workers
 func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFields log.Fields) []saga.SagaMessage {
 	logFields["taskID"] = task.TaskId
 	log.WithFields(logFields).Info("aborting task")
@@ -1187,8 +1188,8 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 // - the max number of tasks the scheduler will handle, -1 -> there is no max number
 func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
-	var taskCnt = total - completed
-	return taskCnt, s.config.TaskThrottle
+	var task_cnt = total - completed
+	return task_cnt, s.config.TaskThrottle
 }
 
 func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {

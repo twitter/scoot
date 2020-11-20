@@ -325,12 +325,12 @@ const (
 	/*
 		number of time Load Based Scheduler saw an unrecognized requestor
 	*/
-	SchedLBSUnknownJobCnt = "schedLBSUnknownJobCnt"
+	SchedLBSUnknownJobCounter = "schedLBSUnknownJobCounter"
 
 	/*
 	   number of jobs ignored because the load % is 0
 	*/
-	SchedLBSIgnoredJobCnt = "schedLBSIgnoredJobCnt"
+	SchedLBSIgnoredJobCounter = "schedLBSIgnoredJobCounter"
 
 	/*
 		number of tasks starting by job class (after the last run of lbs)

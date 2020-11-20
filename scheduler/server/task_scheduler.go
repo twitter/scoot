@@ -29,17 +29,17 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	defer s.stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
+	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
 	// Exit if there are no unscheduled tasks.
-	unscheduledTasks := false
+	waitingTasksFound := false
 	for _, j := range jobs {
 		if len(j.NotStarted) > 0 {
-			unscheduledTasks = true
+			waitingTasksFound = true
 			break
 		}
 	}
-	if !unscheduledTasks {
+	if !waitingTasksFound {
 		return nil
 	}
 
@@ -125,7 +125,7 @@ func assign(
 				}
 			}
 		}
-		// Could not find any free nodes
+		// Could not find any more free nodes
 		if nodeSt == nil {
 			log.WithFields(
 				log.Fields{
