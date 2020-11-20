@@ -126,7 +126,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 		usedWorkers := 0
 		jobsByRequestor := map[string][]*jobState{}
 		requestorToClass := map[string]string{}
-		loadPcts := map[string]int32{}
+		loadPercents := map[string]int32{}
 		expectedNumTasks := 0
 		expectedNumStopTasks := 0
 		for className, state := range testDef.classes {
@@ -136,7 +136,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 				jobsByRequestor[js[0].Job.Def.Requestor] = js
 				requestorToClass[js[0].Job.Def.Requestor] = className
 			}
-			loadPcts[className] = int32(state.loadPct)
+			loadPercents[className] = int32(state.loadPct)
 			expectedNumTasks += state.expectedTasksToStart
 			expectedNumStopTasks += state.expectedTasksToStop
 		}
@@ -155,7 +155,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 		}
 		cluster.nodes = cluster.nodeGroups["idle"].idle
 
-		lbs.setClassLoadPcts(loadPcts)
+		lbs.setClassLoadPercents(loadPercents)
 		lbs.setRequestorToClassMap(requestorToClass)
 
 		tasksToBeAssigned, stopTasks := lbs.GetTasksToBeAssigned(nil, lbs.config.stat, cluster, jobsByRequestor)
@@ -229,7 +229,7 @@ func TestEmptyRequestor(t *testing.T) {
 
 	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByClassAndStartMap)
-	lbs.setClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
+	lbs.setClassLoadPercents(DefaultLoadBasedSchedulerClassPercents)
 	lbs.setRequestorToClassMap(DefaultRequestorToClassMap)
 
 	tasksToBeAssigned, stopTasks := lbs.GetTasksToBeAssigned(nil, statsReceiver, cluster, jobsByRequestor)
@@ -242,16 +242,16 @@ func TestEmptyRequestor(t *testing.T) {
 // the idle workers are allocated
 func TestRandomScenario(t *testing.T) {
 	// set up the test scenario: set up 2 classes to get 75% of workers, then create random % for the remaining 25%
-	loadPcts := generatePcts()
+	loadPercents := generatePercents()
 
 	aTest := testDef{totalWorkers: 10000, classes: map[string]classState{}}
 	totalWorkers := aTest.totalWorkers
-	// define a random set of class states for the loadPcts defined above
+	// define a random set of class states for the loadPercents defined above
 	// these classes will use up a random number of workers (not to exceed 5000) and the number of waiting
 	// tasks for each class will be a random number, not to exceed 2 times the total number of workers
 	workersToUse := totalWorkers - rand.Intn(5001)
 	totalWaitingTasks := 0
-	for className := range loadPcts {
+	for className := range loadPercents {
 		numRunningTasks := 0
 		if workersToUse > 0 {
 			numRunningTasks = rand.Intn(workersToUse + 1)
@@ -296,7 +296,7 @@ func TestRandomScenario(t *testing.T) {
 	// run the test
 	config := &LoadBasedAlgConfig{stat: statsReceiver, rebalanceMinDuration: 0 * time.Minute, rebalanceThreshold: 0}
 	lbs := NewLoadBasedAlg(config, tasksByJobClassAndStartMap)
-	lbs.setClassLoadPcts(loadPcts)
+	lbs.setClassLoadPercents(loadPercents)
 	lbs.setRequestorToClassMap(requestorToClass)
 	tasks, stopTasks := lbs.GetTasksToBeAssigned(nil, statsReceiver, cluster, jobsByRequestor)
 
@@ -361,10 +361,10 @@ func Test_Rebalance(t *testing.T) {
 	runTests(t, testsDefs, lbs, 2*time.Minute)
 }
 
-func generatePcts() map[string]int32 {
+func generatePercents() map[string]int32 {
 	// set up the test scenario: set up 2 classes to get 75% of workers, then create random % for the remaining 25%
 	rand.Seed(time.Now().UnixNano())
-	loadPcts := map[string]int32{
+	loadPercents := map[string]int32{
 		"c0": 50,
 		"c1": 25,
 	}
@@ -378,12 +378,12 @@ func generatePcts() map[string]int32 {
 		} else {
 			pct = int32(rand.Intn(10)) // pct will be 0-9
 		}
-		loadPcts[fmt.Sprintf("c%d", i)] = pct
+		loadPercents[fmt.Sprintf("c%d", i)] = pct
 		i++
 		remainingPct -= pct
 	}
 
-	return loadPcts
+	return loadPercents
 }
 
 // makeJobStateFromClassStates make a list of jobStates for the class.  The classState will contain the number of

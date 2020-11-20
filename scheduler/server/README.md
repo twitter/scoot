@@ -17,26 +17,28 @@ _Given_
 - classes with load %s that defined the number of scoot workers we are targeting for running the class's tasks
 - jobs with
     - list of tasks waiting to start
-    - a requestor that maps it to a class
+    - a requestor that maps jobs to classes
 -  we have the number of idle workers waiting to run a task
 
 _GetTasksToBeAssigned()_ is the top level entry to the algorithm. It
-- computes the number of tasks that can be started for each class and if the system needs re-balancing, and the 
-- list of tasks that should be stopped, then
-- computes the list of tasks to start.
+- determines if the system needs rebalancing (as per the rebalancing thresholds - see rebalancing below)
+- if the system needs rebalancing it computes the tasks that should be stopped and the tasks that should be started
+- otherwise, it just computes the tasks that should be started
+- it returns the list of tasks that should be started and list of tasks that should be stopped
 
 ## get number of tasks to start, and list of tasks to stop:
+(when not rebalancing)
 ### **entitled workers**
 (entitlementTasksToStart())
 
-The class %'s define the target number of workers that should be allocated to that class when scoot is fully
-loaded with many tasks for each class.  We call this the number of workers the class is _entitled_ to use.
+The class %'s define the target number of workers that should be allocated to that class's tasks when scoot is fully
+loaded.  We call this the number of workers the class is _entitled_ to use.
 When the algorithm is assigning tasks to workers it will try to start tasks to meet each class's **_entitlement_**.
 
 The algorithm finds the classes that have waiting tasks and are under their _entitlement_ and normalizes the 
 original class load percents for the classes in this set.  It then computes the entitled workers for each class
-using the number of available workers, the normalized percents and number of tasks waiting in the class.  If any
-of the classes does not have enough tasks to meet its entitlement, there will still be available workers after 
+using the number of available workers, the normalized percents and number of tasks waiting in the class.  If a
+class does not have enough tasks to meet its entitlement, there will still be available workers after 
 processing all the classes.  When this happens the algorithm repeats the entitlement computation (re-normalize 
 %s, allocate workers). Each iteration will either allocate all available workers or allocate all of at least 
 one class's waiting tasks. When all available workers are allocated or all class's waiting tasks or entitlements 
@@ -47,11 +49,11 @@ have been allocated the entitlement computation is complete.
 
 It may be the case that some classes are under-utilizing their entitlements, but other classes have more tasks than
 their entitlement.  When this happens, the algorithm allows the 'over entitlement' classes to run tasks on more than
-their entitled number of workers, in effect _loaning_ workers from classes under-utilizing their entitlement to the classes  
-with more tasks than their entitlement.
+their entitled number of workers, the classes under-utilizing their entitlement are,in effect, _loaning_ workers from
+to the classes with more tasks than their entitlement.
 
-The algorithm normalizes the load %s to the classes with waiting tasks and allocates the unused workers as per these
-normalized percents.  If the _loan_ amount for a class is larger than the number of waiting tasks in that class,
+The loan part of the algorithm normalizes the load %s to the classes with waiting tasks and allocates the unused workers 
+as per these normalized percents.  If the _loan_ amount for a class is larger than the number of waiting tasks in that class,
 there will still be unallocated workers after processing each class.  When this happens the algorithm repeats the loan
 computation re-normalizing the %s to the classes with waiting tasks and allocating the still unallocated workers.  The
 iteration finishes when all unallocated workers have been assigned to a class or when all the classes waiting tasks
@@ -83,8 +85,8 @@ tasks have been collected.
 
 ## exposed scheduling parameters
 Scheduler api for the algorithm:
-- GetClassLoadPcts - returns the map of className:%
-- SetClassLoadPcts - sets the load %s from a map of className:%
+- GetClassLoadPercents - returns the map of className:%
+- SetClassLoadPercents - sets the load %s from a map of className:%
 - GetRequestorMap - returns the map of className:requestor_re, where requestor_re is the regular
 expression for matching requestor values in the job defs
 - SetRequestorMap - sets the map of className:requestor_re, where requestor_re is the regular

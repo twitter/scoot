@@ -270,7 +270,7 @@ func NewStatefulScheduler(
 	// create the load base scheduling algorithm
 	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
 	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
-	sa.setClassLoadPcts(DefaultLoadBasedSchedulerClassPcts)
+	sa.setClassLoadPercents(DefaultLoadBasedSchedulerClassPercents)
 	sa.setRequestorToClassMap(DefaultRequestorToClassMap)
 	config.SchedAlg = sa
 	config.SchedAlgConfig = sa.config
@@ -1196,22 +1196,22 @@ func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
 	s.config.SchedAlg = sa
 }
 
-// GetClassLoadPcts return a copy of the ClassLoadPcts
-func (s *statefulScheduler) GetClassLoadPcts() (map[string]int32, error) {
+// GetClassLoadPercents return a copy of the ClassLoadPercents
+func (s *statefulScheduler) GetClassLoadPercents() (map[string]int32, error) {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return nil, fmt.Errorf("not using load based scheduler, no load percents")
 	}
-	return sched.getClassLoadPcts(), nil
+	return sched.getClassLoadPercents(), nil
 }
 
-// SetClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
-func (s *statefulScheduler) SetClassLoadPcts(classLoadPcts map[string]int32) error {
+// SetClassLoadPercents set the scheduler's class load pcts with a copy of the input class load pcts
+func (s *statefulScheduler) SetClassLoadPercents(classLoadPercents map[string]int32) error {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, class load pcts ignored")
 	}
-	sched.setClassLoadPcts(classLoadPcts)
+	sched.setClassLoadPercents(classLoadPercents)
 	return nil
 }
 
@@ -1235,21 +1235,21 @@ func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[strin
 }
 
 // GetRebalanceMinDuration
-func (s *statefulScheduler) GetRebalanceMinDuration() (int32, error) {
+func (s *statefulScheduler) GetRebalanceMinDuration() (time.Duration, error) {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return 0, fmt.Errorf("not using load based scheduler, no rebalance min duration")
 	}
-	return int32(sched.getRebalanceMinDuration()), nil
+	return sched.getRebalanceMinDuration(), nil
 }
 
 // GetRebalanceMinDuration
-func (s *statefulScheduler) SetRebalanceMinDuration(durationMin int32) error {
+func (s *statefulScheduler) SetRebalanceMinDuration(durationMin time.Duration) error {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance min duration ignored")
 	}
-	sched.setRebalanceMinDuration(int(durationMin))
+	sched.setRebalanceMinDuration(durationMin)
 	return nil
 }
 

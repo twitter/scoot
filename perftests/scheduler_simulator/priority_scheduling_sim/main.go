@@ -41,7 +41,7 @@ func main() {
 	log.Warn("****************************************")
 	log.Warn("******** Starting Simulation ***********")
 	log.Warn("****************************************")
-	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, 5, server.DefaultLoadBasedSchedulerClassPcts, server.DefaultRequestorToClassMap)
+	schedAlg := scheduler_simulator.MakeSchedulingAlgTester(testsStart, testsEnd, jobDefs, 5, server.DefaultLoadBasedSchedulerClassPercents, server.DefaultRequestorToClassMap)
 	e := schedAlg.RunTest()
 	if e != nil {
 		log.Fatalf("%s\n", e.Error())

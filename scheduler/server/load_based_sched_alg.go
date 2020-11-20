@@ -19,14 +19,14 @@ const (
 )
 
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
-var DefaultLoadBasedSchedulerClassPcts = map[string]int32{"c0": 100}
+var DefaultLoadBasedSchedulerClassPercents = map[string]int32{"c0": 100}
 var DefaultRequestorToClassMap = map[string]string{".*": "c0"}
 var DefaultMinRebalanceTime = time.Duration(4 * time.Minute)
 var MaxTaskDuration = time.Duration(4 * time.Hour)
 
 type LoadBasedAlgConfig struct {
-	classLoadPcts           map[string]int
-	classLoadPctsMu         sync.RWMutex
+	classLoadPercents           map[string]int
+	classLoadPercentsMu         sync.RWMutex
 	requestorReToClassMap   map[string]string
 	requestorReToClassMapMU sync.RWMutex
 
@@ -71,7 +71,7 @@ type LoadBasedAlg struct {
 
 	// local copy of load pcts and requestor map to use during assignment computation
 	// to insulate the computation from external changes to the configuration
-	classLoadPcts         map[string]int
+	classLoadPercents         map[string]int
 	requestorReToClassMap map[string]string
 
 	classByDescLoadPct             []string
@@ -156,7 +156,7 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	log.Debugf("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
 
 	// make local copies of the load pct structures
-	lbs.classLoadPcts = lbs.LocalCopyClassLoadPcts()
+	lbs.classLoadPercents = lbs.LocalCopyClassLoadPercents()
 	lbs.requestorReToClassMap = lbs.getRequestorToClassMap()
 	lbs.classByDescLoadPct = lbs.getClassByDescLoadPct()
 
@@ -169,7 +169,7 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	var stopTasks []*taskState
 	if lbs.getRebalanceMinDuration() > 0 && lbs.getRebalanceThreshold() > 0 {
 		// currentPctSpread is the delta between the highest and lowest
-		currentPctSpread := lbs.getCurrentPctsSpread(numWorkers)
+		currentPctSpread := lbs.getCurrentPercentsSpread(numWorkers)
 		if currentPctSpread > lbs.getRebalanceThreshold() {
 			nilTime := time.Time{}
 			if lbs.exceededRebalanceThresholdStart == nilTime {
@@ -211,7 +211,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	totalWorkers := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
-		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPcts[className], jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
+		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
 		lbs.jobClasses[className] = jc
 		if firstClass {
 			firstClass = false
@@ -344,7 +344,7 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 		}
 
 		// compute normalized entitlement pcts for classes with entitlement > 0
-		lbs.computeEntitlementPcts()
+		lbs.computeEntitlementPercents()
 
 		// compute worker allocations as per the normalized entitlement %s
 		numTasksAllocated := 0
@@ -378,7 +378,7 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 	i := 0
 	for ; i < len(lbs.jobClasses); i++ {
-		lbs.computeLoanPcts()
+		lbs.computeLoanPercents()
 
 		// compute loan %'s and allocate idle workers
 		numTasksAllocated, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
@@ -419,9 +419,9 @@ func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
 	return totalTasksAllocated, haveWaitingTasks
 }
 
-// computeEntitlementPcts computes each class's current entitled % of total entitlements (from the current)
+// computeEntitlementPercents computes each class's current entitled % of total entitlements (from the current)
 // entitlement values
-func (lbs *LoadBasedAlg) computeEntitlementPcts() {
+func (lbs *LoadBasedAlg) computeEntitlementPercents() {
 	// get the entitlements total
 	entitlementTotal := 0
 	for _, jc := range lbs.jobClasses {
@@ -431,7 +431,7 @@ func (lbs *LoadBasedAlg) computeEntitlementPcts() {
 	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
 	// 100 - sum of % to the class with largest % (this eliminates rounding errors, forcing the
 	// % to add up to 100%)
-	totalPcts := 0
+	totalPercents := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
 		if firstClass {
@@ -440,13 +440,13 @@ func (lbs *LoadBasedAlg) computeEntitlementPcts() {
 		}
 		jc := lbs.jobClasses[className]
 		jc.tempNormalizedPct = int(math.Floor(float64(jc.tempEntitlement) * 100.0 / float64(entitlementTotal)))
-		totalPcts += jc.tempNormalizedPct
+		totalPercents += jc.tempNormalizedPct
 	}
-	lbs.jobClasses[lbs.classByDescLoadPct[0]].tempNormalizedPct = 100 - totalPcts
+	lbs.jobClasses[lbs.classByDescLoadPct[0]].tempNormalizedPct = 100 - totalPercents
 }
 
-// computeLoanPcts as orig load %'s normalized to exclude classes that don't have waiting tasks
-func (lbs *LoadBasedAlg) computeLoanPcts() {
+// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks
+func (lbs *LoadBasedAlg) computeLoanPercents() {
 	// get the sum of all the original load pcts for classes that have waiting tasks
 	pctsTotal := 0
 	for _, jc := range lbs.jobClasses {
@@ -462,7 +462,7 @@ func (lbs *LoadBasedAlg) computeLoanPcts() {
 	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
 	// 100 - sum of % to the class with the largest % from the range (this eliminates rounding errors, forcing the
 	// sum or % to go to 100%)
-	totalPcts := 0
+	totalPercents := 0
 	firstClass := true
 	firstClassName := ""
 	for _, className := range lbs.classByDescLoadPct {
@@ -474,12 +474,12 @@ func (lbs *LoadBasedAlg) computeLoanPcts() {
 				continue
 			}
 			jc.tempNormalizedPct = int(math.Floor(float64(jc.origTargetLoadPct) * 100.0 / float64(pctsTotal)))
-			totalPcts += jc.tempNormalizedPct
+			totalPercents += jc.tempNormalizedPct
 		} else {
 			jc.tempNormalizedPct = 0
 		}
 	}
-	lbs.jobClasses[firstClassName].tempNormalizedPct = 100 - totalPcts
+	lbs.jobClasses[firstClassName].tempNormalizedPct = 100 - totalPercents
 }
 
 // buildTaskStartList builds the list of tasks to be started for each jobClass.
@@ -619,7 +619,7 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 
 	if totalTasks < totalWorkers {
 		// some classes are not using their full allocation, we can loan workers
-		lbs.computeLoanPcts()
+		lbs.computeLoanPercents()
 
 		lbs.getTaskAllocations(totalWorkers - totalTasks)
 	}
@@ -629,13 +629,13 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 	return stopTasks
 }
 
-// getCurrentPctsSpread is used to measure how well the current worker assignment matches the target loads.
+// getCurrentPercentsSpread is used to measure how well the current worker assignment matches the target loads.
 // It computes each class's difference between the target load pct and actual load pct.  The 'spread' value
 // is the difference between the min and max differences across the classes.  Eg: if 30% was the load target
 // for class A and class A is using 50% of the workers, A's pct difference is -20%.  If class B has a target
 // of 15% and is only using 5% of workers, B's pct difference is 10%.  If A and B are the only classes, the
 // pctSpread is 25% (5% - -20%).
-func (lbs *LoadBasedAlg) getCurrentPctsSpread(totalWorkers int) int {
+func (lbs *LoadBasedAlg) getCurrentPercentsSpread(totalWorkers int) int {
 	if len(lbs.jobClasses) < 2 {
 		return 0
 	}
@@ -656,8 +656,8 @@ func (lbs *LoadBasedAlg) getCurrentPctsSpread(totalWorkers int) int {
 
 // getClassByDescLoadPct get a copy of the config's class by descending load pcts
 func (lbs *LoadBasedAlg) getClassByDescLoadPct() []string {
-	lbs.config.classLoadPctsMu.RLock()
-	defer lbs.config.classLoadPctsMu.RUnlock()
+	lbs.config.classLoadPercentsMu.RLock()
+	defer lbs.config.classLoadPercentsMu.RUnlock()
 	copy := []string{}
 	for _, v := range lbs.config.classByDescLoadPct {
 		copy = append(copy, v)
@@ -665,47 +665,47 @@ func (lbs *LoadBasedAlg) getClassByDescLoadPct() []string {
 	return copy
 }
 
-// getClassLoadPcts return a copy of the ClassLoadPcts converting to int32
-func (lbs *LoadBasedAlg) getClassLoadPcts() map[string]int32 {
-	lbs.config.classLoadPctsMu.RLock()
-	defer lbs.config.classLoadPctsMu.RUnlock()
+// getClassLoadPercents return a copy of the ClassLoadPercents converting to int32
+func (lbs *LoadBasedAlg) getClassLoadPercents() map[string]int32 {
+	lbs.config.classLoadPercentsMu.RLock()
+	defer lbs.config.classLoadPercentsMu.RUnlock()
 	copy := map[string]int32{}
-	for k, v := range lbs.config.classLoadPcts {
+	for k, v := range lbs.config.classLoadPercents {
 		copy[k] = int32(v)
 	}
 	return copy
 }
 
-// LocalCopyClassLoadPcts return a copy of the ClassLoadPcts leaving as int
-func (lbs *LoadBasedAlg) LocalCopyClassLoadPcts() map[string]int {
-	lbs.config.classLoadPctsMu.RLock()
-	defer lbs.config.classLoadPctsMu.RUnlock()
+// LocalCopyClassLoadPercents return a copy of the ClassLoadPercents leaving as int
+func (lbs *LoadBasedAlg) LocalCopyClassLoadPercents() map[string]int {
+	lbs.config.classLoadPercentsMu.RLock()
+	defer lbs.config.classLoadPercentsMu.RUnlock()
 	copy := map[string]int{}
-	for k, v := range lbs.config.classLoadPcts {
+	for k, v := range lbs.config.classLoadPercents {
 		copy[k] = v
 	}
 	return copy
 }
 
-// setClassLoadPcts set the scheduler's class load pcts with a copy of the input class load pcts
-func (lbs *LoadBasedAlg) setClassLoadPcts(classLoadPcts map[string]int32) {
-	lbs.config.classLoadPctsMu.Lock()
-	defer lbs.config.classLoadPctsMu.Unlock()
+// setClassLoadPercents set the scheduler's class load pcts with a copy of the input class load pcts
+func (lbs *LoadBasedAlg) setClassLoadPercents(classLoadPercents map[string]int32) {
+	lbs.config.classLoadPercentsMu.Lock()
+	defer lbs.config.classLoadPercentsMu.Unlock()
 
 	// build a list that orders the classes by descending pct.
 	keys := []string{}
-	for key := range classLoadPcts {
+	for key := range classLoadPercents {
 		keys = append(keys, key)
 	}
 	sort.Slice(keys, func(i, j int) bool {
-		return classLoadPcts[keys[i]] > classLoadPcts[keys[j]]
+		return classLoadPercents[keys[i]] > classLoadPercents[keys[j]]
 	})
 	lbs.config.classByDescLoadPct = keys
 
 	// set the load pcts - normalizing them if the don't add up to 100
-	lbs.config.classLoadPcts = map[string]int{}
+	lbs.config.classLoadPercents = map[string]int{}
 	pctTotal := 0
-	for _, val := range classLoadPcts {
+	for _, val := range classLoadPercents {
 		pctTotal += int(val)
 	}
 	if pctTotal != 100 {
@@ -717,15 +717,15 @@ func (lbs *LoadBasedAlg) setClassLoadPcts(classLoadPcts map[string]int32) {
 				firstClass = false
 				continue // skip the first class (highest %), it will be given the difference between 100 and the sum of the other %'s
 			}
-			classPct := classLoadPcts[className]
-			lbs.config.classLoadPcts[className] = int(math.Floor(float64(classPct) / float64(pctTotal)))
-			totalNormalizedPct += lbs.config.classLoadPcts[className]
+			classPct := classLoadPercents[className]
+			lbs.config.classLoadPercents[className] = int(math.Floor(float64(classPct) / float64(pctTotal)))
+			totalNormalizedPct += lbs.config.classLoadPercents[className]
 		}
-		lbs.config.classLoadPcts[lbs.config.classByDescLoadPct[0]] = 100 - totalNormalizedPct
-		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPcts)
+		lbs.config.classLoadPercents[lbs.config.classByDescLoadPct[0]] = 100 - totalNormalizedPct
+		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPercents)
 	} else {
-		for k, v := range classLoadPcts {
-			lbs.config.classLoadPcts[k] = int(v)
+		for k, v := range classLoadPercents {
+			lbs.config.classLoadPercents[k] = int(v)
 		}
 	}
 }
@@ -752,17 +752,17 @@ func (lbs *LoadBasedAlg) setRequestorToClassMap(requestorToClassMap map[string]s
 }
 
 // getRebalanceMinDuration get the rebalance duration
-func (lbs *LoadBasedAlg) getRebalanceMinDuration() int {
+func (lbs *LoadBasedAlg) getRebalanceMinDuration() time.Duration {
 	lbs.config.rebalanceMinDurationMu.RLock()
 	defer lbs.config.rebalanceMinDurationMu.RUnlock()
-	return int(lbs.config.rebalanceMinDuration.Minutes())
+	return lbs.config.rebalanceMinDuration
 }
 
 // setRebalanceMinDuration set the rebalance duration
-func (lbs *LoadBasedAlg) setRebalanceMinDuration(rebalanceMinDuration int) {
+func (lbs *LoadBasedAlg) setRebalanceMinDuration(rebalanceMinDuration time.Duration) {
 	lbs.config.rebalanceMinDurationMu.Lock()
 	defer lbs.config.rebalanceMinDurationMu.Unlock()
-	lbs.config.rebalanceMinDuration = time.Duration(rebalanceMinDuration) * time.Minute
+	lbs.config.rebalanceMinDuration = rebalanceMinDuration
 }
 
 // getRebalanceThreshold get the rebalance threshold

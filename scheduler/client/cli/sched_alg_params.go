@@ -10,8 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// lbsSchedAlgParams load based scheduling params.  The setter API is associated with
+// this structure.
 type lbsSchedAlgParams struct {
-	ClassLoadPcts        map[string]int32
+	ClassLoadPercents    map[string]int32
 	RequestorMap         map[string]string
 	RebalanceMinDuration int
 	RebalanceThreshold   int
@@ -19,6 +21,8 @@ type lbsSchedAlgParams struct {
 	clpFilePath    string
 	reqMapFilePath string
 }
+
+// getLBSSchedAlgParams structure for getting the load based scheduling params.
 type getLBSSchedAlgParams struct {
 	printAsJSON bool
 	params      lbsSchedAlgParams
@@ -37,7 +41,7 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	log.Info("Getting Scheduling Algorithm Parameters", args)
 
 	var err error
-	g.params.ClassLoadPcts, err = cl.scootClient.GetClassLoadPcts()
+	g.params.ClassLoadPercents, err = cl.scootClient.GetClassLoadPercents()
 	if err != nil {
 		return getReturnError(err)
 	}
@@ -71,7 +75,7 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	} else {
 		log.Info("Class Load Percents:")
 		fmt.Println("Class Load Percents:")
-		for class, pct := range g.params.ClassLoadPcts {
+		for class, pct := range g.params.ClassLoadPercents {
 			log.Infof("%s:%d", class, pct)
 			fmt.Println(class, ":", pct)
 		}
@@ -127,12 +131,12 @@ func (s *lbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []
 			log.Errorf("%s", err)
 			return err
 		}
-		err = json.Unmarshal(content, &s.ClassLoadPcts)
+		err = json.Unmarshal(content, &s.ClassLoadPercents)
 		if err != nil {
 			log.Errorf("%s", err)
 			return err
 		}
-		err = cl.scootClient.SetClassLoadPcts(s.ClassLoadPcts)
+		err = cl.scootClient.SetClassLoadPercents(s.ClassLoadPercents)
 		if err != nil {
 			log.Errorf("%s", err)
 			return err

@@ -37,10 +37,10 @@ type CloudScoot interface {
 	// Parameters:
 	//  - MaxTasks
 	SetSchedulerStatus(maxTasks int32) (err error)
-	GetClassLoadPcts() (r map[string]int32, err error)
+	GetClassLoadPercents() (r map[string]int32, err error)
 	// Parameters:
-	//  - LoadPcts
-	SetClassLoadPcts(loadPcts map[string]int32) (err error)
+	//  - LoadPercents
+	SetClassLoadPercents(loadPercents map[string]int32) (err error)
 	GetRequestorToClassMap() (r map[string]string, err error)
 	// Parameters:
 	//  - RequestorToClassMap
@@ -659,24 +659,24 @@ func (p *CloudScootClient) recvSetSchedulerStatus() (err error) {
 	return
 }
 
-func (p *CloudScootClient) GetClassLoadPcts() (r map[string]int32, err error) {
-	if err = p.sendGetClassLoadPcts(); err != nil {
+func (p *CloudScootClient) GetClassLoadPercents() (r map[string]int32, err error) {
+	if err = p.sendGetClassLoadPercents(); err != nil {
 		return
 	}
-	return p.recvGetClassLoadPcts()
+	return p.recvGetClassLoadPercents()
 }
 
-func (p *CloudScootClient) sendGetClassLoadPcts() (err error) {
+func (p *CloudScootClient) sendGetClassLoadPercents() (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("GetClassLoadPcts", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("GetClassLoadPercents", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := CloudScootGetClassLoadPctsArgs{}
+	args := CloudScootGetClassLoadPercentsArgs{}
 	if err = args.Write(oprot); err != nil {
 		return
 	}
@@ -686,7 +686,7 @@ func (p *CloudScootClient) sendGetClassLoadPcts() (err error) {
 	return oprot.Flush()
 }
 
-func (p *CloudScootClient) recvGetClassLoadPcts() (value map[string]int32, err error) {
+func (p *CloudScootClient) recvGetClassLoadPercents() (value map[string]int32, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -696,12 +696,12 @@ func (p *CloudScootClient) recvGetClassLoadPcts() (value map[string]int32, err e
 	if err != nil {
 		return
 	}
-	if method != "GetClassLoadPcts" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetClassLoadPcts failed: wrong method name")
+	if method != "GetClassLoadPercents" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetClassLoadPercents failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetClassLoadPcts failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetClassLoadPercents failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
@@ -718,10 +718,10 @@ func (p *CloudScootClient) recvGetClassLoadPcts() (value map[string]int32, err e
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetClassLoadPcts failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetClassLoadPercents failed: invalid message type")
 		return
 	}
-	result := CloudScootGetClassLoadPctsResult{}
+	result := CloudScootGetClassLoadPercentsResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -737,26 +737,26 @@ func (p *CloudScootClient) recvGetClassLoadPcts() (value map[string]int32, err e
 }
 
 // Parameters:
-//  - LoadPcts
-func (p *CloudScootClient) SetClassLoadPcts(loadPcts map[string]int32) (err error) {
-	if err = p.sendSetClassLoadPcts(loadPcts); err != nil {
+//  - LoadPercents
+func (p *CloudScootClient) SetClassLoadPercents(loadPercents map[string]int32) (err error) {
+	if err = p.sendSetClassLoadPercents(loadPercents); err != nil {
 		return
 	}
-	return p.recvSetClassLoadPcts()
+	return p.recvSetClassLoadPercents()
 }
 
-func (p *CloudScootClient) sendSetClassLoadPcts(loadPcts map[string]int32) (err error) {
+func (p *CloudScootClient) sendSetClassLoadPercents(loadPercents map[string]int32) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("SetClassLoadPcts", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("SetClassLoadPercents", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := CloudScootSetClassLoadPctsArgs{
-		LoadPcts: loadPcts,
+	args := CloudScootSetClassLoadPercentsArgs{
+		LoadPercents: loadPercents,
 	}
 	if err = args.Write(oprot); err != nil {
 		return
@@ -767,7 +767,7 @@ func (p *CloudScootClient) sendSetClassLoadPcts(loadPcts map[string]int32) (err 
 	return oprot.Flush()
 }
 
-func (p *CloudScootClient) recvSetClassLoadPcts() (err error) {
+func (p *CloudScootClient) recvSetClassLoadPercents() (err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -777,12 +777,12 @@ func (p *CloudScootClient) recvSetClassLoadPcts() (err error) {
 	if err != nil {
 		return
 	}
-	if method != "SetClassLoadPcts" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetClassLoadPcts failed: wrong method name")
+	if method != "SetClassLoadPercents" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetClassLoadPercents failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetClassLoadPcts failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetClassLoadPercents failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
@@ -799,10 +799,10 @@ func (p *CloudScootClient) recvSetClassLoadPcts() (err error) {
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetClassLoadPcts failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetClassLoadPercents failed: invalid message type")
 		return
 	}
-	result := CloudScootSetClassLoadPctsResult{}
+	result := CloudScootSetClassLoadPercentsResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -1327,8 +1327,8 @@ func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 	self38.processorMap["ReinstateWorker"] = &cloudScootProcessorReinstateWorker{handler: handler}
 	self38.processorMap["GetSchedulerStatus"] = &cloudScootProcessorGetSchedulerStatus{handler: handler}
 	self38.processorMap["SetSchedulerStatus"] = &cloudScootProcessorSetSchedulerStatus{handler: handler}
-	self38.processorMap["GetClassLoadPcts"] = &cloudScootProcessorGetClassLoadPcts{handler: handler}
-	self38.processorMap["SetClassLoadPcts"] = &cloudScootProcessorSetClassLoadPcts{handler: handler}
+	self38.processorMap["GetClassLoadPercents"] = &cloudScootProcessorGetClassLoadPercents{handler: handler}
+	self38.processorMap["SetClassLoadPercents"] = &cloudScootProcessorSetClassLoadPercents{handler: handler}
 	self38.processorMap["GetRequestorToClassMap"] = &cloudScootProcessorGetRequestorToClassMap{handler: handler}
 	self38.processorMap["SetRequestorToClassMap"] = &cloudScootProcessorSetRequestorToClassMap{handler: handler}
 	self38.processorMap["GetRebalanceMinDuration"] = &cloudScootProcessorGetRebalanceMinDuration{handler: handler}
@@ -1731,16 +1731,16 @@ func (p *cloudScootProcessorSetSchedulerStatus) Process(seqId int32, iprot, opro
 	return true, err
 }
 
-type cloudScootProcessorGetClassLoadPcts struct {
+type cloudScootProcessorGetClassLoadPercents struct {
 	handler CloudScoot
 }
 
-func (p *cloudScootProcessorGetClassLoadPcts) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := CloudScootGetClassLoadPctsArgs{}
+func (p *cloudScootProcessorGetClassLoadPercents) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetClassLoadPercentsArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetClassLoadPcts", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetClassLoadPercents", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -1748,16 +1748,16 @@ func (p *cloudScootProcessorGetClassLoadPcts) Process(seqId int32, iprot, oprot 
 	}
 
 	iprot.ReadMessageEnd()
-	result := CloudScootGetClassLoadPctsResult{}
+	result := CloudScootGetClassLoadPercentsResult{}
 	var retval map[string]int32
 	var err2 error
-	if retval, err2 = p.handler.GetClassLoadPcts(); err2 != nil {
+	if retval, err2 = p.handler.GetClassLoadPercents(); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
 		default:
-			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetClassLoadPcts: "+err2.Error())
-			oprot.WriteMessageBegin("GetClassLoadPcts", thrift.EXCEPTION, seqId)
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetClassLoadPercents: "+err2.Error())
+			oprot.WriteMessageBegin("GetClassLoadPercents", thrift.EXCEPTION, seqId)
 			x.Write(oprot)
 			oprot.WriteMessageEnd()
 			oprot.Flush()
@@ -1766,7 +1766,7 @@ func (p *cloudScootProcessorGetClassLoadPcts) Process(seqId int32, iprot, oprot 
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetClassLoadPcts", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetClassLoadPercents", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -1784,16 +1784,16 @@ func (p *cloudScootProcessorGetClassLoadPcts) Process(seqId int32, iprot, oprot 
 	return true, err
 }
 
-type cloudScootProcessorSetClassLoadPcts struct {
+type cloudScootProcessorSetClassLoadPercents struct {
 	handler CloudScoot
 }
 
-func (p *cloudScootProcessorSetClassLoadPcts) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := CloudScootSetClassLoadPctsArgs{}
+func (p *cloudScootProcessorSetClassLoadPercents) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetClassLoadPercentsArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("SetClassLoadPcts", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("SetClassLoadPercents", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -1801,24 +1801,24 @@ func (p *cloudScootProcessorSetClassLoadPcts) Process(seqId int32, iprot, oprot 
 	}
 
 	iprot.ReadMessageEnd()
-	result := CloudScootSetClassLoadPctsResult{}
+	result := CloudScootSetClassLoadPercentsResult{}
 	var err2 error
-	if err2 = p.handler.SetClassLoadPcts(args.LoadPcts); err2 != nil {
+	if err2 = p.handler.SetClassLoadPercents(args.LoadPercents); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
 		case *ScootServerError:
 			result.Err = v
 		default:
-			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetClassLoadPcts: "+err2.Error())
-			oprot.WriteMessageBegin("SetClassLoadPcts", thrift.EXCEPTION, seqId)
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetClassLoadPercents: "+err2.Error())
+			oprot.WriteMessageBegin("SetClassLoadPercents", thrift.EXCEPTION, seqId)
 			x.Write(oprot)
 			oprot.WriteMessageEnd()
 			oprot.Flush()
 			return true, err2
 		}
 	}
-	if err2 = oprot.WriteMessageBegin("SetClassLoadPcts", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("SetClassLoadPercents", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -3933,14 +3933,14 @@ func (p *CloudScootSetSchedulerStatusResult) String() string {
 	return fmt.Sprintf("CloudScootSetSchedulerStatusResult(%+v)", *p)
 }
 
-type CloudScootGetClassLoadPctsArgs struct {
+type CloudScootGetClassLoadPercentsArgs struct {
 }
 
-func NewCloudScootGetClassLoadPctsArgs() *CloudScootGetClassLoadPctsArgs {
-	return &CloudScootGetClassLoadPctsArgs{}
+func NewCloudScootGetClassLoadPercentsArgs() *CloudScootGetClassLoadPercentsArgs {
+	return &CloudScootGetClassLoadPercentsArgs{}
 }
 
-func (p *CloudScootGetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootGetClassLoadPercentsArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -3966,8 +3966,8 @@ func (p *CloudScootGetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("GetClassLoadPcts_args"); err != nil {
+func (p *CloudScootGetClassLoadPercentsArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetClassLoadPercents_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -3979,48 +3979,48 @@ func (p *CloudScootGetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsArgs) String() string {
+func (p *CloudScootGetClassLoadPercentsArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootGetClassLoadPctsArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootGetClassLoadPercentsArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Success
 //  - Ir
-type CloudScootGetClassLoadPctsResult struct {
+type CloudScootGetClassLoadPercentsResult struct {
 	Success map[string]int32 `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest  `thrift:"ir,1" json:"ir,omitempty"`
 }
 
-func NewCloudScootGetClassLoadPctsResult() *CloudScootGetClassLoadPctsResult {
-	return &CloudScootGetClassLoadPctsResult{}
+func NewCloudScootGetClassLoadPercentsResult() *CloudScootGetClassLoadPercentsResult {
+	return &CloudScootGetClassLoadPercentsResult{}
 }
 
-var CloudScootGetClassLoadPctsResult_Success_DEFAULT map[string]int32
+var CloudScootGetClassLoadPercentsResult_Success_DEFAULT map[string]int32
 
-func (p *CloudScootGetClassLoadPctsResult) GetSuccess() map[string]int32 {
+func (p *CloudScootGetClassLoadPercentsResult) GetSuccess() map[string]int32 {
 	return p.Success
 }
 
-var CloudScootGetClassLoadPctsResult_Ir_DEFAULT *InvalidRequest
+var CloudScootGetClassLoadPercentsResult_Ir_DEFAULT *InvalidRequest
 
-func (p *CloudScootGetClassLoadPctsResult) GetIr() *InvalidRequest {
+func (p *CloudScootGetClassLoadPercentsResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return CloudScootGetClassLoadPctsResult_Ir_DEFAULT
+		return CloudScootGetClassLoadPercentsResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
-func (p *CloudScootGetClassLoadPctsResult) IsSetSuccess() bool {
+func (p *CloudScootGetClassLoadPercentsResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) IsSetIr() bool {
+func (p *CloudScootGetClassLoadPercentsResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootGetClassLoadPercentsResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -4057,7 +4057,7 @@ func (p *CloudScootGetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) readField0(iprot thrift.TProtocol) error {
+func (p *CloudScootGetClassLoadPercentsResult) readField0(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return thrift.PrependError("error reading map begin: ", err)
@@ -4085,7 +4085,7 @@ func (p *CloudScootGetClassLoadPctsResult) readField0(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootGetClassLoadPercentsResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -4093,8 +4093,8 @@ func (p *CloudScootGetClassLoadPctsResult) readField1(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("GetClassLoadPcts_result"); err != nil {
+func (p *CloudScootGetClassLoadPercentsResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetClassLoadPercents_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField0(oprot); err != nil {
@@ -4112,7 +4112,7 @@ func (p *CloudScootGetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootGetClassLoadPctsResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootGetClassLoadPercentsResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err := oprot.WriteFieldBegin("success", thrift.MAP, 0); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
@@ -4138,7 +4138,7 @@ func (p *CloudScootGetClassLoadPctsResult) writeField0(oprot thrift.TProtocol) (
 	return err
 }
 
-func (p *CloudScootGetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootGetClassLoadPercentsResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -4153,27 +4153,27 @@ func (p *CloudScootGetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (
 	return err
 }
 
-func (p *CloudScootGetClassLoadPctsResult) String() string {
+func (p *CloudScootGetClassLoadPercentsResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootGetClassLoadPctsResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootGetClassLoadPercentsResult(%+v)", *p)
 }
 
 // Attributes:
-//  - LoadPcts
-type CloudScootSetClassLoadPctsArgs struct {
-	LoadPcts map[string]int32 `thrift:"loadPcts,1" json:"loadPcts"`
+//  - LoadPercents
+type CloudScootSetClassLoadPercentsArgs struct {
+	LoadPercents map[string]int32 `thrift:"loadPercents,1" json:"loadPercents"`
 }
 
-func NewCloudScootSetClassLoadPctsArgs() *CloudScootSetClassLoadPctsArgs {
-	return &CloudScootSetClassLoadPctsArgs{}
+func NewCloudScootSetClassLoadPercentsArgs() *CloudScootSetClassLoadPercentsArgs {
+	return &CloudScootSetClassLoadPercentsArgs{}
 }
 
-func (p *CloudScootSetClassLoadPctsArgs) GetLoadPcts() map[string]int32 {
-	return p.LoadPcts
+func (p *CloudScootSetClassLoadPercentsArgs) GetLoadPercents() map[string]int32 {
+	return p.LoadPercents
 }
-func (p *CloudScootSetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetClassLoadPercentsArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -4206,13 +4206,13 @@ func (p *CloudScootSetClassLoadPctsArgs) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsArgs) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetClassLoadPercentsArgs) readField1(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return thrift.PrependError("error reading map begin: ", err)
 	}
 	tMap := make(map[string]int32, size)
-	p.LoadPcts = tMap
+	p.LoadPercents = tMap
 	for i := 0; i < size; i++ {
 		var _key42 string
 		if v, err := iprot.ReadString(); err != nil {
@@ -4226,7 +4226,7 @@ func (p *CloudScootSetClassLoadPctsArgs) readField1(iprot thrift.TProtocol) erro
 		} else {
 			_val43 = v
 		}
-		p.LoadPcts[_key42] = _val43
+		p.LoadPercents[_key42] = _val43
 	}
 	if err := iprot.ReadMapEnd(); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -4234,8 +4234,8 @@ func (p *CloudScootSetClassLoadPctsArgs) readField1(iprot thrift.TProtocol) erro
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("SetClassLoadPcts_args"); err != nil {
+func (p *CloudScootSetClassLoadPercentsArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetClassLoadPercents_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -4250,14 +4250,14 @@ func (p *CloudScootSetClassLoadPctsArgs) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("loadPcts", thrift.MAP, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:loadPcts: ", p), err)
+func (p *CloudScootSetClassLoadPercentsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("loadPercents", thrift.MAP, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:loadPercents: ", p), err)
 	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.LoadPcts)); err != nil {
+	if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.LoadPercents)); err != nil {
 		return thrift.PrependError("error writing map begin: ", err)
 	}
-	for k, v := range p.LoadPcts {
+	for k, v := range p.LoadPercents {
 		if err := oprot.WriteString(string(k)); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
 		}
@@ -4269,56 +4269,56 @@ func (p *CloudScootSetClassLoadPctsArgs) writeField1(oprot thrift.TProtocol) (er
 		return thrift.PrependError("error writing map end: ", err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:loadPcts: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:loadPercents: ", p), err)
 	}
 	return err
 }
 
-func (p *CloudScootSetClassLoadPctsArgs) String() string {
+func (p *CloudScootSetClassLoadPercentsArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootSetClassLoadPctsArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetClassLoadPercentsArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Ir
 //  - Err
-type CloudScootSetClassLoadPctsResult struct {
+type CloudScootSetClassLoadPercentsResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
 }
 
-func NewCloudScootSetClassLoadPctsResult() *CloudScootSetClassLoadPctsResult {
-	return &CloudScootSetClassLoadPctsResult{}
+func NewCloudScootSetClassLoadPercentsResult() *CloudScootSetClassLoadPercentsResult {
+	return &CloudScootSetClassLoadPercentsResult{}
 }
 
-var CloudScootSetClassLoadPctsResult_Ir_DEFAULT *InvalidRequest
+var CloudScootSetClassLoadPercentsResult_Ir_DEFAULT *InvalidRequest
 
-func (p *CloudScootSetClassLoadPctsResult) GetIr() *InvalidRequest {
+func (p *CloudScootSetClassLoadPercentsResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return CloudScootSetClassLoadPctsResult_Ir_DEFAULT
+		return CloudScootSetClassLoadPercentsResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
 
-var CloudScootSetClassLoadPctsResult_Err_DEFAULT *ScootServerError
+var CloudScootSetClassLoadPercentsResult_Err_DEFAULT *ScootServerError
 
-func (p *CloudScootSetClassLoadPctsResult) GetErr() *ScootServerError {
+func (p *CloudScootSetClassLoadPercentsResult) GetErr() *ScootServerError {
 	if !p.IsSetErr() {
-		return CloudScootSetClassLoadPctsResult_Err_DEFAULT
+		return CloudScootSetClassLoadPercentsResult_Err_DEFAULT
 	}
 	return p.Err
 }
-func (p *CloudScootSetClassLoadPctsResult) IsSetIr() bool {
+func (p *CloudScootSetClassLoadPercentsResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) IsSetErr() bool {
+func (p *CloudScootSetClassLoadPercentsResult) IsSetErr() bool {
 	return p.Err != nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetClassLoadPercentsResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -4355,7 +4355,7 @@ func (p *CloudScootSetClassLoadPctsResult) Read(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetClassLoadPercentsResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -4363,7 +4363,7 @@ func (p *CloudScootSetClassLoadPctsResult) readField1(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) readField2(iprot thrift.TProtocol) error {
+func (p *CloudScootSetClassLoadPercentsResult) readField2(iprot thrift.TProtocol) error {
 	p.Err = &ScootServerError{}
 	if err := p.Err.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
@@ -4371,8 +4371,8 @@ func (p *CloudScootSetClassLoadPctsResult) readField2(iprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("SetClassLoadPcts_result"); err != nil {
+func (p *CloudScootSetClassLoadPercentsResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetClassLoadPercents_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -4390,7 +4390,7 @@ func (p *CloudScootSetClassLoadPctsResult) Write(oprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *CloudScootSetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetClassLoadPercentsResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -4405,7 +4405,7 @@ func (p *CloudScootSetClassLoadPctsResult) writeField1(oprot thrift.TProtocol) (
 	return err
 }
 
-func (p *CloudScootSetClassLoadPctsResult) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetClassLoadPercentsResult) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetErr() {
 		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
@@ -4420,11 +4420,11 @@ func (p *CloudScootSetClassLoadPctsResult) writeField2(oprot thrift.TProtocol) (
 	return err
 }
 
-func (p *CloudScootSetClassLoadPctsResult) String() string {
+func (p *CloudScootSetClassLoadPercentsResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootSetClassLoadPctsResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetClassLoadPercentsResult(%+v)", *p)
 }
 
 type CloudScootGetRequestorToClassMapArgs struct {

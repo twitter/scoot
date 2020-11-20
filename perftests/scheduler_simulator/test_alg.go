@@ -81,7 +81,7 @@ type SchedulingAlgTester struct {
 	comparisonMap       map[string]*timeSummary
 	comparisonMapMu     sync.RWMutex
 	timeout             time.Duration
-	classLoadPcts       map[string]int32
+	classLoadPercents       map[string]int32
 	requestorToClassMap map[string]string
 }
 
@@ -93,7 +93,7 @@ contains the number of seconds the task should take during the simulation
 
 */
 func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*domain.JobDefinition,
-	clusterSize int, classLoadPcts map[string]int32, requestorToClassMap map[string]string) *SchedulingAlgTester {
+	clusterSize int, classLoadPercents map[string]int32, requestorToClassMap map[string]string) *SchedulingAlgTester {
 
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
 	if _, err := os.Stat(tDir); os.IsNotExist(err) {
@@ -109,7 +109,7 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 	log.Warnf("Test will shadow %s to %s", testsStart.Format(time.RFC3339), testsEnd.Format(time.RFC3339))
 	log.Warnf("Running %d jobs", len(jobDefsMap))
 	log.Warnf("On %d workers", clusterSize)
-	log.Warnf("Using Class Loads %v", classLoadPcts)
+	log.Warnf("Using Class Loads %v", classLoadPercents)
 	log.Warnf("Using Requestor Map %v", requestorToClassMap)
 	log.Warn(".........................")
 	st := &SchedulingAlgTester{
@@ -120,7 +120,7 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 		testsEnd:            testsEnd,
 		jobDefsMap:          jobDefsMap,
 		clusterSize:         clusterSize,
-		classLoadPcts:       classLoadPcts,
+		classLoadPercents:       classLoadPercents,
 		requestorToClassMap: requestorToClassMap,
 	}
 	st.makeComparisonMap()
@@ -140,7 +140,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 		config,
 		st.extDeps.statsReceiver,
 	)
-	s.SetClassLoadPcts(st.classLoadPcts)
+	s.SetClassLoadPercents(st.classLoadPercents)
 	s.SetRequestorToClassMap(st.requestorToClassMap)
 
 	sc := s.GetSagaCoord()
@@ -345,7 +345,7 @@ func (st *SchedulingAlgTester) writeStatsToFile() {
 	var s map[string]interface{}
 	json.Unmarshal(statsJson, &s)
 	line := make([]byte, 0)
-	for className, loadPct := range st.classLoadPcts {
+	for className, loadPct := range st.classLoadPercents {
 		runningStatName := fmt.Sprintf("schedNumRunningTasksGauge_%s", className)
 		waitingStatName := fmt.Sprintf("schedNumWaitingTasksGauge_%s", className)
 		runningCnt, ok1 := s[runningStatName]
@@ -465,7 +465,7 @@ func (st *SchedulingAlgTester) writeFirstLines() {
 	defer f1.Close()
 	line := fmt.Sprintf("runDate: %s, testWindow: %s, %s, class loads: %v, requestor map:%v\n",
 		time.Now().Format("2006-01-02 15:04 MST"), st.testsStart.Format("2006-01-02 15:04 MST"),
-		st.testsEnd.Format("2006-01-02 15:04 MST"), st.classLoadPcts, st.requestorToClassMap)
+		st.testsEnd.Format("2006-01-02 15:04 MST"), st.classLoadPercents, st.requestorToClassMap)
 	f.Write([]byte(line))
 	f1.Write([]byte(line))
 }

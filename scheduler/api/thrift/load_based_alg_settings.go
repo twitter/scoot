@@ -1,17 +1,19 @@
 package thrift
 
 import (
+	"time"
+
 	"github.com/twitter/scoot/scheduler/server"
 )
 
-// GetClassLoadPcts get the target load pcts for the classes
-func GetClassLoadPcts(scheduler server.Scheduler) (map[string]int32, error) {
-	return scheduler.GetClassLoadPcts()
+// GetClassLoadPercents get the target load pcts for the classes
+func GetClassLoadPercents(scheduler server.Scheduler) (map[string]int32, error) {
+	return scheduler.GetClassLoadPercents()
 }
 
-// SetClassLoadPcts set the target worker load % for each job class
-func SetClassLoadPcts(scheduler server.Scheduler, classLoads map[string]int32) error {
-	return scheduler.SetClassLoadPcts(classLoads)
+// SetClassLoadPercents set the target worker load % for each job class
+func SetClassLoadPercents(scheduler server.Scheduler, classLoads map[string]int32) error {
+	return scheduler.SetClassLoadPercents(classLoads)
 }
 
 // GetRequestorToClassMap get map of requestor (reg exp) to class load pct
@@ -26,13 +28,13 @@ func SetRequestorToClassMap(scheduler server.Scheduler, requestorToClassMap map[
 
 // GetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
 // triggering rebalance.  <= 0 implies no rebalancing
-func GetRebalanceMinDuration(scheduler server.Scheduler) (int32, error) {
+func GetRebalanceMinDuration(scheduler server.Scheduler) (time.Duration, error) {
 	return scheduler.GetRebalanceMinDuration()
 }
 
 // SetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
 // triggering rebalance.  <= 0 implies no rebalancing
-func SetRebalanceMinDuration(scheduler server.Scheduler, duration int32) error {
+func SetRebalanceMinDuration(scheduler server.Scheduler, duration time.Duration) error {
 	return scheduler.SetRebalanceMinDuration(duration)
 }
 
@@ -44,6 +46,6 @@ func GetRebalanceThreshold(scheduler server.Scheduler) (int32, error) {
 
 // SetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
 // to trigger rebalance.  <= 0 implies no rebalancing
-func SetRebalanceThreshold(scheduler server.Scheduler, duration int32) error {
-	return scheduler.SetRebalanceThreshold(duration)
+func SetRebalanceThreshold(scheduler server.Scheduler, threshold int32) error {
+	return scheduler.SetRebalanceThreshold(threshold)
 }

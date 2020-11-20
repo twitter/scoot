@@ -4,6 +4,8 @@ package server
 //go:generate mockgen -source=scheduler.go -package=server -destination=scheduler_mock.go
 
 import (
+	"time"
+
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
@@ -24,17 +26,17 @@ type Scheduler interface {
 
 	GetSchedulerStatus() (int, int)
 
-	GetClassLoadPcts() (map[string]int32, error)
+	GetClassLoadPercents() (map[string]int32, error)
 
-	SetClassLoadPcts(classLoads map[string]int32) error
+	SetClassLoadPercents(classLoads map[string]int32) error
 
 	GetRequestorToClassMap() (map[string]string, error)
 
 	SetRequestorToClassMap(requestorToClassMap map[string]string) error
 
-	GetRebalanceMinDuration() (int32, error)
+	GetRebalanceMinDuration() (time.Duration, error)
 
-	SetRebalanceMinDuration(durationMin int32) error
+	SetRebalanceMinDuration(durationMin time.Duration) error
 
 	GetRebalanceThreshold() (int32, error)
 

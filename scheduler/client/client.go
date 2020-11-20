@@ -161,12 +161,12 @@ func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) 
 	return schedulerStatus, err
 }
 
-// GetClassLoadPcts get the target load pcts for the classes
-func (c *CloudScootClient) GetClassLoadPcts() (map[string]int32, error) {
+// GetClassLoadPercents get the target load pcts for the classes
+func (c *CloudScootClient) GetClassLoadPercents() (map[string]int32, error) {
 	if err := c.checkForClient(); err != nil {
 		return nil, err
 	}
-	classLoadPcts, err := c.client.GetClassLoadPcts()
+	classLoadPercents, err := c.client.GetClassLoadPercents()
 	// if an error occurred reset the connection, could be a broken pipe or other
 	// unrecoverable error.  reset connection so a new clean one gets created
 	// on the next request
@@ -175,16 +175,16 @@ func (c *CloudScootClient) GetClassLoadPcts() (map[string]int32, error) {
 		// but we don't care do our best effort and move on
 		c.closeConnection()
 	}
-	return classLoadPcts, err
+	return classLoadPercents, err
 }
 
-// SetClassLoadPcts set the target worker load % for each job class
-func (c *CloudScootClient) SetClassLoadPcts(classLoads map[string]int32) error {
+// SetClassLoadPercents set the target worker load % for each job class
+func (c *CloudScootClient) SetClassLoadPercents(classLoads map[string]int32) error {
 	if err := c.checkForClient(); err != nil {
 		return err
 	}
 
-	return c.client.SetClassLoadPcts(classLoads)
+	return c.client.SetClassLoadPercents(classLoads)
 }
 
 // GetRequestorToClassMap get map of requestor (reg exp) to class load pct

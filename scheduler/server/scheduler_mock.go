@@ -10,6 +10,7 @@ import (
 	saga "github.com/twitter/scoot/saga"
 	domain "github.com/twitter/scoot/scheduler/domain"
 	reflect "reflect"
+	time "time"
 )
 
 // MockScheduler is a mock of Scheduler interface
@@ -121,29 +122,29 @@ func (mr *MockSchedulerMockRecorder) GetSchedulerStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerStatus", reflect.TypeOf((*MockScheduler)(nil).GetSchedulerStatus))
 }
 
-// GetClassLoadPcts mocks base method
-func (m *MockScheduler) GetClassLoadPcts() (map[string]int32, error) {
-	ret := m.ctrl.Call(m, "GetClassLoadPcts")
+// GetClassLoadPercents mocks base method
+func (m *MockScheduler) GetClassLoadPercents() (map[string]int32, error) {
+	ret := m.ctrl.Call(m, "GetClassLoadPercents")
 	ret0, _ := ret[0].(map[string]int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetClassLoadPcts indicates an expected call of GetClassLoadPcts
-func (mr *MockSchedulerMockRecorder) GetClassLoadPcts() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).GetClassLoadPcts))
+// GetClassLoadPercents indicates an expected call of GetClassLoadPercents
+func (mr *MockSchedulerMockRecorder) GetClassLoadPercents() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClassLoadPercents", reflect.TypeOf((*MockScheduler)(nil).GetClassLoadPercents))
 }
 
-// SetClassLoadPcts mocks base method
-func (m *MockScheduler) SetClassLoadPcts(classLoads map[string]int32) error {
-	ret := m.ctrl.Call(m, "SetClassLoadPcts", classLoads)
+// SetClassLoadPercents mocks base method
+func (m *MockScheduler) SetClassLoadPercents(classLoads map[string]int32) error {
+	ret := m.ctrl.Call(m, "SetClassLoadPercents", classLoads)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SetClassLoadPcts indicates an expected call of SetClassLoadPcts
-func (mr *MockSchedulerMockRecorder) SetClassLoadPcts(classLoads interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClassLoadPcts", reflect.TypeOf((*MockScheduler)(nil).SetClassLoadPcts), classLoads)
+// SetClassLoadPercents indicates an expected call of SetClassLoadPercents
+func (mr *MockSchedulerMockRecorder) SetClassLoadPercents(classLoads interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClassLoadPercents", reflect.TypeOf((*MockScheduler)(nil).SetClassLoadPercents), classLoads)
 }
 
 // GetRequestorToClassMap mocks base method
@@ -172,9 +173,9 @@ func (mr *MockSchedulerMockRecorder) SetRequestorToClassMap(requestorToClassMap 
 }
 
 // GetRebalanceMinDuration mocks base method
-func (m *MockScheduler) GetRebalanceMinDuration() (int32, error) {
+func (m *MockScheduler) GetRebalanceMinDuration() (time.Duration, error) {
 	ret := m.ctrl.Call(m, "GetRebalanceMinDuration")
-	ret0, _ := ret[0].(int32)
+	ret0, _ := ret[0].(time.Duration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -185,7 +186,7 @@ func (mr *MockSchedulerMockRecorder) GetRebalanceMinDuration() *gomock.Call {
 }
 
 // SetRebalanceMinDuration mocks base method
-func (m *MockScheduler) SetRebalanceMinDuration(durationMin int32) error {
+func (m *MockScheduler) SetRebalanceMinDuration(durationMin time.Duration) error {
 	ret := m.ctrl.Call(m, "SetRebalanceMinDuration", durationMin)
 	ret0, _ := ret[0].(error)
 	return ret0
