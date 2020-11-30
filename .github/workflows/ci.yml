@@ -25,4 +25,8 @@ jobs:
         restore-keys: ${{ runner.os }}-go-
 
     - name: Run all tests
-      run: make -j 1 ci
+      run: |
+        echo ${GOROOT}
+        echo ${GOPATH}
+        echo ${GOBIN}
+        make -j 1 ci

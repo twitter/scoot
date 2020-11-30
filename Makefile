@@ -5,7 +5,7 @@ GOVERSION := $(shell go version)
 BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/twitter/scoot"
-GOBIN := $(shell echo $${GOBIN%%:*})
+FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
 THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
 PROTOCVERSION := $(shell protoc --version | cut -d ' ' -f 2 | tr -d '\n')
 GO111MODULE := on
@@ -100,18 +100,18 @@ smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	$(GOBIN)/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
 
 recoverytest:
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce ci log size. Smoketest is more important and that still logs.
-	$(FIRSTGOPATH)/recoverytest
+	$(FIRSTGOPATH)/bin/recoverytest
 
 integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
-	$(GOBIN)/scoot-integration
-	$(GOBIN)/bazel-integration
+	$(FIRSTGOPATH)/bin/scoot-integration
+	$(FIRSTGOPATH)/bin/bazel-integration
 
 ############## cleanup
 
