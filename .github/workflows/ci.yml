@@ -25,4 +25,4 @@ jobs:
         restore-keys: ${{ runner.os }}-go-
 
     - name: Run all tests
-      run: make ci
+      run: make -j 1 ci
