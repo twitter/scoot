@@ -2,7 +2,6 @@ on: [push, pull_request]
 name: ci
 env:
   GO111MODULE: on
-  GOPATH: $HOME/go
 
 jobs:
   test:
@@ -27,6 +26,7 @@ jobs:
 
     - name: Run all tests
       run: |
+        GOPATH="~/go"
         echo ${GOROOT}
         echo ${GOPATH}
         echo ${GOBIN}
