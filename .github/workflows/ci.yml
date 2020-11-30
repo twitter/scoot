@@ -27,7 +27,4 @@ jobs:
     - name: Run all tests
       run: |
         export GOPATH="$HOME/go"
-        echo ${GOROOT}
-        echo ${GOPATH}
-        echo ${GOBIN}
         make -j 1 ci

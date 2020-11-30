@@ -106,12 +106,12 @@ recoverytest:
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce ci log size. Smoketest is more important and that still logs.
-	$(FIRSTGOPATH)/bin/recoverytest
+	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
 integrationtest:
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
-	$(FIRSTGOPATH)/bin/scoot-integration
-	$(FIRSTGOPATH)/bin/bazel-integration
+	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
+	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
 ############## cleanup
 
