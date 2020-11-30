@@ -26,7 +26,7 @@ jobs:
 
     - name: Run all tests
       run: |
-        GOPATH="~/go"
+        export GOPATH="$HOME/go"
         echo ${GOROOT}
         echo ${GOPATH}
         echo ${GOBIN}
