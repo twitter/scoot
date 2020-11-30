@@ -104,7 +104,7 @@ smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m $(FILTER)
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 1 --timeout 1m $(FILTER)
 
 recoverytest:
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
