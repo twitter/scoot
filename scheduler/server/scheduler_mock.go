@@ -172,29 +172,29 @@ func (mr *MockSchedulerMockRecorder) SetRequestorToClassMap(requestorToClassMap 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRequestorToClassMap", reflect.TypeOf((*MockScheduler)(nil).SetRequestorToClassMap), requestorToClassMap)
 }
 
-// GetRebalanceMinDuration mocks base method
-func (m *MockScheduler) GetRebalanceMinDuration() (time.Duration, error) {
-	ret := m.ctrl.Call(m, "GetRebalanceMinDuration")
+// GetRebalanceMinimumDuration mocks base method
+func (m *MockScheduler) GetRebalanceMinimumDuration() (time.Duration, error) {
+	ret := m.ctrl.Call(m, "GetRebalanceMinimumDuration")
 	ret0, _ := ret[0].(time.Duration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetRebalanceMinDuration indicates an expected call of GetRebalanceMinDuration
-func (mr *MockSchedulerMockRecorder) GetRebalanceMinDuration() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceMinDuration))
+// GetRebalanceMinimumDuration indicates an expected call of GetRebalanceMinimumDuration
+func (mr *MockSchedulerMockRecorder) GetRebalanceMinimumDuration() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRebalanceMinimumDuration", reflect.TypeOf((*MockScheduler)(nil).GetRebalanceMinimumDuration))
 }
 
-// SetRebalanceMinDuration mocks base method
-func (m *MockScheduler) SetRebalanceMinDuration(durationMin time.Duration) error {
-	ret := m.ctrl.Call(m, "SetRebalanceMinDuration", durationMin)
+// SetRebalanceMinimumDuration mocks base method
+func (m *MockScheduler) SetRebalanceMinimumDuration(durationMin time.Duration) error {
+	ret := m.ctrl.Call(m, "SetRebalanceMinimumDuration", durationMin)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SetRebalanceMinDuration indicates an expected call of SetRebalanceMinDuration
-func (mr *MockSchedulerMockRecorder) SetRebalanceMinDuration(durationMin interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceMinDuration", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceMinDuration), durationMin)
+// SetRebalanceMinimumDuration indicates an expected call of SetRebalanceMinimumDuration
+func (mr *MockSchedulerMockRecorder) SetRebalanceMinimumDuration(durationMin interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceMinimumDuration", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceMinimumDuration), durationMin)
 }
 
 // GetRebalanceThreshold mocks base method

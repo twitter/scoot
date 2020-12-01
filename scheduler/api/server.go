@@ -108,20 +108,20 @@ func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) er
 	return schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
 }
 
-// GetRebalanceMinDuration get the duration(minutes) that the scheduler needs to be exceeding
+// GetRebalanceMinimumDuration get the duration(minutes) that the scheduler needs to be exceeding
 // the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
-func (h *Handler) GetRebalanceMinDuration() (int32, error) {
-	d, err := schedthrift.GetRebalanceMinDuration(h.scheduler)
-	log.Infof("GetRebalanceMinDuration returning: %d, err:%s", d, err)
+func (h *Handler) GetRebalanceMinimumDuration() (int32, error) {
+	d, err := schedthrift.GetRebalanceMinimumDuration(h.scheduler)
+	log.Infof("GetRebalanceMinimumDuration returning: %d, err:%s", d, err)
 	return int32(d.Minutes()), err
 }
 
-// SetRebalanceMinDuration set the duration(minutes) that the scheduler needs to be exceeding
+// SetRebalanceMinimumDuration set the duration(minutes) that the scheduler needs to be exceeding
 // the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
-func (h *Handler) SetRebalanceMinDuration(durationMin int32) error {
-	log.Infof("SetRebalanceMinDuration to %d", durationMin)
-	d := time.Duration(durationMin) * time.Minute
-	return schedthrift.SetRebalanceMinDuration(h.scheduler, d)
+func (h *Handler) SetRebalanceMinimumDuration(durationMinimum int32) error {
+	log.Infof("SetRebalanceMinimumDuration to %d", durationMinimum)
+	d := time.Duration(durationMinimum) * time.Minute
+	return schedthrift.SetRebalanceMinimumDuration(h.scheduler, d)
 }
 
 // GetRebalanceThreshold the % spread threshold that must be exceeded to trigger rebalance

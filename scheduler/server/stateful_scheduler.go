@@ -160,7 +160,7 @@ type statefulScheduler struct {
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
-	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec // map of tasks by their class and start time
+	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID // map of tasks by their class and start time
 
 	// stats
 	stat stats.StatsReceiver
@@ -260,15 +260,13 @@ func NewStatefulScheduler(
 		config.MaxJobsPerRequestor = DefaultMaxJobsPerRequestor
 	}
 	config.SchedAlgConfig = &LoadBasedAlgConfig{
-		rebalanceThreshold:   0,
-		rebalanceMinDuration: 0 * time.Minute,
-		stat:                 stat,
+		stat: stat,
 	}
 
 	config.TaskThrottle = -1
 
 	// create the load base scheduling algorithm
-	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
+	tasksByClassAndStartMap := map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
 	sa.setClassLoadPercents(DefaultLoadBasedSchedulerClassPercents)
 	sa.setRequestorToClassMap(DefaultRequestorToClassMap)
@@ -1234,22 +1232,22 @@ func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[strin
 	return nil
 }
 
-// GetRebalanceMinDuration
-func (s *statefulScheduler) GetRebalanceMinDuration() (time.Duration, error) {
+// GetRebalanceMinimumDuration
+func (s *statefulScheduler) GetRebalanceMinimumDuration() (time.Duration, error) {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return 0, fmt.Errorf("not using load based scheduler, no rebalance min duration")
 	}
-	return sched.getRebalanceMinDuration(), nil
+	return sched.getRebalanceMinimumDuration(), nil
 }
 
-// GetRebalanceMinDuration
-func (s *statefulScheduler) SetRebalanceMinDuration(durationMin time.Duration) error {
+// GetRebalanceMinimumDuration
+func (s *statefulScheduler) SetRebalanceMinimumDuration(durationMin time.Duration) error {
 	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance min duration ignored")
 	}
-	sched.setRebalanceMinDuration(durationMin)
+	sched.setRebalanceMinimumDuration(durationMin)
 	return nil
 }
 

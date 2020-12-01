@@ -81,7 +81,7 @@ type SchedulingAlgTester struct {
 	comparisonMap       map[string]*timeSummary
 	comparisonMapMu     sync.RWMutex
 	timeout             time.Duration
-	classLoadPercents       map[string]int32
+	classLoadPercents   map[string]int32
 	requestorToClassMap map[string]string
 }
 
@@ -100,14 +100,22 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 		os.Mkdir(tDir, 0777)
 	}
 
-	statsFile := fmt.Sprintf("%s/newAlgStats.csv", tDir)
-	finishTimesFilename := fmt.Sprintf("%s/newAlgJobTimes.csv", tDir)
+	dateTimeZone := "2006_01_02_15_04_05_MST"
+	startTimeStr := testsStart.Format(dateTimeZone)
+	endTimeStr := testsEnd.Format(dateTimeZone)
+	statsFile := fmt.Sprintf("%s/newAlgStats%s_%s.csv", tDir, startTimeStr, endTimeStr)
+	finishTimesFilename := fmt.Sprintf("%s/newAlgJobTimes%s_%s.csv", tDir, startTimeStr, endTimeStr)
+
+	numJobs := 0
+	for _, jds := range jobDefsMap {
+		numJobs += len(jds)
+	}
 
 	log.Warn(".........................")
 	log.Warnf("Stats are being written to %s", statsFile)
 	log.Warnf("Final comparisons are being written to %s", finishTimesFilename)
 	log.Warnf("Test will shadow %s to %s", testsStart.Format(time.RFC3339), testsEnd.Format(time.RFC3339))
-	log.Warnf("Running %d jobs", len(jobDefsMap))
+	log.Warnf("Running %d jobs", numJobs)
 	log.Warnf("On %d workers", clusterSize)
 	log.Warnf("Using Class Loads %v", classLoadPercents)
 	log.Warnf("Using Requestor Map %v", requestorToClassMap)
@@ -120,7 +128,7 @@ func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int]
 		testsEnd:            testsEnd,
 		jobDefsMap:          jobDefsMap,
 		clusterSize:         clusterSize,
-		classLoadPercents:       classLoadPercents,
+		classLoadPercents:   classLoadPercents,
 		requestorToClassMap: requestorToClassMap,
 	}
 	st.makeComparisonMap()
@@ -164,7 +172,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 	sort.Ints(keys)
 
 	// now start running the jobs at the same frequency that they were run in production
-	log.Warnf("%s: Starting %d jobs.", simStart.Format(time.RFC3339), len(st.jobDefsMap))
+	log.Warnf("%s: Starting the jobs.", simStart.Format(time.RFC3339))
 	if len(st.jobDefsMap) == 0 {
 		log.Errorf("no jobs")
 		return nil
@@ -186,7 +194,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 			}
 
 			// give the job to the scheduler
-			log.Warnf("%s submitting job:jobType:%s, req:%s, tag:%s, basis: %s, tasks:%d", time.Now().Format(time.RFC3339), jobDef.JobType, jobDef.Requestor, jobDef.Tag, jobDef.Basis, len(jobDef.Tasks))
+			log.Warnf("%s submitting job:%s", time.Now().Format(time.RFC3339), jobDef)
 			id, err := s.ScheduleJob(*jobDef)
 			if err != nil {
 				return fmt.Errorf("Expected job to be Scheduled Successfully %v", err)

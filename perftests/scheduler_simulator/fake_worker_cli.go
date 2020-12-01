@@ -76,7 +76,9 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 
 	fw.state = runner.RUNNING
 	go func(fw *FakeWorker) {
-		time.Sleep(time.Duration(duration) * time.Second)
+		t := time.NewTicker(time.Duration(duration) * time.Second)
+		<-t.C
+		t.Stop()
 		fw.doneCh <- true
 	}(fw)
 

@@ -34,9 +34,9 @@ type Scheduler interface {
 
 	SetRequestorToClassMap(requestorToClassMap map[string]string) error
 
-	GetRebalanceMinDuration() (time.Duration, error)
+	GetRebalanceMinimumDuration() (time.Duration, error)
 
-	SetRebalanceMinDuration(durationMin time.Duration) error
+	SetRebalanceMinimumDuration(durationMin time.Duration) error
 
 	GetRebalanceThreshold() (int32, error)
 

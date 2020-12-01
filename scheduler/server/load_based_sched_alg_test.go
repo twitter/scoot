@@ -120,7 +120,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 	jobsByJobID := map[string]*jobState{}
 	for _, testDef := range testsDefs {
 		// reinitialize the task start times since this test will be creating new tasks
-		lbs.tasksByJobClassAndStartTimeSec = tasksByClassAndStartTimeSec{}
+		lbs.tasksByJobClassAndStartTimeSec = map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 		lbs.exceededRebalanceThresholdStart = time.Now().Add(-1 * rebalanceExceededDuration)
 		totalWorkers := testDef.totalWorkers
 		usedWorkers := 0
@@ -206,7 +206,7 @@ func TestEmptyRequestor(t *testing.T) {
 	statsRegistry := stats.NewFinagleStatsRegistry()
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
 
-	tasksByClassAndStartMap := tasksByClassAndStartTimeSec{}
+	tasksByClassAndStartMap := map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 
 	jobsByJobID := map[string]*jobState{}
 	jobsByRequestor := map[string][]*jobState{}
@@ -262,7 +262,7 @@ func TestRandomScenario(t *testing.T) {
 		totalWaitingTasks += waitingTasks
 	}
 
-	tasksByJobClassAndStartMap := tasksByClassAndStartTimeSec{}
+	tasksByJobClassAndStartMap := map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 
 	// create jobState objects for each class
 	usedWorkers := 0
@@ -389,7 +389,7 @@ func generatePercents() map[string]int32 {
 // makeJobStateFromClassStates make a list of jobStates for the class.  The classState will contain the number of
 // jobStates to create and the total number of running and waiting tasks to distribute across the jobStates.
 func makeJobStatesFromClassStates(t *testing.T, className string, cState classState, jobsByJobID map[string]*jobState,
-	tasksByClassAndStartMap tasksByClassAndStartTimeSec) []*jobState {
+	tasksByClassAndStartMap map[taskClassAndStartKey]taskStateByJobIDTaskID) []*jobState {
 	jobStates := make([]*jobState, cState.numJobs)
 	requestor := fmt.Sprintf("requestor%s", className)
 

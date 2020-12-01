@@ -24,8 +24,8 @@ type simpleCLIClient struct {
 	scootClient *client.CloudScootClient
 }
 
-// getReturnError extend the error with Invalid Request, Scoot server error, or Error getting status message
-func getReturnError(err error) error {
+// returnError extend the error with Invalid Request, Scoot server error, or Error getting status message
+func returnError(err error) error {
 	switch err := err.(type) {
 	case *scoot.InvalidRequest:
 		return fmt.Errorf("Invalid Request: %v", err.GetMessage())

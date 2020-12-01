@@ -91,9 +91,9 @@ Scheduler api for the algorithm:
 expression for matching requestor values in the job defs
 - SetRequestorMap - sets the map of className:requestor_re, where requestor_re is the regular
 expression for matching requestor values in the job defs
-- GetRebalanceMinDuration - return minimum number of minutes the system must be over
+- GetRebalanceMinimumDuration - return minimum number of minutes the system must be over
 the delta entitlement spread before triggering re-balancing
-- SetRebalanceMinDuration - set the minimum number of minutes the system must be over
+- SetRebalanceMinimumDuration - set the minimum number of minutes the system must be over
 the delta entitlement spread before triggering re-balancing
 - GetRebalanceThreshold - return the threshold the delta entitlement spread must be over before triggering
 re-balancing

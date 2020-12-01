@@ -45,10 +45,10 @@ type CloudScoot interface {
 	// Parameters:
 	//  - RequestorToClassMap
 	SetRequestorToClassMap(requestorToClassMap map[string]string) (err error)
-	GetRebalanceMinDuration() (r int32, err error)
+	GetRebalanceMinimumDuration() (r int32, err error)
 	// Parameters:
 	//  - DurationMin
-	SetRebalanceMinDuration(durationMin int32) (err error)
+	SetRebalanceMinimumDuration(durationMin int32) (err error)
 	GetRebalanceThreshold() (r int32, err error)
 	// Parameters:
 	//  - Threshold
@@ -979,24 +979,24 @@ func (p *CloudScootClient) recvSetRequestorToClassMap() (err error) {
 	return
 }
 
-func (p *CloudScootClient) GetRebalanceMinDuration() (r int32, err error) {
-	if err = p.sendGetRebalanceMinDuration(); err != nil {
+func (p *CloudScootClient) GetRebalanceMinimumDuration() (r int32, err error) {
+	if err = p.sendGetRebalanceMinimumDuration(); err != nil {
 		return
 	}
-	return p.recvGetRebalanceMinDuration()
+	return p.recvGetRebalanceMinimumDuration()
 }
 
-func (p *CloudScootClient) sendGetRebalanceMinDuration() (err error) {
+func (p *CloudScootClient) sendGetRebalanceMinimumDuration() (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("GetRebalanceMinimumDuration", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := CloudScootGetRebalanceMinDurationArgs{}
+	args := CloudScootGetRebalanceMinimumDurationArgs{}
 	if err = args.Write(oprot); err != nil {
 		return
 	}
@@ -1006,7 +1006,7 @@ func (p *CloudScootClient) sendGetRebalanceMinDuration() (err error) {
 	return oprot.Flush()
 }
 
-func (p *CloudScootClient) recvGetRebalanceMinDuration() (value int32, err error) {
+func (p *CloudScootClient) recvGetRebalanceMinimumDuration() (value int32, err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1016,12 +1016,12 @@ func (p *CloudScootClient) recvGetRebalanceMinDuration() (value int32, err error
 	if err != nil {
 		return
 	}
-	if method != "GetRebalanceMinDuration" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetRebalanceMinDuration failed: wrong method name")
+	if method != "GetRebalanceMinimumDuration" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "GetRebalanceMinimumDuration failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetRebalanceMinDuration failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "GetRebalanceMinimumDuration failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
@@ -1038,10 +1038,10 @@ func (p *CloudScootClient) recvGetRebalanceMinDuration() (value int32, err error
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetRebalanceMinDuration failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "GetRebalanceMinimumDuration failed: invalid message type")
 		return
 	}
-	result := CloudScootGetRebalanceMinDurationResult{}
+	result := CloudScootGetRebalanceMinimumDurationResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -1058,24 +1058,24 @@ func (p *CloudScootClient) recvGetRebalanceMinDuration() (value int32, err error
 
 // Parameters:
 //  - DurationMin
-func (p *CloudScootClient) SetRebalanceMinDuration(durationMin int32) (err error) {
-	if err = p.sendSetRebalanceMinDuration(durationMin); err != nil {
+func (p *CloudScootClient) SetRebalanceMinimumDuration(durationMin int32) (err error) {
+	if err = p.sendSetRebalanceMinimumDuration(durationMin); err != nil {
 		return
 	}
-	return p.recvSetRebalanceMinDuration()
+	return p.recvSetRebalanceMinimumDuration()
 }
 
-func (p *CloudScootClient) sendSetRebalanceMinDuration(durationMin int32) (err error) {
+func (p *CloudScootClient) sendSetRebalanceMinimumDuration(durationMin int32) (err error) {
 	oprot := p.OutputProtocol
 	if oprot == nil {
 		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
 		p.OutputProtocol = oprot
 	}
 	p.SeqId++
-	if err = oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.CALL, p.SeqId); err != nil {
+	if err = oprot.WriteMessageBegin("SetRebalanceMinimumDuration", thrift.CALL, p.SeqId); err != nil {
 		return
 	}
-	args := CloudScootSetRebalanceMinDurationArgs{
+	args := CloudScootSetRebalanceMinimumDurationArgs{
 		DurationMin: durationMin,
 	}
 	if err = args.Write(oprot); err != nil {
@@ -1087,7 +1087,7 @@ func (p *CloudScootClient) sendSetRebalanceMinDuration(durationMin int32) (err e
 	return oprot.Flush()
 }
 
-func (p *CloudScootClient) recvSetRebalanceMinDuration() (err error) {
+func (p *CloudScootClient) recvSetRebalanceMinimumDuration() (err error) {
 	iprot := p.InputProtocol
 	if iprot == nil {
 		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1097,12 +1097,12 @@ func (p *CloudScootClient) recvSetRebalanceMinDuration() (err error) {
 	if err != nil {
 		return
 	}
-	if method != "SetRebalanceMinDuration" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetRebalanceMinDuration failed: wrong method name")
+	if method != "SetRebalanceMinimumDuration" {
+		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "SetRebalanceMinimumDuration failed: wrong method name")
 		return
 	}
 	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetRebalanceMinDuration failed: out of sequence response")
+		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "SetRebalanceMinimumDuration failed: out of sequence response")
 		return
 	}
 	if mTypeId == thrift.EXCEPTION {
@@ -1119,10 +1119,10 @@ func (p *CloudScootClient) recvSetRebalanceMinDuration() (err error) {
 		return
 	}
 	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetRebalanceMinDuration failed: invalid message type")
+		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "SetRebalanceMinimumDuration failed: invalid message type")
 		return
 	}
-	result := CloudScootSetRebalanceMinDurationResult{}
+	result := CloudScootSetRebalanceMinimumDurationResult{}
 	if err = result.Read(iprot); err != nil {
 		return
 	}
@@ -1331,8 +1331,8 @@ func NewCloudScootProcessor(handler CloudScoot) *CloudScootProcessor {
 	self38.processorMap["SetClassLoadPercents"] = &cloudScootProcessorSetClassLoadPercents{handler: handler}
 	self38.processorMap["GetRequestorToClassMap"] = &cloudScootProcessorGetRequestorToClassMap{handler: handler}
 	self38.processorMap["SetRequestorToClassMap"] = &cloudScootProcessorSetRequestorToClassMap{handler: handler}
-	self38.processorMap["GetRebalanceMinDuration"] = &cloudScootProcessorGetRebalanceMinDuration{handler: handler}
-	self38.processorMap["SetRebalanceMinDuration"] = &cloudScootProcessorSetRebalanceMinDuration{handler: handler}
+	self38.processorMap["GetRebalanceMinimumDuration"] = &cloudScootProcessorGetRebalanceMinimumDuration{handler: handler}
+	self38.processorMap["SetRebalanceMinimumDuration"] = &cloudScootProcessorSetRebalanceMinimumDuration{handler: handler}
 	self38.processorMap["GetRebalanceThreshold"] = &cloudScootProcessorGetRebalanceThreshold{handler: handler}
 	self38.processorMap["SetRebalanceThreshold"] = &cloudScootProcessorSetRebalanceThreshold{handler: handler}
 	return self38
@@ -1941,16 +1941,16 @@ func (p *cloudScootProcessorSetRequestorToClassMap) Process(seqId int32, iprot, 
 	return true, err
 }
 
-type cloudScootProcessorGetRebalanceMinDuration struct {
+type cloudScootProcessorGetRebalanceMinimumDuration struct {
 	handler CloudScoot
 }
 
-func (p *cloudScootProcessorGetRebalanceMinDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := CloudScootGetRebalanceMinDurationArgs{}
+func (p *cloudScootProcessorGetRebalanceMinimumDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootGetRebalanceMinimumDurationArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("GetRebalanceMinimumDuration", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -1958,16 +1958,16 @@ func (p *cloudScootProcessorGetRebalanceMinDuration) Process(seqId int32, iprot,
 	}
 
 	iprot.ReadMessageEnd()
-	result := CloudScootGetRebalanceMinDurationResult{}
+	result := CloudScootGetRebalanceMinimumDurationResult{}
 	var retval int32
 	var err2 error
-	if retval, err2 = p.handler.GetRebalanceMinDuration(); err2 != nil {
+	if retval, err2 = p.handler.GetRebalanceMinimumDuration(); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
 		default:
-			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetRebalanceMinDuration: "+err2.Error())
-			oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetRebalanceMinimumDuration: "+err2.Error())
+			oprot.WriteMessageBegin("GetRebalanceMinimumDuration", thrift.EXCEPTION, seqId)
 			x.Write(oprot)
 			oprot.WriteMessageEnd()
 			oprot.Flush()
@@ -1976,7 +1976,7 @@ func (p *cloudScootProcessorGetRebalanceMinDuration) Process(seqId int32, iprot,
 	} else {
 		result.Success = &retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetRebalanceMinDuration", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("GetRebalanceMinimumDuration", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -1994,16 +1994,16 @@ func (p *cloudScootProcessorGetRebalanceMinDuration) Process(seqId int32, iprot,
 	return true, err
 }
 
-type cloudScootProcessorSetRebalanceMinDuration struct {
+type cloudScootProcessorSetRebalanceMinimumDuration struct {
 	handler CloudScoot
 }
 
-func (p *cloudScootProcessorSetRebalanceMinDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := CloudScootSetRebalanceMinDurationArgs{}
+func (p *cloudScootProcessorSetRebalanceMinimumDuration) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := CloudScootSetRebalanceMinimumDurationArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("SetRebalanceMinimumDuration", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush()
@@ -2011,24 +2011,24 @@ func (p *cloudScootProcessorSetRebalanceMinDuration) Process(seqId int32, iprot,
 	}
 
 	iprot.ReadMessageEnd()
-	result := CloudScootSetRebalanceMinDurationResult{}
+	result := CloudScootSetRebalanceMinimumDurationResult{}
 	var err2 error
-	if err2 = p.handler.SetRebalanceMinDuration(args.DurationMin); err2 != nil {
+	if err2 = p.handler.SetRebalanceMinimumDuration(args.DurationMin); err2 != nil {
 		switch v := err2.(type) {
 		case *InvalidRequest:
 			result.Ir = v
 		case *ScootServerError:
 			result.Err = v
 		default:
-			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetRebalanceMinDuration: "+err2.Error())
-			oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.EXCEPTION, seqId)
+			x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing SetRebalanceMinimumDuration: "+err2.Error())
+			oprot.WriteMessageBegin("SetRebalanceMinimumDuration", thrift.EXCEPTION, seqId)
 			x.Write(oprot)
 			oprot.WriteMessageEnd()
 			oprot.Flush()
 			return true, err2
 		}
 	}
-	if err2 = oprot.WriteMessageBegin("SetRebalanceMinDuration", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("SetRebalanceMinimumDuration", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -4921,14 +4921,14 @@ func (p *CloudScootSetRequestorToClassMapResult) String() string {
 	return fmt.Sprintf("CloudScootSetRequestorToClassMapResult(%+v)", *p)
 }
 
-type CloudScootGetRebalanceMinDurationArgs struct {
+type CloudScootGetRebalanceMinimumDurationArgs struct {
 }
 
-func NewCloudScootGetRebalanceMinDurationArgs() *CloudScootGetRebalanceMinDurationArgs {
-	return &CloudScootGetRebalanceMinDurationArgs{}
+func NewCloudScootGetRebalanceMinimumDurationArgs() *CloudScootGetRebalanceMinimumDurationArgs {
+	return &CloudScootGetRebalanceMinimumDurationArgs{}
 }
 
-func (p *CloudScootGetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootGetRebalanceMinimumDurationArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -4954,8 +4954,8 @@ func (p *CloudScootGetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("GetRebalanceMinDuration_args"); err != nil {
+func (p *CloudScootGetRebalanceMinimumDurationArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceMinimumDuration_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -4967,51 +4967,51 @@ func (p *CloudScootGetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationArgs) String() string {
+func (p *CloudScootGetRebalanceMinimumDurationArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootGetRebalanceMinDurationArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootGetRebalanceMinimumDurationArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Success
 //  - Ir
-type CloudScootGetRebalanceMinDurationResult struct {
+type CloudScootGetRebalanceMinimumDurationResult struct {
 	Success *int32          `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest `thrift:"ir,1" json:"ir,omitempty"`
 }
 
-func NewCloudScootGetRebalanceMinDurationResult() *CloudScootGetRebalanceMinDurationResult {
-	return &CloudScootGetRebalanceMinDurationResult{}
+func NewCloudScootGetRebalanceMinimumDurationResult() *CloudScootGetRebalanceMinimumDurationResult {
+	return &CloudScootGetRebalanceMinimumDurationResult{}
 }
 
-var CloudScootGetRebalanceMinDurationResult_Success_DEFAULT int32
+var CloudScootGetRebalanceMinimumDurationResult_Success_DEFAULT int32
 
-func (p *CloudScootGetRebalanceMinDurationResult) GetSuccess() int32 {
+func (p *CloudScootGetRebalanceMinimumDurationResult) GetSuccess() int32 {
 	if !p.IsSetSuccess() {
-		return CloudScootGetRebalanceMinDurationResult_Success_DEFAULT
+		return CloudScootGetRebalanceMinimumDurationResult_Success_DEFAULT
 	}
 	return *p.Success
 }
 
-var CloudScootGetRebalanceMinDurationResult_Ir_DEFAULT *InvalidRequest
+var CloudScootGetRebalanceMinimumDurationResult_Ir_DEFAULT *InvalidRequest
 
-func (p *CloudScootGetRebalanceMinDurationResult) GetIr() *InvalidRequest {
+func (p *CloudScootGetRebalanceMinimumDurationResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return CloudScootGetRebalanceMinDurationResult_Ir_DEFAULT
+		return CloudScootGetRebalanceMinimumDurationResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
-func (p *CloudScootGetRebalanceMinDurationResult) IsSetSuccess() bool {
+func (p *CloudScootGetRebalanceMinimumDurationResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) IsSetIr() bool {
+func (p *CloudScootGetRebalanceMinimumDurationResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootGetRebalanceMinimumDurationResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -5048,7 +5048,7 @@ func (p *CloudScootGetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) readField0(iprot thrift.TProtocol) error {
+func (p *CloudScootGetRebalanceMinimumDurationResult) readField0(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
 		return thrift.PrependError("error reading field 0: ", err)
 	} else {
@@ -5057,7 +5057,7 @@ func (p *CloudScootGetRebalanceMinDurationResult) readField0(iprot thrift.TProto
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootGetRebalanceMinimumDurationResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -5065,8 +5065,8 @@ func (p *CloudScootGetRebalanceMinDurationResult) readField1(iprot thrift.TProto
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("GetRebalanceMinDuration_result"); err != nil {
+func (p *CloudScootGetRebalanceMinimumDurationResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("GetRebalanceMinimumDuration_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField0(oprot); err != nil {
@@ -5084,7 +5084,7 @@ func (p *CloudScootGetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) 
 	return nil
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootGetRebalanceMinimumDurationResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err := oprot.WriteFieldBegin("success", thrift.I32, 0); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
@@ -5099,7 +5099,7 @@ func (p *CloudScootGetRebalanceMinDurationResult) writeField0(oprot thrift.TProt
 	return err
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootGetRebalanceMinimumDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -5114,27 +5114,27 @@ func (p *CloudScootGetRebalanceMinDurationResult) writeField1(oprot thrift.TProt
 	return err
 }
 
-func (p *CloudScootGetRebalanceMinDurationResult) String() string {
+func (p *CloudScootGetRebalanceMinimumDurationResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootGetRebalanceMinDurationResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootGetRebalanceMinimumDurationResult(%+v)", *p)
 }
 
 // Attributes:
 //  - DurationMin
-type CloudScootSetRebalanceMinDurationArgs struct {
+type CloudScootSetRebalanceMinimumDurationArgs struct {
 	DurationMin int32 `thrift:"durationMin,1" json:"durationMin"`
 }
 
-func NewCloudScootSetRebalanceMinDurationArgs() *CloudScootSetRebalanceMinDurationArgs {
-	return &CloudScootSetRebalanceMinDurationArgs{}
+func NewCloudScootSetRebalanceMinimumDurationArgs() *CloudScootSetRebalanceMinimumDurationArgs {
+	return &CloudScootSetRebalanceMinimumDurationArgs{}
 }
 
-func (p *CloudScootSetRebalanceMinDurationArgs) GetDurationMin() int32 {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) GetDurationMin() int32 {
 	return p.DurationMin
 }
-func (p *CloudScootSetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -5167,7 +5167,7 @@ func (p *CloudScootSetRebalanceMinDurationArgs) Read(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationArgs) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) readField1(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadI32(); err != nil {
 		return thrift.PrependError("error reading field 1: ", err)
 	} else {
@@ -5176,8 +5176,8 @@ func (p *CloudScootSetRebalanceMinDurationArgs) readField1(iprot thrift.TProtoco
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("SetRebalanceMinDuration_args"); err != nil {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceMinimumDuration_args"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -5192,7 +5192,7 @@ func (p *CloudScootSetRebalanceMinDurationArgs) Write(oprot thrift.TProtocol) er
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err := oprot.WriteFieldBegin("durationMin", thrift.I32, 1); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:durationMin: ", p), err)
 	}
@@ -5205,51 +5205,51 @@ func (p *CloudScootSetRebalanceMinDurationArgs) writeField1(oprot thrift.TProtoc
 	return err
 }
 
-func (p *CloudScootSetRebalanceMinDurationArgs) String() string {
+func (p *CloudScootSetRebalanceMinimumDurationArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootSetRebalanceMinDurationArgs(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetRebalanceMinimumDurationArgs(%+v)", *p)
 }
 
 // Attributes:
 //  - Ir
 //  - Err
-type CloudScootSetRebalanceMinDurationResult struct {
+type CloudScootSetRebalanceMinimumDurationResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
 }
 
-func NewCloudScootSetRebalanceMinDurationResult() *CloudScootSetRebalanceMinDurationResult {
-	return &CloudScootSetRebalanceMinDurationResult{}
+func NewCloudScootSetRebalanceMinimumDurationResult() *CloudScootSetRebalanceMinimumDurationResult {
+	return &CloudScootSetRebalanceMinimumDurationResult{}
 }
 
-var CloudScootSetRebalanceMinDurationResult_Ir_DEFAULT *InvalidRequest
+var CloudScootSetRebalanceMinimumDurationResult_Ir_DEFAULT *InvalidRequest
 
-func (p *CloudScootSetRebalanceMinDurationResult) GetIr() *InvalidRequest {
+func (p *CloudScootSetRebalanceMinimumDurationResult) GetIr() *InvalidRequest {
 	if !p.IsSetIr() {
-		return CloudScootSetRebalanceMinDurationResult_Ir_DEFAULT
+		return CloudScootSetRebalanceMinimumDurationResult_Ir_DEFAULT
 	}
 	return p.Ir
 }
 
-var CloudScootSetRebalanceMinDurationResult_Err_DEFAULT *ScootServerError
+var CloudScootSetRebalanceMinimumDurationResult_Err_DEFAULT *ScootServerError
 
-func (p *CloudScootSetRebalanceMinDurationResult) GetErr() *ScootServerError {
+func (p *CloudScootSetRebalanceMinimumDurationResult) GetErr() *ScootServerError {
 	if !p.IsSetErr() {
-		return CloudScootSetRebalanceMinDurationResult_Err_DEFAULT
+		return CloudScootSetRebalanceMinimumDurationResult_Err_DEFAULT
 	}
 	return p.Err
 }
-func (p *CloudScootSetRebalanceMinDurationResult) IsSetIr() bool {
+func (p *CloudScootSetRebalanceMinimumDurationResult) IsSetIr() bool {
 	return p.Ir != nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) IsSetErr() bool {
+func (p *CloudScootSetRebalanceMinimumDurationResult) IsSetErr() bool {
 	return p.Err != nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) error {
+func (p *CloudScootSetRebalanceMinimumDurationResult) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
 	}
@@ -5286,7 +5286,7 @@ func (p *CloudScootSetRebalanceMinDurationResult) Read(iprot thrift.TProtocol) e
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) readField1(iprot thrift.TProtocol) error {
+func (p *CloudScootSetRebalanceMinimumDurationResult) readField1(iprot thrift.TProtocol) error {
 	p.Ir = &InvalidRequest{}
 	if err := p.Ir.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Ir), err)
@@ -5294,7 +5294,7 @@ func (p *CloudScootSetRebalanceMinDurationResult) readField1(iprot thrift.TProto
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) readField2(iprot thrift.TProtocol) error {
+func (p *CloudScootSetRebalanceMinimumDurationResult) readField2(iprot thrift.TProtocol) error {
 	p.Err = &ScootServerError{}
 	if err := p.Err.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
@@ -5302,8 +5302,8 @@ func (p *CloudScootSetRebalanceMinDurationResult) readField2(iprot thrift.TProto
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("SetRebalanceMinDuration_result"); err != nil {
+func (p *CloudScootSetRebalanceMinimumDurationResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("SetRebalanceMinimumDuration_result"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
 	}
 	if err := p.writeField1(oprot); err != nil {
@@ -5321,7 +5321,7 @@ func (p *CloudScootSetRebalanceMinDurationResult) Write(oprot thrift.TProtocol) 
 	return nil
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetRebalanceMinimumDurationResult) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetIr() {
 		if err := oprot.WriteFieldBegin("ir", thrift.STRUCT, 1); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:ir: ", p), err)
@@ -5336,7 +5336,7 @@ func (p *CloudScootSetRebalanceMinDurationResult) writeField1(oprot thrift.TProt
 	return err
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *CloudScootSetRebalanceMinimumDurationResult) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetErr() {
 		if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 2); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:err: ", p), err)
@@ -5351,11 +5351,11 @@ func (p *CloudScootSetRebalanceMinDurationResult) writeField2(oprot thrift.TProt
 	return err
 }
 
-func (p *CloudScootSetRebalanceMinDurationResult) String() string {
+func (p *CloudScootSetRebalanceMinimumDurationResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("CloudScootSetRebalanceMinDurationResult(%+v)", *p)
+	return fmt.Sprintf("CloudScootSetRebalanceMinimumDurationResult(%+v)", *p)
 }
 
 type CloudScootGetRebalanceThresholdArgs struct {

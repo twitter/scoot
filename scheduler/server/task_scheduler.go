@@ -46,6 +46,9 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors)
 	// Exit if no tasks qualify to be scheduled.
 	if len(tasks) == 0 {
+		if len(stopTasks) != 0 {
+			log.Errorf("task assignment returned tasks to stop but none to start.  Ignoring the (%d len) stopTasks list", len(stopTasks))
+		}
 		return nil
 	}
 	log.WithFields(log.Fields{"numStartingTasks": len(tasks), "numStoppingTasks": len(stopTasks)}).Info("scheduling returned")

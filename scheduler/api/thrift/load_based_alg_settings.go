@@ -26,25 +26,25 @@ func SetRequestorToClassMap(scheduler server.Scheduler, requestorToClassMap map[
 	return scheduler.SetRequestorToClassMap(requestorToClassMap)
 }
 
-// GetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
+// GetRebalanceMinimumDuration get the duration (min) that the rebalance threshold must be exceeded before
 // triggering rebalance.  <= 0 implies no rebalancing
-func GetRebalanceMinDuration(scheduler server.Scheduler) (time.Duration, error) {
-	return scheduler.GetRebalanceMinDuration()
+func GetRebalanceMinimumDuration(scheduler server.Scheduler) (time.Duration, error) {
+	return scheduler.GetRebalanceMinimumDuration()
 }
 
-// SetRebalanceMinDuration get the duration (min) that the rebalance threshold must be exceeded before
+// SetRebalanceMinimumDuration get the duration (min) that the rebalance threshold must be exceeded before
 // triggering rebalance.  <= 0 implies no rebalancing
-func SetRebalanceMinDuration(scheduler server.Scheduler, duration time.Duration) error {
-	return scheduler.SetRebalanceMinDuration(duration)
+func SetRebalanceMinimumDuration(scheduler server.Scheduler, duration time.Duration) error {
+	return scheduler.SetRebalanceMinimumDuration(duration)
 }
 
-// GetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
+// GetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinimumDuration
 // to trigger rebalance.  <= 0 implies no rebalancing
 func GetRebalanceThreshold(scheduler server.Scheduler) (int32, error) {
 	return scheduler.GetRebalanceThreshold()
 }
 
-// SetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinDuration
+// SetRebalanceThreshold get the rebalance threshold.  The %s spread must exceed this for RebalanceMinimumDuration
 // to trigger rebalance.  <= 0 implies no rebalancing
 func SetRebalanceThreshold(scheduler server.Scheduler, threshold int32) error {
 	return scheduler.SetRebalanceThreshold(threshold)

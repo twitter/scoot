@@ -13,10 +13,10 @@ import (
 // lbsSchedAlgParams load based scheduling params.  The setter API is associated with
 // this structure.
 type lbsSchedAlgParams struct {
-	ClassLoadPercents    map[string]int32
-	RequestorMap         map[string]string
-	RebalanceMinDuration int
-	RebalanceThreshold   int
+	ClassLoadPercents        map[string]int32
+	RequestorMap             map[string]string
+	RebalanceMinimumDuration int
+	RebalanceThreshold       int
 
 	clpFilePath    string
 	reqMapFilePath string
@@ -43,24 +43,24 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	var err error
 	g.params.ClassLoadPercents, err = cl.scootClient.GetClassLoadPercents()
 	if err != nil {
-		return getReturnError(err)
+		return returnError(err)
 	}
 
 	g.params.RequestorMap, err = cl.scootClient.GetRequestorToClassMap()
 	if err != nil {
-		return getReturnError(err)
+		return returnError(err)
 	}
 
 	var tInt int32
-	tInt, err = cl.scootClient.GetRebalanceMinDuration()
+	tInt, err = cl.scootClient.GetRebalanceMinimumDuration()
 	if err != nil {
-		return getReturnError(err)
+		return returnError(err)
 	}
-	g.params.RebalanceMinDuration = int(tInt)
+	g.params.RebalanceMinimumDuration = int(tInt)
 
 	tInt, err = cl.scootClient.GetRebalanceThreshold()
 	if err != nil {
-		return getReturnError(err)
+		return returnError(err)
 	}
 	g.params.RebalanceThreshold = int(tInt)
 
@@ -85,9 +85,9 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 			log.Infof("%s:%s", requestorRe, class)
 			fmt.Println(requestorRe, ":", class)
 		}
-		log.Infof("Rebalance Duration:%d (minutes)", g.params.RebalanceMinDuration)
-		fmt.Println("Rebalance Duration:", g.params.RebalanceMinDuration, " (minutes)")
-		log.Infof("Rebalance Threshold:%d", g.params.RebalanceThreshold)
+		log.Infof("Rebalance Duration:%d (minutes)\n", g.params.RebalanceMinimumDuration)
+		fmt.Println("Rebalance Duration:", g.params.RebalanceMinimumDuration, " (minutes)")
+		log.Infof("Rebalance Threshold:%d\n", g.params.RebalanceThreshold)
 		fmt.Println("Rebalance Threshold:", g.params.RebalanceThreshold)
 
 	}
@@ -102,7 +102,7 @@ func (s *lbsSchedAlgParams) registerFlags() *cobra.Command {
 	}
 	r.Flags().StringVar(&s.clpFilePath, "class_pcts_file", "", "JSON file to read class load percents from.")
 	r.Flags().StringVar(&s.reqMapFilePath, "requestor_map_file", "", "JSON file to read requestor to class map from.")
-	r.Flags().IntVar(&s.RebalanceMinDuration, "rebalance_min", -1, "The number of minutes the tasks must be over rebalance threshold to trigger rebalance. 0 implies no rebalance. (Default of -1 implies no entry)")
+	r.Flags().IntVar(&s.RebalanceMinimumDuration, "rebalance_min", -1, "The number of minutes the tasks must be over rebalance threshold to trigger rebalance. 0 implies no rebalance. (Default of -1 implies no entry)")
 	r.Flags().IntVar(&s.RebalanceThreshold, "rebalance_threshold", -1, "The rebalance threshold. 0 implies no rebalance. (Default of -1 implies no entry)")
 	return r
 }
@@ -110,8 +110,8 @@ func (s *lbsSchedAlgParams) registerFlags() *cobra.Command {
 func (s *lbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Setting Scheduling Algorithm Parameters", args)
 
-	if s.RebalanceMinDuration > -1 {
-		err := cl.scootClient.SetRebalanceMinDuration(int32(s.RebalanceMinDuration))
+	if s.RebalanceMinimumDuration > -1 {
+		err := cl.scootClient.SetRebalanceMinimumDuration(int32(s.RebalanceMinimumDuration))
 		if err != nil {
 			log.Errorf("%s", err)
 			return err

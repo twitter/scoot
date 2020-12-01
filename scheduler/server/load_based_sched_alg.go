@@ -19,14 +19,16 @@ const (
 )
 
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
-var DefaultLoadBasedSchedulerClassPercents = map[string]int32{"c0": 100}
-var DefaultRequestorToClassMap = map[string]string{".*": "c0"}
-var DefaultMinRebalanceTime = time.Duration(4 * time.Minute)
-var MaxTaskDuration = time.Duration(4 * time.Hour)
+var (
+	DefaultLoadBasedSchedulerClassPercents = map[string]int32{"c0": 100}
+	DefaultRequestorToClassMap             = map[string]string{".*": "c0"}
+	DefaultMinRebalanceTime                = time.Duration(4 * time.Minute)
+	MaxTaskDuration                        = time.Duration(4 * time.Hour)
+)
 
 type LoadBasedAlgConfig struct {
-	classLoadPercents           map[string]int
-	classLoadPercentsMu         sync.RWMutex
+	classLoadPercents       map[string]int
+	classLoadPercentsMu     sync.RWMutex
 	requestorReToClassMap   map[string]string
 	requestorReToClassMapMU sync.RWMutex
 
@@ -71,16 +73,16 @@ type LoadBasedAlg struct {
 
 	// local copy of load pcts and requestor map to use during assignment computation
 	// to insulate the computation from external changes to the configuration
-	classLoadPercents         map[string]int
+	classLoadPercents     map[string]int
 	requestorReToClassMap map[string]string
 
 	classByDescLoadPct             []string
-	tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec
+	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
 }
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
 // the %'s will be adjusted and an error will be returned with the alg object
-func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec tasksByClassAndStartTimeSec) *LoadBasedAlg {
+func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
 		config:                          config,
 		jobClasses:                      map[string]*jobClass{},
@@ -107,17 +109,22 @@ type jobClass struct {
 	// the largest key value in the jobsByNumRunningTasks map
 	maxTaskRunningMapIndex int
 
-	origNumWaitingTasks    int
-	origNumRunningTasks    int
-	origTargetLoadPct      int // the target % of workers for this class
-	origNumTargetedWorkers int // the original number of workers allocated for this class by target % (total workers * origTargetLoadPct)
+	origNumWaitingTasks int
+	origNumRunningTasks int
 
-	numTasksToStart int // number of tasks that can be started (when negative -> number of tasks to stop)
-	numWaitingTasks int // number of tasks still waiting to be started
+	// the target % of workers for this class
+	origTargetLoadPct int
+	// the original number of workers allocated for this class by target % (total workers * origTargetLoadPct)
+	origNumTargetedWorkers int
+	// number of tasks that can be started (when negative -> number of tasks to stop)
+	numTasksToStart int
+	// number of tasks still waiting to be started
+	numWaitingTasks int
 
-	tempEntitlement   int // temporary field to hold intermediate entitled num workers
-	tempNormalizedPct int // temporary field to hold the normalized load %
-
+	// temporary field to hold intermediate entitled num workers
+	tempEntitlement int
+	// temporary field to hold the normalized load %
+	tempNormalizedPct int
 }
 
 func (jc *jobClass) String() string {
@@ -139,10 +146,10 @@ func NewJobClass(name string, targetLoadPct int) *jobClass {
 }
 
 // GetTasksToBeAssigned - the entry point to the load based scheduling algorithm
-// It returns the list of tasks that should be assigned to nodes as per the worker-class %s:
-// Allocate available workers to classes based on target % allocations for each class and the current and
-// running load for each class.
-// - When a class has tasks waiting to start, the algorithm will determing the number of workers the class it 'entitled' to:
+// It computes the list of tasks that should be started.
+// Allocate available workers to classes based on target load % allocations for each class, and the current number of running and
+// waiting tasks for each class.
+// - When a class has tasks waiting to start, the algorithm will determine the number of workers the class it 'entitled' to:
 // the number of workers as per the class's target load %
 // - When classes are under-utilizing their 'entitlement', (due to lack of waiting tasks), the unallocated workers will be
 // ‘loaned’/used to run tasks from other classes (class allocations may exceed the targeted allocations %’s)
@@ -167,7 +174,7 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 
 	rebalanced := false
 	var stopTasks []*taskState
-	if lbs.getRebalanceMinDuration() > 0 && lbs.getRebalanceThreshold() > 0 {
+	if lbs.getRebalanceMinimumDuration() > 0 && lbs.getRebalanceThreshold() > 0 {
 		// currentPctSpread is the delta between the highest and lowest
 		currentPctSpread := lbs.getCurrentPercentsSpread(numWorkers)
 		if currentPctSpread > lbs.getRebalanceThreshold() {
@@ -234,19 +241,12 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 		var jc *jobClass
 		var ok bool
 		className := GetRequestorClass(requestor, lbs.requestorReToClassMap)
-		if className != "" {
-			jc, ok = lbs.jobClasses[className]
-			if !ok {
-				// the class name was not recognized, use the class with the least number of workers (lowest %)
-				lbs.config.stat.Counter(stats.SchedLBSUnknownJobCounter).Inc(1)
-				jc = lbs.jobClasses[classNameWithLeastWorkers]
-				log.Errorf("%s is not a recognized job class assigning to class (%s)", className, classNameWithLeastWorkers)
-			}
-		} else {
-			// if the requestor is not recognized, use the class with the least number of workers (lowest %)
+		jc, ok = lbs.jobClasses[className]
+		if !ok {
+			// the class name was not recognized, use the class with the least number of workers (lowest %)
 			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCounter).Inc(1)
 			jc = lbs.jobClasses[classNameWithLeastWorkers]
-			log.Errorf("%s is not a recognized requestor assigning to class (%s)", className, classNameWithLeastWorkers)
+			log.Errorf("%s is not a recognized job class assigning to class (%s)", className, classNameWithLeastWorkers)
 		}
 		if jc.origTargetLoadPct == 0 {
 			log.Errorf("%s worker allocation (load %% is 0), ignoring %d jobs", requestor, len(jobs))
@@ -573,7 +573,8 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 	numTasksToStop := jobClass.numTasksToStart * -1
 	stopTasks := []*taskState{}
 	for len(stopTasks) < numTasksToStop {
-		tasks := getTasksByJobClassAndStart(lbs.tasksByJobClassAndStartTimeSec, jobClass.className, startTimeSec)
+		key := taskClassAndStartKey{class: jobClass.className, start: startTimeSec}
+		tasks := lbs.tasksByJobClassAndStartTimeSec[key]
 		for _, task := range tasks {
 			stopTasks = append(stopTasks, task)
 			if len(stopTasks) == numTasksToStop {
@@ -751,15 +752,15 @@ func (lbs *LoadBasedAlg) setRequestorToClassMap(requestorToClassMap map[string]s
 	}
 }
 
-// getRebalanceMinDuration get the rebalance duration
-func (lbs *LoadBasedAlg) getRebalanceMinDuration() time.Duration {
+// getRebalanceMinimumDuration get the rebalance duration
+func (lbs *LoadBasedAlg) getRebalanceMinimumDuration() time.Duration {
 	lbs.config.rebalanceMinDurationMu.RLock()
 	defer lbs.config.rebalanceMinDurationMu.RUnlock()
 	return lbs.config.rebalanceMinDuration
 }
 
-// setRebalanceMinDuration set the rebalance duration
-func (lbs *LoadBasedAlg) setRebalanceMinDuration(rebalanceMinDuration time.Duration) {
+// setRebalanceMinimumDuration set the rebalance duration
+func (lbs *LoadBasedAlg) setRebalanceMinimumDuration(rebalanceMinDuration time.Duration) {
 	lbs.config.rebalanceMinDurationMu.Lock()
 	defer lbs.config.rebalanceMinDurationMu.Unlock()
 	lbs.config.rebalanceMinDuration = rebalanceMinDuration

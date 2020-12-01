@@ -172,10 +172,10 @@ service CloudScoot {
     1: InvalidRequest ir
     2: ScootServerError err
   )
-  i32 GetRebalanceMinDuration() throws (
+  i32 GetRebalanceMinimumDuration() throws (
     1: InvalidRequest ir
   )
-  void SetRebalanceMinDuration(1: i32 durationMin) throws (
+  void SetRebalanceMinimumDuration(1: i32 durationMin) throws (
     1: InvalidRequest ir
     2: ScootServerError err
   )
