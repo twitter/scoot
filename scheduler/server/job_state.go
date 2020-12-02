@@ -246,17 +246,17 @@ func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, start
 // removeTaskFromStartTimeMap remove the completed task from the map that bins running tasks by their class and start time
 func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, startTimeSec time.Time) {
 	if j.tasksByJobClassAndStartTimeSec == nil {
-		log.Errorf("tasksByJobClassAndStartTime map not found.  Skipping removing task from it. jobID: %s, taskID: %s, jobClass:%s, startTime:%s", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		log.Warnf("tasksByJobClassAndStartTime map not found.  Skipping removing task from it. jobID: %s, taskID: %s, jobClass:%s, startTime:%s", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
 		return
 	}
 	timeBucket := taskClassAndStartKey{class: j.jobClass, start: startTimeSec}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[timeBucket]; !ok {
-		log.Errorf("no %s start time bucket found for the time %s. Skipping removing task %s_%s from it", j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"), jobID, taskID)
+		log.Warnf("no %s start time bucket found for the time %s. Skipping removing task %s_%s from it", j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"), jobID, taskID)
 		return
 	}
 	taskKey := jobIDTaskIDKey{jobID: jobID, taskID: taskID}
 	if _, ok := j.tasksByJobClassAndStartTimeSec[timeBucket][taskKey]; !ok {
-		log.Errorf("task %s_%s was not found in %s time bucket found for the job %s.  Skipping removing task from it", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		log.Warnf("task %s_%s was not found in %s time bucket found for the job %s.  Skipping removing task from it", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
 		return
 	}
 	delete(j.tasksByJobClassAndStartTimeSec[timeBucket], taskKey)
