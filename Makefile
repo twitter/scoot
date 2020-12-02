@@ -16,10 +16,6 @@ SHELL := /bin/bash -o pipefail
 # Libaries don't configure the logger by default - define this so they can init the logger during testing.
 SCOOT_LOGLEVEL ?= info
 
-# Output can be overly long and exceed TravisCI 4MB limit, so filter out some of the noisier logs.
-# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
-
 build:
 	go build ./...
 
@@ -104,7 +100,7 @@ smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m $(FILTER)
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
 
 recoverytest:
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
