@@ -4,7 +4,7 @@ env:
   GO111MODULE: on
 
 jobs:
-  test:
+  validate-changes:
     strategy:
       matrix:
         go-version: [1.13.8]
