@@ -195,21 +195,6 @@ const (
 	SchedPreemptedTasksCounter = "preemptedTasksCounter"
 
 	/*
-		the number of jobs with priority 0
-	*/
-	SchedPriority0JobsGauge = "priority0JobsGauge"
-
-	/*
-		the number of jobs with priority 1
-	*/
-	SchedPriority1JobsGauge = "priority1JobsGauge"
-
-	/*
-		the number of jobs with priority 2
-	*/
-	SchedPriority2JobsGauge = "priority2JobsGauge"
-
-	/*
 		the number of times the platform retried sending an end saga message
 	*/
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"

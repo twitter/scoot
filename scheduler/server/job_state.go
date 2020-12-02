@@ -191,7 +191,7 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	}
 	if _, ok := j.Running[taskId]; ok {
 		delete(j.Running, taskId)
-	} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
+	} else if _, ok = j.NotStarted[taskId]; ok {
 		delete(j.NotStarted, taskId)
 	}
 	j.Completed[taskId] = taskState

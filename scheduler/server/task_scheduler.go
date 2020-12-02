@@ -13,6 +13,9 @@ type taskAssignment struct {
 	task   *taskState
 }
 
+// Clients will check for this string to differentiate between scoot and user initiated actions.
+const RebalanceRequestedErrStr = "RebalanceRequested"
+
 // Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
 // Note: pure fn because it's confusing to have getTaskAssignments() modify clusterState based on the proposed
@@ -62,7 +65,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 			"jobType":   jobState.Job.Def.JobType,
 			"tag":       jobState.Job.Def.Tag,
 		}
-		msgs := s.abortTask(jobState, task, logFields)
+		msgs := s.abortTask(jobState, task, logFields, RebalanceRequestedErrStr)
 		if len(msgs) > 0 {
 			if err := jobState.Saga.BulkMessage(msgs); err != nil {
 				logFields["err"] = err

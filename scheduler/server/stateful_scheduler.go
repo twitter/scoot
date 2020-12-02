@@ -1127,7 +1127,7 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 		}
 		var updateMessages []saga.SagaMessage
 		for _, task := range s.getJob(req.jobId).Tasks {
-			msgs := s.abortTask(jobState, task, logFields)
+			msgs := s.abortTask(jobState, task, logFields, UserRequestedErrStr)
 			updateMessages = append(updateMessages, msgs...)
 		}
 
@@ -1147,13 +1147,13 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 }
 
 // abortTask abort a task - will be triggered by killing a job and when the scheduling algorithm rebalances the workers
-func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFields log.Fields) []saga.SagaMessage {
+func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFields log.Fields, abortMsg string) []saga.SagaMessage {
 	logFields["taskID"] = task.TaskId
 	log.WithFields(logFields).Info("aborting task")
 	var updateMessages []saga.SagaMessage
 
 	if task.Status == domain.InProgress {
-		task.TaskRunner.Abort(true, UserRequestedErrStr)
+		task.TaskRunner.Abort(true, abortMsg)
 	} else if task.Status == domain.NotStarted {
 		st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 		st.Error = UserRequestedErrStr
