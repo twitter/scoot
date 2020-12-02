@@ -27,4 +27,5 @@ jobs:
     - name: Run all tests
       run: |
         export GOPATH="$HOME/go"
-        sudo -E make -j 1 ci
+        sudo ln -f -s $GOROOT/bin/* /usr/bin/
+        sudo -E PATH="$PATH" make -j 1 ci
