@@ -32,7 +32,7 @@ jobs:
         export GOPATH="$HOME/go"
         sudo ln -f -s $GOROOT/bin/* /usr/bin/
         sudo -E PATH="$PATH" make -j 1 ci
-        - name: Upload coverage to Codecov
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       timeout-minutes: 2
       with:
