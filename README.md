@@ -1,6 +1,6 @@
 # Scoot
 [![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
-[![Build Status](https://travis-ci.org/twitter/scoot.svg?branch=master)](https://travis-ci.org/twitter/scoot)
+[![Build Status](https://github.com/actions/hello-world/workflows/.github/workflows/main.yml/badge.svg)](https://github.com/twitter/scoot/actions)
 [![GoReportCard](https://goreportcard.com/badge/github.com/twitter/scoot)](https://goreportcard.com/report/github.com/twitter/scoot)
 [![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
 
@@ -30,7 +30,7 @@ Scoot work is broken down into independent jobs, which can consist of one or mor
 #### Go Version
 
 Scoot is intended to work with go modules. If this repository is on your GOPATH, please set **GO111MODULE=on** when
-working with go tools in this repository, and preferably use the Go distribution pinned in the .travis.yml file.
+working with go tools in this repository, and preferably use the Go distribution pinned in the .github/workflows/ci.yml file.
 
 ### Example
 
