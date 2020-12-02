@@ -12,32 +12,31 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - uses: actions/checkout@v2
-
-    - name: Cache go modules
-      uses: actions/cache@v1
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
-        restore-keys: ${{ runner.os }}-go-
-    - name: Check fmt
-      run: bash scripts/check_gofmt.sh
-    - name: Vet
-      run: make vet
-    - name: Run all tests
-      run: |
-        # Certain tests need sudo to run on github actions,
-        # so run them all as sudo.
-        # su doesn't use the same go version, so preserve env.
-        # See https://github.com/actions/virtual-environments/issues/731
-        export GOPATH="$HOME/go"
-        sudo ln -f -s $GOROOT/bin/* /usr/bin/
-        sudo -E PATH="$PATH" make -j 1 ci
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      timeout-minutes: 2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v2
+      - name: Cache go modules
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+      - name: Check fmt
+        run: bash scripts/check_gofmt.sh
+      - name: Vet
+        run: make vet
+      - name: Run all tests
+        run: |
+          # Certain tests need sudo to run on github actions,
+          # so run them all as sudo.
+          # su doesn't use the same go version, so preserve env.
+          # See https://github.com/actions/virtual-environments/issues/731
+          export GOPATH="$HOME/go"
+          sudo ln -f -s $GOROOT/bin/* /usr/bin/
+          sudo -E PATH="$PATH" make -j 1 ci
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        timeout-minutes: 2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
