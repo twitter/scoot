@@ -23,9 +23,17 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
         restore-keys: ${{ runner.os }}-go-
-
+    - name: Check fmt
+      run: bash scripts/check_gofmt.sh
+    - name: Vet
+      run: make vet
     - name: Run all tests
       run: |
         export GOPATH="$HOME/go"
         sudo ln -f -s $GOROOT/bin/* /usr/bin/
         sudo -E PATH="$PATH" make -j 1 ci
+        - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      timeout-minutes: 2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
