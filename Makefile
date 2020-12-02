@@ -16,10 +16,6 @@ SHELL := /bin/bash -o pipefail
 # Libaries don't configure the logger by default - define this so they can init the logger during testing.
 SCOOT_LOGLEVEL ?= info
 
-# Output can be overly long and exceed TravisCI 4MB limit, so filter out some of the noisier logs.
-# Hacky redirect interactive console to 'tee /dev/null' so logrus on travis will produce full timestamps.
-TRAVIS_FILTER ?= 2>&1 | tee /dev/null | egrep -v 'line="(runners|scheduler/task_|gitdb)'
-
 build:
 	go build ./...
 
@@ -77,7 +73,7 @@ fs_util:
 ############## tests and coverage
 
 coverage:
-	bash scripts/test_coverage.sh $(TRAVIS_FILTER)
+	bash scripts/test_coverage.sh
 
 # Usage: make test PKG=github.com/twitter/scoot/binaries/...
 test:
@@ -85,11 +81,11 @@ test:
 
 test-unit-property-integration: fs_util
 	# Runs all tests including integration and property tests
-	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...)
 
 test-unit-property:
 	# Runs only unit tests and property tests
-	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./...) $(TRAVIS_FILTER)
+	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./...)
 
 test-unit:
 	# Runs only unit tests
@@ -104,12 +100,12 @@ smoketest:
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m $(TRAVIS_FILTER)
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
 
 recoverytest:
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	# Ignore output here to reduce travis log size. Smoketest is more important and that still logs.
+	# Ignore output here to reduce ci log size. Smoketest is more important and that still logs.
 	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
 integrationtest:
@@ -161,8 +157,8 @@ thrift: thrift-go
 bazel-proto:
 	# see bazel/remoteexecution/README.md
 
-############## top-level dev-fullbuild, travis targets
+############## top-level dev-fullbuild, ci targets
 
 dev-fullbuild: dev-dependencies generate test-all
 
-travis: clean-data fs_util install recoverytest smoketest integrationtest test-all clean-data
+ci: clean-data fs_util install recoverytest smoketest integrationtest test-all clean-data
