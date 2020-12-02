@@ -1,6 +1,6 @@
 # Scoot
 [![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
-[![Build Status](https://github.com/actions/hello-world/workflows/.github/workflows/main.yml/badge.svg)](https://github.com/twitter/scoot/actions)
+[![Build Status](https://github.com/twitter/scoot/workflows/ci/badge.svg)](https://github.com/twitter/scoot/actions)
 [![GoReportCard](https://goreportcard.com/badge/github.com/twitter/scoot)](https://goreportcard.com/report/github.com/twitter/scoot)
 [![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
 
