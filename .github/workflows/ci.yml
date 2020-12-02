@@ -27,4 +27,4 @@ jobs:
     - name: Run all tests
       run: |
         export GOPATH="$HOME/go"
-        make -j 1 ci
+        sudo -E make -j 1 ci
