@@ -28,10 +28,9 @@ get_fs_util() {
         echo "Target file exists locally"
         return
     fi
-	# Github actions need this to run as su
-	sudo wget "$url" -O "$firstgopath/bin/fs_util-$pants_release"
-	sudo chmod +x "$firstgopath/bin/fs_util-$pants_release"
-	sudo ln -s -f "$firstgopath/bin/fs_util-$pants_release" "$firstgopath/bin/fs_util"
+	wget "$url" -O "$firstgopath/bin/fs_util-$pants_release"
+	chmod +x "$firstgopath/bin/fs_util-$pants_release"
+	ln -s -f "$firstgopath/bin/fs_util-$pants_release" "$firstgopath/bin/fs_util"
 }
 
 mkdir -p "$firstgopath/bin"

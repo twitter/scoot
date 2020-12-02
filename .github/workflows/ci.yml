@@ -29,6 +29,10 @@ jobs:
       run: make vet
     - name: Run all tests
       run: |
+        # Certain tests need sudo to run on github actions,
+        # so run them all as sudo.
+        # su doesn't use the same go version, so preserve env.
+        # See https://github.com/actions/virtual-environments/issues/731
         export GOPATH="$HOME/go"
         sudo ln -f -s $GOROOT/bin/* /usr/bin/
         sudo -E PATH="$PATH" make -j 1 ci
