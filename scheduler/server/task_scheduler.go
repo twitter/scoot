@@ -24,19 +24,11 @@ const RebalanceRequestedErrStr = "RebalanceRequested"
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
 func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
-	cs := s.clusterState
-	jobs := s.inProgressJobs
-	requestors := s.requestorMap
-	stat := s.stat
-
-	if stat == nil {
-		stat = stats.NilStatsReceiver()
-	}
-	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
+	defer s.stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
 	// Exit if there are no unscheduled tasks.
 	waitingTasksFound := false
-	for _, j := range jobs {
+	for _, j := range s.inProgressJobs {
 		if len(j.NotStarted) > 0 {
 			waitingTasksFound = true
 			break
@@ -46,7 +38,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 		return nil
 	}
 
-	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors)
+	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(s.inProgressJobs, s.stat, s.clusterState, s.requestorMap)
 	// Exit if no tasks qualify to be scheduled.
 	if len(tasks) == 0 {
 		if len(stopTasks) != 0 {
@@ -78,7 +70,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
-	assignments := assign(cs, tasks, stat)
+	assignments := assign(s.clusterState, tasks, s.stat)
 	log.WithFields(
 		log.Fields{
 			"numAssignments": len(assignments),

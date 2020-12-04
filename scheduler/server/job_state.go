@@ -235,12 +235,12 @@ func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, start
 		log.Errorf("tasksByJobClassAndStartTime map not found.  Skipping adding task to it. jobID: %s, taskID:%s, jobClass:%s, startTime:%s", task.JobId, task.TaskId, jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
 		return
 	}
-	timeBucket := taskClassAndStartKey{class: jobClass, start: startTimeSec}
-	if _, ok := j.tasksByJobClassAndStartTimeSec[timeBucket]; !ok {
-		j.tasksByJobClassAndStartTimeSec[timeBucket] = taskStateByJobIDTaskID{}
+	classNStartBucketKey := taskClassAndStartKey{class: jobClass, start: startTimeSec}
+	if _, ok := j.tasksByJobClassAndStartTimeSec[classNStartBucketKey]; !ok {
+		j.tasksByJobClassAndStartTimeSec[classNStartBucketKey] = taskStateByJobIDTaskID{}
 	}
 	taskKey := jobIDTaskIDKey{jobID: task.JobId, taskID: task.TaskId}
-	j.tasksByJobClassAndStartTimeSec[timeBucket][taskKey] = task
+	j.tasksByJobClassAndStartTimeSec[classNStartBucketKey][taskKey] = task
 }
 
 // removeTaskFromStartTimeMap remove the completed task from the map that bins running tasks by their class and start time
