@@ -20,10 +20,26 @@ const (
 
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
 var (
-	DefaultLoadBasedSchedulerClassPercents = map[string]int32{"c0": 100}
-	DefaultRequestorToClassMap             = map[string]string{".*": "c0"}
-	DefaultMinRebalanceTime                = time.Duration(4 * time.Minute)
-	MaxTaskDuration                        = time.Duration(4 * time.Hour)
+	DefaultLoadBasedSchedulerClassPercents = map[string]int32{
+		"land":       48,
+		"diff":       25,
+		"sandbox":    10,
+		"regression": 9,
+		"tryout":     2,
+		"ktf":        5,
+		"unknown":    1,
+	}
+	DefaultRequestorToClassMap = map[string]string{
+		"land.*":       "land",
+		"diff.*":       "diff",
+		"sandbox.*":    "sandbox",
+		"regression.*": "regression",
+		"source_ci.*":  "regression",
+		"tryout.*":     "tryout",
+		"ktf.*":        "ktf",
+	}
+	DefaultMinRebalanceTime = time.Duration(4 * time.Minute)
+	MaxTaskDuration         = time.Duration(4 * time.Hour)
 )
 
 type LoadBasedAlgConfig struct {

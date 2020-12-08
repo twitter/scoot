@@ -173,28 +173,26 @@ func (st *SchedulingAlgTester) RunTest() error {
 	// set up goroutine picking up job completion times
 	allJobsDoneCh := make(chan bool)    // true when all jobs have finished
 	allJobsStartedCh := make(chan bool) // used this channel to tell the watchForAllDone that it has all job ids
-	simStart := time.Now()
-	simEnd := simStart.Add(st.testsEnd.Sub(st.testsStart))
-	go st.watchForAllDone(allJobsStartedCh, allJobsDoneCh, simEnd, sc)
+	realStart := time.Now()
+	realEnd := realStart.Add(st.testsEnd.Sub(st.testsStart))
+	go st.watchForAllDone(allJobsStartedCh, allJobsDoneCh, realEnd, sc)
 
 	// initialize structures for running the jobs
 	// sort the job map so we run them in ascending time order
-	keys := make([]int, 0)
+	secondsAfterStartKeys := make([]int, 0)
 	for k := range st.jobDefsMap {
-		keys = append(keys, k)
+		secondsAfterStartKeys = append(secondsAfterStartKeys, k)
 	}
-	sort.Ints(keys)
+	sort.Ints(secondsAfterStartKeys)
 
 	// now start running the jobs at the same frequency that they were run in production
-	log.Warnf("%s: Starting the jobs.", simStart.Format(time.RFC3339))
+	log.Warnf("%s: Starting the sim for jobs running after %s.", realStart.Format(time.RFC3339), st.testsStart.Format(time.RFC3339))
 	if len(st.jobDefsMap) == 0 {
 		log.Errorf("no jobs")
 		return nil
 	}
-	// the first job will be started immediately, so save the first jobs' delay and
-	// offset all jobs' start time by this value
-	st.firstJobStartOffset = time.Duration(keys[0]) * time.Second
-	for _, secondsAfterStart := range keys {
+	st.firstJobStartOffset = time.Duration(secondsAfterStartKeys[0]) * time.Second
+	for _, secondsAfterStart := range secondsAfterStartKeys {
 		jobDefs := st.jobDefsMap[secondsAfterStart]
 		for _, jobDef := range jobDefs {
 			select {
@@ -203,17 +201,17 @@ func (st *SchedulingAlgTester) RunTest() error {
 				return fmt.Errorf("error reported looking for completed jobs.  See log")
 			default:
 			}
-			// pause to simulate the frequency in which the jobs arrived in production
-			// (exclude the first jobs' time offset)
-			jobStart := simStart.Add(time.Duration(secondsAfterStart) * time.Second).Add(-1 * st.firstJobStartOffset)
-			if time.Now().Before(jobStart) {
-				pause := jobStart.Sub(time.Now())
+			// startAt is when the simulation should start the jobs with respect to the current (wall) clock time
+			startAt := realStart.Add(time.Duration(secondsAfterStart) * time.Second).Add(-1 * st.firstJobStartOffset)
+			if time.Now().Before(startAt) {
+				pause := startAt.Sub(time.Now())
 				log.Warnf("waiting %s to start the next job", pause.Truncate(time.Second))
 				<-time.After(pause) // wait till time reaches startTime
 			}
 
 			// give the job to the scheduler
-			log.Warnf("%s: submitting job:%s", time.Duration(secondsAfterStart)*time.Second-st.firstJobStartOffset, jobDef)
+			simTime := st.testsStart.Add(st.firstJobStartOffset).Add(time.Now().Sub(realStart))
+			log.Warnf("%s(%s): submitting job:%s", simTime.Format(time.RFC3339), time.Duration(secondsAfterStart)*time.Second-st.firstJobStartOffset, jobDef)
 			id, err := s.ScheduleJob(*jobDef)
 			if err != nil {
 				return fmt.Errorf("Expected job to be Scheduled Successfully %v", err)
