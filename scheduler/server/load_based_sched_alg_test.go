@@ -85,6 +85,14 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c3": {loadPct: 0, numRunningTasks: 100, numWaitingTasks: 300, numJobs: 13, expectedTasksToStart: 0},
 			"c4": {loadPct: 15, numRunningTasks: 110, numWaitingTasks: 500, numJobs: 40, expectedTasksToStart: 31}},
 		},
+		// class loads with percents not adding up to 100- trigger percent normalizing
+		{totalWorkers: 1000, classes: map[string]classState{
+			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 100, numJobs: 30, expectedTasksToStart: 100},
+			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 50, numJobs: 10, expectedTasksToStart: 10},
+			"c2": {loadPct: 15, numRunningTasks: 0, numWaitingTasks: 200, numJobs: 40, expectedTasksToStart: 172},
+			"c3": {loadPct: 0, numRunningTasks: 100, numWaitingTasks: 300, numJobs: 13, expectedTasksToStart: 0},
+			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 500, numJobs: 40, expectedTasksToStart: 8}},
+		},
 		{totalWorkers: 10000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 1660, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 830},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 1282},

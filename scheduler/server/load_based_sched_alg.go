@@ -97,7 +97,7 @@ type LoadBasedAlg struct {
 }
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
-// the %'s will be adjusted and an error will be returned with the alg object
+// the %'s will be adjusted and a message printed to the log
 func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
 		config:                          config,
@@ -125,7 +125,9 @@ type jobClass struct {
 	// the largest key value in the jobsByNumRunningTasks map
 	maxTaskRunningMapIndex int
 
+	// the total number of tasks waiting to start for all jobs in this class
 	origNumWaitingTasks int
+	// the total number of tasks running for all jobs in this class
 	origNumRunningTasks int
 
 	// the target % of workers for this class
@@ -178,7 +180,8 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	jobsByRequestor map[string][]*jobState) ([]*taskState, []*taskState) {
 	log.Debugf("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
 
-	// make local copies of the load pct structures
+	// make local copies of the load pct structures to isolate the algorithm from user updates that may happen
+	// as the algorithm is running
 	lbs.classLoadPercents = lbs.LocalCopyClassLoadPercents()
 	lbs.requestorReToClassMap = lbs.getRequestorToClassMap()
 	lbs.classByDescLoadPct = lbs.getClassByDescLoadPct()
@@ -189,16 +192,16 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 	lbs.initJobClassesMap(jobsByRequestor)
 
 	rebalanced := false
-	var stopTasks []*taskState
+	var tasksToStop []*taskState
 	if lbs.getRebalanceMinimumDuration() > 0 && lbs.getRebalanceThreshold() > 0 {
-		// currentPctSpread is the delta between the highest and lowest
+		// currentPctSpread is the delta between the highest and lowest delta from target percent loads
 		currentPctSpread := lbs.getCurrentPercentsSpread(numWorkers)
 		if currentPctSpread > lbs.getRebalanceThreshold() {
 			nilTime := time.Time{}
 			if lbs.exceededRebalanceThresholdStart == nilTime {
 				lbs.exceededRebalanceThresholdStart = time.Now()
 			} else if time.Now().Sub(lbs.exceededRebalanceThresholdStart) > lbs.config.rebalanceMinDuration {
-				stopTasks = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
+				tasksToStop = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
 				lbs.exceededRebalanceThresholdStart = time.Time{}
 				rebalanced = true
 			}
@@ -223,8 +226,8 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassActualPct, jc.className)).Update(int64(finalPct))
 	}
 
-	log.Debugf("Returning %d start tasks, %d stop tasks", len(tasksToStart), len(stopTasks))
-	return tasksToStart, stopTasks
+	log.Debugf("Returning %d start tasks, %d stop tasks", len(tasksToStart), len(tasksToStop))
+	return tasksToStart, tasksToStop
 }
 
 // initOrigNumTargetedWorkers computes the number of workers targeted for each class as per the class's
@@ -537,7 +540,7 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 				// get the next task to start from the job
 				tasks = append(tasks, lbs.getJobsNextTask(job))
 
-				// move the job to jobsByRunning tasks with numRunningTasks + 1 entry.  Note: we don't have to pull it from
+				// move the job to jobsByRunningTasks with numRunningTasks + 1 entry.  Note: we don't have to pull it from
 				// its current numRunningTasks bucket since this is a 1 time pass through the jobsByNumRunningTasks map.  The map
 				// will be rebuilt with the next scheduling iteration
 				if len(job.waitingTaskIDs) > 1 {
@@ -557,7 +560,10 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 		}
 	}
 
-	return tasks // note: we should never hit this line
+	msg := "getTasksToStartForJobClass() fell out of for range jobs loop.  We expected it to return because startingTaskCnt == jc.numTasksToStart above " +
+		"before falling out of the loop.  Not all workers may be getting assigned."
+	log.Warnf(msg)
+	return tasks
 }
 
 // getJobsNextTask get the next task to start from the job
@@ -587,13 +593,13 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 	earliest := time.Now().Add(-1 * MaxTaskDuration)
 	startTimeSec := time.Now().Truncate(time.Second)
 	numTasksToStop := jobClass.numTasksToStart * -1
-	stopTasks := []*taskState{}
-	for len(stopTasks) < numTasksToStop {
+	tasksToStop := []*taskState{}
+	for len(tasksToStop) < numTasksToStop {
 		key := taskClassAndStartKey{class: jobClass.className, start: startTimeSec}
 		tasks := lbs.tasksByJobClassAndStartTimeSec[key]
 		for _, task := range tasks {
-			stopTasks = append(stopTasks, task)
-			if len(stopTasks) == numTasksToStop {
+			tasksToStop = append(tasksToStop, task)
+			if len(tasksToStop) == numTasksToStop {
 				break
 			}
 		}
@@ -603,7 +609,7 @@ func (lbs *LoadBasedAlg) getTasksToStopForJobClass(jobClass *jobClass) []*taskSt
 		}
 	}
 	lbs.config.stat.Gauge(fmt.Sprintf("%s%s", stats.SchedStoppingTasks, jobClass.className)).Update(int64(numTasksToStop))
-	return stopTasks
+	return tasksToStop
 }
 
 func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
@@ -641,9 +647,9 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 		lbs.getTaskAllocations(totalWorkers - totalTasks)
 	}
 
-	stopTasks := lbs.buildTaskStopList()
+	tasksToStop := lbs.buildTaskStopList()
 
-	return stopTasks
+	return tasksToStop
 }
 
 // getCurrentPercentsSpread is used to measure how well the current worker assignment matches the target loads.
@@ -722,29 +728,34 @@ func (lbs *LoadBasedAlg) setClassLoadPercents(classLoadPercents map[string]int32
 	// set the load pcts - normalizing them if the don't add up to 100
 	lbs.config.classLoadPercents = map[string]int{}
 	pctTotal := 0
-	for _, val := range classLoadPercents {
+	for k, val := range classLoadPercents {
+		lbs.config.classLoadPercents[k] = int(val)
 		pctTotal += int(val)
 	}
 	if pctTotal != 100 {
 		log.Errorf("LoadBalanced scheduling %%'s don't add up to 100, normalizing them")
-		totalNormalizedPct := 0
-		firstClass := true
-		for _, className := range lbs.config.classByDescLoadPct {
-			if firstClass {
-				firstClass = false
-				continue // skip the first class (highest %), it will be given the difference between 100 and the sum of the other %'s
-			}
-			classPct := classLoadPercents[className]
-			lbs.config.classLoadPercents[className] = int(math.Floor(float64(classPct) / float64(pctTotal)))
-			totalNormalizedPct += lbs.config.classLoadPercents[className]
-		}
-		lbs.config.classLoadPercents[lbs.config.classByDescLoadPct[0]] = 100 - totalNormalizedPct
+		lbs.normalizePercents(pctTotal)
 		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPercents)
-	} else {
-		for k, v := range classLoadPercents {
-			lbs.config.classLoadPercents[k] = int(v)
-		}
 	}
+}
+
+// normalizePercents normalizes the class percents to the sum of their values.  Only uses when the configured
+// percents don't add up to 100
+func (lbs *LoadBasedAlg) normalizePercents(percentsSum int) {
+	totalNormalizedPercents := 0
+	firstClass := true
+	normalizedPercents := map[string]int{}
+	for _, className := range lbs.config.classByDescLoadPct {
+		if firstClass {
+			firstClass = false
+			continue // skip the first class (highest %), it will be given the difference between 100 and the sum of the other %'s
+		}
+		classPercent := lbs.config.classLoadPercents[className]
+		normalizedPercents[className] = int(math.Floor(float64(classPercent) / float64(percentsSum) * 100))
+		totalNormalizedPercents += normalizedPercents[className]
+	}
+	normalizedPercents[lbs.config.classByDescLoadPct[0]] = 100 - totalNormalizedPercents
+	lbs.config.classLoadPercents = normalizedPercents
 }
 
 // getRequestorToClassMap return a copy of the RequestorToClassMap
