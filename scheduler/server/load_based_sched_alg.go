@@ -58,27 +58,28 @@ type LoadBasedAlgConfig struct {
 	stat stats.StatsReceiver
 }
 
-// LoadBasedAlg the scheduling algorithm allocates job tasks to workers using a class map as
-// follows:
-// - each job maps to a 'class' (based on the job's requestor value)
-// - classes are assigned a % of the number of scoot workers.
-// When the algorithm is assigning tasks to workers it will try to start tasks such that the
-// number of running tasks maintain the defined class %'s.  We refer to number of workers as
-// per a class's defined % as the number of 'entitled' workers for the class.
-// (The class is entitled to use class % * total number of workers to run job tasks from jobs
-// assigned to the class.)
-// When there are not enough tasks to use all of the class's entitled workers, the algorithm
-// will allow other classes to run their tasks on the unused workers.  We refer to
-// this as loaning worker to other classes.
-// Note: workers are not assigned to specific classes.  The class % concept is simply a counting
-// mechanism.
+// LoadBasedAlg the scheduling algorithm computes the list of tasks to start and stop for the
+// current iteration of the scheduler loop.
 //
-// Each scheduling iteration tries to bring the task allocation back to the original class
-// entitlement as defined in the class %s. It could be the case that long running tasks slowly create
-// an imbalance in the worker to class numbers (long running tasks accumulate loaned workers).
-// As such, the algorithm periodically rebalances the running workers back toward the original target
-// %s by stopping tasks that have been started on loaned workers.  It will stop the most recently started
-// tasks till the running task to class allocation meets the original entitlement targets.
+// The algorithm uses the classLoadPercents, number of tasks currently running for each class,
+// and number of available workers when computing the tasks to start/stop.
+//
+// the algorithm has 3 main phases: rebalancing, entitlement allocation, loaning allocation.
+//
+// - the rebalancing phase is only triggered when the number of tasks running for each class is very
+// different than the class load percents.  When rebalancing is run, the rebalancing computation will
+// select the set of tasks that need to be stopped to bring classes that are over their target load
+// percents back to the target load percents, and the tasks that can be started to replace the stopped tasks.
+// Note: there may still be idle workers after the rebalance tasks are started/stopped.  The next
+// scheduling iteration will find tasks for these workers.
+//
+// the entitlement part of the computation identifies the number of tasks to start to bring the number
+// of running tasks for each class closer to its entitlement as defined in the classLoadPercents.
+//
+// the loan part of the computation identifies the number of tasks over a class's entitlement that can
+// be started to use up unused workers due to other classes not using their entitlement.
+//
+// See README.md for more details
 //
 type LoadBasedAlg struct {
 	config     *LoadBasedAlgConfig
@@ -96,8 +97,7 @@ type LoadBasedAlg struct {
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
 }
 
-// NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.  If the load %'s don't add up to 100
-// the %'s will be adjusted and a message printed to the log
+// NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.
 func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *LoadBasedAlg {
 	lbs := &LoadBasedAlg{
 		config:                          config,
@@ -114,7 +114,9 @@ type jobWaitingTaskIds struct {
 	waitingTaskIDs []string
 }
 
-// jobClass the class definition that will be assigned to a set of jobs (using the job's requestor value)
+// jobClass the structure used by the algorithm when computing the list of tasks to start/stop for each class.
+// It tracks a class's load percent, and the current state of jobs/tasks assigned to the class.  It also holds
+// the intermediate fields used to calculate the tasks to start/stop.
 type jobClass struct {
 	className string
 
@@ -132,14 +134,14 @@ type jobClass struct {
 
 	// the target % of workers for this class
 	origTargetLoadPct int
-	// the original number of workers allocated for this class by target % (total workers * origTargetLoadPct)
+	// the original number of workers that should be running this class's tasks (total workers * origTargetLoadPct)
 	origNumTargetedWorkers int
 	// number of tasks that can be started (when negative -> number of tasks to stop)
 	numTasksToStart int
 	// number of tasks still waiting to be started
 	numWaitingTasks int
 
-	// temporary field to hold intermediate entitled num workers
+	// temporary field to hold intermediate entitled values
 	tempEntitlement int
 	// temporary field to hold the normalized load %
 	tempNormalizedPct int
@@ -158,24 +160,15 @@ func (jc *jobClass) String() string {
 		jc.tempNormalizedPct)
 }
 
-// NewJobClass a job class with its target % worker load
+// NewJobClass create a jobClass struct
 func NewJobClass(name string, targetLoadPct int) *jobClass {
 	return &jobClass{className: name, origTargetLoadPct: targetLoadPct, jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
 }
 
 // GetTasksToBeAssigned - the entry point to the load based scheduling algorithm
-// It computes the list of tasks that should be started.
-// Allocate available workers to classes based on target load % allocations for each class, and the current number of running and
-// waiting tasks for each class.
-// - When a class has tasks waiting to start, the algorithm will determine the number of workers the class it 'entitled' to:
-// the number of workers as per the class's target load %
-// - When classes are under-utilizing their 'entitlement', (due to lack of waiting tasks), the unallocated workers will be
-// ‘loaned’/used to run tasks from other classes (class allocations may exceed the targeted allocations %’s)
-// -The algorithm will try to allocate 100% of the workers (no unallocated reserves)
-//
-// When starting tasks within a class:
-// Jobs within a class are binned by the number of running tasks (ranking jobs by the number of active tasks).
-// When starting tasks for a class, the tasks are first pulled from jobs with the least number of active tasks.
+// The algorithm uses the classLoadPercents, number of tasks currently running for each class
+// and number of available workers when computing the tasks to start/stop.
+// The algorithm has 3 main phases: rebalancing, entitlement allocation, loaning allocation.
 func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stats.StatsReceiver, cs *clusterState,
 	jobsByRequestor map[string][]*jobState) ([]*taskState, []*taskState) {
 	log.Debugf("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
@@ -252,7 +245,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 
 // initJobClassesMap builds the map of requestor (class name) to jobClass objects
 // if we see a job whose class % not defined, assign the job to the class with the
-// least number of workers
+// smallest class load %
 func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobState) {
 	classNameWithLeastWorkers := lbs.classByDescLoadPct[len(lbs.classByDescLoadPct)-1]
 	// fill the jobClasses map with the state of the running jobs
@@ -262,7 +255,7 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 		className := GetRequestorClass(requestor, lbs.requestorReToClassMap)
 		jc, ok = lbs.jobClasses[className]
 		if !ok {
-			// the class name was not recognized, use the class with the least number of workers (lowest %)
+			// the class name was not recognized, use the class with the smallest class load %
 			lbs.config.stat.Counter(stats.SchedLBSUnknownJobCounter).Inc(1)
 			jc = lbs.jobClasses[classNameWithLeastWorkers]
 			log.Errorf("%s is not a recognized job class assigning to class (%s)", className, classNameWithLeastWorkers)
@@ -275,8 +268,8 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 
 		// organize the class's jobs by the number of tasks currently running (map of jobs indexed by the number of
 		// tasks currently running for the job).  This will be used in the round robin task selection to start a
-		// class's worker allocation at the jobs with least number of running tasks
-		// this loop also computes the class's running tasks and waiting task totals
+		// class's task allocation from jobs with least number of running tasks.
+		// This loop also computes the class's running tasks and waiting task totals
 		for _, job := range jobs {
 			_, ok := jc.jobsByNumRunningTasks[job.TasksRunning]
 			if !ok {
@@ -328,13 +321,13 @@ func (lbs *LoadBasedAlg) computeNumTasksToStart(numIdleWorkers int) {
 // number of workers (origNumTargetedWorkers)
 // Note: this is an iterative computation that converges on the number of tasks to start within number of class's iterations.
 //
-// 1. compute the entitlement of a class as the class's orig target load minus (number of tasks running + number of tasks that
-// can be started)  (exception: if a class does not have waiting tasks, its entitlement is 0)
-// 2. compute entitlement % as entitlement/total of all classes entitlements
-// 3. compute num tasks to start for each class as min(entitlement % * idle(unallocated) workers, number of the class's waiting tasks)
+// 1. compute the outstanding entitlement of a class as the class's orig target load minus (number of tasks running + number of tasks
+// to start from the prior iteration)  (exception: if a class does not have waiting tasks, its entitlement is 0)
+// 2. compute outstanding entitlement % as outstanding entitlement/total of all classes outstanding entitlements
+// 3. compute num tasks to start for each class as min(outstanding entitlement % * idle(unallocated) workers, number of the class's waiting tasks)
 //
 // After completing the 3 steps above, the sum of the number tasks to start may still be < number of idle workers.  This will happen
-// when a class's waiting task count < than its entitlement (the class is not using all of its entitlement).  When this happens,
+// when a class's waiting task count < than its outstanding entitlement (the class cannot use all if its entitlement).  When this happens,
 // the un-allocated idle workers can be distributed across the other classes that have waiting tasks and have not met their full
 // entitlement.  We compute this by repeating steps 1-3 till all idle workers have been allocated, all waiting tasks have been
 // allocated or all classes entitlements have been met.  Each iteration either uses up all idle workers, all of a class's waiting tasks
@@ -365,10 +358,10 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 		// compute normalized entitlement pcts for classes with entitlement > 0
 		lbs.computeEntitlementPercents()
 
-		// compute worker allocations as per the normalized entitlement %s
+		// compute number of tasks to start (workersToAllocate) as per the normalized entitlement %s
 		numTasksAllocated := 0
-		workersToAllocate := min(numIdleWorkers, totalEntitlements)
-		numTasksAllocated, haveWaitingTasks = lbs.getTaskAllocations(workersToAllocate)
+		tasksToStart := min(numIdleWorkers, totalEntitlements)
+		numTasksAllocated, haveWaitingTasks = lbs.getTaskAllocations(tasksToStart)
 
 		numIdleWorkers -= numTasksAllocated
 
@@ -382,7 +375,8 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 	return numIdleWorkers, haveWaitingTasks
 }
 
-// loanWorkers: We have workers that can be 'loaned' to classes that still have waiting tasks.
+// loanWorkers: We have workers that can be 'loaned' to classes that still have waiting tasks.  (That is, a class
+// may have more running tasks than their entitlement % because other classes are not using their full entitlement.)
 // Note: this is an iterative computation that will converge on the number of workers to loan to classes
 // For each iteration
 // 1. normalize the original target load % to those classes with waiting tasks
@@ -390,19 +384,18 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 // exceed the class's number of waiting tasks
 //
 // When a class's allowed loan amount is larger than the class's waiting tasks, there will be unallocated workers
-// after all the class 'loan' amounts have been calculated.  We distribute these unallocated workers by
-// repeating the loan calculation till there are no unallocated workers left.
-// Each iteration either uses up all idle workers, or all of a class's waiting tasks.  This means that the we will not
-// iterate more than the number of classes.
+// after all the class 'loan' amounts have been calculated.  When this happens we repeat the loan calculation till
+// there are no unallocated workers left.  Each iteration either uses up all idle workers, or all of a class's waiting
+// tasks.  This means that the we will not iterate more than the number of classes.
 func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 	i := 0
 	for ; i < len(lbs.jobClasses); i++ {
 		lbs.computeLoanPercents()
 
 		// compute loan %'s and allocate idle workers
-		numTasksAllocated, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
+		numTasksToStart, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
 
-		numIdleWorkers -= numTasksAllocated
+		numIdleWorkers -= numTasksToStart
 
 		if !haveWaitingTasks {
 			break
@@ -415,31 +408,31 @@ func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
 
 // getTaskAllocations given the normalized allocation %s for each class, working from highest % (largest allocation) to smallest,
 // allocate that class's % of the idle workers (update the class's numTasksToStart and numWaitingTasks), but not to exceed the
-// classs' number of waiting tasks. Return the total number of tasks allocated to workers and a boolean indicating if there are
-// still tasks waiting to be allocated
+// classs' number of waiting tasks. This function updates each class' numTasksToStart and returns the total number of tasks to
+// start and a boolean indicating if there are still tasks waiting to be started
 func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
-	totalTasksAllocated := 0
+	totalTasksToStart := 0
 	haveWaitingTasks := false
 
 	for _, className := range lbs.classByDescLoadPct {
 		jc := lbs.jobClasses[className]
 		numTasksToStart := min(jc.numWaitingTasks, ceil(float32(numIdleWorkers)*(float32(jc.tempNormalizedPct)/100.0)))
 
-		if (totalTasksAllocated + numTasksToStart) > numIdleWorkers {
-			numTasksToStart = numIdleWorkers - totalTasksAllocated
+		if (totalTasksToStart + numTasksToStart) > numIdleWorkers {
+			numTasksToStart = numIdleWorkers - totalTasksToStart
 		}
 		jc.numTasksToStart += numTasksToStart
 		jc.numWaitingTasks -= numTasksToStart
 		if jc.numWaitingTasks > 0 {
 			haveWaitingTasks = true
 		}
-		totalTasksAllocated += numTasksToStart
+		totalTasksToStart += numTasksToStart
 	}
-	return totalTasksAllocated, haveWaitingTasks
+	return totalTasksToStart, haveWaitingTasks
 }
 
 // computeEntitlementPercents computes each class's current entitled % of total entitlements (from the current)
-// entitlement values
+// entitlement values.  The entitlement percents are written to the corresponding jobClass.tempNormalizedPCt field.
 func (lbs *LoadBasedAlg) computeEntitlementPercents() {
 	// get the entitlements total
 	entitlementTotal := 0
@@ -464,7 +457,8 @@ func (lbs *LoadBasedAlg) computeEntitlementPercents() {
 	lbs.jobClasses[lbs.classByDescLoadPct[0]].tempNormalizedPct = 100 - totalPercents
 }
 
-// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks
+// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks.
+// The loan percents percents are written to the corresponding jobClass.tempNormalizedPCt field.
 func (lbs *LoadBasedAlg) computeLoanPercents() {
 	// get the sum of all the original load pcts for classes that have waiting tasks
 	pctsTotal := 0
@@ -561,7 +555,7 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	}
 
 	msg := "getTasksToStartForJobClass() fell out of for range jobs loop.  We expected it to return because startingTaskCnt == jc.numTasksToStart above " +
-		"before falling out of the loop.  Not all workers may be getting assigned."
+		"before falling out of the loop.  Workers may be left idle till the next scheduling iteration."
 	log.Warnf(msg)
 	return tasks
 }
@@ -633,7 +627,7 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 			// the waiting tasks won't put the class over its entitlement
 			jc.numTasksToStart = jc.origNumWaitingTasks
 		} else {
-			// the class is running more than its entitled workers, numTasksToStart is number of tasks
+			// the class is running more than its entitled number of tasks, numTasksToStart is number of tasks
 			// to stop to bring back to its entitlement (it will be a negative number)
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		}
@@ -652,7 +646,7 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 	return tasksToStop
 }
 
-// getCurrentPercentsSpread is used to measure how well the current worker assignment matches the target loads.
+// getCurrentPercentsSpread is used to measure how well the current running tasks counts match the target loads.
 // It computes each class's difference between the target load pct and actual load pct.  The 'spread' value
 // is the difference between the min and max differences across the classes.  Eg: if 30% was the load target
 // for class A and class A is using 50% of the workers, A's pct difference is -20%.  If class B has a target

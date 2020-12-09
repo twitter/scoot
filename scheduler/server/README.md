@@ -31,33 +31,35 @@ _GetTasksToBeAssigned()_ is the top level entry to the algorithm. It
 ### **entitled workers**
 (entitlementTasksToStart())
 
-The class %'s define the target number of workers that should be allocated to that class's tasks when scoot is fully
-loaded.  We call this the number of workers the class is _entitled_ to use.
-When the algorithm is assigning tasks to workers it will try to start tasks to meet each class's **_entitlement_**.
+The class %'s define the target number of tasks from each class that should be running at any given time, given 
+the platform is fully loaded with many tasks for each class.  We call the number tasks that should be 
+running for a given class, the number of workers the class is _entitled_ to use.
+When the algorithm is computing tasks to start, it will try to produce a list of tasks such that, when the tasks 
+have been started, the running number of running tasks in each class meets the class' **_entitlements_**.
 
-The algorithm finds the classes that have waiting tasks and are under their _entitlement_ and normalizes the 
-original class load percents for the classes in this set.  It then computes the entitled workers for each class
-using the number of available workers, the normalized percents and number of tasks waiting in the class.  If a
-class does not have enough tasks to meet its entitlement, there will still be available workers after 
+The algorithm finds the classes that have waiting tasks and are under their _entitlement_, computes the unused 
+entitlement and each class's unused entitlement % wrt to all the class' unused entitlements.  It then computes the 
+number of tasks to start for each class based on the number of available workers, the normalized unused entitlement
+%s.  If a  class does not have enough tasks to meet its entitlement, there will still be available workers after 
 processing all the classes.  When this happens the algorithm repeats the entitlement computation (re-normalize 
-%s, allocate workers). Each iteration will either allocate all available workers or allocate all of at least 
-one class's waiting tasks. When all available workers are allocated or all class's waiting tasks or entitlements 
-have been allocated the entitlement computation is complete.    
+%s, compute tasks to start using number of available workers). Each iteration will either allocate all available 
+workers or allocate all of at least one class's waiting tasks or full entitlement. When all available workers are 
+allocated or all class's waiting tasks or entitlements have been allocated the entitlement computation is complete.    
 
 ### **loaned workers**
 (workerLoanAllocation())
 
 It may be the case that some classes are under-utilizing their entitlements, but other classes have more tasks than
-their entitlement.  When this happens, the algorithm allows the 'over entitlement' classes to run tasks on more than
-their entitled number of workers, the classes under-utilizing their entitlement are,in effect, _loaning_ workers from
+their entitlement.  When this happens, the algorithm allows the 'over entitlement' classes to start more tasks than
+their entitlement.  The classes under-utilizing their entitlement are, in effect, _loaning_ workers
 to the classes with more tasks than their entitlement.
 
-The loan part of the algorithm normalizes the load %s to the classes with waiting tasks and allocates the unused workers 
-as per these normalized percents.  If the _loan_ amount for a class is larger than the number of waiting tasks in that class,
-there will still be unallocated workers after processing each class.  When this happens the algorithm repeats the loan
-computation re-normalizing the %s to the classes with waiting tasks and allocating the still unallocated workers.  The
-iteration finishes when all unallocated workers have been assigned to a class or when all the classes waiting tasks
-have been allocated to a worker.
+The loan part of the algorithm normalizes the load %s on the classes with waiting tasks, and computes the number of tasks
+to start as per these normalized percents and the number of available workers.  If the _loan_ amount for a class is larger than the 
+number of waiting tasks in that class, there will still be available workers after processing each class.  When this 
+happens the algorithm repeats the loan computation re-normalizing the %s to the classes with waiting tasks and allocating 
+the still unallocated workers.  The iteration finishes when all unallocated workers have been assigned to a class or when 
+all the classes waiting tasks have been allocated to a worker.
 
 **Note** the entitlement and loan computation does not assign a specific worker to a task, it simply computes the number of
 workers that can be used to start tasks in each class.
@@ -65,10 +67,10 @@ workers that can be used to start tasks in each class.
 ### **re-balancing**
 (rebalanceClassTasks())
 
-Each scheduling iteration tries to bring the task allocation back to the original class
-entitlements, but it could be the case that long running tasks slowly create
-an imbalance in the worker to class numbers (long running tasks tying up loaned workers).
-As such, the algorithm periodically _re-balances_ the running workers back toward the original target
+Each scheduling iteration naturally brings the running task allocations back to the original class
+entitlements, but it could be the case that long running tasks holding on to loaned workers slowly cause the number of
+running tasks for each class to be far from the target load percents.
+When this occurs, the algorithm _re-balances_ the running workers back toward the original target
 %s by stopping tasks that have been started on loaned workers.  It will select the most recently started
 tasks till the running task to class allocation meets the original entitlement targets.
 
@@ -99,6 +101,3 @@ the delta entitlement spread before triggering re-balancing
 re-balancing
 - SetRebalanceThreshold - set the threshold the delta entitlement spread must be over before triggering
 re-balancing
-
-# Old Scheduling Algorithm
-See doc.go
