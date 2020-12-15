@@ -17,15 +17,12 @@ type lbsSchedAlgParams struct {
 	RequestorMap             map[string]string
 	RebalanceMinimumDuration int
 	RebalanceThreshold       int
-
-	clpFilePath    string
-	reqMapFilePath string
 }
 
 // getLBSSchedAlgParams structure for getting the load based scheduling params.
 type getLBSSchedAlgParams struct {
 	printAsJSON bool
-	params      lbsSchedAlgParams
+	lbsSchedAlgParams
 }
 
 func (g *getLBSSchedAlgParams) registerFlags() *cobra.Command {
@@ -41,12 +38,12 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	log.Info("Getting Scheduling Algorithm Parameters", args)
 
 	var err error
-	g.params.ClassLoadPercents, err = cl.scootClient.GetClassLoadPercents()
+	g.ClassLoadPercents, err = cl.scootClient.GetClassLoadPercents()
 	if err != nil {
 		return returnError(err)
 	}
 
-	g.params.RequestorMap, err = cl.scootClient.GetRequestorToClassMap()
+	g.RequestorMap, err = cl.scootClient.GetRequestorToClassMap()
 	if err != nil {
 		return returnError(err)
 	}
@@ -56,16 +53,16 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	if err != nil {
 		return returnError(err)
 	}
-	g.params.RebalanceMinimumDuration = int(tInt)
+	g.RebalanceMinimumDuration = int(tInt)
 
 	tInt, err = cl.scootClient.GetRebalanceThreshold()
 	if err != nil {
 		return returnError(err)
 	}
-	g.params.RebalanceThreshold = int(tInt)
+	g.RebalanceThreshold = int(tInt)
 
 	if g.printAsJSON {
-		asJSON, err := json.Marshal(g.params)
+		asJSON, err := json.Marshal(g.lbsSchedAlgParams)
 		if err != nil {
 			log.Errorf("Error converting status to JSON: %v", err.Error())
 			return fmt.Errorf("Error converting status to JSON: %v", err.Error())
@@ -75,27 +72,34 @@ func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 	} else {
 		log.Info("Class Load Percents:")
 		fmt.Println("Class Load Percents:")
-		for class, pct := range g.params.ClassLoadPercents {
+		for class, pct := range g.ClassLoadPercents {
 			log.Infof("%s:%d", class, pct)
 			fmt.Println(class, ":", pct)
 		}
 		log.Info("Requestor (reg exp) to class map:")
 		fmt.Println("Requestor (reg exp) to class map:")
-		for requestorRe, class := range g.params.RequestorMap {
+		for requestorRe, class := range g.RequestorMap {
 			log.Infof("%s:%s", requestorRe, class)
 			fmt.Println(requestorRe, ":", class)
 		}
-		log.Infof("Rebalance Duration:%d (minutes)\n", g.params.RebalanceMinimumDuration)
-		fmt.Println("Rebalance Duration:", g.params.RebalanceMinimumDuration, " (minutes)")
-		log.Infof("Rebalance Threshold:%d\n", g.params.RebalanceThreshold)
-		fmt.Println("Rebalance Threshold:", g.params.RebalanceThreshold)
+		log.Infof("Rebalance Duration:%d (minutes)\n", g.RebalanceMinimumDuration)
+		fmt.Println("Rebalance Duration:", g.RebalanceMinimumDuration, " (minutes)")
+		log.Infof("Rebalance Threshold:%d\n", g.RebalanceThreshold)
+		fmt.Println("Rebalance Threshold:", g.RebalanceThreshold)
 
 	}
 
 	return nil
 }
 
-func (s *lbsSchedAlgParams) registerFlags() *cobra.Command {
+type setLbsSchedAlgParams struct {
+	lbsSchedAlgParams
+
+	clpFilePath    string
+	reqMapFilePath string
+}
+
+func (s *setLbsSchedAlgParams) registerFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "set_scheduling_alg_params",
 		Short: "SetSchedAlgParams",
@@ -107,7 +111,7 @@ func (s *lbsSchedAlgParams) registerFlags() *cobra.Command {
 	return r
 }
 
-func (s *lbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (s *setLbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
 	log.Info("Setting Scheduling Algorithm Parameters", args)
 
 	if s.RebalanceMinimumDuration > -1 {
@@ -161,7 +165,7 @@ func (s *lbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []
 	return nil
 }
 
-func (s *lbsSchedAlgParams) readSettingsFile(filename string) ([]byte, error) {
+func (s *setLbsSchedAlgParams) readSettingsFile(filename string) ([]byte, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err

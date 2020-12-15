@@ -64,7 +64,7 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c.addCmd(&setSchedulerStatusCmd{})
 	c.addCmd(&getSchedulerStatusCmd{})
 	c.addCmd(&getLBSSchedAlgParams{})
-	c.addCmd(&lbsSchedAlgParams{})
+	c.addCmd(&setLbsSchedAlgParams{})
 
 	return c, nil
 }

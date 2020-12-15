@@ -25,8 +25,9 @@ var (
 		"diff":       25,
 		"sandbox":    10,
 		"regression": 9,
+		"ktf":        3,
+		"coverage":   2,
 		"tryout":     2,
-		"ktf":        5,
 		"unknown":    1,
 	}
 	DefaultRequestorToClassMap = map[string]string{
@@ -34,9 +35,11 @@ var (
 		"diff.*":       "diff",
 		"sandbox.*":    "sandbox",
 		"regression.*": "regression",
-		"source_ci.*":  "regression",
-		"tryout.*":     "tryout",
+		"CI.*":         "regression",
+		"jenkins.*":    "ktf",
 		"ktf.*":        "ktf",
+		"coverage.*":   "coverage",
+		"tryout.*":     "tryout",
 	}
 	DefaultMinRebalanceTime = time.Duration(4 * time.Minute)
 	MaxTaskDuration         = time.Duration(4 * time.Hour)
