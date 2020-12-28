@@ -13,6 +13,9 @@ type taskAssignment struct {
 	task   *taskState
 }
 
+// Clients will check for this string to differentiate between scoot and user initiated actions.
+const RebalanceRequestedErrStr = "RebalanceRequested"
+
 // Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
 // Note: pure fn because it's confusing to have getTaskAssignments() modify clusterState based on the proposed
@@ -20,77 +23,62 @@ type taskAssignment struct {
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.
-func getTaskAssignments(cs *clusterState, jobs []*jobState,
-	requestors map[string][]*jobState, config *SchedulerConfig, stat stats.StatsReceiver,
-	schedAlg SchedulingAlgorithm) (
-	[]taskAssignment, map[string]*nodeGroup,
-) {
-	if stat == nil {
-		stat = stats.NilStatsReceiver()
-	}
-	defer stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
+func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
+	defer s.stat.Latency(stats.SchedTaskAssignmentsLatency_ms).Time().Stop()
 
 	// Exit if there are no unscheduled tasks.
-	totalOutstandingTasks := 0
-	totalUnschedTasks := 0
-	for _, j := range jobs {
-		totalOutstandingTasks += (len(j.Tasks) - j.TasksCompleted)
-		totalUnschedTasks += (len(j.Tasks) - j.TasksCompleted - j.TasksRunning)
-	}
-	if totalUnschedTasks == 0 {
-		return nil, nil
-	}
-
-	// Udate SoftMaxSchedulableTasks based on number of healthy nodes and the total number of tasks.
-	// Setting the max to num healthy nodes means that each job can be fully scheduled.
-	// (This gets used in config.GetNodeScaleFactor())
-	cfg := SchedulerConfig{SoftMaxSchedulableTasks: max(totalOutstandingTasks, len(cs.nodes))}
-	if config != nil {
-		cfg = *config
-	}
-
-	// Create a copy of cs.nodeGroups to modify based on new scheduling.
-	clusterSnapshotIds := []string{}
-	nodeGroups := map[string]*nodeGroup{}
-	for snapId, groups := range cs.nodeGroups {
-		nodeGroups[snapId] = newNodeGroup()
-		for nodeId, node := range groups.idle {
-			nodeGroups[snapId].idle[nodeId] = node
+	waitingTasksFound := false
+	for _, j := range s.inProgressJobs {
+		if len(j.NotStarted) > 0 {
+			waitingTasksFound = true
+			break
 		}
-		for nodeId, node := range groups.busy {
-			nodeGroups[snapId].busy[nodeId] = node
-		}
-		clusterSnapshotIds = append(clusterSnapshotIds, snapId)
+	}
+	if !waitingTasksFound {
+		return nil
 	}
 
-	tasks := schedAlg.GetTasksToBeAssigned(jobs, stat, cs, requestors, cfg)
+	tasks, stopTasks := s.config.SchedAlg.GetTasksToBeAssigned(s.inProgressJobs, s.stat, s.clusterState, s.requestorMap)
 	// Exit if no tasks qualify to be scheduled.
 	if len(tasks) == 0 {
-		return nil, nil
+		if len(stopTasks) != 0 {
+			log.Errorf("task assignment returned tasks to stop but none to start.  Ignoring the (%d len) stopTasks list", len(stopTasks))
+		}
+		return nil
+	}
+	log.WithFields(log.Fields{"numStartingTasks": len(tasks), "numStoppingTasks": len(stopTasks)}).Info("scheduling returned")
+
+	// stop the tasks in stopTasks (we are rebalancing the workers)
+	for _, task := range stopTasks {
+		jobState := s.getJob(task.JobId)
+		logFields := log.Fields{
+			"jobID":     task.JobId,
+			"requestor": jobState.Job.Def.Requestor,
+			"jobType":   jobState.Job.Def.JobType,
+			"tag":       jobState.Job.Def.Tag,
+		}
+		msgs := s.abortTask(jobState, task, logFields, RebalanceRequestedErrStr)
+		if len(msgs) > 0 {
+			if err := jobState.Saga.BulkMessage(msgs); err != nil {
+				logFields["err"] = err
+				log.WithFields(logFields).Error("abortTask saga.BulkMessage failure")
+			}
+		}
 	}
 
 	// Loop over all cluster snapshotIds looking for a usable node. Prefer, in order:
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
-	assignments := assign(cs, tasks, nodeGroups, append([]string{""}, clusterSnapshotIds...), stat)
-	if len(assignments) == totalUnschedTasks {
-		log.WithFields(
-			log.Fields{
-				"numTasks": len(tasks),
-				"tag":      tasks[0].Def.Tag,
-				"jobID":    tasks[0].Def.JobID,
-			}).Info("Scheduled all tasks")
-	} else {
-		log.WithFields(
-			log.Fields{
-				"numAssignments": len(assignments),
-				"numTasks":       totalUnschedTasks,
-				"tag":            tasks[0].Def.Tag,
-				"jobID":          tasks[0].Def.JobID,
-			}).Info("Unable to schedule all tasks")
-	}
-	return assignments, nodeGroups
+	assignments := assign(s.clusterState, tasks, s.stat)
+	log.WithFields(
+		log.Fields{
+			"numAssignments": len(assignments),
+			"numTasks":       len(tasks),
+			"tag":            tasks[0].Def.Tag,
+			"jobID":          tasks[0].Def.JobID,
+		}).Infof("Assigned %d tasks", len(assignments))
+	return assignments
 }
 
 // Helper fn, appends to 'assignments' and updates nodeGroups.
@@ -98,23 +86,40 @@ func getTaskAssignments(cs *clusterState, jobs []*jobState,
 func assign(
 	cs *clusterState,
 	tasks []*taskState,
-	nodeGroups map[string]*nodeGroup,
-	snapIds []string,
 	stat stats.StatsReceiver,
 ) (assignments []taskAssignment) {
+	idleNodeGroupIDs := map[string]string{}
+	for groupID, group := range cs.nodeGroups {
+		if len(group.idle) > 0 {
+			idleNodeGroupIDs[groupID] = groupID
+		}
+	}
 	for _, task := range tasks {
-		var snapshotId string
+		var idleNodeGroupID string
 		var nodeSt *nodeState
-	SnapshotsLoop:
-		for _, snapId := range append([]string{task.Def.SnapshotID}, snapIds...) {
-			if groups, ok := nodeGroups[snapId]; ok {
-				for _, ns := range groups.idle {
-					if ns.suspended() || cs.isOfflined(ns) {
+
+		// is there a node group (with idle node) for this snapshot?
+		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; ok {
+			nodeSt = findIdleNodeInGroup(cs, task.Def.SnapshotID)
+		}
+		if nodeSt != nil {
+			idleNodeGroupID = task.Def.SnapshotID
+		} else {
+			// could not find any free nodes in node group for the task's snapshot id.  Look for a free node in the other
+			// node groups, starting with the "" node group
+			if _, ok := idleNodeGroupIDs[""]; ok {
+				nodeSt = findIdleNodeInGroup(cs, "")
+			}
+			if nodeSt == nil {
+				for groupID := range idleNodeGroupIDs {
+					if groupID == "" {
 						continue
 					}
-					snapshotId = snapId
-					nodeSt = ns
-					break SnapshotsLoop
+					nodeSt = findIdleNodeInGroup(cs, groupID)
+					if nodeSt != nil {
+						idleNodeGroupID = groupID
+						break
+					}
 				}
 			}
 		}
@@ -129,24 +134,49 @@ func assign(
 			continue
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
-		if _, ok := nodeGroups[snapshotId]; !ok {
-			nodeGroups[snapshotId] = newNodeGroup()
+
+		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; !ok {
+			cs.nodeGroups[task.Def.SnapshotID] = newNodeGroup()
 		}
-		nodeId := nodeSt.node.Id()
-		nodeGroups[snapshotId].busy[nodeId] = nodeSt
-		delete(nodeGroups[snapshotId].idle, nodeId)
+		nodeID := nodeSt.node.Id()
+		if idleNodeGroupID != task.Def.SnapshotID {
+			// move the idle node to the task's node group, taskScheduled (called below) moves the nodesSt
+			// from the task group's idle node list to busy
+			delete(cs.nodeGroups[idleNodeGroupID].idle, nodeID)
+			cs.nodeGroups[task.Def.SnapshotID].idle[nodeID] = nodeSt
+			nodeSt.snapshotId = task.Def.SnapshotID
+			// if all nodes have been moved from this node group, delete the nodeGroup from the clusterState nodeGroups map
+			if len(cs.nodeGroups[idleNodeGroupID].idle) == 0 && len(cs.nodeGroups[idleNodeGroupID].busy) == 0 {
+				delete(cs.nodeGroups, idleNodeGroupID)
+				if _, ok := idleNodeGroupIDs[idleNodeGroupID]; ok {
+					delete(idleNodeGroupIDs, idleNodeGroupID)
+				}
+			}
+		}
+		// Mark Task as Started in the cluster
+		cs.taskScheduled(nodeSt.node.Id(), task.JobId, task.Def.TaskID, task.Def.SnapshotID)
+
 		log.WithFields(
 			log.Fields{
 				"jobID":          task.JobId,
 				"taskID":         task.TaskId,
 				"node":           nodeSt.node,
 				"numAssignments": len(assignments),
-				"numTasks":       len(tasks),
 				"tag":            task.Def.Tag,
-			}).Info("Scheduled job")
+			}).Info("Scheduling task")
 		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments
+}
+
+func findIdleNodeInGroup(cs *clusterState, groupID string) *nodeState {
+	for _, ns := range cs.nodeGroups[groupID].idle {
+		if ns.suspended() || cs.isOfflined(ns) {
+			continue
+		}
+		return ns
+	}
+	return nil
 }
 
 // Helpers.

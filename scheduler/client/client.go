@@ -5,6 +5,7 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
@@ -24,7 +25,7 @@ type CloudScootClientConfig struct {
 	Dialer dialer.Dialer // dialer to use to connect to address
 }
 
-// Creates a NewCloudScootClient.  Returns a client object which can
+// Creates a CloudScootClient.  Returns a client object which can
 // be used to execute calls to Scoot Cloud Exec.
 func NewCloudScootClient(config CloudScootClientConfig) *CloudScootClient {
 	return &CloudScootClient{
@@ -35,7 +36,7 @@ func NewCloudScootClient(config CloudScootClientConfig) *CloudScootClient {
 }
 
 // RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
-//the specified job. If successful the JobId is returned if not an error.
+//the specified job. If successful the jobId is returned if not an error.
 func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
 	err = c.checkForClient()
 	if err != nil {
@@ -53,7 +54,7 @@ func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, 
 	return jobId, err
 }
 
-// GetStatus API. Returns the JobStatus of the specified JobId if successful,
+// GetStatus API. Returns the JobStatus of the specified jobId if successful,
 // otherwise an erorr.
 func (c *CloudScootClient) GetStatus(jobId string) (r *scoot.JobStatus, err error) {
 	err = c.checkForClient()
@@ -145,8 +146,7 @@ func (c *CloudScootClient) SetSchedulerStatus(maxTasks int32) error {
 		return err
 	}
 
-	err = c.client.SetSchedulerStatus(maxTasks)
-	return err
+	return c.client.SetSchedulerStatus(maxTasks)
 }
 
 func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
@@ -164,6 +164,152 @@ func (c *CloudScootClient) GetSchedulerStatus() (*scoot.SchedulerStatus, error) 
 		c.closeConnection()
 	}
 	return schedulerStatus, err
+}
+
+// GetClassLoadPercents get the target load pcts for the classes
+func (c *CloudScootClient) GetClassLoadPercents() (map[string]int32, error) {
+	if err := c.checkForClient(); err != nil {
+		return nil, err
+	}
+	classLoadPercents, err := c.client.GetClassLoadPercents()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return classLoadPercents, err
+}
+
+// SetClassLoadPercents set the target worker load % for each job class
+func (c *CloudScootClient) SetClassLoadPercents(classLoads map[string]int32) error {
+	if err := c.checkForClient(); err != nil {
+		return err
+	}
+
+	err := c.client.SetClassLoadPercents(classLoads)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
+}
+
+// GetRequestorToClassMap get map of requestor (reg exp) to class load pct
+func (c *CloudScootClient) GetRequestorToClassMap() (map[string]string, error) {
+	if err := c.checkForClient(); err != nil {
+		return nil, err
+	}
+	requestorToClassMap, err := c.client.GetRequestorToClassMap()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error.  reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return requestorToClassMap, err
+}
+
+// SetRequestorToClassMap set the map of requestor (requestor value is reg exp) to class name
+func (c *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
+	if err := c.checkForClient(); err != nil {
+		return err
+	}
+
+	err := c.client.SetRequestorToClassMap(requestorToClassMap)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
+}
+
+// GetRebalanceMinimumDuration get the minimum time the scheduler load % must we over the re-balance
+// threshold before re-balancing
+func (c *CloudScootClient) GetRebalanceMinimumDuration() (int32, error) {
+	if err := c.checkForClient(); err != nil {
+		return -1, err
+	}
+
+	m, err := c.client.GetRebalanceMinimumDuration()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return m, err
+}
+
+// SetRebalanceMinimumDuration set the minimum time the scheduler load % must we over the re-balance
+// threshold before re-balancing
+func (c *CloudScootClient) SetRebalanceMinimumDuration(durationMin int32) error {
+	if err := c.checkForClient(); err != nil {
+		return err
+	}
+
+	err := c.client.SetRebalanceMinimumDuration(durationMin)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
+}
+
+// GetRebalanceThreshold get the minimum difference between under/over allocated %s that will trigger
+// re-balancing
+func (c *CloudScootClient) GetRebalanceThreshold() (int32, error) {
+	if err := c.checkForClient(); err != nil {
+		return -1, err
+	}
+
+	rt, err := c.client.GetRebalanceThreshold()
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return rt, err
+}
+
+// SetRebalanceThreshold set the minimum difference between under/over allocated %s that will trigger
+// re-balancing
+func (c *CloudScootClient) SetRebalanceThreshold(threshold int32) error {
+	if err := c.checkForClient(); err != nil {
+		return err
+	}
+
+	err := c.client.SetRebalanceThreshold(threshold)
+	// if an error occurred reset the connection, could be a broken pipe or other
+	// unrecoverable error. reset connection so a new clean one gets created
+	// on the next request
+	if err != nil {
+		// this could cause an error when closing transport
+		// but we don't care do our best effort and move on
+		c.closeConnection()
+	}
+	return err
 }
 
 // helper method to check for a non-nil client / create one

@@ -4,9 +4,12 @@ import (
 	"math"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 )
+
+type taskStateByTaskID map[string]*taskState
 
 // Contains all the information for a job in progress
 // Note: Only Job, Saga, and Tasks are provided during scheduler recovery. Anything else must be initialized separately.
@@ -21,11 +24,14 @@ type jobState struct {
 	TimeCreated    time.Time    //when was this job first created
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
 
-	// track tasks by state (completed, running, not started) for priority based scheduling algorithm
-	// TODO remove if we don't use the priority based scheduling algorithm
-	Completed  map[string]*taskState
-	Running    map[string]*taskState
-	NotStarted map[string]*taskState
+	// track tasks by state (completed, running, not started) for scheduling algorithm
+	// Completed and Running are only used by the scheduling algorithm
+	Completed  taskStateByTaskID
+	Running    taskStateByTaskID
+	NotStarted taskStateByTaskID
+
+	jobClass                       string
+	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
 }
 
 // Contains all the information for a specified task
@@ -42,6 +48,17 @@ type taskState struct {
 
 type taskStatesByDuration []*taskState
 
+// the following types are used to access task State objects by class, startTime, taskID
+type taskClassAndStartKey struct {
+	class string
+	start time.Time
+}
+type jobIDTaskIDKey struct {
+	jobID  string
+	taskID string
+}
+type taskStateByJobIDTaskID map[jobIDTaskIDKey]*taskState
+
 func (s taskStatesByDuration) Len() int {
 	return len(s)
 }
@@ -55,20 +72,23 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Creates a New Job State based on the specified Job and Saga
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
-func newJobState(job *domain.Job, saga *saga.Saga, taskDurations map[string]*averageDuration) *jobState {
+func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations map[string]*averageDuration,
+	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *jobState {
 	j := &jobState{
-		Job:            job,
-		Saga:           saga,
-		Tasks:          make([]*taskState, 0),
-		EndingSaga:     false,
-		TasksCompleted: 0,
-		TasksRunning:   0,
-		JobKilled:      false,
-		TimeCreated:    time.Now(),
-		TimeMarker:     time.Now(),
-		Completed:      make(map[string]*taskState),
-		Running:        make(map[string]*taskState),
-		NotStarted:     make(map[string]*taskState),
+		Job:                            job,
+		Saga:                           saga,
+		Tasks:                          make([]*taskState, 0),
+		EndingSaga:                     false,
+		TasksCompleted:                 0,
+		TasksRunning:                   0,
+		JobKilled:                      false,
+		TimeCreated:                    time.Now(),
+		TimeMarker:                     time.Now(),
+		Completed:                      make(taskStateByTaskID),
+		Running:                        make(taskStateByTaskID),
+		NotStarted:                     make(taskStateByTaskID),
+		jobClass:                       jobClass,
+		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
 	}
 
 	for _, taskDef := range job.Def.Tasks {
@@ -151,6 +171,10 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 		delete(j.Completed, taskId)
 	}
 	j.Running[taskId] = taskState
+
+	// add the task to the map of tasks by start time
+	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
+	j.addTaskToStartTimeMap(j.jobClass, taskState, startTimeSec)
 }
 
 // Update JobState to reflect that a Task has been completed
@@ -158,6 +182,7 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 func (j *jobState) taskCompleted(taskId string, running bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = domain.Completed
+	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksCompleted++
@@ -166,16 +191,20 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	}
 	if _, ok := j.Running[taskId]; ok {
 		delete(j.Running, taskId)
-	} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
+	} else if _, ok = j.NotStarted[taskId]; ok {
 		delete(j.NotStarted, taskId)
 	}
 	j.Completed[taskId] = taskState
+
+	// remove the task from the map of tasks by start time
+	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
 }
 
 // Update JobState to reflect that an error has occurred running this Task
 func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
 	taskState.Status = domain.NotStarted
+	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
 	j.TasksRunning--
@@ -188,6 +217,8 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 		delete(j.Completed, taskId)
 	}
 	j.NotStarted[taskId] = taskState
+
+	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
 }
 
 // Returns the Current Job Status
@@ -196,4 +227,40 @@ func (j *jobState) getJobStatus() domain.Status {
 		return domain.Completed
 	}
 	return domain.InProgress
+}
+
+// addTaskToStartTimeMap add the running task to the map that bins running tasks by their class and start time
+func (j *jobState) addTaskToStartTimeMap(jobClass string, task *taskState, startTimeSec time.Time) {
+	if j.tasksByJobClassAndStartTimeSec == nil {
+		log.Errorf("tasksByJobClassAndStartTime map not found.  Skipping adding task to it. jobID: %s, taskID:%s, jobClass:%s, startTime:%s", task.JobId, task.TaskId, jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		return
+	}
+	classNStartBucketKey := taskClassAndStartKey{class: jobClass, start: startTimeSec}
+	if _, ok := j.tasksByJobClassAndStartTimeSec[classNStartBucketKey]; !ok {
+		j.tasksByJobClassAndStartTimeSec[classNStartBucketKey] = taskStateByJobIDTaskID{}
+	}
+	taskKey := jobIDTaskIDKey{jobID: task.JobId, taskID: task.TaskId}
+	j.tasksByJobClassAndStartTimeSec[classNStartBucketKey][taskKey] = task
+}
+
+// removeTaskFromStartTimeMap remove the completed task from the map that bins running tasks by their class and start time
+func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, startTimeSec time.Time) {
+	if j.tasksByJobClassAndStartTimeSec == nil {
+		log.Warnf("tasksByJobClassAndStartTime map not found.  Skipping removing task from it. jobID: %s, taskID: %s, jobClass:%s, startTime:%s", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		return
+	}
+	timeBucket := taskClassAndStartKey{class: j.jobClass, start: startTimeSec}
+	if _, ok := j.tasksByJobClassAndStartTimeSec[timeBucket]; !ok {
+		log.Warnf("no %s start time bucket found for the time %s. Skipping removing task %s_%s from it", j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"), jobID, taskID)
+		return
+	}
+	taskKey := jobIDTaskIDKey{jobID: jobID, taskID: taskID}
+	if _, ok := j.tasksByJobClassAndStartTimeSec[timeBucket][taskKey]; !ok {
+		log.Warnf("task %s_%s was not found in %s time bucket found for the job %s.  Skipping removing task from it", jobID, taskID, j.jobClass, startTimeSec.Format("2006-01-02 15:04:05 -0700 MST"))
+		return
+	}
+	delete(j.tasksByJobClassAndStartTimeSec[timeBucket], taskKey)
+	if len(j.tasksByJobClassAndStartTimeSec[timeBucket]) == 0 {
+		delete(j.tasksByJobClassAndStartTimeSec, timeBucket)
+	}
 }

@@ -52,6 +52,10 @@ type JobDefinition struct {
 	Tasks     []TaskDefinition
 }
 
+func (jd *JobDefinition) String() string {
+	return fmt.Sprintf("jobType:%s, req:%s, tag:%s, basis: %s, tasks:%d", jd.JobType, jd.Requestor, jd.Tag, jd.Basis, len(jd.Tasks))
+}
+
 // Task is one task to run
 type TaskDefinition struct {
 	runner.Command

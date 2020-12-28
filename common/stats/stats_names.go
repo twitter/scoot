@@ -195,21 +195,6 @@ const (
 	SchedPreemptedTasksCounter = "preemptedTasksCounter"
 
 	/*
-		the number of jobs with priority 0
-	*/
-	SchedPriority0JobsGauge = "priority0JobsGauge"
-
-	/*
-		the number of jobs with priority 1
-	*/
-	SchedPriority1JobsGauge = "priority1JobsGauge"
-
-	/*
-		the number of jobs with priority 2
-	*/
-	SchedPriority2JobsGauge = "priority2JobsGauge"
-
-	/*
 		the number of times the platform retried sending an end saga message
 	*/
 	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
@@ -320,6 +305,47 @@ const (
 		Amount of time it takes the scheduler to figure out which tasks to schedule next and on which worker
 	*/
 	SchedScheduleTasksLatency_ms = "schedScheduleTasksLatency_ms"
+
+	/*--------------------- load based scheduler stats ---------------------------*/
+	/*
+		number of time Load Based Scheduler saw an unrecognized requestor
+	*/
+	SchedLBSUnknownJobCounter = "schedLBSUnknownJobCounter"
+
+	/*
+	   number of jobs ignored because the load % is 0
+	*/
+	SchedLBSIgnoredJobCounter = "schedLBSIgnoredJobCounter"
+
+	/*
+		number of tasks starting by job class (after the last run of lbs)
+	*/
+	SchedJobClassTasksStarting = "schedStartingTasks_"
+
+	/*
+		number of tasks already running by job class (before starting tasks as per lbs)
+	*/
+	SchedJobClassTasksRunning = "schedRunningTasks_"
+
+	/*
+		number of tasks still waiting by job class after the tasks identified by lbs have started
+	*/
+	SchedJobClassTasksWaiting = "schedWaitingTasks_"
+
+	/*
+		job class % (set via scheduler api)
+	*/
+	SchedJobClassDefinedPct = "schedClassTargetPct_"
+
+	/*
+		job class actual % (set computed from running tasks)
+	*/
+	SchedJobClassActualPct = "schedClassActualPct_"
+
+	/*
+		number of tasks being stopped for the class (due to rebalancing)
+	*/
+	SchedStoppingTasks = "schedStoppingTasks_"
 
 	/******************************** Worker metrics **************************************/
 	/*

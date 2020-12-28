@@ -4,7 +4,10 @@ package api
 // (they are call from cloudscoot.go)
 
 import (
+	"time"
+
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
@@ -77,4 +80,61 @@ func (h *Handler) GetSchedulerStatus() (*scoot.SchedulerStatus, error) {
 // Implements SetSchedulerStatus Cloud Scoot API
 func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 	return schedthrift.SetSchedulerStatus(h.scheduler, maxNumTasks)
+}
+
+// GetClassLoadPercents Implements GetClassLoadPercents Cloud Scoot API
+func (h *Handler) GetClassLoadPercents() (map[string]int32, error) {
+	clp, err := schedthrift.GetClassLoadPercents(h.scheduler)
+	log.Infof("GetClassLoadPercents returning: %v, err:%s", clp, err)
+	return clp, err
+}
+
+// SetClassLoadPercents Implements SetClassLoadPercents Cloud Scoot API
+func (h *Handler) SetClassLoadPercents(classLoadPercents map[string]int32) error {
+	log.Infof("SetClassLoadPercents to %v", classLoadPercents)
+	return schedthrift.SetClassLoadPercents(h.scheduler, classLoadPercents)
+}
+
+// GetRequestorToClassMap Implements GetRequestorToClassMap Cloud Scoot API
+func (h *Handler) GetRequestorToClassMap() (map[string]string, error) {
+	rm, err := schedthrift.GetRequestorToClassMap(h.scheduler)
+	log.Infof("GetClassLoadPercents returning: %v, err:%s", rm, err)
+	return rm, err
+}
+
+// SetRequestorToClassMap Implements SetRequestorToClassMap Cloud Scoot API
+func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) error {
+	log.Infof("SetRequestorToClassMap to %v", requestToClassMap)
+	return schedthrift.SetRequestorToClassMap(h.scheduler, requestToClassMap)
+}
+
+// GetRebalanceMinimumDuration get the duration(minutes) that the scheduler needs to be exceeding
+// the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
+func (h *Handler) GetRebalanceMinimumDuration() (int32, error) {
+	d, err := schedthrift.GetRebalanceMinimumDuration(h.scheduler)
+	log.Infof("GetRebalanceMinimumDuration returning: %d, err:%s", d, err)
+	return int32(d.Minutes()), err
+}
+
+// SetRebalanceMinimumDuration set the duration(minutes) that the scheduler needs to be exceeding
+// the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
+func (h *Handler) SetRebalanceMinimumDuration(durationMinimum int32) error {
+	log.Infof("SetRebalanceMinimumDuration to %d", durationMinimum)
+	d := time.Duration(durationMinimum) * time.Minute
+	return schedthrift.SetRebalanceMinimumDuration(h.scheduler, d)
+}
+
+// GetRebalanceThreshold the % spread threshold that must be exceeded to trigger rebalance
+// <= 0 implies no rebalancing
+func (h *Handler) GetRebalanceThreshold() (int32, error) {
+	t, err := schedthrift.GetRebalanceThreshold(h.scheduler)
+	log.Infof("GetRebalanceThreshold returning: %d, err:%s", t, err)
+	return t, err
+}
+
+// SetRebalanceThreshold the % spread threshold that must be exceeded to trigger rebalance
+// <= 0 implies no rebalancing
+func (h *Handler) SetRebalanceThreshold(threshold int32) error {
+	log.Infof("SetRebalanceThreshold to %d", threshold)
+	return schedthrift.SetRebalanceThreshold(h.scheduler, threshold)
 }
