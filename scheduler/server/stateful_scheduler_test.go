@@ -378,7 +378,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 
-	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", domain.P0)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "")
 	s.step() // get the first job in the queue
 	for s.getJob(jobId).getTask(taskIds[0]).Status == domain.NotStarted {
 		s.step()
@@ -401,7 +401,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
-	putJobInScheduler(1, s, "pause", "", domain.P0)
+	putJobInScheduler(1, s, "pause", "")
 
 	respCh := sendKillRequest("badJobId", s)
 
@@ -418,7 +418,7 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, true)
-	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", domain.P0)
+	jobId, taskIds, _ := putJobInScheduler(1, s, "", "")
 	s.step() // get the job in the queue
 
 	//advance scheduler until the task completes
@@ -460,7 +460,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
-	jobId1, _, _ := putJobInScheduler(5, s, "pause", "", domain.P0)
+	jobId1, _, _ := putJobInScheduler(5, s, "pause", "")
 	s.step()
 	for !allTasksInState("job1", jobId1, s, domain.InProgress) {
 		s.step()
@@ -478,7 +478,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 	}
 
 	// put a job with 3 tasks in the queue - all tasks should be in NotStarted state
-	jobId2, _, _ := putJobInScheduler(3, s, "pause", "", domain.P0)
+	jobId2, _, _ := putJobInScheduler(3, s, "pause", "")
 	s.step()
 	verifyJobStatus("verify put job2 in scheduler", jobId2, domain.InProgress,
 		[]domain.Status{domain.NotStarted, domain.NotStarted, domain.NotStarted}, s, t)
@@ -594,7 +594,7 @@ func BenchmarkProcessKillJobsRequests(b *testing.B) {
 	tasksInJob := 10000
 
 	for i := 0; i < b.N; i++ {
-		jobId, _, _ := putJobInScheduler(tasksInJob, s, "pause", "", domain.P0)
+		jobId, _, _ := putJobInScheduler(tasksInJob, s, "pause", "")
 		s.step()
 
 		validKillRequests := []jobKillRequest{{jobId: jobId, responseCh: make(chan error, 1)}}
@@ -667,12 +667,11 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 // create a job definition containing numTasks tasks and put it in the scheduler.
 // usingPausingExecer is true, each task will contain the command "pause"
 func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
-	requestor string, priority domain.Priority) (string, []string, error) {
+	requestor string) (string, []string, error) {
 	// create the job and run it to completion
 	// create the job and run it to completion
 	jobDef := domain.GenJobDef(numTasks)
 	jobDef.Requestor = requestor
-	jobDef.Priority = priority
 
 	var taskIds []string
 

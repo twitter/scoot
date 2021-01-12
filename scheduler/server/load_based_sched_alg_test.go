@@ -430,7 +430,6 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 				Requestor: requestor,
 				Basis:     "",
 				Tag:       "",
-				Priority:  domain.Priority(0),
 			},
 		}
 		js := &jobState{

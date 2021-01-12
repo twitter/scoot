@@ -48,10 +48,7 @@ func execReqToScoot(req *remoteexecution.ExecuteRequest) (
 		return result, err
 	}
 
-	// NOTE fixed to lowest priority in early stages of Bazel support
-	// ExecuteRequests do not have priority values, but the Action portion
-	// contains Platform Properties which can be used to specify arbitary server-side behavior.
-	result.Priority = domain.P0
+	// Action portion contains Platform Properties which can be used to specify arbitary server-side behavior.
 	result.Tasks = []domain.TaskDefinition{}
 	// Populate TaskDef and Command. Note that Argv and EnvVars are set with placeholders for these requests,
 	// per Bazel API this data must be made available by the client in the CAS before submitting this request.

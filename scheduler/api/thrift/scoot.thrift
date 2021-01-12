@@ -71,9 +71,9 @@ struct JobDefinition {
   1: required list<TaskDefinition> tasks,
   2: optional JobType DEPRECATED_jobType,
   3: optional i32 defaultTaskTimeoutMs,
-  # Priority levels are defined in docs.
+  # the use of priority is deprecated.  Left in for api backwards compatibility
   4: optional i32 priority
-  # Tag allows related jobs to be grouped together (all using the same priority as the first seen job).
+  # Tag allows related jobs to be grouped together.
   # Set to JobId by default.
   5: optional string tag
   # Basis is used to replace an ancestor of this job (keep only the latest job for a basis).

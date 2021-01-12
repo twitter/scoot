@@ -80,9 +80,6 @@ func thriftJobToScoot(def *scoot.JobDefinition) (result domain.JobDefinition, er
 	if def.Requestor != nil {
 		result.Requestor = *def.Requestor
 	}
-	if def.Priority != nil {
-		result.Priority = domain.Priority(*def.Priority)
-	}
 
 	return result, nil
 }

@@ -48,7 +48,6 @@ type JobDefinition struct {
 	Requestor string
 	Basis     string
 	Tag       string
-	Priority  Priority
 	Tasks     []TaskDefinition
 }
 
@@ -99,26 +98,12 @@ func (s Status) String() string {
 	return asString[s]
 }
 
-type Priority int
-
-const (
-	// Default, queue new runs until any resources are available
-	P0 Priority = iota
-
-	// Run asap, ahead of priority=0, consuming nodes as they become available if no nodes are free
-	P1
-
-	// Run asap, ahead of priority=1, consuming nodes as they become available if no nodes are free
-	P2
-)
-
 // transforms a thrift Job into a scheduler Job
 func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	if thriftJob == nil {
 		return nil
 	}
 	jobType := ""
-	priority := int32(0)
 	tag := ""
 	basis := ""
 	requestor := ""
@@ -149,7 +134,6 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 		}
 
 		jobType = thriftJobDef.GetJobType()
-		priority = thriftJobDef.GetPriority()
 		tag = thriftJobDef.GetTag()
 		basis = thriftJobDef.GetBasis()
 		requestor = thriftJobDef.GetRequestor()
@@ -158,7 +142,6 @@ func makeDomainJobFromThriftJob(thriftJob *schedthrift.Job) *Job {
 	domainJobDef := JobDefinition{
 		JobType:   jobType,
 		Tasks:     domainTasks,
-		Priority:  Priority(priority),
 		Basis:     basis,
 		Requestor: requestor,
 		Tag:       tag,
@@ -192,11 +175,9 @@ func makeThriftJobFromDomainJob(domainJob *Job) (*schedthrift.Job, error) {
 		thriftTasks = append(thriftTasks, &thriftTask)
 	}
 
-	prio := int32(domainJob.Def.Priority)
 	thriftJobDefinition := schedthrift.JobDefinition{
 		JobType:   &(*domainJob).Def.JobType,
 		Tasks:     thriftTasks,
-		Priority:  &prio,
 		Tag:       &(domainJob).Def.Tag,
 		Basis:     &(domainJob).Def.Basis,
 		Requestor: &(domainJob).Def.Requestor,

@@ -49,3 +49,12 @@ type SchedulingAlgorithm interface {
 	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
 		requestors map[string][]*jobState) (startTasks []*taskState, stopTasks []*taskState)
 }
+
+// LogFields extendable log fields structure
+type LogFields map[string]interface{}
+
+// Field add a log field
+func (l LogFields) Field(key string, value interface{}) LogFields {
+	l[key] = value
+	return l
+}

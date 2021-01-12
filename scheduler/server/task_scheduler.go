@@ -51,12 +51,8 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	// stop the tasks in stopTasks (we are rebalancing the workers)
 	for _, task := range stopTasks {
 		jobState := s.getJob(task.JobId)
-		logFields := log.Fields{
-			"jobID":     task.JobId,
-			"requestor": jobState.Job.Def.Requestor,
-			"jobType":   jobState.Job.Def.JobType,
-			"tag":       jobState.Job.Def.Tag,
-		}
+		logFields := log.Fields(s.jobStateLogFields(jobState))
+
 		msgs := s.abortTask(jobState, task, logFields, RebalanceRequestedErrStr)
 		if len(msgs) > 0 {
 			if err := jobState.Saga.BulkMessage(msgs); err != nil {
