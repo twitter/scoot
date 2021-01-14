@@ -164,6 +164,8 @@ type statefulScheduler struct {
 
 	// stats
 	stat stats.StatsReceiver
+
+	persistor Persistor
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -193,6 +195,7 @@ func NewStatefulSchedulerFromCluster(
 		rf,
 		config,
 		stat,
+		nil,
 	)
 }
 
@@ -209,6 +212,7 @@ func NewStatefulScheduler(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	persistor Persistor,
 ) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
@@ -270,6 +274,7 @@ func NewStatefulScheduler(
 	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
 	sa.setClassLoadPercents(DefaultLoadBasedSchedulerClassPercents)
 	sa.setRequestorToClassMap(DefaultRequestorToClassMap)
+	sa.setRebalanceMinimumDuration(DefaultMinRebalanceTime)
 	config.SchedAlg = sa
 	config.SchedAlgConfig = sa.config
 
@@ -292,7 +297,13 @@ func NewStatefulScheduler(
 		stat:             stat,
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
+		persistor:                      persistor,
 	}
+
+	if sched.persistor == nil {
+		sched.persistor = Persistor(&nopPersistor{})
+	}
+	sched.persistor.LoadSettings(sched)
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -1177,6 +1188,7 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 		return err
 	}
 	s.config.TaskThrottle = maxTasks
+	s.persistor.PersistSettings(s)
 	return nil
 }
 
@@ -1196,76 +1208,84 @@ func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
 
 // GetClassLoadPercents return a copy of the ClassLoadPercents
 func (s *statefulScheduler) GetClassLoadPercents() (map[string]int32, error) {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return nil, fmt.Errorf("not using load based scheduler, no load percents")
 	}
-	return sched.getClassLoadPercents(), nil
+	return sa.getClassLoadPercents(), nil
 }
 
 // SetClassLoadPercents set the scheduler's class load pcts with a copy of the input class load pcts
 func (s *statefulScheduler) SetClassLoadPercents(classLoadPercents map[string]int32) error {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, class load pcts ignored")
 	}
-	sched.setClassLoadPercents(classLoadPercents)
+	sa.setClassLoadPercents(classLoadPercents)
+	s.persistor.PersistSettings(s)
 	return nil
 }
 
 // GetRequestorToClassMap return a copy of the RequestorToClassMap
 func (s *statefulScheduler) GetRequestorToClassMap() (map[string]string, error) {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return nil, fmt.Errorf("not using load based scheduler, no class map")
 	}
-	return sched.getRequestorToClassMap(), nil
+	return sa.getRequestorToClassMap(), nil
 }
 
 // SetRequestorToClassMap set the scheduler's requestor to class map with a copy of the input map
 func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[string]string) error {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, requestor to class map ignored")
 	}
-	sched.setRequestorToClassMap(requestorToClassMap)
+	sa.setRequestorToClassMap(requestorToClassMap)
+	s.persistor.PersistSettings(s)
 	return nil
 }
 
 // GetRebalanceMinimumDuration
 func (s *statefulScheduler) GetRebalanceMinimumDuration() (time.Duration, error) {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return 0, fmt.Errorf("not using load based scheduler, no rebalance min duration")
 	}
-	return sched.getRebalanceMinimumDuration(), nil
+	return sa.getRebalanceMinimumDuration(), nil
 }
 
 // GetRebalanceMinimumDuration
 func (s *statefulScheduler) SetRebalanceMinimumDuration(durationMin time.Duration) error {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance min duration ignored")
 	}
-	sched.setRebalanceMinimumDuration(durationMin)
+	sa.setRebalanceMinimumDuration(durationMin)
+	s.persistor.PersistSettings(s)
 	return nil
 }
 
 // GetRebalanceThreshold
 func (s *statefulScheduler) GetRebalanceThreshold() (int32, error) {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return 0, fmt.Errorf("not using load based scheduler, no rebalance threshold")
 	}
-	return int32(sched.getRebalanceThreshold()), nil
+	return int32(sa.getRebalanceThreshold()), nil
 }
 
 // SetRebalanceThreshold
 func (s *statefulScheduler) SetRebalanceThreshold(threshold int32) error {
-	sched, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance threshold ignored")
 	}
-	sched.setRebalanceThreshold(int(threshold))
+	sa.setRebalanceThreshold(int(threshold))
+	s.persistor.PersistSettings(s)
 	return nil
+}
+
+func (s *statefulScheduler) SetPersistor(persistor Persistor) {
+	s.persistor = persistor
 }

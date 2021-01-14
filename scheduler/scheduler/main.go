@@ -19,6 +19,7 @@ import (
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
+	"github.com/twitter/scoot/scheduler/server"
 )
 
 func main() {
@@ -75,6 +76,10 @@ func main() {
 
 		func() (*temp.TempDir, error) {
 			return temp.NewTempDir("", "sched")
+		},
+
+		func() server.Persistor {
+			return nil
 		},
 	)
 
