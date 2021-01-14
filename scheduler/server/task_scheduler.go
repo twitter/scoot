@@ -92,7 +92,15 @@ type nodeStatesByNodeID map[cluster.NodeId]*nodeState
 func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssignment) {
 	idleNodesByGroupIDs := map[string]nodeStatesByNodeID{}
 
-	// make a local copy of (non-suspended/offlined) idle nodeIDs by groupID, these will be the nodes assigned to the tasks
+	// make a local map of groupID to each group's (non-suspended/non-offlined) idle nodes.  We use a local
+	// map instead of the clusterState's nodeGroups map because as the processing (findIdleNodeInGroup) finds an idle
+	// node to assign to a task, it removes it from that group's idle nodes.  We don't want to have that removal
+	// impact clusterState's idle nodes for the group because clusterState.taskScheduled() also removes the idle
+	// node from the group.
+	// Note: each group is a map of nodeID to the nodeState being maintained in clusterState.  If a node goes offline
+	// as the tasks are being assigned, findIdleNodeInGroup() will not assign the node to a task.
+	// (Yes this is wonky, but I don't have a great understanding of clusterState, and since the original
+	// implementation used its own local copy of clusterState's nodeGroups here, I'm following that pattern.)
 	for groupID, group := range s.clusterState.nodeGroups {
 		if len(group.idle) > 0 {
 			idleNodesByGroupIDs[groupID] = nodeStatesByNodeID{}
@@ -118,6 +126,7 @@ func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssign
 				nodeSt = s.findIdleNodeInGroup(nodeGroup)
 			}
 			if nodeSt == nil {
+				// no free node was found in "" nor the task's node group, grab an idle node from another group
 				for groupID, nodeGroup := range idleNodesByGroupIDs {
 					if groupID == "" {
 						continue
@@ -130,15 +139,17 @@ func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssign
 			}
 		}
 
-		// Could not find any more free nodes
 		if nodeSt == nil {
+			// Could not find any more free nodes.  This may happen if nodes are suspended after the scheduling algorithm
+			// has built the list of tasks to schedule but before the tasks are actually assigned to a node.
+			// Skip the rest of the assignments, the skipped tasks should be picked up in the next scheduling run
 			log.WithFields(
 				log.Fields{
 					"jobID":  task.JobId,
 					"taskID": task.TaskId,
 					"tag":    task.Def.Tag,
 				}).Warn("Unable to assign, no free node for task")
-			continue
+			break
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
 
@@ -158,7 +169,7 @@ func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssign
 	return assignments
 }
 
-// findIdleNodeInGroup find a node in the group's idle nodes that is not suspended or offlined (this method will, pick
+// findIdleNodeInGroup finds a node in the group's idle nodes that is not suspended or offlined (this method will, pick
 // up nodes that have been suspended/offlined while the processing was assigning other tasks to nodes).
 // It also removes the node from the groups idle nodes list to prevent it from being assigned again.
 func (s *statefulScheduler) findIdleNodeInGroup(nodeGroup nodeStatesByNodeID) *nodeState {
