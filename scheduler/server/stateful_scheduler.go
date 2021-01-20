@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -111,6 +112,7 @@ type SchedulerConfig struct {
 	MaxRequestors        int
 	MaxJobsPerRequestor  int
 	TaskThrottle         int
+	TaskThrottleMu       sync.RWMutex
 	Admins               []string
 
 	SchedAlgConfig interface{}
@@ -267,8 +269,6 @@ func NewStatefulScheduler(
 		stat: stat,
 	}
 
-	config.TaskThrottle = -1
-
 	// create the load base scheduling algorithm
 	tasksByClassAndStartMap := map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 	sa := NewLoadBasedAlg(config.SchedAlgConfig.(*LoadBasedAlgConfig), tasksByClassAndStartMap)
@@ -299,6 +299,8 @@ func NewStatefulScheduler(
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 		persistor:                      persistor,
 	}
+
+	sched.setThrottle(-1)
 
 	if sched.persistor == nil {
 		sched.persistor = Persistor(&nopPersistor{})
@@ -1187,8 +1189,9 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 	if err != nil {
 		return err
 	}
-	s.config.TaskThrottle = maxTasks
+	s.setThrottle(maxTasks)
 	s.persistor.PersistSettings(s)
+	log.Infof("scheduler throttled to %d", maxTasks)
 	return nil
 }
 
@@ -1199,7 +1202,7 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 func (s *statefulScheduler) GetSchedulerStatus() (int, int) {
 	var total, completed, _ = s.getSchedulerTaskCounts()
 	var task_cnt = total - completed
-	return task_cnt, s.config.TaskThrottle
+	return task_cnt, s.getThrottle()
 }
 
 func (s *statefulScheduler) SetSchedulingAlg(sa SchedulingAlgorithm) {
@@ -1288,4 +1291,16 @@ func (s *statefulScheduler) SetRebalanceThreshold(threshold int32) error {
 
 func (s *statefulScheduler) SetPersistor(persistor Persistor) {
 	s.persistor = persistor
+}
+
+func (s *statefulScheduler) getThrottle() int {
+	s.config.TaskThrottleMu.RLock()
+	defer s.config.TaskThrottleMu.RUnlock()
+	return s.config.TaskThrottle
+}
+
+func (s *statefulScheduler) setThrottle(throttle int) {
+	s.config.TaskThrottleMu.Lock()
+	defer s.config.TaskThrottleMu.Unlock()
+	s.config.TaskThrottle = throttle
 }

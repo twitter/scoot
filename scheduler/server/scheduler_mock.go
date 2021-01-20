@@ -222,6 +222,16 @@ func (mr *MockSchedulerMockRecorder) SetRebalanceThreshold(durationMin interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRebalanceThreshold", reflect.TypeOf((*MockScheduler)(nil).SetRebalanceThreshold), durationMin)
 }
 
+// LoadPersistedSettings mocks base method
+func (m *MockScheduler) LoadPersistedSettings(settings PersistedSettings) {
+	m.ctrl.Call(m, "LoadPersistedSettings", settings)
+}
+
+// LoadPersistedSettings indicates an expected call of LoadPersistedSettings
+func (mr *MockSchedulerMockRecorder) LoadPersistedSettings(settings interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadPersistedSettings", reflect.TypeOf((*MockScheduler)(nil).LoadPersistedSettings), settings)
+}
+
 // MockSchedulingAlgorithm is a mock of SchedulingAlgorithm interface
 type MockSchedulingAlgorithm struct {
 	ctrl     *gomock.Controller

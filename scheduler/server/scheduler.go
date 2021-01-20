@@ -41,6 +41,8 @@ type Scheduler interface {
 	GetRebalanceThreshold() (int32, error)
 
 	SetRebalanceThreshold(durationMin int32) error
+
+	LoadPersistedSettings(settings PersistedSettings)
 }
 
 // SchedulingAlgorithm interface for the scheduling algorithm.  Implementations will compute the list of
