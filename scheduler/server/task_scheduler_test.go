@@ -67,8 +67,6 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 }
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
-	// testCluster := makeTestCluster("node1", "node2", "node3")
-	// s := getDebugStatefulScheduler(testCluster)
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
 	cs := s.clusterState
@@ -109,6 +107,9 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 		t.Errorf("Expected 5 tasks to be assigned, got %v", len(assignments1))
 	}
 
+	_, ok := cs.nodeGroups[""]
+	assert.True(t, ok, "didn't find '' nodeGroup")
+
 	// complete one task from each job.
 	taskNodes := map[string]cluster.NodeId{}
 	completedTasksByJob := map[string]string{}
@@ -144,6 +145,8 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	}
 
 	assert.True(t, haveNodeMatch)
+	_, ok = cs.nodeGroups[""]
+	assert.True(t, ok, "didn't find '' nodeGroup")
 }
 
 func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {

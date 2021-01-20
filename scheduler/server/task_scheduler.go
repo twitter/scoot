@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 )
 
@@ -70,7 +71,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	// - Hot node for the given snapshotId (one whose last task shared the same snapshotId).
 	// - New untouched node (or node whose last task used an empty snapshotId)
 	// - A random free node from the idle pools of nodes associated with other snapshotIds.
-	assignments := assign(s.clusterState, tasks, s.stat)
+	assignments := s.assign(tasks)
 	log.WithFields(
 		log.Fields{
 			"numAssignments": len(assignments),
@@ -81,80 +82,79 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	return assignments
 }
 
+type nodeStatesByNodeID map[cluster.NodeId]*nodeState
+
 // Helper fn, appends to 'assignments' and updates nodeGroups.
 // Should successfully assign all given tasks if caller invokes this with self-consistent params.
-func assign(
-	cs *clusterState,
-	tasks []*taskState,
-	stat stats.StatsReceiver,
-) (assignments []taskAssignment) {
-	idleNodeGroupIDs := map[string]string{}
-	for groupID, group := range cs.nodeGroups {
+// Note: there may be a race condition between recognizing idle nodes as available for assignment and
+// nodes becoming offlined or suspended. The code does the best it can, but it may assign a task to
+// a node that clusterState considers offlined/suspended before or as the task is actually being started
+func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssignment) {
+	idleNodesByGroupIDs := map[string]nodeStatesByNodeID{}
+
+	// make a local map of groupID to each group's (non-suspended/non-offlined) idle nodes.  We use a local
+	// map instead of the clusterState's nodeGroups map because as the processing (findIdleNodeInGroup) finds an idle
+	// node to assign to a task, it removes it from that group's idle nodes.  We don't want to have that removal
+	// impact clusterState's idle nodes for the group because clusterState.taskScheduled() also removes the idle
+	// node from the group.
+	// Note: each group is a map of nodeID to the nodeState being maintained in clusterState.  If a node goes offline
+	// as the tasks are being assigned, findIdleNodeInGroup() will not assign the node to a task.
+	// (Yes this is wonky, but I don't have a great understanding of clusterState, and since the original
+	// implementation used its own local copy of clusterState's nodeGroups here, I'm following that pattern.)
+	for groupID, group := range s.clusterState.nodeGroups {
 		if len(group.idle) > 0 {
-			idleNodeGroupIDs[groupID] = groupID
+			idleNodesByGroupIDs[groupID] = nodeStatesByNodeID{}
+			for _, ns := range group.idle {
+				if !ns.suspended() && !s.clusterState.isOfflined(ns) {
+					idleNodesByGroupIDs[groupID][ns.node.Id()] = ns
+				}
+			}
 		}
 	}
+
 	for _, task := range tasks {
-		var idleNodeGroupID string
 		var nodeSt *nodeState
 
 		// is there a node group (with idle node) for this snapshot?
-		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; ok {
-			nodeSt = findIdleNodeInGroup(cs, task.Def.SnapshotID)
+		if nodeGroup, ok := idleNodesByGroupIDs[task.Def.SnapshotID]; ok {
+			nodeSt = s.findIdleNodeInGroup(nodeGroup)
 		}
-		if nodeSt != nil {
-			idleNodeGroupID = task.Def.SnapshotID
-		} else {
+		if nodeSt == nil {
 			// could not find any free nodes in node group for the task's snapshot id.  Look for a free node in the other
 			// node groups, starting with the "" node group
-			if _, ok := idleNodeGroupIDs[""]; ok {
-				nodeSt = findIdleNodeInGroup(cs, "")
+			if nodeGroup, ok := idleNodesByGroupIDs[""]; ok {
+				nodeSt = s.findIdleNodeInGroup(nodeGroup)
 			}
 			if nodeSt == nil {
-				for groupID := range idleNodeGroupIDs {
+				// no free node was found in "" nor the task's node group, grab an idle node from another group
+				for groupID, nodeGroup := range idleNodesByGroupIDs {
 					if groupID == "" {
 						continue
 					}
-					nodeSt = findIdleNodeInGroup(cs, groupID)
+					nodeSt = s.findIdleNodeInGroup(nodeGroup)
 					if nodeSt != nil {
-						idleNodeGroupID = groupID
 						break
 					}
 				}
 			}
 		}
-		// Could not find any more free nodes
+
 		if nodeSt == nil {
+			// Could not find any more free nodes.  This may happen if nodes are suspended after the scheduling algorithm
+			// has built the list of tasks to schedule but before the tasks are actually assigned to a node.
+			// Skip the rest of the assignments, the skipped tasks should be picked up in the next scheduling run
 			log.WithFields(
 				log.Fields{
 					"jobID":  task.JobId,
 					"taskID": task.TaskId,
 					"tag":    task.Def.Tag,
 				}).Warn("Unable to assign, no free node for task")
-			continue
+			break
 		}
 		assignments = append(assignments, taskAssignment{nodeSt: nodeSt, task: task})
 
-		if _, ok := cs.nodeGroups[task.Def.SnapshotID]; !ok {
-			cs.nodeGroups[task.Def.SnapshotID] = newNodeGroup()
-		}
-		nodeID := nodeSt.node.Id()
-		if idleNodeGroupID != task.Def.SnapshotID {
-			// move the idle node to the task's node group, taskScheduled (called below) moves the nodesSt
-			// from the task group's idle node list to busy
-			delete(cs.nodeGroups[idleNodeGroupID].idle, nodeID)
-			cs.nodeGroups[task.Def.SnapshotID].idle[nodeID] = nodeSt
-			nodeSt.snapshotId = task.Def.SnapshotID
-			// if all nodes have been moved from this node group, delete the nodeGroup from the clusterState nodeGroups map
-			if len(cs.nodeGroups[idleNodeGroupID].idle) == 0 && len(cs.nodeGroups[idleNodeGroupID].busy) == 0 {
-				delete(cs.nodeGroups, idleNodeGroupID)
-				if _, ok := idleNodeGroupIDs[idleNodeGroupID]; ok {
-					delete(idleNodeGroupIDs, idleNodeGroupID)
-				}
-			}
-		}
 		// Mark Task as Started in the cluster
-		cs.taskScheduled(nodeSt.node.Id(), task.JobId, task.Def.TaskID, task.Def.SnapshotID)
+		s.clusterState.taskScheduled(nodeSt.node.Id(), task.JobId, task.Def.TaskID, task.Def.SnapshotID)
 
 		log.WithFields(
 			log.Fields{
@@ -164,16 +164,20 @@ func assign(
 				"numAssignments": len(assignments),
 				"tag":            task.Def.Tag,
 			}).Info("Scheduling task")
-		stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
+		s.stat.Counter(stats.SchedScheduledTasksCounter).Inc(1)
 	}
 	return assignments
 }
 
-func findIdleNodeInGroup(cs *clusterState, groupID string) *nodeState {
-	for _, ns := range cs.nodeGroups[groupID].idle {
-		if ns.suspended() || cs.isOfflined(ns) {
+// findIdleNodeInGroup finds a node in the group's idle nodes that is not suspended or offlined (this method will, pick
+// up nodes that have been suspended/offlined while the processing was assigning other tasks to nodes).
+// It also removes the node from the groups idle nodes list to prevent it from being assigned again.
+func (s *statefulScheduler) findIdleNodeInGroup(nodeGroup nodeStatesByNodeID) *nodeState {
+	for id, ns := range nodeGroup {
+		if ns.suspended() || s.clusterState.isOfflined(ns) {
 			continue
 		}
+		delete(nodeGroup, id)
 		return ns
 	}
 	return nil
