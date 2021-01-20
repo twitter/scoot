@@ -112,7 +112,6 @@ type SchedulerConfig struct {
 	MaxRequestors        int
 	MaxJobsPerRequestor  int
 	TaskThrottle         int
-	TaskThrottleMu       sync.RWMutex
 	Admins               []string
 
 	SchedAlgConfig interface{}
@@ -167,7 +166,8 @@ type statefulScheduler struct {
 	// stats
 	stat stats.StatsReceiver
 
-	persistor Persistor
+	persistor      Persistor
+	TaskThrottleMu sync.RWMutex // mutex must be here to avoid copying the lock when passing config to scheduler constructor
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -1294,13 +1294,13 @@ func (s *statefulScheduler) SetPersistor(persistor Persistor) {
 }
 
 func (s *statefulScheduler) getThrottle() int {
-	s.config.TaskThrottleMu.RLock()
-	defer s.config.TaskThrottleMu.RUnlock()
+	s.TaskThrottleMu.RLock()
+	defer s.TaskThrottleMu.RUnlock()
 	return s.config.TaskThrottle
 }
 
 func (s *statefulScheduler) setThrottle(throttle int) {
-	s.config.TaskThrottleMu.Lock()
-	defer s.config.TaskThrottleMu.Unlock()
+	s.TaskThrottleMu.Lock()
+	defer s.TaskThrottleMu.Unlock()
 	s.config.TaskThrottle = throttle
 }
