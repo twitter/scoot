@@ -9,8 +9,8 @@ import (
 // Persistor interface for persisting scheduler settings and initializing the scheduler
 // from its persisted settings
 type Persistor interface {
-	PersistSettings(s Scheduler)
-	LoadSettings(s Scheduler)
+	PersistSettings(settings *PersistedSettings) error
+	LoadSettings() (*PersistedSettings, error)
 }
 
 // PersistedSettings the persisted scheduler settings structure for encoding/decoding as json
@@ -25,15 +25,44 @@ type PersistedSettings struct {
 // nopPersistor provides nop implementations of persist and load functions
 type nopPersistor struct{}
 
-func (p *nopPersistor) PersistSettings(s Scheduler) {
-	return
+func (p *nopPersistor) PersistSettings(settings *PersistedSettings) error {
+	return nil
 }
 
-func (p *nopPersistor) LoadSettings(s Scheduler) {
-	return
+func (p *nopPersistor) LoadSettings() (*PersistedSettings, error) {
+	return nil, nil
 }
 
-func (s *statefulScheduler) LoadPersistedSettings(settings PersistedSettings) {
+func (s *statefulScheduler) persistSettings() {
+	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
+	if !ok {
+		log.Errorf("not using load based scheduler, settings ignored")
+		return
+	}
+	_, throttle := s.GetSchedulerStatus()
+	ps := &PersistedSettings{
+		ClassLoadPercents:               sa.getClassLoadPercents(),
+		RequestorToClassMap:             sa.getRequestorToClassMap(),
+		RebalanceMinimumDurationMinutes: int(sa.getRebalanceMinimumDuration().Minutes()),
+		RebalanceThreshold:              sa.getRebalanceThreshold(),
+		Throttle:                        throttle,
+	}
+	err := s.persistor.PersistSettings(ps)
+	if err != nil {
+		log.Errorf("settings were not persisted, default scheduler settings will be used on next restart.%s", err)
+	}
+}
+
+func (s *statefulScheduler) loadSettings() {
+	settings, err := s.persistor.LoadSettings()
+	if err != nil {
+		log.Errorf("error loading settings, scheduler will use the default settings. %s", err)
+		return
+	}
+	if settings == nil {
+		log.Infof("no persisted settings found. Scheduler will use default values")
+		return
+	}
 	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		log.Errorf("not using load based scheduler, settings ignored")

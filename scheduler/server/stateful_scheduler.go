@@ -305,7 +305,7 @@ func NewStatefulScheduler(
 	if sched.persistor == nil {
 		sched.persistor = Persistor(&nopPersistor{})
 	}
-	sched.persistor.LoadSettings(sched)
+	sched.loadSettings()
 
 	if !config.DebugMode {
 		// start the scheduler loop
@@ -1190,7 +1190,7 @@ func (s *statefulScheduler) SetSchedulerStatus(maxTasks int) error {
 		return err
 	}
 	s.setThrottle(maxTasks)
-	s.persistor.PersistSettings(s)
+	s.persistSettings()
 	log.Infof("scheduler throttled to %d", maxTasks)
 	return nil
 }
@@ -1225,7 +1225,7 @@ func (s *statefulScheduler) SetClassLoadPercents(classLoadPercents map[string]in
 		return fmt.Errorf("not using load based scheduler, class load pcts ignored")
 	}
 	sa.setClassLoadPercents(classLoadPercents)
-	s.persistor.PersistSettings(s)
+	s.persistSettings()
 	return nil
 }
 
@@ -1245,7 +1245,7 @@ func (s *statefulScheduler) SetRequestorToClassMap(requestorToClassMap map[strin
 		return fmt.Errorf("not using load based scheduler, requestor to class map ignored")
 	}
 	sa.setRequestorToClassMap(requestorToClassMap)
-	s.persistor.PersistSettings(s)
+	s.persistSettings()
 	return nil
 }
 
@@ -1265,7 +1265,7 @@ func (s *statefulScheduler) SetRebalanceMinimumDuration(durationMin time.Duratio
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance min duration ignored")
 	}
 	sa.setRebalanceMinimumDuration(durationMin)
-	s.persistor.PersistSettings(s)
+	s.persistSettings()
 	return nil
 }
 
@@ -1285,7 +1285,7 @@ func (s *statefulScheduler) SetRebalanceThreshold(threshold int32) error {
 		return fmt.Errorf("not using load based scheduler, requestor to rebalance threshold ignored")
 	}
 	sa.setRebalanceThreshold(int(threshold))
-	s.persistor.PersistSettings(s)
+	s.persistSettings()
 	return nil
 }
 
