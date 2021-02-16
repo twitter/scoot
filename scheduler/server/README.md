@@ -54,12 +54,22 @@ their entitlement.  When this happens, the algorithm allows the 'over entitlemen
 their entitlement.  The classes under-utilizing their entitlement are, in effect, _loaning_ workers
 to the classes with more tasks than their entitlement.
 
-The loan part of the algorithm normalizes the load %s on the classes with waiting tasks, and computes the number of tasks
-to start as per these normalized percents and the number of available workers.  If the _loan_ amount for a class is larger than the 
-number of waiting tasks in that class, there will still be available workers after processing each class.  When this 
-happens the algorithm repeats the loan computation re-normalizing the %s to the classes with waiting tasks and allocating 
-the still unallocated workers.  The iteration finishes when all unallocated workers have been assigned to a class or when 
-all the classes waiting tasks have been allocated to a worker.
+The loan part of the algorithm computes the loan distribution %s as follows:
+
+1. normalize the original load %s for classes with waiting tasks.  
+2. compute the total workers that will be loaned (sum of current loaned workers + number of idle workers that would still be unassigned after the entitlement distribution above).
+3. compute what the worker loan distribution would be if all of the currently loaned workers plus newly available workers were distributed as per the normalized loan %s
+4. adjust the worker loan distribution by subtracting the number of currently loaned workers for each class.  If classes are
+exceeding their loan distribution (from step 3) then their adjusted loan distribution is 0
+5. compute class final loan %s as each class's adjusted loan distribution / sum of the adjusted loan distributions
+
+Each class's _loan amount_ is computed as the class final loan % (from step 5) * number of workers still available or number of
+waiting tasks whichever is smaller
+
+When the _loan_ amount for a class is larger than the number of waiting tasks in that class, there will still be available 
+workers after processing each class.  When this happens the algorithm repeats the loan computation for the still unallocated 
+workers.  The iteration finishes when all unallocated workers have been assigned to a class or when all the classes waiting 
+tasks have been allocated to a worker.
 
 **Note** the entitlement and loan computation does not assign a specific worker to a task, it simply computes the number of
 workers that can be used to start tasks in each class.
