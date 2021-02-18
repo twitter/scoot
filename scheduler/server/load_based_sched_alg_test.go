@@ -352,11 +352,13 @@ func TestRandomScenario(t *testing.T) {
 
 func Test_Rebalance(t *testing.T) {
 	testsDefs := []testDef{
+		// unit test 1 - trigger rebalance
 		{totalWorkers: 10, classes: map[string]classState{ // debuggable scenario
 			"c0": {loadPct: 70, numRunningTasks: 2, numWaitingTasks: 20, numJobs: 3, expectedTasksToStart: 5},
 			"c1": {loadPct: 20, numRunningTasks: 4, numWaitingTasks: 10, numJobs: 2, expectedTasksToStart: 0, expectedTasksToStop: 2},
 			"c2": {loadPct: 10, numRunningTasks: 4, numWaitingTasks: 30, numJobs: 4, expectedTasksToStart: 0, expectedTasksToStop: 3}},
 		},
+		// unit test 2 - no rebalance
 		{totalWorkers: 10000, classes: map[string]classState{ // no rebalance - spread not large enough
 			"c0": {loadPct: 30, numRunningTasks: 1660, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 830},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 1282},
@@ -367,6 +369,7 @@ func Test_Rebalance(t *testing.T) {
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 9145, numJobs: 30, expectedTasksToStart: 0},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 16781, numJobs: 40, expectedTasksToStart: 0}},
 		},
+		// unit test 3 - rebalance
 		{totalWorkers: 10000, classes: map[string]classState{ // rebalance, but no loaning workers
 			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 2834},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 2399},
@@ -377,15 +380,16 @@ func Test_Rebalance(t *testing.T) {
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0, expectedTasksToStop: 677},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2412}},
 		},
+		// unit test 4 - rebalance and loan workers
 		{totalWorkers: 10000, classes: map[string]classState{ // rebalance and loan workers
-			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 3028},
-			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 2560},
-			"c2": {loadPct: 16, numRunningTasks: 420, numWaitingTasks: 16542, numJobs: 400, expectedTasksToStart: 1280},
-			"c3": {loadPct: 14, numRunningTasks: 14, numWaitingTasks: 104194, numJobs: 13, expectedTasksToStart: 1475},
+			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 3017},
+			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 2549},
+			"c2": {loadPct: 16, numRunningTasks: 420, numWaitingTasks: 16542, numJobs: 400, expectedTasksToStart: 1275},
+			"c3": {loadPct: 14, numRunningTasks: 14, numWaitingTasks: 104194, numJobs: 13, expectedTasksToStart: 1470},
 			"c4": {loadPct: 6, numRunningTasks: 404, numWaitingTasks: 0, numJobs: 400, expectedTasksToStart: 0},
 			"c5": {loadPct: 4, numRunningTasks: 42, numWaitingTasks: 0, numJobs: 40, expectedTasksToStart: 0},
-			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0, expectedTasksToStop: 677},
-			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2412}},
+			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0, expectedTasksToStop: 660},
+			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2400}},
 		},
 	}
 
