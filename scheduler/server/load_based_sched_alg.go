@@ -197,7 +197,7 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 			if lbs.exceededRebalanceThresholdStart == nilTime {
 				lbs.exceededRebalanceThresholdStart = time.Now()
 			} else if time.Now().Sub(lbs.exceededRebalanceThresholdStart) > lbs.config.rebalanceMinDuration {
-				tasksToStop = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
+				tasksToStop = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers)
 				lbs.exceededRebalanceThresholdStart = time.Time{}
 				rebalanced = true
 			}
@@ -316,7 +316,7 @@ func (lbs *LoadBasedAlg) computeNumTasksToStart(numIdleWorkers int) {
 	numIdleWorkers, haveUnallocatedTasks = lbs.entitlementTasksToStart(numIdleWorkers)
 
 	if numIdleWorkers > 0 && haveUnallocatedTasks {
-		lbs.workerLoanAllocation(numIdleWorkers)
+		lbs.workerLoanAllocation(numIdleWorkers, false)
 	}
 }
 
@@ -390,10 +390,10 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 // after all the class 'loan' amounts have been calculated.  When this happens we repeat the loan calculation till
 // there are no unallocated workers left.  Each iteration either uses up all idle workers, or all of a class's waiting
 // tasks.  This means that the we will not iterate more than the number of classes.
-func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
+func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int, haveRebalanced bool) {
 	i := 0
 	for ; i < len(lbs.jobClasses); i++ {
-		lbs.computeLoanPercents()
+		lbs.computeLoanPercents(numIdleWorkers, haveRebalanced)
 
 		// compute loan %'s and allocate idle workers
 		numTasksToStart, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
@@ -420,6 +420,13 @@ func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
 	for _, className := range lbs.classByDescLoadPct {
 		jc := lbs.jobClasses[className]
 		numTasksToStart := min(jc.numWaitingTasks, ceil(float32(numIdleWorkers)*(float32(jc.tempNormalizedPct)/100.0)))
+		if jc.numTasksToStart < 0 {
+			// we've determined we need to stop numTasksToStart for this class, but the subsequent loan calculation may
+			// have determined this class can also get loaners, we'll reduce the number of tasks to stop by the loaner amount.
+			// (below outside this if), but we also want to set the normalization pct to 0 to prevent redoing this reduction
+			// if we repeat the loan calculation
+			jc.tempNormalizedPct = 0.0
+		}
 
 		if (totalTasksToStart + numTasksToStart) > numIdleWorkers {
 			numTasksToStart = numIdleWorkers - totalTasksToStart
@@ -460,9 +467,10 @@ func (lbs *LoadBasedAlg) computeEntitlementPercents() {
 	lbs.jobClasses[lbs.classByDescLoadPct[0]].tempNormalizedPct = 100 - totalPercents
 }
 
-// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks.
+// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks and
+// to adjust loan targets based on number of workers already loaned to that class.
 // The loan percents percents are written to the corresponding jobClass.tempNormalizedPCt field.
-func (lbs *LoadBasedAlg) computeLoanPercents() {
+func (lbs *LoadBasedAlg) computeLoanPercents(numWorkersAvailableForLoan int, haveRebalanced bool) {
 	// get the sum of all the original load pcts for classes that have waiting tasks
 	pctsTotal := 0
 	for _, jc := range lbs.jobClasses {
@@ -472,30 +480,59 @@ func (lbs *LoadBasedAlg) computeLoanPercents() {
 	}
 
 	if pctsTotal == 0 {
+		// there are no workers who can use a loan
 		return
 	}
 
-	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
-	// 100 - sum of % to the class with the largest % from the range (this eliminates rounding errors, forcing the
-	// sum or % to go to 100%)
-	totalPercents := 0
-	firstClass := true
-	firstClassName := ""
+	// normalize the original class % excluding classes that don't have waiting tasks.
+	// (These pcts will be further adjusted to account for workers already loaned to each class.)
+	// Also compute the total number of loaned workers (totalLoaners).
+	normalizedLoanPcts := map[string]float64{}
+	totalLoaners := 0
 	for _, className := range lbs.classByDescLoadPct {
 		jc := lbs.jobClasses[className]
 		if jc.numWaitingTasks > 0 {
-			if firstClass {
-				firstClass = false
-				firstClassName = className
-				continue
-			}
-			jc.tempNormalizedPct = int(math.Floor(float64(jc.origTargetLoadPct) * 100.0 / float64(pctsTotal)))
-			totalPercents += jc.tempNormalizedPct
+			// normalize the class's loan %
+			normalizedLoanPcts[className] = float64(jc.origTargetLoadPct) / float64(pctsTotal)
 		} else {
-			jc.tempNormalizedPct = 0
+			// exclude the class
+			normalizedLoanPcts[className] = 0.0
+		}
+		if !haveRebalanced {
+			// only add up loaners if we are not rebalancing tasks - if we are rebalancing, then the
+			// number of loaners are theoretically 0
+			totalLoaners += int(math.Max(0.0, float64(jc.origNumRunningTasks-jc.origNumTargetedWorkers)))
 		}
 	}
-	lbs.jobClasses[firstClassName].tempNormalizedPct = 100 - totalPercents
+	// at this point origTargetLoanPcts is the orig load % normalized to exclude workers who don't have waiting tasks
+	// (workers who can't use a loan)
+
+	// update totalLoaners to include the idle workers that are about to be loaned
+	totalLoaners += numWorkersAvailableForLoan
+
+	loanEntitlements := map[string]int{}
+	totalEntitlements := 0
+	// compute the loan entitlement for each class: the class's loan % (origTargetLoanPcts) * totalLoaned workers
+	// then subtract the current loaned from the loan entitlement to get the remaining entitlement for each class
+	for className, jc := range lbs.jobClasses {
+		// compute the number of workers targeted to loan to this class (out of all currently loaned + workers available for loaning)
+		entitlement := int(math.Floor(normalizedLoanPcts[className] * float64(totalLoaners)))
+		currentLoaned := int(math.Max(0, float64(jc.origNumRunningTasks-jc.origNumTargetedWorkers)))
+		if haveRebalanced && jc.numTasksToStart < 0 {
+			// if we're going to be stopping tasks, decrease the number currently loaned by the number of tasks we're stopping
+			currentLoaned += jc.numTasksToStart
+		}
+
+		// reduce that entitlement by the number of workers already loaned
+		loanEntitlements[className] = int(math.Max(0, float64(entitlement-currentLoaned)))
+		totalEntitlements += loanEntitlements[className]
+	}
+
+	// re-normalize the loan entitlement %'s for just those workers whose loan entitlement is still > 0
+	// the available workers will be loaned as per these final %'s
+	for className, jc := range lbs.jobClasses {
+		jc.tempNormalizedPct = int(float64(loanEntitlements[className]) / float64(totalEntitlements) * 100.0)
+	}
 }
 
 // buildTaskStartList builds the list of tasks to be started for each jobClass.
@@ -617,7 +654,7 @@ func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
 // to start tasks in better alignment with the original targeted task load percents.
 // The function returns the list of tasks to stop and updates the jobClass objects with the number
 // of tasks to start
-func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int, numIdleWorkers int) []*taskState {
+func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int) []*taskState {
 
 	totalTasks := 0
 	// compute number tasks as per the each class's entitlement and waiting tasks
@@ -639,7 +676,7 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 
 	if totalTasks < totalWorkers {
 		// some classes are not using their full allocation, we can loan workers
-		lbs.computeLoanPercents()
+		lbs.computeLoanPercents(totalWorkers-totalTasks, true)
 
 		lbs.getTaskAllocations(totalWorkers - totalTasks)
 	}

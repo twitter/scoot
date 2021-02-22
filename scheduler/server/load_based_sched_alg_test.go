@@ -16,23 +16,6 @@ import (
 	"github.com/twitter/scoot/scheduler/domain"
 )
 
-var (
-	default_sc = SchedulerConfig{
-		MaxRetriesPerTask:    0,
-		DebugMode:            false,
-		RecoverJobsOnStartup: false,
-		DefaultTaskTimeout:   0,
-		TaskTimeoutOverhead:  0,
-		RunnerRetryTimeout:   0,
-		RunnerRetryInterval:  0,
-		ReadyFnBackoff:       0,
-		MaxRequestors:        0,
-		MaxJobsPerRequestor:  0,
-		TaskThrottle:         0,
-		Admins:               nil,
-	}
-)
-
 type classState struct {
 	loadPct              int
 	numRunningTasks      int
@@ -47,8 +30,13 @@ type testDef struct {
 	classes      map[string]classState
 }
 
+// test the algorithm for various scenarios
+// https://docs.google.com/spreadsheets/d/1QP-okxrVkmKBMtc4OzWe8cFU15u84b9aXENeKqGogbc/edit#gid=554928957 is a
+// spreadsheet with the expected computation.  Note: the numbers may be off by small amounts due to rounding
+// differences
 func Test_Class_Task_Start_Cnts(t *testing.T) {
 	testsDefs := []testDef{
+		// scenario 1 - all classes with waiting tasks, takes 2 iterations to allocate all workers based on entitlement
 		{totalWorkers: 1000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 290, numJobs: 10, expectedTasksToStart: 94},
 			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 230, numJobs: 50, expectedTasksToStart: 0},
@@ -57,20 +45,23 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 90, numJobs: 2, expectedTasksToStart: 0},
 			"c5": {loadPct: 0, numRunningTasks: 0, numWaitingTasks: 328, numJobs: 1, expectedTasksToStart: 0}},
 		},
+		// scenario 2 - 1 class with no waiting tasks, takes 2 iterations to allocate all workers based on entitlement
 		{totalWorkers: 1000, classes: map[string]classState{
-			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 290, numJobs: 10, expectedTasksToStart: 167},
-			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 230, numJobs: 15, expectedTasksToStart: 53},
+			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 290, numJobs: 10, expectedTasksToStart: 194},
+			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 230, numJobs: 15, expectedTasksToStart: 26},
 			"c2": {loadPct: 20, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
 			"c3": {loadPct: 15, numRunningTasks: 100, numWaitingTasks: 50, numJobs: 3, expectedTasksToStart: 50},
 			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 90, numJobs: 2, expectedTasksToStart: 20}},
 		},
+		// scenario 3 - allocating some workers as per entitlement plus loaning workers
 		{totalWorkers: 1000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 10, numJobs: 2, expectedTasksToStart: 10},
-			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 230, numJobs: 15, expectedTasksToStart: 166},
+			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 230, numJobs: 15, expectedTasksToStart: 157},
 			"c2": {loadPct: 20, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
 			"c3": {loadPct: 15, numRunningTasks: 100, numWaitingTasks: 50, numJobs: 10, expectedTasksToStart: 50},
-			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 90, numJobs: 3, expectedTasksToStart: 64}},
+			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 90, numJobs: 3, expectedTasksToStart: 73}},
 		},
+		// scenario 4 - allocating workers to previously inactive classes
 		{totalWorkers: 1000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 0, numWaitingTasks: 300, numJobs: 30, expectedTasksToStart: 105},
 			"c1": {loadPct: 25, numRunningTasks: 0, numWaitingTasks: 230, numJobs: 10, expectedTasksToStart: 81},
@@ -78,6 +69,7 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c3": {loadPct: 15, numRunningTasks: 0, numWaitingTasks: 650, numJobs: 13, expectedTasksToStart: 48},
 			"c4": {loadPct: 10, numRunningTasks: 700, numWaitingTasks: 800, numJobs: 40, expectedTasksToStart: 0}},
 		},
+		// scenario 5 - another variant taking 2 iterations to allocate all workers based on entitlement
 		{totalWorkers: 1000, classes: map[string]classState{
 			"c0": {loadPct: 35, numRunningTasks: 200, numWaitingTasks: 100, numJobs: 30, expectedTasksToStart: 100},
 			"c1": {loadPct: 30, numRunningTasks: 300, numWaitingTasks: 50, numJobs: 10, expectedTasksToStart: 0},
@@ -85,7 +77,8 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c3": {loadPct: 0, numRunningTasks: 100, numWaitingTasks: 300, numJobs: 13, expectedTasksToStart: 0},
 			"c4": {loadPct: 15, numRunningTasks: 110, numWaitingTasks: 500, numJobs: 40, expectedTasksToStart: 31}},
 		},
-		// class loads with percents not adding up to 100- trigger percent normalizing
+		// scenario 6 class loads with percents not adding up to 100- trigger percent normalizing, plus
+		// 2 iterations of entitlement phase and 1 iteration of loan phase
 		{totalWorkers: 1000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 200, numWaitingTasks: 100, numJobs: 30, expectedTasksToStart: 100},
 			"c1": {loadPct: 25, numRunningTasks: 300, numWaitingTasks: 50, numJobs: 10, expectedTasksToStart: 10},
@@ -93,6 +86,7 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c3": {loadPct: 0, numRunningTasks: 100, numWaitingTasks: 300, numJobs: 13, expectedTasksToStart: 0},
 			"c4": {loadPct: 10, numRunningTasks: 110, numWaitingTasks: 500, numJobs: 40, expectedTasksToStart: 8}},
 		},
+		// scenario 7 - another variant taking 2 iterations to allocate all workers based on entitlement (larger volume)
 		{totalWorkers: 10000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 1660, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 830},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 1282},
@@ -103,6 +97,7 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 9145, numJobs: 30, expectedTasksToStart: 0},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 16781, numJobs: 40, expectedTasksToStart: 0}},
 		},
+		// scenario 8 - another variant taking 2 iterations to allocate all workers based on entitlement (larger volume)
 		{totalWorkers: 10000, classes: map[string]classState{
 			"c0": {loadPct: 30, numRunningTasks: 1660, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 830},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 29401, numJobs: 100, expectedTasksToStart: 1282},
@@ -112,6 +107,40 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 			"c5": {loadPct: 4, numRunningTasks: 42, numWaitingTasks: 11136, numJobs: 40, expectedTasksToStart: 187},
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0}},
+		},
+		// scenario 9 - mimick just diff and tryout running on staging
+		{totalWorkers: 3270, classes: map[string]classState{
+			"land":       {loadPct: 48, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"diff":       {loadPct: 25, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"sandbox":    {loadPct: 10, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"regression": {loadPct: 9, numRunningTasks: 3111, numWaitingTasks: 22121, numJobs: 1, expectedTasksToStart: 0},
+			"ktf":        {loadPct: 3, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"coverage":   {loadPct: 2, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"tryout":     {loadPct: 2, numRunningTasks: 146, numWaitingTasks: 24099, numJobs: 1, expectedTasksToStart: 13},
+			"unknown":    {loadPct: 1, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0}},
+		},
+		// scenario 10 - mimick just diff and tryout running on staging, having consumed its entitlement and getting
+		// loaned workers from the other classes
+		{totalWorkers: 4000, classes: map[string]classState{
+			"land":       {loadPct: 48, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"diff":       {loadPct: 25, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"sandbox":    {loadPct: 10, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"regression": {loadPct: 9, numRunningTasks: 3111, numWaitingTasks: 22121, numJobs: 1, expectedTasksToStart: 157},
+			"ktf":        {loadPct: 3, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"coverage":   {loadPct: 2, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"tryout":     {loadPct: 2, numRunningTasks: 146, numWaitingTasks: 24099, numJobs: 1, expectedTasksToStart: 586},
+			"unknown":    {loadPct: 1, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0}},
+		},
+		// scenario 11 - mimick just diff and tryout running on staging, taking 2 loan iterations to allocate all workers
+		{totalWorkers: 4000, classes: map[string]classState{
+			"land":       {loadPct: 48, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"diff":       {loadPct: 25, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"sandbox":    {loadPct: 10, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"regression": {loadPct: 9, numRunningTasks: 3111, numWaitingTasks: 22121, numJobs: 1, expectedTasksToStart: 319},
+			"ktf":        {loadPct: 3, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"coverage":   {loadPct: 2, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0},
+			"tryout":     {loadPct: 2, numRunningTasks: 70, numWaitingTasks: 500, numJobs: 1, expectedTasksToStart: 500},
+			"unknown":    {loadPct: 1, numRunningTasks: 0, numWaitingTasks: 0, numJobs: 0, expectedTasksToStart: 0}},
 		},
 	}
 
@@ -126,7 +155,7 @@ func Test_Class_Task_Start_Cnts(t *testing.T) {
 
 func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExceededDuration time.Duration) {
 	jobsByJobID := map[string]*jobState{}
-	for _, testDef := range testsDefs {
+	for testNum, testDef := range testsDefs {
 		// reinitialize the task start times since this test will be creating new tasks
 		lbs.tasksByJobClassAndStartTimeSec = map[taskClassAndStartKey]taskStateByJobIDTaskID{}
 		lbs.exceededRebalanceThresholdStart = time.Now().Add(-1 * rebalanceExceededDuration)
@@ -168,8 +197,8 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 
 		tasksToBeAssigned, stopTasks := lbs.GetTasksToBeAssigned(nil, lbs.config.stat, cluster, jobsByRequestor)
 
-		assert.Equal(t, expectedNumTasks, len(tasksToBeAssigned), "wrong number of tasks in tasksToBeAssigned")
-		assert.Equal(t, expectedNumStopTasks, len(stopTasks))
+		assert.Equal(t, expectedNumTasks, len(tasksToBeAssigned), "wrong number of tasks in tasksToBeAssigned for test %d", testNum)
+		assert.Equal(t, expectedNumStopTasks, len(stopTasks), "wrong number of tasks to stop for test %d", testNum)
 
 		// compute the number of tasks to start for each class from the tasks list
 		numTasksByClassName := map[string]int{}
@@ -205,8 +234,8 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 		// have the correct number of tasks in the task list for each class
 		for className, state := range testDef.classes {
 			// verify the computed number of tasks to start for the class
-			assert.Equal(t, state.expectedTasksToStart, numTasksByClassName[className], "wrong number of %s tasks in the task list", className)
-			assert.Equal(t, state.expectedTasksToStop, numStopTasksByClassName[className], "wrong number of %s tasks to stop in the task list", className)
+			assert.Equal(t, state.expectedTasksToStart, numTasksByClassName[className], "wrong number of %s tasks in the task list for test %d", className, testNum)
+			assert.Equal(t, state.expectedTasksToStop, numStopTasksByClassName[className], "wrong number of %s tasks to stop in the task list for test %d", className, testNum)
 		}
 	}
 }
@@ -323,11 +352,13 @@ func TestRandomScenario(t *testing.T) {
 
 func Test_Rebalance(t *testing.T) {
 	testsDefs := []testDef{
+		// unit test 1 - trigger rebalance
 		{totalWorkers: 10, classes: map[string]classState{ // debuggable scenario
 			"c0": {loadPct: 70, numRunningTasks: 2, numWaitingTasks: 20, numJobs: 3, expectedTasksToStart: 5},
 			"c1": {loadPct: 20, numRunningTasks: 4, numWaitingTasks: 10, numJobs: 2, expectedTasksToStart: 0, expectedTasksToStop: 2},
 			"c2": {loadPct: 10, numRunningTasks: 4, numWaitingTasks: 30, numJobs: 4, expectedTasksToStart: 0, expectedTasksToStop: 3}},
 		},
+		// unit test 2 - no rebalance
 		{totalWorkers: 10000, classes: map[string]classState{ // no rebalance - spread not large enough
 			"c0": {loadPct: 30, numRunningTasks: 1660, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 830},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 1282},
@@ -338,6 +369,7 @@ func Test_Rebalance(t *testing.T) {
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 9145, numJobs: 30, expectedTasksToStart: 0},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 16781, numJobs: 40, expectedTasksToStart: 0}},
 		},
+		// unit test 3 - rebalance
 		{totalWorkers: 10000, classes: map[string]classState{ // rebalance, but no loaning workers
 			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 2834},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 2399},
@@ -348,15 +380,16 @@ func Test_Rebalance(t *testing.T) {
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0, expectedTasksToStop: 677},
 			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2412}},
 		},
+		// unit test 4 - rebalance and loan workers
 		{totalWorkers: 10000, classes: map[string]classState{ // rebalance and loan workers
-			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 3034},
+			"c0": {loadPct: 30, numRunningTasks: 166, numWaitingTasks: 14220, numJobs: 300, expectedTasksToStart: 3017},
 			"c1": {loadPct: 25, numRunningTasks: 101, numWaitingTasks: 9401, numJobs: 100, expectedTasksToStart: 2549},
 			"c2": {loadPct: 16, numRunningTasks: 420, numWaitingTasks: 16542, numJobs: 400, expectedTasksToStart: 1275},
 			"c3": {loadPct: 14, numRunningTasks: 14, numWaitingTasks: 104194, numJobs: 13, expectedTasksToStart: 1470},
 			"c4": {loadPct: 6, numRunningTasks: 404, numWaitingTasks: 0, numJobs: 400, expectedTasksToStart: 0},
 			"c5": {loadPct: 4, numRunningTasks: 42, numWaitingTasks: 0, numJobs: 40, expectedTasksToStart: 0},
 			"c6": {loadPct: 3, numRunningTasks: 977, numWaitingTasks: 209145, numJobs: 30, expectedTasksToStart: 0, expectedTasksToStop: 660},
-			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2404}},
+			"c7": {loadPct: 2, numRunningTasks: 2612, numWaitingTasks: 416781, numJobs: 40, expectedTasksToStart: 0, expectedTasksToStop: 2400}},
 		},
 	}
 
