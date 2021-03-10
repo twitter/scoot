@@ -17,7 +17,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), tmp, nil, runner.EmptyID)
+	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), tmp, nil, nil, runner.EmptyID)
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos

@@ -115,7 +115,7 @@ func TestMemCap(t *testing.T) {
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, nil, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -143,7 +143,8 @@ func TestStats(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	diskMonitor := stats.NewDiskMonitor([]string{"cwd"}, []string{"./"})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, diskMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -168,6 +169,7 @@ func TestStats(t *testing.T) {
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.WorkerDirSizeChange + "_cwd":      {Checker: stats.Int64EqTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
@@ -181,7 +183,7 @@ func TestTimeout(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, nil, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -222,7 +224,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, runner.EmptyID)
+	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, nil, runner.EmptyID)
 	return r, sim
 }
 
