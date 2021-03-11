@@ -7,7 +7,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/mock v1.0.1-0.20180211072722-58cd061d0938
+	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.3.2
 	github.com/leanovate/gopter v0.2.4
 	github.com/luci/go-render v0.0.0-20160219211803-9a04cc21af0f
@@ -23,8 +23,6 @@ require (
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	golang.org/x/tools v0.0.0-20190425150028-36563e24a262 // indirect
 	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
 	google.golang.org/grpc v1.14.0
-	rsc.io/quote/v3 v3.1.0 // indirect
 )

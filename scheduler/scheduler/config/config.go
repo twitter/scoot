@@ -85,7 +85,7 @@ func configConfigGo() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1615475890, 0)}
+	info := bindataFileInfo{name: "config/config.go", size: 0, mode: os.FileMode(420), modTime: time.Unix(1583878394, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -105,7 +105,7 @@ func configLocalLocal() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.local", size: 367, mode: os.FileMode(420), modTime: time.Unix(1609344497, 0)}
+	info := bindataFileInfo{name: "config/local.local", size: 367, mode: os.FileMode(420), modTime: time.Unix(1571853409, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -125,7 +125,7 @@ func configLocalMemory() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "config/local.memory", size: 325, mode: os.FileMode(420), modTime: time.Unix(1609344497, 0)}
+	info := bindataFileInfo{name: "config/local.memory", size: 325, mode: os.FileMode(420), modTime: time.Unix(1571853409, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -228,10 +228,10 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"config": &bintree{nil, map[string]*bintree{
-		"config.go":    &bintree{configConfigGo, map[string]*bintree{}},
-		"local.local":  &bintree{configLocalLocal, map[string]*bintree{}},
-		"local.memory": &bintree{configLocalMemory, map[string]*bintree{}},
+	"config": {nil, map[string]*bintree{
+		"config.go":    {configConfigGo, map[string]*bintree{}},
+		"local.local":  {configLocalLocal, map[string]*bintree{}},
+		"local.memory": {configLocalMemory, map[string]*bintree{}},
 	}},
 }}
 
