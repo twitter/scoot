@@ -35,7 +35,7 @@ func NewInvoker(
 	output runner.OutputCreator,
 	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
-	dirMonitor *stats.DirMonitor,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) *Invoker {
 	if stat == nil {
@@ -53,7 +53,7 @@ type Invoker struct {
 	output     runner.OutputCreator
 	tmp        *temp.TempDir
 	stat       stats.StatsReceiver
-	dirMonitor *stats.DirMonitor
+	dirMonitor *stats.DirsMonitor
 	rID        runner.RunnerID
 }
 

@@ -175,7 +175,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 		func(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 			return NewHandler(stat, run)
 		},
-		stats.NewDirMonitor,
+		stats.NewDirsMonitor,
 	)
 	if useErrorExec {
 		bag.Put(

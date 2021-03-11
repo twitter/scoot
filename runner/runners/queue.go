@@ -82,7 +82,7 @@ func NewQueueRunner(
 	tmp *temp.TempDir,
 	capacity int,
 	stat stats.StatsReceiver,
-	dirMonitor *stats.DirMonitor,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) runner.Service {
 	if stat == nil {
@@ -164,7 +164,7 @@ func NewSingleRunner(
 	output runner.OutputCreator,
 	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
-	dirMonitor *stats.DirMonitor,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) runner.Service {
 	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat, dirMonitor, rID)

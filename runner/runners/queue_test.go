@@ -223,7 +223,7 @@ func setup(capacity int, interval time.Duration, t *testing.T) *env {
 
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFilerUpdater(updater), IDC: nil}
-	r := NewQueueRunner(sim, filerMap, outputCreator, tmpDir, capacity, nil, stats.NopDirMonitor, runner.EmptyID)
+	r := NewQueueRunner(sim, filerMap, outputCreator, tmpDir, capacity, nil, stats.NopDirsMonitor, runner.EmptyID)
 
 	return &env{sim: sim, r: r, u: updater, uc: &updateCount}
 }

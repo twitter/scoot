@@ -11,52 +11,49 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var NopDirMonitor *DirMonitor = NewDirMonitor([]MonitorDir{})
+var NopDirsMonitor *DirsMonitor = NewDirsMonitor([]MonitorDir{})
 
 // MonitorDir a directory to monitor and a shortname (suffix) for reporting the stat
 type MonitorDir struct {
 	Directory  string // the directory to monitor
 	StatSuffix string // the suffix to use on the commandDirUsage_kb stat
+	startSize  int64
+	endSize    int64
 }
 
-// DirMonitor monitor disk usage for selected directories
-type DirMonitor struct {
-	dirs       []MonitorDir
-	startSizes []int64
-	endSizes   []int64
+// DirsMonitor monitor disk usage for selected directories
+type DirsMonitor struct {
+	dirs []MonitorDir
 }
 
-// NewDirMonitor return a DirMonitor
-func NewDirMonitor(dirs []MonitorDir) *DirMonitor {
-	dm := &DirMonitor{dirs: dirs, startSizes: make([]int64, len(dirs)), endSizes: make([]int64, len(dirs))}
-	for i := range dirs {
-		dm.startSizes[i] = -1
-		dm.endSizes[i] = -1
-	}
-	return dm
+// NewDirsMonitor return a DirsMonitor
+func NewDirsMonitor(dirs []MonitorDir) *DirsMonitor {
+	return &DirsMonitor{dirs: dirs}
 }
 
 // GetStartSizes get the starting sizes of the directories being monitored
-func (dm *DirMonitor) GetStartSizes() {
+func (dm *DirsMonitor) GetStartSizes() {
 	dm.getSizes(true)
 }
 
 // GetEndSizes get the ending sizes of the directories being monitored
-func (dm *DirMonitor) GetEndSizes() {
+func (dm *DirsMonitor) GetEndSizes() {
 	dm.getSizes(false)
 }
 
 // RecordSizeStats record the disk size deltas to the stats receiver
-func (dm *DirMonitor) RecordSizeStats(stat StatsReceiver) {
+func (dm *DirsMonitor) RecordSizeStats(stat StatsReceiver) {
 	for i, dir := range dm.dirs {
-		delta := dm.endSizes[i] - dm.startSizes[i]
-		statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, dir.StatSuffix)
-		stat.Gauge(statName).Update(delta)
+		if dm.dirs[i].startSize != -1 && dm.dirs[i].endSize != -1 {
+			delta := dm.dirs[i].endSize - dm.dirs[i].startSize
+			statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, dir.StatSuffix)
+			stat.Gauge(statName).Update(delta)
+		}
 	}
 }
 
 // getStartSizes get the starting sized of the directories being monitored
-func (dm *DirMonitor) getSizes(isStart bool) {
+func (dm *DirsMonitor) getSizes(isStart bool) {
 	var err error
 	for i, dir := range dm.dirs {
 		var dSize uint64
@@ -69,9 +66,9 @@ func (dm *DirMonitor) getSizes(isStart bool) {
 			asInt = int64(dSize)
 		}
 		if isStart {
-			dm.startSizes[i] = asInt
+			dm.dirs[i].startSize = asInt
 		} else {
-			dm.endSizes[i] = asInt
+			dm.dirs[i].endSize = asInt
 		}
 	}
 }

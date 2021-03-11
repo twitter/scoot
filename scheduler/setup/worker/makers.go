@@ -23,7 +23,7 @@ func MakeDoneWorker(tmp *temp.TempDir) runner.Service {
 	ex := execers.NewDoneExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirMonitor, runner.EmptyID)
+	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := runners.NewChaosRunner(r)
 	chaos.SetDelay(time.Duration(50) * time.Millisecond)
 	return chaos
@@ -34,5 +34,5 @@ func MakeSimWorker(tmp *temp.TempDir) runner.Service {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirMonitor, runner.EmptyID)
+	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
 }
