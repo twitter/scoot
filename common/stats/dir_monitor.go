@@ -11,18 +11,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// DiskMonitor monitor disk usage for selected directories
-type DiskMonitor struct {
-	pathAbbrevs []string // these abbreviations are added to the end of the paths' usage gauge names
-	paths       []string
-	startSizes  []int64
-	endSizes    []int64
+var NopDirMonitor *DirMonitor = NewDirMonitor([]MonitorDir{})
+
+// MonitorDir a directory to monitor and a shortname (suffix) for reporting the stat
+type MonitorDir struct {
+	Directory  string // the directory to monitor
+	StatSuffix string // the suffix to use on the commandDirUsage_kb stat
 }
 
-// NewDiskMonitor return a DiskMonitor
-func NewDiskMonitor(pathAbbrevs []string, paths []string) *DiskMonitor {
-	dm := &DiskMonitor{pathAbbrevs: pathAbbrevs, paths: paths, startSizes: make([]int64, len(paths)), endSizes: make([]int64, len(paths))}
-	for i := range paths {
+// DirMonitor monitor disk usage for selected directories
+type DirMonitor struct {
+	dirs       []MonitorDir
+	startSizes []int64
+	endSizes   []int64
+}
+
+// NewDirMonitor return a DirMonitor
+func NewDirMonitor(dirs []MonitorDir) *DirMonitor {
+	dm := &DirMonitor{dirs: dirs, startSizes: make([]int64, len(dirs)), endSizes: make([]int64, len(dirs))}
+	for i := range dirs {
 		dm.startSizes[i] = -1
 		dm.endSizes[i] = -1
 	}
@@ -30,33 +37,33 @@ func NewDiskMonitor(pathAbbrevs []string, paths []string) *DiskMonitor {
 }
 
 // GetStartSizes get the starting sizes of the directories being monitored
-func (dm *DiskMonitor) GetStartSizes() {
+func (dm *DirMonitor) GetStartSizes() {
 	dm.getSizes(true)
 }
 
 // GetEndSizes get the ending sizes of the directories being monitored
-func (dm *DiskMonitor) GetEndSizes() {
+func (dm *DirMonitor) GetEndSizes() {
 	dm.getSizes(false)
 }
 
 // RecordSizeStats record the disk size deltas to the stats receiver
-func (dm *DiskMonitor) RecordSizeStats(stat StatsReceiver) {
-	for i, pathAbbrevs := range dm.pathAbbrevs {
+func (dm *DirMonitor) RecordSizeStats(stat StatsReceiver) {
+	for i, dir := range dm.dirs {
 		delta := dm.endSizes[i] - dm.startSizes[i]
-		statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, pathAbbrevs)
+		statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, dir.StatSuffix)
 		stat.Gauge(statName).Update(delta)
 	}
 }
 
 // getStartSizes get the starting sized of the directories being monitored
-func (dm *DiskMonitor) getSizes(isStart bool) {
+func (dm *DirMonitor) getSizes(isStart bool) {
 	var err error
-	for i, p := range dm.paths {
+	for i, dir := range dm.dirs {
 		var dSize uint64
 		var asInt int64
-		dSize, err = GetDiskUsageKB(p)
+		dSize, err = GetDiskUsageKB(dir.Directory)
 		if err != nil {
-			log.Errorf("error getting disk size for %s, will not monitor size: %s", dm.paths[i], err)
+			log.Errorf("error getting disk size for %s, will not monitor size: %s", dir.Directory, err)
 			asInt = -1
 		} else {
 			asInt = int64(dSize)

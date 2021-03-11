@@ -33,5 +33,6 @@ func (m module) Install(b *ice.MagicBag) {
 			return runner.RunnerID{ID: hostname}
 		},
 		NewSingleRunner,
+		stats.NopDirMonitor,
 	)
 }

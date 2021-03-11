@@ -355,9 +355,9 @@ const (
 
 	/*
 		The disk size change for the indicated directory seen when running the task.
-		The stat will be qualified with a logical name for the directory
+		The reported stat will be of the form commandDirUsage_kb_<PathSuffix from
 	*/
-	CommandDirUsageKb = "commandDirUsageKb"
+	CommandDirUsageKb = "commandDirUsage_kb"
 
 	/*
 		the number of times the worker downloaded a snapshot from bundlestore

@@ -115,7 +115,7 @@ func TestMemCap(t *testing.T) {
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, nil, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, stats.NopDirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -143,8 +143,8 @@ func TestStats(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	diskMonitor := stats.NewDiskMonitor([]string{"cwd"}, []string{"./"})
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, diskMonitor, runner.EmptyID)
+	dirMonitor := stats.NewDirMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, dirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -183,7 +183,7 @@ func TestTimeout(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, nil, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, stats.NopDirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -224,7 +224,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, nil, runner.EmptyID)
+	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, stats.NopDirMonitor, runner.EmptyID)
 	return r, sim
 }
 

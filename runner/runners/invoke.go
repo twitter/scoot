@@ -35,26 +35,26 @@ func NewInvoker(
 	output runner.OutputCreator,
 	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
-	diskMonitor *stats.DiskMonitor,
+	dirMonitor *stats.DirMonitor,
 	rID runner.RunnerID,
 ) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat, diskMonitor: diskMonitor, rID: rID}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat, dirMonitor: dirMonitor, rID: rID}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec        execer.Execer
-	filerMap    runner.RunTypeMap
-	output      runner.OutputCreator
-	tmp         *temp.TempDir
-	stat        stats.StatsReceiver
-	diskMonitor *stats.DiskMonitor
-	rID         runner.RunnerID
+	exec       execer.Execer
+	filerMap   runner.RunTypeMap
+	output     runner.OutputCreator
+	tmp        *temp.TempDir
+	stat       stats.StatsReceiver
+	dirMonitor *stats.DirMonitor
+	rID        runner.RunnerID
 }
 
 // Run runs cmd
@@ -339,9 +339,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stdlog.Write([]byte(header))
 	}
 
-	if inv.diskMonitor != nil {
-		inv.diskMonitor.GetStartSizes()
-	}
+	inv.dirMonitor.GetStartSizes() // start monitoring directory sizes
 
 	// start running the command
 	log.WithFields(
@@ -440,11 +438,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}).Info("Run done")
 	}
 
-	// record target's disk usage for monitored directories
-	if inv.diskMonitor != nil {
-		inv.diskMonitor.GetEndSizes()
-		inv.diskMonitor.RecordSizeStats(inv.stat)
-	}
+	// record command's disk usage for the monitored directories
+	inv.dirMonitor.GetEndSizes()
+	inv.dirMonitor.RecordSizeStats(inv.stat)
 
 	// the command is no longer running, post process the results
 	switch st.State {

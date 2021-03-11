@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -22,7 +23,7 @@ func MakeDoneWorker(tmp *temp.TempDir) runner.Service {
 	ex := execers.NewDoneExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, nil, runner.EmptyID)
+	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirMonitor, runner.EmptyID)
 	chaos := runners.NewChaosRunner(r)
 	chaos.SetDelay(time.Duration(50) * time.Millisecond)
 	return chaos
@@ -33,5 +34,5 @@ func MakeSimWorker(tmp *temp.TempDir) runner.Service {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, nil, runner.EmptyID)
+	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirMonitor, runner.EmptyID)
 }
