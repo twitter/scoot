@@ -13,15 +13,15 @@ import (
 
 // DiskMonitor monitor disk usage for selected directories
 type DiskMonitor struct {
-	shortName  []string
-	paths      []string
-	startSizes []int64
-	endSizes   []int64
+	pathAbbrevs []string // these abbreviations are added to the end of the paths' usage gauge names
+	paths       []string
+	startSizes  []int64
+	endSizes    []int64
 }
 
 // NewDiskMonitor return a DiskMonitor
-func NewDiskMonitor(shortNames []string, paths []string) *DiskMonitor {
-	dm := &DiskMonitor{shortName: shortNames, paths: paths, startSizes: make([]int64, len(paths)), endSizes: make([]int64, len(paths))}
+func NewDiskMonitor(pathAbbrevs []string, paths []string) *DiskMonitor {
+	dm := &DiskMonitor{pathAbbrevs: pathAbbrevs, paths: paths, startSizes: make([]int64, len(paths)), endSizes: make([]int64, len(paths))}
 	for i := range paths {
 		dm.startSizes[i] = -1
 		dm.endSizes[i] = -1
@@ -41,15 +41,15 @@ func (dm *DiskMonitor) GetEndSizes() {
 
 // RecordSizeStats record the disk size deltas to the stats receiver
 func (dm *DiskMonitor) RecordSizeStats(stat StatsReceiver) {
-	for i, shortName := range dm.shortName {
+	for i, pathAbbrevs := range dm.pathAbbrevs {
 		delta := dm.endSizes[i] - dm.startSizes[i]
-		statName := fmt.Sprintf("%s_%s", WorkerDirSizeChange, shortName)
+		statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, pathAbbrevs)
 		stat.Gauge(statName).Update(delta)
 	}
 }
 
 // getStartSizes get the starting sized of the directories being monitored
-func (dm *DiskMonitor) getSizes(start bool) {
+func (dm *DiskMonitor) getSizes(isStart bool) {
 	var err error
 	for i, p := range dm.paths {
 		var dSize uint64
@@ -61,7 +61,7 @@ func (dm *DiskMonitor) getSizes(start bool) {
 		} else {
 			asInt = int64(dSize)
 		}
-		if start {
+		if isStart {
 			dm.startSizes[i] = asInt
 		} else {
 			dm.endSizes[i] = asInt

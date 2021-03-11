@@ -357,7 +357,7 @@ const (
 		The disk size change for the indicated directory seen when running the task.
 		The stat will be qualified with a logical name for the directory
 	*/
-	WorkerDirSizeChange = "directorySizeChange_k"
+	CommandDirUsageKb = "commandDirUsageKb"
 
 	/*
 		the number of times the worker downloaded a snapshot from bundlestore
