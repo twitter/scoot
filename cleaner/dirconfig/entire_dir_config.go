@@ -6,6 +6,8 @@ import (
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 // Configuration for cleaning disk space of a directory
@@ -19,7 +21,7 @@ type EntireDirConfig struct {
 func (dc EntireDirConfig) GetDir() string { return dc.Dir }
 
 func (dc EntireDirConfig) CleanDir() error {
-	usage, err := getDiskUsageKB(dc.GetDir())
+	usage, err := stats.GetDiskUsageKB(dc.GetDir())
 	if err != nil {
 		return err
 	}

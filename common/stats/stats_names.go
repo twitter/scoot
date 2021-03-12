@@ -354,6 +354,12 @@ const (
 	WorkerActiveRunsGauge = "activeRunsGauge"
 
 	/*
+		The disk size change for the indicated directory seen when running the task.
+		The reported stat will be of the form commandDirUsage_kb_<PathSuffix from
+	*/
+	CommandDirUsageKb = "commandDirUsage_kb"
+
+	/*
 		the number of times the worker downloaded a snapshot from bundlestore
 	*/
 	WorkerDownloads = "workerDownloads"
