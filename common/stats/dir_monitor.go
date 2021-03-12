@@ -43,9 +43,9 @@ func (dm *DirsMonitor) GetEndSizes() {
 
 // RecordSizeStats record the disk size deltas to the stats receiver
 func (dm *DirsMonitor) RecordSizeStats(stat StatsReceiver) {
-	for i, dir := range dm.dirs {
-		if dm.dirs[i].startSize != -1 && dm.dirs[i].endSize != -1 {
-			delta := dm.dirs[i].endSize - dm.dirs[i].startSize
+	for _, dir := range dm.dirs {
+		if dir.startSize != -1 && dir.endSize != -1 {
+			delta := dir.endSize - dir.startSize
 			statName := fmt.Sprintf("%s_%s", CommandDirUsageKb, dir.StatSuffix)
 			stat.Gauge(statName).Update(delta)
 		}
@@ -55,7 +55,7 @@ func (dm *DirsMonitor) RecordSizeStats(stat StatsReceiver) {
 // getStartSizes get the starting sized of the directories being monitored
 func (dm *DirsMonitor) getSizes(isStart bool) {
 	var err error
-	for i, dir := range dm.dirs {
+	for _, dir := range dm.dirs {
 		var dSize uint64
 		var asInt int64
 		dSize, err = GetDiskUsageKB(dir.Directory)
@@ -66,9 +66,9 @@ func (dm *DirsMonitor) getSizes(isStart bool) {
 			asInt = int64(dSize)
 		}
 		if isStart {
-			dm.dirs[i].startSize = asInt
+			dir.startSize = asInt
 		} else {
-			dm.dirs[i].endSize = asInt
+			dir.endSize = asInt
 		}
 	}
 }
