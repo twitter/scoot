@@ -54,16 +54,19 @@ func (dm *DirsMonitor) RecordSizeStats(stat StatsReceiver) {
 
 // getStartSizes get the starting sized of the directories being monitored
 func (dm *DirsMonitor) getSizes(isStart bool) {
-	var err error
 	for _, dir := range dm.dirs {
 		var dSize uint64
 		var asInt int64
-		dSize, err = GetDiskUsageKB(dir.Directory)
-		if err != nil {
-			log.Errorf("error getting disk size for %s, will not monitor size: %s", dir.Directory, err)
-			asInt = -1
+		if _, err := os.Stat(dir.Directory); os.IsNotExist(err) {
+			asInt = 0
 		} else {
-			asInt = int64(dSize)
+			dSize, err = GetDiskUsageKB(dir.Directory)
+			if err != nil {
+				log.Errorf("error getting disk size for %s, will not monitor size: %s", dir.Directory, err)
+				asInt = -1
+			} else {
+				asInt = int64(dSize)
+			}
 		}
 		if isStart {
 			dir.startSize = asInt

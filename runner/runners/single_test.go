@@ -143,7 +143,7 @@ func TestStats(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
+	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}, {StatSuffix: "notExist", Directory: "./dirNotExist"}})
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, dirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
@@ -170,6 +170,7 @@ func TestStats(t *testing.T) {
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
 			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
+			stats.CommandDirUsageKb + "_notExist":   {Checker: stats.Int64EqTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
