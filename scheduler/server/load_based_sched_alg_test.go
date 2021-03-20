@@ -31,9 +31,6 @@ type testDef struct {
 }
 
 // test the algorithm for various scenarios
-// https://docs.google.com/spreadsheets/d/1QP-okxrVkmKBMtc4OzWe8cFU15u84b9aXENeKqGogbc/edit#gid=554928957 is a
-// spreadsheet with the expected computation.  Note: the numbers may be off by small amounts due to rounding
-// differences
 func Test_Class_Task_Start_Cnts(t *testing.T) {
 	testsDefs := []testDef{
 		// scenario 1 - all classes with waiting tasks, takes 2 iterations to allocate all workers based on entitlement
