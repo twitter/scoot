@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/cloud/cluster"
@@ -99,6 +100,8 @@ func Test_StatefulScheduler_Initialize(t *testing.T) {
 	if len(s.clusterState.nodes) != 5 {
 		t.Errorf("Expected Scheduler to have a cluster with 5 nodes")
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
@@ -128,6 +131,8 @@ func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
@@ -163,6 +168,8 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_AddJob(t *testing.T) {
@@ -193,6 +200,8 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 // verifies that task gets retried maxRetryTimes and then marked as completed
@@ -242,6 +251,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 // verifies that task gets retried maxRetryTimes and then marked as completed
@@ -293,6 +304,8 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 // Ensure a single job with one task runs to completion, updates
@@ -372,6 +385,8 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	for len(s.inProgressJobs) > 0 {
 		s.step()
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
@@ -396,6 +411,8 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 		t.Fatalf("Expected no error from killJob request, instead got:%s", errResp.Error())
 	}
 	verifyJobStatus("verify kill", jobId, domain.Completed, []domain.Status{domain.Completed}, s, t)
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
@@ -413,6 +430,7 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 
 	log.Infof("Got job not found error: \n%s", err.Error())
 
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
@@ -453,6 +471,8 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 			j = s.getJob(jobId)
 		}
 	}
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
@@ -517,6 +537,8 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 
 	// cleanup
 	sendKillRequest(jobId1, s)
+
+	validateCompletionCounts(s, t)
 }
 
 func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
@@ -669,7 +691,6 @@ func initializeServices(sc saga.SagaCoordinator, useDefaultDeps bool) (*stateful
 func putJobInScheduler(numTasks int, s *statefulScheduler, command string,
 	requestor string, priority domain.Priority) (string, []string, error) {
 	// create the job and run it to completion
-	// create the job and run it to completion
 	jobDef := domain.GenJobDef(numTasks)
 	jobDef.Requestor = requestor
 	jobDef.Priority = priority
@@ -744,4 +765,73 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 		},
 		statsRegistry: stats.NewFinagleStatsRegistry(),
 	}, nil
+}
+
+func validateCompletionCounts(s *statefulScheduler, t *testing.T) {
+
+	// check the counts of entries in tasksByJobClassAndStartTimeSec map and counts within each jobState
+	for _, js := range s.inProgressJobs {
+		mapRunning := 0
+		for classNStartKey, v := range js.tasksByJobClassAndStartTimeSec {
+			if classNStartKey.class != js.jobClass {
+				continue
+			}
+			for jobIDnTaskID := range v {
+				if jobIDnTaskID.jobID != js.Job.Id {
+					continue
+				}
+				mapRunning++
+			}
+		}
+
+		jRunning := 0
+		jCompleted := 0
+		jNotStarted := 0
+		for _, taskState := range js.Tasks {
+			if taskState.Status == domain.InProgress {
+				jRunning++
+			} else if taskState.Status == domain.NotStarted {
+				jNotStarted++
+			} else if taskState.Status == domain.Completed {
+				jCompleted++
+			}
+		}
+		// job's running task counts:
+		// taskStates in running state vs js count of tasks in running state
+		assert.Equal(t, jRunning, js.TasksRunning,
+			"job  %s,%s,%s, has %d tasks in running state but %s running task count",
+			jRunning, js.jobClass, js.Job.Def.Requestor, js.Job.Id, jRunning, js.TasksRunning)
+		// num tasks in job state's running task list vs job state's running task count
+		assert.Equal(t, len(js.Running), js.TasksRunning, "job:%s,%s,%s has %d tasks in its Running map, but %d in its TasksRunning count",
+			js.jobClass, js.Job.Def.Requestor, js.Job.Id, len(js.Running), js.TasksRunning)
+		// the map's (running) task count vs job state's running task count
+		assert.Equal(t, mapRunning, js.TasksRunning, "job:%s,%s,%s has %d tasks running in the map, but %d in its TasksRunning count",
+			js.jobClass, js.Job.Def.Requestor, js.Job.Id, mapRunning, js.TasksRunning)
+
+		// jobState's completed task counts:
+		// taskStates in completed state vs js count of tasks in completed state
+		assert.Equal(t, jCompleted, js.TasksCompleted,
+			"job %s,%s,%s has %d tasks in completed state but a count of %d completed tasks",
+			jRunning, js.jobClass, js.Job.Def.Requestor, js.Job.Id, jCompleted, js.TasksCompleted)
+		// num tasks in job state's completed task list vs job state's completed task count
+		assert.Equal(t, len(js.Completed), js.TasksCompleted, "job:%s,%s,%s has %d tasks in its completed task list, but %d in its TasksCompleted count",
+			js.jobClass, js.Job.Def.Requestor, js.Job.Id, len(js.Completed), js.TasksCompleted)
+
+		// jobState's not started task counts:
+		// taskStates in not started state vs js count of tasks in completed state
+		assert.Equal(t, len(js.NotStarted), len(js.Tasks)-js.TasksCompleted-js.TasksRunning, "job:%s,%s,%s has %d tasks in its NotStarted map, but %d in its NotStarted count",
+			js.jobClass, js.Job.Def.Requestor, js.Job.Id, len(js.NotStarted), len(js.Tasks)-js.TasksRunning-js.TasksCompleted)
+		// tasks in not started state vs counts of tasks, completed and running maps
+		assert.Equal(t, jNotStarted, len(js.Tasks)-len(js.Completed)-len(js.Running), "job:%s,%s,%s has %d tasks in not started state, but this isn't equal to %d (len(tasks) - len(completed) - len(running))",
+			js.jobClass, js.Job.Def.Requestor, js.Job.Id, len(js.NotStarted), len(js.Tasks)-len(js.Running)-len(js.Completed))
+	}
+
+	// total running in map vs total running for scheduler
+	totalMapRunning := 0
+	for _, v := range s.tasksByJobClassAndStartTimeSec {
+		totalMapRunning += len(v)
+	}
+	_, _, running := s.getSchedulerTaskCounts()
+	assert.Equal(t, totalMapRunning, running, "running count from tasksByJobClassAndStartTimeSec map (%d) is not equal to running from scheduler (%d)",
+		totalMapRunning, running)
 }

@@ -163,11 +163,6 @@ func (jc *jobClass) String() string {
 		jc.tempNormalizedPct)
 }
 
-// NewJobClass create a jobClass struct
-func NewJobClass(name string, targetLoadPct int) *jobClass {
-	return &jobClass{className: name, origTargetLoadPct: targetLoadPct, jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
-}
-
 // GetTasksToBeAssigned - the entry point to the load based scheduling algorithm
 // The algorithm uses the classLoadPercents, number of tasks currently running for each class
 // and number of available workers when computing the tasks to start/stop.
@@ -246,7 +241,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	lbs.jobClasses[lbs.classByDescLoadPct[0]].origNumTargetedWorkers = numWorkers - totalWorkers
 }
 
-// initJobClassesMap builds the map of requestor (class name) to jobClass objects
+// initJobClassesMap builds the map of waiting jobs' requestors to jobClass objects
 // if we see a job whose class % not defined, assign the job to the class with the
 // smallest class load %
 func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobState) {
@@ -655,20 +650,20 @@ func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
 // The function returns the list of tasks to stop and updates the jobClass objects with the number
 // of tasks to start
 func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int) []*taskState {
-
+	log.Info("Rebalancing")
 	totalTasks := 0
 	// compute number tasks as per the each class's entitlement and waiting tasks
 	// will be negative when a class is over its entitlement
 	for _, jc := range lbs.jobClasses {
 		if jc.origNumRunningTasks > jc.origNumTargetedWorkers {
-			// the number of tasks that could be started to bring the class up to its entitlement
+			// the class is running more than its entitled number of tasks, numTasksToStart is number of tasks
+			// to stop to bring back to its entitlement (it will be a negative number)
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		} else if jc.origNumRunningTasks+jc.origNumWaitingTasks < jc.origNumTargetedWorkers {
 			// the waiting tasks won't put the class over its entitlement
 			jc.numTasksToStart = jc.origNumWaitingTasks
 		} else {
-			// the class is running more than its entitled number of tasks, numTasksToStart is number of tasks
-			// to stop to bring back to its entitlement (it will be a negative number)
+			// the number of tasks that could be started to bring the class up to its entitlement
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		}
 		totalTasks += jc.origNumRunningTasks + jc.numTasksToStart
