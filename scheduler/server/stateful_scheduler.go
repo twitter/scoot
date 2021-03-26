@@ -163,7 +163,8 @@ type statefulScheduler struct {
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID // map of tasks by their class and start time
 
 	// stats
-	stat stats.StatsReceiver
+	stat                        stats.StatsReceiver
+	requestorHistoryEntriesSize int64
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -567,6 +568,35 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(jobsWaitingToStart))
 	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remainingTasks))
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
+
+	// print internal data structure sizes
+	var lbs *LoadBasedAlg = s.config.SchedAlg.(*LoadBasedAlg)
+	lbsStats := lbs.GetDataStructureSizeStats()
+	for k, v := range lbsStats {
+		s.stat.Gauge(k).Update(int64(v))
+	}
+	s.stat.Gauge(stats.SchedTaskStartTimeMapSize).Update(int64(s.getSchedTaskStartTimeMapSize()))
+	s.stat.Gauge(stats.SchedInProgressJobsSize).Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge(stats.SchedRequestorMapSize).Update(int64(len(s.requestorMap)))
+	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(int64(len(s.requestorHistory)))
+	if len(s.requestorHistory) > 0 {
+		s.stat.Gauge(stats.SchedRequestorHistoryAveLen).Update(s.requestorHistoryEntriesSize / int64(len(s.requestorHistory)))
+	} else {
+		s.stat.Gauge(stats.SchedRequestorHistoryAveLen).Update(int64(0))
+	}
+	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(len(s.taskDurations)))
+	s.stat.Gauge(stats.SchedSagasSize).Update(int64(s.sagaCoord.GetNumSagas()))
+	s.stat.Gauge(stats.SchedRunnersSize).Update(int64(s.asyncRunner.NumRunning()))
+}
+
+// getSchedTaskStartTimeMapSize get the number of running tasks being tracked by tasksByJobClassAndStartTimeSec map
+// (should never be larger than the number of workers)
+func (s *statefulScheduler) getSchedTaskStartTimeMapSize() int {
+	sz := 0
+	for _, v := range s.tasksByJobClassAndStartTimeSec {
+		sz += len(v)
+	}
+	return sz
 }
 
 func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
@@ -623,6 +653,7 @@ func (s *statefulScheduler) checkJobsLoop() {
 						s.requestorHistory[rb] = []string{}
 					}
 					s.requestorHistory[rb] = append(s.requestorHistory[rb], checkJobMsg.jobDef.Tag)
+					s.requestorHistoryEntriesSize += int64(len(checkJobMsg.jobDef.Tag))
 				}
 			}
 			checkJobMsg.resultCh <- err

@@ -835,3 +835,26 @@ func (lbs *LoadBasedAlg) setRebalanceThreshold(rebalanceThreshold int) {
 	defer lbs.config.rebalanceThresholdMu.Unlock()
 	lbs.config.rebalanceThreshold = rebalanceThreshold
 }
+
+func (lbs *LoadBasedAlg) GetDataStructureSizeStats() map[string]int {
+	return map[string]int{
+		stats.SchedLBSConfigDescLoadPctSize:      len(lbs.config.classByDescLoadPct),
+		stats.SchedLBSConfigLoadPercentsSize:     len(lbs.config.classLoadPercents),
+		stats.SchedLBSConfigRequestorToPctsSize:  len(lbs.config.requestorReToClassMap),
+		stats.SchedLBSWorkingDescLoadPctSize:     len(lbs.classByDescLoadPct),
+		stats.SchedLBSWorkingJobClassesSize:      lbs.getJobClassesSize(),
+		stats.SchedLBSWorkingLoadPercentsSize:    len(lbs.classByDescLoadPct),
+		stats.SchedLBSWorkingRequestorToPctsSize: len(lbs.requestorReToClassMap),
+	}
+}
+
+func (lbs *LoadBasedAlg) getJobClassesSize() int {
+	// get sum of number of waiting tasks across all the jobClasses's job entries
+	s := 0
+	for _, jc := range lbs.jobClasses {
+		for _, wt := range jc.jobsByNumRunningTasks {
+			s += len(wt)
+		}
+	}
+	return s
+}

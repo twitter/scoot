@@ -329,6 +329,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
+	sagaLogMock.EXPECT().GetActiveSagas().AnyTimes()
 
 	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
 
