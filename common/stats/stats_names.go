@@ -347,6 +347,24 @@ const (
 	*/
 	SchedStoppingTasks = "schedStoppingTasks_"
 
+	/*
+		scheduler internal data structure size monitoring
+	*/
+	SchedLBSConfigLoadPercentsSize     = "schedDS_size_ConfigLoadPercents"
+	SchedLBSConfigRequestorToPctsSize  = "schedDS_size_ConfigRequestorToClassMap"
+	SchedLBSConfigDescLoadPctSize      = "schedDS_size_ConfigDescLoadPercents"
+	SchedLBSWorkingJobClassesSize      = "schedDS_size_WorkingJobClasses"
+	SchedLBSWorkingLoadPercentsSize    = "schedDS_size_WorkingLoadPercents"
+	SchedLBSWorkingRequestorToPctsSize = "schedDS_size_WorkingRequestorToClassMap"
+	SchedLBSWorkingDescLoadPctSize     = "schedDS_size_WorkingDescLoadPercents"
+	SchedTaskStartTimeMapSize          = "schedDS_size_taskStartTimeMap"
+	SchedInProgressJobsSize            = "schedDS_size_inProgressJobs"
+	SchedRequestorMapSize              = "schedDS_size_requestorMap"
+	SchedRequestorHistorySize          = "schedDS_size_requestorHistory"
+	SchedTaskDurationsSize             = "schedDS_size_taskDurations"
+	SchedSagasSize                     = "schedDS_size_sagas"
+	SchedRunnersSize                   = "schedDS_size_runners"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running

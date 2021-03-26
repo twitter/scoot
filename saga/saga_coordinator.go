@@ -1,5 +1,7 @@
 package saga
 
+import log "github.com/sirupsen/logrus"
+
 //
 // Saga Object which provides all Saga Functionality
 // Implementations of SagaLog should provide a factory method
@@ -85,4 +87,15 @@ func (sc SagaCoordinator) RecoverSagaState(sagaId string, recoveryType SagaRecov
 	}
 
 	return saga, err
+}
+
+// GetNumSagas get the number of sagas currently being managed in memory
+func (sc SagaCoordinator) GetNumSagas() int {
+	var sagas []string
+	var err error
+	if sagas, err = sc.log.GetActiveSagas(); err != nil {
+		log.Infof("error getting number of active sagas: %s", err)
+		return -1
+	}
+	return len(sagas)
 }

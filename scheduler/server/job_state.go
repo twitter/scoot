@@ -175,6 +175,8 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	// add the task to the map of tasks by start time
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	j.addTaskToStartTimeMap(j.jobClass, taskState, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Update JobState to reflect that a Task has been completed
@@ -198,6 +200,8 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 
 	// remove the task from the map of tasks by start time
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Update JobState to reflect that an error has occurred running this Task
@@ -219,6 +223,8 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	j.NotStarted[taskId] = taskState
 
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Returns the Current Job Status
@@ -262,5 +268,40 @@ func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, start
 	delete(j.tasksByJobClassAndStartTimeSec[timeBucket], taskKey)
 	if len(j.tasksByJobClassAndStartTimeSec[timeBucket]) == 0 {
 		delete(j.tasksByJobClassAndStartTimeSec, timeBucket)
+	}
+}
+
+func (j *jobState) logInconsistentStateValues() {
+	if j.TasksCompleted != len(j.Completed) {
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksCompleted count (%d) != number entries in Completed map (%d)",
+			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksCompleted, len(j.Completed))
+	}
+	if j.TasksRunning != len(j.Running) {
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
+			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning, len(j.Running))
+	}
+	notStarted := len(j.Tasks) - j.TasksRunning - j.TasksCompleted
+	if notStarted != len(j.NotStarted) {
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
+			j.jobClass, j.Job.Def.Requestor, j.Job.Id, notStarted, len(j.NotStarted))
+	}
+	// TODO remove before deploying to prod or if this slows staging down too much
+	running := 0
+	for classNStartKey, v := range j.tasksByJobClassAndStartTimeSec {
+		if classNStartKey.class != j.jobClass {
+			continue
+		}
+		for jobIDnTaskID, taskState := range v {
+			if jobIDnTaskID.jobID != j.Job.Id {
+				continue
+			}
+			if taskState.Status == domain.InProgress {
+				running++
+			}
+		}
+	}
+	if running != j.TasksRunning {
+		log.Errorf("inconsistent job state: tasksByJobClassAndStartTimeSec has %d running tasks for job %s,%s,%s, but jobState and %d running tasks",
+			running, j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning)
 	}
 }
