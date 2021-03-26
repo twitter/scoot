@@ -361,7 +361,6 @@ const (
 	SchedInProgressJobsSize            = "schedDS_size_inProgressJobs"
 	SchedRequestorMapSize              = "schedDS_size_requestorMap"
 	SchedRequestorHistorySize          = "schedDS_size_requestorHistory"
-	SchedRequestorHistoryAveLen        = "schedDS_size_requestorHistoryEntry_ave_len"
 	SchedTaskDurationsSize             = "schedDS_size_taskDurations"
 	SchedSagasSize                     = "schedDS_size_sagas"
 	SchedRunnersSize                   = "schedDS_size_runners"

@@ -578,12 +578,7 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedTaskStartTimeMapSize).Update(int64(s.getSchedTaskStartTimeMapSize()))
 	s.stat.Gauge(stats.SchedInProgressJobsSize).Update(int64(len(s.inProgressJobs)))
 	s.stat.Gauge(stats.SchedRequestorMapSize).Update(int64(len(s.requestorMap)))
-	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(int64(len(s.requestorHistory)))
-	if len(s.requestorHistory) > 0 {
-		s.stat.Gauge(stats.SchedRequestorHistoryAveLen).Update(s.requestorHistoryEntriesSize / int64(len(s.requestorHistory)))
-	} else {
-		s.stat.Gauge(stats.SchedRequestorHistoryAveLen).Update(int64(0))
-	}
+	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(s.requestorHistoryEntriesSize)
 	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(len(s.taskDurations)))
 	s.stat.Gauge(stats.SchedSagasSize).Update(int64(s.sagaCoord.GetNumSagas()))
 	s.stat.Gauge(stats.SchedRunnersSize).Update(int64(s.asyncRunner.NumRunning()))

@@ -273,19 +273,19 @@ func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, start
 
 func (j *jobState) logInconsistentStateValues() {
 	if j.TasksCompleted != len(j.Completed) {
-		log.Errorf("job:%s,%s,%s: TasksCompleted count (%d) != number entries in Completed map (%d)",
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksCompleted count (%d) != number entries in Completed map (%d)",
 			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksCompleted, len(j.Completed))
 	}
 	if j.TasksRunning != len(j.Running) {
-		log.Errorf("job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
 			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning, len(j.Running))
 	}
 	notStarted := len(j.Tasks) - j.TasksRunning - j.TasksCompleted
 	if notStarted != len(j.NotStarted) {
-		log.Errorf("job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
+		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
 			j.jobClass, j.Job.Def.Requestor, j.Job.Id, notStarted, len(j.NotStarted))
 	}
-	// TODO remove is slows things down too much
+	// TODO remove before deploying to prod or if this slows staging down too much
 	running := 0
 	for classNStartKey, v := range j.tasksByJobClassAndStartTimeSec {
 		if classNStartKey.class != j.jobClass {
@@ -301,7 +301,7 @@ func (j *jobState) logInconsistentStateValues() {
 		}
 	}
 	if running != j.TasksRunning {
-		log.Errorf("tasksByJobClassAndStartTimeSec has %d running tasks for job %s,%s,%s, but jobState and %d running tasks",
+		log.Errorf("inconsistent job state: tasksByJobClassAndStartTimeSec has %d running tasks for job %s,%s,%s, but jobState and %d running tasks",
 			running, j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning)
 	}
 }
