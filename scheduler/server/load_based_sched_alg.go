@@ -21,10 +21,10 @@ const (
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
 var (
 	DefaultLoadBasedSchedulerClassPercents = map[string]int32{
-		"land":       40,
+		"land":       48,
 		"diff":       25,
 		"sandbox":    10,
-		"regression": 17,
+		"regression": 9,
 		"ktf":        3,
 		"coverage":   2,
 		"tryout":     2,
