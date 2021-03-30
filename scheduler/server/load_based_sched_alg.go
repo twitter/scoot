@@ -286,7 +286,6 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 				jc.maxTaskRunningMapIndex = job.TasksRunning
 			}
 			jc.origNumRunningTasks += job.TasksRunning
-			// jc.origNumWaitingTasks += len(job.NotStarted)
 		}
 
 		jc.numWaitingTasks = jc.origNumWaitingTasks
@@ -600,14 +599,6 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	log.Warn(msg)
 	return tasks
 }
-
-// // getJobsNextTask get the next task to start from the job
-// func (lbs *LoadBasedAlg) getJobsNextTask(job jobWaitingTaskIds) *taskState {
-// 	task := job.jobState.NotStarted[job.waitingTaskIDs[0]]
-// 	job.waitingTaskIDs = job.waitingTaskIDs[1:]
-
-// 	return task
-// }
 
 // buildTaskStopList builds the list of tasks to be stopped.
 func (lbs *LoadBasedAlg) buildTaskStopList() []*taskState {

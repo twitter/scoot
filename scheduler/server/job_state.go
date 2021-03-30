@@ -101,7 +101,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 			AvgDuration:   duration,
 		}
 		j.Tasks = append(j.Tasks, task)
-		// j.NotStarted[task.TaskId] = task
 	}
 
 	// Assumes Forward Recovery only, tasks are either
