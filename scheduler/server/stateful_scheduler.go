@@ -169,7 +169,7 @@ type statefulScheduler struct {
 	stat                        stats.StatsReceiver
 	requestorHistoryEntriesSize int64
 
-	// taskIDExtractorFn - function to extract an ID for ordering tasks from TaskID
+	// taskIDExtractorFn - function to extract the taskID to use for tracking task average durations
 	taskIDExtractorFn func(string) string
 }
 
@@ -636,7 +636,7 @@ func (s *statefulScheduler) checkJobsLoop() {
 			} else if checkJobMsg.jobDef.Priority < domain.P0 || checkJobMsg.jobDef.Priority > domain.P2 {
 				err = fmt.Errorf("Invalid priority %d, must be between 0-2 inclusive", checkJobMsg.jobDef.Priority)
 			} else {
-				// Check for duplicate task names
+				// Check for duplicate task names within the job's tasks
 				seenTasks := map[string]bool{}
 				for _, t := range checkJobMsg.jobDef.Tasks {
 					tTaskID := s.getDurationTaskID(t.TaskID)
