@@ -99,6 +99,9 @@ const MaxPriority = domain.P2
 // TaskThrottle -
 //	   requestors will try not to schedule jobs that make the scheduler exceed
 //     the TaskThrottle.  Note: Sickle may exceed it with retries.
+// SchedAlg -
+//     config the configuration for the scheduling algorithm
+//     SchedAlg. the implementation of the scheduling algorithm
 type SchedulerConfig struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
@@ -165,6 +168,9 @@ type statefulScheduler struct {
 	// stats
 	stat                        stats.StatsReceiver
 	requestorHistoryEntriesSize int64
+
+	// taskIDExtractorFn - function to extract an ID for ordering tasks from TaskID
+	taskIDExtractorFn func(string) string
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -185,6 +191,7 @@ func NewStatefulSchedulerFromCluster(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	taskIDExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -194,6 +201,7 @@ func NewStatefulSchedulerFromCluster(
 		rf,
 		config,
 		stat,
+		taskIDExtractorFn,
 	)
 }
 
@@ -210,6 +218,7 @@ func NewStatefulScheduler(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	taskIDExtractorFn func(string) string,
 ) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
@@ -293,6 +302,7 @@ func NewStatefulScheduler(
 		stat:             stat,
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
+		taskIDExtractorFn:              taskIDExtractorFn,
 	}
 
 	if !config.DebugMode {
@@ -629,11 +639,12 @@ func (s *statefulScheduler) checkJobsLoop() {
 				// Check for duplicate task names
 				seenTasks := map[string]bool{}
 				for _, t := range checkJobMsg.jobDef.Tasks {
-					if _, ok := seenTasks[t.TaskID]; ok {
+					tTaskID := s.getDurationTaskID(t.TaskID)
+					if _, ok := seenTasks[tTaskID]; ok {
 						err = fmt.Errorf("Invalid dup taskID %s", t.TaskID)
 						break
 					}
-					seenTasks[t.TaskID] = true
+					seenTasks[tTaskID] = true
 				}
 			}
 			if err == nil && checkJobMsg.jobDef.Basis != "" {
@@ -896,7 +907,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
 				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
 					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
-					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
+					s.taskDurations[s.getDurationTaskID(taskID)].update(time.Now().Sub(tRunner.startTime))
 				}
 
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
@@ -1180,6 +1191,13 @@ func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFi
 		jobState.taskCompleted(task.TaskId, false)
 	}
 	return updateMessages
+}
+
+func (s *statefulScheduler) getDurationTaskID(taskID string) string {
+	if s.taskIDExtractorFn != nil {
+		return s.taskIDExtractorFn(taskID)
+	}
+	return taskID
 }
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job

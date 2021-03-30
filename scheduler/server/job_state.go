@@ -24,12 +24,6 @@ type jobState struct {
 	TimeCreated    time.Time    //when was this job first created
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
 
-	// track tasks by state (completed, running, not started) for scheduling algorithm
-	// Completed and Running are only used by the scheduling algorithm
-	Completed  taskStateByTaskID
-	Running    taskStateByTaskID
-	NotStarted taskStateByTaskID
-
 	jobClass                       string
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
 }
@@ -84,9 +78,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		JobKilled:                      false,
 		TimeCreated:                    time.Now(),
 		TimeMarker:                     time.Now(),
-		Completed:                      make(taskStateByTaskID),
-		Running:                        make(taskStateByTaskID),
-		NotStarted:                     make(taskStateByTaskID),
 		jobClass:                       jobClass,
 		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
 	}
@@ -110,7 +101,7 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 			AvgDuration:   duration,
 		}
 		j.Tasks = append(j.Tasks, task)
-		j.NotStarted[task.TaskId] = task
+		// j.NotStarted[task.TaskId] = task
 	}
 
 	// Assumes Forward Recovery only, tasks are either
@@ -122,12 +113,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		if sagaState.IsTaskCompleted(taskId) {
 			j.getTask(taskId).Status = domain.Completed
 			j.TasksCompleted++
-			if _, ok := j.Running[taskId]; ok {
-				delete(j.Running, taskId)
-			} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
-				delete(j.NotStarted, taskId)
-			}
-			j.Completed[taskId] = j.getTask(taskId)
 		}
 	}
 
@@ -165,12 +150,6 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
 	j.TasksRunning++
-	if _, ok := j.NotStarted[taskId]; ok {
-		delete(j.NotStarted, taskId)
-	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
-		delete(j.Completed, taskId)
-	}
-	j.Running[taskId] = taskState
 
 	// add the task to the map of tasks by start time
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
@@ -191,12 +170,6 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	if running {
 		j.TasksRunning--
 	}
-	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running, taskId)
-	} else if _, ok = j.NotStarted[taskId]; ok {
-		delete(j.NotStarted, taskId)
-	}
-	j.Completed[taskId] = taskState
 
 	// remove the task from the map of tasks by start time
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
@@ -215,12 +188,6 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	if preempted {
 		taskState.NumTimesTried--
 	}
-	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running, taskId)
-	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
-		delete(j.Completed, taskId)
-	}
-	j.NotStarted[taskId] = taskState
 
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
 
@@ -272,19 +239,6 @@ func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, start
 }
 
 func (j *jobState) logInconsistentStateValues() {
-	if j.TasksCompleted != len(j.Completed) {
-		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksCompleted count (%d) != number entries in Completed map (%d)",
-			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksCompleted, len(j.Completed))
-	}
-	if j.TasksRunning != len(j.Running) {
-		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
-			j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning, len(j.Running))
-	}
-	notStarted := len(j.Tasks) - j.TasksRunning - j.TasksCompleted
-	if notStarted != len(j.NotStarted) {
-		log.Errorf("inconsistent job state: job:%s,%s,%s: TasksRunning count (%d) != number entries in Running map (%d)",
-			j.jobClass, j.Job.Def.Requestor, j.Job.Id, notStarted, len(j.NotStarted))
-	}
 	// TODO remove before deploying to prod or if this slows staging down too much
 	running := 0
 	for classNStartKey, v := range j.tasksByJobClassAndStartTimeSec {

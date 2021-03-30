@@ -464,17 +464,17 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 			},
 		}
 		js := &jobState{
-			Job:                            j,
-			Saga:                           nil,
-			EndingSaga:                     false,
-			TasksCompleted:                 0,
-			TasksRunning:                   numRunningTasks,
-			JobKilled:                      false,
-			TimeCreated:                    time.Time{},
-			TimeMarker:                     time.Time{},
-			Completed:                      make(taskStateByTaskID),
-			Running:                        nil,
-			NotStarted:                     nil,
+			Job:            j,
+			Saga:           nil,
+			EndingSaga:     false,
+			TasksCompleted: 0,
+			TasksRunning:   numRunningTasks,
+			JobKilled:      false,
+			TimeCreated:    time.Time{},
+			TimeMarker:     time.Time{},
+			// Completed:                      make(taskStateByTaskID),
+			// Running:                        nil,
+			// NotStarted:                     nil,
 			jobClass:                       className,
 			tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 		}
@@ -493,7 +493,7 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 		j.Def.Tasks = t
 		js.Tasks = ts
 		taskMap := makeTaskMap(ts)
-		js.NotStarted = taskMap
+		// js.NotStarted = taskMap
 		jobStates[i] = js
 		jobsByJobID[js.Job.Id] = js
 

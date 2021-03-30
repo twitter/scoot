@@ -30,7 +30,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	// Exit if there are no unscheduled tasks.
 	waitingTasksFound := false
 	for _, j := range s.inProgressJobs {
-		if len(j.NotStarted) > 0 {
+		if len(j.Tasks)-j.TasksCompleted-j.TasksRunning > 0 {
 			waitingTasksFound = true
 			break
 		}

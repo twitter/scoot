@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 const (
@@ -111,10 +112,10 @@ func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec 
 	return lbs
 }
 
-// jobWaitingTaskIds map waiting task ids to the job state objects
-type jobWaitingTaskIds struct {
-	jobState       *jobState
-	waitingTaskIDs []string
+// jobWaitingTasks waiting task ids (in the order they should be started) for a job
+type jobWaitingTasks struct {
+	jobState     *jobState
+	waitingTasks []*taskState
 }
 
 // jobClass the structure used by the algorithm when computing the list of tasks to start/stop for each class.
@@ -126,7 +127,7 @@ type jobClass struct {
 	// jobsByNumRunningTasks is a map that bins jobs by their number of running tasks.  Given that the algorithm has
 	// determined it will start n tasks from class A, the tasks selected for starting from class A will give prefence
 	// to jobs with the least number of running tasks.
-	jobsByNumRunningTasks map[int][]jobWaitingTaskIds
+	jobsByNumRunningTasks map[int][]*jobWaitingTasks
 	// the largest key value in the jobsByNumRunningTasks map
 	maxTaskRunningMapIndex int
 
@@ -228,7 +229,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	totalWorkers := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
-		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
+		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]*jobWaitingTasks{}}
 		lbs.jobClasses[className] = jc
 		if firstClass {
 			firstClass = false
@@ -271,18 +272,21 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 		for _, job := range jobs {
 			_, ok := jc.jobsByNumRunningTasks[job.TasksRunning]
 			if !ok {
-				jc.jobsByNumRunningTasks[job.TasksRunning] = []jobWaitingTaskIds{}
+				jc.jobsByNumRunningTasks[job.TasksRunning] = []*jobWaitingTasks{}
 			}
-			waitingTaskIds := []string{}
-			for taskID := range job.NotStarted {
-				waitingTaskIds = append(waitingTaskIds, taskID)
+			waitingTasks := []*taskState{}
+			for _, taskState := range job.Tasks {
+				if taskState.Status == domain.NotStarted {
+					waitingTasks = append(waitingTasks, taskState)
+					jc.origNumWaitingTasks++
+				}
 			}
-			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], jobWaitingTaskIds{jobState: job, waitingTaskIDs: waitingTaskIds})
+			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], &jobWaitingTasks{jobState: job, waitingTasks: waitingTasks})
 			if job.TasksRunning > jc.maxTaskRunningMapIndex {
 				jc.maxTaskRunningMapIndex = job.TasksRunning
 			}
 			jc.origNumRunningTasks += job.TasksRunning
-			jc.origNumWaitingTasks += len(job.NotStarted)
+			// jc.origNumWaitingTasks += len(job.NotStarted)
 		}
 
 		jc.numWaitingTasks = jc.origNumWaitingTasks
@@ -555,7 +559,7 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	// work our way through the class's jobs, starting with jobs with the least number of running tasks,
 	// till we've added the class's numTasksToStart number of tasks to the task list
 	for numRunningTasks := 0; numRunningTasks <= jc.maxTaskRunningMapIndex; numRunningTasks++ {
-		var jobs []jobWaitingTaskIds
+		var jobs []*jobWaitingTasks
 		var ok bool
 		if jobs, ok = jc.jobsByNumRunningTasks[numRunningTasks]; !ok {
 			// there are no jobs with numRunningTasks running tasks, move on to jobs with more running tasks
@@ -565,19 +569,21 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 		// Allocate one task from each job till we've allocated numTasksToStart for the jobClass, or have allocated 1 task from
 		// each job in this list.  As we allocate a task for a job, move the job to the end of jc.jobsByNumRunningTasks[numRunningTasks+1].
 		for _, job := range jobs {
-			if job.waitingTaskIDs != nil && len(job.waitingTaskIDs) > 0 {
+			if job.waitingTasks != nil && len(job.waitingTasks) > 0 {
 				// get the next task to start from the job
-				tasks = append(tasks, lbs.getJobsNextTask(job))
+				tasks = append(tasks, job.waitingTasks[0])
 
 				// move the job to jobsByRunningTasks with numRunningTasks + 1 entry.  Note: we don't have to pull it from
 				// its current numRunningTasks bucket since this is a 1 time pass through the jobsByNumRunningTasks map.  The map
 				// will be rebuilt with the next scheduling iteration
-				if len(job.waitingTaskIDs) > 1 {
-					job.waitingTaskIDs = job.waitingTaskIDs[1:]
+				if len(job.waitingTasks) > 1 {
+					job.waitingTasks = job.waitingTasks[1:]
 					jc.jobsByNumRunningTasks[numRunningTasks+1] = append(jc.jobsByNumRunningTasks[numRunningTasks+1], job)
 					if numRunningTasks == jc.maxTaskRunningMapIndex {
 						jc.maxTaskRunningMapIndex++
 					}
+				} else {
+					job.waitingTasks = []*taskState{}
 				}
 
 				startingTaskCnt++
@@ -591,17 +597,17 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 
 	msg := "getTasksToStartForJobClass() fell out of for range jobs loop.  We expected it to return because startingTaskCnt == jc.numTasksToStart above " +
 		"before falling out of the loop.  Workers may be left idle till the next scheduling iteration."
-	log.Warnf(msg)
+	log.Warn(msg)
 	return tasks
 }
 
-// getJobsNextTask get the next task to start from the job
-func (lbs *LoadBasedAlg) getJobsNextTask(job jobWaitingTaskIds) *taskState {
-	task := job.jobState.NotStarted[job.waitingTaskIDs[0]]
-	job.waitingTaskIDs = job.waitingTaskIDs[1:]
+// // getJobsNextTask get the next task to start from the job
+// func (lbs *LoadBasedAlg) getJobsNextTask(job jobWaitingTaskIds) *taskState {
+// 	task := job.jobState.NotStarted[job.waitingTaskIDs[0]]
+// 	job.waitingTaskIDs = job.waitingTaskIDs[1:]
 
-	return task
-}
+// 	return task
+// }
 
 // buildTaskStopList builds the list of tasks to be stopped.
 func (lbs *LoadBasedAlg) buildTaskStopList() []*taskState {
