@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/os/temp"
@@ -595,15 +596,41 @@ func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
 }
 
 func TestUpdateAvgDuration(t *testing.T) {
-	taskDurations := make(map[string]*averageDuration)
-	taskDurations["foo"] = &averageDuration{
-		count:    1,
-		duration: 5 * time.Second,
+	taskDurations, err := lru.New(3)
+	if err != nil {
+		t.Fatalf("Failed to create LRU: %v", err)
 	}
-	taskDurations["foo"].update(21 * time.Second)
-	taskDurations["foo"].update(25 * time.Second)
-	if taskDurations["foo"].duration != 17*time.Second {
-		t.Fatalf("Expected 17 seconds, got %v", taskDurations["foo"].duration)
+
+	// verify durations are tracked correctly
+
+	addOrUpdateTaskDuration(taskDurations, "foo", 5*time.Second)
+	addOrUpdateTaskDuration(taskDurations, "foo", 21*time.Second)
+	addOrUpdateTaskDuration(taskDurations, "foo", 25*time.Second)
+
+	iface, ok := taskDurations.Get("foo")
+	if !ok {
+		t.Fatal("foo wasn't in taskDurations")
+	}
+	ad, ok := iface.(*averageDuration)
+	if !ok {
+		t.Fatal("Failed iface assertion to *averageDuration")
+	}
+	if ad.duration != 17*time.Second {
+		t.Fatalf("Expected 17 seconds, got %v", ad.duration)
+	}
+
+	// verify lru size limit
+
+	if taskDurations.Len() != 1 {
+		t.Fatalf("Expected taskDurations len: 1, got: %d", taskDurations.Len())
+	}
+
+	addOrUpdateTaskDuration(taskDurations, "bar", 5*time.Second)
+	addOrUpdateTaskDuration(taskDurations, "baz", 5*time.Second)
+	addOrUpdateTaskDuration(taskDurations, "oof", 5*time.Second)
+
+	if taskDurations.Len() != 3 {
+		t.Fatalf("Expected taskDurations len: 3, got: %d", taskDurations.Len())
 	}
 }
 
