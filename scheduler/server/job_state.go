@@ -4,7 +4,9 @@ import (
 	"math"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 )
@@ -72,7 +74,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Creates a New Job State based on the specified Job and Saga
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
-func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations map[string]*averageDuration,
+func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations *lru.Cache,
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *jobState {
 	j := &jobState{
 		Job:                            job,
@@ -94,11 +96,14 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 	for _, taskDef := range job.Def.Tasks {
 		var duration time.Duration
 		if taskDurations != nil {
-			if avgDur, ok := taskDurations[taskDef.TaskID]; !ok || avgDur.duration == 0 {
-				taskDurations[taskDef.TaskID] = &averageDuration{}
-				taskDurations[taskDef.TaskID].update(math.MaxInt64) // Set max duration if we don't have the average duration.
+			if iface, ok := taskDurations.Get(taskDef.TaskID); !ok {
+				duration = math.MaxInt64
+				addOrUpdateTaskDuration(taskDurations, taskDef.TaskID, duration)
+			} else {
+				if ad, ok := iface.(*averageDuration); ok {
+					duration = ad.duration
+				}
 			}
-			duration = taskDurations[taskDef.TaskID].duration
 		}
 		task := &taskState{
 			JobId:         job.Id,

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
@@ -20,6 +21,42 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/workerapi"
+)
+
+const (
+	// Clients will check for this string to differentiate between scoot and user initiated actions.
+	UserRequestedErrStr = "UserRequested"
+
+	// Provide defaults for config settings that should never be uninitialized/zero.
+	// These are reasonable defaults for a small cluster of around a couple dozen nodes.
+
+	// Nothing should run forever by default, use this timeout as a fallback.
+	DefaultDefaultTaskTimeout = 30 * time.Minute
+
+	// Allow extra time when waiting for a task response.
+	// This includes network time and the time to upload logs to bundlestore.
+	DefaultTaskTimeoutOverhead = 15 * time.Second
+
+	// Number of different requestors that can run jobs at any given time.
+	DefaultMaxRequestors = 10
+
+	// Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
+	DefaultMaxJobsPerRequestor = 100
+
+	// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
+	DefaultSoftMaxSchedulableTasks = 1
+
+	// Threshold for jobs considered long running
+	LongJobDuration = 4 * time.Hour
+
+	// How often Scheduler step is called in loop
+	TickRate = 250 * time.Millisecond
+
+	// The max job priority we respect (higher priority is untested and disabled)
+	MaxPriority = domain.P2
+
+	// Max number of task IDs to track durations for
+	DefaultMaxTaskDurations = 1000000
 )
 
 // Used to get proper logging from tests...
@@ -46,37 +83,6 @@ func stringInSlice(a string, list []string) bool {
 	}
 	return false
 }
-
-// Clients will check for this string to differentiate between scoot and user initiated actions.
-const UserRequestedErrStr = "UserRequested"
-
-// Provide defaults for config settings that should never be uninitialized/zero.
-// These are reasonable defaults for a small cluster of around a couple dozen nodes.
-
-// Nothing should run forever by default, use this timeout as a fallback.
-const DefaultDefaultTaskTimeout = 30 * time.Minute
-
-// Allow extra time when waiting for a task response.
-// This includes network time and the time to upload logs to bundlestore.
-const DefaultTaskTimeoutOverhead = 15 * time.Second
-
-// Number of different requestors that can run jobs at any given time.
-const DefaultMaxRequestors = 10
-
-// Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
-const DefaultMaxJobsPerRequestor = 100
-
-// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
-const DefaultSoftMaxSchedulableTasks = 1
-
-//
-const LongJobDuration = 4 * time.Hour
-
-// How often Scheduler step is called in loop
-const TickRate = 250 * time.Millisecond
-
-// The max job priority we respect (higher priority is untested and disabled)
-const MaxPriority = domain.P2
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -123,9 +129,10 @@ type averageDuration struct {
 	duration time.Duration
 }
 
-func (ad *averageDuration) update(d time.Duration) {
+func (ad *averageDuration) update(d time.Duration) *averageDuration {
 	ad.count++
 	ad.duration = ad.duration + time.Duration(int64(d-ad.duration)/ad.count)
+	return ad
 }
 
 type RunnerFactory func(node cluster.Node) runner.Service
@@ -154,9 +161,9 @@ type statefulScheduler struct {
 	clusterState   *clusterState
 	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
 	// no tasks have started yet.
-	requestorMap     map[string][]*jobState      // map of requestor to all its jobs. Default requestor="" is ok.
-	requestorHistory map[string][]string         // map of join(requestor, basis) to new tags in the order received.
-	taskDurations    map[string]*averageDuration // map of taskId to averageDuration
+	requestorMap     map[string][]*jobState // map of requestor to all its jobs. Default requestor="" is ok.
+	requestorHistory map[string][]string    // map of join(requestor, basis) to new tags in the order received.
+	taskDurations    *lru.Cache
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
@@ -274,6 +281,12 @@ func NewStatefulScheduler(
 	config.SchedAlg = sa
 	config.SchedAlgConfig = sa.config
 
+	taskDurations, err := lru.New(DefaultMaxTaskDurations)
+	if err != nil {
+		log.Errorf("Failed to create taskDurations cache: %v", err)
+		return nil
+	}
+
 	sched := &statefulScheduler{
 		config:        &config,
 		sagaCoord:     sc,
@@ -288,7 +301,7 @@ func NewStatefulScheduler(
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
 		requestorHistory: make(map[string][]string),
-		taskDurations:    make(map[string]*averageDuration),
+		taskDurations:    taskDurations,
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
 
@@ -579,7 +592,7 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedInProgressJobsSize).Update(int64(len(s.inProgressJobs)))
 	s.stat.Gauge(stats.SchedRequestorMapSize).Update(int64(len(s.requestorMap)))
 	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(s.requestorHistoryEntriesSize)
-	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(len(s.taskDurations)))
+	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(s.taskDurations.Len()))
 	s.stat.Gauge(stats.SchedSagasSize).Update(int64(s.sagaCoord.GetNumSagas()))
 	s.stat.Gauge(stats.SchedRunnersSize).Update(int64(s.asyncRunner.NumRunning()))
 }
@@ -896,7 +909,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
 				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
 					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
-					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
+					addOrUpdateTaskDuration(s.taskDurations, taskID, time.Now().Sub(tRunner.startTime))
 				}
 
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
@@ -1180,6 +1193,21 @@ func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFi
 		jobState.taskCompleted(task.TaskId, false)
 	}
 	return updateMessages
+}
+
+func addOrUpdateTaskDuration(taskDurations *lru.Cache, taskId string, d time.Duration) {
+	var ad *averageDuration
+	iface, ok := taskDurations.Get(taskId)
+	if !ok {
+		ad = &averageDuration{count: 1, duration: d}
+	} else {
+		ad, ok = iface.(*averageDuration)
+		if !ok {
+			return
+		}
+		ad.update(d)
+	}
+	taskDurations.Add(taskId, ad)
 }
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job

@@ -9,6 +9,7 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.3.2
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/leanovate/gopter v0.2.4
 	github.com/luci/go-render v0.0.0-20160219211803-9a04cc21af0f
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
