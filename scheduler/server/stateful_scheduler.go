@@ -129,10 +129,9 @@ type averageDuration struct {
 	duration time.Duration
 }
 
-func (ad *averageDuration) update(d time.Duration) *averageDuration {
+func (ad *averageDuration) update(d time.Duration) {
 	ad.count++
 	ad.duration = ad.duration + time.Duration(int64(d-ad.duration)/ad.count)
-	return ad
 }
 
 type RunnerFactory func(node cluster.Node) runner.Service
