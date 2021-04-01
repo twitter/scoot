@@ -51,7 +51,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 		Run:                func(*cobra.Command, []string) {},
 		PersistentPostRunE: c.Close,
 	}
-	c.rootCmd.PersistentFlags().StringVar(&c.addr, "addr", "", "scoot server address")
+	sched, _, _ := client.GetScootapiAddr() // ignore err & apiserver addr
+	c.rootCmd.PersistentFlags().StringVar(&c.addr, "addr", sched, "Scoot server address. If unset, uses default value of first line of $HOME/.cloudscootaddr$SCOOT_ID")
 	c.rootCmd.PersistentFlags().StringVar(&c.logLevel, "log_level", "info", "Log everything at this level and above (error|info|debug)")
 
 	c.addCmd(&runJobCmd{})
