@@ -127,7 +127,7 @@ type jobClass struct {
 	// jobsByNumRunningTasks is a map that bins jobs by their number of running tasks.  Given that the algorithm has
 	// determined it will start n tasks from class A, the tasks selected for starting from class A will give prefence
 	// to jobs with the least number of running tasks.
-	jobsByNumRunningTasks map[int][]*jobWaitingTasks
+	jobsByNumRunningTasks map[int][]jobWaitingTasks
 	// the largest key value in the jobsByNumRunningTasks map
 	maxTaskRunningMapIndex int
 
@@ -229,7 +229,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	totalWorkers := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
-		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]*jobWaitingTasks{}}
+		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]jobWaitingTasks{}}
 		lbs.jobClasses[className] = jc
 		if firstClass {
 			firstClass = false
@@ -272,7 +272,7 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 		for _, job := range jobs {
 			_, ok := jc.jobsByNumRunningTasks[job.TasksRunning]
 			if !ok {
-				jc.jobsByNumRunningTasks[job.TasksRunning] = []*jobWaitingTasks{}
+				jc.jobsByNumRunningTasks[job.TasksRunning] = []jobWaitingTasks{}
 			}
 			waitingTasks := []*taskState{}
 			for _, taskState := range job.Tasks {
@@ -281,7 +281,7 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 					jc.origNumWaitingTasks++
 				}
 			}
-			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], &jobWaitingTasks{jobState: job, waitingTasks: waitingTasks})
+			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], jobWaitingTasks{jobState: job, waitingTasks: waitingTasks})
 			if job.TasksRunning > jc.maxTaskRunningMapIndex {
 				jc.maxTaskRunningMapIndex = job.TasksRunning
 			}
@@ -558,7 +558,7 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	// work our way through the class's jobs, starting with jobs with the least number of running tasks,
 	// till we've added the class's numTasksToStart number of tasks to the task list
 	for numRunningTasks := 0; numRunningTasks <= jc.maxTaskRunningMapIndex; numRunningTasks++ {
-		var jobs []*jobWaitingTasks
+		var jobs []jobWaitingTasks
 		var ok bool
 		if jobs, ok = jc.jobsByNumRunningTasks[numRunningTasks]; !ok {
 			// there are no jobs with numRunningTasks running tasks, move on to jobs with more running tasks

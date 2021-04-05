@@ -160,7 +160,6 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.fakeRunners,
 		config,
 		st.extDeps.statsReceiver,
-		nil,
 	)
 	s.SetClassLoadPercents(st.classLoadPercents)
 	s.SetRequestorToClassMap(st.requestorToClassMap)

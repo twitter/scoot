@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -199,6 +200,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 
 		// compute the number of tasks to start for each class from the tasks list
 		numTasksByClassName := map[string]int{}
+		expectedTaskID := map[string]int{} // map tracking last seen taskID for each job.  Starting tasks should have increasing taskID
 		for _, task := range tasksToBeAssigned {
 			jobState := jobsByJobID[task.JobId]
 			className := GetRequestorClass(jobState.Job.Def.Requestor, lbs.requestorReToClassMap)
@@ -207,6 +209,11 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 			} else {
 				numTasksByClassName[className]++
 			}
+			// verify tasks are assigned in order defined in job (ascending from 0)
+			taskNum, err := strconv.Atoi(task.TaskId)
+			assert.Nil(t, err)
+			assert.Equal(t, expectedTaskID[jobState.Job.Id], taskNum)
+			expectedTaskID[jobState.Job.Id] += 1
 		}
 
 		// compute the number of tasks to stop for each class from the tasks list
@@ -558,7 +565,7 @@ func makeTestTasks(jobId string, numTasks int) ([]domain.TaskDefinition, []*task
 
 		tasksState[i] = &taskState{
 			JobId:  jobId,
-			TaskId: fmt.Sprintf("task%d", i),
+			TaskId: td.LogTags.TaskID,
 			Status: domain.NotStarted,
 		}
 	}
