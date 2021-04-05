@@ -265,9 +265,11 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 			continue
 		}
 
-		// organize the class's jobs by the number of tasks currently running (map of jobs indexed by the number of
+		// organize the class's jobs by the number of tasks currently running (map of jobs' waiting tasks indexed by the number of
 		// tasks currently running for the job).  This will be used in the round robin task selection to start a
 		// class's task allocation from jobs with least number of running tasks.
+		// The waiting task array for each job preserves the task order from the job defintion, to ensure that jobs' tasks are started
+		// in the same order as they are defined in the job definition.
 		// This loop also computes the class's running tasks and waiting task totals
 		for _, job := range jobs {
 			_, ok := jc.jobsByNumRunningTasks[job.TasksRunning]
