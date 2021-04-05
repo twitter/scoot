@@ -80,6 +80,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 		deps.rf,
 		deps.config,
 		statsReceiver,
+		nil,
 	)
 	s.config.RunnerRetryTimeout = 0
 	s.config.RunnerRetryInterval = 0

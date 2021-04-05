@@ -171,6 +171,9 @@ type statefulScheduler struct {
 	// stats
 	stat                        stats.StatsReceiver
 	requestorHistoryEntriesSize int64
+
+	// taskIDExtractorFn - function to extract the taskID to use for tracking task average durations
+	taskIDExtractorFn func(string) string
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -191,6 +194,7 @@ func NewStatefulSchedulerFromCluster(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	taskIDExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -200,6 +204,7 @@ func NewStatefulSchedulerFromCluster(
 		rf,
 		config,
 		stat,
+		taskIDExtractorFn,
 	)
 }
 
@@ -216,6 +221,7 @@ func NewStatefulScheduler(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	taskIDExtractorFn func(string) string,
 ) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
@@ -305,6 +311,8 @@ func NewStatefulScheduler(
 		stat:             stat,
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
+
+		taskIDExtractorFn: taskIDExtractorFn,
 	}
 
 	if !config.DebugMode {
@@ -858,6 +866,10 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
+		durationID := taskID
+		if s.taskIDExtractorFn != nil {
+			durationID = s.taskIDExtractorFn(durationID)
+		}
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
@@ -908,7 +920,7 @@ func (s *statefulScheduler) scheduleTasks() {
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
 				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
 					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
-					addOrUpdateTaskDuration(s.taskDurations, taskID, time.Now().Sub(tRunner.startTime))
+					addOrUpdateTaskDuration(s.taskDurations, durationID, time.Now().Sub(tRunner.startTime))
 				}
 
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
