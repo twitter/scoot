@@ -172,8 +172,8 @@ type statefulScheduler struct {
 	stat                        stats.StatsReceiver
 	requestorHistoryEntriesSize int64
 
-	// taskIDExtractorFn - function to extract the taskID to use for tracking task average durations
-	taskIDExtractorFn func(string) string
+	// durationKeyExtractorFn - function to extract, from taskID, the key to use for tracking task average durations
+	durationKeyExtractorFn func(string) string
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -194,7 +194,7 @@ func NewStatefulSchedulerFromCluster(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
-	taskIDExtractorFn func(string) string,
+	durationKeyExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -204,7 +204,7 @@ func NewStatefulSchedulerFromCluster(
 		rf,
 		config,
 		stat,
-		taskIDExtractorFn,
+		durationKeyExtractorFn,
 	)
 }
 
@@ -221,8 +221,7 @@ func NewStatefulScheduler(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
-	taskIDExtractorFn func(string) string,
-) *statefulScheduler {
+	durationKeyExtractorFn func(string) string) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
 		st, svc, err := run.StatusAll()
@@ -312,7 +311,7 @@ func NewStatefulScheduler(
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 
-		taskIDExtractorFn: taskIDExtractorFn,
+		durationKeyExtractorFn: durationKeyExtractorFn,
 	}
 
 	if !config.DebugMode {
@@ -867,21 +866,22 @@ func (s *statefulScheduler) scheduleTasks() {
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
 		durationID := taskID
-		if s.taskIDExtractorFn != nil {
-			durationID = s.taskIDExtractorFn(durationID)
+		if s.durationKeyExtractorFn != nil {
+			durationID = s.durationKeyExtractorFn(durationID)
 		}
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
 		log.WithFields(
 			log.Fields{
-				"jobID":     jobID,
-				"taskID":    taskID,
-				"node":      nodeSt.node,
-				"requestor": requestor,
-				"jobType":   jobType,
-				"tag":       tag,
-				"taskDef":   taskDef,
+				"jobID":      jobID,
+				"taskID":     taskID,
+				"node":       nodeSt.node,
+				"requestor":  requestor,
+				"jobType":    jobType,
+				"tag":        tag,
+				"taskDef":    taskDef,
+				"durationID": durationID,
 			}).Info("Starting taskRunner")
 
 		tRunner := &taskRunner{
