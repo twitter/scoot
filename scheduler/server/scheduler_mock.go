@@ -257,38 +257,3 @@ func (m *MockSchedulingAlgorithm) GetTasksToBeAssigned(jobs []*jobState, stat st
 func (mr *MockSchedulingAlgorithmMockRecorder) GetTasksToBeAssigned(jobs, stat, cs, requestors interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksToBeAssigned", reflect.TypeOf((*MockSchedulingAlgorithm)(nil).GetTasksToBeAssigned), jobs, stat, cs, requestors)
 }
-
-// MockDurationKeyExtractor is a mock of DurationKeyExtractor interface
-type MockDurationKeyExtractor struct {
-	ctrl     *gomock.Controller
-	recorder *MockDurationKeyExtractorMockRecorder
-}
-
-// MockDurationKeyExtractorMockRecorder is the mock recorder for MockDurationKeyExtractor
-type MockDurationKeyExtractorMockRecorder struct {
-	mock *MockDurationKeyExtractor
-}
-
-// NewMockDurationKeyExtractor creates a new mock instance
-func NewMockDurationKeyExtractor(ctrl *gomock.Controller) *MockDurationKeyExtractor {
-	mock := &MockDurationKeyExtractor{ctrl: ctrl}
-	mock.recorder = &MockDurationKeyExtractorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockDurationKeyExtractor) EXPECT() *MockDurationKeyExtractorMockRecorder {
-	return m.recorder
-}
-
-// ExtractDurationKey mocks base method
-func (m *MockDurationKeyExtractor) ExtractDurationKey(arg0 string) string {
-	ret := m.ctrl.Call(m, "ExtractDurationKey", arg0)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// ExtractDurationKey indicates an expected call of ExtractDurationKey
-func (mr *MockDurationKeyExtractorMockRecorder) ExtractDurationKey(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractDurationKey", reflect.TypeOf((*MockDurationKeyExtractor)(nil).ExtractDurationKey), arg0)
-}

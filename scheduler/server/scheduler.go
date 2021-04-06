@@ -49,8 +49,3 @@ type SchedulingAlgorithm interface {
 	GetTasksToBeAssigned(jobs []*jobState, stat stats.StatsReceiver, cs *clusterState,
 		requestors map[string][]*jobState) (startTasks []*taskState, stopTasks []*taskState)
 }
-
-// DurationKeyExtractor interface for getting the duration key from taskID (for averaging task durations)
-type DurationKeyExtractor interface {
-	ExtractDurationKey(string) string
-}
