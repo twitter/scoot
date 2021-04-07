@@ -76,6 +76,11 @@ func main() {
 		func() (*temp.TempDir, error) {
 			return temp.NewTempDir("", "sched")
 		},
+		func() func(string) string { // noop for extracting duration id from task id
+			return func(id string) string {
+				return id
+			}
+		},
 	)
 
 	log.Info("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
