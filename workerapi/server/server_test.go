@@ -25,7 +25,6 @@ Test the stats collected by the server's stats() goroutine:
 */
 // TODO DISABLED TEST - time.Sleep based tests have data races and need to be refactored
 /*func TestInitStats(t *testing.T) {
-
 	//setup the test environment
 	// create a worker - (starting the init activity)
 	h, initDoneCh, statsRegistry, simExecer := setupTestEnv(false)
@@ -130,7 +129,6 @@ Test the stats collected by the server's stats() goroutine:
 }*/
 
 func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRegistry stats.StatsRegistry, simExecer *execers.SimExecer) {
-
 	stats.StatReportIntvl = 100 * time.Millisecond
 	log.AddHook(hooks.NewContextHook())
 
@@ -208,7 +206,6 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 	h = w.(*handler)
 
 	return
-
 }
 
 // ************************ fake objects for tests:  (do we already have these somewhere?)
