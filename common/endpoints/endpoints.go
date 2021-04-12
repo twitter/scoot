@@ -53,7 +53,7 @@ func (s *TwitterServer) Serve() error {
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	msg := "Common paths: '/admin/metrics.json', '/output', '/debug/pprof'"
+	msg := "Common paths: '/admin/metrics.json', '/debug/pprof'"
 	http.Error(w, msg, http.StatusNotImplemented)
 }
 
