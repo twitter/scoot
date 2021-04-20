@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/cloud/cluster"
 )
 
-// Poor man's dynamic localhost cluster nodes.
+// Proletariat person's dynamic localhost cluster nodes.
 // Note: lsof is slow to return on osx so we just use 'ps' and regex match the port.
 func MakeFetcher(procName, portFlag string) cluster.Fetcher {
 	return &localFetcher{

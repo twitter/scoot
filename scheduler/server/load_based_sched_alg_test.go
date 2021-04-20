@@ -463,7 +463,7 @@ func makeJobStatesFromClassStates(t *testing.T, className string, cState classSt
 		j := &domain.Job{
 			Id: fmt.Sprintf("job_%s_%d", className, i),
 			Def: domain.JobDefinition{
-				JobType:   "dummyJobType",
+				JobType:   "fakeJobType",
 				Requestor: requestor,
 				Basis:     "",
 				Tag:       "",
@@ -558,7 +558,7 @@ func makeTestTasks(jobId string, numTasks int) ([]domain.TaskDefinition, []*task
 			EnvVars:        nil,
 			Timeout:        0,
 			SnapshotID:     "",
-			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "dummyTag"},
+			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "fakeTag"},
 			ExecuteRequest: nil,
 		}
 		tasks[i] = domain.TaskDefinition{Command: td}
