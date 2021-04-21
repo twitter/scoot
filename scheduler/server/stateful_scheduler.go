@@ -924,8 +924,8 @@ func (s *statefulScheduler) scheduleTasks() {
 				}
 
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
-				// The job update is normal but we update the cluster with a dummy value which denotes abnormal cleanup.
-				// We need the dummy value so we don't clobber any new job assignments to that nodeId.
+				// The job update is normal but we update the cluster with a fake value which denotes abnormal cleanup.
+				// We need the fake value so we don't clobber any new job assignments to that nodeId.
 				nodeId := nodeSt.node.Id()
 				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
 				nodeAbsent := !ok

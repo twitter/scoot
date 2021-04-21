@@ -454,7 +454,7 @@ func (lt *ApiserverLoadTester) uploadADataSet(numKBytes int) (string, error) {
 func (lt *ApiserverLoadTester) makeUploadContent(numKBytes int) ([]byte, *remoteexecution.Digest) {
 	size := int64(numKBytes * KBYTE)
 	theData := make([]byte, 0)
-	uniqPref := lt.makeDummyData(KBYTE)
+	uniqPref := lt.makeFakeData(KBYTE)
 	theData = append(theData, uniqPref[:]...)
 	if size > KBYTE {
 		theData = append(theData, lt.data[0:size-KBYTE]...)
@@ -483,7 +483,7 @@ func (lt *ApiserverLoadTester) downloadAFile(digestId string) error {
 }
 
 // create a random data set
-func (lt *ApiserverLoadTester) makeDummyData(size int) []byte {
+func (lt *ApiserverLoadTester) makeFakeData(size int) []byte {
 	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, size)
 	rand.Read(data)
@@ -515,10 +515,10 @@ func (lt *ApiserverLoadTester) initTestData() error {
 	}
 
 	// create the common data set containing the max data the testing needs
-	lt.data = lt.makeDummyData(lt.dataSizes[len(lt.dataSizes)-1] * KBYTE) // assume TestDataSizes in ascending order
+	lt.data = lt.makeFakeData(lt.dataSizes[len(lt.dataSizes)-1] * KBYTE) // assume TestDataSizes in ascending order
 
 	if lt.action == "download" || lt.action == "both" {
-		log.Infof("uploading dummy files for downloads")
+		log.Infof("uploading fake files for downloads")
 		lt.status = InitUpload
 		lt.initUploadDigestIds = make([]string, len(lt.dataSizes))
 		for i := 0; i < len(lt.dataSizes); i++ {
@@ -531,7 +531,7 @@ func (lt *ApiserverLoadTester) initTestData() error {
 		}
 	}
 
-	log.Infof("dummy files have been uploaded")
+	log.Infof("fake files have been uploaded")
 	return nil
 }
 

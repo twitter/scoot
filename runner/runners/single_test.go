@@ -138,7 +138,7 @@ func TestMemCap(t *testing.T) {
 func TestStats(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"sleep 50"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId"}
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
 	tmp, _ := temp.TempDirDefault()
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
@@ -178,7 +178,7 @@ func TestStats(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"pause"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId", Timeout: 50 * time.Millisecond}
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId", Timeout: 50 * time.Millisecond}
 	tmp, _ := temp.TempDirDefault()
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
