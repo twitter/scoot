@@ -6,6 +6,8 @@ import (
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 // Configuration for cleaning disk space of a directory
@@ -42,7 +44,7 @@ func (dc lastAccessedDirConfig) CleanDir() error {
 	var err error = nil
 
 	if dc.LowMarkKB != 0 || dc.HighMarkKB != 0 {
-		usage, err = getDiskUsageKB(dc.GetDir())
+		usage, err = stats.GetDiskUsageKB(dc.GetDir())
 		if err != nil {
 			return errors.New(fmt.Sprintf("Failed to Cleanup dir: %s. %s", dc.GetDir(), err))
 		}

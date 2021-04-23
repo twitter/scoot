@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
@@ -21,6 +22,42 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/workerapi"
+)
+
+const (
+	// Clients will check for this string to differentiate between scoot and user initiated actions.
+	UserRequestedErrStr = "UserRequested"
+
+	// Provide defaults for config settings that should never be uninitialized/zero.
+	// These are reasonable defaults for a small cluster of around a couple dozen nodes.
+
+	// Nothing should run forever by default, use this timeout as a fallback.
+	DefaultDefaultTaskTimeout = 30 * time.Minute
+
+	// Allow extra time when waiting for a task response.
+	// This includes network time and the time to upload logs to bundlestore.
+	DefaultTaskTimeoutOverhead = 15 * time.Second
+
+	// Number of different requestors that can run jobs at any given time.
+	DefaultMaxRequestors = 10
+
+	// Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
+	DefaultMaxJobsPerRequestor = 100
+
+	// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
+	DefaultSoftMaxSchedulableTasks = 1
+
+	// Threshold for jobs considered long running
+	LongJobDuration = 4 * time.Hour
+
+	// How often Scheduler step is called in loop
+	TickRate = 250 * time.Millisecond
+
+	// The max job priority we respect (higher priority is untested and disabled)
+	MaxPriority = domain.P2
+
+	// Max number of task IDs to track durations for
+	DefaultMaxTaskDurations = 1000000
 )
 
 // Used to get proper logging from tests...
@@ -47,37 +84,6 @@ func stringInSlice(a string, list []string) bool {
 	}
 	return false
 }
-
-// Clients will check for this string to differentiate between scoot and user initiated actions.
-const UserRequestedErrStr = "UserRequested"
-
-// Provide defaults for config settings that should never be uninitialized/zero.
-// These are reasonable defaults for a small cluster of around a couple dozen nodes.
-
-// Nothing should run forever by default, use this timeout as a fallback.
-const DefaultDefaultTaskTimeout = 30 * time.Minute
-
-// Allow extra time when waiting for a task response.
-// This includes network time and the time to upload logs to bundlestore.
-const DefaultTaskTimeoutOverhead = 15 * time.Second
-
-// Number of different requestors that can run jobs at any given time.
-const DefaultMaxRequestors = 10
-
-// Number of jobs any single requestor can have (to prevent spamming, not for scheduler fairness).
-const DefaultMaxJobsPerRequestor = 100
-
-// Set the maximum number of tasks we'd expect to queue to a nonzero value (it'll be overridden later).
-const DefaultSoftMaxSchedulableTasks = 1
-
-//
-const LongJobDuration = 4 * time.Hour
-
-// How often Scheduler step is called in loop
-const TickRate = 250 * time.Millisecond
-
-// The max job priority we respect (higher priority is untested and disabled)
-const MaxPriority = domain.P2
 
 // Scheduler Config variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
@@ -155,9 +161,9 @@ type statefulScheduler struct {
 	clusterState   *clusterState
 	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
 	// no tasks have started yet.
-	requestorMap     map[string][]*jobState      // map of requestor to all its jobs. Default requestor="" is ok.
-	requestorHistory map[string][]string         // map of join(requestor, basis) to new tags in the order received.
-	taskDurations    map[string]*averageDuration // map of taskId to averageDuration
+	requestorMap     map[string][]*jobState // map of requestor to all its jobs. Default requestor="" is ok.
+	requestorHistory map[string][]string    // map of join(requestor, basis) to new tags in the order received.
+	taskDurations    *lru.Cache
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
 
@@ -168,6 +174,11 @@ type statefulScheduler struct {
 
 	persistor      Persistor
 	TaskThrottleMu sync.RWMutex // mutex must be here to avoid copying the lock when passing config to scheduler constructor
+
+	requestorHistoryEntriesSize int64
+
+	// durationKeyExtractorFn - function to extract, from taskID, the key to use for tracking task average durations
+	durationKeyExtractorFn func(string) string
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -188,6 +199,7 @@ func NewStatefulSchedulerFromCluster(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	durationKeyExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
 	return NewStatefulScheduler(
@@ -198,6 +210,7 @@ func NewStatefulSchedulerFromCluster(
 		config,
 		stat,
 		nil,
+		durationKeyExtractorFn,
 	)
 }
 
@@ -215,7 +228,7 @@ func NewStatefulScheduler(
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	persistor Persistor,
-) *statefulScheduler {
+	durationKeyExtractorFn func(string) string) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
 		st, svc, err := run.StatusAll()
@@ -278,6 +291,12 @@ func NewStatefulScheduler(
 	config.SchedAlg = sa
 	config.SchedAlgConfig = sa.config
 
+	taskDurations, err := lru.New(DefaultMaxTaskDurations)
+	if err != nil {
+		log.Errorf("Failed to create taskDurations cache: %v", err)
+		return nil
+	}
+
 	sched := &statefulScheduler{
 		config:        &config,
 		sagaCoord:     sc,
@@ -292,12 +311,13 @@ func NewStatefulScheduler(
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
 		requestorHistory: make(map[string][]string),
-		taskDurations:    make(map[string]*averageDuration),
+		taskDurations:    taskDurations,
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 		persistor:                      persistor,
+		durationKeyExtractorFn:         durationKeyExtractorFn,
 	}
 
 	sched.setThrottle(-1)
@@ -333,6 +353,13 @@ type jobCheckMsg struct {
 type jobAddedMsg struct {
 	job  *domain.Job
 	saga *saga.Saga
+}
+
+type requestorCounts struct {
+	numJobsRunning         int
+	numJobsWaitingToStart  int
+	numTasksRunning        int
+	numTasksWaitingToStart int
 }
 
 /*
@@ -516,40 +543,26 @@ func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
 	jobsWaitingToStart := 0
 
-	// reset current counts to 0
-	jobsRunningKey := "jobsRunning"
-	jobsWaitingToStartKey := "jobsWaitingToStart"
-	numRunningTasksKey := "numRunningTasks"
-	numWaitingTasksKey := "numWaitingTasks"
-	for _, counts := range s.requestorsCounts {
-		counts[jobsRunningKey] = 0
-		counts[jobsWaitingToStartKey] = 0
-		counts[numRunningTasksKey] = 0
-		counts[numWaitingTasksKey] = 0
-	}
+	requestorsCounts := make(map[string]*requestorCounts) // map of requestor to job and task stats counts
 
 	// get job and task counts by requestor, and overall jobs stats
 	for _, job := range s.inProgressJobs {
 		requestor := job.Job.Def.Requestor
 		if _, ok := s.requestorsCounts[requestor]; !ok {
 			// first time we've seen this requestor, initialize its map entry
-			counts := make(map[string]int)
-			s.requestorsCounts[job.Job.Def.Requestor] = counts
-			counts[jobsWaitingToStartKey] = 0
-			counts[jobsRunningKey] = 0
-			counts[numRunningTasksKey] = 0
-			counts[numWaitingTasksKey] = 0
+			counts := &requestorCounts{}
+			requestorsCounts[job.Job.Def.Requestor] = counts
 		}
 
 		remainingTasks += (len(job.Tasks) - job.TasksCompleted)
 		if job.TasksCompleted+job.TasksRunning == 0 {
 			jobsWaitingToStart += 1
-			s.requestorsCounts[requestor][jobsWaitingToStartKey]++
-			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks)
+			requestorsCounts[requestor].numJobsWaitingToStart++
+			requestorsCounts[requestor].numTasksWaitingToStart += len(job.Tasks)
 		} else if job.getJobStatus() == domain.InProgress {
-			s.requestorsCounts[requestor][jobsRunningKey]++
-			s.requestorsCounts[requestor][numRunningTasksKey] += job.TasksRunning
-			s.requestorsCounts[requestor][numWaitingTasksKey] += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
+			requestorsCounts[requestor].numJobsRunning++
+			requestorsCounts[requestor].numTasksRunning += job.TasksRunning
+			requestorsCounts[requestor].numTasksWaitingToStart += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
 
 		if time.Now().Sub(job.TimeMarker) > LongJobDuration {
@@ -571,21 +584,15 @@ func (s *statefulScheduler) updateStats() {
 	}
 
 	// publish the requestor stats
-	for requestor, counts := range s.requestorsCounts {
+	for requestor, counts := range requestorsCounts {
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
-			counts[jobsRunningKey]))
+			counts.numJobsRunning))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor)).Update(int64(
-			counts[jobsWaitingToStartKey]))
+			counts.numJobsWaitingToStart))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor)).Update(int64(
-			counts[numRunningTasksKey]))
+			counts.numTasksRunning))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor)).Update(int64(
-			counts[numWaitingTasksKey]))
-
-		// if there is no current activity for this requestor, remove it from the map
-		if counts[jobsRunningKey] == 0 && counts[jobsWaitingToStartKey] == 0 && counts[numRunningTasksKey] == 0 &&
-			counts[numWaitingTasksKey] == 0 {
-			delete(s.requestorsCounts, requestor)
-		}
+			counts.numTasksWaitingToStart))
 	}
 
 	// publish the rest of the stats
@@ -593,6 +600,30 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(jobsWaitingToStart))
 	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remainingTasks))
 	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
+
+	// print internal data structure sizes
+	var lbs *LoadBasedAlg = s.config.SchedAlg.(*LoadBasedAlg)
+	lbsStats := lbs.GetDataStructureSizeStats()
+	for k, v := range lbsStats {
+		s.stat.Gauge(k).Update(int64(v))
+	}
+	s.stat.Gauge(stats.SchedTaskStartTimeMapSize).Update(int64(s.getSchedTaskStartTimeMapSize()))
+	s.stat.Gauge(stats.SchedInProgressJobsSize).Update(int64(len(s.inProgressJobs)))
+	s.stat.Gauge(stats.SchedRequestorMapSize).Update(int64(len(s.requestorMap)))
+	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(s.requestorHistoryEntriesSize)
+	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(s.taskDurations.Len()))
+	s.stat.Gauge(stats.SchedSagasSize).Update(int64(s.sagaCoord.GetNumSagas()))
+	s.stat.Gauge(stats.SchedRunnersSize).Update(int64(s.asyncRunner.NumRunning()))
+}
+
+// getSchedTaskStartTimeMapSize get the number of running tasks being tracked by tasksByJobClassAndStartTimeSec map
+// (should never be larger than the number of workers)
+func (s *statefulScheduler) getSchedTaskStartTimeMapSize() int {
+	sz := 0
+	for _, v := range s.tasksByJobClassAndStartTimeSec {
+		sz += len(v)
+	}
+	return sz
 }
 
 func (s *statefulScheduler) getSchedulerTaskCounts() (int, int, int) {
@@ -649,6 +680,7 @@ func (s *statefulScheduler) checkJobsLoop() {
 						s.requestorHistory[rb] = []string{}
 					}
 					s.requestorHistory[rb] = append(s.requestorHistory[rb], checkJobMsg.jobDef.Tag)
+					s.requestorHistoryEntriesSize += int64(len(checkJobMsg.jobDef.Tag))
 				}
 			}
 			checkJobMsg.resultCh <- err
@@ -846,18 +878,23 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
+		durationID := taskID
+		if s.durationKeyExtractorFn != nil {
+			durationID = s.durationKeyExtractorFn(durationID)
+		}
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
 		log.WithFields(
 			log.Fields{
-				"jobID":     jobID,
-				"taskID":    taskID,
-				"node":      nodeSt.node,
-				"requestor": requestor,
-				"jobType":   jobType,
-				"tag":       tag,
-				"taskDef":   taskDef,
+				"jobID":      jobID,
+				"taskID":     taskID,
+				"node":       nodeSt.node,
+				"requestor":  requestor,
+				"jobType":    jobType,
+				"tag":        tag,
+				"taskDef":    taskDef,
+				"durationID": durationID,
 			}).Info("Starting taskRunner")
 
 		tRunner := &taskRunner{
@@ -896,12 +933,12 @@ func (s *statefulScheduler) scheduleTasks() {
 				// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
 				if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
 					(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
-					s.taskDurations[taskID].update(time.Now().Sub(tRunner.startTime))
+					addOrUpdateTaskDuration(s.taskDurations, durationID, time.Now().Sub(tRunner.startTime))
 				}
 
 				// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
-				// The job update is normal but we update the cluster with a dummy value which denotes abnormal cleanup.
-				// We need the dummy value so we don't clobber any new job assignments to that nodeId.
+				// The job update is normal but we update the cluster with a fake value which denotes abnormal cleanup.
+				// We need the fake value so we don't clobber any new job assignments to that nodeId.
 				nodeId := nodeSt.node.Id()
 				nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
 				nodeAbsent := !ok
@@ -1180,6 +1217,21 @@ func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFi
 		jobState.taskCompleted(task.TaskId, false)
 	}
 	return updateMessages
+}
+
+func addOrUpdateTaskDuration(taskDurations *lru.Cache, taskId string, d time.Duration) {
+	var ad *averageDuration
+	iface, ok := taskDurations.Get(taskId)
+	if !ok {
+		ad = &averageDuration{count: 1, duration: d}
+	} else {
+		ad, ok = iface.(*averageDuration)
+		if !ok {
+			return
+		}
+		ad.update(d)
+	}
+	taskDurations.Add(taskId, ad)
 }
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job

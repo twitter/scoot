@@ -30,7 +30,7 @@ func (s *statefulScheduler) getTaskAssignments() []taskAssignment {
 	// Exit if there are no unscheduled tasks.
 	waitingTasksFound := false
 	for _, j := range s.inProgressJobs {
-		if len(j.NotStarted) > 0 {
+		if len(j.Tasks)-j.TasksCompleted-j.TasksRunning > 0 {
 			waitingTasksFound = true
 			break
 		}
@@ -101,6 +101,7 @@ func (s *statefulScheduler) assign(tasks []*taskState) (assignments []taskAssign
 	// as the tasks are being assigned, findIdleNodeInGroup() will not assign the node to a task.
 	// (Yes this is wonky, but I don't have a great understanding of clusterState, and since the original
 	// implementation used its own local copy of clusterState's nodeGroups here, I'm following that pattern.)
+	// TODO move assigning tasks to nodes to cluster state to avoid copying clusterState.NodeGroups
 	for groupID, group := range s.clusterState.nodeGroups {
 		if len(group.idle) > 0 {
 			idleNodesByGroupIDs[groupID] = nodeStatesByNodeID{}

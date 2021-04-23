@@ -115,7 +115,7 @@ func TestMemCap(t *testing.T) {
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -138,12 +138,13 @@ func TestMemCap(t *testing.T) {
 func TestStats(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"sleep 50"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId"}
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
 	tmp, _ := temp.TempDirDefault()
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, dirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -168,6 +169,7 @@ func TestStats(t *testing.T) {
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
@@ -176,12 +178,12 @@ func TestStats(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"pause"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId", Timeout: 50 * time.Millisecond}
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId", Timeout: 50 * time.Millisecond}
 	tmp, _ := temp.TempDirDefault()
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, stats.NopDirsMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -222,7 +224,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, runner.EmptyID)
+	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, stats.NopDirsMonitor, runner.EmptyID)
 	return r, sim
 }
 

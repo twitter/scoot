@@ -29,7 +29,6 @@ func (m module) Install(b *ice.MagicBag) {
 		},
 		NewTwitterServer,
 	)
-
 }
 
 // Starts the Server based on the MagicBag and config schema provided

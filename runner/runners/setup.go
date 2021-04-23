@@ -32,6 +32,9 @@ func (m module) Install(b *ice.MagicBag) {
 			hostname = fmt.Sprintf("%s-%d", hostname, rand.Intn(10000))
 			return runner.RunnerID{ID: hostname}
 		},
+		func() *stats.DirsMonitor {
+			return stats.NopDirsMonitor
+		},
 		NewSingleRunner,
 	)
 }

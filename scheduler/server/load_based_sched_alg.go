@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/scheduler/domain"
 )
 
 const (
@@ -21,10 +22,10 @@ const (
 // defaults for the LoadBasedScheduler algorithm: only one class and all jobs map to that class
 var (
 	DefaultLoadBasedSchedulerClassPercents = map[string]int32{
-		"land":       48,
+		"land":       40,
 		"diff":       25,
 		"sandbox":    10,
-		"regression": 9,
+		"regression": 17,
 		"ktf":        3,
 		"coverage":   2,
 		"tryout":     2,
@@ -111,10 +112,10 @@ func NewLoadBasedAlg(config *LoadBasedAlgConfig, tasksByJobClassAndStartTimeSec 
 	return lbs
 }
 
-// jobWaitingTaskIds map waiting task ids to the job state objects
-type jobWaitingTaskIds struct {
-	jobState       *jobState
-	waitingTaskIDs []string
+// jobWaitingTasks waiting task ids (in the order they should be started) for a job
+type jobWaitingTasks struct {
+	jobState     *jobState
+	waitingTasks []*taskState
 }
 
 // jobClass the structure used by the algorithm when computing the list of tasks to start/stop for each class.
@@ -126,7 +127,7 @@ type jobClass struct {
 	// jobsByNumRunningTasks is a map that bins jobs by their number of running tasks.  Given that the algorithm has
 	// determined it will start n tasks from class A, the tasks selected for starting from class A will give prefence
 	// to jobs with the least number of running tasks.
-	jobsByNumRunningTasks map[int][]jobWaitingTaskIds
+	jobsByNumRunningTasks map[int][]jobWaitingTasks
 	// the largest key value in the jobsByNumRunningTasks map
 	maxTaskRunningMapIndex int
 
@@ -163,11 +164,6 @@ func (jc *jobClass) String() string {
 		jc.tempNormalizedPct)
 }
 
-// NewJobClass create a jobClass struct
-func NewJobClass(name string, targetLoadPct int) *jobClass {
-	return &jobClass{className: name, origTargetLoadPct: targetLoadPct, jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
-}
-
 // GetTasksToBeAssigned - the entry point to the load based scheduling algorithm
 // The algorithm uses the classLoadPercents, number of tasks currently running for each class
 // and number of available workers when computing the tasks to start/stop.
@@ -197,7 +193,7 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 			if lbs.exceededRebalanceThresholdStart == nilTime {
 				lbs.exceededRebalanceThresholdStart = time.Now()
 			} else if time.Now().Sub(lbs.exceededRebalanceThresholdStart) > lbs.config.rebalanceMinDuration {
-				tasksToStop = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers, cs.numFree())
+				tasksToStop = lbs.rebalanceClassTasks(jobsByRequestor, numWorkers)
 				lbs.exceededRebalanceThresholdStart = time.Time{}
 				rebalanced = true
 			}
@@ -233,7 +229,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	totalWorkers := 0
 	firstClass := true
 	for _, className := range lbs.classByDescLoadPct {
-		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]jobWaitingTaskIds{}}
+		jc := &jobClass{className: className, origTargetLoadPct: lbs.classLoadPercents[className], jobsByNumRunningTasks: map[int][]jobWaitingTasks{}}
 		lbs.jobClasses[className] = jc
 		if firstClass {
 			firstClass = false
@@ -246,7 +242,7 @@ func (lbs *LoadBasedAlg) initOrigNumTargetedWorkers(numWorkers int) {
 	lbs.jobClasses[lbs.classByDescLoadPct[0]].origNumTargetedWorkers = numWorkers - totalWorkers
 }
 
-// initJobClassesMap builds the map of requestor (class name) to jobClass objects
+// initJobClassesMap builds the map of waiting jobs' requestors to jobClass objects
 // if we see a job whose class % not defined, assign the job to the class with the
 // smallest class load %
 func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobState) {
@@ -269,25 +265,29 @@ func (lbs *LoadBasedAlg) initJobClassesMap(jobsByRequestor map[string][]*jobStat
 			continue
 		}
 
-		// organize the class's jobs by the number of tasks currently running (map of jobs indexed by the number of
+		// organize the class's jobs by the number of tasks currently running (map of jobs' waiting tasks indexed by the number of
 		// tasks currently running for the job).  This will be used in the round robin task selection to start a
 		// class's task allocation from jobs with least number of running tasks.
+		// The waiting task array for each job preserves the task order from the job defintion, to ensure that jobs' tasks are started
+		// in the same order as they are defined in the job definition.
 		// This loop also computes the class's running tasks and waiting task totals
 		for _, job := range jobs {
 			_, ok := jc.jobsByNumRunningTasks[job.TasksRunning]
 			if !ok {
-				jc.jobsByNumRunningTasks[job.TasksRunning] = []jobWaitingTaskIds{}
+				jc.jobsByNumRunningTasks[job.TasksRunning] = []jobWaitingTasks{}
 			}
-			waitingTaskIds := []string{}
-			for taskID := range job.NotStarted {
-				waitingTaskIds = append(waitingTaskIds, taskID)
+			waitingTasks := []*taskState{}
+			for _, taskState := range job.Tasks {
+				if taskState.Status == domain.NotStarted {
+					waitingTasks = append(waitingTasks, taskState)
+					jc.origNumWaitingTasks++
+				}
 			}
-			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], jobWaitingTaskIds{jobState: job, waitingTaskIDs: waitingTaskIds})
+			jc.jobsByNumRunningTasks[job.TasksRunning] = append(jc.jobsByNumRunningTasks[job.TasksRunning], jobWaitingTasks{jobState: job, waitingTasks: waitingTasks})
 			if job.TasksRunning > jc.maxTaskRunningMapIndex {
 				jc.maxTaskRunningMapIndex = job.TasksRunning
 			}
 			jc.origNumRunningTasks += job.TasksRunning
-			jc.origNumWaitingTasks += len(job.NotStarted)
 		}
 
 		jc.numWaitingTasks = jc.origNumWaitingTasks
@@ -316,7 +316,7 @@ func (lbs *LoadBasedAlg) computeNumTasksToStart(numIdleWorkers int) {
 	numIdleWorkers, haveUnallocatedTasks = lbs.entitlementTasksToStart(numIdleWorkers)
 
 	if numIdleWorkers > 0 && haveUnallocatedTasks {
-		lbs.workerLoanAllocation(numIdleWorkers)
+		lbs.workerLoanAllocation(numIdleWorkers, false)
 	}
 }
 
@@ -390,10 +390,10 @@ func (lbs *LoadBasedAlg) entitlementTasksToStart(numIdleWorkers int) (int, bool)
 // after all the class 'loan' amounts have been calculated.  When this happens we repeat the loan calculation till
 // there are no unallocated workers left.  Each iteration either uses up all idle workers, or all of a class's waiting
 // tasks.  This means that the we will not iterate more than the number of classes.
-func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int) {
+func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int, haveRebalanced bool) {
 	i := 0
 	for ; i < len(lbs.jobClasses); i++ {
-		lbs.computeLoanPercents()
+		lbs.computeLoanPercents(numIdleWorkers, haveRebalanced)
 
 		// compute loan %'s and allocate idle workers
 		numTasksToStart, haveWaitingTasks := lbs.getTaskAllocations(numIdleWorkers)
@@ -420,6 +420,13 @@ func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
 	for _, className := range lbs.classByDescLoadPct {
 		jc := lbs.jobClasses[className]
 		numTasksToStart := min(jc.numWaitingTasks, ceil(float32(numIdleWorkers)*(float32(jc.tempNormalizedPct)/100.0)))
+		if jc.numTasksToStart < 0 {
+			// we've determined we need to stop numTasksToStart for this class, but the subsequent loan calculation may
+			// have determined this class can also get loaners, we'll reduce the number of tasks to stop by the loaner amount.
+			// (below outside this if), but we also want to set the normalization pct to 0 to prevent redoing this reduction
+			// if we repeat the loan calculation
+			jc.tempNormalizedPct = 0.0
+		}
 
 		if (totalTasksToStart + numTasksToStart) > numIdleWorkers {
 			numTasksToStart = numIdleWorkers - totalTasksToStart
@@ -460,9 +467,10 @@ func (lbs *LoadBasedAlg) computeEntitlementPercents() {
 	lbs.jobClasses[lbs.classByDescLoadPct[0]].tempNormalizedPct = 100 - totalPercents
 }
 
-// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks.
+// computeLoanPercents as orig load %'s normalized to exclude classes that don't have waiting tasks and
+// to adjust loan targets based on number of workers already loaned to that class.
 // The loan percents percents are written to the corresponding jobClass.tempNormalizedPCt field.
-func (lbs *LoadBasedAlg) computeLoanPercents() {
+func (lbs *LoadBasedAlg) computeLoanPercents(numWorkersAvailableForLoan int, haveRebalanced bool) {
 	// get the sum of all the original load pcts for classes that have waiting tasks
 	pctsTotal := 0
 	for _, jc := range lbs.jobClasses {
@@ -472,30 +480,59 @@ func (lbs *LoadBasedAlg) computeLoanPercents() {
 	}
 
 	if pctsTotal == 0 {
+		// there are no workers who can use a loan
 		return
 	}
 
-	// compute the % for all but the class with the largest %.  Add up all computed %s and assign
-	// 100 - sum of % to the class with the largest % from the range (this eliminates rounding errors, forcing the
-	// sum or % to go to 100%)
-	totalPercents := 0
-	firstClass := true
-	firstClassName := ""
+	// normalize the original class % excluding classes that don't have waiting tasks.
+	// (These pcts will be further adjusted to account for workers already loaned to each class.)
+	// Also compute the total number of loaned workers (totalLoaners).
+	normalizedLoanPcts := map[string]float64{}
+	totalLoaners := 0
 	for _, className := range lbs.classByDescLoadPct {
 		jc := lbs.jobClasses[className]
 		if jc.numWaitingTasks > 0 {
-			if firstClass {
-				firstClass = false
-				firstClassName = className
-				continue
-			}
-			jc.tempNormalizedPct = int(math.Floor(float64(jc.origTargetLoadPct) * 100.0 / float64(pctsTotal)))
-			totalPercents += jc.tempNormalizedPct
+			// normalize the class's loan %
+			normalizedLoanPcts[className] = float64(jc.origTargetLoadPct) / float64(pctsTotal)
 		} else {
-			jc.tempNormalizedPct = 0
+			// exclude the class
+			normalizedLoanPcts[className] = 0.0
+		}
+		if !haveRebalanced {
+			// only add up loaners if we are not rebalancing tasks - if we are rebalancing, then the
+			// number of loaners are theoretically 0
+			totalLoaners += int(math.Max(0.0, float64(jc.origNumRunningTasks-jc.origNumTargetedWorkers)))
 		}
 	}
-	lbs.jobClasses[firstClassName].tempNormalizedPct = 100 - totalPercents
+	// at this point origTargetLoanPcts is the orig load % normalized to exclude workers who don't have waiting tasks
+	// (workers who can't use a loan)
+
+	// update totalLoaners to include the idle workers that are about to be loaned
+	totalLoaners += numWorkersAvailableForLoan
+
+	loanEntitlements := map[string]int{}
+	totalEntitlements := 0
+	// compute the loan entitlement for each class: the class's loan % (origTargetLoanPcts) * totalLoaned workers
+	// then subtract the current loaned from the loan entitlement to get the remaining entitlement for each class
+	for className, jc := range lbs.jobClasses {
+		// compute the number of workers targeted to loan to this class (out of all currently loaned + workers available for loaning)
+		entitlement := int(math.Floor(normalizedLoanPcts[className] * float64(totalLoaners)))
+		currentLoaned := int(math.Max(0, float64(jc.origNumRunningTasks-jc.origNumTargetedWorkers)))
+		if haveRebalanced && jc.numTasksToStart < 0 {
+			// if we're going to be stopping tasks, decrease the number currently loaned by the number of tasks we're stopping
+			currentLoaned += jc.numTasksToStart
+		}
+
+		// reduce that entitlement by the number of workers already loaned
+		loanEntitlements[className] = int(math.Max(0, float64(entitlement-currentLoaned)))
+		totalEntitlements += loanEntitlements[className]
+	}
+
+	// re-normalize the loan entitlement %'s for just those workers whose loan entitlement is still > 0
+	// the available workers will be loaned as per these final %'s
+	for className, jc := range lbs.jobClasses {
+		jc.tempNormalizedPct = int(float64(loanEntitlements[className]) / float64(totalEntitlements) * 100.0)
+	}
 }
 
 // buildTaskStartList builds the list of tasks to be started for each jobClass.
@@ -523,7 +560,7 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 	// work our way through the class's jobs, starting with jobs with the least number of running tasks,
 	// till we've added the class's numTasksToStart number of tasks to the task list
 	for numRunningTasks := 0; numRunningTasks <= jc.maxTaskRunningMapIndex; numRunningTasks++ {
-		var jobs []jobWaitingTaskIds
+		var jobs []jobWaitingTasks
 		var ok bool
 		if jobs, ok = jc.jobsByNumRunningTasks[numRunningTasks]; !ok {
 			// there are no jobs with numRunningTasks running tasks, move on to jobs with more running tasks
@@ -533,19 +570,21 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 		// Allocate one task from each job till we've allocated numTasksToStart for the jobClass, or have allocated 1 task from
 		// each job in this list.  As we allocate a task for a job, move the job to the end of jc.jobsByNumRunningTasks[numRunningTasks+1].
 		for _, job := range jobs {
-			if job.waitingTaskIDs != nil && len(job.waitingTaskIDs) > 0 {
+			if job.waitingTasks != nil && len(job.waitingTasks) > 0 {
 				// get the next task to start from the job
-				tasks = append(tasks, lbs.getJobsNextTask(job))
+				tasks = append(tasks, job.waitingTasks[0])
 
 				// move the job to jobsByRunningTasks with numRunningTasks + 1 entry.  Note: we don't have to pull it from
 				// its current numRunningTasks bucket since this is a 1 time pass through the jobsByNumRunningTasks map.  The map
 				// will be rebuilt with the next scheduling iteration
-				if len(job.waitingTaskIDs) > 1 {
-					job.waitingTaskIDs = job.waitingTaskIDs[1:]
+				if len(job.waitingTasks) > 1 {
+					job.waitingTasks = job.waitingTasks[1:]
 					jc.jobsByNumRunningTasks[numRunningTasks+1] = append(jc.jobsByNumRunningTasks[numRunningTasks+1], job)
 					if numRunningTasks == jc.maxTaskRunningMapIndex {
 						jc.maxTaskRunningMapIndex++
 					}
+				} else {
+					job.waitingTasks = []*taskState{}
 				}
 
 				startingTaskCnt++
@@ -559,16 +598,8 @@ func (lbs *LoadBasedAlg) getTasksToStartForJobClass(jc *jobClass) []*taskState {
 
 	msg := "getTasksToStartForJobClass() fell out of for range jobs loop.  We expected it to return because startingTaskCnt == jc.numTasksToStart above " +
 		"before falling out of the loop.  Workers may be left idle till the next scheduling iteration."
-	log.Warnf(msg)
+	log.Warn(msg)
 	return tasks
-}
-
-// getJobsNextTask get the next task to start from the job
-func (lbs *LoadBasedAlg) getJobsNextTask(job jobWaitingTaskIds) *taskState {
-	task := job.jobState.NotStarted[job.waitingTaskIDs[0]]
-	job.waitingTaskIDs = job.waitingTaskIDs[1:]
-
-	return task
 }
 
 // buildTaskStopList builds the list of tasks to be stopped.
@@ -617,21 +648,21 @@ func (lbs *LoadBasedAlg) getNumTasksToStart(requestor string) int {
 // to start tasks in better alignment with the original targeted task load percents.
 // The function returns the list of tasks to stop and updates the jobClass objects with the number
 // of tasks to start
-func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int, numIdleWorkers int) []*taskState {
-
+func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobState, totalWorkers int) []*taskState {
+	log.Info("Rebalancing")
 	totalTasks := 0
 	// compute number tasks as per the each class's entitlement and waiting tasks
 	// will be negative when a class is over its entitlement
 	for _, jc := range lbs.jobClasses {
 		if jc.origNumRunningTasks > jc.origNumTargetedWorkers {
-			// the number of tasks that could be started to bring the class up to its entitlement
+			// the class is running more than its entitled number of tasks, numTasksToStart is number of tasks
+			// to stop to bring back to its entitlement (it will be a negative number)
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		} else if jc.origNumRunningTasks+jc.origNumWaitingTasks < jc.origNumTargetedWorkers {
 			// the waiting tasks won't put the class over its entitlement
 			jc.numTasksToStart = jc.origNumWaitingTasks
 		} else {
-			// the class is running more than its entitled number of tasks, numTasksToStart is number of tasks
-			// to stop to bring back to its entitlement (it will be a negative number)
+			// the number of tasks that could be started to bring the class up to its entitlement
 			jc.numTasksToStart = jc.origNumTargetedWorkers - jc.origNumRunningTasks
 		}
 		totalTasks += jc.origNumRunningTasks + jc.numTasksToStart
@@ -639,7 +670,7 @@ func (lbs *LoadBasedAlg) rebalanceClassTasks(jobsByRequestor map[string][]*jobSt
 
 	if totalTasks < totalWorkers {
 		// some classes are not using their full allocation, we can loan workers
-		lbs.computeLoanPercents()
+		lbs.computeLoanPercents(totalWorkers-totalTasks, true)
 
 		lbs.getTaskAllocations(totalWorkers - totalTasks)
 	}
@@ -807,4 +838,27 @@ func (lbs *LoadBasedAlg) setRebalanceThreshold(rebalanceThreshold int) {
 	defer lbs.config.rebalanceThresholdMu.Unlock()
 	lbs.config.rebalanceThreshold = rebalanceThreshold
 	log.Infof("set rebalanceThreshold to %d", rebalanceThreshold)
+}
+
+func (lbs *LoadBasedAlg) GetDataStructureSizeStats() map[string]int {
+	return map[string]int{
+		stats.SchedLBSConfigDescLoadPctSize:      len(lbs.config.classByDescLoadPct),
+		stats.SchedLBSConfigLoadPercentsSize:     len(lbs.config.classLoadPercents),
+		stats.SchedLBSConfigRequestorToPctsSize:  len(lbs.config.requestorReToClassMap),
+		stats.SchedLBSWorkingDescLoadPctSize:     len(lbs.classByDescLoadPct),
+		stats.SchedLBSWorkingJobClassesSize:      lbs.getJobClassesSize(),
+		stats.SchedLBSWorkingLoadPercentsSize:    len(lbs.classByDescLoadPct),
+		stats.SchedLBSWorkingRequestorToPctsSize: len(lbs.requestorReToClassMap),
+	}
+}
+
+func (lbs *LoadBasedAlg) getJobClassesSize() int {
+	// get sum of number of waiting tasks across all the jobClasses's job entries
+	s := 0
+	for _, jc := range lbs.jobClasses {
+		for _, wt := range jc.jobsByNumRunningTasks {
+			s += len(wt)
+		}
+	}
+	return s
 }

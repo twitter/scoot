@@ -4,7 +4,9 @@ import (
 	"math"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 )
@@ -23,12 +25,6 @@ type jobState struct {
 	JobKilled      bool         //indicates the job was killed
 	TimeCreated    time.Time    //when was this job first created
 	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
-
-	// track tasks by state (completed, running, not started) for scheduling algorithm
-	// Completed and Running are only used by the scheduling algorithm
-	Completed  taskStateByTaskID
-	Running    taskStateByTaskID
-	NotStarted taskStateByTaskID
 
 	jobClass                       string
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
@@ -72,7 +68,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // Creates a New Job State based on the specified Job and Saga
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
-func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations map[string]*averageDuration,
+func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations *lru.Cache,
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *jobState {
 	j := &jobState{
 		Job:                            job,
@@ -84,9 +80,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		JobKilled:                      false,
 		TimeCreated:                    time.Now(),
 		TimeMarker:                     time.Now(),
-		Completed:                      make(taskStateByTaskID),
-		Running:                        make(taskStateByTaskID),
-		NotStarted:                     make(taskStateByTaskID),
 		jobClass:                       jobClass,
 		tasksByJobClassAndStartTimeSec: tasksByJobClassAndStartTimeSec,
 	}
@@ -94,11 +87,14 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 	for _, taskDef := range job.Def.Tasks {
 		var duration time.Duration
 		if taskDurations != nil {
-			if avgDur, ok := taskDurations[taskDef.TaskID]; !ok || avgDur.duration == 0 {
-				taskDurations[taskDef.TaskID] = &averageDuration{}
-				taskDurations[taskDef.TaskID].update(math.MaxInt64) // Set max duration if we don't have the average duration.
+			if iface, ok := taskDurations.Get(taskDef.TaskID); !ok {
+				duration = math.MaxInt64
+				addOrUpdateTaskDuration(taskDurations, taskDef.TaskID, duration)
+			} else {
+				if ad, ok := iface.(*averageDuration); ok {
+					duration = ad.duration
+				}
 			}
-			duration = taskDurations[taskDef.TaskID].duration
 		}
 		task := &taskState{
 			JobId:         job.Id,
@@ -110,7 +106,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 			AvgDuration:   duration,
 		}
 		j.Tasks = append(j.Tasks, task)
-		j.NotStarted[task.TaskId] = task
 	}
 
 	// Assumes Forward Recovery only, tasks are either
@@ -122,12 +117,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		if sagaState.IsTaskCompleted(taskId) {
 			j.getTask(taskId).Status = domain.Completed
 			j.TasksCompleted++
-			if _, ok := j.Running[taskId]; ok {
-				delete(j.Running, taskId)
-			} else if _, ok = j.NotStarted[taskId]; ok { // TODO what should we really do?
-				delete(j.NotStarted, taskId)
-			}
-			j.Completed[taskId] = j.getTask(taskId)
 		}
 	}
 
@@ -165,16 +154,12 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
 	j.TasksRunning++
-	if _, ok := j.NotStarted[taskId]; ok {
-		delete(j.NotStarted, taskId)
-	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
-		delete(j.Completed, taskId)
-	}
-	j.Running[taskId] = taskState
 
 	// add the task to the map of tasks by start time
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
 	j.addTaskToStartTimeMap(j.jobClass, taskState, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Update JobState to reflect that a Task has been completed
@@ -189,15 +174,11 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 	if running {
 		j.TasksRunning--
 	}
-	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running, taskId)
-	} else if _, ok = j.NotStarted[taskId]; ok {
-		delete(j.NotStarted, taskId)
-	}
-	j.Completed[taskId] = taskState
 
 	// remove the task from the map of tasks by start time
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Update JobState to reflect that an error has occurred running this Task
@@ -211,14 +192,10 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	if preempted {
 		taskState.NumTimesTried--
 	}
-	if _, ok := j.Running[taskId]; ok {
-		delete(j.Running, taskId)
-	} else if _, ok = j.Completed[taskId]; ok { // TODO what should we really do?
-		delete(j.Completed, taskId)
-	}
-	j.NotStarted[taskId] = taskState
 
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
+
+	j.logInconsistentStateValues()
 }
 
 // Returns the Current Job Status
@@ -262,5 +239,27 @@ func (j *jobState) removeTaskFromStartTimeMap(jobID string, taskID string, start
 	delete(j.tasksByJobClassAndStartTimeSec[timeBucket], taskKey)
 	if len(j.tasksByJobClassAndStartTimeSec[timeBucket]) == 0 {
 		delete(j.tasksByJobClassAndStartTimeSec, timeBucket)
+	}
+}
+
+func (j *jobState) logInconsistentStateValues() {
+	// TODO remove before deploying to prod or if this slows staging down too much
+	running := 0
+	for classNStartKey, v := range j.tasksByJobClassAndStartTimeSec {
+		if classNStartKey.class != j.jobClass {
+			continue
+		}
+		for jobIDnTaskID, taskState := range v {
+			if jobIDnTaskID.jobID != j.Job.Id {
+				continue
+			}
+			if taskState.Status == domain.InProgress {
+				running++
+			}
+		}
+	}
+	if running != j.TasksRunning {
+		log.Errorf("inconsistent job state: tasksByJobClassAndStartTimeSec has %d running tasks for job %s,%s,%s, but jobState and %d running tasks",
+			running, j.jobClass, j.Job.Def.Requestor, j.Job.Id, j.TasksRunning)
 	}
 }
