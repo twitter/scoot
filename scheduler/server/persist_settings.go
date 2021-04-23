@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -33,11 +34,11 @@ func (p *nopPersistor) LoadSettings() (*PersistedSettings, error) {
 	return nil, nil
 }
 
-func (s *statefulScheduler) persistSettings() {
+func (s *statefulScheduler) persistSettings() error {
 	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		log.Errorf("not using load based scheduler, settings ignored")
-		return
+		return nil
 	}
 	_, throttle := s.GetSchedulerStatus()
 	ps := &PersistedSettings{
@@ -49,8 +50,9 @@ func (s *statefulScheduler) persistSettings() {
 	}
 	err := s.persistor.PersistSettings(ps)
 	if err != nil {
-		log.Errorf("settings were not persisted, default scheduler settings will be used on next restart.%s", err)
+		return fmt.Errorf("settings were not persisted, default scheduler settings will be used on next restart.%s", err)
 	}
+	return nil
 }
 
 func (s *statefulScheduler) loadSettings() {

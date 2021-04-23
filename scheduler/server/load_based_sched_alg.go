@@ -763,10 +763,9 @@ func (lbs *LoadBasedAlg) setClassLoadPercents(classLoadPercents map[string]int32
 	if pctTotal != 100 {
 		log.Errorf("LoadBalanced scheduling %%'s don't add up to 100, normalizing them")
 		lbs.normalizePercents(pctTotal)
-		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPercents)
-	} else {
-		log.Infof("set classLoadPercents to %v", lbs.config.classLoadPercents)
 	}
+
+	log.Infof("classLoadPercents are %v", lbs.config.classLoadPercents)
 }
 
 // normalizePercents normalizes the class percents to the sum of their values.  Only uses when the configured

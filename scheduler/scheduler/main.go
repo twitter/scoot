@@ -77,16 +77,15 @@ func main() {
 		func() (*temp.TempDir, error) {
 			return temp.NewTempDir("", "sched")
 		},
-<<<<<<< HEAD
 
 		func() server.Persistor {
 			return nil
-=======
+		},
+
 		func() func(string) string { // noop for extracting duration id from task id
 			return func(id string) string {
 				return id
 			}
->>>>>>> master
 		},
 	)
 
