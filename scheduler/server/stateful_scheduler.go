@@ -55,6 +55,10 @@ const (
 	// The max job priority we respect (higher priority is untested and disabled)
 	MaxPriority = domain.P2
 
+	// Max number of requestors to track tag history, and max number of tags per requestor to track
+	DefaultMaxRequestorHistories = 1000000
+	DefaultMaxHistoryTags        = 100
+
 	// Max number of task IDs to track durations for
 	DefaultMaxTaskDurations = 1000000
 )
@@ -161,7 +165,7 @@ type statefulScheduler struct {
 	inProgressJobs []*jobState // ordered list (by jobId) of jobs being scheduled.  Note: it might be
 	// no tasks have started yet.
 	requestorMap     map[string][]*jobState // map of requestor to all its jobs. Default requestor="" is ok.
-	requestorHistory map[string][]string    // map of join(requestor, basis) to new tags in the order received.
+	requestorHistory *lru.Cache             // cache of join(requestor, basis) to new tags in the order received.
 	taskDurations    *lru.Cache
 
 	requestorsCounts map[string]map[string]int // map of requestor to job and task stats counts
@@ -169,8 +173,7 @@ type statefulScheduler struct {
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID // map of tasks by their class and start time
 
 	// stats
-	stat                        stats.StatsReceiver
-	requestorHistoryEntriesSize int64
+	stat stats.StatsReceiver
 
 	// durationKeyExtractorFn - function to extract, from taskID, the key to use for tracking task average durations
 	durationKeyExtractorFn func(string) string
@@ -285,6 +288,12 @@ func NewStatefulScheduler(
 	config.SchedAlg = sa
 	config.SchedAlgConfig = sa.config
 
+	requestorHistory, err := lru.New(DefaultMaxRequestorHistories)
+	if err != nil {
+		log.Errorf("Failed to create requestorHistory cache: %v", err)
+		return nil
+	}
+
 	taskDurations, err := lru.New(DefaultMaxTaskDurations)
 	if err != nil {
 		log.Errorf("Failed to create taskDurations cache: %v", err)
@@ -304,7 +313,7 @@ func NewStatefulScheduler(
 		clusterState:     newClusterState(initialCluster, clusterUpdates, nodeReadyFn, stat),
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
-		requestorHistory: make(map[string][]string),
+		requestorHistory: requestorHistory,
 		taskDurations:    taskDurations,
 		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
@@ -597,7 +606,7 @@ func (s *statefulScheduler) updateStats() {
 	s.stat.Gauge(stats.SchedTaskStartTimeMapSize).Update(int64(s.getSchedTaskStartTimeMapSize()))
 	s.stat.Gauge(stats.SchedInProgressJobsSize).Update(int64(len(s.inProgressJobs)))
 	s.stat.Gauge(stats.SchedRequestorMapSize).Update(int64(len(s.requestorMap)))
-	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(s.requestorHistoryEntriesSize)
+	s.stat.Gauge(stats.SchedRequestorHistorySize).Update(int64(s.requestorHistory.Len()))
 	s.stat.Gauge(stats.SchedTaskDurationsSize).Update(int64(s.taskDurations.Len()))
 	s.stat.Gauge(stats.SchedSagasSize).Update(int64(s.sagaCoord.GetNumSagas()))
 	s.stat.Gauge(stats.SchedRunnersSize).Update(int64(s.asyncRunner.NumRunning()))
@@ -658,16 +667,13 @@ func (s *statefulScheduler) checkJobsLoop() {
 			if err == nil && checkJobMsg.jobDef.Basis != "" {
 				// Check if the given tag is expired for the given requestor & basis.
 				rb := checkJobMsg.jobDef.Requestor + checkJobMsg.jobDef.Basis
-				if stringInSlice(checkJobMsg.jobDef.Tag, s.requestorHistory[rb]) &&
-					s.requestorHistory[rb][len(s.requestorHistory[rb])-1] != checkJobMsg.jobDef.Tag {
+				rh := getRequestorHistory(s.requestorHistory, rb)
+				if stringInSlice(checkJobMsg.jobDef.Tag, rh) &&
+					rh[len(rh)-1] != checkJobMsg.jobDef.Tag {
 					err = fmt.Errorf("Expired tag=%s for basis=%s. Expected either tag=%s or new tag.",
-						checkJobMsg.jobDef.Tag, checkJobMsg.jobDef.Basis, s.requestorHistory[rb][len(s.requestorHistory[rb])-1])
+						checkJobMsg.jobDef.Tag, checkJobMsg.jobDef.Basis, rh[len(rh)-1])
 				} else {
-					if _, ok := s.requestorHistory[rb]; !ok {
-						s.requestorHistory[rb] = []string{}
-					}
-					s.requestorHistory[rb] = append(s.requestorHistory[rb], checkJobMsg.jobDef.Tag)
-					s.requestorHistoryEntriesSize += int64(len(checkJobMsg.jobDef.Tag))
+					addOrUpdateRequestorHistory(s.requestorHistory, rb, checkJobMsg.jobDef.Tag)
 				}
 			}
 			checkJobMsg.resultCh <- err
@@ -1204,6 +1210,31 @@ func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFi
 		jobState.taskCompleted(task.TaskId, false)
 	}
 	return updateMessages
+}
+
+func getRequestorHistory(requestorHistory *lru.Cache, requestor string) []string {
+	var history []string
+	iface, ok := requestorHistory.Get(requestor)
+	if ok {
+		history, ok = iface.([]string)
+	}
+	return history
+}
+
+func addOrUpdateRequestorHistory(requestorHistory *lru.Cache, requestor, newHistory string) {
+	var history []string
+	iface, ok := requestorHistory.Get(requestor)
+	if ok {
+		history, ok = iface.([]string)
+		if !ok {
+			return
+		}
+		history = append(history, newHistory)
+	}
+	if len(history) > DefaultMaxHistoryTags {
+		history = history[1:]
+	}
+	requestorHistory.Add(requestor, history)
 }
 
 func addOrUpdateTaskDuration(taskDurations *lru.Cache, taskId string, d time.Duration) {
