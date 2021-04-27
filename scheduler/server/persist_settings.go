@@ -35,6 +35,10 @@ func (p *nopPersistor) LoadSettings() (*PersistedSettings, error) {
 }
 
 func (s *statefulScheduler) persistSettings() error {
+	if s.persistor == nil {
+		log.Infof("setting persistor is nil, scheduler will use default settings on restart")
+		return nil
+	}
 	sa, ok := s.config.SchedAlg.(*LoadBasedAlg)
 	if !ok {
 		log.Errorf("not using load based scheduler, settings ignored")
@@ -48,6 +52,7 @@ func (s *statefulScheduler) persistSettings() error {
 		RebalanceThreshold:              sa.getRebalanceThreshold(),
 		Throttle:                        throttle,
 	}
+
 	err := s.persistor.PersistSettings(ps)
 	if err != nil {
 		return fmt.Errorf("settings were not persisted, default scheduler settings will be used on next restart.%s", err)
@@ -56,6 +61,10 @@ func (s *statefulScheduler) persistSettings() error {
 }
 
 func (s *statefulScheduler) loadSettings() {
+	if s.persistor == nil {
+		log.Info("no settings persistor provided, scheduler will use the default settings.")
+		return
+	}
 	settings, err := s.persistor.LoadSettings()
 	if err != nil {
 		log.Errorf("error loading settings, scheduler will use the default settings. %s", err)
@@ -70,6 +79,7 @@ func (s *statefulScheduler) loadSettings() {
 		log.Errorf("not using load based scheduler, settings ignored")
 		return
 	}
+	log.Info("loaded persisted settings")
 	sa.setClassLoadPercents(settings.ClassLoadPercents)
 	sa.setRequestorToClassMap(settings.RequestorToClassMap)
 	sa.setRebalanceMinimumDuration(time.Duration(settings.RebalanceMinimumDurationMinutes) * time.Minute)

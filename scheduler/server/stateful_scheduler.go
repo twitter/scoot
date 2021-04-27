@@ -199,6 +199,7 @@ func NewStatefulSchedulerFromCluster(
 	rf RunnerFactory,
 	config SchedulerConfig,
 	stat stats.StatsReceiver,
+	persistor Persistor,
 	durationKeyExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
@@ -209,7 +210,7 @@ func NewStatefulSchedulerFromCluster(
 		rf,
 		config,
 		stat,
-		nil,
+		persistor,
 		durationKeyExtractorFn,
 	)
 }
@@ -323,7 +324,7 @@ func NewStatefulScheduler(
 	sched.setThrottle(-1)
 
 	if sched.persistor == nil {
-		sched.persistor = Persistor(&nopPersistor{})
+		log.Info("setting persistor is nil, settings will reset to default values on scheduler reset")
 	}
 	sched.loadSettings()
 

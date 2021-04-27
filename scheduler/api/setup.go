@@ -54,9 +54,10 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			rf func(cluster.Node) runner.Service,
 			config server.SchedulerConfig,
 			stat stats.StatsReceiver,
+			persistor server.Persistor,
 			durationKeyExtractorFn func(string) string,
 		) server.Scheduler {
-			return server.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat, durationKeyExtractorFn)
+			return server.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat, persistor, durationKeyExtractorFn)
 		},
 
 		func(
