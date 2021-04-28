@@ -85,7 +85,7 @@ func (h *Handler) SetSchedulerStatus(maxNumTasks int32) error {
 // GetClassLoadPercents Implements GetClassLoadPercents Cloud Scoot API
 func (h *Handler) GetClassLoadPercents() (map[string]int32, error) {
 	clp, err := schedthrift.GetClassLoadPercents(h.scheduler)
-	log.Infof("GetClassLoadPercents returning: %v, err:%s", clp, err)
+	log.Infof("GetClassLoadPercents returning: %v, err:%v", clp, err)
 	return clp, err
 }
 
@@ -98,7 +98,7 @@ func (h *Handler) SetClassLoadPercents(classLoadPercents map[string]int32) error
 // GetRequestorToClassMap Implements GetRequestorToClassMap Cloud Scoot API
 func (h *Handler) GetRequestorToClassMap() (map[string]string, error) {
 	rm, err := schedthrift.GetRequestorToClassMap(h.scheduler)
-	log.Infof("GetClassLoadPercents returning: %v, err:%s", rm, err)
+	log.Infof("GetClassLoadPercents returning: %v, err:%v", rm, err)
 	return rm, err
 }
 
@@ -112,7 +112,7 @@ func (h *Handler) SetRequestorToClassMap(requestToClassMap map[string]string) er
 // the rebalance threshold before rebalancing.  <= 0 implies no rebalancing
 func (h *Handler) GetRebalanceMinimumDuration() (int32, error) {
 	d, err := schedthrift.GetRebalanceMinimumDuration(h.scheduler)
-	log.Infof("GetRebalanceMinimumDuration returning: %d, err:%s", d, err)
+	log.Infof("GetRebalanceMinimumDuration returning: %d, err:%v", d, err)
 	return int32(d.Minutes()), err
 }
 
@@ -128,7 +128,7 @@ func (h *Handler) SetRebalanceMinimumDuration(durationMinimum int32) error {
 // <= 0 implies no rebalancing
 func (h *Handler) GetRebalanceThreshold() (int32, error) {
 	t, err := schedthrift.GetRebalanceThreshold(h.scheduler)
-	log.Infof("GetRebalanceThreshold returning: %d, err:%s", t, err)
+	log.Infof("GetRebalanceThreshold returning: %d, err:%v", t, err)
 	return t, err
 }
 
