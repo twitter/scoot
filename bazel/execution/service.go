@@ -255,6 +255,11 @@ func (s *executionServer) DeleteOperation(context.Context, *longrunning.DeleteOp
 	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
 }
 
+// Unsupported
+func (s *executionServer) WaitOperation(context.Context, *longrunning.WaitOperationRequest) (*longrunning.Operation, error) {
+	return nil, status.Error(codes.Unimplemented, fmt.Sprint("Unsupported in Scoot"))
+}
+
 // Takes a CancelOperation request and asynchronously starts cancellation on the specified Operation
 // via Scoot's KillJob API. Note that successful cancellation is not guaranteed. The client should use
 // GetOperation to determine if the cancellation succeeded
