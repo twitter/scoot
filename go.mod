@@ -6,10 +6,10 @@ require (
 	github.com/apache/thrift v0.0.0-20160616201512-0e9fed1e12ed
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/davecgh/go-spew v1.1.1
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.3.2
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/golang/protobuf v1.3.3
 	github.com/leanovate/gopter v0.2.4
 	github.com/luci/go-render v0.0.0-20160219211803-9a04cc21af0f
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
@@ -24,6 +24,6 @@ require (
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8
-	google.golang.org/grpc v1.14.0
+	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
+	google.golang.org/grpc v1.28.0
 )
