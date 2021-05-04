@@ -107,3 +107,21 @@ func (mr *MockOperationsClientMockRecorder) ListOperations(arg0, arg1 interface{
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperations", reflect.TypeOf((*MockOperationsClient)(nil).ListOperations), varargs...)
 }
+
+// WaitOperation mocks base method
+func (m *MockOperationsClient) WaitOperation(arg0 context.Context, arg1 *longrunning.WaitOperationRequest, arg2 ...grpc.CallOption) (*longrunning.Operation, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitOperation", varargs...)
+	ret0, _ := ret[0].(*longrunning.Operation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitOperation indicates an expected call of WaitOperation
+func (mr *MockOperationsClientMockRecorder) WaitOperation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitOperation", reflect.TypeOf((*MockOperationsClient)(nil).WaitOperation), varargs...)
+}
