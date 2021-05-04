@@ -763,8 +763,9 @@ func (lbs *LoadBasedAlg) setClassLoadPercents(classLoadPercents map[string]int32
 	if pctTotal != 100 {
 		log.Errorf("LoadBalanced scheduling %%'s don't add up to 100, normalizing them")
 		lbs.normalizePercents(pctTotal)
-		log.Errorf("LoadBalanced scheduling class percents have been changed to %v", lbs.config.classLoadPercents)
 	}
+
+	log.Infof("classLoadPercents are %v", lbs.config.classLoadPercents)
 }
 
 // normalizePercents normalizes the class percents to the sum of their values.  Only uses when the configured
@@ -805,6 +806,7 @@ func (lbs *LoadBasedAlg) setRequestorToClassMap(requestorToClassMap map[string]s
 	for k, v := range requestorToClassMap {
 		lbs.config.requestorReToClassMap[k] = v
 	}
+	log.Infof("set requestorToClassMap to %v", requestorToClassMap)
 }
 
 // getRebalanceMinimumDuration get the rebalance duration
@@ -819,6 +821,7 @@ func (lbs *LoadBasedAlg) setRebalanceMinimumDuration(rebalanceMinDuration time.D
 	lbs.config.rebalanceMinDurationMu.Lock()
 	defer lbs.config.rebalanceMinDurationMu.Unlock()
 	lbs.config.rebalanceMinDuration = rebalanceMinDuration
+	log.Infof("set rebalanceMinDuration to %s", rebalanceMinDuration)
 }
 
 // getRebalanceThreshold get the rebalance threshold
@@ -833,6 +836,7 @@ func (lbs *LoadBasedAlg) setRebalanceThreshold(rebalanceThreshold int) {
 	lbs.config.rebalanceThresholdMu.Lock()
 	defer lbs.config.rebalanceThresholdMu.Unlock()
 	lbs.config.rebalanceThreshold = rebalanceThreshold
+	log.Infof("set rebalanceThreshold to %d", rebalanceThreshold)
 }
 
 func (lbs *LoadBasedAlg) GetDataStructureSizeStats() map[string]int {

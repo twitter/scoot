@@ -153,6 +153,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 		sc,
 		statsReceiver,
 		nil,
+		nil,
 	)
 	return s
 }
