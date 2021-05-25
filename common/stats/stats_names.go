@@ -174,11 +174,6 @@ const (
 	SchedJobRequestsCounter = "schedJobRequestsCounter"
 
 	/*
-		the number of async runners still waiting on task completion
-	*/
-	SchedNumAsyncRunnersGauge = "schedNumAsyncRunnersGauge"
-
-	/*
 		the number of jobs with tasks running.  Only reported by requestor
 	*/
 	SchedNumRunningJobsGauge = "schedNumRunningJobsGauge"

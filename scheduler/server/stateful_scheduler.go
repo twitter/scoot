@@ -369,7 +369,6 @@ type requestorCounts struct {
 	numJobsWaitingToStart  int
 	numTasksRunning        int
 	numTasksWaitingToStart int
-	numRemainingTasks      int // not completed tasks
 }
 
 /*
@@ -551,8 +550,6 @@ func (s *statefulScheduler) step() {
 //. number of jobs running or waiting to start
 func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
-	waitingTasks := 0
-	runningTasks := 0
 	jobsWaitingToStart := 0
 
 	requestorsCounts := make(map[string]*requestorCounts) // map of requestor to job and task stats counts
@@ -563,28 +560,19 @@ func (s *statefulScheduler) updateStats() {
 		if _, ok := s.requestorsCounts[requestor]; !ok {
 			// first time we've seen this requestor, initialize its map entry
 			counts := &requestorCounts{}
-			requestorsCounts[requestor] = counts
+			requestorsCounts[job.Job.Def.Requestor] = counts
 		}
 
-		running := job.GetNumRunning()
-		completed := job.GetNumCompleted()
-		remaining := len(job.Tasks) - completed
-		waiting := remaining - running
-		status := job.getJobStatus()
-		// accumulate totals independent of requestors
-		remainingTasks += remaining
-		waitingTasks += waiting
-		runningTasks += running
-
-		// totals by requestor
+		remainingTasks += (len(job.Tasks) - job.TasksCompleted)
 		if job.TasksCompleted+job.TasksRunning == 0 {
 			jobsWaitingToStart += 1
-		} else if status == domain.InProgress {
+			requestorsCounts[requestor].numJobsWaitingToStart++
+			requestorsCounts[requestor].numTasksWaitingToStart += len(job.Tasks)
+		} else if job.getJobStatus() == domain.InProgress {
 			requestorsCounts[requestor].numJobsRunning++
+			requestorsCounts[requestor].numTasksRunning += job.TasksRunning
+			requestorsCounts[requestor].numTasksWaitingToStart += len(job.Tasks) - job.TasksCompleted - job.TasksRunning
 		}
-		requestorsCounts[requestor].numRemainingTasks += remaining
-		requestorsCounts[requestor].numTasksRunning += running
-		requestorsCounts[requestor].numTasksWaitingToStart += waiting
 
 		if time.Now().Sub(job.TimeMarker) > LongJobDuration {
 			job.TimeMarker = time.Now()
@@ -614,17 +602,13 @@ func (s *statefulScheduler) updateStats() {
 			counts.numTasksRunning))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor)).Update(int64(
 			counts.numTasksWaitingToStart))
-		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedInProgressTasksGauge, requestor)).Update(int64(
-			counts.numRemainingTasks))
 	}
 
 	// publish the rest of the stats
 	s.stat.Gauge(stats.SchedAcceptedJobsGauge).Update(int64(len(s.inProgressJobs)))
 	s.stat.Gauge(stats.SchedWaitingJobsGauge).Update(int64(jobsWaitingToStart))
 	s.stat.Gauge(stats.SchedInProgressTasksGauge).Update(int64(remainingTasks))
-	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(runningTasks))
-	s.stat.Gauge(stats.SchedNumWaitingTasksGauge).Update(int64(waitingTasks))
-	s.stat.Gauge(stats.SchedNumAsyncRunnersGauge).Update(int64(s.asyncRunner.NumRunning())) //TODO remove when done debugging
+	s.stat.Gauge(stats.SchedNumRunningTasksGauge).Update(int64(s.asyncRunner.NumRunning()))
 
 	// print internal data structure sizes
 	var lbs *LoadBasedAlg = s.config.SchedAlg.(*LoadBasedAlg)
