@@ -2,6 +2,7 @@ package server
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -22,9 +23,10 @@ type jobState struct {
 	EndingSaga     bool         //denotes whether an EndSagaMsg is in progress or not
 	TasksCompleted int          //number of tasks that've been marked completed so far.
 	TasksRunning   int          //number of tasks that've been scheduled or started.
-	JobKilled      bool         //indicates the job was killed
-	TimeCreated    time.Time    //when was this job first created
-	TimeMarker     time.Time    //when was this job last marked (i.e. for reporting purposes)
+	stateMu        sync.RWMutex
+	JobKilled      bool      //indicates the job was killed
+	TimeCreated    time.Time //when was this job first created
+	TimeMarker     time.Time //when was this job last marked (i.e. for reporting purposes)
 
 	jobClass                       string
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
@@ -149,11 +151,14 @@ func (j *jobState) getUnScheduledTasks() []*taskState {
 // Update JobState to reflect that a Task has been started
 func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 	taskState := j.getTask(taskId)
+	start := time.Now()
 	taskState.Status = domain.InProgress
-	taskState.TimeStarted = time.Now()
+	taskState.TimeStarted = start
 	taskState.TaskRunner = tr
 	taskState.NumTimesTried++
+	j.stateMu.Lock()
 	j.TasksRunning++
+	j.stateMu.Unlock()
 
 	// add the task to the map of tasks by start time
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
@@ -166,14 +171,16 @@ func (j *jobState) taskStarted(taskId string, tr *taskRunner) {
 // Running param: true if taskStarted was called for this taskId.
 func (j *jobState) taskCompleted(taskId string, running bool) {
 	taskState := j.getTask(taskId)
-	taskState.Status = domain.Completed
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
+	taskState.Status = domain.Completed
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
+	j.stateMu.Lock()
 	j.TasksCompleted++
 	if running {
 		j.TasksRunning--
 	}
+	j.stateMu.Unlock()
 
 	// remove the task from the map of tasks by start time
 	j.removeTaskFromStartTimeMap(taskState.JobId, taskId, startTimeSec)
@@ -184,11 +191,13 @@ func (j *jobState) taskCompleted(taskId string, running bool) {
 // Update JobState to reflect that an error has occurred running this Task
 func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	taskState := j.getTask(taskId)
-	taskState.Status = domain.NotStarted
 	startTimeSec := taskState.TimeStarted.Truncate(time.Second)
+	taskState.Status = domain.NotStarted
 	taskState.TimeStarted = nilTime
 	taskState.TaskRunner = nil
+	j.stateMu.Lock()
 	j.TasksRunning--
+	j.stateMu.Unlock()
 	if preempted {
 		taskState.NumTimesTried--
 	}
@@ -198,9 +207,21 @@ func (j *jobState) errorRunningTask(taskId string, err error, preempted bool) {
 	j.logInconsistentStateValues()
 }
 
+func (j *jobState) GetNumRunning() int {
+	j.stateMu.RLock()
+	defer j.stateMu.RUnlock()
+	return j.TasksRunning
+}
+
+func (j *jobState) GetNumCompleted() int {
+	j.stateMu.RLock()
+	defer j.stateMu.RUnlock()
+	return j.TasksCompleted
+}
+
 // Returns the Current Job Status
 func (j *jobState) getJobStatus() domain.Status {
-	if j.TasksCompleted == len(j.Tasks) {
+	if j.GetNumCompleted() == len(j.Tasks) {
 		return domain.Completed
 	}
 	return domain.InProgress
