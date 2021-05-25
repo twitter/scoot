@@ -180,6 +180,7 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 	s, _, statsRegistry := initializeServices(sc, true)
 
 	jobDef := domain.GenJobDef(2)
+	jobDef.Requestor = "fakeRequestor"
 	go func() {
 		checkJobMsg := <-s.checkJobCh
 		checkJobMsg.resultCh <- nil
@@ -197,9 +198,12 @@ func Test_StatefulScheduler_AddJob(t *testing.T) {
 
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
-			stats.SchedAcceptedJobsGauge:    {Checker: stats.Int64EqTest, Value: 1},
-			stats.SchedInProgressTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
-			stats.SchedNumRunningTasksGauge: {Checker: stats.Int64EqTest, Value: 2},
+			stats.SchedAcceptedJobsGauge:                                     {Checker: stats.Int64EqTest, Value: 1},
+			stats.SchedInProgressTasksGauge:                                  {Checker: stats.Int64EqTest, Value: 2},
+			stats.SchedNumRunningTasksGauge:                                  {Checker: stats.Int64EqTest, Value: 2},
+			fmt.Sprintf("%s_fakeRequestor", stats.SchedInProgressTasksGauge): {Checker: stats.Int64EqTest, Value: 1},
+			fmt.Sprintf("%s_fakeRequestor", stats.SchedInProgressTasksGauge): {Checker: stats.Int64EqTest, Value: 2},
+			fmt.Sprintf("%s_fakeRequestor", stats.SchedNumRunningTasksGauge): {Checker: stats.Int64EqTest, Value: 2},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
@@ -652,22 +656,6 @@ func BenchmarkProcessKillJobsRequests(b *testing.B) {
 		validKillRequests := []jobKillRequest{{jobId: jobId, responseCh: make(chan error, 1)}}
 		s.processKillJobRequests(validKillRequests)
 	}
-}
-
-func checkGauges(requestor string, expectedCounts map[string]int, s *statefulScheduler,
-	t *testing.T, statsRegistry stats.StatsRegistry) bool {
-	// check the gauges
-	if !stats.StatsOk("", statsRegistry, t,
-		map[string]stats.Rule{
-			fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor):  {Checker: stats.Int64EqTest, Value: expectedCounts["jobRunning"]},
-			fmt.Sprintf("%s_%s", stats.SchedWaitingJobsGauge, requestor):     {Checker: stats.Int64EqTest, Value: expectedCounts["jobsWaitingToStart"]},
-			fmt.Sprintf("%s_%s", stats.SchedNumRunningTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numRunningTasks"]},
-			fmt.Sprintf("%s_%s", stats.SchedNumWaitingTasksGauge, requestor): {Checker: stats.Int64EqTest, Value: expectedCounts["numWaitingTasks"]},
-		}) {
-		return false
-	}
-
-	return true
 }
 
 func allTasksInState(jobName string, jobId string, s *statefulScheduler, status domain.Status) bool {
