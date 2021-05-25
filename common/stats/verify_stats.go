@@ -128,7 +128,7 @@ func StatsOk(tag string, statsRegistry StatsRegistry, t *testing.T, contains map
 
 				} else {
 					statsOk = false
-					ruleMsg := fmt.Sprintf("%s: got %v, expected to pass %s with %v", key, gotValue, rule.Checker.name, rule.Value)
+					ruleMsg := fmt.Sprintf("\n%s: got %v, expected to pass %s with %v", key, gotValue, rule.Checker.name, rule.Value)
 					msg.WriteString(fmt.Sprintln(ruleMsg))
 				}
 			}
