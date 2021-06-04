@@ -571,20 +571,61 @@ func (s *statefulScheduler) updateStats() {
 		remaining := len(job.Tasks) - completed
 		waiting := remaining - running
 		status := job.getJobStatus()
+
 		// accumulate totals independent of requestors
 		remainingTasks += remaining
 		waitingTasks += waiting
 		runningTasks += running
 
+		log.WithFields(
+			log.Fields{
+				"requestor":                requestor,
+				"jobType":                  job.Job.Def.JobType,
+				"jobId":                    job.Job.Id,
+				"tag":                      job.Job.Def.Tag,
+				"basis":                    job.Job.Def.Basis,
+				"priority":                 job.Job.Def.Priority,
+				"numTasks":                 len(job.Tasks),
+				"tasksRunning":             job.TasksRunning,
+				"tasksCompleted":           job.TasksCompleted,
+				"runTime":                  time.Now().Sub(job.TimeCreated),
+				"totalRunning":             runningTasks,
+				"totalWaiting":             waitingTasks,
+				"totalRemaining":           remainingTasks,
+				"requestorScopedRunning":   running,
+				"requestorScopedWaiting":   completed,
+				"requestorScopedRemaining": remaining,
+			}).Info("In progress jobs requestor calculation")
+
 		// totals by requestor
+		log.WithFields(
+			log.Fields{
+				"requestor":              requestor,
+				"numJobsRunning":         requestorsCounts[requestor].numJobsRunning,
+				"numJobsWaitingToStart":  requestorCounts[requestor].jobsWaitingToStart,
+				"numTasksRunning":        requestorsCounts[requestor].numTasksRunning,
+				"numTasksWaitingToStart": requestorsCounts[requestor].numTasksWaitingToStart,
+				"numRemainingTasks":      requestorsCounts[requestor].numRemainingTasks,
+			}).log.Infof("RequestorCounts state before calculation")
 		if job.TasksCompleted+job.TasksRunning == 0 {
-			jobsWaitingToStart += 1
+			jobsWaitingToStart++
+			requestorCounts[requestor].jobsWaitingToStart++
 		} else if status == domain.InProgress {
 			requestorsCounts[requestor].numJobsRunning++
 		}
 		requestorsCounts[requestor].numRemainingTasks += remaining
 		requestorsCounts[requestor].numTasksRunning += running
 		requestorsCounts[requestor].numTasksWaitingToStart += waiting
+
+		log.WithFields(
+			log.Fields{
+				"requestor":              requestor,
+				"numJobsRunning":         requestorsCounts[requestor].numJobsRunning,
+				"numJobsWaitingToStart":  requestorCounts[requestor].jobsWaitingToStart,
+				"numTasksRunning":        requestorsCounts[requestor].numTasksRunning,
+				"numTasksWaitingToStart": requestorsCounts[requestor].numTasksWaitingToStart,
+				"numRemainingTasks":      requestorsCounts[requestor].numRemainingTasks,
+			}).log.Infof("RequestorCounts state after calculation")
 
 		if time.Now().Sub(job.TimeMarker) > LongJobDuration {
 			job.TimeMarker = time.Now()
@@ -603,6 +644,11 @@ func (s *statefulScheduler) updateStats() {
 				}).Info("Long-running job")
 		}
 	}
+
+	log.WithFields(
+		log.Fields{
+			"requestorCounts": requestorsCounts,
+		}).log.Infof("RequestorCounts state after full loop")
 
 	// publish the requestor stats
 	for requestor, counts := range requestorsCounts {
