@@ -1,5 +1,11 @@
 package async
 
+import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
 // An AsyncMailbox stores AsyncErrors and their associated callbacks
 // and invokes them once the AsyncError is completed
 //
@@ -105,6 +111,7 @@ func (bx *Mailbox) NewAsyncError(cb AsyncErrorResponseHandler) *AsyncError {
 // the callback function and removes the message from the mailbox
 func (bx *Mailbox) ProcessMessages() {
 	var unCompletedMsgs []message
+	start := time.Now()
 	for _, msg := range bx.msgs {
 		ok, err := msg.Err.TryGetValue()
 
@@ -115,6 +122,7 @@ func (bx *Mailbox) ProcessMessages() {
 			unCompletedMsgs = append(unCompletedMsgs, msg)
 		}
 	}
+	log.Infof("processed (worker) messages in %v", time.Since(start))
 
 	// reset inProgress messages to unCompletedMsgs only
 	bx.msgs = unCompletedMsgs

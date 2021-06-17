@@ -52,14 +52,14 @@ func (h *Handler) RunJob(def *scoot.JobDefinition) (*scoot.JobId, error) {
 func (h *Handler) GetStatus(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobStatusLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobStatusCounter).Inc(1)
-	return schedthrift.GetJobStatus(jobId, h.sagaCoord)
+	return schedthrift.GetJobStatus(jobId, h.sagaCoord, h.stat)
 }
 
 // Implements KillJob Cloud Scoot API
 func (h *Handler) KillJob(jobId string) (*scoot.JobStatus, error) {
 	defer h.stat.Latency(stats.SchedServerJobKillLatency_ms).Time().Stop()
 	h.stat.Counter(stats.SchedServerJobKillCounter).Inc(1)
-	return schedthrift.KillJob(jobId, h.scheduler, h.sagaCoord)
+	return schedthrift.KillJob(jobId, h.scheduler, h.sagaCoord, h.stat)
 }
 
 // Implements OfflineWorker Cloud Scoot API

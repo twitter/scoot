@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
 	s "github.com/twitter/scoot/saga"
@@ -23,7 +24,7 @@ func Test_GetJobStatus_InternalLogError(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInternalLogError("test error"))
 	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
 
-	status, err := GetJobStatus("job1", sagaCoord)
+	status, err := GetJobStatus("job1", sagaCoord, stats.NilStatsReceiver())
 	if err == nil {
 		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
 	}
@@ -47,7 +48,7 @@ func Test_GetJobStatus_InvalidRequestError(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInvalidRequestError("test error"))
 	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
 
-	status, err := GetJobStatus("job1", sagaCoord)
+	status, err := GetJobStatus("job1", sagaCoord, stats.NilStatsReceiver())
 	if err == nil {
 		t.Error("Expected error to be returned when SagaLog fails to retrieve messages")
 	}
@@ -71,7 +72,7 @@ func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, nil)
 	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
 
-	status, err := GetJobStatus("job1", sagaCoord)
+	status, err := GetJobStatus("job1", sagaCoord, stats.NilStatsReceiver())
 	if err != nil {
 		t.Error("Unexpected error returned", err)
 	}
@@ -215,7 +216,7 @@ func TestRunStatusRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jobStatus, err := GetJobStatus(jobID, sagaCoord)
+	jobStatus, err := GetJobStatus(jobID, sagaCoord, stats.NilStatsReceiver())
 	if err != nil {
 		t.Fatal(err)
 	}

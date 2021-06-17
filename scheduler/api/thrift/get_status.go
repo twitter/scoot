@@ -1,6 +1,11 @@
 package thrift
 
 import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	s "github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
@@ -8,8 +13,11 @@ import (
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
-func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) {
+func GetJobStatus(jobId string, sc s.SagaCoordinator, stat stats.StatsReceiver) (*scoot.JobStatus, error) {
+	start := time.Now()
 	state, err := sc.GetSagaState(jobId)
+	getSagaStateDur := time.Since(start)
+	stat.Gauge(stats.SchedGetJobStatusSagaLatencySec).Update(int64(getSagaStateDur.Seconds()))
 
 	if err != nil {
 		js := scoot.NewJobStatus()
@@ -23,6 +31,7 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) 
 			err = scoot.NewScootServerError()
 		}
 
+		log.Infof("returning error: %s", err)
 		return js, err
 	}
 
@@ -37,7 +46,15 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator) (*scoot.JobStatus, error) 
 		return js, nil
 	}
 
-	return convertSagaStateToJobStatus(state), nil
+	start = time.Now()
+	scootJs := convertSagaStateToJobStatus(state)
+
+	// log and record stats
+	convertDur := time.Since(start)
+	log.Infof("GetJobStatus took %v (%v in GetSagaState, %v in convertSagaState), for job: %s", getSagaStateDur+convertDur, getSagaStateDur, convertDur, jobId)
+	stat.Gauge(stats.SchedGetJobStatusConversionLatencySec).Update(int64(convertDur.Seconds()))
+
+	return scootJs, nil
 }
 
 // Converts a SagaState to a corresponding JobStatus

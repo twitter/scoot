@@ -150,7 +150,18 @@ const (
 	/*
 		the number of times the processing failed to serialize the workerapi status object
 	*/
+
 	SchedFailedTaskSerializeCounter = "failedTaskSerializeCounter"
+	/*
+		the time (sec) to get the job's status structure from sagalog
+	*/
+
+	SchedGetJobStatusSagaLatencySec = "schedGetStatusSagaGaugeSec"
+	/*
+		the time (sec) to convert the sagalog structure to the return structure
+	*/
+	SchedGetJobStatusConversionLatencySec = "schedGetStatusConversionGaugeSec"
+
 	/*
 		The number of tasks from the inProgress list waiting to start or running.
 	*/

@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/server"
@@ -25,13 +26,13 @@ func Test_KillJob(t *testing.T) {
 	s := makeMockScheduler(t)
 
 	// test scheduler.KillJob returning a non-null error
-	_, err := KillJob("err", s, sc)
+	_, err := KillJob("err", s, sc, stats.NilStatsReceiver())
 	if err == nil {
 		t.Fatal("Expected error insted got nil")
 	}
 
 	// test scheduler.KillJob not finding an error and KillJob calling GetJobStatus
-	st, err := KillJob("1", s, sc)
+	st, err := KillJob("1", s, sc, stats.NilStatsReceiver())
 	if err != nil {
 		t.Fatalf("Expected error to be nil, instead got %s", err.Error())
 	}
