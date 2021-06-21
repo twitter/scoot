@@ -82,6 +82,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"jobID":  cmd.JobID,
 			"taskID": cmd.TaskID,
 		}).Info("*Invoker.run()")
+	inv.stat.Gauge(stats.WorkerRunningTask).Update(1)
+	defer inv.stat.Gauge(stats.WorkerRunningTask).Update(0)
 
 	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
 

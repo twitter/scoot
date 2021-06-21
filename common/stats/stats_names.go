@@ -430,6 +430,11 @@ const (
 	WorkerMemory = "memory"
 
 	/*
+		A gauge used to indicate if the worker is currently running a task or if is idling
+	*/
+	WorkerRunningTask = "runningTask"
+
+	/*
 		the number of abort requests received by the worker
 	*/
 	WorkerServerAborts = "aborts"
