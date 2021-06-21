@@ -1,6 +1,8 @@
 package cluster
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"sort"
 )
 
@@ -37,6 +39,7 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 	sort.Sort(NodeSorter(removed))
 	outgoing := []NodeUpdate{}
 	for _, n := range added {
+		log.Infof("NodeAdded update: %s", n)
 		outgoing = append(outgoing, NodeUpdate{
 			UpdateType: NodeAdded,
 			Id:         n.Id(),
@@ -44,6 +47,7 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 		})
 	}
 	for _, n := range removed {
+		log.Infof("NodeRemoved update: %s", n)
 		outgoing = append(outgoing, NodeUpdate{
 			UpdateType: NodeRemoved,
 			Id:         n.Id(),
@@ -52,6 +56,7 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 	// reset nodes map, assign to new state
 	s.nodes = make(map[NodeId]Node)
 	for _, n := range newState {
+		log.Infof("Node %s included in new cluster state", n)
 		s.nodes[n.Id()] = n
 	}
 	return outgoing
