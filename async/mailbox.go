@@ -122,7 +122,7 @@ func (bx *Mailbox) ProcessMessages() {
 			unCompletedMsgs = append(unCompletedMsgs, msg)
 		}
 	}
-	log.Infof("processed (worker) messages in %v", time.Since(start))
+	log.Infof("processed %d (worker) messages in %v", len(bx.msgs), time.Since(start))
 
 	// reset inProgress messages to unCompletedMsgs only
 	bx.msgs = unCompletedMsgs

@@ -47,14 +47,14 @@ func GetJobStatus(jobId string, sc s.SagaCoordinator, stat stats.StatsReceiver) 
 	}
 
 	start = time.Now()
-	scootJs := convertSagaStateToJobStatus(state)
+	js := convertSagaStateToJobStatus(state)
 
 	// log and record stats
 	convertDur := time.Since(start)
-	log.Infof("GetJobStatus took %v (%v in GetSagaState, %v in convertSagaState), for job: %s", getSagaStateDur+convertDur, getSagaStateDur, convertDur, jobId)
+	log.Infof("GetJobStatus took %v (%v in GetSagaState, %v in convertSagaStßate), for job: %s", getSagaStateDur+convertDur, getSagaStateDur, convertDur, jobId)
 	stat.Gauge(stats.SchedGetJobStatusConversionLatencySec).Update(int64(convertDur.Seconds()))
 
-	return scootJs, nil
+	return js, nil
 }
 
 // Converts a SagaState to a corresponding JobStatus
