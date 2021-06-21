@@ -56,7 +56,6 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 	// reset nodes map, assign to new state
 	s.nodes = make(map[NodeId]Node)
 	for _, n := range newState {
-		log.Infof("Node %s included in new cluster state", n)
 		s.nodes[n.Id()] = n
 	}
 	return outgoing
