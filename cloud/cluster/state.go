@@ -23,6 +23,7 @@ func makeState(nodes []Node) *state {
 // node updates based on the diff
 func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 	added := []Node{}
+	oldStateLen := len(s.nodes)
 	for _, n := range newState {
 		if _, exists := s.nodes[n.Id()]; exists {
 			// remove from s.nodes so that s.nodes only contains nodes removed in this diff
@@ -53,6 +54,8 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 			Id:         n.Id(),
 		})
 	}
+
+	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d\nNumber of nodes in newState: %d\nNumber of nodes in old state: %d", len(added), len(removed), len(newState), oldStateLen)
 	// reset nodes map, assign to new state
 	s.nodes = make(map[NodeId]Node)
 	for _, n := range newState {

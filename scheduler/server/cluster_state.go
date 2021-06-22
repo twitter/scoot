@@ -228,10 +228,13 @@ func (c *clusterState) updateCluster() {
 //TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
 func (c *clusterState) update(updates []cluster.NodeUpdate) {
 	// Apply updates
+	adds := 0
+	removals := 0
 	for _, update := range updates {
 		var newNode *nodeState
 		switch update.UpdateType {
 		case cluster.NodeAdded:
+			adds += 1
 			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
 				log.Infof("Reinstating node %s", update.Id)
@@ -254,7 +257,6 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				} else {
 					log.Infof("Ignoring NodeAdded event for suspended flaky node. %v (%s)", update.Id, ns)
 				}
-
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
 				if c.readyFn == nil {
@@ -271,13 +273,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
-
 			} else {
 				// This node is already present, log this spurious add.
 				log.Infof("Node already added!! %v (%s)", update.Id, ns)
 			}
 
 		case cluster.NodeRemoved:
+			removals += 1
 			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
 				log.Infof("Offlining node %s", update.Id)
@@ -295,20 +297,19 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				log.Infof("Already suspended node marked as removed: %v (was %s)", update.Id, ns)
 				ns.timeLost = time.Now()
 				ns.timeFlaky = nilTime
-
 			} else if ns, ok := c.nodes[update.Id]; ok {
 				// This was a healthy node, mark it as lost now.
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
 				log.Infof("Removing node by marking as lost: %v (%s), %s", update.Id, ns, c.status())
-
 			} else {
 				// We don't know about this node, log spurious remove.
 				log.Infof("Cannot remove unknown node: %v", update.Id)
 			}
 		}
 	}
+	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d", adds, removals)
 
 	// Clean up lost nodes that haven't recovered in time, add flaky nodes back into rotation after some time,
 	// and check if newly added non-ready nodes are ready to be put into rotation.
