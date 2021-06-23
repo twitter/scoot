@@ -605,6 +605,9 @@ func (s *statefulScheduler) updateStats() {
 	}
 
 	// publish the requestor stats
+	tasksRunningCheckSum := 0
+	tasksWaitingCheckSum := 0
+	tasksRemainingCheckSum := 0
 	for requestor, counts := range requestorsCounts {
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedNumRunningJobsGauge, requestor)).Update(int64(
 			counts.numJobsRunning))
@@ -616,6 +619,14 @@ func (s *statefulScheduler) updateStats() {
 			counts.numTasksWaitingToStart))
 		s.stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedInProgressTasksGauge, requestor)).Update(int64(
 			counts.numRemainingTasks))
+		tasksRunningCheckSum += counts.numTasksRunning
+		tasksWaitingCheckSum += counts.numTasksWaitingToStart
+		tasksRemainingCheckSum += counts.numRemainingTasks
+	}
+
+	if tasksRunningCheckSum != runningTasks || tasksWaitingCheckSum != waitingTasks || tasksRemainingCheckSum != remainingTasks {
+		log.Errorf("stats checksum error\nrunning: expected: %d, got:%d\n waiting: expected: %d, got:%d\nremaining: expected:%d, got:%d",
+			runningTasks, tasksRunningCheckSum, waitingTasks, tasksWaitingCheckSum, remainingTasks, tasksRemainingCheckSum)
 	}
 
 	// publish the rest of the stats
