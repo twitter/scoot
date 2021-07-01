@@ -839,3 +839,44 @@ func validateCompletionCounts(s *statefulScheduler, t *testing.T) {
 	assert.Equal(t, totalMapRunning, running, "running count from tasksByJobClassAndStartTimeSec map (%d) is not equal to running from scheduler (%d)",
 		totalMapRunning, running)
 }
+
+func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	s, _, _ := initializeServices(sc, false)
+	s.SetClassLoadPercents(map[string]int32{"land": 60, "diff": 40})
+	s.SetRequestorToClassMap(map[string]string{"land": "land", "diff": "diff"})
+
+	requestors := []string{"land", "diff", "land", "diff", "land"}
+	// put 5 jobs in the queue
+	for i := 0; i < 5; i++ {
+		jobDef := domain.GenJobDef((i + 1))
+		for j := 0; j < len(jobDef.Tasks); j++ {
+			jobDef.Tasks[j].TaskID = fmt.Sprintf("job:%d, task: %d", i, j)
+		}
+		jobDef.Requestor = requestors[i]
+		jobDef.Priority = domain.P0
+
+		go func() {
+			// simulate checking the job and returning no error, so ScheduleJob() will put the job definition
+			// immediately on the addJobCh
+			checkJobMsg := <-s.checkJobCh
+			checkJobMsg.resultCh <- nil
+		}()
+
+		s.ScheduleJob(jobDef)
+		s.addJobs()
+	}
+
+	s.step()
+
+	tmp := string(s.stat.Render(true))
+	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge\": 15"))
+	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_diff\": 6"))
+	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_land\": 9"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge\": 5"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_diff\": 2"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_land\": 3"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge\": 10"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_diff\": 4"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_land\": 6"))
+}
