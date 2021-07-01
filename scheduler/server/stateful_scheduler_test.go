@@ -843,10 +843,10 @@ func validateCompletionCounts(s *statefulScheduler, t *testing.T) {
 func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
 	s, _, _ := initializeServices(sc, false)
-	s.SetClassLoadPercents(map[string]int32{"land": 60, "diff": 40})
-	s.SetRequestorToClassMap(map[string]string{"land": "land", "diff": "diff"})
+	s.SetClassLoadPercents(map[string]int32{"fake R1": 60, "fake R2": 40})
+	s.SetRequestorToClassMap(map[string]string{"fake R1": "fake R1", "fake R2": "fake R2"})
 
-	requestors := []string{"land", "diff", "land", "diff", "land"}
+	requestors := []string{"fake R1", "fake R1", "fake R1", "fake R2", "fake R2"}
 	// put 5 jobs in the queue
 	for i := 0; i < 5; i++ {
 		jobDef := domain.GenJobDef((i + 1))
@@ -870,13 +870,14 @@ func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 	s.step()
 
 	tmp := string(s.stat.Render(true))
+	fmt.Println(tmp)
 	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge\": 15"))
-	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_diff\": 6"))
-	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_land\": 9"))
+	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_fake R1\": 6"))
+	assert.True(t, strings.Contains(tmp, "\"schedInProgressTasksGauge_fake R2\": 9"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge\": 5"))
-	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_diff\": 2"))
-	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_land\": 3"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_fake R1\": 3"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumRunningTasksGauge_fake R2\": 2"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge\": 10"))
-	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_diff\": 4"))
-	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_land\": 6"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R1\": 3"))
+	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R2\": 7"))
 }
