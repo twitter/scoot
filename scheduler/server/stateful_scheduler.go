@@ -321,7 +321,6 @@ func NewStatefulScheduler(
 		requestorMap:     make(map[string][]*jobState),
 		requestorHistory: requestorHistory,
 		taskDurations:    taskDurations,
-		requestorsCounts: make(map[string]map[string]int),
 		stat:             stat,
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
@@ -560,7 +559,7 @@ func (s *statefulScheduler) updateStats() {
 	// get job and task counts by requestor, and overall jobs stats
 	for _, job := range s.inProgressJobs {
 		requestor := job.Job.Def.Requestor
-		if _, ok := s.requestorsCounts[requestor]; !ok {
+		if _, ok := requestorsCounts[requestor]; !ok {
 			// first time we've seen this requestor, initialize its map entry
 			counts := &requestorCounts{}
 			requestorsCounts[requestor] = counts
