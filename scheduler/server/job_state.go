@@ -71,7 +71,7 @@ func (s taskStatesByDuration) Less(i, j int) bool {
 // The jobState will reflect any previous progress made on this job and logged to the Sagalog
 // Note: taskDurations is optional and only used to enable sorts using taskStatesByDuration above.
 func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDurations *lru.Cache,
-	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID) *jobState {
+	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID, durationKeyExtractor func(string) string) *jobState {
 	j := &jobState{
 		Job:                            job,
 		Saga:                           saga,
@@ -88,10 +88,12 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 
 	for _, taskDef := range job.Def.Tasks {
 		var duration time.Duration
+		origKey := taskDef.TaskID
+		durationKey := durationKeyExtractor(origKey)
 		if taskDurations != nil {
-			if iface, ok := taskDurations.Get(taskDef.TaskID); !ok {
+			if iface, ok := taskDurations.Get(durationKey); !ok {
 				duration = math.MaxInt64
-				addOrUpdateTaskDuration(taskDurations, taskDef.TaskID, duration)
+				addOrUpdateTaskDuration(taskDurations, durationKey, duration)
 			} else {
 				if ad, ok := iface.(*averageDuration); ok {
 					duration = ad.duration
