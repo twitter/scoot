@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -1292,6 +1293,7 @@ func addOrUpdateTaskDuration(taskDurations *lru.Cache, durationKey string, d tim
 	} else {
 		ad, ok = iface.(*averageDuration)
 		if !ok {
+			log.Errorf("task duration object was not *averageDuration type!  (it is %s)", reflect.TypeOf(ad))
 			return
 		}
 		ad.update(d)
