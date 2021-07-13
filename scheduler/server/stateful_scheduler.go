@@ -89,8 +89,8 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-// defaultDurationKeyExtractor returns an unchanged key.
-func defaultDurationKeyExtractor(key string) string {
+// nopDurationKeyExtractor returns an unchanged key.
+func nopDurationKeyExtractor(key string) string {
 	return key
 }
 
@@ -313,7 +313,7 @@ func NewStatefulScheduler(
 
 	dkef := durationKeyExtractorFn
 	if durationKeyExtractorFn == nil {
-		dkef = defaultDurationKeyExtractor
+		dkef = nopDurationKeyExtractor
 	}
 
 	sched := &statefulScheduler{

@@ -88,8 +88,7 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 
 	for _, taskDef := range job.Def.Tasks {
 		var duration time.Duration
-		origKey := taskDef.TaskID
-		durationKey := durationKeyExtractor(origKey)
+		durationKey := durationKeyExtractor(taskDef.TaskID)
 		if taskDurations != nil {
 			if iface, ok := taskDurations.Get(durationKey); !ok {
 				duration = math.MaxInt64
