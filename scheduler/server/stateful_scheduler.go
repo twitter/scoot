@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -87,6 +88,11 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+// nopDurationKeyExtractor returns an unchanged key.
+func nopDurationKeyExtractor(key string) string {
+	return key
 }
 
 // Scheduler Config variables read at initialization
@@ -306,6 +312,11 @@ func NewStatefulScheduler(
 		return nil
 	}
 
+	dkef := durationKeyExtractorFn
+	if durationKeyExtractorFn == nil {
+		dkef = nopDurationKeyExtractor
+	}
+
 	sched := &statefulScheduler{
 		config:        &config,
 		sagaCoord:     sc,
@@ -325,7 +336,7 @@ func NewStatefulScheduler(
 
 		tasksByJobClassAndStartTimeSec: tasksByClassAndStartMap,
 		persistor:                      persistor,
-		durationKeyExtractorFn:         durationKeyExtractorFn,
+		durationKeyExtractorFn:         dkef,
 	}
 
 	sched.setThrottle(-1)
@@ -778,7 +789,7 @@ func (s *statefulScheduler) addJobsLoop() {
 
 			reqToClassMap, _ := s.GetRequestorToClassMap()
 			jc := GetRequestorClass(newJobMsg.job.Def.Requestor, reqToClassMap)
-			js := newJobState(newJobMsg.job, jc, newJobMsg.saga, s.taskDurations, s.tasksByJobClassAndStartTimeSec)
+			js := newJobState(newJobMsg.job, jc, newJobMsg.saga, s.taskDurations, s.tasksByJobClassAndStartTimeSec, s.durationKeyExtractorFn)
 			s.inProgressJobs = append(s.inProgressJobs, js)
 
 			sort.Sort(sort.Reverse(taskStatesByDuration(js.Tasks)))
@@ -910,10 +921,7 @@ func (s *statefulScheduler) scheduleTasks() {
 		jobState := s.getJob(jobID)
 		sa := jobState.Saga
 		rs := s.runnerFactory(nodeSt.node)
-		durationID := taskID
-		if s.durationKeyExtractorFn != nil {
-			durationID = s.durationKeyExtractorFn(durationID)
-		}
+		durationID := s.durationKeyExtractorFn(taskID)
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
@@ -1276,19 +1284,20 @@ func addOrUpdateRequestorHistory(requestorHistory *lru.Cache, requestor, newHist
 	requestorHistory.Add(requestor, history)
 }
 
-func addOrUpdateTaskDuration(taskDurations *lru.Cache, taskId string, d time.Duration) {
+func addOrUpdateTaskDuration(taskDurations *lru.Cache, durationKey string, d time.Duration) {
 	var ad *averageDuration
-	iface, ok := taskDurations.Get(taskId)
+	iface, ok := taskDurations.Get(durationKey)
 	if !ok {
 		ad = &averageDuration{count: 1, duration: d}
+		taskDurations.Add(durationKey, ad)
 	} else {
 		ad, ok = iface.(*averageDuration)
 		if !ok {
+			log.Errorf("task duration object was not *averageDuration type!  (it is %s)", reflect.TypeOf(ad))
 			return
 		}
 		ad.update(d)
 	}
-	taskDurations.Add(taskId, ad)
 }
 
 // set the max schedulable tasks.   -1 = unlimited, 0 = don't accept any more requests, >0 = only accept job

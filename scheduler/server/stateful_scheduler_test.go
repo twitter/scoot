@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/twitter/scoot/scheduler/setup/worker"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
+	"github.com/twitter/scoot/tests/testhelpers"
 )
 
 //Mocks sometimes hang without useful output, this allows early exit with err msg.
@@ -880,4 +882,45 @@ func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge\": 10"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R1\": 3"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R2\": 7"))
+}
+
+// Test creating job definitions with tasks in descending duration order
+func Test_TaskAssignments_TasksScheduledByDuration(t *testing.T) {
+	// create a test cluster with 3 nodes
+	testCluster := makeTestCluster("node1", "node2", "node3")
+	s := getDebugStatefulScheduler(testCluster)
+	taskKeyFn := func(key string) string {
+		keyParts := strings.Split(key, " ")
+		return keyParts[len(keyParts)-1]
+	}
+	s.durationKeyExtractorFn = taskKeyFn
+
+	// create a jobdef with 10 tasks
+	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
+
+	// set the scheduler's current (fake) duration data
+	for i := range job.Def.Tasks {
+		// update TaskID to match what we are really seeing from our clients (GenJob() generates different values needed by other tests)
+		job.Def.Tasks[i].TaskID = strings.Join(job.Def.Tasks[i].Argv, " ")
+		addOrUpdateTaskDuration(s.taskDurations, s.durationKeyExtractorFn(job.Def.Tasks[i].TaskID), time.Duration(i)*time.Second)
+	}
+	go func() {
+		// simulate checking the job and returning no error, so ScheduleJob() will put the job definition
+		// immediately on the addJobCh
+		checkJobMsg := <-s.checkJobCh
+		checkJobMsg.resultCh <- nil
+	}()
+
+	s.ScheduleJob(job.Def)
+	s.addJobs()
+
+	js1 := s.inProgressJobs[0]
+	// verify tasks are in descending duration order
+	for i, task := range js1.Tasks {
+		assert.True(t, task.AvgDuration != time.Duration(math.MaxInt64), "average duration not found for task %d, %v", i, task)
+		if i == 0 {
+			continue
+		}
+		assert.True(t, js1.Tasks[i-1].AvgDuration >= task.AvgDuration, fmt.Sprintf("tasks not in descending duration order at task %d, %v", i, task))
+	}
 }

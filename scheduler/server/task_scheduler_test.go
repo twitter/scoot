@@ -19,7 +19,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
-	js := newJobState(&job, "", saga, nil, nil)
+	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	// create a test cluster with no nodes
 	testCluster := makeTestCluster()
@@ -32,7 +32,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 }
 
 func Test_TaskAssignment_NoTasks(t *testing.T) {
-	// create a test cluster with no nodes
+	// create a test cluster with 5 nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	s := getDebugStatefulScheduler(testCluster)
 	assignments := getTaskAssignments([]*jobState{}, s)
@@ -49,9 +49,9 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
-	js := newJobState(&job, "", saga, nil, nil)
+	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
-	// create a test cluster with no nodes
+	// create a test cluster with 5 nodes
 	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 	s := getDebugStatefulScheduler(testCluster)
 	unScheduledTasks := js.getUnScheduledTasks()
