@@ -105,7 +105,7 @@ func (r *taskRunner) run() error {
 	shouldDeadLetter := (err != nil && (end || r.markCompleteOnFailure))
 	shouldLog := (err == nil) || shouldDeadLetter
 
-	// Update taskErr state if it's empty or if we're doing deadletter..
+	// Update taskErr's Error to indicate we got an empty status back
 	if taskErr.st.State == runner.UNKNOWN {
 		taskErr.st.Error = emptyStatusError(r.JobID, r.TaskID, err)
 	}
