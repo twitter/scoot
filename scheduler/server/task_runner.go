@@ -17,7 +17,7 @@ import (
 const DeadLetterTrailer = " -> Error(s) encountered, canceling task."
 
 func emptyStatusError(jobId string, taskId string, err error) string {
-	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %s", jobId, taskId, err)
+	return fmt.Sprintf("Empty run status, jobId: %s, taskId: %s, err: %v", jobId, taskId, err)
 }
 
 type abortReq struct {
@@ -55,7 +55,7 @@ type taskError struct {
 }
 
 func (t *taskError) Error() string {
-	return fmt.Sprintf("TaskError: saga: %v ### runner: %v ### result: %v", t.sagaErr, t.runnerErr, t.resultErr)
+	return fmt.Sprintf("TaskError: saga: %v ### runner: %v ### result: %v, state:%s", t.sagaErr, t.runnerErr, t.resultErr, t.st.State)
 }
 
 // Run the task on the specified worker, and update the SagaLog appropriately.  Returns an error if an
@@ -107,7 +107,6 @@ func (r *taskRunner) run() error {
 
 	// Update taskErr state if it's empty or if we're doing deadletter..
 	if taskErr.st.State == runner.UNKNOWN {
-		taskErr.st.State = runner.FAILED
 		taskErr.st.Error = emptyStatusError(r.JobID, r.TaskID, err)
 	}
 	if shouldDeadLetter {

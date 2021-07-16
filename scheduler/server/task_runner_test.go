@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -174,20 +175,19 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	testErr := errors.New("Test Error, Failed Running Task On Worker")
 	// setup mock worker that returns an error.
 	chaos := runners.NewChaosRunner(nil)
-
-	chaos.SetError(testErr)
-
+	chaos.SetError(fmt.Errorf("Failed to run on worker"))
+	runStatus := runner.RunStatus{State: runner.FAILED}
+	runStatus.JobID = "job1"
+	runStatus.TaskID = "task1"
+	chaos.SetRunStatus(runStatus)
 	// set up a mock saga log that verifies task is started and completed with a failed task
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
-	var retStatus runner.RunStatus
 
-	retStatus.State = runner.FAILED
-	retStatus.Error = emptyStatusError("job1", "task1", testErr) + DeadLetterTrailer
-	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(retStatus)
+	runStatus.Error = DeadLetterTrailer // this message is added by task_runner
+	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(runStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
 
@@ -199,6 +199,37 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	if err.(*taskError).runnerErr == nil {
 		t.Errorf("Expected result error to not be nil, got: %v", err)
 	}
+}
+
+// Test_cannotGetStatusFromWorkerReturnsFlakyResult verify that the result has an error and
+// state is not runner.Failed (this triggers stateful_scheduler to mark the worker as flaky)
+func Test_cannotGetStatusFromWorkerReturnsFlakyResult(t *testing.T) {
+	log.Debug("Test_cannotGetStatusFromWorkerReturnsFlakyResult")
+	task := domain.GenTask()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// setup mock worker that returns an error.
+	chaos := runners.NewChaosRunner(nil)
+	chaos.SetError(fmt.Errorf("connection error"))
+	chaos.SetRunStatus(runner.RunStatus{State: runner.UNKNOWN})
+
+	// set up a mock saga log that verifies task is started and completed with a task with Unknown
+	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("job1", nil)
+	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+	msgMatcher = TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
+	sagaLogMock.EXPECT().LogMessage(msgMatcher)
+
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	s, _ := sagaCoord.MakeSaga("job1", nil)
+
+	err := get_testTaskRunner(s, chaos, "job1", "task1", task, true, stats.NilStatsReceiver()).run()
+
+	assert.NotNil(t, err.(*taskError).runnerErr)
+	assert.Equal(t, err.(*taskError).st.State, runner.UNKNOWN)
+	assert.Equal(t, fmt.Sprintf("%s", err.(*taskError).runnerErr), "connection error")
 }
 
 func Test_runTaskWithFailedStartTask(t *testing.T) {

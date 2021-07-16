@@ -55,7 +55,9 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 		})
 	}
 
-	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d\nNumber of nodes in newState: %d\nNumber of nodes in old state: %d", len(added), len(removed), len(newState), oldStateLen)
+	if len(added) > 0 || len(removed) > 0 {
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d\nNumber of nodes in newState: %d\nNumber of nodes in old state: %d", len(added), len(removed), len(newState), oldStateLen)
+	}
 	// reset nodes map, assign to new state
 	s.nodes = make(map[NodeId]Node)
 	for _, n := range newState {
