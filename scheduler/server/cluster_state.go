@@ -35,6 +35,7 @@ type clusterState struct {
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
+	nopUpdateCnt     int
 }
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
@@ -310,8 +311,14 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 	}
 
+	// debugging scheduler performance issues: record when we see nodes being added removed
+	// also record how many times we've checked and didn't see any changes (we're wondering if
+	// this go routine is being swapped out for long periods of time).
 	if adds > 0 || removals > 0 {
-		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d", adds, removals)
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, (%d cluster updates with no change)", adds, removals, c.nopUpdateCnt)
+		c.nopUpdateCnt = 0
+	} else {
+		c.nopUpdateCnt++
 	}
 
 	// Clean up lost nodes that haven't recovered in time, add flaky nodes back into rotation after some time,
