@@ -19,10 +19,11 @@ func NewChaosRunner(delegate runner.Service) *ChaosRunner {
 // ChaosRunner implements Runner by calling to a delegate runner in the happy path,
 // but delaying a random time between 0 and MaxDelay, or returning an error
 type ChaosRunner struct {
-	del      runner.Service
-	mu       sync.Mutex
-	maxDelay time.Duration
-	err      error
+	del       runner.Service
+	mu        sync.Mutex
+	maxDelay  time.Duration
+	err       error
+	runStatus runner.RunStatus
 }
 
 // Chaos Controls
@@ -32,6 +33,10 @@ func (r *ChaosRunner) SetError(err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.err = err
+}
+
+func (r *ChaosRunner) SetRunStatus(status runner.RunStatus) {
+	r.runStatus = status
 }
 
 // SetDelay sets the max delay to delay; the actual delay will be randomly selected up to delay
@@ -55,7 +60,7 @@ func (r *ChaosRunner) delay() error {
 func (r *ChaosRunner) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {
-		return runner.RunStatus{}, err
+		return r.runStatus, err
 	}
 	return r.del.Run(cmd)
 }

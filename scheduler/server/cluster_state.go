@@ -35,6 +35,7 @@ type clusterState struct {
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
+	nopUpdateCnt     int
 }
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
@@ -237,25 +238,25 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			adds += 1
 			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
-				log.Infof("Reinstating node %s", update.Id)
+				log.Infof("NodeAdded: Reinstating node %s", update.Id)
 				if ns, ok := c.offlinedNodes[update.Id]; ok {
 					c.nodes[update.Id] = ns
 					delete(c.offlinedNodes, update.Id)
 				} else {
-					log.Errorf("Unable to reinstate node %s, not present in offlinedNodes", update.Id)
+					log.Errorf("NodeAdded: Unable to reinstate node %s, not present in offlinedNodes", update.Id)
 				}
 			} else if ns, ok := c.suspendedNodes[update.Id]; ok {
 				if !ns.ready() {
 					// Adding a node that's already suspended as non-ready, leave it in that state until ready.
-					log.Infof("Suspended node re-added but still awaiting readiness check %v (%s)", update.Id, ns)
+					log.Infof("NodeAdded: Suspended node re-added but still awaiting readiness check %v (%s)", update.Id, ns)
 				} else if ns.timeLost != nilTime {
 					// This node was suspended as lost earlier, we can recover it now.
 					ns.timeLost = nilTime
 					c.nodes[update.Id] = ns
 					delete(c.suspendedNodes, update.Id)
-					log.Infof("Recovered suspended node %v (%s), %s", update.Id, ns, c.status())
+					log.Infof("NodeAdded: Recovered suspended node %v (%s), %s", update.Id, ns, c.status())
 				} else {
-					log.Infof("Ignoring NodeAdded event for suspended flaky node. %v (%s)", update.Id, ns)
+					log.Infof("NodeAdded: Ignoring NodeAdded event for suspended flaky node. %v (%s)", update.Id, ns)
 				}
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
@@ -264,25 +265,25 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
 					newNode.readyCh = nil
-					log.Infof("Added new node: %v (%#v), %s", update.Id, update.Node, c.status())
+					log.Infof("NodeAdded: Added new node: %v (%#v), %s", update.Id, update.Node, c.status())
 				} else {
 					// Add this to the suspended nodes and start a goroutine to check for readiness.
 					newNode = newNodeState(update.Node)
 					c.suspendedNodes[update.Id] = newNode
-					log.Infof("Added new suspended node: %v (%#v), %s", update.Id, update.Node, c.status())
+					log.Infof("NodeAdded: Added new suspended node: %v (%#v), %s", update.Id, update.Node, c.status())
 					newNode.startReadyLoop(c.readyFn)
 				}
 				c.nodeGroups[""].idle[update.Id] = newNode
 			} else {
 				// This node is already present, log this spurious add.
-				log.Infof("Node already added!! %v (%s)", update.Id, ns)
+				log.Infof("NodeAdded: Node already added!! %v (%s)", update.Id, ns)
 			}
 
 		case cluster.NodeRemoved:
 			removals += 1
 			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
-				log.Infof("Offlining node %s", update.Id)
+				log.Infof("NodeRemoved: Offlining node %s", update.Id)
 				if ns, ok := c.nodes[update.Id]; ok {
 					c.offlinedNodes[update.Id] = ns
 					delete(c.nodes, update.Id)
@@ -290,11 +291,11 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 					c.offlinedNodes[update.Id] = ns
 					delete(c.suspendedNodes, update.Id)
 				} else {
-					log.Errorf("Unable to offline node %s, not present in nodes or suspendedNodes", update.Id)
+					log.Errorf("NodeRemoved: Unable to offline node %s, not present in nodes or suspendedNodes", update.Id)
 				}
 			} else if ns, ok := c.suspendedNodes[update.Id]; ok {
 				// Node already suspended, make sure it's now marked as lost and not flaky (keep readiness status intact).
-				log.Infof("Already suspended node marked as removed: %v (was %s)", update.Id, ns)
+				log.Infof("NodeRemoved: Already suspended node marked as removed: %v (was %s)", update.Id, ns)
 				ns.timeLost = time.Now()
 				ns.timeFlaky = nilTime
 			} else if ns, ok := c.nodes[update.Id]; ok {
@@ -302,14 +303,23 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				ns.timeLost = time.Now()
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
-				log.Infof("Removing node by marking as lost: %v (%s), %s", update.Id, ns, c.status())
+				log.Infof("NodeRemoved: Removing node by marking as lost: %v (%s), %s", update.Id, ns, c.status())
 			} else {
 				// We don't know about this node, log spurious remove.
-				log.Infof("Cannot remove unknown node: %v", update.Id)
+				log.Infof("NodeRemoved: Cannot remove unknown node: %v", update.Id)
 			}
 		}
 	}
-	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d", adds, removals)
+
+	// debugging scheduler performance issues: record when we see nodes being added removed
+	// also record how many times we've checked and didn't see any changes (we're wondering if
+	// this go routine is being swapped out for long periods of time).
+	if adds > 0 || removals > 0 {
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, (%d cluster updates with no change)", adds, removals, c.nopUpdateCnt)
+		c.nopUpdateCnt = 0
+	} else {
+		c.nopUpdateCnt++
+	}
 
 	// Clean up lost nodes that haven't recovered in time, add flaky nodes back into rotation after some time,
 	// and check if newly added non-ready nodes are ready to be put into rotation.
@@ -322,13 +332,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
-			log.Infof("Node now ready, adding to rotation: %v (%s), %s", ns.node.Id(), ns, c.status())
+			log.Infof("SuspendedNode: Node now ready, adding to rotation: %v (%s), %s", ns.node.Id(), ns, c.status())
 		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].busy, ns.node.Id())
-			log.Infof("Deleting lost node: %v (%s), %s", ns.node.Id(), ns, c.status())
+			log.Infof("SuspendedNode: Deleting lost node: %v (%s), %s", ns.node.Id(), ns, c.status())
 			// Try to notify this node's goroutine about removal so it can stop checking readiness if necessary.
 			select {
 			case ns.removedCh <- nil:
@@ -343,10 +353,10 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			ns.timeFlaky = nilTime
 			ns.snapshotId = ""
 			if c.readyFn != nil {
-				log.Infof("Reinstating flaky node momentarily: %v (%s), %s", ns.node.Id(), ns, c.status())
+				log.Infof("SuspendedNode: Reinstating flaky node momentarily: %v (%s), %s", ns.node.Id(), ns, c.status())
 				ns.startReadyLoop(c.readyFn)
 			} else {
-				log.Infof("Reinstating flaky node now: %v (%s), %s", ns.node.Id(), ns, c.status())
+				log.Infof("SuspendedNode:  Reinstating flaky node now: %v (%s), %s", ns.node.Id(), ns, c.status())
 				delete(c.suspendedNodes, ns.node.Id())
 				c.nodes[ns.node.Id()] = ns
 			}
