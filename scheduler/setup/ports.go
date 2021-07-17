@@ -2,8 +2,7 @@ package setup
 
 import (
 	"fmt"
-	"os/exec"
-	"strconv"
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -19,16 +18,16 @@ func WaitForPort(port int) error {
 // the port remains open
 func WaitForPortTimeout(port int, timeout time.Duration) error {
 	log.Infof("Waiting for port %v for %v", port, timeout)
+	address := fmt.Sprintf("localhost:%d", port)
 	end := time.Now().Add(timeout)
 	for !time.Now().After(end) {
-		// Use exec.Command because we don't worry about these getting orphaned,
-		// and don't want to fill up our Cmds's list of running cmds
-		cmd := exec.Command("nc", "-z", "localhost", strconv.Itoa(port))
-		if err := cmd.Run(); err == nil {
+		conn, _ := net.Dial("tcp", address)
+		if conn != nil {
 			log.Infof("Port %v active", port)
+			_ = conn.Close()
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return fmt.Errorf("port %v is not up after 5s", port)
+	return fmt.Errorf("port %v is not up after %v", port, timeout)
 }
