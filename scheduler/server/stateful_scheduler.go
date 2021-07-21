@@ -925,16 +925,28 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		preventRetries := bool(task.NumTimesTried >= s.config.MaxRetriesPerTask)
 
+		avgDur := -1
+		iface, ok := s.taskDurations.Get(durationID)
+		if ok {
+			ad, ok := iface.(*averageDuration)
+			if !ok {
+				log.Errorf("getting task duration, object was not *averageDuration type!  (it is %s)", reflect.TypeOf(ad))
+			} else {
+				avgDur = int(ad.duration)
+			}
+		}
+
 		log.WithFields(
 			log.Fields{
-				"jobID":      jobID,
-				"taskID":     taskID,
-				"node":       nodeSt.node,
-				"requestor":  requestor,
-				"jobType":    jobType,
-				"tag":        tag,
-				"taskDef":    taskDef,
-				"durationID": durationID,
+				"jobID":       jobID,
+				"taskID":      taskID,
+				"node":        nodeSt.node,
+				"requestor":   requestor,
+				"jobType":     jobType,
+				"tag":         tag,
+				"taskDef":     taskDef,
+				"durationID":  durationID,
+				"avgDuration": fmt.Sprintf("%d (sec)", avgDur),
 			}).Info("Starting taskRunner")
 
 		tRunner := &taskRunner{
