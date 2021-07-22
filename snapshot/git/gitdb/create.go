@@ -38,7 +38,7 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snaps
 }
 
 func (db *DB) ingestDir(dir string) (snapshot, error) {
-	indexDir, err := ioutil.TempDir(db.tmp, "git-index")
+	indexDir, err := ioutil.TempDir("", "git-index")
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error) {
-	indexDir, err := ioutil.TempDir(db.tmp, "git-index")
+	indexDir, err := ioutil.TempDir("", "git-index")
 	if err != nil {
 		return nil, err
 	}

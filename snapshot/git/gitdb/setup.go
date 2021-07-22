@@ -20,8 +20,8 @@ func Module() ice.Module {
 // Install installs setup functions to use GitDB
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
-		func(tmp string) RepoIniter {
-			return &TmpRepoIniter{tmp: tmp}
+		func() RepoIniter {
+			return &TmpRepoIniter{}
 		},
 		func() RepoUpdater {
 			return &NoopRepoUpdater{}

@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -54,11 +53,6 @@ func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
 }
 
 func (i *injector) Inject() (snapshot.DB, error) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return nil, err
-	}
-	dbTempDir = tempDir
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -88,7 +82,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 
 	store := store.MakeHTTPStore(url)
 	return gitdb.MakeDBFromRepo(
-			dataRepo, nil, tempDir, nil, nil,
+			dataRepo, nil, nil, nil,
 			&gitdb.BundlestoreConfig{Store: store},
 			gitdb.AutoUploadBundlestore,
 			stats.NilStatsReceiver()),

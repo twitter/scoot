@@ -82,9 +82,6 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 
 	// Run Servers
 	var servers servers
-	for key, val := range bag.Bindings() {
-		log.Infof("%s: %s", key, val)
-	}
 	err = bag.Extract(&servers)
 	if err != nil {
 		log.Fatalf("Error injecting servers: %v", err)
