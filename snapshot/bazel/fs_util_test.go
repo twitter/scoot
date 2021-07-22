@@ -3,6 +3,7 @@
 package bazel
 
 import (
+	"io/ioutil"
 	"os/exec"
 	"testing"
 	"time"
@@ -32,18 +33,12 @@ func makeTestingFiler() *BzFiler {
 // directory save tests
 
 func TestSaveEmptyDir(t *testing.T) {
-	root, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tmpDirPrefix := "tmp"
-	tmpDir, err := root.TempDir(tmpDirPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	bf := makeTestingFiler()
-	id, err := bf.Ingest(tmpDir.Dir)
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := bf.Ingest(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,16 +49,11 @@ func TestSaveEmptyDir(t *testing.T) {
 }
 
 func TestSaveDir(t *testing.T) {
-	root, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpDirPrefix := "tmp"
-	tmpDir, err := root.TempDir(tmpDirPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := tmpDir.TempFile("nonempty")
+	f, err := ioutil.TempFile(tmp, "nonempty")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +63,7 @@ func TestSaveDir(t *testing.T) {
 	}
 
 	bf := makeTestingFiler()
-	id, err := bf.Ingest(tmpDir.Dir)
+	id, err := bf.Ingest(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,11 +87,7 @@ func TestSaveDir(t *testing.T) {
 // file save tests
 
 func TestSaveEmptyFile(t *testing.T) {
-	root, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := root.TempFile("empty")
+	f, err := ioutil.TempFile("", "empty")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,11 +104,7 @@ func TestSaveEmptyFile(t *testing.T) {
 }
 
 func TestSaveFile(t *testing.T) {
-	root, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := root.TempFile("nonempty")
+	f, err := ioutil.TempFile("", "nonempty")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,16 +138,12 @@ func TestSaveFile(t *testing.T) {
 // directory materialize test
 
 func TestMaterializeDir(t *testing.T) {
-	root, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tmpDirPrefix := "tmp"
-	tmpDir, err := root.TempDir(tmpDirPrefix)
+	tmpDir, err := ioutil.TempDir("", tmpDirPrefix)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := tmpDir.TempFile("nonempty")
+	f, err := ioutil.TempFile(tmpDir, "nonempty")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +153,7 @@ func TestMaterializeDir(t *testing.T) {
 	}
 
 	bf := makeTestingFiler()
-	id, err := bf.Ingest(tmpDir.Dir)
+	id, err := bf.Ingest(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,9 +162,9 @@ func TestMaterializeDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := exec.Command("diff", "-r", co.Path(), tmpDir.Dir).Output()
+	output, err := exec.Command("diff", "-r", co.Path(), tmpDir).Output()
 	if string(output) != "" {
-		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir.Dir, string(output))
+		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir, string(output))
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -194,12 +172,8 @@ func TestMaterializeDir(t *testing.T) {
 }
 
 func TestMaterializeEmptyDir(t *testing.T) {
-	root, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tmpDirPrefix := "tmp"
-	tmpDir, err := root.TempDir(tmpDirPrefix)
+	tmpDir, err := ioutil.TempDir("", tmpDirPrefix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,9 +185,9 @@ func TestMaterializeEmptyDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := exec.Command("diff", "-r", co.Path(), tmpDir.Dir).Output()
+	output, err := exec.Command("diff", "-r", co.Path(), tmpDir).Output()
 	if string(output) != "" {
-		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir.Dir, string(output))
+		t.Fatalf("Expected %s and %s to be equivalent, instead received \"%s\" from command", co.Path(), tmpDir, string(output))
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -222,10 +196,6 @@ func TestMaterializeEmptyDir(t *testing.T) {
 
 // test cancellation functionality
 func TestCancelOperation(t *testing.T) {
-	_, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	bf := makeTestingFiler()
 	// Override bf's bzCommand's execer with a sim execer
@@ -261,10 +231,6 @@ func TestCancelOperation(t *testing.T) {
 
 // test timeout functionality
 func TestTimeoutCommand(t *testing.T) {
-	_, err := tmpTest.TempDir("")
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	bf := makeTestingFiler()
 	bc := bf.tree.(*bzCommand)
