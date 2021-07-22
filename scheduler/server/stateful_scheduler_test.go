@@ -25,7 +25,6 @@ import (
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 	"github.com/twitter/scoot/tests/testhelpers"
-	"io/ioutil"
 )
 
 //Mocks sometimes hang without useful output, this allows early exit with err msg.
@@ -52,7 +51,6 @@ type schedulerDeps struct {
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
-	tmp, _ := ioutil.TempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{
@@ -60,7 +58,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		clUpdates: cl.ch,
 		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
-			return worker.MakeInmemoryWorker(n, tmp)
+			return worker.MakeInmemoryWorker(n)
 		},
 		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,
@@ -282,13 +280,12 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.config.MaxRetriesPerTask = 3
 
 	// create a runner factory that returns a runner that always fails
-	tmp, _ := ioutil.TempDir("", "")
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
 		filerMap := runner.MakeRunTypeMap()
 		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-		return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
+		return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -763,7 +760,6 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, 
 }
 
 func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
-	tmp, _ := ioutil.TempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{
@@ -774,7 +770,7 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()
 			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
+			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 			return runner
 		},
 		config: SchedulerConfig{

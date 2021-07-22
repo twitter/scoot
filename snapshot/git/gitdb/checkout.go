@@ -27,7 +27,7 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 	}
 	defer os.RemoveAll(tmp)
 
-	r, err := v.DownloadTempRepo(db, tmp)
+	r, err := v.DownloadTempRepo(db)
 	if err != nil {
 		return "", errors.NewError(err, errors.ReadFileAllFailureExitCode)
 	}

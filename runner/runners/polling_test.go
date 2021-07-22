@@ -10,15 +10,13 @@ import (
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
-	"io/ioutil"
 )
 
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
-	tmp, _ := ioutil.TempDir("", "runner_polling_test")
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
+	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos

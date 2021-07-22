@@ -31,7 +31,7 @@ type localOutputCreator struct {
 }
 
 // Takes a tempdir to place new files and optionally an httpUri, ex: 'http://HOST:PORT/ENDPOINT/', to use instead of 'file://HOST/PATH'
-func NewHttpOutputCreator(tmp string, httpUri string) (HttpOutputCreator, error) {
+func NewHttpOutputCreator(httpUri string) (HttpOutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -43,6 +43,10 @@ func NewHttpOutputCreator(tmp string, httpUri string) (HttpOutputCreator, error)
 			return nil, err
 		}
 		httpPath = strings.TrimSuffix(u.Path, "/") + "/"
+	}
+	tmp, err := ioutil.TempDir("", "output")
+	if err != nil {
+		return nil, err
 	}
 	return &localOutputCreator{
 		tmp: tmp, hostname: hostname,

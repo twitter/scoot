@@ -8,24 +8,24 @@ import (
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func MakeBzFiler(tmp string, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, nil, false)
+func MakeBzFiler(r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(r, nil, false)
 }
 
-func MakeBzFilerUpdater(tmp string, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, u, false)
+func MakeBzFilerUpdater(r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(r, u, false)
 }
 
-func MakeBzFilerKeepCheckouts(tmp string, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, nil, true)
+func MakeBzFilerKeepCheckouts(r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(r, nil, true)
 }
 
-func MakeBzFilerUpdaterKeepCheckouts(tmp string, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, u, true)
+func MakeBzFilerUpdaterKeepCheckouts(r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(r, u, true)
 }
 
-func makeBzFiler(tmp string, r dialer.Resolver, u snapshot.Updater, keep bool) (*BzFiler, error) {
-	treeDir, err := ioutil.TempDir(tmp, "bztree")
+func makeBzFiler(r dialer.Resolver, u snapshot.Updater, keep bool) (*BzFiler, error) {
+	treeDir, err := ioutil.TempDir("", "bztree")
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,6 @@ func makeBzFiler(tmp string, r dialer.Resolver, u snapshot.Updater, keep bool) (
 
 	bf := &BzFiler{
 		tree:          makeBzCommand(treeDir, r),
-		tmp:           tmp,
 		keepCheckouts: keep,
 		CASResolver:   r,
 		updater:       u,
@@ -49,7 +48,6 @@ func makeBzFiler(tmp string, r dialer.Resolver, u snapshot.Updater, keep bool) (
 // which handles underlying implementation of bazel snapshot functionality
 type BzFiler struct {
 	tree bzTree
-	tmp  string
 
 	// keepCheckouts exists for debuggability. Instead of removing checkouts on release,
 	// we can optionally keep them to inspect

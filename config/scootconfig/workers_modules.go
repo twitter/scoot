@@ -61,13 +61,13 @@ type WorkersLocalConfig struct {
 }
 
 func (c *WorkersLocalConfig) Install(bag *ice.MagicBag) {
-	bag.Put(func(tmp string) func(cluster.Node) runner.Service {
-		return InmemoryWorkerFactory(tmp)
+	bag.Put(func() func(cluster.Node) runner.Service {
+		return InmemoryWorkerFactory()
 	})
 }
 
-func InmemoryWorkerFactory(tmp string) func(cluster.Node) runner.Service {
+func InmemoryWorkerFactory() func(cluster.Node) runner.Service {
 	return func(node cluster.Node) runner.Service {
-		return worker.MakeInmemoryWorker(node, tmp)
+		return worker.MakeInmemoryWorker(node)
 	}
 }

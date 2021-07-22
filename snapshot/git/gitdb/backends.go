@@ -30,7 +30,7 @@ type snapshot interface {
 	Download(db *DB) error
 
 	// Download into a preexisting TempDir, resulting in a new Repository at that location
-	DownloadTempRepo(db *DB, tmp string) (*repo.Repository, error)
+	DownloadTempRepo(db *DB) (*repo.Repository, error)
 }
 
 // parseID parses ID into a snapshot

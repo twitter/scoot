@@ -13,8 +13,8 @@ func Module() ice.Module {
 
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
-		func(tmp string) (*BzFiler, error) {
-			return MakeBzFiler(tmp, dialer.NewConstantResolver(""))
+		func() (*BzFiler, error) {
+			return MakeBzFiler(dialer.NewConstantResolver(""))
 		},
 	)
 }

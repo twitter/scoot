@@ -30,7 +30,6 @@ func setup() (string, *BzFiler) {
 	}
 	bf := &BzFiler{
 		tree: &noopBzTree{},
-		tmp:  tmp,
 	}
 	return tmp, bf
 }
@@ -158,11 +157,7 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 }
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
-	tmp, err := ioutil.TempDir(tmpTest, "")
-	if err != nil {
-		t.Fatalf("Error creating temp dir. %v", err)
-	}
-	bf, err := MakeBzFiler(tmp, noopRes)
+	bf, err := MakeBzFiler(noopRes)
 	if err != nil {
 		t.Fatalf("Error creating BzFiler: %s", err)
 	}

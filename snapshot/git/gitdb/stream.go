@@ -87,7 +87,7 @@ func (s *streamSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.SHA())
 }
 
-func (s *streamSnapshot) DownloadTempRepo(db *DB, tmp string) (*repo.Repository, error) {
+func (s *streamSnapshot) DownloadTempRepo(_ *DB) (*repo.Repository, error) {
 	return nil, errors.New("DownloadTempRepo unimplemented in streamSnapshot")
 }
 

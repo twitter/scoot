@@ -81,7 +81,7 @@ func RunServer(
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error injecting servers", err)
+		log.Fatalf("Error injecting servers: %v", err)
 	}
 
 	errCh := make(chan error)

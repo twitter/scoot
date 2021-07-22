@@ -13,25 +13,25 @@ import (
 )
 
 // Makes a worker suitable for using as an in-memory worker.
-func MakeInmemoryWorker(node cluster.Node, tmp string) runner.Service {
-	return MakeDoneWorker(tmp)
+func MakeInmemoryWorker(node cluster.Node) runner.Service {
+	return MakeDoneWorker()
 }
 
 // Makes a worker suitable for using as an in-memory worker.
-func MakeDoneWorker(tmp string) runner.Service {
+func MakeDoneWorker() runner.Service {
 	ex := execers.NewDoneExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
+	r := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := runners.NewChaosRunner(r)
 	chaos.SetDelay(time.Duration(50) * time.Millisecond)
 	return chaos
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
-func MakeSimWorker(tmp string) runner.Service {
+func MakeSimWorker() runner.Service {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), tmp, nil, stats.NopDirsMonitor, runner.EmptyID)
+	return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 }

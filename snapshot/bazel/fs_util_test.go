@@ -22,7 +22,7 @@ func init() {
 }
 
 func makeTestingFiler() *BzFiler {
-	bf, err := MakeBzFiler(tmpTest, noopRes)
+	bf, err := MakeBzFiler(noopRes)
 	if err != nil {
 		log.Fatal(err)
 	}

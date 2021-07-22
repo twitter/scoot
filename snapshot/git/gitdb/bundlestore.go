@@ -269,7 +269,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 // Downloads the snapshot's SHA locally similar to Download, but into a
 // temp repository located under tmp and not db's persistent dataRepo.
 // Returns the temp repo and nil if the sha can be found in it, or an error.
-func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, _ string) (*repo.Repository, error) {
+func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB) (*repo.Repository, error) {
 	log.Infof("Downloading sha: %s", s.SHA())
 
 	tmpRepoIniter := &TmpRepoIniter{tmp: db.tmp}

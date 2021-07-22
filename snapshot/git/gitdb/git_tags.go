@@ -100,7 +100,7 @@ func (s *tagsSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.SHA())
 }
 
-func (s *tagsSnapshot) DownloadTempRepo(_ *DB, _ string) (*repo.Repository, error) {
+func (s *tagsSnapshot) DownloadTempRepo(_ *DB) (*repo.Repository, error) {
 	return nil, errors.New("DownloadTempRepo unimplemented in tagsSnapshot")
 }
 

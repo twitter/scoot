@@ -28,7 +28,7 @@ func (c *CheckoutNotExistError) Error() string {
 }
 
 func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
-	tmp, err := ioutil.TempDir(bf.tmp, "checkout")
+	tmp, err := ioutil.TempDir("", "checkout")
 	if err != nil {
 		return nil, err
 	}

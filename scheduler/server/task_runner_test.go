@@ -71,7 +71,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
 	}
@@ -97,7 +97,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
-	err := get_testTaskRunner(s, worker.MakeSimWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeSimWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 	if err != nil {
 		t.Errorf("Unexpected Error %v", err)
 	}
@@ -116,7 +116,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging StartTask Fails")
@@ -139,7 +139,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
-	err := get_testTaskRunner(s, worker.MakeDoneWorker(tmp), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
+	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
 
 	if err == nil {
 		t.Errorf("Expected an error to be returned if Logging EndTask Fails")

@@ -42,6 +42,6 @@ func (s *localSnapshot) Download(db *DB) error {
 	return db.shaPresent(s.SHA())
 }
 
-func (s *localSnapshot) DownloadTempRepo(_ *DB, _ string) (*repo.Repository, error) {
+func (s *localSnapshot) DownloadTempRepo(_ *DB) (*repo.Repository, error) {
 	return nil, errors.New("DownloadTempRepo unimplemented in localSnapshot")
 }

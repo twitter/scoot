@@ -14,8 +14,8 @@ import (
 
 // Create a fixed dir in tmp.
 // Note: this implementation does not currently support TTL.
-func MakeFileStoreInTemp(tmp string) (*FileStore, error) {
-	bundleDir, err := ioutil.TempDir(tmp, "bundles")
+func MakeFileStoreInTemp() (*FileStore, error) {
+	bundleDir, err := ioutil.TempDir("", "bundles")
 	if err != nil {
 		return nil, err
 	}

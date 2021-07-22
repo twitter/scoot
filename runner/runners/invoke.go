@@ -33,7 +33,6 @@ func NewInvoker(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp string,
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
@@ -41,7 +40,7 @@ func NewInvoker(
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat, dirMonitor: dirMonitor, rID: rID}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
@@ -51,7 +50,6 @@ type Invoker struct {
 	exec       execer.Execer
 	filerMap   runner.RunTypeMap
 	output     runner.OutputCreator
-	tmp        string
 	stat       stats.StatsReceiver
 	dirMonitor *stats.DirsMonitor
 	rID        runner.RunnerID
@@ -176,7 +174,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 						"taskID": cmd.TaskID,
 					}).Info("No snapshotID! Using a nop-checkout initialized with tmpDir")
 			}
-			if tmp, err := ioutil.TempDir(inv.tmp, "invoke_nop_checkout"); err != nil {
+			if tmp, err := ioutil.TempDir("", "invoke_nop_checkout"); err != nil {
 				checkoutCh <- err
 			} else {
 				co = gitfiler.MakeUnmanagedCheckout(string(id), tmp)
@@ -450,7 +448,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		rts.execEnd = stamp()
 		rts.outputStart = stamp()
 		if runType == runner.RunTypeScoot {
-			tmp, err := ioutil.TempDir(inv.tmp, "invoke")
+			tmp, err := ioutil.TempDir("", "invoke")
 			if err != nil {
 				return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error staging ingestion dir: %v", err), errors.PostExecFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
