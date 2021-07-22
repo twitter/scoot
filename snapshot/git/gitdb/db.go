@@ -7,7 +7,6 @@ import (
 
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
@@ -23,7 +22,7 @@ import (
 func MakeDBFromRepo(
 	dataRepo *repo.Repository,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
+	tmp string,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
@@ -36,7 +35,7 @@ func MakeDBFromRepo(
 func MakeDBNewRepo(
 	initer RepoIniter,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
+	tmp string,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
@@ -49,7 +48,7 @@ func makeDB(
 	dataRepo *repo.Repository,
 	initer RepoIniter,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
+	tmp string,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
@@ -119,7 +118,7 @@ type DB struct {
 	// All data below here should be accessed only by the loop() goroutine
 	dataRepo   *repo.Repository
 	updater    RepoUpdater
-	tmp        *temp.TempDir
+	tmp        string
 	checkouts  map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local      *localBackend
 	stream     *streamBackend

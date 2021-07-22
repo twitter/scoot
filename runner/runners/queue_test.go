@@ -2,6 +2,7 @@ package runners
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
@@ -208,7 +208,7 @@ func setup(capacity int, interval time.Duration, t *testing.T) *env {
 	logrusLevel, _ := log.ParseLevel("debug")
 	log.SetLevel(logrusLevel)
 	sim := execers.NewSimExecer()
-	tmpDir, err := temp.TempDirDefault()
+	tmpDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
 	}

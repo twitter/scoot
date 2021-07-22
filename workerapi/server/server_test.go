@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	log "github.com/sirupsen/logrus"
 	//"testing"
+	"io/ioutil"
 	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
@@ -136,7 +137,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 	initDoneCh = make(chan error, 1)
 	statsRegistry = stats.NewFinagleStatsRegistry()
 	simExecer = execers.NewSimExecer()
-	tmpDir, err := temp.TempDirDefault()
+	tmpDir, err := ioutil.TempDir("", "")
 	configText := "{}"
 
 	bag := ice.NewMagicBag()

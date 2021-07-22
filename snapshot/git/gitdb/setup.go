@@ -1,10 +1,10 @@
 package gitdb
 
 import (
+	"io/ioutil"
 	"time"
 
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
@@ -20,7 +20,7 @@ func Module() ice.Module {
 // Install installs setup functions to use GitDB
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
-		func(tmp *temp.TempDir) RepoIniter {
+		func(tmp string) RepoIniter {
 			return &TmpRepoIniter{tmp: tmp}
 		},
 		func() RepoUpdater {
@@ -46,17 +46,17 @@ func (m module) Install(b *ice.MagicBag) {
 
 // TmpRepoIniter creates a new Repo in a temp dir
 type TmpRepoIniter struct {
-	tmp *temp.TempDir
+	tmp string
 }
 
 // Init creates a new temp dir and a repo in it
 func (i *TmpRepoIniter) Init() (*repo.Repository, error) {
-	repoTmp, err := i.tmp.TempDir("gitdb-repo-")
+	repoTmp, err := ioutil.TempDir(i.tmp, "gitdb-repo-")
 	if err != nil {
 		return nil, err
 	}
 
-	return repo.InitRepo(repoTmp.Dir)
+	return repo.InitRepo(repoTmp)
 }
 
 type NoopRepoUpdater struct{}

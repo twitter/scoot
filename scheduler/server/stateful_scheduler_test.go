@@ -15,7 +15,6 @@ import (
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/runner/runners"
@@ -26,6 +25,7 @@ import (
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 	"github.com/twitter/scoot/tests/testhelpers"
+	"io/ioutil"
 )
 
 //Mocks sometimes hang without useful output, this allows early exit with err msg.
@@ -52,7 +52,7 @@ type schedulerDeps struct {
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
-	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
+	tmp, _ := ioutil.TempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{
@@ -282,7 +282,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.config.MaxRetriesPerTask = 3
 
 	// create a runner factory that returns a runner that always fails
-	tmp, _ := temp.TempDirDefault()
+	tmp, _ := ioutil.TempDir("", "")
 	deps.rf = func(cluster.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
@@ -763,7 +763,7 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, 
 }
 
 func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
-	tmp, _ := temp.NewTempDir("", "stateful_scheduler_test")
+	tmp, _ := ioutil.TempDir("", "stateful_scheduler_test")
 	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{

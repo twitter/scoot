@@ -9,17 +9,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/os/temp"
+	"io/ioutil"
 )
 
 // Create a fixed dir in tmp.
 // Note: this implementation does not currently support TTL.
-func MakeFileStoreInTemp(tmp *temp.TempDir) (*FileStore, error) {
-	bundleDir, err := tmp.FixedDir("bundles")
+func MakeFileStoreInTemp(tmp string) (*FileStore, error) {
+	bundleDir, err := ioutil.TempDir(tmp, "bundles")
 	if err != nil {
 		return nil, err
 	}
-	return MakeFileStore(bundleDir.Dir)
+	return MakeFileStore(bundleDir)
 }
 
 func MakeFileStore(dir string) (*FileStore, error) {

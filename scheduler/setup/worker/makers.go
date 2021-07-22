@@ -5,7 +5,6 @@ import (
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/runner/runners"
@@ -14,12 +13,12 @@ import (
 )
 
 // Makes a worker suitable for using as an in-memory worker.
-func MakeInmemoryWorker(node cluster.Node, tmp *temp.TempDir) runner.Service {
+func MakeInmemoryWorker(node cluster.Node, tmp string) runner.Service {
 	return MakeDoneWorker(tmp)
 }
 
 // Makes a worker suitable for using as an in-memory worker.
-func MakeDoneWorker(tmp *temp.TempDir) runner.Service {
+func MakeDoneWorker(tmp string) runner.Service {
 	ex := execers.NewDoneExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
@@ -30,7 +29,7 @@ func MakeDoneWorker(tmp *temp.TempDir) runner.Service {
 }
 
 // Makes a worker that uses a SimExecer. This is suitable for testing.
-func MakeSimWorker(tmp *temp.TempDir) runner.Service {
+func MakeSimWorker(tmp string) runner.Service {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}

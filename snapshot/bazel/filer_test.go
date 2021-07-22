@@ -11,19 +11,19 @@ import (
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
+	"io/ioutil"
 )
 
 var noopBf *BzFiler
-var tmpTest *temp.TempDir
+var tmpTest string
 var noopRes = dialer.NewConstantResolver("")
 
 func init() {
 	log.AddHook(hooks.NewContextHook())
 }
 
-func setup() (*temp.TempDir, *BzFiler) {
-	tmp, err := temp.TempDirDefault()
+func setup() (string, *BzFiler) {
+	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
@@ -35,10 +35,8 @@ func setup() (*temp.TempDir, *BzFiler) {
 	return tmp, bf
 }
 
-func teardown(tmp *temp.TempDir) {
-	if tmp != nil {
-		os.Remove(tmp.Dir)
-	}
+func teardown(tmp string) {
+	os.Remove(tmp)
 }
 
 func TestMain(m *testing.M) {
@@ -69,13 +67,13 @@ func TestInvalidBzCheckout(t *testing.T) {
 }
 
 func TestReleaseBzCheckout(t *testing.T) {
-	tempDir, err := tmpTest.TempDir("")
+	tempDir, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-	bc := &bzCheckout{dir: tempDir.Dir}
+	bc := &bzCheckout{dir: tempDir}
 	bc.Release()
-	_, err = os.Stat(tempDir.Dir)
+	_, err = os.Stat(tempDir)
 	if !os.IsNotExist(err) {
 		t.Fatalf("Directory was not successfully removed. %v", err)
 	}
@@ -103,11 +101,11 @@ func TestBzCheckouterValidCheckout(t *testing.T) {
 }
 
 func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
-	tempDir, err := tmpTest.TempDir("")
+	tempDir, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-	_, err = noopBf.CheckoutAt("this definitely isn't right", tempDir.Dir)
+	_, err = noopBf.CheckoutAt("this definitely isn't right", tempDir)
 	if err == nil || !strings.Contains(err.Error(), bazel.InvalidIDMsg) {
 		t.Fatalf("Expected checkout to be invalid due to ID")
 	}
@@ -116,11 +114,11 @@ func TestBzCheckouterInvalidCheckoutAt(t *testing.T) {
 func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 	size := int64(5)
 	id := bazel.SnapshotID(bazel.EmptySha, size)
-	tempDir, err := tmpTest.TempDir("")
+	tempDir, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-	snap, err := noopBf.CheckoutAt(id, tempDir.Dir)
+	snap, err := noopBf.CheckoutAt(id, tempDir)
 	if err != nil {
 		t.Fatalf("Expected checkout to be valid. Err: %v", err)
 	}
@@ -132,23 +130,23 @@ func TestBzCheckouterValidCheckoutAt(t *testing.T) {
 // Ingester tests
 
 func TestBzIngesteValidIngestDir(t *testing.T) {
-	tmp, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
-	_, err = noopBf.Ingest(tmp.Dir)
+	_, err = noopBf.Ingest(tmp)
 	if err != nil {
-		t.Fatalf("Error ingesting dir %v. Err: %v", tmp.Dir, err)
+		t.Fatalf("Error ingesting dir %v. Err: %v", tmp, err)
 	}
 }
 
 func TestBzIngesterValidIngestFile(t *testing.T) {
-	tmp, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 
-	tmpFile, err := tmp.TempFile("")
+	tmpFile, err := ioutil.TempFile(tmp, "")
 	if err != nil {
 		t.Fatalf("Error creating temp file. %v", err)
 	}
@@ -160,7 +158,7 @@ func TestBzIngesterValidIngestFile(t *testing.T) {
 }
 
 func TestBzIngesterInvalidIngest(t *testing.T) {
-	tmp, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
@@ -178,24 +176,24 @@ func TestBzIngesterInvalidIngest(t *testing.T) {
 // Utils tests
 
 func TestGetFileTypeDir(t *testing.T) {
-	tmp, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 
-	fileType, err := getFileType(tmp.Dir)
+	fileType, err := getFileType(tmp)
 	if err != nil || fileType != fsUtilCmdDirectory {
 		t.Fatalf("Expected fileType to be %s, was %s. Err: %v", fsUtilCmdDirectory, fileType, err)
 	}
 }
 
 func TestGetFileTypeFile(t *testing.T) {
-	tmp, err := tmpTest.TempDir("")
+	tmp, err := ioutil.TempDir(tmpTest, "")
 	if err != nil {
 		t.Fatalf("Error creating temp dir. %v", err)
 	}
 
-	tmpFile, err := tmp.TempFile("")
+	tmpFile, err := ioutil.TempFile(tmp, "")
 	if err != nil {
 		t.Fatalf("Error creating temp file. %v", err)
 	}

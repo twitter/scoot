@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
+	"io/ioutil"
 )
 
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
-	tmp, _ := temp.NewTempDir("", "runner_polling_test")
+	tmp, _ := ioutil.TempDir("", "runner_polling_test")
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -11,7 +12,6 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/cli"
@@ -54,11 +54,11 @@ func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
 }
 
 func (i *injector) Inject() (snapshot.DB, error) {
-	tempDir, err := temp.TempDirDefault()
+	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return nil, err
 	}
-	dbTempDir = tempDir.Dir
+	dbTempDir = tempDir
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err

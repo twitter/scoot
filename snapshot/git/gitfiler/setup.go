@@ -1,11 +1,7 @@
 package gitfiler
 
 import (
-	"io/ioutil"
-	"path"
-
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
@@ -41,28 +37,5 @@ func NewSingleRepoCheckouter(repoIniter PooledRepoIniter,
 	stat stats.StatsReceiver,
 	doneCh <-chan struct{}) *Checkouter {
 	pool := NewSingleRepoPool(repoIniter, stat, doneCh)
-	return NewCheckouter(pool, stat)
-}
-
-// A Checkouter that creates a new repo with git clone --reference for each checkout
-func NewRefRepoCloningCheckouter(refRepoIniter PooledRepoIniter,
-	stat stats.StatsReceiver,
-	clonesDir *temp.TempDir,
-	doneCh <-chan struct{},
-	maxClones int) *Checkouter {
-	refPool := NewSingleRepoPool(refRepoIniter, stat, doneCh)
-
-	cloner := &refCloner{refPool: refPool, clonesDir: clonesDir}
-	var clones []*repo.Repository
-	fis, _ := ioutil.ReadDir(clonesDir.Dir)
-	for _, fi := range fis {
-		// TODO(dbentley): maybe we should check that these clones are in fact clones
-		// of the reference repo? Using some kind of git commands to determine its upstream?
-		if clone, err := repo.NewRepository(path.Join(clonesDir.Dir, fi.Name())); err == nil {
-			clones = append(clones, clone)
-		}
-	}
-
-	pool := NewRepoPool(cloner, stat, clones, doneCh, maxClones)
 	return NewCheckouter(pool, stat)
 }

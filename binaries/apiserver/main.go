@@ -81,7 +81,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, tmp *temp.TempDir) (*StoreAndHandler, error) {
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, tmp string) (*StoreAndHandler, error) {
 			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,

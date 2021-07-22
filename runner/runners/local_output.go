@@ -3,13 +3,13 @@ package runners
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	osexecer "github.com/twitter/scoot/runner/execer/os"
 )
@@ -23,7 +23,7 @@ type HttpOutputCreator interface {
 }
 
 type localOutputCreator struct {
-	tmp      *temp.TempDir
+	tmp      string
 	hostname string
 	httpUri  string
 	httpPath string
@@ -31,7 +31,7 @@ type localOutputCreator struct {
 }
 
 // Takes a tempdir to place new files and optionally an httpUri, ex: 'http://HOST:PORT/ENDPOINT/', to use instead of 'file://HOST/PATH'
-func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator, error) {
+func NewHttpOutputCreator(tmp string, httpUri string) (HttpOutputCreator, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -54,13 +54,13 @@ func NewHttpOutputCreator(tmp *temp.TempDir, httpUri string) (HttpOutputCreator,
 // Create a new Output that writes to local fs.
 // Note: id should not have leading or trailing slashes.
 func (s *localOutputCreator) Create(id string) (runner.Output, error) {
-	if _, err := os.Stat(s.tmp.Dir); os.IsNotExist(err) {
-		err = os.MkdirAll(s.tmp.Dir, os.ModePerm)
+	if _, err := os.Stat(s.tmp); os.IsNotExist(err) {
+		err = os.MkdirAll(s.tmp, os.ModePerm)
 		if err != nil {
 			return nil, err
 		}
 	}
-	f, err := s.tmp.TempFile(id)
+	f, err := ioutil.TempFile(s.tmp, id)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (s *localOutputCreator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	</html>	
 `
 	if strings.TrimSuffix(r.URL.Path, "/")+"/" == s.HttpPath() {
-		http.StripPrefix(s.HttpPath(), http.FileServer(http.Dir(s.tmp.Dir))).ServeHTTP(w, r)
+		http.StripPrefix(s.HttpPath(), http.FileServer(http.Dir(s.tmp))).ServeHTTP(w, r)
 		return
 	}
 	path := strings.TrimPrefix(r.URL.Path, s.HttpPath())

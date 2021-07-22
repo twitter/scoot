@@ -14,7 +14,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	runnermock "github.com/twitter/scoot/runner/mocks"
 	"github.com/twitter/scoot/runner/runners"
@@ -22,14 +21,15 @@ import (
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/scheduler/setup/worker"
 	"github.com/twitter/scoot/workerapi"
+	"io/ioutil"
 )
 
-var tmp *temp.TempDir
+var tmp string
 
 func TestMain(m *testing.M) {
 	log.AddHook(hooks.NewContextHook())
 	log.SetLevel(log.DebugLevel)
-	tmp, _ = temp.NewTempDir("", "task_runner_test")
+	tmp, _ = ioutil.TempDir("", "task_runner_test")
 	os.Exit(m.Run())
 }
 

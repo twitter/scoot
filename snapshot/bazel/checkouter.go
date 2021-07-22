@@ -1,6 +1,7 @@
 package bazel
 
 import (
+	"io/ioutil"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -27,11 +28,11 @@ func (c *CheckoutNotExistError) Error() string {
 }
 
 func (bf *BzFiler) Checkout(id string) (snapshot.Checkout, error) {
-	tmp, err := bf.tmp.TempDir("checkout")
+	tmp, err := ioutil.TempDir(bf.tmp, "checkout")
 	if err != nil {
 		return nil, err
 	}
-	return bf.CheckoutAt(id, filepath.Join(tmp.Dir, snapshotDirName))
+	return bf.CheckoutAt(id, filepath.Join(tmp, snapshotDirName))
 }
 
 func (bf *BzFiler) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {

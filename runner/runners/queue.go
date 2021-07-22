@@ -12,7 +12,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
@@ -79,7 +78,7 @@ func NewQueueRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
+	tmp string,
 	capacity int,
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
@@ -162,7 +161,7 @@ func NewSingleRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
+	tmp string,
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,

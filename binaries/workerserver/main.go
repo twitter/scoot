@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -76,8 +77,8 @@ func main() {
 		func() (*repo.Repository, error) {
 			return repo.NewRepository(*repoDir)
 		},
-		func(tmp *temp.TempDir) (runners.HttpOutputCreator, error) {
-			outDir, err := tmp.FixedDir("output")
+		func(tmp string) (runners.HttpOutputCreator, error) {
+			outDir, err := ioutil.TempDir("", "output")
 			if err != nil {
 				return nil, err
 			}
@@ -93,10 +94,10 @@ func main() {
 			return execer.Memory(*memCapFlag)
 		},
 		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
-		func(tmp *temp.TempDir) (store.Store, error) {
+		func(tmp string) (store.Store, error) {
 			if *storeHandle != "" {
 				if strings.HasPrefix(*storeHandle, "/") {
-					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+					return store.MakeFileStoreInTemp(*storeHandle)
 				} else {
 					return store.MakeHTTPStore(client.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
@@ -118,7 +119,7 @@ func main() {
 			return store.MakeFileStoreInTemp(tmp)
 		},
 		// Create BzFiler to handle Bazel API requests
-		func(tmp *temp.TempDir) (*bazel.BzFiler, error) {
+		func(tmp string) (*bazel.BzFiler, error) {
 			addr := ""
 			if *casAddr != "" {
 				addr = *casAddr
