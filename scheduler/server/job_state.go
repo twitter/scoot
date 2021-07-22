@@ -1,7 +1,6 @@
 package server
 
 import (
-	"math"
 	"sync"
 	"time"
 
@@ -91,7 +90,6 @@ func newJobState(job *domain.Job, jobClass string, saga *saga.Saga, taskDuration
 		durationKey := durationKeyExtractor(taskDef.TaskID)
 		if taskDurations != nil {
 			if iface, ok := taskDurations.Get(durationKey); !ok {
-				duration = math.MaxInt64
 				addOrUpdateTaskDuration(taskDurations, durationKey, duration)
 			} else {
 				if ad, ok := iface.(*averageDuration); ok {
