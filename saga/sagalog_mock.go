@@ -34,6 +34,7 @@ func (m *MockSagaLog) EXPECT() *MockSagaLogMockRecorder {
 
 // StartSaga mocks base method
 func (m *MockSagaLog) StartSaga(sagaId string, job []byte) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartSaga", sagaId, job)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -41,11 +42,13 @@ func (m *MockSagaLog) StartSaga(sagaId string, job []byte) error {
 
 // StartSaga indicates an expected call of StartSaga
 func (mr *MockSagaLogMockRecorder) StartSaga(sagaId, job interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSaga", reflect.TypeOf((*MockSagaLog)(nil).StartSaga), sagaId, job)
 }
 
 // LogMessage mocks base method
 func (m *MockSagaLog) LogMessage(message SagaMessage) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LogMessage", message)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -53,11 +56,13 @@ func (m *MockSagaLog) LogMessage(message SagaMessage) error {
 
 // LogMessage indicates an expected call of LogMessage
 func (mr *MockSagaLogMockRecorder) LogMessage(message interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogMessage", reflect.TypeOf((*MockSagaLog)(nil).LogMessage), message)
 }
 
 // LogBatchMessages mocks base method
 func (m *MockSagaLog) LogBatchMessages(messages []SagaMessage) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LogBatchMessages", messages)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -65,11 +70,13 @@ func (m *MockSagaLog) LogBatchMessages(messages []SagaMessage) error {
 
 // LogBatchMessages indicates an expected call of LogBatchMessages
 func (mr *MockSagaLogMockRecorder) LogBatchMessages(messages interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogBatchMessages", reflect.TypeOf((*MockSagaLog)(nil).LogBatchMessages), messages)
 }
 
 // GetMessages mocks base method
 func (m *MockSagaLog) GetMessages(sagaId string) ([]SagaMessage, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessages", sagaId)
 	ret0, _ := ret[0].([]SagaMessage)
 	ret1, _ := ret[1].(error)
@@ -78,11 +85,13 @@ func (m *MockSagaLog) GetMessages(sagaId string) ([]SagaMessage, error) {
 
 // GetMessages indicates an expected call of GetMessages
 func (mr *MockSagaLogMockRecorder) GetMessages(sagaId interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessages", reflect.TypeOf((*MockSagaLog)(nil).GetMessages), sagaId)
 }
 
 // GetActiveSagas mocks base method
 func (m *MockSagaLog) GetActiveSagas() ([]string, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetActiveSagas")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
@@ -91,5 +100,6 @@ func (m *MockSagaLog) GetActiveSagas() ([]string, error) {
 
 // GetActiveSagas indicates an expected call of GetActiveSagas
 func (mr *MockSagaLogMockRecorder) GetActiveSagas() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSagas", reflect.TypeOf((*MockSagaLog)(nil).GetActiveSagas))
 }

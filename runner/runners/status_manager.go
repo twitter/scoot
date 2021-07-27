@@ -170,17 +170,6 @@ func (s *StatusManager) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, e
 	return runner.StatusAll(s)
 }
 
-// Prunes the run history so StatusAll() can return a reasonable number of runs.
-func (s *StatusManager) Erase(run runner.RunID) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	st := s.runs[run]
-	if st.State.IsDone() {
-		delete(s.runs, run)
-	}
-	return nil
-}
-
 // queryAndListen performs a query, returning the current results and optionally a channel for
 // listening for future results
 // returns:

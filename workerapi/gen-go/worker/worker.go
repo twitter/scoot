@@ -25,9 +25,6 @@ type Worker interface {
 	// Parameters:
 	//  - RunId
 	Abort(runId string) (r *RunStatus, err error)
-	// Parameters:
-	//  - RunId
-	Erase(runId string) (err error)
 }
 
 type WorkerClient struct {
@@ -283,82 +280,6 @@ func (p *WorkerClient) recvAbort() (value *RunStatus, err error) {
 	return
 }
 
-// Parameters:
-//  - RunId
-func (p *WorkerClient) Erase(runId string) (err error) {
-	if err = p.sendErase(runId); err != nil {
-		return
-	}
-	return p.recvErase()
-}
-
-func (p *WorkerClient) sendErase(runId string) (err error) {
-	oprot := p.OutputProtocol
-	if oprot == nil {
-		oprot = p.ProtocolFactory.GetProtocol(p.Transport)
-		p.OutputProtocol = oprot
-	}
-	p.SeqId++
-	if err = oprot.WriteMessageBegin("Erase", thrift.CALL, p.SeqId); err != nil {
-		return
-	}
-	args := WorkerEraseArgs{
-		RunId: runId,
-	}
-	if err = args.Write(oprot); err != nil {
-		return
-	}
-	if err = oprot.WriteMessageEnd(); err != nil {
-		return
-	}
-	return oprot.Flush()
-}
-
-func (p *WorkerClient) recvErase() (err error) {
-	iprot := p.InputProtocol
-	if iprot == nil {
-		iprot = p.ProtocolFactory.GetProtocol(p.Transport)
-		p.InputProtocol = iprot
-	}
-	method, mTypeId, seqId, err := iprot.ReadMessageBegin()
-	if err != nil {
-		return
-	}
-	if method != "Erase" {
-		err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "Erase failed: wrong method name")
-		return
-	}
-	if p.SeqId != seqId {
-		err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "Erase failed: out of sequence response")
-		return
-	}
-	if mTypeId == thrift.EXCEPTION {
-		error10 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		var error11 error
-		error11, err = error10.Read(iprot)
-		if err != nil {
-			return
-		}
-		if err = iprot.ReadMessageEnd(); err != nil {
-			return
-		}
-		err = error11
-		return
-	}
-	if mTypeId != thrift.REPLY {
-		err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "Erase failed: invalid message type")
-		return
-	}
-	result := WorkerEraseResult{}
-	if err = result.Read(iprot); err != nil {
-		return
-	}
-	if err = iprot.ReadMessageEnd(); err != nil {
-		return
-	}
-	return
-}
-
 type WorkerProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
 	handler      Worker
@@ -379,12 +300,11 @@ func (p *WorkerProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewWorkerProcessor(handler Worker) *WorkerProcessor {
 
-	self12 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self12.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
-	self12.processorMap["Run"] = &workerProcessorRun{handler: handler}
-	self12.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
-	self12.processorMap["Erase"] = &workerProcessorErase{handler: handler}
-	return self12
+	self10 := &WorkerProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self10.processorMap["QueryWorker"] = &workerProcessorQueryWorker{handler: handler}
+	self10.processorMap["Run"] = &workerProcessorRun{handler: handler}
+	self10.processorMap["Abort"] = &workerProcessorAbort{handler: handler}
+	return self10
 }
 
 func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -397,12 +317,12 @@ func (p *WorkerProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, 
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x13 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x11 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x13.Write(oprot)
+	x11.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush()
-	return false, x13
+	return false, x11
 
 }
 
@@ -533,51 +453,6 @@ func (p *workerProcessorAbort) Process(seqId int32, iprot, oprot thrift.TProtoco
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("Abort", thrift.REPLY, seqId); err2 != nil {
-		err = err2
-	}
-	if err2 = result.Write(oprot); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
-		err = err2
-	}
-	if err2 = oprot.Flush(); err == nil && err2 != nil {
-		err = err2
-	}
-	if err != nil {
-		return
-	}
-	return true, err
-}
-
-type workerProcessorErase struct {
-	handler Worker
-}
-
-func (p *workerProcessorErase) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := WorkerEraseArgs{}
-	if err = args.Read(iprot); err != nil {
-		iprot.ReadMessageEnd()
-		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("Erase", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return false, err
-	}
-
-	iprot.ReadMessageEnd()
-	result := WorkerEraseResult{}
-	var err2 error
-	if err2 = p.handler.Erase(args.RunId); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Erase: "+err2.Error())
-		oprot.WriteMessageBegin("Erase", thrift.EXCEPTION, seqId)
-		x.Write(oprot)
-		oprot.WriteMessageEnd()
-		oprot.Flush()
-		return true, err2
-	}
-	if err2 = oprot.WriteMessageBegin("Erase", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -1141,148 +1016,4 @@ func (p *WorkerAbortResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("WorkerAbortResult(%+v)", *p)
-}
-
-// Attributes:
-//  - RunId
-type WorkerEraseArgs struct {
-	RunId string `thrift:"runId,1" json:"runId"`
-}
-
-func NewWorkerEraseArgs() *WorkerEraseArgs {
-	return &WorkerEraseArgs{}
-}
-
-func (p *WorkerEraseArgs) GetRunId() string {
-	return p.RunId
-}
-func (p *WorkerEraseArgs) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if err := p.readField1(iprot); err != nil {
-				return err
-			}
-		default:
-			if err := iprot.Skip(fieldTypeId); err != nil {
-				return err
-			}
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *WorkerEraseArgs) readField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.RunId = v
-	}
-	return nil
-}
-
-func (p *WorkerEraseArgs) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Erase_args"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if err := p.writeField1(oprot); err != nil {
-		return err
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *WorkerEraseArgs) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("runId", thrift.STRING, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:runId: ", p), err)
-	}
-	if err := oprot.WriteString(string(p.RunId)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.runId (1) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:runId: ", p), err)
-	}
-	return err
-}
-
-func (p *WorkerEraseArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("WorkerEraseArgs(%+v)", *p)
-}
-
-type WorkerEraseResult struct {
-}
-
-func NewWorkerEraseResult() *WorkerEraseResult {
-	return &WorkerEraseResult{}
-}
-
-func (p *WorkerEraseResult) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		if err := iprot.Skip(fieldTypeId); err != nil {
-			return err
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *WorkerEraseResult) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("Erase_result"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *WorkerEraseResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("WorkerEraseResult(%+v)", *p)
 }

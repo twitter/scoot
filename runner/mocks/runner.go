@@ -35,6 +35,7 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 
 // Abort mocks base method
 func (m *MockService) Abort(arg0 runner.RunID) (runner.RunStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Abort", arg0)
 	ret0, _ := ret[0].(runner.RunStatus)
 	ret1, _ := ret[1].(error)
@@ -43,23 +44,13 @@ func (m *MockService) Abort(arg0 runner.RunID) (runner.RunStatus, error) {
 
 // Abort indicates an expected call of Abort
 func (mr *MockServiceMockRecorder) Abort(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockService)(nil).Abort), arg0)
-}
-
-// Erase mocks base method
-func (m *MockService) Erase(arg0 runner.RunID) error {
-	ret := m.ctrl.Call(m, "Erase", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Erase indicates an expected call of Erase
-func (mr *MockServiceMockRecorder) Erase(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Erase", reflect.TypeOf((*MockService)(nil).Erase), arg0)
 }
 
 // Query mocks base method
 func (m *MockService) Query(arg0 runner.Query, arg1 runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Query", arg0, arg1)
 	ret0, _ := ret[0].([]runner.RunStatus)
 	ret1, _ := ret[1].(runner.ServiceStatus)
@@ -69,11 +60,13 @@ func (m *MockService) Query(arg0 runner.Query, arg1 runner.Wait) ([]runner.RunSt
 
 // Query indicates an expected call of Query
 func (mr *MockServiceMockRecorder) Query(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockService)(nil).Query), arg0, arg1)
 }
 
 // QueryNow mocks base method
 func (m *MockService) QueryNow(arg0 runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryNow", arg0)
 	ret0, _ := ret[0].([]runner.RunStatus)
 	ret1, _ := ret[1].(runner.ServiceStatus)
@@ -83,21 +76,25 @@ func (m *MockService) QueryNow(arg0 runner.Query) ([]runner.RunStatus, runner.Se
 
 // QueryNow indicates an expected call of QueryNow
 func (mr *MockServiceMockRecorder) QueryNow(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryNow", reflect.TypeOf((*MockService)(nil).QueryNow), arg0)
 }
 
 // Release mocks base method
 func (m *MockService) Release() {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Release")
 }
 
 // Release indicates an expected call of Release
 func (mr *MockServiceMockRecorder) Release() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockService)(nil).Release))
 }
 
 // Run mocks base method
 func (m *MockService) Run(arg0 *runner.Command) (runner.RunStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(runner.RunStatus)
 	ret1, _ := ret[1].(error)
@@ -106,11 +103,13 @@ func (m *MockService) Run(arg0 *runner.Command) (runner.RunStatus, error) {
 
 // Run indicates an expected call of Run
 func (mr *MockServiceMockRecorder) Run(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), arg0)
 }
 
 // Status mocks base method
 func (m *MockService) Status(arg0 runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Status", arg0)
 	ret0, _ := ret[0].(runner.RunStatus)
 	ret1, _ := ret[1].(runner.ServiceStatus)
@@ -120,11 +119,13 @@ func (m *MockService) Status(arg0 runner.RunID) (runner.RunStatus, runner.Servic
 
 // Status indicates an expected call of Status
 func (mr *MockServiceMockRecorder) Status(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockService)(nil).Status), arg0)
 }
 
 // StatusAll mocks base method
 func (m *MockService) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StatusAll")
 	ret0, _ := ret[0].([]runner.RunStatus)
 	ret1, _ := ret[1].(runner.ServiceStatus)
@@ -134,5 +135,6 @@ func (m *MockService) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, err
 
 // StatusAll indicates an expected call of StatusAll
 func (mr *MockServiceMockRecorder) StatusAll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusAll", reflect.TypeOf((*MockService)(nil).StatusAll))
 }

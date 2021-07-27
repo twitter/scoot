@@ -37,6 +37,7 @@ func (m *MockExecutionClient) EXPECT() *MockExecutionClientMockRecorder {
 
 // Execute mocks base method
 func (m *MockExecutionClient) Execute(arg0 context.Context, arg1 *remoteexecution.ExecuteRequest, arg2 ...grpc.CallOption) (remoteexecution.Execution_ExecuteClient, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -49,12 +50,14 @@ func (m *MockExecutionClient) Execute(arg0 context.Context, arg1 *remoteexecutio
 
 // Execute indicates an expected call of Execute
 func (mr *MockExecutionClientMockRecorder) Execute(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutionClient)(nil).Execute), varargs...)
 }
 
 // WaitExecution mocks base method
 func (m *MockExecutionClient) WaitExecution(arg0 context.Context, arg1 *remoteexecution.WaitExecutionRequest, arg2 ...grpc.CallOption) (remoteexecution.Execution_WaitExecutionClient, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -67,6 +70,7 @@ func (m *MockExecutionClient) WaitExecution(arg0 context.Context, arg1 *remoteex
 
 // WaitExecution indicates an expected call of WaitExecution
 func (mr *MockExecutionClientMockRecorder) WaitExecution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitExecution", reflect.TypeOf((*MockExecutionClient)(nil).WaitExecution), varargs...)
 }
@@ -96,6 +100,7 @@ func (m *MockActionCacheClient) EXPECT() *MockActionCacheClientMockRecorder {
 
 // GetActionResult mocks base method
 func (m *MockActionCacheClient) GetActionResult(arg0 context.Context, arg1 *remoteexecution.GetActionResultRequest, arg2 ...grpc.CallOption) (*remoteexecution.ActionResult, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -108,12 +113,14 @@ func (m *MockActionCacheClient) GetActionResult(arg0 context.Context, arg1 *remo
 
 // GetActionResult indicates an expected call of GetActionResult
 func (mr *MockActionCacheClientMockRecorder) GetActionResult(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActionResult", reflect.TypeOf((*MockActionCacheClient)(nil).GetActionResult), varargs...)
 }
 
 // UpdateActionResult mocks base method
 func (m *MockActionCacheClient) UpdateActionResult(arg0 context.Context, arg1 *remoteexecution.UpdateActionResultRequest, arg2 ...grpc.CallOption) (*remoteexecution.ActionResult, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -126,6 +133,7 @@ func (m *MockActionCacheClient) UpdateActionResult(arg0 context.Context, arg1 *r
 
 // UpdateActionResult indicates an expected call of UpdateActionResult
 func (mr *MockActionCacheClientMockRecorder) UpdateActionResult(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateActionResult", reflect.TypeOf((*MockActionCacheClient)(nil).UpdateActionResult), varargs...)
 }
@@ -155,6 +163,7 @@ func (m *MockContentAddressableStorageClient) EXPECT() *MockContentAddressableSt
 
 // BatchReadBlobs mocks base method
 func (m *MockContentAddressableStorageClient) BatchReadBlobs(arg0 context.Context, arg1 *remoteexecution.BatchReadBlobsRequest, arg2 ...grpc.CallOption) (*remoteexecution.BatchReadBlobsResponse, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -167,12 +176,14 @@ func (m *MockContentAddressableStorageClient) BatchReadBlobs(arg0 context.Contex
 
 // BatchReadBlobs indicates an expected call of BatchReadBlobs
 func (mr *MockContentAddressableStorageClientMockRecorder) BatchReadBlobs(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchReadBlobs", reflect.TypeOf((*MockContentAddressableStorageClient)(nil).BatchReadBlobs), varargs...)
 }
 
 // BatchUpdateBlobs mocks base method
 func (m *MockContentAddressableStorageClient) BatchUpdateBlobs(arg0 context.Context, arg1 *remoteexecution.BatchUpdateBlobsRequest, arg2 ...grpc.CallOption) (*remoteexecution.BatchUpdateBlobsResponse, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -185,12 +196,14 @@ func (m *MockContentAddressableStorageClient) BatchUpdateBlobs(arg0 context.Cont
 
 // BatchUpdateBlobs indicates an expected call of BatchUpdateBlobs
 func (mr *MockContentAddressableStorageClientMockRecorder) BatchUpdateBlobs(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchUpdateBlobs", reflect.TypeOf((*MockContentAddressableStorageClient)(nil).BatchUpdateBlobs), varargs...)
 }
 
 // FindMissingBlobs mocks base method
 func (m *MockContentAddressableStorageClient) FindMissingBlobs(arg0 context.Context, arg1 *remoteexecution.FindMissingBlobsRequest, arg2 ...grpc.CallOption) (*remoteexecution.FindMissingBlobsResponse, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -203,12 +216,14 @@ func (m *MockContentAddressableStorageClient) FindMissingBlobs(arg0 context.Cont
 
 // FindMissingBlobs indicates an expected call of FindMissingBlobs
 func (mr *MockContentAddressableStorageClientMockRecorder) FindMissingBlobs(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindMissingBlobs", reflect.TypeOf((*MockContentAddressableStorageClient)(nil).FindMissingBlobs), varargs...)
 }
 
 // GetTree mocks base method
 func (m *MockContentAddressableStorageClient) GetTree(arg0 context.Context, arg1 *remoteexecution.GetTreeRequest, arg2 ...grpc.CallOption) (remoteexecution.ContentAddressableStorage_GetTreeClient, error) {
+	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -221,6 +236,7 @@ func (m *MockContentAddressableStorageClient) GetTree(arg0 context.Context, arg1
 
 // GetTree indicates an expected call of GetTree
 func (mr *MockContentAddressableStorageClientMockRecorder) GetTree(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTree", reflect.TypeOf((*MockContentAddressableStorageClient)(nil).GetTree), varargs...)
 }

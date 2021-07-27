@@ -69,5 +69,3 @@ func (qc *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
 	log.Infof("%v\nError: %v\n", status, err)
 	return nil
 }
-
-//TODO: implement Erase()
