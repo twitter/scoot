@@ -11,5 +11,4 @@ Scoot is built with many libraries which will get assembled into several binarie
 * __scoot-integration__ - an integration test for scoot's thrift endpoints
 * __scoot-snapshot-db__ - CLI client for snapshot store (via apiserver)
 * __setup-cloud-scoot__ - sets up local Scoot components (scheduler and worker), or sets up connection to remote ones
-* __workercl__ - CLI client for workers
 * __workserver__ - the Scoot worker service
