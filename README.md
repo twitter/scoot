@@ -37,7 +37,7 @@ working with go tools in this repository, and preferably use the Go distribution
 Setup a scheduler and worker nodes locally:
 
 ```sh
-go run ./binaries/setup-cloud-scoot/main.go --strategy local.local
+go run ./setup-cloud-scoot/main.go --strategy local.local
 ```
 
 Run a series of randomly generated tests against the local scheduler and workers:
