@@ -38,7 +38,6 @@ func (m *MockByteStreamClient) EXPECT() *MockByteStreamClientMockRecorder {
 
 // QueryWriteStatus mocks base method
 func (m *MockByteStreamClient) QueryWriteStatus(arg0 context.Context, arg1 *bytestream.QueryWriteStatusRequest, arg2 ...grpc.CallOption) (*bytestream.QueryWriteStatusResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -51,14 +50,12 @@ func (m *MockByteStreamClient) QueryWriteStatus(arg0 context.Context, arg1 *byte
 
 // QueryWriteStatus indicates an expected call of QueryWriteStatus
 func (mr *MockByteStreamClientMockRecorder) QueryWriteStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryWriteStatus", reflect.TypeOf((*MockByteStreamClient)(nil).QueryWriteStatus), varargs...)
 }
 
 // Read mocks base method
 func (m *MockByteStreamClient) Read(arg0 context.Context, arg1 *bytestream.ReadRequest, arg2 ...grpc.CallOption) (bytestream.ByteStream_ReadClient, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -71,14 +68,12 @@ func (m *MockByteStreamClient) Read(arg0 context.Context, arg1 *bytestream.ReadR
 
 // Read indicates an expected call of Read
 func (mr *MockByteStreamClientMockRecorder) Read(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockByteStreamClient)(nil).Read), varargs...)
 }
 
 // Write mocks base method
 func (m *MockByteStreamClient) Write(arg0 context.Context, arg1 ...grpc.CallOption) (bytestream.ByteStream_WriteClient, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -91,7 +86,6 @@ func (m *MockByteStreamClient) Write(arg0 context.Context, arg1 ...grpc.CallOpti
 
 // Write indicates an expected call of Write
 func (mr *MockByteStreamClientMockRecorder) Write(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockByteStreamClient)(nil).Write), varargs...)
 }
@@ -121,7 +115,6 @@ func (m *MockByteStream_ReadClient) EXPECT() *MockByteStream_ReadClientMockRecor
 
 // CloseSend mocks base method
 func (m *MockByteStream_ReadClient) CloseSend() error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -129,13 +122,11 @@ func (m *MockByteStream_ReadClient) CloseSend() error {
 
 // CloseSend indicates an expected call of CloseSend
 func (mr *MockByteStream_ReadClientMockRecorder) CloseSend() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockByteStream_ReadClient)(nil).CloseSend))
 }
 
 // Context mocks base method
 func (m *MockByteStream_ReadClient) Context() context.Context {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
@@ -143,13 +134,11 @@ func (m *MockByteStream_ReadClient) Context() context.Context {
 
 // Context indicates an expected call of Context
 func (mr *MockByteStream_ReadClientMockRecorder) Context() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockByteStream_ReadClient)(nil).Context))
 }
 
 // Header mocks base method
 func (m *MockByteStream_ReadClient) Header() (metadata.MD, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
 	ret1, _ := ret[1].(error)
@@ -158,13 +147,11 @@ func (m *MockByteStream_ReadClient) Header() (metadata.MD, error) {
 
 // Header indicates an expected call of Header
 func (mr *MockByteStream_ReadClientMockRecorder) Header() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockByteStream_ReadClient)(nil).Header))
 }
 
 // Recv mocks base method
 func (m *MockByteStream_ReadClient) Recv() (*bytestream.ReadResponse, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*bytestream.ReadResponse)
 	ret1, _ := ret[1].(error)
@@ -173,13 +160,11 @@ func (m *MockByteStream_ReadClient) Recv() (*bytestream.ReadResponse, error) {
 
 // Recv indicates an expected call of Recv
 func (mr *MockByteStream_ReadClientMockRecorder) Recv() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockByteStream_ReadClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method
 func (m *MockByteStream_ReadClient) RecvMsg(arg0 interface{}) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -187,13 +172,11 @@ func (m *MockByteStream_ReadClient) RecvMsg(arg0 interface{}) error {
 
 // RecvMsg indicates an expected call of RecvMsg
 func (mr *MockByteStream_ReadClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockByteStream_ReadClient)(nil).RecvMsg), arg0)
 }
 
 // SendMsg mocks base method
 func (m *MockByteStream_ReadClient) SendMsg(arg0 interface{}) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -201,13 +184,11 @@ func (m *MockByteStream_ReadClient) SendMsg(arg0 interface{}) error {
 
 // SendMsg indicates an expected call of SendMsg
 func (mr *MockByteStream_ReadClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockByteStream_ReadClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method
 func (m *MockByteStream_ReadClient) Trailer() metadata.MD {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
 	return ret0
@@ -215,7 +196,6 @@ func (m *MockByteStream_ReadClient) Trailer() metadata.MD {
 
 // Trailer indicates an expected call of Trailer
 func (mr *MockByteStream_ReadClientMockRecorder) Trailer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockByteStream_ReadClient)(nil).Trailer))
 }
 
@@ -244,7 +224,6 @@ func (m *MockByteStream_WriteClient) EXPECT() *MockByteStream_WriteClientMockRec
 
 // CloseAndRecv mocks base method
 func (m *MockByteStream_WriteClient) CloseAndRecv() (*bytestream.WriteResponse, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseAndRecv")
 	ret0, _ := ret[0].(*bytestream.WriteResponse)
 	ret1, _ := ret[1].(error)
@@ -253,13 +232,11 @@ func (m *MockByteStream_WriteClient) CloseAndRecv() (*bytestream.WriteResponse, 
 
 // CloseAndRecv indicates an expected call of CloseAndRecv
 func (mr *MockByteStream_WriteClientMockRecorder) CloseAndRecv() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseAndRecv", reflect.TypeOf((*MockByteStream_WriteClient)(nil).CloseAndRecv))
 }
 
 // CloseSend mocks base method
 func (m *MockByteStream_WriteClient) CloseSend() error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -267,13 +244,11 @@ func (m *MockByteStream_WriteClient) CloseSend() error {
 
 // CloseSend indicates an expected call of CloseSend
 func (mr *MockByteStream_WriteClientMockRecorder) CloseSend() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockByteStream_WriteClient)(nil).CloseSend))
 }
 
 // Context mocks base method
 func (m *MockByteStream_WriteClient) Context() context.Context {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
@@ -281,13 +256,11 @@ func (m *MockByteStream_WriteClient) Context() context.Context {
 
 // Context indicates an expected call of Context
 func (mr *MockByteStream_WriteClientMockRecorder) Context() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockByteStream_WriteClient)(nil).Context))
 }
 
 // Header mocks base method
 func (m *MockByteStream_WriteClient) Header() (metadata.MD, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
 	ret1, _ := ret[1].(error)
@@ -296,13 +269,11 @@ func (m *MockByteStream_WriteClient) Header() (metadata.MD, error) {
 
 // Header indicates an expected call of Header
 func (mr *MockByteStream_WriteClientMockRecorder) Header() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockByteStream_WriteClient)(nil).Header))
 }
 
 // RecvMsg mocks base method
 func (m *MockByteStream_WriteClient) RecvMsg(arg0 interface{}) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -310,13 +281,11 @@ func (m *MockByteStream_WriteClient) RecvMsg(arg0 interface{}) error {
 
 // RecvMsg indicates an expected call of RecvMsg
 func (mr *MockByteStream_WriteClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockByteStream_WriteClient)(nil).RecvMsg), arg0)
 }
 
 // Send mocks base method
 func (m *MockByteStream_WriteClient) Send(arg0 *bytestream.WriteRequest) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -324,13 +293,11 @@ func (m *MockByteStream_WriteClient) Send(arg0 *bytestream.WriteRequest) error {
 
 // Send indicates an expected call of Send
 func (mr *MockByteStream_WriteClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockByteStream_WriteClient)(nil).Send), arg0)
 }
 
 // SendMsg mocks base method
 func (m *MockByteStream_WriteClient) SendMsg(arg0 interface{}) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -338,13 +305,11 @@ func (m *MockByteStream_WriteClient) SendMsg(arg0 interface{}) error {
 
 // SendMsg indicates an expected call of SendMsg
 func (mr *MockByteStream_WriteClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockByteStream_WriteClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method
 func (m *MockByteStream_WriteClient) Trailer() metadata.MD {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
 	return ret0
@@ -352,6 +317,5 @@ func (m *MockByteStream_WriteClient) Trailer() metadata.MD {
 
 // Trailer indicates an expected call of Trailer
 func (mr *MockByteStream_WriteClientMockRecorder) Trailer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockByteStream_WriteClient)(nil).Trailer))
 }

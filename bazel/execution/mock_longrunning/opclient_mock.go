@@ -38,7 +38,6 @@ func (m *MockOperationsClient) EXPECT() *MockOperationsClientMockRecorder {
 
 // CancelOperation mocks base method
 func (m *MockOperationsClient) CancelOperation(arg0 context.Context, arg1 *longrunning.CancelOperationRequest, arg2 ...grpc.CallOption) (*empty.Empty, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -51,14 +50,12 @@ func (m *MockOperationsClient) CancelOperation(arg0 context.Context, arg1 *longr
 
 // CancelOperation indicates an expected call of CancelOperation
 func (mr *MockOperationsClientMockRecorder) CancelOperation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOperation", reflect.TypeOf((*MockOperationsClient)(nil).CancelOperation), varargs...)
 }
 
 // DeleteOperation mocks base method
 func (m *MockOperationsClient) DeleteOperation(arg0 context.Context, arg1 *longrunning.DeleteOperationRequest, arg2 ...grpc.CallOption) (*empty.Empty, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -71,14 +68,12 @@ func (m *MockOperationsClient) DeleteOperation(arg0 context.Context, arg1 *longr
 
 // DeleteOperation indicates an expected call of DeleteOperation
 func (mr *MockOperationsClientMockRecorder) DeleteOperation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOperation", reflect.TypeOf((*MockOperationsClient)(nil).DeleteOperation), varargs...)
 }
 
 // GetOperation mocks base method
 func (m *MockOperationsClient) GetOperation(arg0 context.Context, arg1 *longrunning.GetOperationRequest, arg2 ...grpc.CallOption) (*longrunning.Operation, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -91,14 +86,12 @@ func (m *MockOperationsClient) GetOperation(arg0 context.Context, arg1 *longrunn
 
 // GetOperation indicates an expected call of GetOperation
 func (mr *MockOperationsClientMockRecorder) GetOperation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOperation", reflect.TypeOf((*MockOperationsClient)(nil).GetOperation), varargs...)
 }
 
 // ListOperations mocks base method
 func (m *MockOperationsClient) ListOperations(arg0 context.Context, arg1 *longrunning.ListOperationsRequest, arg2 ...grpc.CallOption) (*longrunning.ListOperationsResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -111,7 +104,6 @@ func (m *MockOperationsClient) ListOperations(arg0 context.Context, arg1 *longru
 
 // ListOperations indicates an expected call of ListOperations
 func (mr *MockOperationsClientMockRecorder) ListOperations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOperations", reflect.TypeOf((*MockOperationsClient)(nil).ListOperations), varargs...)
 }

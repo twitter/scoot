@@ -36,7 +36,6 @@ func (m *MockGRPCDialer) EXPECT() *MockGRPCDialerMockRecorder {
 
 // Dial mocks base method
 func (m *MockGRPCDialer) Dial(arg0 string, arg1 ...grpc.DialOption) (connection.ClientConnPtr, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
@@ -49,7 +48,6 @@ func (m *MockGRPCDialer) Dial(arg0 string, arg1 ...grpc.DialOption) (connection.
 
 // Dial indicates an expected call of Dial
 func (mr *MockGRPCDialerMockRecorder) Dial(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockGRPCDialer)(nil).Dial), varargs...)
 }
@@ -79,7 +77,6 @@ func (m *MockClientConnPtr) EXPECT() *MockClientConnPtrMockRecorder {
 
 // Close mocks base method
 func (m *MockClientConnPtr) Close() error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -87,6 +84,5 @@ func (m *MockClientConnPtr) Close() error {
 
 // Close indicates an expected call of Close
 func (mr *MockClientConnPtrMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClientConnPtr)(nil).Close))
 }
