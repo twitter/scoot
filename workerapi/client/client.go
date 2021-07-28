@@ -13,6 +13,12 @@ import (
 	"github.com/twitter/scoot/workerapi/gen-go/worker"
 )
 
+// Parameters for configuring connections to remote workers.
+type WorkersClientJSONConfig struct {
+	Type          string // transport type: rpc
+	PollingPeriod string // polling period default to 250ms
+}
+
 type Client interface {
 	// Connection funtions
 	Dial() error

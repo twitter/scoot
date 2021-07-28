@@ -52,7 +52,7 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			cl *cluster.Cluster,
 			sc saga.SagaCoordinator,
 			rf func(cluster.Node) runner.Service,
-			config server.SchedulerConfig,
+			config server.SchedulerConfiguration,
 			stat stats.StatsReceiver,
 			persistor server.Persistor,
 			durationKeyExtractorFn func(string) string,

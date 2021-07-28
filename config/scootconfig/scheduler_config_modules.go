@@ -29,7 +29,7 @@ const DefaultReadyFnBackoff = 5 * time.Second
 //             from the sagalog, and restarts them.
 // DefaultTaskTimeout - default timeout for tasks, human readable ex: "30m"
 //
-// See server.SchedulerConfig for comments on the remaining fields.
+// See server.SchedulerConfiguration for comments on the remaining fields.
 type StatefulSchedulerConfig struct {
 	Type                 string
 	MaxRetriesPerTask    int
@@ -46,20 +46,20 @@ func (c *StatefulSchedulerConfig) Install(bag *ice.MagicBag) {
 	bag.Put(c.Create)
 }
 
-func (c *StatefulSchedulerConfig) Create() (server.SchedulerConfig, error) {
+func (c *StatefulSchedulerConfig) Create() (server.SchedulerConfiguration, error) {
 	var err error
 	var dtt time.Duration
 	if c.DefaultTaskTimeout != "" {
 		dtt, err = time.ParseDuration(c.DefaultTaskTimeout)
 		if err != nil {
-			return server.SchedulerConfig{}, err
+			return server.SchedulerConfiguration{}, err
 		}
 	}
 	var tto time.Duration
 	if c.TaskTimeoutOverhead != "" {
 		tto, err = time.ParseDuration(c.TaskTimeoutOverhead)
 		if err != nil {
-			return server.SchedulerConfig{}, err
+			return server.SchedulerConfiguration{}, err
 		}
 	}
 	admins := []string{}
@@ -69,7 +69,7 @@ func (c *StatefulSchedulerConfig) Create() (server.SchedulerConfig, error) {
 		}
 	}
 
-	return server.SchedulerConfig{
+	return server.SchedulerConfiguration{
 		MaxRetriesPerTask:    c.MaxRetriesPerTask,
 		DebugMode:            c.DebugMode,
 		RecoverJobsOnStartup: c.RecoverJobsOnStartup,

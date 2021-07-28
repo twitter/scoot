@@ -6,9 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/workerapi/client"
 )
 
@@ -37,7 +37,7 @@ func main() {
 	transportFactory := thrift.NewTTransportFactory()
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, scootconfig.DefaultClientTimeout)
+	di := dialer.NewSimpleDialer(transportFactory, protocolFactory, common.DefaultClientTimeout)
 	cl, err := client.NewSimpleCLIClient(di)
 	if err != nil {
 		log.Fatal("Failed to create worker CLIClient: ", err)
