@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/setup"
 )
 
@@ -26,12 +25,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	tmp, err := temp.NewTempDir("", "setup-cloud-scoot-")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	cmds := setup.NewSignalHandlingCmds(tmp)
+	cmds := setup.NewSignalHandlingCmds()
 	defer cmds.Kill()
 
 	builder := setup.NewGoBuilder(cmds)

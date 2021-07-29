@@ -3,10 +3,10 @@ package gitfiler
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"os/exec"
 
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
@@ -19,7 +19,7 @@ import (
 // cloner clones a repo using --reference based on a reference repo
 type refCloner struct {
 	refPool   *RepoPool
-	clonesDir *temp.TempDir
+	clonesDir string
 }
 
 // Get gets a repo with git clone --reference
@@ -33,13 +33,13 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	// don't defer - measure only successful clones
 	initTime := stat.Latency(stats.GitClonerInitLatency_ms).Time()
 
-	cloneDir, err := c.clonesDir.TempDir("clone-")
+	cloneDir, err := ioutil.TempDir(c.clonesDir, "clone-")
 	if err != nil {
 		return nil, err
 	}
 
 	// We probably ought to use a separate git dir so that processes can't mess up .git
-	cmd := exec.Command("git", "clone", "--reference", ref.Dir(), ref.Dir(), cloneDir.Dir)
+	cmd := exec.Command("git", "clone", "--reference", ref.Dir(), ref.Dir(), cloneDir)
 	log.Info("gitfiler.refCloner.clone: Cloning", cmd)
 	err = cmd.Run()
 	if err != nil {
@@ -49,5 +49,5 @@ func (c *refCloner) Init(stat stats.StatsReceiver) (*repo.Repository, error) {
 	log.Info("gitfiler.refCloner.clone: Cloning complete")
 
 	initTime.Stop()
-	return repo.NewRepository(cloneDir.Dir)
+	return repo.NewRepository(cloneDir)
 }

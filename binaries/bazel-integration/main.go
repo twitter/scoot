@@ -24,10 +24,10 @@ import (
 	"github.com/twitter/scoot/bazel/remoteexecution"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/setup"
 	"github.com/twitter/scoot/tests/testhelpers"
+	"io/ioutil"
 )
 
 func main() {
@@ -275,21 +275,21 @@ func uploadCommand(gopath string, timeToSleep int) ([]byte, error) {
 }
 
 func saveDirectory(gopath string) ([]byte, error) {
-	root, err := temp.NewTempDir("", "root")
+	root, err := ioutil.TempDir("", "root")
 	if err != nil {
 		return nil, err
 	}
-	store, err := temp.NewTempDir("", "store")
+	store, err := ioutil.TempDir("", "store")
 	if err != nil {
 		return nil, err
 	}
 	return exec.Command(
 		gopath+"/bin/fs_util",
-		fmt.Sprintf("--local-store-path=%s", store.Dir),
+		fmt.Sprintf("--local-store-path=%s", store),
 		"--server-address=localhost:12100",
 		"directory",
 		"save",
-		fmt.Sprintf("--root=%s", root.Dir), "**",
+		fmt.Sprintf("--root=%s", root), "**",
 	).CombinedOutput()
 }
 

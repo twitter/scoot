@@ -10,7 +10,6 @@ import (
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
@@ -208,12 +207,8 @@ func setup(capacity int, interval time.Duration, t *testing.T) *env {
 	logrusLevel, _ := log.ParseLevel("debug")
 	log.SetLevel(logrusLevel)
 	sim := execers.NewSimExecer()
-	tmpDir, err := temp.TempDirDefault()
-	if err != nil {
-		t.Fatalf("Test setup() failed getting temp dir:%s", err.Error())
-	}
 
-	outputCreator, err := NewHttpOutputCreator(tmpDir, "")
+	outputCreator, err := NewHttpOutputCreator("")
 	if err != nil {
 		t.Fatalf("Test setup() failed getting output creator:%s", err.Error())
 	}
@@ -223,7 +218,7 @@ func setup(capacity int, interval time.Duration, t *testing.T) *env {
 
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFilerUpdater(updater), IDC: nil}
-	r := NewQueueRunner(sim, filerMap, outputCreator, tmpDir, capacity, nil, stats.NopDirsMonitor, runner.EmptyID)
+	r := NewQueueRunner(sim, filerMap, outputCreator, capacity, nil, stats.NopDirsMonitor, runner.EmptyID)
 
 	return &env{sim: sim, r: r, u: updater, uc: &updateCount}
 }
