@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -18,7 +19,7 @@ type watchJobCmd struct {
 	jobId string
 }
 
-func (c *watchJobCmd) registerFlags() *cobra.Command {
+func (c *watchJobCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "watch_job",
 		Short: "WatchJob",
@@ -27,7 +28,7 @@ func (c *watchJobCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *watchJobCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Watching job:", args)
 
@@ -38,7 +39,7 @@ func (c *watchJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string
 	jobId := args[0]
 
 	for {
-		jobStatus, err := GetAndPrintStatus(jobId, cl.scootClient)
+		jobStatus, err := GetAndPrintStatus(jobId, cl.ScootClient)
 		if err != nil {
 			return err
 		}

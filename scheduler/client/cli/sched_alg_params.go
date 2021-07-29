@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/twitter/scoot/common/client"
 )
 
 // lbsSchedAlgParams load based scheduling params.  The setter API is associated with
@@ -25,7 +26,7 @@ type getLBSSchedAlgParams struct {
 	lbsSchedAlgParams
 }
 
-func (g *getLBSSchedAlgParams) registerFlags() *cobra.Command {
+func (g *getLBSSchedAlgParams) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "get_scheduling_alg_params",
 		Short: "GetSchedAlgParams",
@@ -34,28 +35,28 @@ func (g *getLBSSchedAlgParams) registerFlags() *cobra.Command {
 	return r
 }
 
-func (g *getLBSSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (g *getLBSSchedAlgParams) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 	log.Info("Getting Scheduling Algorithm Parameters", args)
 
 	var err error
-	g.ClassLoadPercents, err = cl.scootClient.GetClassLoadPercents()
+	g.ClassLoadPercents, err = cl.ScootClient.GetClassLoadPercents()
 	if err != nil {
 		return returnError(err)
 	}
 
-	g.RequestorMap, err = cl.scootClient.GetRequestorToClassMap()
+	g.RequestorMap, err = cl.ScootClient.GetRequestorToClassMap()
 	if err != nil {
 		return returnError(err)
 	}
 
 	var tInt int32
-	tInt, err = cl.scootClient.GetRebalanceMinimumDuration()
+	tInt, err = cl.ScootClient.GetRebalanceMinimumDuration()
 	if err != nil {
 		return returnError(err)
 	}
 	g.RebalanceMinimumDuration = int(tInt)
 
-	tInt, err = cl.scootClient.GetRebalanceThreshold()
+	tInt, err = cl.ScootClient.GetRebalanceThreshold()
 	if err != nil {
 		return returnError(err)
 	}
@@ -99,7 +100,7 @@ type setLbsSchedAlgParams struct {
 	reqMapFilePath string
 }
 
-func (s *setLbsSchedAlgParams) registerFlags() *cobra.Command {
+func (s *setLbsSchedAlgParams) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "set_scheduling_alg_params",
 		Short: "SetSchedAlgParams",
@@ -111,18 +112,18 @@ func (s *setLbsSchedAlgParams) registerFlags() *cobra.Command {
 	return r
 }
 
-func (s *setLbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (s *setLbsSchedAlgParams) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 	log.Info("Setting Scheduling Algorithm Parameters", args)
 
 	if s.RebalanceMinimumDuration > -1 {
-		err := cl.scootClient.SetRebalanceMinimumDuration(int32(s.RebalanceMinimumDuration))
+		err := cl.ScootClient.SetRebalanceMinimumDuration(int32(s.RebalanceMinimumDuration))
 		if err != nil {
 			log.Errorf("%s", err)
 			return err
 		}
 	}
 	if s.RebalanceThreshold > -1 {
-		err := cl.scootClient.SetRebalanceThreshold(int32(s.RebalanceThreshold))
+		err := cl.ScootClient.SetRebalanceThreshold(int32(s.RebalanceThreshold))
 		if err != nil {
 			log.Errorf("%s", err)
 			return err
@@ -140,7 +141,7 @@ func (s *setLbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 			log.Errorf("%s", err)
 			return err
 		}
-		err = cl.scootClient.SetClassLoadPercents(s.ClassLoadPercents)
+		err = cl.ScootClient.SetClassLoadPercents(s.ClassLoadPercents)
 		if err != nil {
 			log.Errorf("%s", err)
 			return err
@@ -156,7 +157,7 @@ func (s *setLbsSchedAlgParams) run(cl *simpleCLIClient, cmd *cobra.Command, args
 		if err != nil {
 			return err
 		}
-		cl.scootClient.SetRequestorToClassMap(s.RequestorMap)
+		cl.ScootClient.SetRequestorToClassMap(s.RequestorMap)
 		if err != nil {
 			log.Errorf("%s", err)
 			return err

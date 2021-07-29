@@ -10,13 +10,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 type offlineWorkerCmd struct {
 }
 
-func (c *offlineWorkerCmd) registerFlags() *cobra.Command {
+func (c *offlineWorkerCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "offline_worker",
 		Short: "OfflineWorker",
@@ -24,7 +26,7 @@ func (c *offlineWorkerCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *offlineWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *offlineWorkerCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Infof("Offlining Scoot Worker %s", args)
 
@@ -38,7 +40,7 @@ func (c *offlineWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []s
 		return err
 	}
 
-	err = cl.scootClient.OfflineWorker(&scoot.OfflineWorkerReq{ID: id, Requestor: requestor.Username})
+	err = cl.ScootClient.OfflineWorker(&scoot.OfflineWorkerReq{ID: id, Requestor: requestor.Username})
 
 	if err != nil {
 		switch err := err.(type) {
