@@ -10,7 +10,6 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -136,12 +135,10 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 	initDoneCh = make(chan error, 1)
 	statsRegistry = stats.NewFinagleStatsRegistry()
 	simExecer = execers.NewSimExecer()
-	tmpDir, err := temp.TempDirDefault()
 	configText := "{}"
 
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
-	bag.InstallModule(temp.Module())
 	bag.InstallModule(runners.Module())
 	bag.InstallModule(Module())
 	bag.PutMany(
@@ -181,7 +178,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 	} else {
 		bag.Put(
 			func() runner.OutputCreator {
-				oc, _ := runners.NewHttpOutputCreator(tmpDir, "")
+				oc, _ := runners.NewHttpOutputCreator("")
 				return oc
 			},
 		)
@@ -236,13 +233,13 @@ func (pdb *pausingDB) IngestGitWorkingDir(ingestRepo *repo.Repository) (snapshot
 	pdb.wait()
 	return "nilSnapshoId", nil
 }
-func (pdb *pausingDB) ReadFileAll(id snapshot.ID, path string) ([]byte, error) {
-	pdb.wait()
-	return []byte{}, nil
-}
 func (pdb *pausingDB) Checkout(id snapshot.ID) (path string, err error) {
 	pdb.wait()
 	return "", nil
+}
+func (pdb *pausingDB) ReadFileAll(id snapshot.ID, path string) ([]byte, error) {
+	pdb.wait()
+	return []byte{}, nil
 }
 func (pdb *pausingDB) ReleaseCheckout(path string) error {
 	pdb.wait()

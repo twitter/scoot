@@ -8,12 +8,11 @@ import (
 	"testing"
 
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
 
 func TestCheckouter(t *testing.T) {
-	tmp, err := temp.NewTempDir("", "checkouter_test")
+	tmp, err := ioutil.TempDir("", "checkouter_test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,22 +77,22 @@ func TestCheckouter(t *testing.T) {
 	}
 }
 
-func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Repository, error) {
+func CreateReferenceRepo(tmp string, id1 *string, id2 *string) (*repo.Repository, error) {
 	// git init
-	dir, err := tmp.TempDir("ref-repo-")
+	dir, err := ioutil.TempDir(tmp, "ref-repo-")
 	if err != nil {
 		return nil, err
 	}
 
 	cmd := exec.Command("git", "init")
-	cmd.Dir = dir.Dir
+	cmd.Dir = dir
 	err = cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("error init'ing: %v", err)
 	}
 
 	// create the repo
-	r, err := repo.NewRepository(dir.Dir)
+	r, err := repo.NewRepository(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +105,7 @@ func CreateReferenceRepo(tmp *temp.TempDir, id1 *string, id2 *string) (*repo.Rep
 	}
 
 	// Create a commit with file.txt = "first"
-	filename := filepath.Join(dir.Dir, "file.txt")
+	filename := filepath.Join(dir, "file.txt")
 	if err = ioutil.WriteFile(filename, []byte("first"), 0777); err != nil {
 		return nil, err
 	}

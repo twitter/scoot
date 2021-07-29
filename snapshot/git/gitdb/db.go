@@ -7,7 +7,6 @@ import (
 
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
@@ -23,33 +22,30 @@ import (
 func MakeDBFromRepo(
 	dataRepo *repo.Repository,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
 	autoUploadDest AutoUploadDest,
 	stat stats.StatsReceiver) *DB {
-	return makeDB(dataRepo, nil, updater, tmp, stream, tags, bundles, autoUploadDest, stat)
+	return makeDB(dataRepo, nil, updater, stream, tags, bundles, autoUploadDest, stat)
 }
 
 // MakeDBNewRepo makes a gitDB that uses a new DB, populated by initer
 func MakeDBNewRepo(
 	initer RepoIniter,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
 	autoUploadDest AutoUploadDest,
 	stat stats.StatsReceiver) *DB {
-	return makeDB(nil, initer, updater, tmp, stream, tags, bundles, autoUploadDest, stat)
+	return makeDB(nil, initer, updater, stream, tags, bundles, autoUploadDest, stat)
 }
 
 func makeDB(
 	dataRepo *repo.Repository,
 	initer RepoIniter,
 	updater RepoUpdater,
-	tmp *temp.TempDir,
 	stream *StreamConfig,
 	tags *TagsConfig,
 	bundles *BundlestoreConfig,
@@ -64,7 +60,6 @@ func makeDB(
 		reqCh:      make(chan req),
 		dataRepo:   dataRepo,
 		updater:    updater,
-		tmp:        tmp,
 		checkouts:  make(map[string]bool),
 		local:      &localBackend{},
 		stream:     &streamBackend{cfg: stream, stat: stat},
@@ -119,7 +114,6 @@ type DB struct {
 	// All data below here should be accessed only by the loop() goroutine
 	dataRepo   *repo.Repository
 	updater    RepoUpdater
-	tmp        *temp.TempDir
 	checkouts  map[string]bool // checkouts stores bare checkouts, but not the git worktree
 	local      *localBackend
 	stream     *streamBackend

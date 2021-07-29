@@ -10,8 +10,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/twitter/scoot/os/temp"
 )
 
 // Cmds runs commands for Cloud Scoot setup.
@@ -29,22 +27,19 @@ type Cmds struct {
 	// commands we are watching (may be unstarted or finished)
 	watching []*exec.Cmd
 	mu       sync.Mutex
-	tmp      *temp.TempDir
 
 	wg     sync.WaitGroup
 	killed bool
 }
 
 // Create a new Cmds
-func NewCmds(tmp *temp.TempDir) *Cmds {
-	return &Cmds{
-		tmp: tmp,
-	}
+func NewCmds() *Cmds {
+	return &Cmds{}
 }
 
 // Create a new Cmds that has a signal handler installed
-func NewSignalHandlingCmds(tmp *temp.TempDir) *Cmds {
-	r := NewCmds(tmp)
+func NewSignalHandlingCmds() *Cmds {
+	r := NewCmds()
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -124,7 +119,6 @@ func (c *Cmds) Command(path string, arg ...string) *exec.Cmd {
 	// TODO(dbentley): consider migrating to use Execer and OSExecer
 	cmd := exec.Command(path, arg...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	// TODO(dbentley): redirect output to files in c.tmp so we don't deluge stdout/stderr
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	c.wg.Add(1)
 	c.watching = append(c.watching, cmd)
