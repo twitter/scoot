@@ -20,7 +20,6 @@ Key objects (not exhaustive, see code or godoc for more):
   * _Ingester_ - interface for creating snapshots from the local filesystem
   * _Updater_ - interface for updating underlying resource a Filer is utilizing
 * __git specific objects__
-  * _package gitfiler_ - for checking out and handling snapshots from Git
     * _RepoPool_ - for handling concurrent access to Git repos
     * _RepoIniter_ - interface for controlling (possibly expensive) Git repo initialization
     * _Checkouter_ - a Git-specific snapshot checkouter implementation
