@@ -12,7 +12,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
@@ -68,19 +67,20 @@ If the queue is full when a command is received, an empty RunStatus and a queue 
 @param: filerMap - mapping of runner.RunType's to filers and corresponding InitDoneCh's
 that are used by underlying Invokers. The Controller waits on all non-nil InitDoneCh's
 to complete successfully before serving requests.
-@param: idtCh - channel that queue uses to report (to handler) the time the initialization finished
 @param: output
 @param: tmp
 @param: capacity - the maximum number of commands to support on the queue.  If 0 then the queue is unbounded.
 @param: stats - the stats receiver the queue will use when reporting its metrics
+@param: dirMonitor - monitor directory size changes from running the task's command
+@param: rID - the runner id
 */
 func NewQueueRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
 	capacity int,
 	stat stats.StatsReceiver,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) runner.Service {
 	if stat == nil {
@@ -96,7 +96,7 @@ func NewQueueRunner(
 	}
 
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filerMap, output, tmp, stat, rID)
+	inv := NewInvoker(exec, filerMap, output, stat, dirMonitor, rID)
 
 	controller := &QueueController{
 		statusManager: statusManager,
@@ -108,7 +108,7 @@ func NewQueueRunner(
 		updateCh:      make(chan interface{}),
 		cancelTimerCh: make(chan interface{}),
 	}
-	run := &Service{controller, statusManager, statusManager}
+	run := &Service{controller, statusManager}
 
 	// QueueRunner waits on filers with InitDoneChannels defined to return,
 	// and will not serve requests if any return an error
@@ -155,15 +155,16 @@ func NewQueueRunner(
 	return run
 }
 
+// NewSingleRunner create a SingleRunner
 func NewSingleRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) runner.Service {
-	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat, rID)
+	return NewQueueRunner(exec, filerMap, output, 0, stat, dirMonitor, rID)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

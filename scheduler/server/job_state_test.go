@@ -13,7 +13,7 @@ func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {
 	jobAsBytes, _ := job.Serialize()
 
 	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
-	jobState := newJobState(&job, saga, nil)
+	jobState := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	tasks := jobState.getUnScheduledTasks()
 
@@ -31,7 +31,7 @@ func Test_NewJobState_PreviousProgress_StartedTasks(t *testing.T) {
 	for _, task := range job.Def.Tasks {
 		saga.StartTask(task.TaskID, nil)
 	}
-	jobState := newJobState(&job, saga, nil)
+	jobState := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	tasks := jobState.getUnScheduledTasks()
 	if len(tasks) != len(job.Def.Tasks) {
@@ -49,7 +49,7 @@ func Test_NewJobState_PreviousProgress_CompletedTasks(t *testing.T) {
 		saga.StartTask(task.TaskID, nil)
 		saga.EndTask(task.TaskID, nil)
 	}
-	jobState := newJobState(&job, saga, nil)
+	jobState := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	tasks := jobState.getUnScheduledTasks()
 	if len(tasks) != 0 {

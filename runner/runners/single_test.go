@@ -12,7 +12,6 @@ import (
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -111,11 +110,11 @@ func TestMemCap(t *testing.T) {
 	// Test that limiting the memory to 10MB causes the command to abort.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
 	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
-	tmp, _ := temp.TempDirDefault()
+	tmp, _ := ioutil.TempDir("", "")
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
-	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, nil, runner.EmptyID)
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -138,12 +137,13 @@ func TestMemCap(t *testing.T) {
 func TestStats(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"sleep 50"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId"}
-	tmp, _ := temp.TempDirDefault()
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
+	tmp, _ := ioutil.TempDir("", "")
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
-	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, dirMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -168,6 +168,7 @@ func TestStats(t *testing.T) {
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
@@ -176,12 +177,12 @@ func TestStats(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	stat, statsReg := setupTest()
 	args := []string{"pause"}
-	cmd := &runner.Command{Argv: args, SnapshotID: "dummySnapshotId", Timeout: 50 * time.Millisecond}
-	tmp, _ := temp.TempDirDefault()
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId", Timeout: 50 * time.Millisecond}
+	tmp, _ := ioutil.TempDir("", "")
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
-	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp.Dir), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), tmp, stat, runner.EmptyID)
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -209,12 +210,8 @@ func TestTimeout(t *testing.T) {
 
 func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
-	tmpDir, err := temp.TempDirDefault()
-	if err != nil {
-		panic(err)
-	}
 
-	outputCreator, err := NewHttpOutputCreator(tmpDir, "")
+	outputCreator, err := NewHttpOutputCreator("")
 	if err != nil {
 		panic(err)
 	}
@@ -222,7 +219,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, tmpDir, nil, runner.EmptyID)
+	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
 	return r, sim
 }
 

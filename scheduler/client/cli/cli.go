@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/client"
 )
 
@@ -23,6 +24,18 @@ type simpleCLIClient struct {
 	scootClient *client.CloudScootClient
 }
 
+// returnError extend the error with Invalid Request, Scoot server error, or Error getting status message
+func returnError(err error) error {
+	switch err := err.(type) {
+	case *scoot.InvalidRequest:
+		return fmt.Errorf("Invalid Request: %v", err.GetMessage())
+	case *scoot.ScootServerError:
+		return fmt.Errorf("Scoot server error: %v", err.Error())
+	default:
+		return fmt.Errorf("Error getting status: %v", err.Error())
+	}
+}
+
 func (c *simpleCLIClient) Exec() error {
 	return c.rootCmd.Execute()
 }
@@ -38,7 +51,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 		Run:                func(*cobra.Command, []string) {},
 		PersistentPostRunE: c.Close,
 	}
-	c.rootCmd.PersistentFlags().StringVar(&c.addr, "addr", "", "scoot server address")
+	sched, _, _ := client.GetScootapiAddr() // ignore err & apiserver addr
+	c.rootCmd.PersistentFlags().StringVar(&c.addr, "addr", sched, "Scoot server address. If unset, uses default value of first line of $HOME/.cloudscootaddr$SCOOT_ID")
 	c.rootCmd.PersistentFlags().StringVar(&c.logLevel, "log_level", "info", "Log everything at this level and above (error|info|debug)")
 
 	c.addCmd(&runJobCmd{})
@@ -50,6 +64,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (CLIClient, error) {
 	c.addCmd(&reinstateWorkerCmd{})
 	c.addCmd(&setSchedulerStatusCmd{})
 	c.addCmd(&getSchedulerStatusCmd{})
+	c.addCmd(&getLBSSchedAlgParams{})
+	c.addCmd(&setLbsSchedAlgParams{})
 
 	return c, nil
 }

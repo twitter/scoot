@@ -17,6 +17,8 @@ import (
 //		run_smoke_test
 //		get_scheduler_status
 //		set_scheduler_status [limit]
+//		get_scheduling_alg_params
+//		set_scheduling_alg_params
 //	Global flags:
 //		--addr [<host:port> of cloud server]
 // 		--log_level [<error|info|debug> level and above should be logged]

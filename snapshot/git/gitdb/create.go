@@ -2,6 +2,7 @@ package gitdb
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,12 +38,12 @@ func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snaps
 }
 
 func (db *DB) ingestDir(dir string) (snapshot, error) {
-	indexDir, err := db.tmp.TempDir("git-index")
+	indexDir, err := ioutil.TempDir("", "git-index")
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(indexDir.Dir)
-	return db.ingestDirWithRepo(db.dataRepo, filepath.Join(indexDir.Dir, "index"), dir)
+	defer os.RemoveAll(indexDir)
+	return db.ingestDirWithRepo(db.dataRepo, filepath.Join(indexDir, "index"), dir)
 }
 
 const tempBranch = "scoot/__temp_for_writing"
@@ -67,18 +68,18 @@ func (db *DB) ingestGitCommit(ingestRepo *repo.Repository, commitish string) (sn
 }
 
 func (db *DB) ingestGitWorkingDir(ingestRepo *repo.Repository) (snapshot, error) {
-	indexDir, err := db.tmp.TempDir("git-index")
+	indexDir, err := ioutil.TempDir("", "git-index")
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(indexDir.Dir)
+	defer os.RemoveAll(indexDir)
 
-	err = exec.Command("cp", filepath.Join(ingestRepo.Dir(), ".git/index"), indexDir.Dir).Run()
+	err = exec.Command("cp", filepath.Join(ingestRepo.Dir(), ".git/index"), indexDir).Run()
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := db.ingestDirWithRepo(ingestRepo, filepath.Join(indexDir.Dir, "index"), ingestRepo.Dir())
+	s, err := db.ingestDirWithRepo(ingestRepo, filepath.Join(indexDir, "index"), ingestRepo.Dir())
 	if err != nil {
 		return nil, err
 	}

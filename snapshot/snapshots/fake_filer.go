@@ -3,13 +3,13 @@ package snapshots
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 )
 
@@ -42,17 +42,17 @@ func MakeFilerFacade(
 }
 
 // Make a Filer that can Checkout() but does a noop Ingest().
-func MakeTempCheckouterFiler(tmp *temp.TempDir) snapshot.Filer {
+func MakeTempCheckouterFiler(tmp string) snapshot.Filer {
 	return MakeFilerFacade(MakeTempCheckouter(tmp), MakeNoopIngester(), MakeNoopUpdater())
 }
 
 // Creates a filer that copies ingested paths in and then back out for checkouts.
-func MakeTempFiler(tmp *temp.TempDir) snapshot.Filer {
+func MakeTempFiler(tmp string) snapshot.Filer {
 	return &tempFiler{tmp: tmp, snapshots: make(map[string]string)}
 }
 
 type tempFiler struct {
-	tmp       *temp.TempDir
+	tmp       string
 	snapshots map[string]string
 }
 
@@ -61,14 +61,14 @@ func (t *tempFiler) Ingest(path string) (id string, err error) {
 }
 
 func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error) {
-	var s *temp.TempDir
-	s, err = t.tmp.TempDir("snapshot-")
+	var s string
+	s, err = ioutil.TempDir(t.tmp, "snapshot-")
 	if err != nil {
 		return "", err
 	}
 	for src, dest := range srcToDest {
 		// absDest is a parent directory in which we place the contents of src.
-		absDest := filepath.Join(s.Dir, dest)
+		absDest := filepath.Join(s, dest)
 
 		slashDot := ""
 		if fi, err := os.Stat(src); err == nil && fi.IsDir() {
@@ -90,7 +90,7 @@ func (t *tempFiler) IngestMap(srcToDest map[string]string) (id string, err error
 	}
 
 	id = strconv.Itoa(len(t.snapshots))
-	t.snapshots[id] = s.Dir
+	t.snapshots[id] = s
 	return
 }
 
@@ -99,13 +99,13 @@ func (t *tempFiler) CancelIngest() error {
 }
 
 func (t *tempFiler) Checkout(id string) (snapshot.Checkout, error) {
-	dir, err := t.tmp.TempDir("checkout-" + id + "__")
+	dir, err := ioutil.TempDir(t.tmp, "checkout-"+id+"__")
 	if err != nil {
 		return nil, err
 	}
-	co, err := t.CheckoutAt(id, dir.Dir)
+	co, err := t.CheckoutAt(id, dir)
 	if err != nil {
-		os.RemoveAll(dir.Dir)
+		os.RemoveAll(dir)
 		return nil, err
 	}
 	return co, nil

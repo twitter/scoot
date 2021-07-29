@@ -10,9 +10,8 @@ Input parameters (provided to the SchedulingAlgTester constructor):
  - test start time: the actual time the jobs being shadowed started
  - test end time: the actual time the jobs being shadowed ended
  - job definitions: a set of 'shadow' job definitions where each job 'shadows' a real job.  The 'shadow' job definitions
-are a map of job definitions where the map index can be used to sort the jobs to relative run order.
-   . the job_definition.Basis the number of nanoseconds to wait before starting this job. (We use this to ensure the
-simulation load mirrors the jobs it is shadowing.)
+are a map of job definitions where the map index is the number of seconds (in the overall simulation) to delay before starting
+this job
    . each task's Command.Argv[1] entry is the number of milliseconds the worker should wait before returning success/failure
    . each task's Command.Argv[2] entry is the task's exit code
 */
@@ -25,6 +24,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -69,66 +69,87 @@ type timeSummary struct {
 }
 
 type SchedulingAlgTester struct {
-	extDeps            *externalDeps
-	statsFileName      string
-	testsStart         time.Time
-	testsEnd           time.Time
-	realStart          time.Time
-	jobDefsMap         map[int][]*domain.JobDefinition
-	pRatios            []int
-	clusterSize        int
-	finishTimeFilename string
-	comparisonMap      map[string]*timeSummary
-	comparisonMapMu    sync.RWMutex
-	timeout            time.Duration
+	extDeps             *externalDeps
+	statsFileName       string
+	testsStart          time.Time
+	testsEnd            time.Time
+	realStart           time.Time
+	firstJobStartOffset time.Duration
+	jobDefsMap          map[int][]*domain.JobDefinition
+	pRatios             []int
+	clusterSize         int
+	finishTimeFilename  string
+	comparisonMap       map[string]*timeSummary
+	comparisonMapMu     sync.RWMutex
+	timeout             time.Duration
+	classLoadPercents   map[string]int32
+	requestorToClassMap map[string]string
+	sortedClassNames    []string
 }
 
 /*
 Make a SchedulingAlgTester object
 
-jobDefsMap is a map of relative start time (seconds) -> a job definition where each task in the job definition
-contains the number of seconds the task should take during the simulation
-
+jobDefsMap is a map to the job definitions (each task in the job definition
+contains the number of seconds the task should take during the simulation)
+the map keys are the number of seconds (from the start of the simulation) to delay
+before starting the job
 */
 func MakeSchedulingAlgTester(testsStart, testsEnd time.Time, jobDefsMap map[int][]*domain.JobDefinition,
-	pRatios []int, clusterSize int) *SchedulingAlgTester {
+	clusterSize int, classLoadPercents map[string]int32, requestorToClassMap map[string]string) *SchedulingAlgTester {
 
 	tDir := fmt.Sprintf("%sCloudExec", os.TempDir())
 	if _, err := os.Stat(tDir); os.IsNotExist(err) {
 		os.Mkdir(tDir, 0777)
 	}
 
-	statsFile := fmt.Sprintf("%s/newAlgStats.csv", tDir)
-	finishTimesFilename := fmt.Sprintf("%s/newAlgJobTimes.csv", tDir)
+	dateTimeZone := "2006_01_02_15_04_05_MST"
+	startTimeStr := testsStart.Format(dateTimeZone)
+	endTimeStr := testsEnd.Format(dateTimeZone)
+	statsFile := fmt.Sprintf("%s/newAlgStats%s_%s.csv", tDir, startTimeStr, endTimeStr)
+	finishTimesFilename := fmt.Sprintf("%s/newAlgJobTimes%s_%s.csv", tDir, startTimeStr, endTimeStr)
+
+	numJobs := 0
+	for _, jds := range jobDefsMap {
+		numJobs += len(jds)
+	}
 
 	log.Warn(".........................")
 	log.Warnf("Stats are being written to %s", statsFile)
 	log.Warnf("Final comparisons are being written to %s", finishTimesFilename)
 	log.Warnf("Test will shadow %s to %s", testsStart.Format(time.RFC3339), testsEnd.Format(time.RFC3339))
-	log.Warnf("Running %d jobs", len(jobDefsMap))
+	log.Warnf("Running %d jobs", numJobs)
 	log.Warnf("On %d workers", clusterSize)
-	log.Warnf("Using Ratios %v", pRatios)
+	log.Warnf("Using Class Loads %v", classLoadPercents)
+	log.Warnf("Using Requestor Map %v", requestorToClassMap)
 	log.Warn(".........................")
 	st := &SchedulingAlgTester{
-		statsFileName:      statsFile,
-		finishTimeFilename: finishTimesFilename,
-		realStart:          time.Now(),
-		testsStart:         testsStart,
-		testsEnd:           testsEnd,
-		jobDefsMap:         jobDefsMap,
-		pRatios:            pRatios,
-		clusterSize:        clusterSize,
+		statsFileName:       statsFile,
+		finishTimeFilename:  finishTimesFilename,
+		realStart:           time.Now(),
+		testsStart:          testsStart,
+		testsEnd:            testsEnd,
+		jobDefsMap:          jobDefsMap,
+		clusterSize:         clusterSize,
+		classLoadPercents:   classLoadPercents,
+		requestorToClassMap: requestorToClassMap,
 	}
+
+	keys := []string{}
+	for key := range classLoadPercents {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return strings.Compare(keys[i], keys[j]) < 0
+	})
+	st.sortedClassNames = keys
+
 	st.makeComparisonMap()
 	st.writeFirstLines()
 	return st
 }
 
 func (st *SchedulingAlgTester) RunTest() error {
-	if err := st.verifyRatios(); err != nil {
-		return err
-	}
-
 	st.extDeps = st.getExternals(st.clusterSize)
 
 	config := st.getTestConfig()
@@ -139,59 +160,60 @@ func (st *SchedulingAlgTester) RunTest() error {
 		st.extDeps.fakeRunners,
 		config,
 		st.extDeps.statsReceiver,
+		nil,
+		nil,
 	)
-
-	s.SchedAlg = server.MakePriorityBasedAlg(st.pRatios[:]) // use the priority based algorithm
-
-	rm := st.getRequestorMap(st.jobDefsMap)
+	s.SetClassLoadPercents(st.classLoadPercents)
+	s.SetRequestorToClassMap(st.requestorToClassMap)
 
 	sc := s.GetSagaCoord()
 
 	// start a go routine printing the stats
 	stopStatsCh := make(chan bool)
-	go st.printStats(st.extDeps, stopStatsCh, rm)
+	go st.printStats(stopStatsCh)
 
 	// set up goroutine picking up job completion times
 	allJobsDoneCh := make(chan bool)    // true when all jobs have finished
 	allJobsStartedCh := make(chan bool) // used this channel to tell the watchForAllDone that it has all job ids
-	go st.watchForAllDone(allJobsStartedCh, allJobsDoneCh, sc)
+	realStart := time.Now()
+	realEnd := realStart.Add(st.testsEnd.Sub(st.testsStart))
+	go st.watchForAllDone(allJobsStartedCh, allJobsDoneCh, realEnd, sc)
 
 	// initialize structures for running the jobs
-	shadowStart := time.Now()
 	// sort the job map so we run them in ascending time order
-	keys := make([]int, 0)
+	secondsAfterStartKeys := make([]int, 0)
 	for k := range st.jobDefsMap {
-		keys = append(keys, k)
+		secondsAfterStartKeys = append(secondsAfterStartKeys, k)
 	}
-	sort.Ints(keys)
+	sort.Ints(secondsAfterStartKeys)
 
 	// now start running the jobs at the same frequency that they were run in production
-	log.Warnf("%s: Starting %d jobs.", shadowStart.Format(time.RFC3339), len(st.jobDefsMap))
+	log.Warnf("%s: Starting the sim for jobs running after %s.", realStart.Format(time.RFC3339), st.testsStart.Format(time.RFC3339))
 	if len(st.jobDefsMap) == 0 {
 		log.Errorf("no jobs")
 		return nil
 	}
-	for _, key := range keys {
-		jobDefs := st.jobDefsMap[key]
+	st.firstJobStartOffset = time.Duration(secondsAfterStartKeys[0]) * time.Second
+	for _, secondsAfterStart := range secondsAfterStartKeys {
+		jobDefs := st.jobDefsMap[secondsAfterStart]
 		for _, jobDef := range jobDefs {
 			select {
 			case <-allJobsDoneCh:
 				// if an error occurred in watchForAllDone, abort the test
-				return fmt.Errorf("error reported looking for completed jobs.  See log.")
+				return fmt.Errorf("error reported looking for completed jobs.  See log")
 			default:
 			}
-			// pause to simulate the frequency in which the jobs arrived in production
-			deltaFromStart, e := st.extractWaitDurationFromJobDef(jobDef)
-			if e != nil {
-				return fmt.Errorf("Couldn't get deltaStartDuration:%s, skipping job", e.Error())
-			}
-			n := time.Now()
-			startTime := shadowStart.Add(deltaFromStart)
-			if startTime.After(n) {
-				time.Sleep(startTime.Sub(n)) // this pause emulates the jobs' run frequency
+			// startAt is when the simulation should start the jobs with respect to the current (wall) clock time
+			startAt := realStart.Add(time.Duration(secondsAfterStart) * time.Second).Add(-1 * st.firstJobStartOffset)
+			if time.Now().Before(startAt) {
+				pause := startAt.Sub(time.Now())
+				log.Warnf("waiting %s to start the next job", pause.Truncate(time.Second))
+				<-time.After(pause) // wait till time reaches startTime
 			}
 
 			// give the job to the scheduler
+			simTime := st.testsStart.Add(st.firstJobStartOffset).Add(time.Now().Sub(realStart))
+			log.Warnf("%s(%s): submitting job:%s", simTime.Format(time.RFC3339), time.Duration(secondsAfterStart)*time.Second-st.firstJobStartOffset, jobDef)
 			id, err := s.ScheduleJob(*jobDef)
 			if err != nil {
 				return fmt.Errorf("Expected job to be Scheduled Successfully %v", err)
@@ -216,8 +238,8 @@ func (st *SchedulingAlgTester) RunTest() error {
 	// shut down stats
 	stopStatsCh <- true // stop the timed stats collection/printing
 
-	st.writeStatsToFile(st.extDeps, rm) // write the final stats
-	st.extDeps.statsCancelFn()          // stop stats collectors
+	st.writeStatsToFile()      // write the final stats
+	st.extDeps.statsCancelFn() // stop stats collectors
 
 	for _, timeSummary := range st.comparisonMap {
 		if timeSummary.testEnd == time.Unix(0, 0) {
@@ -232,11 +254,10 @@ watch for jobs completing.  Record finish times. When all the jobs
 have finished put the finished times on an all done channel
 */
 func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
-	allJobsDoneCh chan bool, sc saga.SagaCoordinator) {
+	allJobsDoneCh chan bool, endTime time.Time, sc saga.SagaCoordinator) {
 	finishedJobs := make(map[string]bool) // if the job is in this map, it has finished
-	allDone := false
 	finalCnt := -1
-	for !allDone {
+	for true {
 		jobIds := st.getComparisonMapKeys()
 		select {
 		case <-allJobsStartedCh:
@@ -244,6 +265,7 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 		default:
 		}
 		// look for newly completed jobs, record their finish times
+		allDone := false
 		for _, id := range jobIds {
 			if _, ok := finishedJobs[id]; !ok {
 				// we haven't seen the job finish yet, check its state
@@ -257,15 +279,6 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 						allDone = true
 						break
 					}
-
-				} else {
-					// timeout the unfinished job?
-					timeSummary := st.getComparisonMapEntry(id)
-					if time.Now().Sub(timeSummary.testStart) > st.timeout {
-						log.Warnf("timing out job %s", timeSummary.buildUrl)
-						finishedJobs[id] = true
-						st.recordJobEndTime(id, true)
-					}
 				}
 			}
 			if finalCnt > 0 && len(finishedJobs) == finalCnt {
@@ -273,12 +286,26 @@ func (st *SchedulingAlgTester) watchForAllDone(allJobsStartedCh chan bool,
 				break
 			}
 		}
-		if !allDone {
-			time.Sleep(3 * time.Second)
+		if allDone {
+			allJobsDoneCh <- true
+			return
 		}
+		if !time.Now().Before(endTime) {
+			// the sim duration is up, discard all jobs still running, their timings will not be accurate since
+			// the simulation is not adding any more real load to the workers
+			for _, id := range jobIds {
+				if _, ok := finishedJobs[id]; !ok {
+					timeSummary := st.getComparisonMapEntry(id)
+					log.Warnf("timing out job %s", timeSummary.buildUrl)
+					finishedJobs[id] = true
+					st.recordJobEndTime(id, true)
+				}
+			}
+			allJobsDoneCh <- true
+			return
+		}
+		time.Sleep(3 * time.Second)
 	}
-
-	allJobsDoneCh <- true
 }
 
 /*
@@ -305,17 +332,6 @@ func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, job
 	return nil
 }
 
-/*
-extract the time from Basis field
-*/
-func (st *SchedulingAlgTester) extractWaitDurationFromJobDef(jobDef *domain.JobDefinition) (time.Duration, error) {
-	d, e := strconv.Atoi(jobDef.Basis)
-	if e != nil {
-		return time.Duration(0), fmt.Errorf("couldn't parse duration from job def basis:%s", e.Error())
-	}
-	return time.Duration(d), nil
-}
-
 func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 
 	cl := st.makeTestCluster(clusterSize)
@@ -339,36 +355,35 @@ func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 }
 
 // use in a goroutine to print stats every minute
-func (st *SchedulingAlgTester) printStats(deps *externalDeps, stopCh chan bool, rm map[domain.Priority]string) {
-	ticker := time.NewTicker(deps.latchTime)
+func (st *SchedulingAlgTester) printStats(stopCh chan bool) {
+	ticker := time.NewTicker(st.extDeps.latchTime)
 
 	for true {
 		select {
 		case <-ticker.C:
-			st.writeStatsToFile(deps, rm)
+			st.writeStatsToFile()
 		case <-stopCh:
 			return
 		}
 	}
 }
 
-func (st *SchedulingAlgTester) writeStatsToFile(deps *externalDeps, rm map[domain.Priority]string) {
+func (st *SchedulingAlgTester) writeStatsToFile() {
 	t := time.Now()
 	elapsed := t.Sub(st.realStart)
-	simTime := st.testsStart.Add(elapsed)
+	simTime := st.testsStart.Add(elapsed).Add(-1 * st.firstJobStartOffset)
 	timePP := simTime.Format(time.RFC3339)
-	statsJson := deps.statsReceiver.Render(false)
+	statsJson := st.extDeps.statsReceiver.Render(false)
 	var s map[string]interface{}
 	json.Unmarshal(statsJson, &s)
-	line := make([]byte, 0)
-	for priority := 0; priority < len(rm); priority++ {
-		req := rm[domain.Priority(priority)]
-		runningStatName := fmt.Sprintf("schedNumRunningTasksGauge_%s", req)
-		waitingStatName := fmt.Sprintf("schedNumWaitingTasksGauge_%s", req)
-		runningCnt := s[runningStatName]
-		waitingCnt := s[waitingStatName]
-		line = append(line, []byte(fmt.Sprintf("%s, job:%s, priority:%d, running:%v, waiting:%v, ",
-			timePP, req, priority, runningCnt, waitingCnt))...)
+	line := []byte(fmt.Sprintf("%s", timePP))
+	for _, className := range st.sortedClassNames {
+		runningStatName := fmt.Sprintf("schedNumRunningTasksGauge_%s", className)
+		waitingStatName := fmt.Sprintf("schedNumWaitingTasksGauge_%s", className)
+		runningCnt, _ := s[runningStatName]
+		waitingCnt, _ := s[waitingStatName]
+		line = append(line, []byte(fmt.Sprintf("class:%s, running:%v, waiting:%v, ",
+			className, runningCnt, waitingCnt))...)
 	}
 	line = append(line, '\n')
 
@@ -414,34 +429,19 @@ func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
 
 func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfig {
 	return server.SchedulerConfig{
-		MaxRetriesPerTask:       0,
-		DebugMode:               false,
-		RecoverJobsOnStartup:    false,
-		DefaultTaskTimeout:      0,
-		TaskTimeoutOverhead:     0,
-		RunnerRetryTimeout:      0,
-		RunnerRetryInterval:     0,
-		ReadyFnBackoff:          0,
-		MaxRequestors:           1000,
-		MaxJobsPerRequestor:     1000,
-		SoftMaxSchedulableTasks: 0,
-		TaskThrottle:            0,
-		Admins:                  nil,
+		MaxRetriesPerTask:    0,
+		DebugMode:            false,
+		RecoverJobsOnStartup: false,
+		DefaultTaskTimeout:   0,
+		TaskTimeoutOverhead:  0,
+		RunnerRetryTimeout:   0,
+		RunnerRetryInterval:  0,
+		ReadyFnBackoff:       0,
+		MaxRequestors:        1000,
+		MaxJobsPerRequestor:  1000,
+		TaskThrottle:         0,
+		Admins:               nil,
 	}
-}
-
-func (st *SchedulingAlgTester) getRequestorMap(jobDefsMap map[int][]*domain.JobDefinition) map[domain.Priority]string {
-	m := make(map[domain.Priority]string)
-
-	var r string
-	for _, jobDefs := range jobDefsMap {
-		for _, jobDef := range jobDefs {
-			r = jobDef.Requestor
-			m[jobDef.Priority] = r
-		}
-	}
-
-	return m
 }
 
 func (st *SchedulingAlgTester) getComparisonMapEntry(id string) *timeSummary {
@@ -479,27 +479,9 @@ func (st *SchedulingAlgTester) writeFirstLines() {
 	f1, _ := os.OpenFile(st.statsFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	defer f.Close()
 	defer f1.Close()
-	line := fmt.Sprintf("runDate: %s, testWindow: %s, %s, ratios: %v\n",
+	line := fmt.Sprintf("runDate: %s, testWindow: %s, %s, class loads: %v, requestor map:%v\n",
 		time.Now().Format("2006-01-02 15:04 MST"), st.testsStart.Format("2006-01-02 15:04 MST"),
-		st.testsEnd.Format("2006-01-02 15:04 MST"), st.pRatios)
+		st.testsEnd.Format("2006-01-02 15:04 MST"), st.classLoadPercents, st.requestorToClassMap)
 	f.Write([]byte(line))
 	f1.Write([]byte(line))
-}
-
-func (st *SchedulingAlgTester) verifyRatios() error {
-	// verify the pRatios values start with 1, are ascending and no duplicates
-	vals := make(map[int]int)
-	for i, ratio := range st.pRatios {
-		if i == 0 && ratio != 1 {
-			return fmt.Errorf("first ratio must be 1 not %d", ratio)
-		} else {
-			if i > 0 && st.pRatios[i] < st.pRatios[i-1] {
-				return fmt.Errorf("ratios must be asencing %d, %d not allowed", st.pRatios[i-1], st.pRatios[i])
-			}
-		}
-		if _, ok := vals[ratio]; ok {
-			return fmt.Errorf("ratio %d is duplicated.  No duplicate ratios allowed", ratio)
-		}
-	}
-	return nil
 }

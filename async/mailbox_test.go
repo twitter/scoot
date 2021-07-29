@@ -89,7 +89,7 @@ func storeValue_withMailbox(num int) error {
 }
 
 // a function which makes a call to a durable register
-// which is accessed via the network, dummy function that always
+// which is accessed via the network, fake function that always
 // succeeds
 func write(num int, address string) error {
 	return nil

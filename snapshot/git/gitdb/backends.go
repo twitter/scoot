@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 )
@@ -31,7 +30,7 @@ type snapshot interface {
 	Download(db *DB) error
 
 	// Download into a preexisting TempDir, resulting in a new Repository at that location
-	DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error)
+	DownloadTempRepo(db *DB) (*repo.Repository, error)
 }
 
 // parseID parses ID into a snapshot

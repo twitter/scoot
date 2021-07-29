@@ -14,6 +14,10 @@ type MagicBag struct {
 	bindings map[Key]Provider
 }
 
+func (b *MagicBag) Bindings() map[Key]Provider {
+	return b.bindings
+}
+
 // Module can install many things at once.
 // It could be just []Provider, but this lets Module code look a little nicer,
 type Module interface {

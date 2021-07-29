@@ -158,4 +158,32 @@ service CloudScoot {
     1: InvalidRequest ir
     2: ScootServerError err
   )
+  map<string, i32> GetClassLoadPercents() throws (
+    1: InvalidRequest ir
+  )
+  void SetClassLoadPercents (1: map<string, i32> loadPercents) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  map<string, string> GetRequestorToClassMap() throws (
+    1: InvalidRequest ir
+  )
+  void SetRequestorToClassMap (1: map<string, string> requestorToClassMap) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  i32 GetRebalanceMinimumDuration() throws (
+    1: InvalidRequest ir
+  )
+  void SetRebalanceMinimumDuration(1: i32 durationMin) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
+  i32 GetRebalanceThreshold() throws (
+    1: InvalidRequest ir
+  )
+  void SetRebalanceThreshold(1: i32 threshold) throws (
+    1: InvalidRequest ir
+    2: ScootServerError err
+  )
 }

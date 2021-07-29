@@ -76,7 +76,9 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 
 	fw.state = runner.RUNNING
 	go func(fw *FakeWorker) {
-		time.Sleep(time.Duration(duration) * time.Second)
+		t := time.NewTicker(time.Duration(duration) * time.Second)
+		<-t.C
+		t.Stop()
 		fw.doneCh <- true
 	}(fw)
 
@@ -141,5 +143,3 @@ func (fw *FakeWorker) Status(run runner.RunID) (runner.RunStatus, runner.Service
 func (fw *FakeWorker) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return nil, runner.ServiceStatus{Initialized: false, Error: nil}, nil
 }
-
-func (fw *FakeWorker) Erase(run runner.RunID) error { return nil }

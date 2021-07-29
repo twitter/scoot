@@ -4,7 +4,6 @@ package endpoints
 
 import (
 	"bytes"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -25,7 +24,6 @@ func NewTwitterServer(addr Addr, stats stats.StatsReceiver, handlers map[string]
 	}
 }
 
-// TODO(dbentley): rename to ObservableServer(?)
 // A stats receiver that provides HTTP access for metric scraping with
 // Twitter-style endpoints.
 type TwitterServer struct {
@@ -37,7 +35,6 @@ type TwitterServer struct {
 func (s *TwitterServer) Serve() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", helpHandler)
-	mux.HandleFunc("/health", healthHandler)
 	mux.HandleFunc("/admin/metrics.json", s.statsHandler)
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Index)
@@ -56,12 +53,8 @@ func (s *TwitterServer) Serve() error {
 }
 
 func helpHandler(w http.ResponseWriter, r *http.Request) {
-	msg := "Common paths: '/health', '/admin/metrics.json', '/output', '/debug/pprof'"
+	msg := "Common paths: '/admin/metrics.json', '/debug/pprof'"
 	http.Error(w, msg, http.StatusNotImplemented)
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ok")
 }
 
 func (s *TwitterServer) statsHandler(w http.ResponseWriter, r *http.Request) {

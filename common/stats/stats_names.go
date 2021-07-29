@@ -174,6 +174,11 @@ const (
 	SchedJobRequestsCounter = "schedJobRequestsCounter"
 
 	/*
+		the number of async runners still waiting on task completion
+	*/
+	SchedNumAsyncRunnersGauge = "schedNumAsyncRunnersGauge"
+
+	/*
 		the number of jobs with tasks running.  Only reported by requestor
 	*/
 	SchedNumRunningJobsGauge = "schedNumRunningJobsGauge"
@@ -193,21 +198,6 @@ const (
 		the number of active tasks that stopped because they were preempted by the scheduler
 	*/
 	SchedPreemptedTasksCounter = "preemptedTasksCounter"
-
-	/*
-		the number of jobs with priority 0
-	*/
-	SchedPriority0JobsGauge = "priority0JobsGauge"
-
-	/*
-		the number of jobs with priority 1
-	*/
-	SchedPriority1JobsGauge = "priority1JobsGauge"
-
-	/*
-		the number of jobs with priority 2
-	*/
-	SchedPriority2JobsGauge = "priority2JobsGauge"
 
 	/*
 		the number of times the platform retried sending an end saga message
@@ -321,11 +311,76 @@ const (
 	*/
 	SchedScheduleTasksLatency_ms = "schedScheduleTasksLatency_ms"
 
+	/*--------------------- load based scheduler stats ---------------------------*/
+	/*
+		number of time Load Based Scheduler saw an unrecognized requestor
+	*/
+	SchedLBSUnknownJobCounter = "schedLBSUnknownJobCounter"
+
+	/*
+	   number of jobs ignored because the load % is 0
+	*/
+	SchedLBSIgnoredJobCounter = "schedLBSIgnoredJobCounter"
+
+	/*
+		number of tasks starting by job class (after the last run of lbs)
+	*/
+	SchedJobClassTasksStarting = "schedStartingTasks_"
+
+	/*
+		number of tasks already running by job class (before starting tasks as per lbs)
+	*/
+	SchedJobClassTasksRunning = "schedRunningTasks_"
+
+	/*
+		number of tasks still waiting by job class after the tasks identified by lbs have started
+	*/
+	SchedJobClassTasksWaiting = "schedWaitingTasks_"
+
+	/*
+		job class % (set via scheduler api)
+	*/
+	SchedJobClassDefinedPct = "schedClassTargetPct_"
+
+	/*
+		job class actual % (set computed from running tasks)
+	*/
+	SchedJobClassActualPct = "schedClassActualPct_"
+
+	/*
+		number of tasks being stopped for the class (due to rebalancing)
+	*/
+	SchedStoppingTasks = "schedStoppingTasks_"
+
+	/*
+		scheduler internal data structure size monitoring
+	*/
+	SchedLBSConfigLoadPercentsSize     = "schedDS_size_ConfigLoadPercents"
+	SchedLBSConfigRequestorToPctsSize  = "schedDS_size_ConfigRequestorToClassMap"
+	SchedLBSConfigDescLoadPctSize      = "schedDS_size_ConfigDescLoadPercents"
+	SchedLBSWorkingJobClassesSize      = "schedDS_size_WorkingJobClasses"
+	SchedLBSWorkingLoadPercentsSize    = "schedDS_size_WorkingLoadPercents"
+	SchedLBSWorkingRequestorToPctsSize = "schedDS_size_WorkingRequestorToClassMap"
+	SchedLBSWorkingDescLoadPctSize     = "schedDS_size_WorkingDescLoadPercents"
+	SchedTaskStartTimeMapSize          = "schedDS_size_taskStartTimeMap"
+	SchedInProgressJobsSize            = "schedDS_size_inProgressJobs"
+	SchedRequestorMapSize              = "schedDS_size_requestorMap"
+	SchedRequestorHistorySize          = "schedDS_size_requestorHistory"
+	SchedTaskDurationsSize             = "schedDS_size_taskDurations"
+	SchedSagasSize                     = "schedDS_size_sagas"
+	SchedRunnersSize                   = "schedDS_size_runners"
+
 	/******************************** Worker metrics **************************************/
 	/*
 		The number of runs the worker has currently running
 	*/
 	WorkerActiveRunsGauge = "activeRunsGauge"
+
+	/*
+		The disk size change for the indicated directory seen when running the task.
+		The reported stat will be of the form commandDirUsage_kb_<PathSuffix from
+	*/
+	CommandDirUsageKb = "commandDirUsage_kb"
 
 	/*
 		the number of times the worker downloaded a snapshot from bundlestore
@@ -373,6 +428,11 @@ const (
 		scope is osexecer - change to worker?
 	*/
 	WorkerMemory = "memory"
+
+	/*
+		A gauge used to indicate if the worker is currently running a task or if is idling
+	*/
+	WorkerRunningTask = "runningTask"
 
 	/*
 		the number of abort requests received by the worker
@@ -445,11 +505,6 @@ const (
 		The amount of time it took to init a ref clone
 	*/
 	GitClonerInitLatency_ms = "clonerInitLatency_ms"
-
-	/*
-		The number of times a gitfiler.Checkouter Checkout had to resort to a git fetch
-	*/
-	GitFilerCheckoutFetches = "gitfilerCheckoutFetches"
 
 	/*
 		The number of times a gitdb stream backend had to resort to a git fetch

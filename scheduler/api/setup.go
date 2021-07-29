@@ -53,8 +53,11 @@ func Defaults() (*ice.MagicBag, jsonconfig.Schema) {
 			sc saga.SagaCoordinator,
 			rf func(cluster.Node) runner.Service,
 			config server.SchedulerConfig,
-			stat stats.StatsReceiver) server.Scheduler {
-			return server.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat)
+			stat stats.StatsReceiver,
+			persistor server.Persistor,
+			durationKeyExtractorFn func(string) string,
+		) server.Scheduler {
+			return server.NewStatefulSchedulerFromCluster(cl, sc, rf, config, stat, persistor, durationKeyExtractorFn)
 		},
 
 		func(
@@ -148,7 +151,7 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error injecting servers", err)
+		log.Fatalf("Error injecting servers: %v", err)
 	}
 
 	errCh := make(chan error)

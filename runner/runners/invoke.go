@@ -4,6 +4,7 @@ import (
 	e "errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,13 +18,11 @@ import (
 	"github.com/twitter/scoot/common/log/tags"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
 	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
-	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
 // invoke.go: Invoker runs a Scoot command.
@@ -33,26 +32,26 @@ func NewInvoker(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
+	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, tmp: tmp, stat: stat, rID: rID}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec     execer.Execer
-	filerMap runner.RunTypeMap
-	output   runner.OutputCreator
-	tmp      *temp.TempDir
-	stat     stats.StatsReceiver
-	rID      runner.RunnerID
+	exec       execer.Execer
+	filerMap   runner.RunTypeMap
+	output     runner.OutputCreator
+	stat       stats.StatsReceiver
+	dirMonitor *stats.DirsMonitor
+	rID        runner.RunnerID
 }
 
 // Run runs cmd
@@ -80,6 +79,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"jobID":  cmd.JobID,
 			"taskID": cmd.TaskID,
 		}).Info("*Invoker.run()")
+	inv.stat.Gauge(stats.WorkerRunningTask).Update(1)
+	defer inv.stat.Gauge(stats.WorkerRunningTask).Update(0)
 
 	taskTimer := inv.stat.Latency(stats.WorkerTaskLatency_ms).Time()
 
@@ -159,6 +160,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		inv.stat.Counter(stats.WorkerDownloads).Inc(1)
 	}
 
+	// update local workspace with snapshot
 	go func() {
 		if cmd.SnapshotID == "" {
 			// TODO: we don't want this logic to live here, these decisions should be made at a higher level.
@@ -171,10 +173,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 						"taskID": cmd.TaskID,
 					}).Info("No snapshotID! Using a nop-checkout initialized with tmpDir")
 			}
-			if tmp, err := inv.tmp.TempDir("invoke_nop_checkout"); err != nil {
+			if tmp, err := ioutil.TempDir("", "invoke_nop_checkout"); err != nil {
 				checkoutCh <- err
 			} else {
-				co = gitfiler.MakeUnmanagedCheckout(string(id), tmp.Dir)
+				co = snapshot.NewNopCheckout(string(id), tmp)
 				checkoutCh <- nil
 			}
 		} else {
@@ -192,6 +194,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 	}()
 
+	// wait for checkout to finish (or abort signal)
 	select {
 	case <-abortCh:
 		if err := inv.filerMap[runType].Filer.CancelCheckout(); err != nil {
@@ -259,6 +262,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			"checkout": co.Path(),
 		}).Info("Checkout done")
 
+	// setup stdout,stderr output
 	stdout, err := inv.output.Create(fmt.Sprintf("%s-stdout", id))
 	if err != nil {
 		msg := fmt.Sprintf("could not create stdout: %s", err)
@@ -334,6 +338,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		stdlog.Write([]byte(header))
 	}
 
+	inv.dirMonitor.GetStartSizes() // start monitoring directory sizes
+
+	// start running the command
 	log.WithFields(
 		log.Fields{
 			"runID":  id,
@@ -430,12 +437,17 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}).Info("Run done")
 	}
 
+	// record command's disk usage for the monitored directories
+	inv.dirMonitor.GetEndSizes()
+	inv.dirMonitor.RecordSizeStats(inv.stat)
+
+	// the command is no longer running, post process the results
 	switch st.State {
 	case execer.COMPLETE:
 		rts.execEnd = stamp()
 		rts.outputStart = stamp()
 		if runType == runner.RunTypeScoot {
-			tmp, err := inv.tmp.TempDir("invoke")
+			tmp, err := ioutil.TempDir("", "invoke")
 			if err != nil {
 				return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error staging ingestion dir: %v", err), errors.PostExecFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
@@ -443,21 +455,21 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
 			inv.stat.Counter(stats.WorkerUploads).Inc(1)
 			defer func() {
-				os.RemoveAll(tmp.Dir)
+				os.RemoveAll(tmp)
 				uploadTimer.Stop()
 			}()
 
 			stdoutName := "STDOUT"
 			stderrName := "STDERR"
 			stdlogName := "STDLOG"
-			if err = stageLogFiles(tmp.Dir, stdoutName, stderrName, stdlogName, stdout, stderr, stdlog); err != nil {
+			if err = stageLogFiles(tmp, stdoutName, stderrName, stdlogName, stdout, stderr, stdlog); err != nil {
 				return runner.FailedStatus(id, errors.NewError(err, errors.PostExecFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
 			ingestCh := make(chan interface{})
 			go func() {
-				snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp.Dir)
+				snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp)
 				if err != nil {
 					ingestCh <- err
 				} else {

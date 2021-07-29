@@ -1,35 +1,31 @@
 package bazel
 
 import (
-	"fmt"
+	"io/ioutil"
 
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func MakeBzFiler(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, nil, false)
+func MakeBzFiler(r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(r, nil, false)
 }
 
-func MakeBzFilerUpdater(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, u, false)
+func MakeBzFilerUpdater(r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(r, u, false)
 }
 
-func MakeBzFilerKeepCheckouts(tmp *temp.TempDir, r dialer.Resolver) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, nil, true)
+func MakeBzFilerKeepCheckouts(r dialer.Resolver) (*BzFiler, error) {
+	return makeBzFiler(r, nil, true)
 }
 
-func MakeBzFilerUpdaterKeepCheckouts(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
-	return makeBzFiler(tmp, r, u, true)
+func MakeBzFilerUpdaterKeepCheckouts(r dialer.Resolver, u snapshot.Updater) (*BzFiler, error) {
+	return makeBzFiler(r, u, true)
 }
 
-func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater, keep bool) (*BzFiler, error) {
-	if tmp == nil {
-		return nil, fmt.Errorf("TempDir must be provided to MakeBzFiler")
-	}
-	treeDir, err := tmp.TempDir("bztree")
+func makeBzFiler(r dialer.Resolver, u snapshot.Updater, keep bool) (*BzFiler, error) {
+	treeDir, err := ioutil.TempDir("", "bztree")
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +34,7 @@ func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater, keep 
 	}
 
 	bf := &BzFiler{
-		tree:          makeBzCommand(treeDir.Dir, r),
-		tmp:           tmp,
+		tree:          makeBzCommand(treeDir, r),
 		keepCheckouts: keep,
 		CASResolver:   r,
 		updater:       u,
@@ -53,7 +48,6 @@ func makeBzFiler(tmp *temp.TempDir, r dialer.Resolver, u snapshot.Updater, keep 
 // which handles underlying implementation of bazel snapshot functionality
 type BzFiler struct {
 	tree bzTree
-	tmp  *temp.TempDir
 
 	// keepCheckouts exists for debuggability. Instead of removing checkouts on release,
 	// we can optionally keep them to inspect
