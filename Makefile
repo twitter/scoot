@@ -72,43 +72,43 @@ fs_util:
 
 ############## tests and coverage
 
-coverage:
+coverage: clean-procs
 	bash scripts/test_coverage.sh
 
 # Usage: make test PKG=github.com/twitter/scoot/binaries/...
-test:
+test: clean-procs
 	go test -count=1 -race -timeout 20s $(PKG)
 
-test-unit-property-integration: fs_util
+test-unit-property-integration: clean-procs fs_util
 	# Runs all tests including integration and property tests
 	go test -count=1 -race -timeout 120s -tags="integration property_test" $$(go list ./...)
 
-test-unit-property:
+test-unit-property: clean-procs
 	# Runs only unit tests and property tests
 	go test -count=1 -race -timeout 120s -tags="property_test" $$(go list ./...)
 
-test-unit:
+test-unit: clean-procs
 	# Runs only unit tests
 	# Only invoked manually so we don't need to modify output
 	go test -count=1 -race -timeout 120s $$(go list ./...)
 
-test-all: test-unit-property-integration coverage
+test-all: clean-procs test-unit-property-integration coverage
 
 ############## standalone binary & integration tests
 
-smoketest:
+smoketest: clean-procs
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
 
-recoverytest:
+recoverytest: clean-procs
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce ci log size. Smoketest is more important and that still logs.
 	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
 
-integrationtest:
+integrationtest: clean-procs
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
 	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
@@ -124,7 +124,10 @@ clean-data:
 clean-go:
 	go clean ./...
 
-clean: clean-data clean-go
+clean-procs:
+	killall scheduler workerserver apiserver || true
+
+clean: clean-data clean-go clean-procs
 
 ############## code gen for mocks, bindata configs, thrift, and protoc
 
