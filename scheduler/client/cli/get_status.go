@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/twitter/scoot/common/client"
 	loghelpers "github.com/twitter/scoot/common/log/helpers"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
@@ -16,7 +17,7 @@ type getStatusCmd struct {
 	printAsJson bool
 }
 
-func (c *getStatusCmd) registerFlags() *cobra.Command {
+func (c *getStatusCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "get_job_status",
 		Short: "GetJobStatus",
@@ -25,7 +26,7 @@ func (c *getStatusCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *getStatusCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Checking Status for Scoot Job", args)
 
@@ -35,7 +36,7 @@ func (c *getStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 
 	jobId := args[0]
 
-	status, err := cl.scootClient.GetStatus(jobId)
+	status, err := cl.ScootClient.GetStatus(jobId)
 
 	if err != nil {
 		switch err := err.(type) {

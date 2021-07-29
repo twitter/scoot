@@ -53,12 +53,12 @@ func NewSimpleCLIClient(di dialer.Dialer) (CLIClient, error) {
 
 func (c *simpleCLIClient) addCmd(cmd command, cobraCmd *cobra.Command) {
 	cobraCmd.Flags().StringVar(&c.client.addr, "addr", workerapi.DefaultWorker_Thrift, "worker server address")
-	cmd.registerFlags(cobraCmd)
+	cmd.RegisterFlags(cobraCmd)
 	cobraCmd.RunE = cmd.run
 	c.rootCmd.AddCommand(cobraCmd)
 }
 
 type command interface {
-	registerFlags(cmd *cobra.Command)
+	RegisterFlags(cmd *cobra.Command)
 	run(cmd *cobra.Command, args []string) error
 }

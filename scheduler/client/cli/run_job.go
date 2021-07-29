@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -21,7 +22,7 @@ type runJobCmd struct {
 	tag         string
 }
 
-func (c *runJobCmd) registerFlags() *cobra.Command {
+func (c *runJobCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "run_job",
 		Short: "RunJob",
@@ -53,7 +54,7 @@ type TaskDef struct {
 	TaskID     string
 }
 
-func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *runJobCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 	log.Info("Running on scoot, args:", args)
 	jobDef := scoot.NewJobDefinition()
 	jobDef.Tag = &c.tag
@@ -118,7 +119,7 @@ func (c *runJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) 
 		}
 	}
 
-	jobId, err := cl.scootClient.RunJob(jobDef)
+	jobId, err := cl.ScootClient.RunJob(jobDef)
 	if err != nil {
 		switch err := err.(type) {
 		case *scoot.InvalidRequest:

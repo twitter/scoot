@@ -1,8 +1,9 @@
 package client
 
 import (
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 	"github.com/twitter/scoot/runner"
@@ -17,7 +18,7 @@ type runCmd struct {
 	timeout    time.Duration
 }
 
-func (rc *runCmd) registerFlags(cmd *cobra.Command) {
+func (rc *runCmd) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&rc.snapshotID, "snapshotid", "", "snapshot/patch id.")
 	cmd.Flags().DurationVar(&rc.timeout, "timeout", 0, "how long to let the command run (0 for infinite)")
 }
@@ -43,7 +44,7 @@ type abortCmd struct {
 	runId string
 }
 
-func (ac *abortCmd) registerFlags(cmd *cobra.Command) {
+func (ac *abortCmd) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&ac.runId, "id", "", "run id to abort")
 }
 
@@ -60,7 +61,7 @@ type queryWorkerCmd struct {
 	client *simpleClient
 }
 
-func (qc *queryWorkerCmd) registerFlags(cmd *cobra.Command) {}
+func (qc *queryWorkerCmd) RegisterFlags(cmd *cobra.Command) {}
 
 func (qc *queryWorkerCmd) run(cmd *cobra.Command, args []string) error {
 	log.Info("Calling queryworker rpc to cloud worker", args)
