@@ -110,7 +110,7 @@ func NewQueueRunner(
 		updateCh:      make(chan interface{}),
 		cancelTimerCh: make(chan interface{}),
 	}
-	run := &Service{controller, statusManager, statusManager}
+	run := &Service{controller, statusManager}
 
 	// QueueRunner waits on filers with InitDoneChannels defined to return,
 	// and will not serve requests if any return an error

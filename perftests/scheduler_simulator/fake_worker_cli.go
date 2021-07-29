@@ -143,5 +143,3 @@ func (fw *FakeWorker) Status(run runner.RunID) (runner.RunStatus, runner.Service
 func (fw *FakeWorker) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return nil, runner.ServiceStatus{Initialized: false, Error: nil}, nil
 }
-
-func (fw *FakeWorker) Erase(run runner.RunID) error { return nil }
