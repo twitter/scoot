@@ -71,7 +71,7 @@ type Updater interface {
 	UpdateInterval() time.Duration
 }
 
-func NewDBAdapter(db DB) Filer {
+func NewDBAdapter(db DB) *dbAdapter {
 	return &dbAdapter{db: db}
 }
 
@@ -143,4 +143,25 @@ func (dbc *dbCheckout) ID() string {
 
 func (dbc *dbCheckout) Release() error {
 	return dbc.db.ReleaseCheckout(dbc.dir)
+}
+
+func NewNopCheckout(id, dir string) *nopCheckout {
+	return &nopCheckout{id: id, dir: dir}
+}
+
+type nopCheckout struct {
+	dir string
+	id  string
+}
+
+func (nc *nopCheckout) Path() string {
+	return nc.dir
+}
+
+func (nc *nopCheckout) ID() string {
+	return nc.id
+}
+
+func (nc *nopCheckout) Release() error {
+	return nil
 }

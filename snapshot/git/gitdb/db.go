@@ -83,7 +83,6 @@ func makeDB(
 }
 
 // Interface for defining initialization that results in a valid repo.Repository.
-// Distinct from gitfiler.RepoIniter
 type RepoIniter interface {
 	Init() (*repo.Repository, error)
 }
