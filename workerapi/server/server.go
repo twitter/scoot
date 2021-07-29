@@ -206,12 +206,3 @@ func (h *handler) Abort(runId string) (*worker.RunStatus, error) {
 	}
 	return domain.DomainRunStatusToThrift(status), nil
 }
-
-// Implements worker.thrift Worker.Erase interface
-func (h *handler) Erase(runId string) error {
-	h.stat.Counter(stats.WorkerServerClears).Inc(1)
-	h.updateTimeLastRpc()
-	log.Infof("Worker erasing runID: %s", runId)
-	h.run.Erase(runner.RunID(runId))
-	return nil
-}

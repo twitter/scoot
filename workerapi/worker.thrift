@@ -35,9 +35,8 @@ struct RunStatus {
   11: optional bazel.ActionResult bazelResult
 }
 
-// TODO: add useful load information when it comes time to have multiple runs.
 struct WorkerStatus {
-  1: required list<RunStatus> runs  # All runs excepting what's been Erase()'d
+  1: required list<RunStatus> runs  # All runs
   2: required bool initialized      # True if the worker has finished with any long-running init tasks.
   3: required string error          # Set when a general worker error unrelated to a specific run has occurred.
 }
@@ -53,11 +52,9 @@ struct RunCommand {
   8: optional bazel.ExecuteRequest bazelRequest
 }
 
-//TODO: add a method to kill the worker if we can articulate unrecoverable issues.
 service Worker {
   WorkerStatus QueryWorker()         # Overall worker node status.
   // TODO(dbentley): add a method to Query a status. Cf. runner/status_rw.go
   RunStatus Run(1: RunCommand cmd)   # Run a command and return job Status.
   RunStatus Abort(1: string runId)   # Returns ABORTED if aborted, FAILED if already ended, and UNKNOWN otherwise.
-  void Erase(1: string runId)        # Remove run from the history of runs (trims WorkerStatus.ended). Optional.
 }
