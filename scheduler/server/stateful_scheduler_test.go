@@ -849,7 +849,7 @@ func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		jobDef := domain.GenJobDef((i + 1))
 		for j := 0; j < len(jobDef.Tasks); j++ {
-			jobDef.Tasks[j].TaskID = fmt.Sprintf("job:%d, task: %d", i, j)
+			jobDef.Tasks[j].TaskID = fmt.Sprintf("task: %d", j)
 		}
 		jobDef.Requestor = requestors[i]
 		jobDef.Priority = domain.P0
@@ -878,6 +878,57 @@ func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge\": 10"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R1\": 3"))
 	assert.True(t, strings.Contains(tmp, "\"schedNumWaitingTasksGauge_fake R2\": 7"))
+}
+
+func Test_StatefulScheduler_TaskDurationOrdering_Durations(t *testing.T) {
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	s, _, _ := initializeServices(sc, true)
+	s.SetClassLoadPercents(map[string]int32{"fake R1": 100})
+	s.SetRequestorToClassMap(map[string]string{"fake R1": "fake R1"})
+
+	// validate when already have duration
+	for i := 1; i < 5; i++ {
+		addOrUpdateTaskDuration(s.taskDurations, fmt.Sprintf("task: %d", i), time.Duration(i*10)*time.Second)
+	}
+
+	// put 5 jobs in the queue
+	for i := 0; i < 5; i++ {
+		jobDef := domain.GenJobDef((i + 1))
+		for j := 0; j < len(jobDef.Tasks); j++ {
+			jobDef.Tasks[j].TaskID = fmt.Sprintf("task: %d", j)
+		}
+		jobDef.Requestor = "fake R1"
+		jobDef.Priority = domain.P0
+
+		go func() {
+			// simulate checking the job and returning no error, so ScheduleJob() will put the job definition
+			// immediately on the addJobCh
+			checkJobMsg := <-s.checkJobCh
+			checkJobMsg.resultCh <- nil
+		}()
+
+		s.ScheduleJob(jobDef)
+		s.addJobs()
+	}
+
+	s.step()
+
+	for i := 0; i < 5; i++ {
+		js := s.inProgressJobs[i]
+		for j := 0; j < len(js.Tasks); j++ {
+			task := js.Tasks[j]
+			expectedTaskId := fmt.Sprintf("task: %d", len(js.Tasks)-j-1)
+			assert.Equal(t, expectedTaskId, task.TaskId, fmt.Sprintf("expected job %d, task[%d] to be %s, got %s",
+				i, j, expectedTaskId, task.TaskId))
+		}
+		priorDuration := js.Tasks[0].AvgDuration
+		for j := 1; j < len(js.Tasks); j++ {
+			task := js.Tasks[j]
+			assert.True(t, priorDuration >= task.AvgDuration, fmt.Sprintf("expected job %d, %s, duration %d to be <= than %d",
+				i, task.TaskId, task.AvgDuration, priorDuration))
+			priorDuration = js.Tasks[j].AvgDuration
+		}
+	}
 }
 
 // Test creating job definitions with tasks in descending duration order

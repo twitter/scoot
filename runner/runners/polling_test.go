@@ -20,7 +20,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
-	poller := NewPollingService(chaos, chaos, nower, 10*time.Microsecond)
+	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
 	return ex, chaos, poller
 }
 
