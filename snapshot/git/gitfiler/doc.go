@@ -3,6 +3,8 @@
 //
 // PooledRepoIniter is an interface to initialize a Repository.
 //
+// refCloner gets new repos by running git clone --reference against a reference repo
+//
 // RepoPool controls concurrent access to repos
 //
 // Checkouter makes Checkouts by pulling a Repository from a RepoPool and performing a git checkout
