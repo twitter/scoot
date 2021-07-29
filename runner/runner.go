@@ -104,8 +104,4 @@ var EmptyID RunnerID = RunnerID{ID: ""}
 type Service interface {
 	Controller
 	StatusReader
-
-	// We need StatusEraser because Erase() shouldn't be part of StatusReader,
-	// but we have it for legacy reasons.
-	StatusEraser
 }
