@@ -652,7 +652,7 @@ func setup() (f *dbFixture, err error) {
 		Prefix: "scoot_reserved",
 	}
 
-	simpleDB := MakeDBFromRepo(dataRepo, nil, fixture.tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
+	simpleDB := MakeDBFromRepo(dataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
 
 	authorDataRepo, err := createRepo(tmp, "author-data-repo")
 	if err != nil {
@@ -671,7 +671,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	authorDB := MakeDBFromRepo(authorDataRepo, nil, fixture.tmp, streamCfg, tagsCfg, nil, AutoUploadTags, stats.NilStatsReceiver())
+	authorDB := MakeDBFromRepo(authorDataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadTags, stats.NilStatsReceiver())
 
 	consumerDataRepo, err := createRepo(tmp, "consumer-data-repo")
 	if err != nil {
@@ -686,7 +686,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	consumerDB := MakeDBFromRepo(consumerDataRepo, nil, fixture.tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
+	consumerDB := MakeDBFromRepo(consumerDataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
 
 	return &dbFixture{
 		tmp:        tmp,
