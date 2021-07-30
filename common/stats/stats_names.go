@@ -507,11 +507,6 @@ const (
 	GitClonerInitLatency_ms = "clonerInitLatency_ms"
 
 	/*
-		The number of times a gitfiler.Checkouter Checkout had to resort to a git fetch
-	*/
-	GitFilerCheckoutFetches = "gitfilerCheckoutFetches"
-
-	/*
 		The number of times a gitdb stream backend had to resort to a git fetch
 	*/
 	GitStreamUpdateFetches = "gitStreamUpdateFetches"

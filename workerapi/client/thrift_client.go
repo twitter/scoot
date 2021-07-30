@@ -33,7 +33,7 @@ func NewWorkerThriftClient(
 	rf := func(node cluster.Node) runner.Service {
 		di := dialer.NewSimpleDialer(tf, pf, time.Duration(ct))
 		cl, _ := NewSimpleClient(di, string(node.Id()))
-		return runners.NewPollingService(cl, cl, cl, pollingPeriod)
+		return runners.NewPollingService(cl, cl, pollingPeriod)
 	}
 
 	return rf, nil

@@ -13,7 +13,6 @@ import (
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/api"
@@ -57,7 +56,6 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	workerClientTimeout time.Duration,
 	endpoints *endpoints.TwitterServer,
 	bazelGRPCConfig *bazel.GRPCConfig,
-	tmpDir *temp.TempDir,
 	persistor server.Persistor,
 	durationKeyExtractorFn func(string) string,
 	cluster *cluster.Cluster) error {

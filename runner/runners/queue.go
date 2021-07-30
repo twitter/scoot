@@ -12,7 +12,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/snapshot"
@@ -79,7 +78,6 @@ func NewQueueRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
 	capacity int,
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
@@ -98,7 +96,7 @@ func NewQueueRunner(
 	}
 
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filerMap, output, tmp, stat, dirMonitor, rID)
+	inv := NewInvoker(exec, filerMap, output, stat, dirMonitor, rID)
 
 	controller := &QueueController{
 		statusManager: statusManager,
@@ -110,7 +108,7 @@ func NewQueueRunner(
 		updateCh:      make(chan interface{}),
 		cancelTimerCh: make(chan interface{}),
 	}
-	run := &Service{controller, statusManager, statusManager}
+	run := &Service{controller, statusManager}
 
 	// QueueRunner waits on filers with InitDoneChannels defined to return,
 	// and will not serve requests if any return an error
@@ -162,12 +160,11 @@ func NewSingleRunner(
 	exec execer.Execer,
 	filerMap runner.RunTypeMap,
 	output runner.OutputCreator,
-	tmp *temp.TempDir,
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
 ) runner.Service {
-	return NewQueueRunner(exec, filerMap, output, tmp, 0, stat, dirMonitor, rID)
+	return NewQueueRunner(exec, filerMap, output, 0, stat, dirMonitor, rID)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

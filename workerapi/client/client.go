@@ -29,7 +29,6 @@ type Client interface {
 	runner.Controller
 	runner.StatusQueryNower
 	runner.LegacyStatusReader
-	runner.StatusEraser
 }
 
 type simpleClient struct {
@@ -160,9 +159,4 @@ func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.Serv
 	}
 	st, err = runners.StatusesRO(st).QueryNow(q)
 	return st, svc, err
-}
-
-//TODO: implement erase
-func (c *simpleClient) Erase(run runner.RunID) error {
-	panic(fmt.Errorf("workerapi/client:Erase not yet implemented"))
 }

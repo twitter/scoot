@@ -16,7 +16,6 @@ import (
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
 )
@@ -70,11 +69,6 @@ func main() {
 		MaxConnIdleMins:   *grpcIdleMins,
 	}
 
-	tmpDir, err := temp.NewTempDir("", "sched")
-	if err != nil {
-		panic(fmt.Errorf("error getting temp dir.  Scheduler not started. %s", err))
-	}
-
 	var cluster *cluster.Cluster
 	if schedulerConfig.Cluster.Type == "inMemory" {
 		cmc := &config.ClusterMemoryConfig{
@@ -91,5 +85,5 @@ func main() {
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
 	StartServer(schedulerConfig.SchedulerConfiguration, schedulerConfig.SagaLog, schedulerConfig.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
-		tmpDir, nil, nopDurationKeyExtractor, cluster)
+		nil, nopDurationKeyExtractor, cluster)
 }

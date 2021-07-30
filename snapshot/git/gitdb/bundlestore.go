@@ -4,6 +4,7 @@ import (
 	e "errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -12,7 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
@@ -138,7 +138,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	d, err := db.tmp.TempDir("bundle-")
+	d, err := ioutil.TempDir("", "bundle-")
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 	bundleName := makeBundleName(s.sha)
 
 	// we can't use tmpDir.TempFile() because we need the file to not exist
-	bundleFilename := path.Join(d.Dir, bundleName)
+	bundleFilename := path.Join(d, bundleName)
 
 	// create the bundle
 	// -c core.packobjectedgesonlyshallow=0 is because our internal git
@@ -269,10 +269,10 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 // Downloads the snapshot's SHA locally similar to Download, but into a
 // temp repository located under tmp and not db's persistent dataRepo.
 // Returns the temp repo and nil if the sha can be found in it, or an error.
-func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo.Repository, error) {
+func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB) (*repo.Repository, error) {
 	log.Infof("Downloading sha: %s", s.SHA())
 
-	tmpRepoIniter := &TmpRepoIniter{tmp: db.tmp}
+	tmpRepoIniter := &TmpRepoIniter{}
 	tmpRepo, err := tmpRepoIniter.Init()
 	if err != nil {
 		return nil, err
@@ -298,28 +298,28 @@ func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB, tmp *temp.TempDir) (*repo
 // Fetch a bundle file via the underlying Store configured in the DB's bundlestore config
 // Downloads into a temp dir, the path of which is included in the return (for cleanup purposes)
 func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
-	d, err := db.tmp.TempDir("bundle-")
+	d, err := ioutil.TempDir("", "bundle-")
 	if err != nil {
 		return "", "", err
 	}
 	bundleName := makeBundleName(s.bundleKey)
-	bundleFilename := path.Join(d.Dir, bundleName)
+	bundleFilename := path.Join(d, bundleName)
 	f, err := os.Create(bundleFilename)
 	if err != nil {
-		return d.Dir, "", err
+		return d, "", err
 	}
 	defer f.Close()
 
 	r, err := db.bundles.cfg.Store.OpenForRead(bundleName)
 	if err != nil {
-		return d.Dir, "", err
+		return d, "", err
 	}
 	defer r.Close()
 	if _, err := io.Copy(f, r); err != nil {
-		return d.Dir, "", err
+		return d, "", err
 	}
 
-	return d.Dir, f.Name(), nil
+	return d, f.Name(), nil
 }
 
 func makeBundleName(key string) string {
