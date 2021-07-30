@@ -23,7 +23,6 @@ import (
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
 	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
-	"github.com/twitter/scoot/snapshot/git/gitfiler"
 )
 
 // invoke.go: Invoker runs a Scoot command.
@@ -177,7 +176,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			if tmp, err := ioutil.TempDir("", "invoke_nop_checkout"); err != nil {
 				checkoutCh <- err
 			} else {
-				co = gitfiler.MakeUnmanagedCheckout(string(id), tmp)
+				co = snapshot.NewNopCheckout(string(id), tmp)
 				checkoutCh <- nil
 			}
 		} else {
