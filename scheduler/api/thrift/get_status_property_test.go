@@ -1,5 +1,3 @@
-// +build property_test
-
 package thrift
 
 import (
