@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -36,11 +37,13 @@ func main() {
 
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)
-	if err := cmd.Execute(); err != nil {
-		removeTemp()
+	err = cmd.Execute()
+	if dbTempDir != "" {
+		os.RemoveAll(dbTempDir)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
-	removeTemp()
 }
 
 type injector struct {
@@ -53,6 +56,11 @@ func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
 }
 
 func (i *injector) Inject() (snapshot.DB, error) {
+	dbTempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, err
+	}
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -82,15 +90,9 @@ func (i *injector) Inject() (snapshot.DB, error) {
 
 	store := store.MakeHTTPStore(url)
 	return gitdb.MakeDBFromRepo(
-			dataRepo, nil, nil, nil,
+			dataRepo, nil, dbTempDir, nil, nil,
 			&gitdb.BundlestoreConfig{Store: store},
 			gitdb.AutoUploadBundlestore,
 			stats.NilStatsReceiver()),
 		nil
-}
-
-func removeTemp() {
-	if dbTempDir != "" {
-		os.RemoveAll(dbTempDir)
-	}
 }
