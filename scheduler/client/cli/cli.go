@@ -13,8 +13,8 @@ import (
 )
 
 // Scoot API Client interface that includes CLI handling
-type SimpleCLIClient struct {
-	simpleCLIClient commoncli.SimpleClient
+type SchedCLIClient struct {
+	commoncli.SimpleClient
 }
 
 // returnError extend the error with Invalid Request, Scoot server error, or Error getting status message
@@ -29,15 +29,15 @@ func returnError(err error) error {
 	}
 }
 
-func (c *SimpleCLIClient) Exec() error {
-	return c.simpleCLIClient.RootCmd.Execute()
+func (c *SchedCLIClient) Exec() error {
+	return c.RootCmd.Execute()
 }
 
 func NewSimpleCLIClient(d dialer.Dialer) (commoncli.CLIClient, error) {
-	c := &SimpleCLIClient{}
-	c.simpleCLIClient.Dial = d
+	c := &SchedCLIClient{}
+	c.Dial = d
 
-	c.simpleCLIClient.RootCmd = &cobra.Command{
+	c.RootCmd = &cobra.Command{
 		Use:                "scootcl",
 		Short:              "scootcl is a command-line client to Scoot",
 		PersistentPreRunE:  c.Init,
@@ -45,8 +45,8 @@ func NewSimpleCLIClient(d dialer.Dialer) (commoncli.CLIClient, error) {
 		PersistentPostRunE: c.Close,
 	}
 	sched, _, _ := client.GetScootapiAddr() // ignore err & apiserver addr
-	c.simpleCLIClient.RootCmd.PersistentFlags().StringVar(&c.simpleCLIClient.Addr, "addr", sched, "Scoot server address. If unset, uses default value of first line of $HOME/.cloudscootaddr$SCOOT_ID")
-	c.simpleCLIClient.RootCmd.PersistentFlags().StringVar(&c.simpleCLIClient.LogLevel, "log_level", "info", "Log everything at this level and above (error|info|debug)")
+	c.RootCmd.PersistentFlags().StringVar(&c.Addr, "addr", sched, "Scoot server address. If unset, uses default value of first line of $HOME/.cloudscootaddr$SCOOT_ID")
+	c.RootCmd.PersistentFlags().StringVar(&c.LogLevel, "log_level", "info", "Log everything at this level and above (error|info|debug)")
 
 	c.addCmd(&runJobCmd{})
 	c.addCmd(&getStatusCmd{})
@@ -64,43 +64,43 @@ func NewSimpleCLIClient(d dialer.Dialer) (commoncli.CLIClient, error) {
 }
 
 // Can only be called from cobra command run or hook
-func (c *SimpleCLIClient) Init(cmd *cobra.Command, args []string) error {
-	if c.simpleCLIClient.Addr == "" {
+func (c *SchedCLIClient) Init(cmd *cobra.Command, args []string) error {
+	if c.Addr == "" {
 		var err error
-		c.simpleCLIClient.Addr, _, err = client.GetScootapiAddr()
+		c.Addr, _, err = client.GetScootapiAddr()
 		if err != nil {
 			return fmt.Errorf("scootapi cli addr unset and no valued in %s", client.GetScootapiAddrPath())
 		}
 	}
 
-	level, err := log.ParseLevel(c.simpleCLIClient.LogLevel)
+	level, err := log.ParseLevel(c.LogLevel)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	log.SetLevel(level)
 
-	c.simpleCLIClient.ScootClient = client.NewCloudScootClient(
+	c.ScootClient = client.NewCloudScootClient(
 		client.CloudScootClientConfig{
-			Addr:   c.simpleCLIClient.Addr,
-			Dialer: c.simpleCLIClient.Dial,
+			Addr:   c.Addr,
+			Dialer: c.Dial,
 		})
 
 	return nil
 }
 
 // Needs cobra parameters for use from rootCmd
-func (c *SimpleCLIClient) Close(cmd *cobra.Command, args []string) error {
-	if c.simpleCLIClient.ScootClient != nil {
-		return c.simpleCLIClient.ScootClient.Close()
+func (c *SchedCLIClient) Close(cmd *cobra.Command, args []string) error {
+	if c.ScootClient != nil {
+		return c.ScootClient.Close()
 	}
 	return nil
 }
 
-func (c *SimpleCLIClient) addCmd(cmd commoncli.Cmd) {
+func (c *SchedCLIClient) addCmd(cmd commoncli.Cmd) {
 	cobraCmd := cmd.RegisterFlags()
 	cobraCmd.RunE = func(innerCmd *cobra.Command, args []string) error {
-		return cmd.Run(&c.simpleCLIClient, innerCmd, args)
+		return cmd.Run(&c.SimpleClient, innerCmd, args)
 	}
-	c.simpleCLIClient.RootCmd.AddCommand(cobraCmd)
+	c.RootCmd.AddCommand(cobraCmd)
 }
