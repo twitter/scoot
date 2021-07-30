@@ -13,7 +13,6 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/binaries/workerserver/config"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/endpoints"
@@ -30,6 +29,7 @@ import (
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
+	"github.com/twitter/scoot/worker/worker/config"
 	"github.com/twitter/scoot/workerapi"
 	"github.com/twitter/scoot/workerapi/server"
 )
