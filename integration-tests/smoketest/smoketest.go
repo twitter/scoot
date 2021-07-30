@@ -1,4 +1,4 @@
-package smoketest
+package cli
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func (c *SmokeTestCmd) RegisterFlags() *cobra.Command {
 }
 
 func (c *SmokeTestCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
-	tmp, err := temp.TempDirDefault()
+	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (c *SmokeTestCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []s
 
 type smokeTestRunner struct {
 	cl  *client.SimpleClient
-	tmp *temp.TempDir
+	tmp string
 }
 
 func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) error {
@@ -122,24 +122,24 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 }
 
 func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error) {
-	dir, err := r.tmp.TempDir("testdata")
+	dir, err := ioutil.TempDir(r.tmp, "testdata")
 	if err != nil {
 		return "", "", err
 	}
 
-	if err := ioutil.WriteFile(path.Join(dir.Dir, "file.txt"), []byte("first"), 0666); err != nil {
+	if err := ioutil.WriteFile(path.Join(dir, "file.txt"), []byte("first"), 0666); err != nil {
 		return "", "", err
 	}
-	output, err := exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir.Dir).Output()
+	output, err := exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir).Output()
 	if err != nil {
 		return "", "", err
 	}
 	id1 = strings.TrimSuffix(string(output), "\n")
 
-	if err := ioutil.WriteFile(path.Join(dir.Dir, "file.txt"), []byte("second"), 0666); err != nil {
+	if err := ioutil.WriteFile(path.Join(dir, "file.txt"), []byte("second"), 0666); err != nil {
 		return "", "", err
 	}
-	output, err = exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir.Dir).Output()
+	output, err = exec.Command("scoot-snapshot-db", "create", "ingest_dir", "--dir", dir).Output()
 	if err != nil {
 		return "", "", err
 	}

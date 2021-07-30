@@ -1,7 +1,8 @@
 package snapshots
 
 import (
-	"github.com/twitter/scoot/os/temp"
+	"io/ioutil"
+
 	"github.com/twitter/scoot/snapshot"
 )
 
@@ -34,20 +35,20 @@ func (c *noopCheckouter) CancelCheckout() error {
 }
 
 // MakeTempCheckouter creates a new Checkouter that always checks out by creating a new, empty temp dir
-func MakeTempCheckouter(tmp *temp.TempDir) snapshot.Checkouter {
+func MakeTempCheckouter(tmp string) snapshot.Checkouter {
 	return &tempCheckouter{tmp: tmp}
 }
 
 type tempCheckouter struct {
-	tmp *temp.TempDir
+	tmp string
 }
 
 func (c *tempCheckouter) Checkout(id string) (snapshot.Checkout, error) {
-	t, err := c.tmp.TempDir("checkout-")
+	t, err := ioutil.TempDir(c.tmp, "checkout-")
 	if err != nil {
 		return nil, err
 	}
-	return c.CheckoutAt(id, t.Dir)
+	return c.CheckoutAt(id, t)
 }
 
 func (c *tempCheckouter) CheckoutAt(id string, dir string) (snapshot.Checkout, error) {

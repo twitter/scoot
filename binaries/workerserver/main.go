@@ -20,7 +20,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/runners"
@@ -62,7 +61,6 @@ func main() {
 
 	bag := ice.NewMagicBag()
 	schema := jsonconfig.EmptySchema()
-	bag.InstallModule(temp.Module())
 	bag.InstallModule(gitdb.Module())
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(endpoints.Module())
@@ -76,12 +74,8 @@ func main() {
 		func() (*repo.Repository, error) {
 			return repo.NewRepository(*repoDir)
 		},
-		func(tmp *temp.TempDir) (runners.HttpOutputCreator, error) {
-			outDir, err := tmp.FixedDir("output")
-			if err != nil {
-				return nil, err
-			}
-			return runners.NewHttpOutputCreator(outDir, ("http://" + *httpAddr + "/output/"))
+		func() (runners.HttpOutputCreator, error) {
+			return runners.NewHttpOutputCreator(("http://" + *httpAddr + "/output/"))
 		},
 		func(oc runners.HttpOutputCreator) runner.OutputCreator {
 			return oc
@@ -93,10 +87,10 @@ func main() {
 			return execer.Memory(*memCapFlag)
 		},
 		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
-		func(tmp *temp.TempDir) (store.Store, error) {
+		func() (store.Store, error) {
 			if *storeHandle != "" {
 				if strings.HasPrefix(*storeHandle, "/") {
-					return store.MakeFileStoreInTemp(&temp.TempDir{Dir: *storeHandle})
+					return store.MakeFileStoreInTemp()
 				} else {
 					return store.MakeHTTPStore(client.APIAddrToBundlestoreURI(*storeHandle)), nil
 				}
@@ -115,10 +109,10 @@ func main() {
 				return store.MakeHTTPStore(client.APIAddrToBundlestoreURI(storeAddr)), nil
 			}
 			log.Info("No stores specified or found, creating a tmp file store")
-			return store.MakeFileStoreInTemp(tmp)
+			return store.MakeFileStoreInTemp()
 		},
 		// Create BzFiler to handle Bazel API requests
-		func(tmp *temp.TempDir) (*bazel.BzFiler, error) {
+		func() (*bazel.BzFiler, error) {
 			addr := ""
 			if *casAddr != "" {
 				addr = *casAddr
@@ -131,7 +125,7 @@ func main() {
 				}
 			}
 			resolver := dialer.NewConstantResolver(addr)
-			return bazel.MakeBzFiler(tmp, resolver)
+			return bazel.MakeBzFiler(resolver)
 		},
 		// Initialize map of Filers w/ init chans based on RunTypes
 		// GitDB is created from its ice module defaults and handles Scoot API requests

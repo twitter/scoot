@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 )
 
@@ -34,13 +33,13 @@ func assertDirEntries(path string, count int, msg string, t *testing.T) {
 
 func TestTempFiler(t *testing.T) {
 	// Initialize snapshots tmpdir and filer.
-	snapTmp, _ := temp.NewTempDir(os.TempDir(), "TestTempFiler_filer")
+	snapTmp, _ := ioutil.TempDir(os.TempDir(), "TestTempFiler_filer")
 	filer := MakeTempFiler(snapTmp)
 
 	// Populate the paths we want to ingest.
-	localtmp, _ := temp.NewTempDir(os.TempDir(), "TestTempFiler_localpath")
-	localfile1 := filepath.Join(localtmp.Dir, "foo1")
-	localfile2 := filepath.Join(localtmp.Dir, "foo2")
+	localtmp, _ := ioutil.TempDir(os.TempDir(), "TestTempFiler_localpath")
+	localfile1 := filepath.Join(localtmp, "foo1")
+	localfile2 := filepath.Join(localtmp, "foo2")
 	ioutil.WriteFile(localfile1, []byte("bar1"), os.ModePerm)
 	ioutil.WriteFile(localfile2, []byte("bar2"), os.ModePerm)
 
@@ -51,7 +50,7 @@ func TestTempFiler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ingest single file: %v", err)
 	}
-	id2, err = filer.Ingest(localtmp.Dir)
+	id2, err = filer.Ingest(localtmp)
 	if err != nil {
 		t.Fatalf("ingest dir: %v", err)
 	}

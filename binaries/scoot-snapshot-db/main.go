@@ -11,7 +11,6 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/client"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/cli"
@@ -54,11 +53,6 @@ func (i *injector) RegisterFlags(rootCmd *cobra.Command) {
 }
 
 func (i *injector) Inject() (snapshot.DB, error) {
-	tempDir, err := temp.TempDirDefault()
-	if err != nil {
-		return nil, err
-	}
-	dbTempDir = tempDir.Dir
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -88,7 +82,7 @@ func (i *injector) Inject() (snapshot.DB, error) {
 
 	store := store.MakeHTTPStore(url)
 	return gitdb.MakeDBFromRepo(
-			dataRepo, nil, tempDir, nil, nil,
+			dataRepo, nil, nil, nil,
 			&gitdb.BundlestoreConfig{Store: store},
 			gitdb.AutoUploadBundlestore,
 			stats.NilStatsReceiver()),

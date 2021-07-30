@@ -2,6 +2,7 @@ package gitdb
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -20,13 +21,13 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 		return "", errors.NewError(err, errors.ReadFileAllFailureExitCode)
 	}
 
-	tmp, err := db.tmp.TempDir("readFileAll-")
+	tmp, err := ioutil.TempDir("", "readFileAll-")
 	if err != nil {
 		return "", errors.NewError(fmt.Errorf("Failed to create TempDir: %s", err), errors.ReadFileAllFailureExitCode)
 	}
-	defer os.RemoveAll(tmp.Dir)
+	defer os.RemoveAll(tmp)
 
-	r, err := v.DownloadTempRepo(db, tmp)
+	r, err := v.DownloadTempRepo(db)
 	if err != nil {
 		return "", errors.NewError(err, errors.ReadFileAllFailureExitCode)
 	}
@@ -87,20 +88,20 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 // checkoutFSSnapshot creates a new dir with a new index and checks out exactly that tree.
 func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 	// we don't need the work tree
-	indexDir, err := db.tmp.TempDir("git-index")
+	indexDir, err := ioutil.TempDir("", "git-index")
 	if err != nil {
 		return "", err
 	}
 
-	indexFilename := filepath.Join(indexDir.Dir, "index")
-	defer os.RemoveAll(indexDir.Dir)
+	indexFilename := filepath.Join(indexDir, "index")
+	defer os.RemoveAll(indexDir)
 
-	coDir, err := db.tmp.TempDir("checkout")
+	coDir, err := ioutil.TempDir("", "checkout")
 	if err != nil {
 		return "", err
 	}
 
-	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir.Dir}
+	extraEnv := []string{"GIT_INDEX_FILE=" + indexFilename, "GIT_WORK_TREE=" + coDir}
 
 	_, err = db.dataRepo.RunExtraEnv(extraEnv, "read-tree", sha)
 	if err != nil {
@@ -112,9 +113,9 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 		return "", err
 	}
 
-	db.checkouts[coDir.Dir] = true
+	db.checkouts[coDir] = true
 
-	return coDir.Dir, nil
+	return coDir, nil
 }
 
 // checkoutGitCommitSnapshot checks out a commit into our work tree.

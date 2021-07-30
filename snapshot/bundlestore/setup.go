@@ -9,7 +9,6 @@ import (
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
@@ -23,12 +22,12 @@ func makeServers(h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
 }
 
 // Make a File Store based on the environment, or in temp if unset
-func MakeFileStoreInEnvOrTemp(tmp *temp.TempDir) (*store.FileStore, error) {
+func MakeFileStoreInEnvOrTemp() (*store.FileStore, error) {
 	// if we're running as part of a swarm test, we want to share the store with other processes
 	if d := os.Getenv(BundlestoreDirEnvVar); d != "" {
 		return store.MakeFileStore(d)
 	}
-	return store.MakeFileStoreInTemp(tmp)
+	return store.MakeFileStoreInTemp()
 }
 
 func DefaultStore(store *store.FileStore) store.Store {
@@ -85,7 +84,7 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	var servers servers
 	err = bag.Extract(&servers)
 	if err != nil {
-		log.Fatal("Error injecting servers", err)
+		log.Fatalf("Error injecting servers: %v", err)
 	}
 
 	errCh := make(chan error)

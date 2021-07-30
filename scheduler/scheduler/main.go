@@ -15,11 +15,11 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/config/scootconfig"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
 	"github.com/twitter/scoot/scheduler/server"
+	"io/ioutil"
 )
 
 func main() {
@@ -74,8 +74,8 @@ func main() {
 			}
 		},
 
-		func() (*temp.TempDir, error) {
-			return temp.NewTempDir("", "sched")
+		func() (string, error) {
+			return ioutil.TempDir("", "sched")
 		},
 
 		func() server.Persistor {
