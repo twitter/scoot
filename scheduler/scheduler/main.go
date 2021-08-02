@@ -45,7 +45,11 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	schedulerConfig, err := config.GetSchedulerConfig(*configFlag)
+	schedulerJSONConfigs, err := config.GetSchedulerConfigs(*configFlag)
+	if err != nil {
+		panic(fmt.Errorf("error parsing schedule server config.  Scheduler not started. %s", err))
+	}
+	schedulerConfig, err := schedulerJSONConfigs.Scheduler.CreateSchedulerConfig()
 	if err != nil {
 		panic(fmt.Errorf("error creating schedule server config.  Scheduler not started. %s", err))
 	}
@@ -68,9 +72,9 @@ func main() {
 	}
 
 	var cluster *cluster.Cluster
-	if schedulerConfig.Cluster.Type == "inMemory" {
+	if schedulerJSONConfigs.Cluster.Type == "inMemory" {
 		cmc := &config.ClusterMemoryConfig{
-			Count: schedulerConfig.Cluster.Count,
+			Count: schedulerJSONConfigs.Cluster.Count,
 		}
 		cluster, err = cmc.Create()
 	} else {
@@ -82,6 +86,6 @@ func main() {
 	}
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
-	sstarter.StartServer(schedulerConfig.SchedulerConfiguration, schedulerConfig.SagaLog, schedulerConfig.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
+	sstarter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
 		nil, nopDurationKeyExtractor, cluster)
 }

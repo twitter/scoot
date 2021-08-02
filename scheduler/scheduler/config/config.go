@@ -24,17 +24,15 @@ const DefaultReadyFnBackoff = 5 * time.Second
 
 // SchedulerServerConfig config structure holding original parsed json configs and
 // server.SchedulerConfiguration generated from the parsed json values
-type SchedulerServerConfig struct {
-	server.SchedulerConfiguration
-
+type JSONConfigs struct {
 	Cluster   ClusterJSONConfig              `json:"Cluster"`
 	Workers   client.WorkersClientJSONConfig `json:"Workers"`
 	Scheduler SchedulerJSONConfig            `json:"SchedulerConfig"`
 	SagaLog   SagaLogJSONConfig              `json:"SagaLog"`
 }
 
-func (s SchedulerServerConfig) String() string {
-	return fmt.Sprintf("\n%s\n%s\n%s\n%s\n%s", s.SchedulerConfiguration.String(), s.Cluster, s.Workers, s.Scheduler, s.SagaLog)
+func (s JSONConfigs) String() string {
+	return fmt.Sprintf("\n%s\n%s\n%s\n%s", s.Cluster, s.Workers, s.Scheduler, s.SagaLog)
 }
 
 type ClusterJSONConfig struct {
@@ -87,32 +85,33 @@ func GetConfigText(configSelector string) ([]byte, error) {
 	return []byte(configText), nil
 }
 
-func (c *SchedulerServerConfig) CreateSchedulerConfig() error {
+func (jc *SchedulerJSONConfig) CreateSchedulerConfig() (*server.SchedulerConfiguration, error) {
 	var err error
-	if c.Scheduler.DefaultTaskTimeout != "" {
-		c.DefaultTaskTimeout, err = time.ParseDuration(c.Scheduler.DefaultTaskTimeout)
+	serverConfig := &server.SchedulerConfiguration{}
+	if jc.DefaultTaskTimeout != "" {
+		serverConfig.DefaultTaskTimeout, err = time.ParseDuration(jc.DefaultTaskTimeout)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	c.MaxRetriesPerTask = c.Scheduler.MaxRetriesPerTask
-	c.DebugMode = c.Scheduler.DebugMode
-	c.RecoverJobsOnStartup = c.Scheduler.RecoverJobsOnStartup
-	c.RunnerRetryTimeout = DefaultRunnerRetryTimeout
-	c.RunnerRetryInterval = DefaultRunnerRetryInterval
-	c.ReadyFnBackoff = DefaultReadyFnBackoff
-	c.MaxRequestors = c.Scheduler.MaxRequestors
-	c.MaxJobsPerRequestor = c.Scheduler.MaxJobsPerRequestor
-	return nil
+	serverConfig.MaxRetriesPerTask = jc.MaxRetriesPerTask
+	serverConfig.DebugMode = jc.DebugMode
+	serverConfig.RecoverJobsOnStartup = jc.RecoverJobsOnStartup
+	serverConfig.RunnerRetryTimeout = DefaultRunnerRetryTimeout
+	serverConfig.RunnerRetryInterval = DefaultRunnerRetryInterval
+	serverConfig.ReadyFnBackoff = DefaultReadyFnBackoff
+	serverConfig.MaxRequestors = jc.MaxRequestors
+	serverConfig.MaxJobsPerRequestor = jc.MaxJobsPerRequestor
+	return serverConfig, nil
 }
 
 // GetSchedulerConfig get the scheduler config
-func GetSchedulerConfig(configName string) (*SchedulerServerConfig, error) {
+func GetSchedulerConfigs(configName string) (*JSONConfigs, error) {
 	// get the default values, these will override any of the config
 	// sections whose Type is ""
 	defaultConfigText, _ := GetConfigText("default")
-	defaultConfig := &SchedulerServerConfig{}
+	defaultConfig := &JSONConfigs{}
 	err := json.Unmarshal(defaultConfigText, &defaultConfig)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse the default config: %v", err)
@@ -121,10 +120,10 @@ func GetSchedulerConfig(configName string) (*SchedulerServerConfig, error) {
 	// get the config values as per the command line config name
 	configText, err := GetConfigText(configName)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	schedServerConfig := &SchedulerServerConfig{}
+	schedServerConfig := &JSONConfigs{}
 	err = json.Unmarshal(configText, &schedServerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse top-level config: %v", err)
@@ -147,13 +146,6 @@ func GetSchedulerConfig(configName string) (*SchedulerServerConfig, error) {
 		log.Infof("using default Scheduler config")
 		schedServerConfig.Scheduler = defaultConfig.Scheduler
 	}
-
-	err = schedServerConfig.CreateSchedulerConfig()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't create server.SchedulerConfiguration from config: %v", err)
-	}
-
-	log.Infof("final scheduler config:%s\n", schedServerConfig)
 
 	return schedServerConfig, nil
 }
