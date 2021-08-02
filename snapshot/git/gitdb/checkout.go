@@ -21,7 +21,7 @@ func (db *DB) readFileAll(id snap.ID, path string) (string, error) {
 		return "", errors.NewError(err, errors.ReadFileAllFailureExitCode)
 	}
 
-	tmp, err := ioutil.TempDir("", "readFileAll-")
+	tmp, err := ioutil.TempDir(db.tmp, "readFileAll-")
 	if err != nil {
 		return "", errors.NewError(fmt.Errorf("Failed to create TempDir: %s", err), errors.ReadFileAllFailureExitCode)
 	}
@@ -88,7 +88,7 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 // checkoutFSSnapshot creates a new dir with a new index and checks out exactly that tree.
 func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 	// we don't need the work tree
-	indexDir, err := ioutil.TempDir("", "git-index")
+	indexDir, err := ioutil.TempDir(db.tmp, "git-index")
 	if err != nil {
 		return "", err
 	}
