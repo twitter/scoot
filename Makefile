@@ -75,13 +75,7 @@ fs_util:
 coverage: clean-procs
 	bash scripts/test_coverage.sh
 
-# Usage: make test PKG=github.com/twitter/scoot/binaries/...
 test: clean-procs
-	go test -count=1 -race -timeout 20s $(PKG)
-
-test-unit: clean-procs
-	# Runs only unit tests
-	# Only invoked manually so we don't need to modify output
 	go test -count=1 -race -timeout 120s $$(go list ./...)
 
 ############## standalone binary & integration tests
@@ -152,6 +146,6 @@ bazel-proto:
 
 ############## top-level dev-fullbuild, ci targets
 
-dev-fullbuild: dev-dependencies generate test-unit coverage
+dev-fullbuild: dev-dependencies generate test coverage
 
-ci: clean-data fs_util install recoverytest smoketest integrationtest test-unit coverage clean-data
+ci: clean-data fs_util install recoverytest smoketest integrationtest test coverage clean-data
