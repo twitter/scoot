@@ -38,6 +38,9 @@ func (m module) Install(b *ice.MagicBag) {
 		func() AutoUploadDest {
 			return AutoUploadBundlestore
 		},
+		func() string {
+			return ""
+		},
 		MakeDBNewRepo,
 	)
 }
