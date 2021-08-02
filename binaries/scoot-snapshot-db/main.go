@@ -38,9 +38,7 @@ func main() {
 	inj := &injector{}
 	cmd := cli.MakeDBCLI(inj)
 	err = cmd.Execute()
-	if dbTempDir != "" {
-		os.RemoveAll(dbTempDir)
-	}
+	os.RemoveAll(dbTempDir)
 	if err != nil {
 		log.Fatal(err)
 	}
