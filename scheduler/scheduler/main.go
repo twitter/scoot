@@ -1,8 +1,5 @@
 package main
 
-//go:generate go-bindata -pkg "config" -o ./config/config.go config
-//go:generate go fmt ./config/config.go
-
 import (
 	"flag"
 	"fmt"
@@ -18,6 +15,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
+	sstarter "github.com/twitter/scoot/scheduler/starter"
 )
 
 func nopDurationKeyExtractor(id string) string {
@@ -84,6 +82,6 @@ func main() {
 	}
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
-	StartServer(schedulerConfig.SchedulerConfiguration, schedulerConfig.SagaLog, schedulerConfig.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
+	sstarter.StartServer(schedulerConfig.SchedulerConfiguration, schedulerConfig.SagaLog, schedulerConfig.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
 		nil, nopDurationKeyExtractor, cluster)
 }
