@@ -200,11 +200,6 @@ const (
 	SchedPreemptedTasksCounter = "preemptedTasksCounter"
 
 	/*
-		the number of times the platform retried sending an end saga message
-	*/
-	SchedRetriedEndSagaCounter = "schedRetriedEndSagaCounter"
-
-	/*
 		record the start of the scheduler server
 	*/
 	SchedServerStartedGauge = "schedStartGauge"
