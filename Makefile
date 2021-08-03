@@ -95,7 +95,7 @@ recoverytest: clean-procs
 integrationtest: clean-procs
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
-	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
+	$(FIRSTGOPATH)/bin/bazel-integration
 
 ############## cleanup
 
