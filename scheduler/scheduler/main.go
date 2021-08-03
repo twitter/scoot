@@ -1,26 +1,25 @@
 package main
 
-//go:generate go-bindata -pkg "config" -o ./config/config.go config
-//go:generate go fmt ./config/config.go
-
 import (
 	"flag"
+	"fmt"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/config/scootconfig"
 	"github.com/twitter/scoot/scheduler"
-	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
-	"github.com/twitter/scoot/scheduler/server"
-	"io/ioutil"
+	starter "github.com/twitter/scoot/scheduler/starter"
 )
+
+func nopDurationKeyExtractor(id string) string {
+	return id
+}
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
@@ -45,50 +44,39 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
+	schedulerJSONConfigs, err := config.GetSchedulerConfigs(*configFlag)
 	if err != nil {
-		log.Fatal(err)
+		panic(fmt.Errorf("error parsing schedule server config.  Scheduler not started. %s", err))
 	}
-	bag, schema := api.Defaults()
-	bag.PutMany(
-		func() (thrift.TServerTransport, error) {
-			return thrift.NewTServerSocket(*thriftAddr)
-		},
+	schedulerConfig, err := schedulerJSONConfigs.Scheduler.CreateSchedulerConfig()
+	if err != nil {
+		panic(fmt.Errorf("error creating schedule server config.  Scheduler not started. %s", err))
+	}
 
-		func() scootconfig.ClientTimeout {
-			return scootconfig.ClientTimeout(scootconfig.DefaultClientTimeout)
-		},
+	thriftServerSocket, err := thrift.NewTServerSocket(*thriftAddr)
+	if err != nil {
+		panic(fmt.Errorf("error creating thrift server socket.  Scheduler not started. %s", err))
+	}
 
-		func(s stats.StatsReceiver) *endpoints.TwitterServer {
-			return endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), s, nil)
-		},
+	statsReceiver := endpoints.MakeStatsReceiver("scheduler").Precision(time.Millisecond)
+	httpServer := endpoints.NewTwitterServer(endpoints.Addr(*httpAddr), statsReceiver, nil)
 
-		func() *bazel.GRPCConfig {
-			return &bazel.GRPCConfig{
-				GRPCAddr:          *grpcAddr,
-				ListenerMaxConns:  *grpcConns,
-				RateLimitPerSec:   *grpcRate,
-				BurstLimitPerSec:  *grpcBurst,
-				ConcurrentStreams: *grpcStreams,
-				MaxConnIdleMins:   *grpcIdleMins,
-			}
-		},
+	bazelGRPCConfig := &bazel.GRPCConfig{
+		GRPCAddr:          *grpcAddr,
+		ListenerMaxConns:  *grpcConns,
+		RateLimitPerSec:   *grpcRate,
+		BurstLimitPerSec:  *grpcBurst,
+		ConcurrentStreams: *grpcStreams,
+		MaxConnIdleMins:   *grpcIdleMins,
+	}
 
-		func() (string, error) {
-			return ioutil.TempDir("", "sched")
-		},
+	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
+	if err != nil {
+		panic(fmt.Errorf("%s. Scheduler not started", err))
+	}
 
-		func() server.Persistor {
-			return nil
-		},
-
-		func() func(string) string { // noop for extracting duration id from task id
-			return func(id string) string {
-				return id
-			}
-		},
-	)
-
-	log.Info("Starting Cloud Scoot API Server & Scheduler on", *thriftAddr)
-	api.RunServer(bag, schema, configText)
+	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
+	starter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers,
+		thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
+		nil, nopDurationKeyExtractor, cluster)
 }

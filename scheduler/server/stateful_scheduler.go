@@ -95,7 +95,7 @@ func nopDurationKeyExtractor(key string) string {
 	return key
 }
 
-// Scheduler Config variables read at initialization
+// SchedulerConfiguration variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
 //     marking it as completed.
 // DebugMode - if true, starts the scheduler up but does not start
@@ -116,7 +116,7 @@ func nopDurationKeyExtractor(key string) string {
 // TaskThrottle -
 //	   requestors will try not to schedule jobs that make the scheduler exceed
 //     the TaskThrottle.  Note: Sickle may exceed it with retries.
-type SchedulerConfig struct {
+type SchedulerConfiguration struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
 	RecoverJobsOnStartup bool
@@ -132,6 +132,14 @@ type SchedulerConfig struct {
 
 	SchedAlgConfig interface{}
 	SchedAlg       SchedulingAlgorithm
+}
+
+func (sc *SchedulerConfiguration) String() string {
+	return fmt.Sprintf("SchedulerConfiguration: MaxRetriesPerTask: %d, DebugMode: %t, RecoverJobsOnStartup: %t, DefaultTaskTimeout: %s, "+
+		"TaskTimeoutOverhead: %s, RunnerRetryTimeout: %s, RunnerRetryInterval: %s, MaxRequestors: %d, MaxJobsPerRequestor: %d, TaskThrottle: %d, "+
+		"Admins: %v",
+		sc.MaxRetriesPerTask, sc.DebugMode, sc.RecoverJobsOnStartup, sc.DefaultTaskTimeout, sc.TaskTimeoutOverhead, sc.RunnerRetryTimeout,
+		sc.RunnerRetryInterval, sc.MaxRequestors, sc.MaxJobsPerRequestor, sc.TaskThrottle, sc.Admins)
 }
 
 // Used to keep a running average of duration for a specific task.
@@ -158,7 +166,7 @@ type RunnerFactory func(node cluster.Node) runner.Service
 // The callbacks are executed as part of the scheduler loop.  They therefore can
 // safely read & modify the scheduler state.
 type statefulScheduler struct {
-	config        *SchedulerConfig
+	config        *SchedulerConfiguration
 	sagaCoord     saga.SagaCoordinator
 	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
@@ -187,6 +195,13 @@ type statefulScheduler struct {
 
 	// durationKeyExtractorFn - function to extract, from taskID, the key to use for tracking task average durations
 	durationKeyExtractorFn func(string) string
+
+	SchedAlg SchedulingAlgorithm
+}
+
+func (s *statefulScheduler) String() string {
+	return fmt.Sprintf("%s, num nodes: %d, num suspended nodes: %d, maxFlakyDuration: %s, maxLostDuration: %s",
+		s.config, len(s.clusterState.nodes), len(s.clusterState.suspendedNodes), s.clusterState.maxFlakyDuration, s.clusterState.maxLostDuration)
 }
 
 // contains jobId to be killed and callback for the result of processing the request
@@ -205,7 +220,7 @@ func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	rf RunnerFactory,
-	config SchedulerConfig,
+	config SchedulerConfiguration,
 	stat stats.StatsReceiver,
 	persistor Persistor,
 	durationKeyExtractorFn func(string) string,
@@ -234,7 +249,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	rf RunnerFactory,
-	config SchedulerConfig,
+	config SchedulerConfiguration,
 	stat stats.StatsReceiver,
 	persistor Persistor,
 	durationKeyExtractorFn func(string) string) *statefulScheduler {
@@ -345,6 +360,8 @@ func NewStatefulScheduler(
 		log.Info("setting persistor is nil, settings will reset to default values on scheduler reset")
 	}
 	sched.loadSettings()
+
+	log.Info(sched.String())
 
 	if !config.DebugMode {
 		// start the scheduler loop

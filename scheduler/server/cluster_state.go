@@ -35,6 +35,8 @@ type clusterState struct {
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
+
+	itersWithoutChange int
 }
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
@@ -309,7 +311,6 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			}
 		}
 	}
-	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d", adds, removals)
 
 	// Clean up lost nodes that haven't recovered in time, add flaky nodes back into rotation after some time,
 	// and check if newly added non-ready nodes are ready to be put into rotation.
@@ -351,6 +352,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				c.nodes[ns.node.Id()] = ns
 			}
 		}
+	}
+
+	if adds > 0 || removals > 0 {
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, num iterations without change: %d. %s", adds, removals, c.itersWithoutChange, c.status())
+		c.itersWithoutChange = 0
+	} else {
+		c.itersWithoutChange++
 	}
 
 	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
