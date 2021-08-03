@@ -218,7 +218,7 @@ func TestInitUpdate(t *testing.T) {
 	}
 
 	db := MakeDBNewRepo(&bundleIniter{mirror, ro}, &pullUpdater{rw.Dir()},
-		streamCfg, nil, nil, AutoUploadNone, stats.NilStatsReceiver())
+		fixture.tmp, streamCfg, nil, nil, AutoUploadNone, stats.NilStatsReceiver())
 	defer db.Close()
 
 	firstID := db.IDForStreamCommitSHA("sro", firstCommitID)
@@ -259,7 +259,7 @@ func TestInitFails(t *testing.T) {
 	}
 
 	db := MakeDBNewRepo(&bundleIniter{"/dev/null", fixture.upstream}, nil,
-		streamCfg, nil, nil, AutoUploadNone, stats.NilStatsReceiver())
+		fixture.tmp, streamCfg, nil, nil, AutoUploadNone, stats.NilStatsReceiver())
 	defer db.Close()
 
 	ingestDir, err := ioutil.TempDir(fixture.tmp, "ingest_dir")
@@ -417,7 +417,7 @@ func TestBundlestore(t *testing.T) {
 	}
 
 	authorDB := MakeDBFromRepo(authorDataRepo, nil,
-		streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
+		fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
 
 	consumerDataRepo, err := createRepo(fixture.tmp, "consumer-data-repo")
 	if err != nil {
@@ -430,7 +430,7 @@ func TestBundlestore(t *testing.T) {
 	}
 
 	consumerDB := MakeDBFromRepo(consumerDataRepo, nil,
-		streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
+		fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
 
 	upstreamMaster, err := fixture.upstream.RunSha("rev-parse", "master")
 	if err != nil {
@@ -652,7 +652,7 @@ func setup() (f *dbFixture, err error) {
 		Prefix: "scoot_reserved",
 	}
 
-	simpleDB := MakeDBFromRepo(dataRepo, nil, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
+	simpleDB := MakeDBFromRepo(dataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
 
 	authorDataRepo, err := createRepo(tmp, "author-data-repo")
 	if err != nil {
@@ -671,7 +671,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	authorDB := MakeDBFromRepo(authorDataRepo, nil, streamCfg, tagsCfg, nil, AutoUploadTags, stats.NilStatsReceiver())
+	authorDB := MakeDBFromRepo(authorDataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadTags, stats.NilStatsReceiver())
 
 	consumerDataRepo, err := createRepo(tmp, "consumer-data-repo")
 	if err != nil {
@@ -686,7 +686,7 @@ func setup() (f *dbFixture, err error) {
 		return nil, err
 	}
 
-	consumerDB := MakeDBFromRepo(consumerDataRepo, nil, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
+	consumerDB := MakeDBFromRepo(consumerDataRepo, nil, tmp, streamCfg, tagsCfg, nil, AutoUploadNone, stats.NilStatsReceiver())
 
 	return &dbFixture{
 		tmp:        tmp,
