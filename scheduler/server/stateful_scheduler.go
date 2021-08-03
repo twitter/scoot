@@ -6,7 +6,6 @@ import (
 	"os"
 	"reflect"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -262,7 +261,6 @@ func NewStatefulScheduler(
 					"error":      s.Error,
 					"jobID":      s.JobID,
 					"taskID":     s.TaskID,
-					"tag":        s.Tag,
 				}).Info("Aborting existing run on new node")
 			run.Abort(s.RunID)
 		}
@@ -399,7 +397,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 		log.Fields{
 			"requestor": jobDef.Requestor,
 			"jobType":   jobDef.JobType,
-			"tag":       jobDef.Tag,
 			"basis":     jobDef.Basis,
 			"priority":  jobDef.Priority,
 			"numTasks":  len(jobDef.Tasks),
@@ -417,7 +414,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 				"jobDef":    jobDef,
 				"requestor": jobDef.Requestor,
 				"jobType":   jobDef.JobType,
-				"tag":       jobDef.Tag,
 				"basis":     jobDef.Basis,
 				"priority":  jobDef.Priority,
 				"err":       err,
@@ -440,7 +436,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 				"jobDef":    jobDef,
 				"requestor": jobDef.Requestor,
 				"jobType":   jobDef.JobType,
-				"tag":       jobDef.Tag,
 				"basis":     jobDef.Basis,
 				"priority":  jobDef.Priority,
 				"err":       err,
@@ -457,7 +452,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 				"err":       err,
 				"requestor": jobDef.Requestor,
 				"jobType":   jobDef.JobType,
-				"tag":       jobDef.Tag,
 			}).Error("Failed to create saga for job request")
 		return "", err
 	}
@@ -465,7 +459,6 @@ func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, er
 		log.Fields{
 			"requestor": jobDef.Requestor,
 			"jobType":   jobDef.JobType,
-			"tag":       jobDef.Tag,
 			"basis":     jobDef.Basis,
 			"priority":  jobDef.Priority,
 			"numTasks":  len(jobDef.Tasks),
@@ -597,8 +590,7 @@ func (s *statefulScheduler) updateStats() {
 				log.Fields{
 					"requestor":      job.Job.Def.Requestor,
 					"jobType":        job.Job.Def.JobType,
-					"jobId":          job.Job.Id,
-					"tag":            job.Job.Def.Tag,
+					"jobID":          job.Job.Id,
 					"basis":          job.Job.Def.Basis,
 					"priority":       job.Job.Def.Priority,
 					"numTasks":       len(job.Tasks),
@@ -745,7 +737,6 @@ func (s *statefulScheduler) addJobsLoop() {
 				"jobID":     newJobMsg.job.Id,
 				"requestor": newJobMsg.job.Def.Requestor,
 				"jobType":   newJobMsg.job.Def.JobType,
-				"tag":       newJobMsg.job.Def.Tag,
 				"basis":     newJobMsg.job.Def.Basis,
 				"priority":  newJobMsg.job.Def.Priority,
 				"numTasks":  len(newJobMsg.job.Def.Tasks),
@@ -864,7 +855,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 							"err":       err,
 							"requestor": jobState.Job.Def.Requestor,
 							"jobType":   jobState.Job.Def.JobType,
-							"tag":       jobState.Job.Def.Tag,
 						}).Info("Job completed but failed to log")
 					return
 				}
@@ -873,7 +863,6 @@ func (s *statefulScheduler) checkForCompletedJobs() {
 						"jobID":     jobState.Job.Id,
 						"requestor": jobState.Job.Def.Requestor,
 						"jobType":   jobState.Job.Def.JobType,
-						"tag":       jobState.Job.Def.Tag,
 					}).Info("Job completed and logged")
 				// This job is fully processed remove from InProgressJobs
 				s.deleteJob(jobState.Job.Id)
@@ -925,7 +914,6 @@ func (s *statefulScheduler) scheduleTasks() {
 				"node":        nodeSt.node,
 				"requestor":   requestor,
 				"jobType":     jobType,
-				"tag":         tag,
 				"taskDef":     taskDef,
 				"durationID":  durationID,
 				"avgDuration": fmt.Sprintf("%d (sec)", avgDur),
@@ -959,161 +947,142 @@ func (s *statefulScheduler) scheduleTasks() {
 
 		// mark the task as started in the jobState and record its taskRunner
 		jobState.taskStarted(taskID, tRunner)
-
-		go func() {
-			defer rs.Release()
-			err := tRunner.run()
-			// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
-			if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
-				(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
-				addOrUpdateTaskDuration(s.taskDurations, durationID, time.Now().Sub(tRunner.startTime))
-			}
-
-			// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
-			// The job update is normal but we update the cluster with a fake value which denotes abnormal cleanup.
-			// We need the fake value so we don't clobber any new job assignments to that nodeId.
-			nodeId := nodeSt.node.Id()
-			nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
-			nodeAbsent := !ok
-			nodeReAdded := false
-			if !nodeAbsent {
-				nodeReAdded = (&nodeStInstance.readyCh != &nodeSt.readyCh)
-			}
-			nodeStChanged := nodeAbsent || nodeReAdded
-			preempted := false
-
-			if nodeStChanged {
-				nodeId = nodeId + ":ERROR"
-				log.WithFields(
-					log.Fields{
-						"node":        nodeSt.node,
-						"jobID":       jobID,
-						"taskID":      taskID,
-						"runningJob":  nodeSt.runningJob,
-						"runningTask": nodeSt.runningTask,
-						"requestor":   requestor,
-						"jobType":     jobType,
-						"tag":         tag,
-					}).Info("Task *node* lost, cleaning up.")
-			}
-			if nodeReAdded {
-				preempted = true
-			}
-
-			flaky := false
-			aborted := (err != nil && err.(*taskError).st.State == runner.ABORTED)
-			if err != nil {
-				// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
-				// TODO - we no longer set a node as flaky on failed status.
-				// In practice, we've observed that this results in checkout failures causing
-				// nodes to drop out of the cluster and reduce capacity to no benefit.
-				// A more comprehensive solution would be to overhaul this behavior.
-				taskErr := err.(*taskError)
-				flaky = (taskErr.runnerErr != nil && taskErr.st.State != runner.FAILED)
-
-				msg := "Error running job (will be retried):"
-				if aborted {
-					msg = "Error running task, but job kill request received, (will not retry):"
-					err = nil
-				} else {
-					if preventRetries {
-						msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.config.MaxRetriesPerTask)
-						err = nil
-					} else {
-						jobState.errorRunningTask(taskID, err, preempted)
-					}
-				}
-				log.WithFields(
-					log.Fields{
-						"jobId":     jobID,
-						"taskId":    taskID,
-						"err":       taskErr,
-						"cmd":       strings.Join(taskDef.Argv, " "),
-						"requestor": requestor,
-						"jobType":   jobType,
-						"tag":       tag,
-					}).Info(msg)
-
-				// If the task completed successfully but sagalog failed, start a goroutine to retry until it succeeds.
-				if taskErr.sagaErr != nil && taskErr.st.RunID != "" && taskErr.runnerErr == nil && taskErr.resultErr == nil {
-					log.WithFields(
-						log.Fields{
-							"jobId":  jobID,
-							"taskId": taskID,
-						}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
-					// TODO this may result in closed channel panic due to sending endSaga to sagalog (below) before endTask
-					go func() {
-						for err := errors.New(""); err != nil; err = tRunner.logTaskStatus(&taskErr.st, saga.EndTask) {
-							time.Sleep(time.Second)
-						}
-						log.WithFields(
-							log.Fields{
-								"jobId":     jobID,
-								"taskId":    taskID,
-								"requestor": requestor,
-								"jobType":   jobType,
-								"tag":       tag,
-							}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
-					}()
-				}
-			}
-			if err == nil || aborted {
-				log.WithFields(
-					log.Fields{
-						"jobId":     jobID,
-						"taskId":    taskID,
-						"command":   strings.Join(taskDef.Argv, " "),
-						"requestor": requestor,
-						"jobType":   jobType,
-						"tag":       tag,
-					}).Info("Ending task.")
-				jobState.taskCompleted(taskID, true)
-			}
-
-			// update cluster state that this node is now free and if we consider the runner to be flaky.
-			log.WithFields(
-				log.Fields{
-					"jobId":     jobID,
-					"taskId":    taskID,
-					"node":      nodeSt.node,
-					"flaky":     flaky,
-					"requestor": requestor,
-					"jobType":   jobType,
-					"tag":       tag,
-				}).Info("Freeing node, removed job.")
-			s.clusterState.taskCompleted(nodeId, flaky)
-
-			total := 0
-			completed := 0
-			running := 0
-			for _, job := range s.inProgressJobs {
-				total += len(job.Tasks)
-				completed += job.TasksCompleted
-				running += job.TasksRunning
-			}
-			log.WithFields(
-				log.Fields{
-					"jobId":     jobID,
-					"running":   jobState.TasksRunning,
-					"completed": jobState.TasksCompleted,
-					"total":     len(jobState.Tasks),
-					"isdone":    jobState.TasksCompleted == len(jobState.Tasks),
-					"requestor": requestor,
-					"jobType":   jobType,
-					"tag":       tag,
-				}).Info()
-			log.WithFields(
-				log.Fields{
-					"running":   running,
-					"completed": completed,
-					"total":     total,
-					"alldone":   completed == total,
-					"requestor": requestor,
-					"jobType":   jobType,
-					"tag":       tag,
-				}).Info("Jobs task summary")
-		}()
+		go s.runHandler(tRunner, nodeSt, durationID)
 	}
+}
+
+// runHandler tells the taskRunner to run its assigned task & handles post-run actions, e.g. updating the scheduler's
+// clusterState based on
+func (s *statefulScheduler) runHandler(tRunner *taskRunner, nodeSt *nodeState, durationID string) {
+	defer tRunner.runner.Release()
+	err := tRunner.run()
+	// Update the average duration for this task so, for new jobs, we can schedule the likely long running tasks first.
+	if err == nil || err.(*taskError).st.State == runner.TIMEDOUT ||
+		(err.(*taskError).st.State == runner.COMPLETE && err.(*taskError).st.ExitCode == 0) {
+		addOrUpdateTaskDuration(s.taskDurations, durationID, time.Now().Sub(tRunner.startTime))
+	}
+
+	// If the node is absent, or was deleted then re-added, then we need to selectively clean up.
+	// The job update is normal but we update the cluster with a fake value which denotes abnormal cleanup.
+	// We need the fake value so we don't clobber any new job assignments to that nodeId.
+	nodeId := nodeSt.node.Id()
+	nodeStInstance, ok := s.clusterState.getNodeState(nodeId)
+	nodeAbsent := !ok
+	nodeReAdded := false
+	if !nodeAbsent {
+		nodeReAdded = (&nodeStInstance.readyCh != &nodeSt.readyCh)
+	}
+	nodeStChanged := nodeAbsent || nodeReAdded
+	preempted := false
+
+	if nodeStChanged {
+		nodeId = nodeId + ":ERROR"
+		log.WithFields(
+			log.Fields{
+				"node":        nodeSt.node,
+				"jobID":       tRunner.JobID,
+				"taskID":      tRunner.TaskID,
+				"runningJob":  nodeSt.runningJob,
+				"runningTask": nodeSt.runningTask,
+			}).Info("Task *node* lost, cleaning up.")
+	}
+	if nodeReAdded {
+		preempted = true
+	}
+
+	flaky := false
+	aborted := (err != nil && err.(*taskError).st.State == runner.ABORTED)
+	jobState := s.getJob(tRunner.JobID)
+	if err != nil {
+		// Get the type of error. Currently we only care to distinguish runner (ex: thrift) errors to mark flaky nodes.
+		// TODO - we no longer set a node as flaky on failed status.
+		// In practice, we've observed that this results in checkout failures causing
+		// nodes to drop out of the cluster and reduce capacity to no benefit.
+		// A more comprehensive solution would be to overhaul this behavior.
+		taskErr := err.(*taskError)
+		flaky = (taskErr.runnerErr != nil && taskErr.st.State != runner.FAILED)
+
+		msg := "Error running job (will be retried):"
+		if aborted {
+			msg = "Error running task, but job kill request received, (will not retry):"
+			err = nil
+		} else {
+			if tRunner.markCompleteOnFailure {
+				msg = fmt.Sprintf("Error running task (quitting, hit max retries of %d):", s.config.MaxRetriesPerTask)
+				err = nil
+			} else {
+				jobState.errorRunningTask(tRunner.TaskID, err, preempted)
+			}
+		}
+		log.WithFields(
+			log.Fields{
+				"jobID":  tRunner.JobID,
+				"taskID": tRunner.TaskID,
+				"err":    taskErr,
+			}).Info(msg)
+
+		// If the task completed successfully but sagalog failed, start a goroutine to retry until it succeeds.
+		if taskErr.sagaErr != nil && taskErr.st.RunID != "" && taskErr.runnerErr == nil && taskErr.resultErr == nil {
+			log.WithFields(
+				log.Fields{
+					"jobID":  tRunner.JobID,
+					"taskID": tRunner.TaskID,
+				}).Info(msg, " -> starting goroutine to handle failed saga.EndTask. ")
+			// TODO this may result in closed channel panic due to sending endSaga to sagalog (below) before endTask
+			go func() {
+				for err := errors.New(""); err != nil; err = tRunner.logTaskStatus(&taskErr.st, saga.EndTask) {
+					time.Sleep(time.Second)
+				}
+				log.WithFields(
+					log.Fields{
+						"jobID":  tRunner.JobID,
+						"taskID": tRunner.TaskID,
+					}).Info(msg, " -> finished goroutine to handle failed saga.EndTask. ")
+			}()
+		}
+	}
+	if err == nil || aborted {
+		log.WithFields(
+			log.Fields{
+				"jobID":  tRunner.JobID,
+				"taskID": tRunner.TaskID,
+			}).Info("Ending task.")
+		jobState.taskCompleted(tRunner.TaskID, true)
+	}
+
+	// update cluster state that this node is now free and if we consider the runner to be flaky.
+	log.WithFields(
+		log.Fields{
+			"jobID":  tRunner.JobID,
+			"taskID": tRunner.TaskID,
+			"node":   nodeSt.node,
+			"flaky":  flaky,
+		}).Info("Freeing node, removed job.")
+	s.clusterState.taskCompleted(nodeId, flaky)
+
+	total := 0
+	completed := 0
+	running := 0
+	for _, job := range s.inProgressJobs {
+		total += len(job.Tasks)
+		completed += job.TasksCompleted
+		running += job.TasksRunning
+		log.WithFields(
+			log.Fields{
+				"jobID":     tRunner.JobID,
+				"running":   jobState.TasksRunning,
+				"completed": jobState.TasksCompleted,
+				"total":     len(jobState.Tasks),
+				"isdone":    jobState.TasksCompleted == len(jobState.Tasks),
+			}).Infof("Job %s summary", tRunner.JobID)
+	}
+	log.WithFields(
+		log.Fields{
+			"running":   running,
+			"completed": completed,
+			"total":     total,
+			"alldone":   completed == total,
+		}).Info("Jobs task summary")
 }
 
 //Put the kill request on channel that is processed by the main
@@ -1206,7 +1175,6 @@ func (s *statefulScheduler) processKillJobRequests(reqs []jobKillRequest) {
 			"jobID":     req.jobId,
 			"requestor": jobState.Job.Def.Requestor,
 			"jobType":   jobState.Job.Def.JobType,
-			"tag":       jobState.Job.Def.Tag,
 		}
 		var updateMessages []saga.SagaMessage
 		for _, task := range s.getJob(req.jobId).Tasks {
