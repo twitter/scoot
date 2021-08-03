@@ -45,10 +45,10 @@ func (c ClusterJSONConfig) String() string {
 }
 
 type SagaLogJSONConfig struct {
-	Type          string // file
-	Directory     string // default to .scootdata/filesagalog
-	ExpirationSec int    // default to 0
-	GCIntervalSec int    // default to 1
+	Type          string `json:"Type"`          // file
+	Directory     string `json:"Directory"`     // default to .scootdata/filesagalog
+	ExpirationSec int    `json:"ExpirationSec"` // default to 0
+	GCIntervalSec int    `json:"GCIntervalSec"` // default to 1
 }
 
 func (s SagaLogJSONConfig) String() string {

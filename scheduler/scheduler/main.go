@@ -9,13 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
-	sstarter "github.com/twitter/scoot/scheduler/starter"
+	starter "github.com/twitter/scoot/scheduler/starter"
 )
 
 func nopDurationKeyExtractor(id string) string {
@@ -71,21 +70,13 @@ func main() {
 		MaxConnIdleMins:   *grpcIdleMins,
 	}
 
-	var cluster *cluster.Cluster
-	if schedulerJSONConfigs.Cluster.Type == "inMemory" {
-		cmc := &config.ClusterMemoryConfig{
-			Count: schedulerJSONConfigs.Cluster.Count,
-		}
-		cluster, err = cmc.Create()
-	} else {
-		clc := &config.ClusterLocalConfig{}
-		cluster, err = clc.Create()
-	}
+	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
 	if err != nil {
-		panic(fmt.Errorf("error creating cluster config.  Scheduler not started. %s", err))
+		panic(fmt.Errorf("%s. Scheduler not started", err))
 	}
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
-	sstarter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers, thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
+	starter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers,
+		thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
 		nil, nopDurationKeyExtractor, cluster)
 }
