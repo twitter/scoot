@@ -21,8 +21,7 @@ type Client interface {
 	// Worker API Interactions
 	QueryWorker() (workerapi.WorkerStatus, error)
 	runner.Controller
-	runner.StatusQueryNower
-	runner.LegacyStatusReader
+	runner.StatusQuerier
 }
 
 type simpleClient struct {
@@ -114,27 +113,7 @@ func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
 	return workerapi.ThriftWorkerStatusToDomain(status), nil
 }
 
-// Implements Scoot Worker API
-func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
-	ws, err := c.QueryWorker()
-	if err != nil {
-		return runner.RunStatus{}, runner.ServiceStatus{}, err
-	}
-	var svcErr error
-	if ws.Error != "" {
-		svcErr = errors.New(ws.Error)
-	}
-	svc := runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}
-	for _, p := range ws.Runs {
-		if p.RunID == id {
-			return p, svc, nil
-		}
-	}
-	return runner.RunStatus{}, svc, fmt.Errorf("no such process %v", id)
-}
-
-// Implements Scoot Worker API
-func (c *simpleClient) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
+func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ws, err := c.QueryWorker()
 	if err != nil {
 		return nil, runner.ServiceStatus{}, err
@@ -143,14 +122,16 @@ func (c *simpleClient) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, er
 	if ws.Error != "" {
 		svcErr = errors.New(ws.Error)
 	}
-	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}, nil
-}
-
-func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
-	st, svc, err := c.StatusAll()
+	st := ws.Runs
+	svc := runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}
 	if err != nil {
 		return nil, runner.ServiceStatus{}, err
 	}
 	st, err = runners.StatusesRO(st).QueryNow(q)
 	return st, svc, err
+}
+
+func (c *simpleClient) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	// TODO: implement
+	return []runner.RunStatus{}, runner.ServiceStatus{}, nil
 }

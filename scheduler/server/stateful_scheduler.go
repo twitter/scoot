@@ -236,7 +236,7 @@ func NewStatefulScheduler(
 	durationKeyExtractorFn func(string) string) *statefulScheduler {
 	nodeReadyFn := func(node cluster.Node) (bool, time.Duration) {
 		run := rf(node)
-		st, svc, err := run.StatusAll()
+		st, svc, err := runner.StatusAll(run)
 		if err != nil || !svc.Initialized {
 			if svc.Error != nil {
 				log.WithFields(

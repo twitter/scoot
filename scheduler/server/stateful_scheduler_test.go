@@ -454,7 +454,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 	// verify state changed appropriately
 	for i := 0; i < 5; i++ {
 		if s.clusterState.nodes[cluster.NodeId(fmt.Sprintf("node%d", i+1))].runningTask != noTask {
-			t.Errorf("Expected nodes to not have any running tasks.\n\tclusterState: %+v", s.clusterState.nodes)
+			t.Errorf("Expected nodes to not have any running tasks.\n\tclusterState:\n\n%+v", s.clusterState.nodes)
 		}
 	}
 

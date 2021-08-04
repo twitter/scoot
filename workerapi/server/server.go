@@ -66,7 +66,7 @@ func (h *handler) stats() {
 		case <-ticker.C:
 			h.mu.Lock()
 
-			processes, svcStatus, err := h.run.StatusAll()
+			processes, svcStatus, err := runner.StatusAll(h.run)
 			if err != nil {
 				continue
 			}
@@ -123,7 +123,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 	h.updateTimeLastRpc()
 	ws := worker.NewWorkerStatus()
 
-	st, svc, err := h.run.StatusAll()
+	st, svc, err := runner.StatusAll(h.run)
 	if err != nil {
 		ws.Error = err.Error()
 	}
@@ -165,7 +165,7 @@ func (h *handler) Run(cmd *worker.RunCommand) (*worker.RunStatus, error) {
 	//TODO(jschiller): accept a cmd.Nonce field so we can be precise about hiccups with dup cmd resends?
 	if err != nil && err.Error() == runners.QueueFullMsg && reflect.DeepEqual(c, h.currentCmd) {
 		log.Infof("Worker received dup request, recovering runID: %v", h.currentRunID)
-		status, _, err = h.run.Status(h.currentRunID)
+		status, _, err = runner.StatusNow(h.run, h.currentRunID)
 	}
 	if err != nil {
 		// Set invalid status and nil err to indicate handleable internal err.

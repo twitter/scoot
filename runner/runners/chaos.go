@@ -76,22 +76,6 @@ func (r *ChaosRunner) QueryNow(q runner.Query) ([]runner.RunStatus, runner.Servi
 	return r.del.QueryNow(q)
 }
 
-func (r *ChaosRunner) Status(run runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
-	err := r.delay()
-	if err != nil {
-		return runner.RunStatus{}, runner.ServiceStatus{}, err
-	}
-	return r.del.Status(run)
-}
-
-func (r *ChaosRunner) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
-	err := r.delay()
-	if err != nil {
-		return nil, runner.ServiceStatus{}, err
-	}
-	return r.del.StatusAll()
-}
-
 func (r *ChaosRunner) Abort(run runner.RunID) (runner.RunStatus, error) {
 	err := r.delay()
 	if err != nil {

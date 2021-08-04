@@ -160,16 +160,6 @@ func (s *StatusManager) QueryNow(q runner.Query) ([]runner.RunStatus, runner.Ser
 	return s.Query(q, runner.Wait{})
 }
 
-// Status returns the current status of id from q.
-func (s *StatusManager) Status(id runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
-	return runner.StatusNow(s, id)
-}
-
-// StatusAll returns the Current status of all runs
-func (s *StatusManager) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
-	return runner.StatusAll(s)
-}
-
 // queryAndListen performs a query, returning the current results and optionally a channel for
 // listening for future results
 // returns:

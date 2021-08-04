@@ -402,8 +402,6 @@ const (
 
 	/*
 		The number of runs that the worker tried to run an whose state is failed
-		TODO - understand how/when this gets reset - it's based on the runs in the worker's StatusAll()
-		response - how/when do old jobs drop out of StatusAll()?
 	*/
 	WorkerFailedCachedRunsGauge = "failedCachedRunsGauge"
 

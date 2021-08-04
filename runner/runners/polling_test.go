@@ -18,7 +18,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := NewChaosRunner(single)
-	var nower runner.StatusQueryNower
+	var nower runner.StatusQuerier
 	nower = chaos
 	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
 	return ex, chaos, poller

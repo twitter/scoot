@@ -235,7 +235,7 @@ func (c *QueueController) Run(cmd *runner.Command) (runner.RunStatus, error) {
 }
 
 func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error) {
-	_, svcStatus, _ := c.statusManager.StatusAll()
+	_, svcStatus, _ := runner.StatusAll(c.statusManager)
 	log.WithFields(
 		log.Fields{
 			"ready":          svcStatus.Initialized,
