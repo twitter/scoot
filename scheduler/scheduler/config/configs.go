@@ -1,11 +1,13 @@
 package config
 
+// SchedulerConfigs the map of available configurations
 var SchedulerConfigs = map[string]string{
 	"default":      defaultConfig,
 	"local.local":  localLocal,
 	"local.memory": localMemory,
 }
 
+// defaultConfig the configuration values that are used for nil parts of a specific configuration
 const defaultConfig = `
 {
 	"Cluster": {
