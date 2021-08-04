@@ -20,6 +20,16 @@ import (
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
+func TestRun(t *testing.T) {
+	defer teardown(t)
+	r, _ := newRunner()
+	assertRun(t, r, complete(0), "complete 0")
+	assertRun(t, r, complete(1), "complete 1")
+	if status, _, err := runner.StatusAll(r); len(status) != 1 {
+		t.Fatalf("Expected history count of 1, got %d, err=%v", len(status), err)
+	}
+}
+
 func TestOutput(t *testing.T) {
 	defer teardown(t)
 	r, _ := newRunner()
@@ -119,7 +129,8 @@ func TestMemCap(t *testing.T) {
 	} else if len(runs) != 1 {
 		t.Fatalf("Expected a single COMPLETE run, got %v", len(runs))
 	} else if runs[0].ExitCode != 1 || !strings.Contains(runs[0].Error, "Cmd exceeded MemoryCap, aborting") {
-		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- err %v -- exitCode %v", runs, err, runs[0].ExitCode)
+		status, _, err := runner.StatusAll(r)
+		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
 	}
 }
 
