@@ -113,7 +113,7 @@ func (f *socksTransportFactory) GetTransport(trans thrift.TTransport) thrift.TTr
 
 	if f.dialer == nil {
 		// We want to use SOCKS, but can't, because we have no dialer
-		log.Info("Aurora address specified, but cannot use SOCKS proxy because SOCKS_PORT is unset", addr.String())
+		log.Info("transport will not use SOCKS proxy because SOCKS_PORT is unset", addr.String())
 		return trans
 	}
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -39,23 +38,22 @@ func main() {
 
 	level, err := log.ParseLevel(*logLevelFlag)
 	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal(err)
 	}
 	log.SetLevel(level)
 
 	schedulerJSONConfigs, err := config.GetSchedulerConfigs(*configFlag)
 	if err != nil {
-		panic(fmt.Errorf("error parsing schedule server config.  Scheduler not started. %s", err))
+		log.Fatalf("error parsing schedule server config.  Scheduler not started. %s", err)
 	}
 	schedulerConfig, err := schedulerJSONConfigs.Scheduler.CreateSchedulerConfig()
 	if err != nil {
-		panic(fmt.Errorf("error creating schedule server config.  Scheduler not started. %s", err))
+		log.Fatalf("error creating schedule server config.  Scheduler not started. %s", err)
 	}
 
 	thriftServerSocket, err := thrift.NewTServerSocket(*thriftAddr)
 	if err != nil {
-		panic(fmt.Errorf("error creating thrift server socket.  Scheduler not started. %s", err))
+		log.Fatalf("error creating thrift server socket.  Scheduler not started. %s", err)
 	}
 
 	statsReceiver := endpoints.MakeStatsReceiver("scheduler").Precision(time.Millisecond)
@@ -72,7 +70,7 @@ func main() {
 
 	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
 	if err != nil {
-		panic(fmt.Errorf("%s. Scheduler not started", err))
+		log.Fatalf("%s. Scheduler not started", err)
 	}
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
