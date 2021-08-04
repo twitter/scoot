@@ -90,7 +90,7 @@ recoverytest: clean-procs
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
 	# Ignore output here to reduce ci log size. Smoketest is more important and that still logs.
-	$(FIRSTGOPATH)/bin/recoverytest &>/dev/null
+	$(FIRSTGOPATH)/bin/recoverytest
 
 integrationtest: clean-procs
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
