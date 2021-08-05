@@ -118,7 +118,6 @@ func (f *socksTransportFactory) GetTransport(trans thrift.TTransport) thrift.TTr
 	}
 
 	return &socksSocket{
-		conn:    nil,
 		addr:    addr.String(),
 		timeout: 0, // thrift.TSocket gives us no way to extract the timeout
 		dialer:  f.dialer,
@@ -128,19 +127,15 @@ func (f *socksTransportFactory) GetTransport(trans thrift.TTransport) thrift.TTr
 // socksSocket creates a socket via the proxy dialer.
 // (Ideally, there would be a form of TSocket that took a Dialer instead of a net.Conn)
 type socksSocket struct {
-	conn    *thrift.TSocket
+	*thrift.TSocket
 	addr    string
 	timeout time.Duration
 	dialer  proxy.Dialer
 }
 
-func (s *socksSocket) IsOpen() bool {
-	return s.conn != nil
-}
-
 func (s *socksSocket) Open() error {
 	if s.IsOpen() {
-		return s.conn.Open()
+		return s.Open()
 	}
 	conn, err := s.dialer.Dial("tcp", s.addr)
 	if err != nil {
@@ -151,28 +146,8 @@ func (s *socksSocket) Open() error {
 		}
 	}
 
-	s.conn = thrift.NewTSocketFromConnTimeout(conn, 0)
+	s.TSocket = thrift.NewTSocketFromConnTimeout(conn, 0)
 	return nil
-}
-
-func (s *socksSocket) Read(buf []byte) (int, error) {
-	return s.conn.Read(buf)
-}
-
-func (s *socksSocket) Write(buf []byte) (int, error) {
-	return s.conn.Write(buf)
-}
-
-func (s *socksSocket) Close() error {
-	return s.conn.Close()
-}
-
-func (s *socksSocket) Flush() error {
-	return s.conn.Flush()
-}
-
-func (s *socksSocket) RemainingBytes() uint64 {
-	return s.conn.RemainingBytes()
 }
 
 func GetCluster(clusterJSON config.ClusterJSONConfig) (*cluster.Cluster, error) {
