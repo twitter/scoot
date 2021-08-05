@@ -46,11 +46,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
+	"io/ioutil"
 )
 
 type DBInjector interface {
@@ -243,12 +243,12 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 		return fmt.Errorf("create bundle requires a gitdb.DB snapshot.DB")
 	}
 
-	td, err := temp.TempDirDefault()
+	td, err := ioutil.TempDir("", "")
 	if err != nil {
 		return fmt.Errorf("Couldn't create temp dir: %v", err)
 	}
 	defer func() {
-		os.RemoveAll(td.Dir)
+		os.RemoveAll(td)
 	}()
 
 	// Don't use commit sha as bundle name as it could collide with other bundles.
@@ -274,7 +274,7 @@ func (c *createGitBundleCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 	revData += c.ref
 
 	revSha1 := fmt.Sprintf("%x", sha1.Sum([]byte(revData)))
-	bundleFilename := path.Join(td.Dir, fmt.Sprintf("bs-%s.bundle", revSha1))
+	bundleFilename := path.Join(td, fmt.Sprintf("bs-%s.bundle", revSha1))
 
 	if _, err := ingestRepo.Run("-c",
 		"core.packobjectedgesonlyshallow=0",

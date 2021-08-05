@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/os/temp"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,12 +16,7 @@ func init() {
 }
 
 func TestLocalOutputCreator(t *testing.T) {
-	td, err := temp.TempDirDefault()
-	if err != nil {
-		t.Fatalf("Unable to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(td.Dir)
-	h, err := NewHttpOutputCreator(td, "")
+	h, err := NewHttpOutputCreator("")
 	if err != nil {
 		t.Fatalf("Unable to create output creator: %v", err)
 	}
@@ -36,23 +30,11 @@ func TestLocalOutputCreator(t *testing.T) {
 }
 
 func TestLocalOutputCreatorNonexistentTempDir(t *testing.T) {
-	td, err := temp.TempDirDefault()
-	if err != nil {
-		t.Fatalf("Unable to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(td.Dir)
-	h, err := NewHttpOutputCreator(td, "")
+	h, err := NewHttpOutputCreator("")
 	if err != nil {
 		t.Fatalf("Unable to create output creator: %v", err)
 	}
-	err = os.RemoveAll(td.Dir)
-	if err != nil {
-		t.Fatalf("Unable to remove temp dir %v: %v", td.Dir, err)
-	}
-	if _, err := os.Stat(td.Dir); !os.IsNotExist(err) {
-		t.Fatalf("Expected %v to not exist after removal. Err: %v", td.Dir, err)
-	}
-	o, err := h.Create("test-id") // should recreate td.Dir
+	o, err := h.Create("test-id") // should recreate td
 	if err != nil {
 		t.Fatalf("Error creating output: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/scheduler/setup"
 )
@@ -14,12 +13,7 @@ import (
 // goroutine.  Returns the associated Cmds.  To Kill
 // the cluster run Kill() on return Cmds
 func CreateLocalTestCluster() (*setup.Cmds, error) {
-	tmp, err := temp.NewTempDir("", "localTestCluster")
-	if err != nil {
-		return nil, err
-	}
-
-	clusterCmds := setup.NewSignalHandlingCmds(tmp)
+	clusterCmds := setup.NewSignalHandlingCmds()
 	builder := setup.NewGoBuilder(clusterCmds)
 	go func() {
 		strategy := `local.local.{"SchedulerConfig": {"DefaultTaskTimeoutMs": 1000, "RunnerOverheadMs": 0}}`

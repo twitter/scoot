@@ -111,11 +111,3 @@ func (r *ChaosRunner) Release() {
 		r.del.Release()
 	}
 }
-
-func (r *ChaosRunner) Erase(run runner.RunID) error {
-	err := r.delay()
-	if err != nil {
-		return err
-	}
-	return r.Erase(run)
-}

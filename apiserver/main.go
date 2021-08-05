@@ -16,7 +16,6 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/bundlestore"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/snapshots"
@@ -64,7 +63,6 @@ func main() {
 	bag := bundlestore.Defaults()
 	schema := jsonconfig.EmptySchema()
 	bag.InstallModule(gitdb.Module())
-	bag.InstallModule(temp.Module())
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(snapshots.Module())
 	bag.InstallModule(endpoints.Module())
@@ -81,7 +79,7 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, tmp *temp.TempDir) (*StoreAndHandler, error) {
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig) (*StoreAndHandler, error) {
 			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,

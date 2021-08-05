@@ -139,7 +139,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 	rfn := func() stats.StatsRegistry { return stats.NewFinagleStatsRegistry() }
 	statsReceiver, _ := stats.NewCustomStatsReceiver(rfn, 0)
 	rf := func(n cluster.Node) runner.Service {
-		return worker.MakeInmemoryWorker(n, tmp)
+		return worker.MakeInmemoryWorker(n)
 	}
 	sc := SchedulerConfig{
 		MaxRetriesPerTask:    0,

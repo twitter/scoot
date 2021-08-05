@@ -128,14 +128,6 @@ type StatusWriter interface {
 
 	// Update writes a new status.
 	Update(st RunStatus) error
-
-	StatusEraser
-}
-
-// StatusEraser allows Erasing a Status
-type StatusEraser interface {
-	// Prunes the run history so StatusAll() can return a reasonable number of runs.
-	Erase(run RunID) error
 }
 
 func (m StateMask) Matches(state RunState) bool {

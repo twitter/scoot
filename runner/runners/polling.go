@@ -15,11 +15,11 @@ func NewPollingStatusQuerier(del runner.StatusQueryNower, period time.Duration) 
 	return runner
 }
 
-// NewPollingService creates a new Service from a Controller, a StatusEraser, and a StatusQueryNower.
+// NewPollingService creates a new Service from a Controller, and a StatusQueryNower.
 // (This is a convenience function over NewPollingStatusQuerier
-func NewPollingService(c runner.Controller, e runner.StatusEraser, nower runner.StatusQueryNower, period time.Duration) runner.Service {
+func NewPollingService(c runner.Controller, nower runner.StatusQueryNower, period time.Duration) runner.Service {
 	q := NewPollingStatusQuerier(nower, period)
-	return &Service{c, q, e}
+	return &Service{c, q}
 }
 
 // PollingStatusQuerier turns a StatusQueryNower into a StatusQuerier

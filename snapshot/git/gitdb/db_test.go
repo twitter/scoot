@@ -14,7 +14,6 @@ import (
 
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/os/temp"
 	snap "github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
@@ -23,17 +22,17 @@ import (
 var fixture *dbFixture
 
 func TestIngestDir(t *testing.T) {
-	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
+	ingestDir, err := ioutil.TempDir(fixture.tmp, "ingest_dir")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	contents := "bar"
-	if err := writeFileText(ingestDir.Dir, "foo.txt", contents); err != nil {
+	if err := writeFileText(ingestDir, "foo.txt", contents); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err := fixture.simpleDB.IngestDir(ingestDir.Dir)
+	id, err := fixture.simpleDB.IngestDir(ingestDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +193,7 @@ func TestInitUpdate(t *testing.T) {
 	}
 
 	// create a bundle with rw's master; set it as mirror
-	f, err := fixture.tmp.TempFile("bundle")
+	f, err := ioutil.TempFile(fixture.tmp, "bundle")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,31 +262,31 @@ func TestInitFails(t *testing.T) {
 		fixture.tmp, streamCfg, nil, nil, AutoUploadNone, stats.NilStatsReceiver())
 	defer db.Close()
 
-	ingestDir, err := fixture.tmp.TempDir("ingest_dir")
+	ingestDir, err := ioutil.TempDir(fixture.tmp, "ingest_dir")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	contents := []byte("bar")
-	filename := filepath.Join(ingestDir.Dir, "foo.txt")
+	filename := filepath.Join(ingestDir, "foo.txt")
 
 	if err = ioutil.WriteFile(filename, contents, 0777); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = db.IngestDir(ingestDir.Dir); err == nil {
+	if _, err = db.IngestDir(ingestDir); err == nil {
 		t.Fatal("no error")
 	}
 }
 
 func TestClean(t *testing.T) {
-	tmp, err := temp.NewTempDir("", "db_test")
+	tmp, err := ioutil.TempDir("", "db_test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	defer func() {
-		os.RemoveAll(tmp.Dir)
+		os.RemoveAll(tmp)
 	}()
 
 	r, err := createRepo(tmp, "temp_repo")
@@ -403,11 +402,11 @@ func TestBundlestore(t *testing.T) {
 		RefSpec: "refs/remotes/upstream/master",
 	}
 
-	tmp, err := fixture.tmp.TempDir("bundles")
+	tmp, err := ioutil.TempDir(fixture.tmp, "bundles")
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := store.MakeFileStore(tmp.Dir)
+	store, err := store.MakeFileStore(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,8 +416,8 @@ func TestBundlestore(t *testing.T) {
 		AllowStreamUpdate: true,
 	}
 
-	authorDB := MakeDBFromRepo(authorDataRepo, nil, fixture.tmp,
-		streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
+	authorDB := MakeDBFromRepo(authorDataRepo, nil,
+		fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
 
 	consumerDataRepo, err := createRepo(fixture.tmp, "consumer-data-repo")
 	if err != nil {
@@ -430,8 +429,8 @@ func TestBundlestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	consumerDB := MakeDBFromRepo(consumerDataRepo, nil, fixture.tmp,
-		streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
+	consumerDB := MakeDBFromRepo(consumerDataRepo, nil,
+		fixture.tmp, streamCfg, nil, bundleCfg, AutoUploadBundlestore, stats.NilStatsReceiver())
 
 	upstreamMaster, err := fixture.upstream.RunSha("rev-parse", "master")
 	if err != nil {
@@ -464,19 +463,19 @@ func TestBundlestore(t *testing.T) {
 	}
 
 	// Now, create a new directory with independent contents and ingest it.
-	tmp, err = fixture.tmp.TempDir("output")
+	tmp, err = ioutil.TempDir(fixture.tmp, "output")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := writeFileText(tmp.Dir, "stdout.txt", "stdout"); err != nil {
+	if err := writeFileText(tmp, "stdout.txt", "stdout"); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeFileText(tmp.Dir, "stderr.txt", "stderr"); err != nil {
+	if err := writeFileText(tmp, "stderr.txt", "stderr"); err != nil {
 		t.Fatal(err)
 	}
 
-	id, err = consumerDB.IngestDir(tmp.Dir)
+	id, err = consumerDB.IngestDir(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +494,7 @@ func TestBundlestore(t *testing.T) {
 }
 
 type dbFixture struct {
-	tmp *temp.TempDir
+	tmp string
 	// simpleDB is the simplest DB; no auto-upload
 	simpleDB *DB
 	// authorDB is the DB where we'll author changes
@@ -511,25 +510,25 @@ func (f *dbFixture) close() {
 	f.simpleDB.Close()
 	f.authorDB.Close()
 	f.consumerDB.Close()
-	os.RemoveAll(f.tmp.Dir)
+	os.RemoveAll(f.tmp)
 }
 
 // Create a new repo in tmp with directory name starting with name
-func createRepo(tmp *temp.TempDir, name string) (*repo.Repository, error) {
-	dir, err := tmp.TempDir(name)
+func createRepo(tmp string, name string) (*repo.Repository, error) {
+	dir, err := ioutil.TempDir(tmp, name)
 	if err != nil {
 		return nil, err
 	}
 
 	cmd := exec.Command("git", "init")
-	cmd.Dir = dir.Dir
+	cmd.Dir = dir
 	err = cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("error init'ing: %v", err)
 	}
 
 	// create the repo
-	r, err := repo.NewRepository(dir.Dir)
+	r, err := repo.NewRepository(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -590,14 +589,14 @@ func assertSnapshotContents(db snap.DB, id snap.ID, base string, expected string
 
 func setup() (f *dbFixture, err error) {
 	// git init
-	tmp, err := temp.NewTempDir("", "db_test")
+	tmp, err := ioutil.TempDir("", "db_test")
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
 		if err != nil {
-			os.RemoveAll(tmp.Dir)
+			os.RemoveAll(tmp)
 		}
 	}()
 

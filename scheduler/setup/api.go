@@ -2,11 +2,11 @@ package setup
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/os/temp"
 	"github.com/twitter/scoot/snapshot/bundlestore"
 )
 
@@ -15,7 +15,6 @@ const DefaultApiServerLogLevel log.Level = log.InfoLevel
 
 // ApiStrategy will startup with a bundlestore (or setup a connection to one)
 type ApiStrategy interface {
-
 	// Startup starts up an ApiServer, returing the address of the server or an error
 	Startup() ([]string, error)
 }
@@ -59,11 +58,11 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		s.apiCfg.LogLevel = DefaultApiServerLogLevel
 	}
 
-	tmp, err := temp.TempDirDefault()
+	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		return nil, err
 	}
-	bundlestoreStoreDir, err := tmp.FixedDir("common-bundles")
+	bundlestoreStoreDir, err := ioutil.TempDir(tmp, "common-bundles")
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,7 @@ func (s *LocalApiStrategy) Startup() ([]string, error) {
 		httpAddr := fmt.Sprintf("localhost:%d", httpPort)
 		grpcAddr := fmt.Sprintf("localhost:%d", grpcPort)
 		cmd := s.cmds.Command(bin, "-http_addr", httpAddr, "-grpc_addr", grpcAddr, "-log_level", s.apiCfg.LogLevel.String())
-		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", bundlestore.BundlestoreDirEnvVar, bundlestoreStoreDir.Dir))
+		cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", bundlestore.BundlestoreDirEnvVar, bundlestoreStoreDir))
 		if err := s.cmds.StartCmd(cmd); err != nil {
 			return nil, err
 		}

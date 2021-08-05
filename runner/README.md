@@ -40,14 +40,11 @@ There are more reader interfaces:
 * StatusQuerier offers Query, which allows waiting for some period of time
 * StatusQueryNower offers QueryNow which is the same as Query, but does not allow waiting
 
-StatusEraser is necessary because it's part of the Service interface for legacy reasons, but it doesn't make sense to be part of LegacyStatusReader (because it writes).
-
 ## StatusManager implementations (runner/runners/statuses.go) ##
 StatusManager holds RunStatus'es and implements the various Status interfaces.
 
 ## Service (runner/runner.go) ##
 Service includes the ability to control commands (Controller) and watch the status (StatusReader).
-It also includes StatusEraser for historical reasons.
 
 ## Relation to Execer ##
 Execer is lower-level than runner. Runner deals with Scoot Abstractions; but Execer is just about Unix abstractions: files, directories, etc.
