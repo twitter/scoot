@@ -8,7 +8,8 @@ import (
 
 type state struct {
 	// current view of our nodes
-	nodes map[NodeId]Node
+	nodes       map[NodeId]Node
+	nopCheckCnt int
 }
 
 func makeState(nodes []Node) *state {
@@ -55,7 +56,17 @@ func (s *state) setAndDiff(newState []Node) []NodeUpdate {
 		})
 	}
 
-	log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d\nNumber of nodes in newState: %d\nNumber of nodes in old state: %d", len(added), len(removed), len(newState), oldStateLen)
+	// debugging scheduler performance issues: record when we see nodes being added removed
+	// also record how many times we've checked and didn't see any changes (we're wondering if
+	// this go routine is being swapped out for long periods of time).
+	if len(added) > 0 || len(removed) > 0 {
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d\n"+
+			"Number of nodes in newState: %d\nNumber of nodes in old state: %d\n"+
+			"(%d cluster checks with no change)", len(added), len(removed), len(newState), oldStateLen, s.nopCheckCnt)
+		s.nopCheckCnt = 0
+	} else {
+		s.nopCheckCnt++
+	}
 	// reset nodes map, assign to new state
 	s.nodes = make(map[NodeId]Node)
 	for _, n := range newState {
