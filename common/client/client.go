@@ -2,6 +2,7 @@ package client
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/scheduler/client"
 )
@@ -11,7 +12,7 @@ type CLIClient interface {
 	Exec() error
 }
 
-// Implements CLIClient - basic
+// SimpleClient includes base fields required for implementing client
 type SimpleClient struct {
 	RootCmd     *cobra.Command
 	Addr        string

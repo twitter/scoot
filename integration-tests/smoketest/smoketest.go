@@ -1,4 +1,4 @@
-package cli
+package smoketest
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
 	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/tests/testhelpers"

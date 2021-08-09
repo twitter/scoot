@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
 	commoncli "github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/common/dialer"
 	smoketest "github.com/twitter/scoot/integration-tests/smoketest"
@@ -12,7 +13,7 @@ import (
 	"github.com/twitter/scoot/scheduler/client"
 )
 
-// Scoot API Client interface that includes CLI handling
+// SchedCLIClient includes fields required for CLI client handling
 type SchedCLIClient struct {
 	commoncli.SimpleClient
 }
