@@ -99,6 +99,8 @@ type LoadBasedAlg struct {
 
 	classByDescLoadPct             []string
 	tasksByJobClassAndStartTimeSec map[taskClassAndStartKey]taskStateByJobIDTaskID
+
+	nopAllocationsCnt int // count the number of times, we've run LBS without allocating any nodes to tasks
 }
 
 // NewLoadBasedAlg allocate a new LoadBaseSchedAlg object.
@@ -170,7 +172,6 @@ func (jc *jobClass) String() string {
 // The algorithm has 3 main phases: rebalancing, entitlement allocation, loaning allocation.
 func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stats.StatsReceiver, cs *clusterState,
 	jobsByRequestor map[string][]*jobState) ([]*taskState, []*taskState) {
-	log.Debugf("in LoadBasedAlg.GetTasksToBeAssigned: numWorkers:%d, numIdleWorkers:%d", len(cs.nodes), cs.numFree())
 
 	// make local copies of the load pct structures to isolate the algorithm from user updates that may happen
 	// as the algorithm is running
@@ -218,7 +219,16 @@ func (lbs *LoadBasedAlg) GetTasksToBeAssigned(jobsNotUsed []*jobState, stat stat
 		stat.Gauge(fmt.Sprintf("%s_%s", stats.SchedJobClassActualPct, jc.className)).Update(int64(finalPct))
 	}
 
-	log.Debugf("Returning %d start tasks, %d stop tasks", len(tasksToStart), len(tasksToStop))
+	// log the number of tasks to start/stop (when > 0)
+	// (also track number of times we came into this code, but didn't return any tasks to start/stop)
+	if len(tasksToStart) > 0 || len(tasksToStop) > 0 {
+		log.Debugf("Returning %d start tasks, %d stop tasks, for %d free nodes out of %d total nodes.\n"+
+			"(%d calls to GetTasksToBeAssigned() with no tasks assigned)\n",
+			len(tasksToStart), len(tasksToStop), cs.numFree(), len(cs.nodes), lbs.nopAllocationsCnt)
+		lbs.nopAllocationsCnt = 0
+	} else {
+		lbs.nopAllocationsCnt++
+	}
 	return tasksToStart, tasksToStop
 }
 
@@ -409,10 +419,12 @@ func (lbs *LoadBasedAlg) workerLoanAllocation(numIdleWorkers int, haveRebalanced
 	}
 }
 
-// getTaskAllocations given the normalized allocation %s for each class, working from highest % (largest allocation) to smallest,
-// allocate that class's % of the idle workers (update the class's numTasksToStart and numWaitingTasks), but not to exceed the
-// classs' number of waiting tasks. This function updates each class' numTasksToStart and returns the total number of tasks to
-// start and a boolean indicating if there are still tasks waiting to be started
+// getTaskAllocations - compute the number of tasks to start for each class.
+// The class's pct at this point are normalized to factor out class's with no waiting tasks.
+// The computed number of tasks will not exceed the class's number of waiting tasks.
+//
+// This function updates each class' numTasksToStart and returns the total number of tasks to
+// start and a boolean indicating if any of the classes still have unallocated tasks
 func (lbs *LoadBasedAlg) getTaskAllocations(numIdleWorkers int) (int, bool) {
 	totalTasksToStart := 0
 	haveWaitingTasks := false
