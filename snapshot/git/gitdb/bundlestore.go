@@ -138,7 +138,7 @@ func (b *bundlestoreBackend) uploadLocalSnapshot(s *localSnapshot, db *DB) (sn s
 		return nil, err
 	}
 
-	d, err := ioutil.TempDir("", "bundle-")
+	d, err := ioutil.TempDir(db.tmp, "bundle-")
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *bundlestoreSnapshot) Download(db *DB) error {
 func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB) (*repo.Repository, error) {
 	log.Infof("Downloading sha: %s", s.SHA())
 
-	tmpRepoIniter := &TmpRepoIniter{}
+	tmpRepoIniter := &TmpRepoIniter{tmp: db.tmp}
 	tmpRepo, err := tmpRepoIniter.Init()
 	if err != nil {
 		return nil, err
@@ -298,7 +298,7 @@ func (s *bundlestoreSnapshot) DownloadTempRepo(db *DB) (*repo.Repository, error)
 // Fetch a bundle file via the underlying Store configured in the DB's bundlestore config
 // Downloads into a temp dir, the path of which is included in the return (for cleanup purposes)
 func (s *bundlestoreSnapshot) downloadBundle(db *DB) (string, string, error) {
-	d, err := ioutil.TempDir("", "bundle-")
+	d, err := ioutil.TempDir(db.tmp, "bundle-")
 	if err != nil {
 		return "", "", err
 	}
