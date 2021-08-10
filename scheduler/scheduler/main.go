@@ -13,7 +13,7 @@ import (
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
-	starter "github.com/twitter/scoot/scheduler/starter"
+	"github.com/twitter/scoot/scheduler/starter"
 )
 
 func nopDurationKeyExtractor(id string) string {

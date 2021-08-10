@@ -35,7 +35,7 @@ type TwitterServer struct {
 }
 
 func (s *TwitterServer) String() string {
-	return fmt.Sprintf("TwitterServer:Addr:%s, Stats:%s, Handlers:%v", s.Addr, s.Stats, s.Handlers)
+	return fmt.Sprintf("TwitterServer:Addr:%s, Stats:%+v, Handlers:%+v", s.Addr, s.Stats, s.Handlers)
 }
 
 func (s *TwitterServer) Serve() error {

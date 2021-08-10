@@ -361,7 +361,7 @@ func NewStatefulScheduler(
 	}
 	sched.loadSettings()
 
-	log.Info(sched.String())
+	log.Info(sched)
 
 	if !config.DebugMode {
 		// start the scheduler loop
