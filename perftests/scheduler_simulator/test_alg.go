@@ -427,8 +427,8 @@ func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
 	return h
 }
 
-func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfig {
-	return server.SchedulerConfig{
+func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfiguration {
+	return server.SchedulerConfiguration{
 		MaxRetriesPerTask:    0,
 		DebugMode:            false,
 		RecoverJobsOnStartup: false,

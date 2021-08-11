@@ -10,13 +10,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 type reinstateWorkerCmd struct {
 }
 
-func (c *reinstateWorkerCmd) registerFlags() *cobra.Command {
+func (c *reinstateWorkerCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "reinstate_worker",
 		Short: "ReinstateWorker",
@@ -24,7 +26,7 @@ func (c *reinstateWorkerCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *reinstateWorkerCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Infof("Reinstating Scoot Worker %s", args)
 
@@ -38,7 +40,7 @@ func (c *reinstateWorkerCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args [
 		return err
 	}
 
-	err = cl.scootClient.ReinstateWorker(&scoot.ReinstateWorkerReq{ID: id, Requestor: requestor.Username})
+	err = cl.ScootClient.ReinstateWorker(&scoot.ReinstateWorkerReq{ID: id, Requestor: requestor.Username})
 
 	if err != nil {
 		switch err := err.(type) {

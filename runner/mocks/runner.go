@@ -46,18 +46,6 @@ func (mr *MockServiceMockRecorder) Abort(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockService)(nil).Abort), arg0)
 }
 
-// Erase mocks base method
-func (m *MockService) Erase(arg0 runner.RunID) error {
-	ret := m.ctrl.Call(m, "Erase", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Erase indicates an expected call of Erase
-func (mr *MockServiceMockRecorder) Erase(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Erase", reflect.TypeOf((*MockService)(nil).Erase), arg0)
-}
-
 // Query mocks base method
 func (m *MockService) Query(arg0 runner.Query, arg1 runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	ret := m.ctrl.Call(m, "Query", arg0, arg1)

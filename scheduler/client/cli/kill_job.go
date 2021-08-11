@@ -11,6 +11,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -18,7 +20,7 @@ type killJobCmd struct {
 	printAsJson bool
 }
 
-func (c *killJobCmd) registerFlags() *cobra.Command {
+func (c *killJobCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "kill_job",
 		Short: "KillJob",
@@ -27,7 +29,7 @@ func (c *killJobCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *killJobCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Killing Scoot Job", args)
 
@@ -37,7 +39,7 @@ func (c *killJobCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string)
 
 	jobId := args[0]
 
-	status, err := cl.scootClient.KillJob(jobId)
+	status, err := cl.ScootClient.KillJob(jobId)
 
 	if err != nil {
 		switch err := err.(type) {
