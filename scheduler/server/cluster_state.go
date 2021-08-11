@@ -210,7 +210,7 @@ func (c *clusterState) getNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
 	return ns, ok
 }
 
-// upate cluster state to reflect added and removed nodes
+// update cluster state to reflect added and removed nodes
 func (c *clusterState) updateCluster() {
 	defer c.stats.Latency(stats.SchedUpdateClusterLatency_ms).Time().Stop()
 	select {
@@ -361,6 +361,13 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				c.nodes[ns.node.Id()] = ns
 			}
 		}
+	}
+
+	if adds > 0 || removals > 0 {
+		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, num iterations without change: %d. %s", adds, removals, c.nopUpdateCnt, c.status())
+		c.nopUpdateCnt = 0
+	} else {
+		c.nopUpdateCnt++
 	}
 
 	c.stats.Gauge(stats.ClusterAvailableNodes).Update(int64(len(c.nodes)))
