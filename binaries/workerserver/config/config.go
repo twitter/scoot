@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func GetConfigText(configSelector string) ([]byte, error) {
+func GetWorkerConfigText(configSelector string) ([]byte, error) {
 	configText, ok := WorkerConfigsMap[configSelector]
 	if !ok {
 		keys := make([]string, 0, len(WorkerConfigsMap))
@@ -21,14 +21,4 @@ func GetConfigText(configSelector string) ([]byte, error) {
 	}
 
 	return configBytes, nil
-}
-
-// GetWorkerConfig get the worker server config
-func GetWorkerConfigs(configName string) ([]byte, error) {
-	configText, err := GetConfigText(configName)
-	if err != nil {
-		return nil, err
-	}
-
-	return configText, nil
 }

@@ -51,7 +51,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	workerConfigText, err := config.GetWorkerConfigs(*configFlag)
+	workerConfigText, err := config.GetWorkerConfigText(*configFlag)
 
 	if err != nil {
 		log.Fatal(err)
