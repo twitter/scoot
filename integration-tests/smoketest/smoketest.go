@@ -1,4 +1,4 @@
-package cli
+package smoketest
 
 import (
 	"fmt"
@@ -11,18 +11,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
-type smokeTestCmd struct {
+type SmokeTestCmd struct {
 	numJobs   int
 	numTasks  int
 	timeout   time.Duration
 	storeAddr string
 }
 
-func (c *smokeTestCmd) registerFlags() *cobra.Command {
+func (c *SmokeTestCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "smoketest",
 		Short: "SmokeTest",
@@ -35,7 +37,7 @@ func (c *smokeTestCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *SmokeTestCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		return err
@@ -50,7 +52,7 @@ func (c *smokeTestCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []strin
 }
 
 type smokeTestRunner struct {
-	cl  *simpleCLIClient
+	cl  *client.SimpleClient
 	tmp string
 }
 
@@ -64,7 +66,7 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 
 	// (first job will test data)
 	t1, t2, t3, t4, t5, t6 := "id1", "id2", "id3", "id4", "id5", "id6"
-	jobs[0] = testhelpers.StartJob(r.cl.scootClient, &scoot.JobDefinition{
+	jobs[0] = testhelpers.StartJob(r.cl.ScootClient, &scoot.JobDefinition{
 		// Repeat tasks to better exercise Store w/groupcache.
 		Tasks: []*scoot.TaskDefinition{
 			{
@@ -100,15 +102,15 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 		}})
 
 	for i := 1; i < numJobs; i++ {
-		jobs[i] = testhelpers.StartJob(r.cl.scootClient, testhelpers.GenerateJob(numTasks, id1))
+		jobs[i] = testhelpers.StartJob(r.cl.ScootClient, testhelpers.GenerateJob(numTasks, id1))
 	}
 
 	// Wait for results and then verify that the results are as expected.
-	if err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.scootClient, timeout); err != nil {
+	if err := testhelpers.WaitForJobsToCompleteAndLogStatus(jobs, r.cl.ScootClient, timeout); err != nil {
 		return err
 	}
 
-	st, err := r.cl.scootClient.GetStatus(jobs[0])
+	st, err := r.cl.ScootClient.GetStatus(jobs[0])
 	if err != nil {
 		return err
 	}

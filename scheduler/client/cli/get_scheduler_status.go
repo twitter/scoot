@@ -10,6 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -17,7 +19,7 @@ type getSchedulerStatusCmd struct {
 	printAsJson bool
 }
 
-func (c *getSchedulerStatusCmd) registerFlags() *cobra.Command {
+func (c *getSchedulerStatusCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "get_scheduler_status",
 		Short: "GetSchedulerStatus",
@@ -26,11 +28,11 @@ func (c *getSchedulerStatusCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *getSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *getSchedulerStatusCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Checking Status for Scheduler", args)
 
-	status, err := cl.scootClient.GetSchedulerStatus()
+	status, err := cl.ScootClient.GetSchedulerStatus()
 
 	if err != nil {
 		switch err := err.(type) {

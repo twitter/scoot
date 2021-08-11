@@ -9,6 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/twitter/scoot/common/client"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
@@ -17,7 +19,7 @@ type setSchedulerStatusCmd struct {
 	maxTasks    int
 }
 
-func (c *setSchedulerStatusCmd) registerFlags() *cobra.Command {
+func (c *setSchedulerStatusCmd) RegisterFlags() *cobra.Command {
 	r := &cobra.Command{
 		Use:   "set_scheduler_status",
 		Short: "SetSchedulerStatus",
@@ -27,13 +29,13 @@ func (c *setSchedulerStatusCmd) registerFlags() *cobra.Command {
 	return r
 }
 
-func (c *setSchedulerStatusCmd) run(cl *simpleCLIClient, cmd *cobra.Command, args []string) error {
+func (c *setSchedulerStatusCmd) Run(cl *client.SimpleClient, cmd *cobra.Command, args []string) error {
 
 	log.Info("Set the maximum number of (running + waiting) tasks we want the scheduler"+
 		" to run.  Note: the scheduler does not enforce this limit.  We expect the job"+
 		" requestor to adhere to it.", args)
 
-	err := cl.scootClient.SetSchedulerStatus(int32(c.maxTasks))
+	err := cl.ScootClient.SetSchedulerStatus(int32(c.maxTasks))
 
 	if err != nil {
 		switch err := err.(type) {

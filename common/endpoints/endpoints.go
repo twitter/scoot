@@ -4,11 +4,13 @@ package endpoints
 
 import (
 	"bytes"
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/pprof"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/stats"
 )
@@ -30,6 +32,10 @@ type TwitterServer struct {
 	Addr     string
 	Stats    stats.StatsReceiver
 	Handlers map[string]http.Handler
+}
+
+func (s *TwitterServer) String() string {
+	return fmt.Sprintf("TwitterServer:Addr:%s, Stats:%+v, Handlers:%+v", s.Addr, s.Stats, s.Handlers)
 }
 
 func (s *TwitterServer) Serve() error {
