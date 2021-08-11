@@ -22,8 +22,7 @@ const DefaultRunnerRetryInterval = time.Second
 // How long to wait between runner status queries to determine [init] status.
 const DefaultReadyFnBackoff = 5 * time.Second
 
-// SchedulerServerConfig config structure holding original parsed json configs and
-// server.SchedulerConfiguration generated from the parsed json values
+// SchedulerServerConfig config structure holding original json configs
 type JSONConfigs struct {
 	Cluster   ClusterJSONConfig              `json:"Cluster"`
 	Workers   client.WorkersClientJSONConfig `json:"Workers"`
