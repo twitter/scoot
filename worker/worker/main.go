@@ -1,8 +1,5 @@
 package main
 
-//go:generate go-bindata -pkg "config" -o ./config/config.go config
-//go:generate go fmt ./config/config.go
-
 import (
 	"flag"
 	"math/rand"
@@ -54,7 +51,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
+	workerConfigText, err := config.GetWorkerConfigText(*configFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -140,5 +137,5 @@ func main() {
 	)
 
 	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
-	server.RunServer(bag, schema, configText)
+	server.RunServer(bag, schema, workerConfigText)
 }
