@@ -54,7 +54,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	configText, err := jsonconfig.GetConfigText(*configFlag, config.Asset)
+	workerConfigText, err := config.GetWorkerConfigText(*configFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -140,5 +140,5 @@ func main() {
 	)
 
 	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
-	api.RunServer(bag, schema, configText)
+	api.RunServer(bag, schema, workerConfigText)
 }
