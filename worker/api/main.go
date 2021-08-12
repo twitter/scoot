@@ -13,7 +13,6 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/binaries/workerserver/config"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/endpoints"
@@ -30,15 +29,16 @@ import (
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
-	"github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/server"
+	"github.com/twitter/scoot/worker/api/config"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/server"
 )
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	thriftAddr := flag.String("thrift_addr", workerapi.DefaultWorker_Thrift, "addr to serve thrift on")
-	httpAddr := flag.String("http_addr", workerapi.DefaultWorker_HTTP, "addr to serve http on")
+	thriftAddr := flag.String("thrift_addr", domain.DefaultWorker_Thrift, "addr to serve thrift on")
+	httpAddr := flag.String("http_addr", domain.DefaultWorker_HTTP, "addr to serve http on")
 	configFlag := flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")

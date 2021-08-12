@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	osexec "github.com/twitter/scoot/runner/execer/os"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 type servers struct {
@@ -68,7 +68,7 @@ func RunServer(
 	schema jsonconfig.Schema,
 	config []byte) {
 
-	log.Info("workerapi/server RunServer(), config is:", string(config))
+	log.Info("worker/server RunServer(), config is:", string(config))
 	// Parse Config
 	mod, err := schema.Parse(config)
 	if err != nil {

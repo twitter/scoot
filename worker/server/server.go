@@ -14,8 +14,8 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
-	domain "github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 // Creates a Worker Server

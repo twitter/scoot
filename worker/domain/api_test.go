@@ -1,4 +1,4 @@
-package workerapi
+package domain
 
 import (
 	"reflect"
@@ -8,7 +8,7 @@ import (
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 var someCmd = []string{"", "x"}

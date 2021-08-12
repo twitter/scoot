@@ -19,7 +19,7 @@ import (
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
 	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/client"
 )
 
 const DEFAULT_SOCKS_PORT = "50001"

@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -21,8 +22,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/scheduler/setup/worker"
-	"github.com/twitter/scoot/workerapi"
-	"io/ioutil"
+	workerdomain "github.com/twitter/scoot/worker/domain"
 )
 
 var tmp string
@@ -187,7 +187,7 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 
 	runStatus.Error = DeadLetterTrailer // this message is added by task_runner
-	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(runStatus)
+	expectedProcessStatus, _ := workerdomain.SerializeProcessStatus(runStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
 
