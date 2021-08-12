@@ -29,8 +29,8 @@ import (
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
+	"github.com/twitter/scoot/worker/api"
 	"github.com/twitter/scoot/worker/domain"
-	"github.com/twitter/scoot/worker/server"
 	"github.com/twitter/scoot/worker/workerserver/config"
 )
 
@@ -65,7 +65,7 @@ func main() {
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(endpoints.Module())
 	bag.InstallModule(runners.Module())
-	bag.InstallModule(server.Module())
+	bag.InstallModule(api.Module())
 	bag.InstallModule(bazel.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "workerserver" },
@@ -140,5 +140,5 @@ func main() {
 	)
 
 	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
-	server.RunServer(bag, schema, configText)
+	api.RunServer(bag, schema, configText)
 }

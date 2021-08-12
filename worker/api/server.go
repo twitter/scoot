@@ -1,6 +1,6 @@
 // Package server provides the implementation of the Scoot Worker
 // Server, which implements the Worker API and starts the actual worker.
-package server
+package api
 
 import (
 	"reflect"
