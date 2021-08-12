@@ -26,7 +26,7 @@ import (
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
-	"github.com/twitter/scoot/worker/worker/config"
+	"github.com/twitter/scoot/worker/workerserver/config"
 	"github.com/twitter/scoot/workerapi"
 	"github.com/twitter/scoot/workerapi/server"
 )
