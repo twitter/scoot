@@ -5,6 +5,7 @@ package client
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/runner"
@@ -14,9 +15,9 @@ import (
 )
 
 // Parameters for configuring connections to remote workers.
-type WorkersClientJSONConfig struct {
-	Type          string // transport type: rpc
-	PollingPeriod string // polling period default to 250ms
+type WorkersClientConfig struct {
+	Type          string        // transport type: rpc
+	PollingPeriod time.Duration // polling period default to 250ms
 }
 
 type Client interface {

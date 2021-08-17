@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,109 +22,64 @@ const DefaultRunnerRetryInterval = time.Second
 const DefaultReadyFnBackoff = 5 * time.Second
 
 // SchedulerServerConfig config structure holding original json configs
-type JSONConfigs struct {
-	Cluster   ClusterJSONConfig              `json:"Cluster"`
-	Workers   client.WorkersClientJSONConfig `json:"Workers"`
-	Scheduler SchedulerJSONConfig            `json:"SchedulerConfig"`
-	SagaLog   SagaLogJSONConfig              `json:"SagaLog"`
+type ServiceConfig struct {
+	Cluster   ClusterConfig
+	Workers   client.WorkersClientConfig
+	Scheduler server.SchedulerConfig
+	SagaLog   SagaLogConfig
 }
 
-func (s JSONConfigs) String() string {
-	return fmt.Sprintf("\n%s\n%s\n%s\n%s", s.Cluster, s.Workers, s.Scheduler, s.SagaLog)
+func (sc ServiceConfig) String() string {
+	return fmt.Sprintf("\n%s\n%s\n%s\n%s", sc.Cluster, sc.Workers, sc.Scheduler.String(), sc.SagaLog)
 }
 
-type ClusterJSONConfig struct {
-	Type  string `json:"Type"`  // cluster type: local, memory
-	Count int    `json:"Count"` // default to 10 for Type == memory
+type ClusterConfig struct {
+	Type  string // cluster type: local, memory
+	Count int    // default to 10 for Type == memory
 }
 
-func (c ClusterJSONConfig) String() string {
-	return fmt.Sprintf("ClusterJSONConfig: Type: %s, Count: %d", c.Type, c.Count)
+func (c ClusterConfig) String() string {
+	return fmt.Sprintf("ClusterConfig: Type: %s, Count: %d", c.Type, c.Count)
 }
 
-type SagaLogJSONConfig struct {
-	Type          string `json:"Type"`          // file
-	Directory     string `json:"Directory"`     // default to .scootdata/filesagalog
-	ExpirationSec int    `json:"ExpirationSec"` // default to 0
-	GCIntervalSec int    `json:"GCIntervalSec"` // default to 1
+type SagaLogConfig struct {
+	Type          string // file
+	Directory     string // default to .scootdata/filesagalog
+	ExpirationSec int    // default to 0
+	GCIntervalSec int    // default to 1
 }
 
-func (s SagaLogJSONConfig) String() string {
-	return fmt.Sprintf("SagaLogJSONConfig: Type:%s, Directory: %s, ExpirationSec: %d, GCIntervalSec: %d",
+func (s SagaLogConfig) String() string {
+	return fmt.Sprintf("SagaLogConfig: Type:%s, Directory: %s, ExpirationSec: %d, GCIntervalSec: %d",
 		s.Type, s.Directory, s.ExpirationSec, s.GCIntervalSec)
 }
 
-type SchedulerJSONConfig struct {
-	Type                 string `json:"Type"`              // scheduler type: stateful
-	MaxRetriesPerTask    int    `json:"MaxRetriesPerTask"` // default to 0
-	MaxRequestors        int    `json:"MaxRequestors"`
-	MaxJobsPerRequestor  int    `json:"MaxJobsPerRequestor"`
-	DebugMode            bool   `json:"DebugMode"`            // default to false
-	RecoverJobsOnStartup bool   `json:"RecoverJobsOnStartup"` // default to true
-	DefaultTaskTimeout   string `json:"DefaultTaskTimeout"`   // default to 30m
-}
-
-func (sc SchedulerJSONConfig) String() string {
-	return fmt.Sprintf("SchedulerJSONConfig: Type: %s, MaxRetriesPerTask: %d, MaxRequestors: %d, MaxJobsPerRequestor: %d, DebugMode: %t, "+
-		"RecoverJobsOnStartup: %t, DefaultTaskTimeout: %s",
-		sc.Type, sc.MaxRetriesPerTask, sc.MaxRequestors, sc.MaxJobsPerRequestor, sc.DebugMode, sc.RecoverJobsOnStartup, sc.DefaultTaskTimeout)
-}
-
-func GetConfigText(configSelector string) ([]byte, error) {
-	configText, ok := SchedulerConfigs[configSelector]
+func GetConfig(configSelector string) (*ServiceConfig, error) {
+	config, ok := ServiceConfigs[configSelector]
 	if !ok {
-		keys := make([]string, 0, len(SchedulerConfigs))
-		for k := range SchedulerConfigs {
+		keys := make([]string, 0, len(ServiceConfigs))
+		for k := range ServiceConfigs {
 			keys = append(keys, k)
 		}
 		return nil, fmt.Errorf("invalid configuration %s, supported values are %v", configSelector, keys)
 	}
 
-	return []byte(configText), nil
-}
-
-func (jc *SchedulerJSONConfig) CreateSchedulerConfig() (*server.SchedulerConfiguration, error) {
-	var err error
-	serverConfig := &server.SchedulerConfiguration{}
-	if jc.DefaultTaskTimeout != "" {
-		serverConfig.DefaultTaskTimeout, err = time.ParseDuration(jc.DefaultTaskTimeout)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	serverConfig.MaxRetriesPerTask = jc.MaxRetriesPerTask
-	serverConfig.DebugMode = jc.DebugMode
-	serverConfig.RecoverJobsOnStartup = jc.RecoverJobsOnStartup
-	serverConfig.RunnerRetryTimeout = DefaultRunnerRetryTimeout
-	serverConfig.RunnerRetryInterval = DefaultRunnerRetryInterval
-	serverConfig.ReadyFnBackoff = DefaultReadyFnBackoff
-	serverConfig.MaxRequestors = jc.MaxRequestors
-	serverConfig.MaxJobsPerRequestor = jc.MaxJobsPerRequestor
-	return serverConfig, nil
+	return &config, nil
 }
 
 // GetSchedulerConfig get the scheduler config
-func GetSchedulerConfigs(configName string) (*JSONConfigs, error) {
+func GetServiceConfig(configName string) (*ServiceConfig, error) {
 	// get the default values, these will override any of the config
 	// sections whose Type is ""
-	defaultConfigText, _ := GetConfigText("default")
-	defaultConfig := &JSONConfigs{}
-	err := json.Unmarshal(defaultConfigText, &defaultConfig)
+	defaultConfig, err := GetConfig("default")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse the default config: %v", err)
 	}
 
 	// get the config values as per the command line config name
-	configText, err := GetConfigText(configName)
+	schedServerConfig, err := GetConfig(configName)
 	if err != nil {
 		return nil, err
-	}
-
-	schedServerConfig := &JSONConfigs{}
-	err = json.Unmarshal(configText, &schedServerConfig)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't parse top-level config: %v", err)
 	}
 
 	// use the default values for any sections whose type was not set in the command line config
@@ -140,10 +94,6 @@ func GetSchedulerConfigs(configName string) (*JSONConfigs, error) {
 	if schedServerConfig.Workers.Type == "" {
 		log.Infof("using default Workers config")
 		schedServerConfig.Workers = defaultConfig.Workers
-	}
-	if schedServerConfig.Scheduler.Type == "" {
-		log.Infof("using default Scheduler config")
-		schedServerConfig.Scheduler = defaultConfig.Scheduler
 	}
 
 	return schedServerConfig, nil

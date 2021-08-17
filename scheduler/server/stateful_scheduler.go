@@ -116,7 +116,7 @@ func nopDurationKeyExtractor(key string) string {
 // TaskThrottle -
 //	   requestors will try not to schedule jobs that make the scheduler exceed
 //     the TaskThrottle.  Note: Sickle may exceed it with retries.
-type SchedulerConfiguration struct {
+type SchedulerConfig struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
 	RecoverJobsOnStartup bool
@@ -134,7 +134,7 @@ type SchedulerConfiguration struct {
 	SchedAlg       SchedulingAlgorithm
 }
 
-func (sc *SchedulerConfiguration) String() string {
+func (sc *SchedulerConfig) String() string {
 	return fmt.Sprintf("SchedulerConfiguration: MaxRetriesPerTask: %d, DebugMode: %t, RecoverJobsOnStartup: %t, DefaultTaskTimeout: %s, "+
 		"TaskTimeoutOverhead: %s, RunnerRetryTimeout: %s, RunnerRetryInterval: %s, MaxRequestors: %d, MaxJobsPerRequestor: %d, TaskThrottle: %d, "+
 		"Admins: %v",
@@ -166,7 +166,7 @@ type RunnerFactory func(node cluster.Node) runner.Service
 // The callbacks are executed as part of the scheduler loop.  They therefore can
 // safely read & modify the scheduler state.
 type statefulScheduler struct {
-	config        *SchedulerConfiguration
+	config        *SchedulerConfig
 	sagaCoord     saga.SagaCoordinator
 	runnerFactory RunnerFactory
 	asyncRunner   async.Runner
@@ -220,7 +220,7 @@ func NewStatefulSchedulerFromCluster(
 	cl *cluster.Cluster,
 	sc saga.SagaCoordinator,
 	rf RunnerFactory,
-	config SchedulerConfiguration,
+	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	persistor Persistor,
 	durationKeyExtractorFn func(string) string,
@@ -249,7 +249,7 @@ func NewStatefulScheduler(
 	clusterUpdates chan []cluster.NodeUpdate,
 	sc saga.SagaCoordinator,
 	rf RunnerFactory,
-	config SchedulerConfiguration,
+	config SchedulerConfig,
 	stat stats.StatsReceiver,
 	persistor Persistor,
 	durationKeyExtractorFn func(string) string) *statefulScheduler {

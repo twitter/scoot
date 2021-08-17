@@ -43,7 +43,7 @@ type schedulerDeps struct {
 	clUpdates       chan []cluster.NodeUpdate
 	sc              saga.SagaCoordinator
 	rf              func(cluster.Node) runner.Service
-	config          SchedulerConfiguration
+	config          SchedulerConfig
 	nodeToWorkerMap map[string]runner.Service
 	statsRegistry   stats.StatsRegistry
 }
@@ -60,7 +60,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 		rf: func(n cluster.Node) runner.Service {
 			return worker.MakeInmemoryWorker(n)
 		},
-		config: SchedulerConfiguration{
+		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,
 			DebugMode:            true,
 			RecoverJobsOnStartup: false,
@@ -773,7 +773,7 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 			return runner
 		},
-		config: SchedulerConfiguration{
+		config: SchedulerConfig{
 			MaxRetriesPerTask:    0,
 			DebugMode:            true,
 			RecoverJobsOnStartup: false,

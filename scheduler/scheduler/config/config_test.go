@@ -13,25 +13,23 @@ var tests = []string{"local.memory", "local.local"}
 // and that they parse correctly
 func TestGettingConfigurations(t *testing.T) {
 	for _, configSelector := range tests {
-		_, err := GetSchedulerConfigs(configSelector)
+		_, err := GetConfig(configSelector)
 		assert.Nil(t, err, fmt.Sprintf("error getting schedule server config.  %s", err))
 	}
 
 	selector := "invalid.selector"
-	config, err := GetSchedulerConfigs(selector)
+	config, err := GetConfig(selector)
 	assert.NotNil(t, err, fmt.Sprintf("configuration returned for %s: %s", selector, config))
 }
 
 // TestCreatingConfigStruct test overriding default structure values with values from
 // command line's specification.
 func TestCreatingConfigStruct(t *testing.T) {
-	jsonConfig, err := GetSchedulerConfigs("local.local")
+	config, err := GetConfig("local.local")
 	assert.Nil(t, err)
-	assert.Equal(t, "local", jsonConfig.Cluster.Type)
-	assert.Equal(t, "file", jsonConfig.SagaLog.Type)
-	assert.Equal(t, ".scootdata/filesagalog", jsonConfig.SagaLog.Directory)
+	assert.Equal(t, "local", config.Cluster.Type)
+	assert.Equal(t, "file", config.SagaLog.Type)
+	assert.Equal(t, ".scootdata/filesagalog", config.SagaLog.Directory)
 
-	config, err := jsonConfig.Scheduler.CreateSchedulerConfig()
-	assert.Nil(t, err)
-	assert.True(t, config.RecoverJobsOnStartup)
+	assert.True(t, config.Scheduler.RecoverJobsOnStartup)
 }

@@ -141,7 +141,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 	rf := func(n cluster.Node) runner.Service {
 		return worker.MakeInmemoryWorker(n)
 	}
-	sc := SchedulerConfiguration{
+	sc := SchedulerConfig{
 		MaxRetriesPerTask:    0,
 		DebugMode:            true,
 		RecoverJobsOnStartup: false,

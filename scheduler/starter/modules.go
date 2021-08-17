@@ -25,7 +25,7 @@ import (
 const DEFAULT_SOCKS_PORT = "50001"
 const DEFAULT_SOCKS_ADDR = "localhost:" + DEFAULT_SOCKS_PORT
 
-func GetWorkerRunnerServiceFn(workers client.WorkersClientJSONConfig, thriftTransportFactory thrift.TTransportFactory, binaryProtocolFactory thrift.TProtocolFactory) (func(cluster.Node) runner.Service, error) {
+func GetWorkerRunnerServiceFn(workers client.WorkersClientConfig, thriftTransportFactory thrift.TTransportFactory, binaryProtocolFactory thrift.TProtocolFactory) (func(cluster.Node) runner.Service, error) {
 	var rf func(cluster.Node) runner.Service
 	var err error
 	if workers.Type == "socks" {
@@ -150,7 +150,7 @@ func (s *socksSocket) Open() error {
 	return nil
 }
 
-func GetCluster(clusterJSON config.ClusterJSONConfig) (*cluster.Cluster, error) {
+func GetCluster(clusterJSON config.ClusterConfig) (*cluster.Cluster, error) {
 	var cluster *cluster.Cluster
 	var err error
 	if clusterJSON.Type == "inMemory" {
@@ -171,7 +171,7 @@ func GetCluster(clusterJSON config.ClusterJSONConfig) (*cluster.Cluster, error) 
 
 // MakeSagaLog - TODO remove saga or refactor it so this function can be moved into saga or sagalog
 // the current organization leads to cyclic dependency when moving to saga or sagalogs
-func MakeSagaLog(config config.SagaLogJSONConfig) (saga.SagaLog, error) {
+func MakeSagaLog(config config.SagaLogConfig) (saga.SagaLog, error) {
 	if config.Type == "memory" {
 		return sagalogs.MakeInMemorySagaLog(time.Duration(config.ExpirationSec)*time.Second, time.Duration(config.GCIntervalSec)*time.Second), nil
 	}

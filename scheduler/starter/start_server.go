@@ -34,9 +34,9 @@ func makeServers(
 }
 
 // StartServer construct and start scheduler service (without using ice)
-func StartServer(schedulerConfig server.SchedulerConfiguration,
-	sagaLogConfig config.SagaLogJSONConfig,
-	workers client.WorkersClientJSONConfig,
+func StartServer(schedulerConfig server.SchedulerConfig,
+	sagaLogConfig config.SagaLogConfig,
+	workers client.WorkersClientConfig,
 	thriftServerTransport thrift.TServerTransport,
 	statsReceiver *stats.StatsReceiver,
 	workerClientTimeout time.Duration,

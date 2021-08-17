@@ -42,13 +42,9 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	schedulerJSONConfigs, err := config.GetSchedulerConfigs(*configFlag)
+	serviceConfig, err := config.GetServiceConfig(*configFlag)
 	if err != nil {
 		log.Fatalf("error parsing schedule server config.  Scheduler not started. %s", err)
-	}
-	schedulerConfig, err := schedulerJSONConfigs.Scheduler.CreateSchedulerConfig()
-	if err != nil {
-		log.Fatalf("error creating schedule server config.  Scheduler not started. %s", err)
 	}
 
 	thriftServerSocket, err := thrift.NewTServerSocket(*thriftAddr)
@@ -68,13 +64,13 @@ func main() {
 		MaxConnIdleMins:   *grpcIdleMins,
 	}
 
-	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
+	cluster, err := starter.GetCluster(serviceConfig.Cluster)
 	if err != nil {
 		log.Fatalf("%s. Scheduler not started", err)
 	}
 
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
-	starter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers,
+	starter.StartServer(serviceConfig.Scheduler, serviceConfig.SagaLog, serviceConfig.Workers,
 		thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
 		nil, nopDurationKeyExtractor, cluster)
 }
