@@ -211,6 +211,7 @@ func NewStatefulSchedulerFromCluster(
 	durationKeyExtractorFn func(string) string,
 ) Scheduler {
 	sub := cl.Subscribe()
+	cl.Stats = stat // setting this here because I couldn't figure out how to create the cluster with one via ice
 	return NewStatefulScheduler(
 		sub.InitialMembers,
 		sub.Updates,

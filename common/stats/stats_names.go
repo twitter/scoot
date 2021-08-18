@@ -18,6 +18,11 @@ const (
 	ClusterRunningNodes   = "runningNodes"
 	ClusterLostNodes      = "lostNodes"
 
+	/* a gauge reporting delta time between getting cluster updates */
+	/* TODO - decide if we want to remove these after debugging MGCI-1747 */
+	ClusterStateTimeSinceLastUpdate_ms = "clusterStateTimeSinceLastUpdateMs"
+	ClusterTimeSinceLastUpdate_ms      = "clusterTimeSinceLastUpdateMs"
+
 	/************************* Bundlestore metrics **************************/
 	/*
 		Bundlestore download metrics (Reads/Gets from top-level Bundlestore/Apiserver)

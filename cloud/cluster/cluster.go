@@ -5,14 +5,20 @@ package cluster
 
 import (
 	"sort"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/stats"
 )
 
 // Cluster represents a group of Nodes and has mechanisms for receiving updates.
 type Cluster struct {
-	state    *state
-	reqCh    chan interface{}
-	updateCh chan ClusterUpdate
-	subs     []chan []NodeUpdate
+	state              *state
+	reqCh              chan interface{}
+	updateCh           chan ClusterUpdate
+	subs               []chan []NodeUpdate
+	priorIterationTime time.Time
+	Stats              stats.StatsReceiver
 }
 
 // Clusters can be updated in two ways:
@@ -25,10 +31,11 @@ type ClusterUpdate interface{}
 func NewCluster(state []Node, updateCh chan ClusterUpdate) *Cluster {
 	s := makeState(state)
 	c := &Cluster{
-		state:    s,
-		reqCh:    make(chan interface{}),
-		updateCh: updateCh,
-		subs:     nil,
+		state:              s,
+		reqCh:              make(chan interface{}),
+		updateCh:           updateCh,
+		subs:               nil,
+		priorIterationTime: time.Now(),
 	}
 	go c.loop()
 	return c
@@ -70,9 +77,16 @@ func (c *Cluster) loop() {
 				sort.Sort(NodeSorter(nodes))
 				outgoing = c.state.setAndDiff(nodes)
 			}
+			elapsed := time.Since(c.priorIterationTime)
+			log.Infof("putting changes on channel, time since last iteration: %s", time.Since(c.priorIterationTime))
+			if c.Stats != nil {
+				c.Stats.Gauge(stats.ClusterTimeSinceLastUpdate_ms).Update(elapsed.Milliseconds())
+			}
+			c.priorIterationTime = time.Now()
 			for _, sub := range c.subs {
 				sub <- outgoing
 			}
+			log.Info("changes are in the channel")
 		case req, ok := <-c.reqCh:
 			if !ok {
 				c.reqCh = nil

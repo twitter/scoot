@@ -35,6 +35,8 @@ type clusterState struct {
 	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
 	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver           // for collecting stats about node availability
+
+	priorUpdateTime time.Time
 }
 
 func (c *clusterState) isOfflined(ns *nodeState) bool {
@@ -145,6 +147,7 @@ func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate,
 		maxFlakyDuration: defaultMaxFlakyDuration,
 		readyFn:          rfn,
 		stats:            stats,
+		priorUpdateTime:  time.Now(),
 	}
 	cs.update(updates)
 	return cs
@@ -214,6 +217,12 @@ func (c *clusterState) updateCluster() {
 	defer c.stats.Latency(stats.SchedUpdateClusterLatency_ms).Time().Stop()
 	select {
 	case updates, ok := <-c.updateCh:
+		elapsed := time.Since(c.priorUpdateTime)
+		log.Infof("got updates off updateCh.  Time since last update: %s", elapsed)
+		if c.stats != nil {
+			c.stats.Gauge(stats.ClusterStateTimeSinceLastUpdate_ms).Update(elapsed.Milliseconds())
+		}
+		c.priorUpdateTime = time.Now()
 		if !ok {
 			c.updateCh = nil
 		}
