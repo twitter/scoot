@@ -56,19 +56,20 @@ func newNodeGroup() *nodeGroup {
 
 // The State of A Node in the Cluster
 type nodeState struct {
-	node        cluster.Node
-	runningJob  string
-	runningTask string
-	snapshotId  string
-	timeLost    time.Time        // Time when node was marked lost, if set (lost and flaky are mutually exclusive).
-	timeFlaky   time.Time        // Time when node was marked flaky, if set (lost and flaky are mutually exclusive).
-	readyCh     chan interface{} // We create goroutines for each new node which will close this channel once the node is ready.
-	removedCh   chan interface{} // We send nil when a node has been removed and we want the above goroutine to exit.
+	node              cluster.Node
+	runningJob        string
+	runningTask       string
+	snapshotId        string
+	timeTaskCompleted time.Time        // Time when node completed the latest task (useful for recording idle time between tasks)
+	timeLost          time.Time        // Time when node was marked lost, if set (lost and flaky are mutually exclusive).
+	timeFlaky         time.Time        // Time when node was marked flaky, if set (lost and flaky are mutually exclusive).
+	readyCh           chan interface{} // We create goroutines for each new node which will close this channel once the node is ready.
+	removedCh         chan interface{} // We send nil when a node has been removed and we want the above goroutine to exit.
 }
 
 func (n *nodeState) String() string {
-	return fmt.Sprintf("{node:%s, jobId:%s, taskId:%s, snapshotId:%s, timeLost:%v, timeFlaky:%v, ready:%t}",
-		spew.Sdump(n.node), n.runningJob, n.runningTask, n.snapshotId, n.timeLost, n.timeFlaky, (n.readyCh == nil))
+	return fmt.Sprintf("{node:%s, jobId:%s, taskId:%s, snapshotId:%s, timeTaskCompleted:%v, timeLost:%v, timeFlaky:%v, ready:%t}",
+		spew.Sdump(n.node), n.runningJob, n.runningTask, n.snapshotId, n.timeTaskCompleted, n.timeLost, n.timeFlaky, (n.readyCh == nil))
 }
 
 // This node was either reported lost by a NodeUpdate and we keep it around for a bit in case it revives,
@@ -117,14 +118,15 @@ func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
 // Initializes a Node State for the specified Node
 func newNodeState(node cluster.Node) *nodeState {
 	return &nodeState{
-		node:        node,
-		runningJob:  noJob,
-		runningTask: noTask,
-		snapshotId:  "",
-		timeLost:    nilTime,
-		timeFlaky:   nilTime,
-		readyCh:     nil,
-		removedCh:   make(chan interface{}),
+		node:              node,
+		runningJob:        noJob,
+		runningTask:       noTask,
+		snapshotId:        "",
+		timeTaskCompleted: time.Now(),
+		timeLost:          nilTime,
+		timeFlaky:         nilTime,
+		readyCh:           nil,
+		removedCh:         make(chan interface{}),
 	}
 }
 
@@ -176,6 +178,9 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snaps
 	ns.runningJob = jobId
 	ns.runningTask = taskId
 	ns.snapshotId = snapshotId
+	timeSincelastCompletedTask_ms := int64(time.Now().Sub(ns.timeTaskCompleted) / time.Millisecond)
+	c.stats.Gauge(stats.WorkerIdleLatency_ms).Update(timeSincelastCompletedTask_ms)
+	ns.timeTaskCompleted = nilTime
 	c.numRunning++
 }
 
@@ -197,6 +202,7 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 		}
 		ns.runningJob = noJob
 		ns.runningTask = noTask
+		ns.timeTaskCompleted = time.Now()
 		delete(c.nodeGroups[ns.snapshotId].busy, nodeId)
 		c.nodeGroups[ns.snapshotId].idle[nodeId] = ns
 	} else {

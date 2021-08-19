@@ -495,6 +495,11 @@ const (
 	*/
 	WorkerUptimeGauge_ms = "workerUptimeGauge_ms"
 
+	/*
+		The amount of time a worker node was idle between tasks
+	*/
+	WorkerIdleLatency_ms = "workerIdleLatency_ms"
+
 	/****************************** Git Metrics **********************************************/
 	/*
 		The number of failures trying to init a ref clone

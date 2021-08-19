@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/assert"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 )
@@ -343,6 +344,10 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 		t.Fatalf("Expected: %s\nGot: %s", spew.Sdump(expectedGroups), spew.Sdump(cs.nodeGroups))
 	}
 
+	// Test that scheduling a job on a worker updates task completed time to nil
+	assert.Equal(t, cs.nodes["node1"].timeTaskCompleted, nilTime)
+	assert.Equal(t, cs.nodes["node2"].timeTaskCompleted, nilTime)
+
 	// Test that finishing a jobs moves it to the idle list for its snapshotId.
 	cs.taskCompleted("node1", false)
 	expectedGroups["snapA"].idle["node1"] = cs.nodes["node1"]
@@ -350,6 +355,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
 		t.Fatalf("Expected: %s\nGot: %s", spew.Sdump(expectedGroups), spew.Sdump(cs.nodeGroups))
 	}
+	// Test that finishing a job updates task completed time
+	assert.NotEqual(t, cs.nodes["node1"].timeTaskCompleted, nilTime)
+	assert.NotEqual(t, cs.nodes["node2"].timeTaskCompleted, nilTime)
 
 	// Test the rescheduling a task moves it correctly from an idle list to a busy one.
 	cs.taskScheduled("node1", "job1", "task1", "snapB")
@@ -357,6 +365,15 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	delete(expectedGroups["snapA"].idle, "node1")
 	if !reflect.DeepEqual(cs.nodeGroups, expectedGroups) {
 		t.Fatalf("Expected: %s\nGot: %s", spew.Sdump(expectedGroups), spew.Sdump(cs.nodeGroups))
+	}
+
+	// Test that the idle time is recorded(for first task, it is the time between node state creation
+	//  and scheduling of that first task on the node)
+	if !stats.StatsOk("4th stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
+		}) {
+		t.Fatal("stats check did not pass.")
 	}
 
 	// Task finished and is marked as flaky
