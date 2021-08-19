@@ -78,7 +78,7 @@ func (c *Cluster) loop() {
 				outgoing = c.state.setAndDiff(nodes)
 			}
 			elapsed := time.Since(c.priorIterationTime)
-			log.Infof("putting changes on channel, time since last iteration: %s", time.Since(c.priorIterationTime))
+			log.Infof("putting %d changes on channel, time since last iteration: %s", len(outgoing), elapsed)
 			if c.Stats != nil {
 				c.Stats.Gauge(stats.ClusterTimeSinceLastUpdate_ms).Update(elapsed.Milliseconds())
 			}
