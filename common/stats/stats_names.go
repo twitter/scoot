@@ -22,6 +22,7 @@ const (
 	/* TODO - decide if we want to remove these after debugging MGCI-1747 */
 	ClusterStateTimeSinceLastUpdate_ms = "clusterStateTimeSinceLastUpdateMs"
 	ClusterTimeSinceLastUpdate_ms      = "clusterTimeSinceLastUpdateMs"
+	ClusterNumNodes                    = "clusterNumNodesFromFetcher"
 
 	/************************* Bundlestore metrics **************************/
 	/*

@@ -37,6 +37,7 @@ func NewCluster(state []Node, updateCh chan ClusterUpdate) *Cluster {
 		subs:               nil,
 		priorIterationTime: time.Now(),
 	}
+	s.Stats = c.Stats
 	go c.loop()
 	return c
 }

@@ -4,11 +4,15 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"sort"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 type state struct {
 	// current view of our nodes
 	nodes map[NodeId]Node
+
+	Stats stats.StatsReceiver
 }
 
 func makeState(nodes []Node) *state {
@@ -22,6 +26,9 @@ func makeState(nodes []Node) *state {
 // SetAndDiff takes the new state as an argument and creates
 // node updates based on the diff
 func (s *state) setAndDiff(newState []Node) []NodeUpdate {
+	if s.Stats != nil {
+		s.Stats.Gauge(stats.ClusterNumNodes).Update(int64(len(newState)))
+	}
 	added := []Node{}
 	oldStateLen := len(s.nodes)
 	for _, n := range newState {
