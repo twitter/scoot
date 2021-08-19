@@ -357,7 +357,9 @@ func Test_ClusterState_NodeGroups(t *testing.T) {
 	}
 	// Test that finishing a job updates task completed time
 	assert.NotEqual(t, cs.nodes["node1"].timeTaskCompleted, nilTime)
-	assert.NotEqual(t, cs.nodes["node2"].timeTaskCompleted, nilTime)
+
+	// Adding sleep to add some worker idle time
+	time.Sleep(2 * time.Millisecond)
 
 	// Test the rescheduling a task moves it correctly from an idle list to a busy one.
 	cs.taskScheduled("node1", "job1", "task1", "snapB")
