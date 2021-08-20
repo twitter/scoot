@@ -256,7 +256,7 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 	assertWait(t, r, runID, running(), args...)
 	r.Abort(runID)
 	// adding sleep to add some worker idle time
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	if !stats.StatsOk("check 4", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
