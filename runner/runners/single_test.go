@@ -210,7 +210,7 @@ func TestTimeout(t *testing.T) {
 
 func TestRecordWorkerIdleTime(t *testing.T) {
 	stat, statsReg := setupTest()
-	args := []string{"sleep 5"}
+	args := []string{"sleep 10"}
 	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
 	tmp, _ := ioutil.TempDir("", "")
 	e := execers.NewSimExecer()
@@ -231,8 +231,8 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// Add a small sleep time to make sure stats registry is updated before checking
-	time.Sleep(5 * time.Millisecond)
+	// Wait for the task to start running before checking
+	assertWait(t, r, runStatus.RunID, running(), args...)
 	if !stats.StatsOk("check 2", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerIdleLatency_ms: {Checker: stats.Int64EqTest, Value: 0},
@@ -241,7 +241,7 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 	}
 
 	// wait for the run to finish
-	assertWait(t, r, runStatus.RunID, running(), args...)
+	assertWait(t, r, runStatus.RunID, complete(0), args...)
 	// adding sleep to add some worker idle time
 	time.Sleep(500 * time.Millisecond)
 	if !stats.StatsOk("check 3", statsReg, t,
@@ -253,7 +253,7 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 
 	// Test that abort resets idle time
 	runID := run(t, r, args)
-	assertWait(t, r, runID, running(), args...)
+	assertWait(t, r, runID, complete(0), args...)
 	r.Abort(runID)
 	// adding sleep to add some worker idle time
 	time.Sleep(500 * time.Millisecond)
