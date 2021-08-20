@@ -218,7 +218,7 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID)
 	// adding sleep to add some worker idle time
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	if !stats.StatsOk("check 1", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
@@ -243,7 +243,7 @@ func TestRecordWorkerIdleTime(t *testing.T) {
 	// wait for the run to finish
 	assertWait(t, r, runStatus.RunID, running(), args...)
 	// adding sleep to add some worker idle time
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	if !stats.StatsOk("check 3", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
