@@ -208,6 +208,63 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
+func TestRecordWorkerIdleTime(t *testing.T) {
+	stat, statsReg := setupTest()
+	args := []string{"sleep 5"}
+	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
+	tmp, _ := ioutil.TempDir("", "")
+	e := execers.NewSimExecer()
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID)
+	// adding sleep to add some worker idle time
+	time.Sleep(50 * time.Millisecond)
+	if !stats.StatsOk("check 1", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
+		}) {
+		t.Fatal("stats check 1 did not pass.")
+	}
+
+	runStatus, err := r.Run(cmd)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	// Add a small sleep time to make sure stats registry is updated before checking
+	time.Sleep(5 * time.Millisecond)
+	if !stats.StatsOk("check 2", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerIdleLatency_ms: {Checker: stats.Int64EqTest, Value: 0},
+		}) {
+		t.Fatal("stats check 2 did not pass.")
+	}
+
+	// wait for the run to finish
+	assertWait(t, r, runStatus.RunID, running(), args...)
+	// adding sleep to add some worker idle time
+	time.Sleep(50 * time.Millisecond)
+	if !stats.StatsOk("check 3", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
+		}) {
+		t.Fatal("stats check 3 did not pass.")
+	}
+
+	// Test that abort resets idle time
+	runID := run(t, r, args)
+	assertWait(t, r, runID, running(), args...)
+	r.Abort(runID)
+	// adding sleep to add some worker idle time
+	time.Sleep(50 * time.Millisecond)
+	if !stats.StatsOk("check 4", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerIdleLatency_ms: {Checker: stats.Int64GTTest, Value: 0},
+		}) {
+		t.Fatal("stats check 4 did not pass.")
+	}
+}
+
 func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
 
