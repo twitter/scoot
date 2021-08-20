@@ -288,6 +288,7 @@ func (c *QueueController) abort(run runner.RunID) (runner.RunStatus, error) {
 				}).Info("Aborting")
 			close(c.runningAbort)
 			c.runningAbort = nil
+			c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
 		}
 	} else {
 		for i, cmdID := range c.queue {
@@ -327,6 +328,8 @@ func (c *QueueController) loop() {
 	var watchCh chan runner.RunStatus
 	var updateDoneCh chan interface{}
 	updateRequested := false
+
+	c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
 
 	tryUpdate := func() {
 		if watchCh == nil && updateDoneCh == nil {
@@ -369,6 +372,7 @@ func (c *QueueController) loop() {
 		if watchCh == nil && updateDoneCh == nil && len(c.queue) > 0 {
 			cmdID := c.queue[0]
 			watchCh = c.runAndWatch(cmdID)
+			c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time().Stop()
 		}
 	}
 
@@ -418,6 +422,7 @@ func (c *QueueController) loop() {
 			c.runningCmd = nil
 			c.runningAbort = nil
 			c.queue = c.queue[1:]
+			c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
 		}
 	}
 }
@@ -435,6 +440,7 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 		}).Info("Running")
 	watchCh := make(chan runner.RunStatus)
 	abortCh, statusUpdateCh := c.inv.Run(cmdID.cmd, cmdID.id)
+	c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time().Stop()
 	c.runningAbort = abortCh
 	c.runningID = cmdID.id
 	c.runningCmd = cmdID.cmd
