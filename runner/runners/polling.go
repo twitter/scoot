@@ -48,6 +48,8 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 			return st, service, err
 		}
 		time.Sleep(r.period)
+
+		// Exponentially increase time between polls
 		r.period *= 2
 	}
 	return nil, service, nil
