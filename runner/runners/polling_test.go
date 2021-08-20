@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
+func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service, *PollingStatusQuerier) {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
@@ -20,12 +20,13 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
-	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
-	return ex, chaos, poller
+	run := NewPollingStatusQuerier(nower, 10*time.Microsecond)
+	poller := &Service{chaos, run}
+	return ex, chaos, poller, run
 }
 
 func TestPollingWorker_Simple(t *testing.T) {
-	_, _, poller := setupPoller()
+	_, _, poller, _ := setupPoller()
 
 	st, err := poller.Run(&runner.Command{Argv: []string{"complete 42"}})
 	if err != nil {
@@ -42,7 +43,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
-	ex, _, poller := setupPoller()
+	ex, _, poller, _ := setupPoller()
 	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
 	if err != nil {
@@ -69,11 +70,44 @@ func TestPollingWorker_Wait(t *testing.T) {
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
 		t.Fatal(st, err)
 	}
+}
 
+// Test period is incremented with multiple polls
+func TestPollingWorker_Increment(t *testing.T) {
+	ex, _, poller, run := setupPoller()
+
+	startPeriod := run.period
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
+	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		st, _, err := runner.FinalStatus(poller, st.RunID)
+		stCh <- st
+		errCh <- err
+	}()
+
+	// Sleep for long enough to poll a few times
+	time.Sleep(time.Duration(10) * time.Millisecond)
+	select {
+	case st := <-stCh:
+		err := <-errCh
+		t.Fatal("should still be waiting", st, err)
+	default:
+	}
+
+	ex.Resume()
+	endPeriod := run.period
+	st, err = <-stCh, <-errCh
+	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 || startPeriod == endPeriod {
+		t.Fatal(st, err)
+	}
 }
 
 func TestPollingWorker_Timeout(t *testing.T) {
-	_, _, poller := setupPoller()
+	_, _, poller, _ := setupPoller()
 	stCh, errCh := make(chan runner.RunStatus), make(chan error)
 	st, err := poller.Run(&runner.Command{Argv: []string{"sleep 1000"}, Timeout: time.Millisecond * 20})
 
@@ -103,7 +137,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 }
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
-	_, chaos, poller := setupPoller()
+	_, chaos, poller, _ := setupPoller()
 	chaos.SetError(fmt.Errorf("connection error"))
 
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
@@ -113,7 +147,7 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 }
 
 func TestPolling_ErrorPolling(t *testing.T) {
-	ex, chaos, poller := setupPoller()
+	ex, chaos, poller, _ := setupPoller()
 
 	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
