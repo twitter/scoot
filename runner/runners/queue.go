@@ -379,7 +379,7 @@ func (c *QueueController) loop() {
 					c.inv.stat.Gauge(stats.WorkerIdleLatency_ms).Update(0)
 				}
 			} else {
-				// Update worker idle time when no task is currently running and in queue is empty  
+				// Update worker idle time when no task is currently running and in queue is empty
 				timeSinceLastCompletedRun_ms := int64(time.Now().Sub(c.timePriorRunCompleted) / time.Millisecond)
 				c.inv.stat.Gauge(stats.WorkerIdleLatency_ms).Update(timeSinceLastCompletedRun_ms)
 			}
@@ -439,7 +439,7 @@ func (c *QueueController) loop() {
 			c.timePriorRunCompleted = time.Now()
 
 		default:
-			if watchCh == nil && len(c.queue) == 0{
+			if watchCh == nil && len(c.queue) == 0 {
 				// Update worker idle time if no run is ongoing/queued(update run time is also considered idle time)
 				timeSinceLastCompletedRun_ms := int64(time.Now().Sub(c.timePriorRunCompleted) / time.Millisecond)
 				c.inv.stat.Gauge(stats.WorkerIdleLatency_ms).Update(timeSinceLastCompletedRun_ms)
