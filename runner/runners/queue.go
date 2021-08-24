@@ -327,7 +327,9 @@ func (c *QueueController) loop() {
 	var watchCh chan runner.RunStatus
 	var updateDoneCh chan interface{}
 	updateRequested := false
-	var idleLatency = c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
+
+	var idleLatency = c.inv.stat.Latency(stats.WorkerIdleLatency_ms)
+	idleLatency.Time()
 
 	tryUpdate := func() {
 		if watchCh == nil && updateDoneCh == nil {
@@ -411,7 +413,7 @@ func (c *QueueController) loop() {
 			case abortReq:
 				st, err := c.abort(r.runID)
 				r.resultCh <- result{st, err}
-				idleLatency = c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
+				idleLatency.Time()
 			}
 
 		case <-watchCh:
@@ -421,7 +423,7 @@ func (c *QueueController) loop() {
 			c.runningCmd = nil
 			c.runningAbort = nil
 			c.queue = c.queue[1:]
-			idleLatency = c.inv.stat.Latency(stats.WorkerIdleLatency_ms).Time()
+			idleLatency.Time()
 		}
 	}
 }
