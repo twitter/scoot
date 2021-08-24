@@ -106,6 +106,7 @@ func TestAbort(t *testing.T) {
 }
 
 func TestMemCap(t *testing.T) {
+	defer teardown(t)
 	// Command to increase memory by 1MB every .1s until we hit 50MB after 5s.
 	// Test that limiting the memory to 10MB causes the command to abort.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
@@ -135,6 +136,7 @@ func TestMemCap(t *testing.T) {
 }
 
 func TestStats(t *testing.T) {
+	defer teardown(t)
 	stat, statsReg := setupTest()
 	args := []string{"sleep 50"}
 	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId"}
@@ -161,20 +163,34 @@ func TestStats(t *testing.T) {
 			"err":       err,
 		}).Info("Received status")
 
+	// sleep to add some worker idle time
+	time.Sleep(50 * time.Millisecond)
+
+	// Run and abort a command to verify abort starts the reording of idle time
+	runID := assertRun(t, r, running(), args...)
+	r.Abort(runID)
+	time.Sleep(50 * time.Millisecond)
+
+	// third run to avoid doing a stats check while the idle latency is being measured
+	// (results in data race otherwise)
+	assertRun(t, r, running(), args...)
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
-			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
+			stats.WorkerIdleLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerIdleLatency_ms + ".count":   {Checker: stats.Int64EqTest, Value: 3},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
 }
 
 func TestTimeout(t *testing.T) {
+	defer teardown(t)
 	stat, statsReg := setupTest()
 	args := []string{"pause"}
 	cmd := &runner.Command{Argv: args, SnapshotID: "fakeSnapshotId", Timeout: 50 * time.Millisecond}
@@ -187,6 +203,7 @@ func TestTimeout(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
+	// assertWait(t, r, runStatus.RunID, running(), args...)
 	query := runner.Query{
 		AllRuns: true,
 		States:  runner.DONE_MASK,
@@ -200,6 +217,9 @@ func TestTimeout(t *testing.T) {
 		t.Fatalf("expected timedout state, got %s", status[0].State.String())
 	}
 
+	// Run to avoid doing a stats check while the idle latency is being measured
+	// (results in data race otherwise)
+	assertRun(t, r, running(), args...)
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerTaskLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: (50.0)},
