@@ -203,7 +203,6 @@ func TestTimeout(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// assertWait(t, r, runStatus.RunID, running(), args...)
 	query := runner.Query{
 		AllRuns: true,
 		States:  runner.DONE_MASK,
