@@ -146,6 +146,9 @@ func TestStats(t *testing.T) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, dirMonitor, runner.EmptyID)
+
+	// Add initial idle time to keep the avg idle time above 50ms
+	time.Sleep(50 * time.Millisecond)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -163,10 +166,10 @@ func TestStats(t *testing.T) {
 			"err":       err,
 		}).Info("Received status")
 
-	// sleep to add some worker idle time
+	// sleep to add worker idle time(to keep average above 50ms)
 	time.Sleep(50 * time.Millisecond)
 
-	// Run and abort a command to verify abort starts the reording of idle time
+	// Run and abort a command to verify abort starts the recording of idle time
 	runID := assertRun(t, r, running(), args...)
 	r.Abort(runID)
 	time.Sleep(50 * time.Millisecond)
@@ -182,7 +185,7 @@ func TestStats(t *testing.T) {
 			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
 			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
-			stats.WorkerIdleLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerIdleLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
 			stats.WorkerIdleLatency_ms + ".count":   {Checker: stats.Int64EqTest, Value: 3},
 		}) {
 		t.Fatal("stats check did not pass.")
