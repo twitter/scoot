@@ -413,7 +413,6 @@ func (c *QueueController) loop() {
 			case abortReq:
 				st, err := c.abort(r.runID)
 				r.resultCh <- result{st, err}
-				idleLatency.Time()
 			}
 
 		case <-watchCh:
