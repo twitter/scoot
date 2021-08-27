@@ -57,11 +57,10 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	unScheduledTasks := js.getUnScheduledTasks()
 	assignments := getTaskAssignments([]*jobState{js}, s)
 
-	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
+	if len(assignments) != min(len(unScheduledTasks), 5) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
-      Number Of Available Nodes %v, Number of Unscheduled Tasks %v`,
+      5 nodes available, Number of Unscheduled Tasks %v`,
 			len(assignments),
-			len(testCluster.nodes),
 			len(unScheduledTasks))
 	}
 }
@@ -147,7 +146,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 		RecoverJobsOnStartup: false,
 		DefaultTaskTimeout:   time.Second,
 	}
-	s := NewStatefulScheduler(tc.nodes, tc.ch,
+	s := NewStatefulScheduler(tc,
 		sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf,
 		sc,

@@ -114,6 +114,7 @@ func main() {
 func createCluster() *cluster.Cluster {
 	f := local.MakeFetcher("apiserver", "http_addr")
 	nodes, _ := f.Fetch()
-	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C)
-	return cluster.NewCluster(nodes, updates)
+	cluster := cluster.NewCluster(nodes)
+	cluster.MakeFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
+	return cluster
 }

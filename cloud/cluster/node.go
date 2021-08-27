@@ -83,14 +83,14 @@ func NewRemove(id NodeId) NodeUpdate {
 	}
 }
 
-func NewUserInitiatedAdd(node Node) NodeUpdate {
-	nu := NewAdd(node)
-	nu.UserInitiated = true
-	return nu
-}
+// func NewUserInitiatedAdd(node Node) NodeUpdate {
+// 	nu := NewAdd(node)
+// 	nu.UserInitiated = true
+// 	return nu
+// }
 
-func NewUserInitiatedRemove(id NodeId) NodeUpdate {
-	nu := NewRemove(id)
-	nu.UserInitiated = true
-	return nu
-}
+// func NewUserInitiatedRemove(id NodeId) NodeUpdate {
+// 	nu := NewRemove(id)
+// 	nu.UserInitiated = true
+// 	return nu
+// }

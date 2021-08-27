@@ -1,75 +1,84 @@
-package cluster_test
+package cluster
 
 import (
-	"github.com/twitter/scoot/cloud/cluster"
-	"reflect"
-	"sort"
 	"sync"
 	"testing"
 	"time"
+
+	"gopkg.in/go-playground/assert.v1"
 )
 
 func TestFetchCron(t *testing.T) {
-	h := makeCronHelper(t)
-	h.assertFetch(t)
-	h.assertFetch(t, "host1:1234")
-	h.assertFetch(t, "host1:1234", "host2:8888")
-	h.assertFetch(t)
-	h.assertFetch(t, "host1:1234")
-	h.assertFetch(t)
+	f := &fakeFetcher{}
+	tickerCh := make(chan time.Time)
+	h := makeCronHelper(t, f, tickerCh)
+	h.f.setFakeNodes("node1", "node2", "node3")
+	tickerCh <- time.Now()
+	h.assertFetch(t, "node1", "node2", "node3")
 }
 
 type cronHelper struct {
 	t      *testing.T
 	tickCh chan time.Time
 	f      *fakeFetcher
-	ch     chan cluster.ClusterUpdate
+	c      *fakeCluster
 }
 
-func makeCronHelper(t *testing.T) *cronHelper {
+func makeCronHelper(t *testing.T, f *fakeFetcher, tickerCh chan time.Time) *cronHelper {
 	h := &cronHelper{
 		t:      t,
-		tickCh: make(chan time.Time),
-		f:      &fakeFetcher{},
+		tickCh: tickerCh,
+		f:      f,
+		c:      &fakeCluster{},
 	}
-	h.ch = cluster.MakeFetchCron(h.f, h.tickCh)
+	MakeFetchCron(h.f, h.tickCh, h.c)
 	return h
 }
 
-func (h *cronHelper) assertFetch(t *testing.T, expectedNames ...string) {
-	nodes := nodes(expectedNames)
-	sort.Sort(cluster.NodeSorter(nodes))
-	h.f.setResult(nodes)
-	expected := nodes
-	h.tickCh <- time.Now()
-	actual := <-h.ch
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("got %v, expected %v", actual, expected)
+func (h *cronHelper) assertFetch(t *testing.T, expectedNodes ...string) {
+	got := h.c.GetNodes()
+	for i, n := range expectedNodes {
+		assert.Equal(t, n, got[i].String())
 	}
-}
-
-func nodes(ids []string) []cluster.Node {
-	n := []cluster.Node{}
-	for _, name := range ids {
-		n = append(n, cluster.NewIdNode(name))
-	}
-	return n
 }
 
 // fakeFetcher for testing fetch cron
 type fakeFetcher struct {
 	mutex sync.Mutex
-	nodes []cluster.Node
+	nodes []Node
 }
 
-func (f *fakeFetcher) Fetch() ([]cluster.Node, error) {
+func (f *fakeFetcher) Fetch() ([]Node, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 	return f.nodes, nil
 }
 
-func (f *fakeFetcher) setResult(nodes []cluster.Node) {
+func (f *fakeFetcher) setFakeNodes(nodes ...string) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
-	f.nodes = nodes
+	for _, n := range nodes {
+		f.nodes = append(f.nodes, NewIdNode(n))
+	}
+}
+
+type fakeCluster struct {
+	latestNodeList   []Node
+	latestNodeListMu sync.RWMutex
+}
+
+func (fc *fakeCluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
+	return nil
+}
+
+func (fc *fakeCluster) SetLatestNodesList(nodes []Node) {
+	fc.latestNodeListMu.Lock()
+	defer fc.latestNodeListMu.Unlock()
+	fc.latestNodeList = nodes
+}
+
+func (fc *fakeCluster) GetNodes() []Node {
+	fc.latestNodeListMu.RLock()
+	defer fc.latestNodeListMu.RUnlock()
+	return fc.latestNodeList
 }

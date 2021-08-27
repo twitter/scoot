@@ -39,8 +39,7 @@ func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
 
 // objects needed to initialize a stateful scheduler
 type schedulerDeps struct {
-	initialCl       []cluster.Node
-	clUpdates       chan []cluster.NodeUpdate
+	cluster         cluster.Cluster
 	sc              saga.SagaCoordinator
 	rf              func(cluster.Node) runner.Service
 	config          SchedulerConfiguration
@@ -51,12 +50,12 @@ type schedulerDeps struct {
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
-	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+	tc := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+	cl := cluster.Cluster(tc)
 
 	return &schedulerDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		cluster: cl,
+		sc:      sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
 			return worker.MakeInmemoryWorker(n)
 		},
@@ -74,8 +73,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return deps.statsRegistry }, 0)
 
 	s := NewStatefulScheduler(
-		deps.initialCl,
-		deps.clUpdates,
+		deps.cluster,
 		deps.sc,
 		deps.rf,
 		deps.config,
@@ -326,9 +324,9 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 
 	deps := getDefaultSchedDeps()
 	// cluster with one node
-	cl := makeTestCluster("node1")
-	deps.initialCl = cl.nodes
-	deps.clUpdates = cl.ch
+	tc := makeTestCluster("node1")
+	cl := cluster.Cluster(tc)
+	deps.cluster = cl
 
 	// sagalog mock to ensure all messages are logged appropriately
 	mockCtrl := gomock.NewController(&TestTerminator{})
@@ -760,12 +758,12 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, 
 }
 
 func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
-	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+	tc := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+	cl := cluster.Cluster(tc)
 
 	return &schedulerDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		cluster: cl,
+		sc:      sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		rf: func(n cluster.Node) runner.Service {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()

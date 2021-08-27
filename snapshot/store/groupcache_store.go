@@ -30,7 +30,7 @@ type GroupcacheConfig struct {
 	Memory_bytes int64
 	AddrSelf     string
 	Endpoint     string
-	Cluster      *cluster.Cluster
+	Cluster      cluster.Cluster
 }
 
 // Add in-memory caching to the given store.
@@ -113,19 +113,17 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 	return peers
 }
 
-// Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
+// Loop will look for cluster updates and when there are updates, create a list of peer addresses to update groupcache.
 // Cluster is expected to include the current node.
 // Also updates cache stats, every 1s for now to account for arbitrary stat latch time.
-func loop(c *cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
-	sub := c.Subscribe()
-	pool.Set(toPeers(c.Members(), stat)...)
+func loop(c cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
+	// sub := c.Subscribe()
+	pool.Set(toPeers(c.GetNodes(), stat)...)
 	ticker := time.NewTicker(1 * time.Second)
-	for {
-		select {
-		case <-sub.Updates:
-			pool.Set(toPeers(c.Members(), stat)...)
-		case <-ticker.C:
-			updateCacheStats(cache, stat)
+	for range ticker.C {
+		updates := c.RetrieveCurrentNodeUpdates()
+		if len(updates) > 0 {
+			pool.Set(toPeers(c.GetNodes(), stat)...)
 		}
 	}
 }
