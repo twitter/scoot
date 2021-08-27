@@ -54,30 +54,14 @@ func (h *helper) assertNodeUpdates(t *testing.T, expectedUpdates []NodeUpdate, m
 
 		updates = h.c.RetrieveCurrentNodeUpdates()
 
-		if len(updates) > 0 {
+		if len(expectedUpdates) == len(updates) {
 			// validate the updates
-			if len(expectedUpdates) != len(updates) {
-				continue
-			}
-			found := true
-			for _, eUpdate := range expectedUpdates {
-				found = false
-				for _, update := range updates {
-					if eUpdate.String() == update.String() {
-						found = true
-						break
-					}
-				}
-				if !found {
-					break
+			for i := range expectedUpdates {
+				if expectedUpdates[i].String() != updates[i].String() {
+					assert.Fail(t, fmt.Sprintf("expected %v, got %v", expectedUpdates, updates))
 				}
 			}
-			if found {
-				return
-			}
-
-			assert.Fail(t, fmt.Sprintf("expected %v, got %v", expectedUpdates, updates))
-			return
+			break
 		}
 	}
 }

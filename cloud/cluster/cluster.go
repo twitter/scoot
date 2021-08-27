@@ -15,15 +15,15 @@ import (
 
 var ClusterUpdateLoopFrequency time.Duration = time.Duration(250) * time.Millisecond
 
-// ClusterUpdateGetter the scheduler's interface to the Cluster that is independently building
-// the list of node updates
+// Cluster represents a group of Nodes and has mechanism for
+// setting current Node list and receiving correlating Node updates.
 type Cluster interface {
 	RetrieveCurrentNodeUpdates() []NodeUpdate // used by scheduler's cluster state to get updates
 	SetLatestNodesList(nodes []Node)          // used by fetcher to give cluster the list of current nodes
 	GetNodes() []Node
 }
 
-// cluster represents a group of Nodes and has mechanisms for receiving updates.
+// cluster implementation of Cluster
 type cluster struct {
 	state *state
 
@@ -42,11 +42,6 @@ type cluster struct {
 	priorNodeUpdateTime  time.Time
 	priorFetchUpdateTime time.Time
 }
-
-// Clusters can be updated in two ways:
-// *) a new state of the Cluster, which is a []Node
-// *) updates to specific Nodes, which is a []NodeUpdate
-type ClusterUpdate interface{}
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
