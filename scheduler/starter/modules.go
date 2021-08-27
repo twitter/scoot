@@ -13,6 +13,7 @@ import (
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/dialer"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/saga"
@@ -150,17 +151,17 @@ func (s *socksSocket) Open() error {
 	return nil
 }
 
-func GetCluster(clusterJSON config.ClusterJSONConfig) (cluster.Cluster, error) {
+func GetCluster(clusterJSON config.ClusterJSONConfig, stat stats.StatsReceiver) (cluster.Cluster, error) {
 	var cluster cluster.Cluster
 	var err error
 	if clusterJSON.Type == "inMemory" {
 		cmc := &config.ClusterMemoryConfig{
 			Count: clusterJSON.Count,
 		}
-		cluster, err = cmc.Create()
+		cluster, err = cmc.Create(stat)
 	} else {
 		clc := &config.ClusterLocalConfig{}
-		cluster, err = clc.Create()
+		cluster, err = clc.Create(stat)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error creating cluster.  Scheduler not started. %s", err)

@@ -35,7 +35,7 @@ type helper struct {
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
-	h.c = NewCluster()
+	h.c = NewCluster(nil)
 	h.currentNodes = []Node{}
 	return h
 }
@@ -44,7 +44,7 @@ func (h *helper) assertNodeUpdates(t *testing.T, expectedUpdates []NodeUpdate, m
 	start := time.Now()
 	ticker := time.NewTicker(ClusterUpdateLoopFrequency)
 	defer ticker.Stop()
-	updates := []NodeUpdate{}
+	var updates []NodeUpdate
 	for range ticker.C {
 
 		if time.Since(start) > maxWait {

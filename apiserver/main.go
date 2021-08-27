@@ -85,7 +85,7 @@ func main() {
 				Memory_bytes: *cacheSize,
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
-				Cluster:      createCluster(),
+				Cluster:      createCluster(stat),
 			}
 			store, handler, err := store.MakeGroupcacheStore(fileStore, cfg, ttlc, stat)
 			if err != nil {
@@ -111,9 +111,9 @@ func main() {
 	bundlestore.RunServer(bag, schema, configText)
 }
 
-func createCluster() cc.Cluster {
+func createCluster(stat stats.StatsReceiver) cc.Cluster {
 	f := local.MakeFetcher("apiserver", "http_addr")
-	cluster := cc.NewCluster()
+	cluster := cc.NewCluster(stat)
 	cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
 	return cluster
 }

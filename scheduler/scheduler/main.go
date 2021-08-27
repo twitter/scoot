@@ -68,7 +68,7 @@ func main() {
 		MaxConnIdleMins:   *grpcIdleMins,
 	}
 
-	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
+	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster, statsReceiver)
 	if err != nil {
 		log.Fatalf("%s. Scheduler not started", err)
 	}

@@ -7,6 +7,10 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/twitter/scoot/common/stats"
 )
 
 var ClusterUpdateLoopFrequency time.Duration = time.Duration(250) * time.Millisecond
@@ -23,6 +27,8 @@ type Cluster interface {
 type cluster struct {
 	state *state
 
+	stat stats.StatsReceiver
+
 	// latestFetchedNodes, when not nil, contains the latest node list from fetcher.  When
 	// cluster start processing the latestFetchedNodes, it grabs a copy an sets this to nil
 	latestFetchedNodes   []Node
@@ -32,6 +38,9 @@ type cluster struct {
 	// scheduler gets the contents of currentNodeUpdates, currentNodeUpdates is reset to nil.
 	currentNodeUpdates   []NodeUpdate
 	currentNodeUpdatesMu sync.RWMutex
+
+	priorNodeUpdateTime  time.Time
+	priorFetchUpdateTime time.Time
 }
 
 // Clusters can be updated in two ways:
@@ -41,12 +50,18 @@ type ClusterUpdate interface{}
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-func NewCluster() Cluster {
+func NewCluster(stat stats.StatsReceiver) Cluster {
 	s := makeState([]Node{})
 	c := &cluster{
-		state:              s,
-		latestFetchedNodes: []Node{},
-		currentNodeUpdates: []NodeUpdate{},
+		state:                s,
+		stat:                 stat,
+		latestFetchedNodes:   []Node{},
+		currentNodeUpdates:   []NodeUpdate{},
+		priorNodeUpdateTime:  time.Now(),
+		priorFetchUpdateTime: time.Now(),
+	}
+	if stat == nil {
+		c.stat = stats.NilStatsReceiver()
 	}
 	go c.loop()
 	return c
@@ -71,6 +86,11 @@ func (c *cluster) SetLatestNodesList(nodes []Node) {
 	c.latestFetchedNodesMu.Lock()
 	defer c.latestFetchedNodesMu.Unlock()
 	c.latestFetchedNodes = nodes
+
+	log.Infof("fetch updated cluster node list to %d nodes", len(c.latestFetchedNodes))
+	// report time since last update from fetcher
+	c.stat.Gauge(stats.ClusterFetchFreqMs).Update(time.Since(c.priorFetchUpdateTime).Milliseconds())
+	c.priorFetchUpdateTime = time.Now()
 }
 
 // get the lastest list of nodes seen by a fetcher
@@ -87,6 +107,13 @@ func (c *cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
 	c.currentNodeUpdatesMu.Lock()
 	defer c.currentNodeUpdatesMu.Unlock()
 	c.currentNodeUpdates = append(c.currentNodeUpdates, updates...)
+
+	if len(updates) > 0 {
+		log.Infof("cluster has %d new node updates, %d total updates waiting processing", len(updates), len(c.currentNodeUpdates))
+		// record time since last time saw node
+		c.stat.Gauge(stats.ClusterNodeUpdateFreqMs).Update(time.Since(c.priorNodeUpdateTime).Milliseconds())
+		c.priorNodeUpdateTime = time.Now()
+	}
 }
 
 // return the list of current node update (node updates that the scheduler's

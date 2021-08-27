@@ -9,6 +9,7 @@ import (
 
 	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/scheduler/server"
 	"github.com/twitter/scoot/workerapi/client"
 )
@@ -155,12 +156,12 @@ type ClusterMemoryConfig struct {
 	Count int
 }
 
-func (c *ClusterMemoryConfig) Create() (cc.Cluster, error) {
+func (c *ClusterMemoryConfig) Create(stat stats.StatsReceiver) (cc.Cluster, error) {
 	workerNodes := make([]cc.Node, c.Count)
 	for i := 0; i < c.Count; i++ {
 		workerNodes[i] = cc.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	cluster := cc.NewCluster()
+	cluster := cc.NewCluster(stat)
 	cluster.SetLatestNodesList(workerNodes)
 	return cluster, nil
 }
@@ -168,9 +169,9 @@ func (c *ClusterMemoryConfig) Create() (cc.Cluster, error) {
 // Parameters for configuring a Scoot cluster that will have locally-run components.
 type ClusterLocalConfig struct{}
 
-func (c *ClusterLocalConfig) Create() (cc.Cluster, error) {
+func (c *ClusterLocalConfig) Create(stat stats.StatsReceiver) (cc.Cluster, error) {
 	f := local.MakeFetcher("workerserver", "thrift_addr")
-	cluster := cc.NewCluster()
+	cluster := cc.NewCluster(stat)
 	cc.StartFetchCron(f, time.NewTicker(time.Second).C, cluster)
 	return cluster, nil
 }

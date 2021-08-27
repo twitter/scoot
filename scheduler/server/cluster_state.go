@@ -133,16 +133,11 @@ func newNodeState(node cc.Node) *nodeState {
 	}
 }
 
-// Creates a New State Distributor with the initial nodes, and which updates
-// nodes added or removed based on the supplied channel. ReadyFn is optional.
-// New cluster is returned along with a doneCh which the caller can close to exit our goroutine.
+// Create a ClusterState with the initial nodes, and which updates
+// nodes added or removed when it retrieves node updates from the cluster object. ReadyFn is optional.
+// A ClusterState is returned.
 func newClusterState(cluster cc.Cluster, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
-	// var updates []cluster.NodeUpdate
-	// for _, n := range initial {
-	// 	updates = append(updates, cluster.NewAdd(n))
-	// }
 	cs := &clusterState{
-		// updateCh:         updateCh,
 		cluster:          cluster,
 		nodes:            make(map[cc.NodeId]*nodeState),
 		suspendedNodes:   map[cc.NodeId]*nodeState{},
@@ -157,13 +152,14 @@ func newClusterState(cluster cc.Cluster, rfn ReadyFn, stats stats.StatsReceiver)
 	return cs
 }
 
-// Number of free nodes that are not in a suspended state.
+// return the number of free nodes that are not in a suspended state and not running tasks.
+// Note: we assume numFree() is called from methods that have already created a (sync) lock
 func (c *clusterState) numFree() int {
 	// This can go negative due to lost nodes, set lower bound at zero.
 	return max(0, len(c.nodes)-c.numRunning)
 }
 
-// Update ClusterState to reflect that a task has been scheduled on a particular node
+// update ClusterState to reflect that a task has been scheduled on a particular node
 // SnapshotId should be the value from the task definition associated with the given taskId.
 func (c *clusterState) taskScheduled(nodeId cc.NodeId, jobId, taskId, snapshotId string) {
 	c.clusterUpdatesMu.RLock()
@@ -188,7 +184,7 @@ func (c *clusterState) taskScheduled(nodeId cc.NodeId, jobId, taskId, snapshotId
 	c.numRunning++
 }
 
-// Update ClusterState to reflect that a task has finished running on
+// update ClusterState to reflect that a task has finished running on
 // a particular node, whether successfully or unsuccessfully.
 // If the node isn't found then the node was already suspended and deleted, just decrement numRunning.
 func (c *clusterState) taskCompleted(nodeId cc.NodeId, flaky bool) {
