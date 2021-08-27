@@ -376,6 +376,10 @@ func (c *clusterState) status() string {
 		len(c.nodes), c.numFree(), c.numRunning, len(c.suspendedNodes))
 }
 
+// the following functions implement (async) user initiated onlining and offlining a node
+// since these functions modify c.nodes and c.offlinedNodes, we need mutex around
+// uses of these structures.
+
 func (c *clusterState) HasOnlineNode(nodeId cc.NodeId) bool {
 	c.clusterUpdatesMu.RLock()
 	defer c.clusterUpdatesMu.RUnlock()
