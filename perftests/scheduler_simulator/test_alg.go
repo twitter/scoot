@@ -41,8 +41,7 @@ import (
 
 type externalDeps struct {
 	// external components used by scheduler
-	initialCl       []cluster.Node
-	clUpdates       chan []cluster.NodeUpdate
+	cl              cluster.Cluster
 	sc              saga.SagaCoordinator
 	fakeRunners     func(cluster.Node) runner.Service
 	nodeToWorkerMap map[string]runner.Service
@@ -56,8 +55,40 @@ type externalDeps struct {
 fake cluster
 */
 type testCluster struct {
-	ch    chan []cluster.NodeUpdate
-	nodes []cluster.Node
+	NodeUpdates []cluster.NodeUpdate
+}
+
+func (tc *testCluster) RetrieveCurrentNodeUpdates() []cluster.NodeUpdate {
+	ret := tc.NodeUpdates
+	tc.NodeUpdates = []cluster.NodeUpdate{}
+	return ret
+}
+
+func (tc *testCluster) SetLatestNodesList(nodes []cluster.Node) {
+	updates := []cluster.NodeUpdate{}
+	for _, node := range nodes {
+		updates = append(updates, cluster.NodeUpdate{UpdateType: cluster.NodeAdded,
+			Id:            node.Id(),
+			Node:          node,
+			UserInitiated: false,
+		})
+	}
+	tc.NodeUpdates = updates
+}
+
+func (tc *testCluster) GetNodes() []cluster.Node {
+	// this function is not used in any tests using testCluster
+	return nil
+}
+
+func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
+	h := &testCluster{}
+	nodes := []cluster.Node{}
+	for i := 0; i < num; i++ {
+		nodes = append(nodes, cluster.NewIdNode(fmt.Sprintf("node%d", i)))
+	}
+	h.SetLatestNodesList(nodes)
+	return h
 }
 
 type timeSummary struct {
@@ -154,8 +185,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 
 	config := st.getTestConfig()
 	s := server.NewStatefulScheduler(
-		st.extDeps.initialCl,
-		st.extDeps.clUpdates,
+		st.extDeps.cl,
 		st.extDeps.sc,
 		st.extDeps.fakeRunners,
 		config,
@@ -341,9 +371,8 @@ func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 	statsRec, cancelFn := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsReg }, latchTime)
 
 	return &externalDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		cl: cluster.Cluster(cl),
+		sc: sagalogs.MakeInMemorySagaCoordinatorNoGC(),
 		fakeRunners: func(n cluster.Node) runner.Service {
 			return makeFakeWorker(n)
 		},
@@ -413,18 +442,6 @@ func (st *SchedulingAlgTester) recordJobEndTime(jobId string, timedOut bool) err
 	f.Write([]byte(line))
 
 	return nil
-}
-
-func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
-	h := &testCluster{
-		ch: make(chan []cluster.NodeUpdate, 1),
-	}
-	nodes := []cluster.Node{}
-	for i := 0; i < num; i++ {
-		nodes = append(nodes, cluster.NewIdNode(fmt.Sprintf("node%d", i)))
-	}
-	h.nodes = nodes
-	return h
 }
 
 func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfiguration {

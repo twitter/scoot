@@ -31,7 +31,7 @@ func makeCronHelper(t *testing.T, f *fakeFetcher, tickerCh chan time.Time) *cron
 		f:      f,
 		c:      &fakeCluster{},
 	}
-	MakeFetchCron(h.f, h.tickCh, h.c)
+	StartFetchCron(h.f, h.tickCh, h.c)
 	return h
 }
 

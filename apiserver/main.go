@@ -10,7 +10,7 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
-	"github.com/twitter/scoot/cloud/cluster"
+	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -111,10 +111,9 @@ func main() {
 	bundlestore.RunServer(bag, schema, configText)
 }
 
-func createCluster() *cluster.Cluster {
+func createCluster() cc.Cluster {
 	f := local.MakeFetcher("apiserver", "http_addr")
-	nodes, _ := f.Fetch()
-	cluster := cluster.NewCluster(nodes)
-	cluster.MakeFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
+	cluster := cc.NewCluster()
+	cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
 	return cluster
 }

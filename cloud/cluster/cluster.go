@@ -41,7 +41,7 @@ type ClusterUpdate interface{}
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-func NewCluster(fetcher Fetcher) Cluster {
+func NewCluster() Cluster {
 	s := makeState([]Node{})
 	c := &cluster{
 		state:              s,

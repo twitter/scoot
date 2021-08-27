@@ -150,8 +150,8 @@ func (s *socksSocket) Open() error {
 	return nil
 }
 
-func GetCluster(clusterJSON config.ClusterJSONConfig) (*cluster.Cluster, error) {
-	var cluster *cluster.Cluster
+func GetCluster(clusterJSON config.ClusterJSONConfig) (cluster.Cluster, error) {
+	var cluster cluster.Cluster
 	var err error
 	if clusterJSON.Type == "inMemory" {
 		cmc := &config.ClusterMemoryConfig{

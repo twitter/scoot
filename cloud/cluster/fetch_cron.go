@@ -17,7 +17,7 @@ type Fetcher interface {
 
 // Given a Fetcher implementation and a Ticker, start a ticker loop that
 // fetches the current nodes and updates cluster's latestNodeList with this list
-func MakeFetchCron(f Fetcher, tickCh <-chan time.Time, cluster Cluster) {
+func StartFetchCron(f Fetcher, tickCh <-chan time.Time, cluster Cluster) {
 	c := &fetchCron{
 		tickCh:  tickCh,
 		f:       f,
