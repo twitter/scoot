@@ -39,8 +39,9 @@ type cluster struct {
 	currentNodeUpdates   []NodeUpdate
 	currentNodeUpdatesMu sync.RWMutex
 
-	priorNodeUpdateTime  time.Time
-	priorFetchUpdateTime time.Time
+	priorNodeUpdateTime       time.Time
+	priorFetchUpdateTime      time.Time
+	numNodesInLastFetchUpdate int
 }
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
@@ -82,7 +83,11 @@ func (c *cluster) SetLatestNodesList(nodes []Node) {
 	defer c.latestFetchedNodesMu.Unlock()
 	c.latestFetchedNodes = nodes
 
-	log.Infof("fetch updated cluster node list to %d nodes", len(c.latestFetchedNodes))
+	elapsed := time.Since(c.priorFetchUpdateTime)
+	if len(c.latestFetchedNodes) != c.numNodesInLastFetchUpdate || elapsed > 1*time.Minute {
+		c.numNodesInLastFetchUpdate = len(c.latestFetchedNodes)
+		log.Infof("fetch updated cluster node list to %d nodes", len(c.latestFetchedNodes))
+	}
 	// report time since last update from fetcher
 	c.stat.Gauge(stats.ClusterFetchFreqMs).Update(time.Since(c.priorFetchUpdateTime).Milliseconds())
 	c.priorFetchUpdateTime = time.Now()
