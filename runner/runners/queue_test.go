@@ -84,7 +84,7 @@ func TestUnknownRunIDInStatusRequest(t *testing.T) {
 	env := setup(4, snapshot.NoDuration, t)
 	defer env.teardown()
 
-	st, _, err := env.r.Status(runner.RunID("not a real run id"))
+	st, _, err := runner.StatusNow(env.r, runner.RunID("not a real run id"))
 	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf(UnknownRunIDMsg, "")) {
 		t.Fatalf("Should not be able to get status: %q %q", err, st)
 	}
@@ -130,7 +130,7 @@ func TestStatus(t *testing.T) {
 	run7 := assertRun(t, env.r, pending(), "complete 0")
 	run8 := assertRun(t, env.r, pending(), "complete 0")
 
-	all, _, err := env.r.StatusAll()
+	all, _, err := runner.StatusAll(env.r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestStatus(t *testing.T) {
 	// We've already waited for each status to be correct, so we trust that.
 	// So, for each status in StatusAll, we'll call Status on its ID and error if not equal
 	for _, st := range all {
-		st2, _, err := env.r.Status(st.RunID)
+		st2, _, err := runner.StatusNow(env.r, st.RunID)
 		if err != nil {
 			t.Fatal(err)
 		}

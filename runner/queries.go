@@ -12,7 +12,7 @@ func WaitForever() Wait {
 }
 
 // Status returns the current status of id from q.
-func StatusNow(q StatusQueryNower, id RunID) (RunStatus, ServiceStatus, error) {
+func StatusNow(q StatusQuerier, id RunID) (RunStatus, ServiceStatus, error) {
 	statuses, service, err := q.QueryNow(Query{Runs: []RunID{id}, States: ALL_MASK})
 	if err != nil {
 		return RunStatus{}, ServiceStatus{}, err
@@ -38,6 +38,6 @@ func SingleStatus(statuses []RunStatus, service ServiceStatus, err error) (RunSt
 }
 
 // StatusAll returns the Current status of all runs
-func StatusAll(q StatusQueryNower) ([]RunStatus, ServiceStatus, error) {
+func StatusAll(q StatusQuerier) ([]RunStatus, ServiceStatus, error) {
 	return q.QueryNow(Query{States: ALL_MASK, AllRuns: true})
 }

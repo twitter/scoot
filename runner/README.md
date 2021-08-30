@@ -34,11 +34,7 @@ There are several interfaces having to do with reading/writing RunStatus'es.
 
 StatusWriter for writing Statuses.
 
-There are more reader interfaces:
-* StatusReader includes all the ones below
-* LegacyStatusReader offers legacy APIs
-* StatusQuerier offers Query, which allows waiting for some period of time
-* StatusQueryNower offers QueryNow which is the same as Query, but does not allow waiting
+StatusQuerier offers Query & QueryNow, which allows waiting for some period of time or immediately, respectively.
 
 ## StatusManager implementations (runner/runners/statuses.go) ##
 StatusManager holds RunStatus'es and implements the various Status interfaces.

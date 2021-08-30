@@ -103,5 +103,5 @@ var EmptyID RunnerID = RunnerID{ID: ""}
 // Service allows starting/abort'ing runs and checking on their status.
 type Service interface {
 	Controller
-	StatusReader
+	StatusQuerier
 }

@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 	r, _ := newRunner()
 	assertRun(t, r, complete(0), "complete 0")
 	assertRun(t, r, complete(1), "complete 1")
-	if status, _, err := r.StatusAll(); len(status) != 1 {
+	if status, _, err := runner.StatusAll(r); len(status) != 1 {
 		t.Fatalf("Expected history count of 1, got %d, err=%v", len(status), err)
 	}
 }
@@ -36,7 +36,7 @@ func TestOutput(t *testing.T) {
 	stdoutExpected, stderrExpected := "hello world\n", "hello err\n"
 	id := assertRun(t, r, complete(0),
 		"stdout "+stdoutExpected, "stderr "+stderrExpected, "complete 0")
-	st, _, err := r.Status(id)
+	st, _, err := runner.StatusNow(r, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestAbort(t *testing.T) {
 	assertWait(t, r, runID, running(), args...)
 	r.Abort(runID)
 	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
-	st, _, err := r.Status(runID)
+	st, _, err := runner.StatusNow(r, runID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestMemCap(t *testing.T) {
 	} else if len(runs) != 1 {
 		t.Fatalf("Expected a single COMPLETE run, got %v", len(runs))
 	} else if runs[0].ExitCode != 1 || !strings.Contains(runs[0].Error, "Cmd exceeded MemoryCap, aborting") {
-		status, _, err := r.StatusAll()
+		status, _, err := runner.StatusAll(r)
 		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
 	}
 }

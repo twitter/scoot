@@ -123,23 +123,3 @@ func (fw *FakeWorker) Query(q runner.Query, w runner.Wait) ([]runner.RunStatus, 
 func (fw *FakeWorker) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	return nil, runner.ServiceStatus{Initialized: false, Error: nil}, nil
 }
-
-func (fw *FakeWorker) Status(run runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
-	rs := runner.RunStatus{
-		RunID:        runner.RunID(fw.cmdId),
-		State:        fw.state,
-		LogTags:      tags.LogTags{},
-		StdoutRef:    "",
-		StderrRef:    "",
-		SnapshotID:   "",
-		ExitCode:     0,
-		Error:        "",
-		ActionResult: nil,
-	}
-
-	return rs, runner.ServiceStatus{Initialized: false, Error: nil}, nil
-}
-
-func (fw *FakeWorker) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, error) {
-	return nil, runner.ServiceStatus{Initialized: false, Error: nil}, nil
-}
