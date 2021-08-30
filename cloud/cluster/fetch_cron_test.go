@@ -80,5 +80,6 @@ func (fc *fakeCluster) SetLatestNodesList(nodes []Node) {
 func (fc *fakeCluster) GetNodes() []Node {
 	fc.latestNodeListMu.RLock()
 	defer fc.latestNodeListMu.RUnlock()
-	return fc.latestNodeList
+	ret := fc.latestNodeList[:]
+	return ret
 }

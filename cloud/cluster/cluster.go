@@ -93,11 +93,12 @@ func (c *cluster) SetLatestNodesList(nodes []Node) {
 	c.priorFetchUpdateTime = time.Now()
 }
 
-// get the lastest list of nodes seen by a fetcher
+// get (a copy of) the lastest list of nodes seen by a fetcher
 func (c *cluster) getLatestNodesList() []Node {
 	c.latestFetchedNodesMu.RLock()
 	defer c.latestFetchedNodesMu.RUnlock()
-	ret := c.latestFetchedNodes
+	ret := make([]Node, len(c.latestFetchedNodes))
+	copy(ret, c.latestFetchedNodes)
 	return ret
 }
 
@@ -116,20 +117,22 @@ func (c *cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
 	}
 }
 
-// return the list of current node update (node updates that the scheduler's
+// return (a copy of) the list of current node update (node updates that the scheduler's
 // cluster state has not yet seen) and empty the current node update list
 func (c *cluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
 	c.currentNodeUpdatesMu.Lock()
 	defer c.currentNodeUpdatesMu.Unlock()
-	ret := c.currentNodeUpdates
+	ret := make([]NodeUpdate, len(c.currentNodeUpdates))
+	copy(ret, c.currentNodeUpdates)
 	c.currentNodeUpdates = []NodeUpdate{}
 	return ret
 }
 
+// GetNodes get (a copy of) the list of nodes last fetched by fetcher
 func (c *cluster) GetNodes() []Node {
 	c.latestFetchedNodesMu.RLock()
 	defer c.latestFetchedNodesMu.RUnlock()
-	ret := []Node{}
+	ret := make([]Node, len(c.state.nodes))
 	for _, node := range c.state.nodes {
 		ret = append(ret, node)
 	}
