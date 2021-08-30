@@ -12,7 +12,7 @@ import (
 	"github.com/twitter/scoot/snapshot/snapshots"
 )
 
-func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service, *PollingStatusQuerier) {
+func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
@@ -20,13 +20,12 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service, *PollingSt
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
-	run := NewPollingStatusQuerier(nower, 10*time.Microsecond)
-	poller := &Service{chaos, run}
-	return ex, chaos, poller, run
+	poller := NewPollingService(chaos, nower, 1*time.Microsecond)
+	return ex, chaos, poller
 }
 
 func TestPollingWorker_Simple(t *testing.T) {
-	_, _, poller, _ := setupPoller()
+	_, _, poller := setupPoller()
 
 	st, err := poller.Run(&runner.Command{Argv: []string{"complete 42"}})
 	if err != nil {
@@ -43,7 +42,7 @@ func TestPollingWorker_Simple(t *testing.T) {
 
 // Test it doesn't return until the task is done
 func TestPollingWorker_Wait(t *testing.T) {
-	ex, _, poller, _ := setupPoller()
+	ex, _, poller := setupPoller()
 	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
 	if err != nil {
@@ -72,42 +71,8 @@ func TestPollingWorker_Wait(t *testing.T) {
 	}
 }
 
-// Test period is incremented with multiple polls
-func TestPollingWorker_Increment(t *testing.T) {
-	ex, _, poller, run := setupPoller()
-
-	startPeriod := run.period
-	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
-	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		st, _, err := runner.FinalStatus(poller, st.RunID)
-		stCh <- st
-		errCh <- err
-	}()
-
-	// Sleep for long enough to poll a few times
-	time.Sleep(time.Duration(10) * time.Millisecond)
-	select {
-	case st := <-stCh:
-		err := <-errCh
-		t.Fatal("should still be waiting", st, err)
-	default:
-	}
-
-	ex.Resume()
-	endPeriod := run.period
-	st, err = <-stCh, <-errCh
-	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 || startPeriod == endPeriod {
-		t.Fatal(st, err)
-	}
-}
-
 func TestPollingWorker_Timeout(t *testing.T) {
-	_, _, poller, _ := setupPoller()
+	_, _, poller := setupPoller()
 	stCh, errCh := make(chan runner.RunStatus), make(chan error)
 	st, err := poller.Run(&runner.Command{Argv: []string{"sleep 1000"}, Timeout: time.Millisecond * 20})
 
@@ -137,7 +102,7 @@ func TestPollingWorker_Timeout(t *testing.T) {
 }
 
 func TestPollingWorker_ErrorRunning(t *testing.T) {
-	_, chaos, poller, _ := setupPoller()
+	_, chaos, poller := setupPoller()
 	chaos.SetError(fmt.Errorf("connection error"))
 
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
@@ -147,7 +112,7 @@ func TestPollingWorker_ErrorRunning(t *testing.T) {
 }
 
 func TestPolling_ErrorPolling(t *testing.T) {
-	ex, chaos, poller, _ := setupPoller()
+	ex, chaos, poller := setupPoller()
 
 	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
 	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
@@ -182,4 +147,35 @@ func TestPolling_ErrorPolling(t *testing.T) {
 	// Now let it finish
 	ex.Resume()
 
+}
+
+func TestPollingWorker_PollFrequency(t *testing.T) {
+	defer teardown(t)
+	sim := execers.NewSimExecer()
+
+	outputCreator, err := NewHttpOutputCreator("")
+	if err != nil {
+		panic(err)
+	}
+
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+
+	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
+	startPeriod := r.period
+	firstArgs := []string{"pause", "complete 0"}
+	firstRun := run(t, r, firstArgs)
+	assertWait(t, r, firstRun, running(), firstArgs...)
+
+	// Now that one is running, try running a second
+	secondArgs := []string{"complete 3"}
+	cmd := &runner.Command{}
+	cmd.Argv = secondArgs
+	_, err = r.Run(cmd)
+	if err == nil {
+		t.Fatal("Expected: no resources available err.")
+	}
+
+	sim.Resume()
+	assertWait(t, r, firstRun, complete(0), firstArgs...)
 }
