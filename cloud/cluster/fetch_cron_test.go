@@ -1,102 +1,73 @@
 package cluster
 
 import (
+	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/twitter/scoot/common"
 )
 
+// TestFetchCron verify that cron fetcher can put multiple node lists on the channel
+// we don't want cluster to block repeated (cron) fetches.
 func TestFetchCron(t *testing.T) {
-	f := &fakeFetcher{}
-	tickerCh := make(chan time.Time)
-	h := makeCronHelper(t, f, tickerCh)
-	h.f.setFakeNodes("node1", "node2", "node3")
-	tickerCh <- time.Now()
-	h.assertFetch(t, 100*time.Millisecond, "node1", "node2", "node3")
+	fetchDoneCh := make(chan bool)
+	f := &fakeFetcher{fetchDoneCh: fetchDoneCh}
+	f.setFakeNodes("node1", "node2", "node3")
+	fetchedNodesCh := StartFetchCron(f, 10*time.Millisecond, common.DefaultClusterChanSize)
+	<-fetchDoneCh
+
+	f.setFakeNodes("node1", "node2", "node4")
+	<-fetchDoneCh
+
+	assertFetch(t, fetchedNodesCh, makeNodeList("node1", "node2", "node3"), makeNodeList("node1", "node2", "node4"))
 }
 
-type cronHelper struct {
-	t      *testing.T
-	tickCh chan time.Time
-	f      *fakeFetcher
-	c      *fakeCluster
-}
-
-func makeCronHelper(t *testing.T, f *fakeFetcher, tickerCh chan time.Time) *cronHelper {
-	h := &cronHelper{
-		t:      t,
-		tickCh: tickerCh,
-		f:      f,
-		c:      &fakeCluster{},
+func assertFetch(t *testing.T, fetchedNodesCh chan []Node, expected1, expected2 []Node) {
+	nodes := <-fetchedNodesCh
+	// verify we get expected1 at least once from the channel
+	assert.True(t, reflect.DeepEqual(expected1, nodes))
+	for ; reflect.DeepEqual(expected1, nodes); nodes = <-fetchedNodesCh {
 	}
-	StartFetchCron(h.f, h.tickCh, h.c)
-	return h
+	// verify we get expected2 is seen
+	assert.True(t, reflect.DeepEqual(expected2, nodes), fmt.Sprintf("expected %v, got %v", expected2, nodes))
 }
 
-func (h *cronHelper) assertFetch(t *testing.T, timeout time.Duration, expectedNodes ...string) {
-	ticker := time.NewTicker(10 * time.Millisecond)
-	start := time.Now()
-	// loop (with timeout) looking for expected results
-	for range ticker.C {
-		if time.Since(start) > timeout {
-			assert.Fail(t, "test timed out")
-		}
-		got := h.c.GetNodes()
-		match := true
-		for i, n := range expectedNodes {
-			if n != got[i].String() {
-				match = false
-				break
-			}
-		}
-		if match {
-			break
-		}
+func makeNodeList(nodeIds ...string) []Node {
+	ret := []Node{}
+	for _, nId := range nodeIds {
+		node := NewIdNode(nId)
+		ret = append(ret, node)
 	}
+	return ret
 }
 
 // fakeFetcher for testing fetch cron
 type fakeFetcher struct {
-	mutex sync.Mutex
-	nodes []Node
+	nodes         []Node
+	nodesMu       sync.RWMutex
+	fetchUpdateCh chan []Node
+	fetchDoneCh   chan bool
 }
 
 func (f *fakeFetcher) Fetch() ([]Node, error) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.nodesMu.RLock()
+	defer func() {
+		f.nodesMu.RUnlock()
+		f.fetchDoneCh <- true
+	}()
+
 	return f.nodes, nil
 }
 
 func (f *fakeFetcher) setFakeNodes(nodes ...string) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
+	f.nodesMu.Lock()
+	defer f.nodesMu.Unlock()
+	f.nodes = []Node{}
 	for _, n := range nodes {
 		f.nodes = append(f.nodes, NewIdNode(n))
 	}
-}
-
-type fakeCluster struct {
-	latestNodeList   []Node
-	latestNodeListMu sync.RWMutex
-}
-
-func (fc *fakeCluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
-	return nil
-}
-
-func (fc *fakeCluster) SetLatestNodesList(nodes []Node) {
-	fc.latestNodeListMu.Lock()
-	defer fc.latestNodeListMu.Unlock()
-	fc.latestNodeList = nodes
-}
-
-func (fc *fakeCluster) GetNodes() []Node {
-	fc.latestNodeListMu.RLock()
-	defer fc.latestNodeListMu.RUnlock()
-
-	ret := make([]Node, len(fc.latestNodeList))
-	copy(ret, fc.latestNodeList)
-	return ret
 }

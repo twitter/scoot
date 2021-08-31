@@ -10,8 +10,10 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
+	"github.com/twitter/scoot/cloud/cluster"
 	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
@@ -79,23 +81,23 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(stat stats.StatsReceiver) (cc.Cluster, error) {
+		func(stat stats.StatsReceiver) (chan chan []cc.Node, error) {
 			f := local.MakeFetcher("apiserver", "http_addr")
 			initialNodes, err := f.Fetch()
 			if err != nil {
 				return nil, err
 			}
-			cluster := cc.NewCluster(stat, initialNodes)
-			cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
-			return cluster, nil
+			fetchedNodesCh := cc.StartFetchCron(f, 1*time.Second, common.DefaultClusterChanSize)
+			_, reqNodeCh := cc.NewCluster(stat, initialNodes, fetchedNodesCh, false)
+			return reqNodeCh, nil
 		},
-		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, cluster cc.Cluster) (*StoreAndHandler, error) {
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, nodeReqCh chan chan []cluster.Node) (*StoreAndHandler, error) {
 			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
-				Cluster:      cluster,
+				NodeReqCh:    nodeReqCh,
 			}
 			store, handler, err := store.MakeGroupcacheStore(fileStore, cfg, ttlc, stat)
 			if err != nil {

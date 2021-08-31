@@ -5,39 +5,33 @@ package cluster
 
 import (
 	"sort"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/stats"
 )
 
 var ClusterUpdateLoopFrequency time.Duration = time.Duration(250) * time.Millisecond
-
-// Cluster represents a group of Nodes and has mechanism for
-// setting current Node list and receiving correlating Node updates.
-type Cluster interface {
-	RetrieveCurrentNodeUpdates() []NodeUpdate // used by scheduler's cluster state to get updates
-	SetLatestNodesList(nodes []Node)          // used by fetcher to give cluster the list of current nodes
-	GetNodes() []Node
-}
+var ClusterChBufferSize = 100
 
 // cluster implementation of Cluster
-type cluster struct {
+type Cluster struct {
 	state *state
 
 	stat stats.StatsReceiver
 
-	// latestFetchedNodes, when not nil, contains the latest node list from fetcher.  When
-	// cluster start processing the latestFetchedNodes, it grabs a copy an sets this to nil
-	latestFetchedNodes   []Node
-	latestFetchedNodesMu sync.RWMutex
+	// latestFetchedNodesCh, contains the latest node list from fetcher.
+	fetchedNodesCh chan []Node
 
-	// currentNodeUpdates, the node updates that the scheduler needs to process.  When
-	// scheduler gets the contents of currentNodeUpdates, currentNodeUpdates is reset to nil.
-	currentNodeUpdates   []NodeUpdate
-	currentNodeUpdatesMu sync.RWMutex
+	// nodesReqCh, used (by groupcache) to request the current list of nodes
+	NodesReqCh chan chan []Node
+
+	// nodesUpdatesChan, the node updates that the scheduler needs to process.
+	NodesUpdatesCh chan []NodeUpdate
+
+	useNodesUpdatesCh bool
 
 	priorNodeUpdateTime  time.Time
 	priorFetchUpdateTime time.Time
@@ -45,13 +39,22 @@ type cluster struct {
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-func NewCluster(stat stats.StatsReceiver, initialNodes []Node) Cluster {
-	s := makeState([]Node{})
-	c := &cluster{
+func NewCluster(stat stats.StatsReceiver, initialNodes []Node, fetchedNodesCh chan []Node, useNodesUpdatesCh bool) (chan []NodeUpdate, chan chan []Node) {
+	s := makeState(initialNodes)
+	var nodesUpdatesCh chan []NodeUpdate = nil
+	var nodesReqCh chan chan []Node = nil
+	if useNodesUpdatesCh {
+		nodesUpdatesCh = make(chan []NodeUpdate, common.DefaultClusterChanSize)
+	} else {
+		nodesReqCh = make(chan chan []Node)
+	}
+	c := &Cluster{
 		state:                s,
 		stat:                 stat,
-		latestFetchedNodes:   initialNodes,
-		currentNodeUpdates:   []NodeUpdate{},
+		fetchedNodesCh:       fetchedNodesCh,
+		NodesReqCh:           nodesReqCh,
+		NodesUpdatesCh:       nodesUpdatesCh,
+		useNodesUpdatesCh:    useNodesUpdatesCh,
 		priorNodeUpdateTime:  time.Now(),
 		priorFetchUpdateTime: time.Now(),
 	}
@@ -59,76 +62,68 @@ func NewCluster(stat stats.StatsReceiver, initialNodes []Node) Cluster {
 		c.stat = stats.NilStatsReceiver()
 	}
 	go c.loop()
-	return c
+	return nodesUpdatesCh, nodesReqCh
 }
 
 // loop continuously get the latest list of nodes (on latestNodeList, set by fetcher) and
-// create a NodeUpdateList (scheduler will get this list update it's cluster state)
-func (c *cluster) loop() {
+// create a NodeUpdateList (scheduler will get this list update it's cluster state) and
+// respond to any request for the node list (groupcache uses this mechanism)
+func (c *Cluster) loop() {
 	ticker := time.NewTicker(ClusterUpdateLoopFrequency)
 	for range ticker.C {
 		lastestNodeList := c.getLatestNodesList()
 		if lastestNodeList != nil {
 			sort.Sort(NodeSorter(lastestNodeList))
 			updates := c.state.setAndDiff(lastestNodeList)
-			c.addToCurrentNodeUpdates(updates)
+			if c.NodesUpdatesCh != nil {
+				c.addToCurrentNodeUpdates(updates)
+			}
+		}
+
+		if c.NodesReqCh != nil {
+			select {
+			case respCh := <-c.NodesReqCh:
+				respCh <- c.getNodes()
+			default:
+			}
 		}
 	}
 }
 
-// SetLatestNodesList set the latest list of nodes seen by a fetcher
-func (c *cluster) SetLatestNodesList(nodes []Node) {
-	c.latestFetchedNodesMu.Lock()
-	defer c.latestFetchedNodesMu.Unlock()
-	c.latestFetchedNodes = nodes
-
-	elapsed := time.Since(c.priorFetchUpdateTime)
-	if elapsed > 1*time.Minute {
-		log.Infof("fetch updated cluster node list to %d nodes", len(c.latestFetchedNodes))
+// pull up to ClusterChBufferSize node lists off the fetchedNodesCh
+// keep only the latest list of nodes from the fetcher
+func (c *Cluster) getLatestNodesList() []Node {
+	var currentNodes []Node
+	haveFetchedNodes := false
+LOOP:
+	for i := 0; i < ClusterChBufferSize; i++ {
+		select {
+		case currentNodes = <-c.fetchedNodesCh:
+			haveFetchedNodes = true
+		default:
+			break LOOP
+		}
 	}
-	// report time since last update from fetcher
-	c.stat.Gauge(stats.ClusterFetchFreqMs).Update(time.Since(c.priorFetchUpdateTime).Milliseconds())
-	c.priorFetchUpdateTime = time.Now()
-}
-
-// get (a copy of) the lastest list of nodes seen by a fetcher
-func (c *cluster) getLatestNodesList() []Node {
-	c.latestFetchedNodesMu.RLock()
-	defer c.latestFetchedNodesMu.RUnlock()
-	ret := make([]Node, len(c.latestFetchedNodes))
-	copy(ret, c.latestFetchedNodes)
-	return ret
+	if !haveFetchedNodes {
+		return c.getNodes()
+	}
+	return currentNodes
 }
 
 // addToCurrentNodeUpdates accumulate the node updates.  These will be
 // the node updates that the scheduler's cluster state has not yet seen
-func (c *cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
-	c.currentNodeUpdatesMu.Lock()
-	defer c.currentNodeUpdatesMu.Unlock()
-	c.currentNodeUpdates = append(c.currentNodeUpdates, updates...)
-
+func (c *Cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
+	c.NodesUpdatesCh <- updates
 	if len(updates) > 0 {
-		log.Infof("cluster has %d new node updates, %d total updates waiting processing", len(updates), len(c.currentNodeUpdates))
+		log.Infof("cluster has %d new node updates", len(updates))
 		// record time since last time saw node
 		c.stat.Gauge(stats.ClusterNodeUpdateFreqMs).Update(time.Since(c.priorNodeUpdateTime).Milliseconds())
 		c.priorNodeUpdateTime = time.Now()
 	}
 }
 
-// return (a copy of) the list of current node update (node updates that the scheduler's
-// cluster state has not yet seen) and empty the current node update list
-func (c *cluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
-	c.currentNodeUpdatesMu.Lock()
-	defer c.currentNodeUpdatesMu.Unlock()
-	ret := c.currentNodeUpdates
-	c.currentNodeUpdates = []NodeUpdate{}
-	return ret
-}
-
 // GetNodes get (a copy of) the list of nodes last fetched by fetcher
-func (c *cluster) GetNodes() []Node {
-	c.latestFetchedNodesMu.RLock()
-	defer c.latestFetchedNodesMu.RUnlock()
+func (c *Cluster) getNodes() []Node {
 	ret := []Node{}
 	for _, node := range c.state.nodes {
 		ret = append(ret, node)

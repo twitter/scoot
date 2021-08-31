@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cc "github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/scheduler/server"
 	"github.com/twitter/scoot/workerapi/client"
 )
@@ -156,25 +156,21 @@ type ClusterMemoryConfig struct {
 	Count int
 }
 
-func (c *ClusterMemoryConfig) Create(stat stats.StatsReceiver) (cc.Cluster, error) {
-	workerNodes := make([]cc.Node, c.Count)
+func (c *ClusterMemoryConfig) Create() (chan []cluster.NodeUpdate, error) {
+	workerNodes := make([]cluster.Node, c.Count)
 	for i := 0; i < c.Count; i++ {
-		workerNodes[i] = cc.NewIdNode(fmt.Sprintf("inmemory%d", i))
+		workerNodes[i] = cluster.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	cluster := cc.NewCluster(stat, workerNodes)
-	return cluster, nil
+	nuc, _ := cluster.NewCluster(nil, workerNodes, nil, true)
+	return nuc, nil
 }
 
 // Parameters for configuring a Scoot cluster that will have locally-run components.
 type ClusterLocalConfig struct{}
 
-func (c *ClusterLocalConfig) Create(stat stats.StatsReceiver) (cc.Cluster, error) {
+func (c *ClusterLocalConfig) Create() (chan []cluster.NodeUpdate, error) {
 	f := local.MakeFetcher("workerserver", "thrift_addr")
-	nodes, err := f.Fetch()
-	if err != nil {
-		return nil, err
-	}
-	cluster := cc.NewCluster(stat, nodes)
-	cc.StartFetchCron(f, time.NewTicker(time.Second).C, cluster)
-	return cluster, nil
+	fetchedNodesCh := cluster.StartFetchCron(f, time.Second, common.DefaultClusterChanSize)
+	nuc, _ := cluster.NewCluster(nil, nil, fetchedNodesCh, true)
+	return nuc, nil
 }

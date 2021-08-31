@@ -44,7 +44,7 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	bazelGRPCConfig *bazel.GRPCConfig,
 	persistor server.Persistor,
 	durationKeyExtractorFn func(string) string,
-	clusterIn cluster.Cluster) error {
+	nodesUpdatesCh chan []cluster.NodeUpdate) error {
 
 	thriftTransportFactory := thrift.NewTTransportFactory()
 
@@ -62,7 +62,7 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 		return fmt.Errorf("%s.  Scheduler not started", err)
 	}
 
-	statefulScheduler := server.NewStatefulScheduler(clusterIn, sagaCoordinator, rf, schedulerConfig, *statsReceiver, persistor, durationKeyExtractorFn)
+	statefulScheduler := server.NewStatefulScheduler(nodesUpdatesCh, sagaCoordinator, rf, schedulerConfig, *statsReceiver, persistor, durationKeyExtractorFn)
 
 	bazelServer := execution.MakeExecutionServer(bazelGRPCConfig, statefulScheduler, *statsReceiver)
 

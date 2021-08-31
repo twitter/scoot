@@ -30,7 +30,7 @@ type GroupcacheConfig struct {
 	Memory_bytes int64
 	AddrSelf     string
 	Endpoint     string
-	Cluster      cluster.Cluster
+	NodeReqCh    chan chan []cluster.Node
 }
 
 // Add in-memory caching to the given store.
@@ -96,7 +96,7 @@ func MakeGroupcacheStore(underlying Store, cfg *GroupcacheConfig, ttlc *TTLConfi
 	// The HTTPPool constructor will register as a global PeerPicker on our behalf.
 	poolOpts := &groupcache.HTTPPoolOptions{BasePath: cfg.Endpoint}
 	pool := groupcache.NewHTTPPoolOpts("http://"+cfg.AddrSelf, poolOpts)
-	go loop(cfg.Cluster, pool, cache, stat)
+	go loop(cfg.NodeReqCh, pool, cache, stat)
 
 	return &groupcacheStore{underlying: underlying, cache: cache, stat: stat, ttlConfig: ttlc}, pool, nil
 }
@@ -113,17 +113,21 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 	return peers
 }
 
-// Loop will look for cluster updates and when there are updates, create a list of peer addresses to update groupcache.
+// Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
 // Cluster is expected to include the current node.
 // Also updates cache stats, every 1s for now to account for arbitrary stat latch time.
-func loop(c cluster.Cluster, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
-	// sub := c.Subscribe()
-	ticker := time.NewTicker(1 * time.Second)
-	for range ticker.C {
-		updates := c.RetrieveCurrentNodeUpdates()
-		if len(updates) > 0 {
-			nodes := c.GetNodes()
-			pool.Set(toPeers(nodes, stat)...)
+func loop(nodesReqCh chan chan []cluster.Node, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
+	nodesCh := make(chan []cluster.Node)
+	statsTicker := time.NewTicker(1 * time.Second)
+	for {
+		nodesReqCh <- nodesCh // send a request for the nodes
+		pool.Set(toPeers(<-nodesCh, stat)...)
+
+		// record stats every 1s
+		select {
+		case <-statsTicker.C:
+			updateCacheStats(cache, stat)
+		default:
 		}
 	}
 }

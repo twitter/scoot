@@ -5,9 +5,9 @@ import (
 )
 
 type fetchCron struct {
-	tickCh  <-chan time.Time
-	f       Fetcher
-	cluster Cluster
+	freq           time.Duration
+	f              Fetcher
+	fetchedNodesCh chan []Node
 }
 
 // Defines the way in which a full set of Nodes in a Cluster is retrieved
@@ -17,22 +17,24 @@ type Fetcher interface {
 
 // Given a Fetcher implementation and a Ticker, start a ticker loop that
 // fetches the current nodes and updates cluster's latestNodeList with this list
-func StartFetchCron(f Fetcher, tickCh <-chan time.Time, cluster Cluster) {
+func StartFetchCron(f Fetcher, freq time.Duration, fetchBufferSize int) chan []Node {
 	c := &fetchCron{
-		tickCh:  tickCh,
-		f:       f,
-		cluster: cluster,
+		freq:           freq,
+		f:              f,
+		fetchedNodesCh: make(chan []Node, fetchBufferSize),
 	}
 	go c.loop()
+	return c.fetchedNodesCh
 }
 
 func (c *fetchCron) loop() {
-	for range c.tickCh {
+	tickCh := time.NewTicker(c.freq)
+	for range tickCh.C {
 		nodes, err := c.f.Fetch()
 		if err != nil {
 			// TODO(rcouto): Correctly handle as many errors as possible
 			continue
 		}
-		c.cluster.SetLatestNodesList(nodes)
+		c.fetchedNodesCh <- nodes
 	}
 }

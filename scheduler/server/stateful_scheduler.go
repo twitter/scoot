@@ -220,7 +220,7 @@ type jobKillRequest struct {
 // If recoverJobsOnStartup is true Active Sagas in the saga log will be recovered
 // and rescheduled, otherwise no recovery will be done on startup
 func NewStatefulScheduler(
-	cluster cc.Cluster,
+	nodesUpdatesCh chan []cc.NodeUpdate,
 	sc saga.SagaCoordinator,
 	rf RunnerFactory,
 	config SchedulerConfiguration,
@@ -316,7 +316,7 @@ func NewStatefulScheduler(
 		killJobCh:     make(chan jobKillRequest, 1), // TODO - what should this value be?
 		stepTicker:    time.NewTicker(TickRate),
 
-		clusterState:     newClusterState(cluster, nodeReadyFn, stat),
+		clusterState:     newClusterState(nodesUpdatesCh, nodeReadyFn, stat),
 		inProgressJobs:   make([]*jobState, 0),
 		requestorMap:     make(map[string][]*jobState),
 		requestorHistory: requestorHistory,
