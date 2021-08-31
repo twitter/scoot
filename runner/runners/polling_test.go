@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -162,14 +163,13 @@ func TestPollingWorker_PollFrequency(t *testing.T) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
 	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
-	firstArgs := []string{"pause", "complete 0"}
-	firstStatus := time.Now()
-	firstRun := run(t, r, firstArgs)
-	assertWait(t, r, firstRun, running(), firstArgs...)
+	args := []string{"pause", "complete 0"}
+	startTime := time.Now()
+	expectedTime := startTime.Add(1 * time.Microsecond)
+	firstRun := run(t, r, args)
+	assertWait(t, r, firstRun, pending(), args...)
 
-	secondStatus := time.Now()
+	assert.WithinDuration(t, expectedTime, time.Now(), 1*time.Millisecond)
 
 	sim.Resume()
-
-	if (firstStatus - secondStatus > time.Duration)	
 }
