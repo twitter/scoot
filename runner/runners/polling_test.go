@@ -162,20 +162,14 @@ func TestPollingWorker_PollFrequency(t *testing.T) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
 	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
-	startPeriod := r.period
 	firstArgs := []string{"pause", "complete 0"}
+	firstStatus := time.Now()
 	firstRun := run(t, r, firstArgs)
 	assertWait(t, r, firstRun, running(), firstArgs...)
 
-	// Now that one is running, try running a second
-	secondArgs := []string{"complete 3"}
-	cmd := &runner.Command{}
-	cmd.Argv = secondArgs
-	_, err = r.Run(cmd)
-	if err == nil {
-		t.Fatal("Expected: no resources available err.")
-	}
+	secondStatus := time.Now()
 
 	sim.Resume()
-	assertWait(t, r, firstRun, complete(0), firstArgs...)
+
+	if (firstStatus - secondStatus > time.Duration)	
 }
