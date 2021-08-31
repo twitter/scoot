@@ -21,7 +21,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	chaos := NewChaosRunner(single)
 	var nower runner.StatusQueryNower
 	nower = chaos
-	poller := NewPollingService(chaos, nower, 1*time.Microsecond)
+	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
 	return ex, chaos, poller
 }
 
@@ -165,7 +165,7 @@ func TestPollingWorker_PollFrequency(t *testing.T) {
 	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
 	args := []string{"pause", "complete 0"}
 	startTime := time.Now()
-	expectedTime := startTime.Add(1 * time.Microsecond)
+	expectedTime := startTime.Add(10 * time.Microsecond)
 	firstRun := run(t, r, args)
 	assertWait(t, r, firstRun, pending(), args...)
 
