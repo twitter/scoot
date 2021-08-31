@@ -14,7 +14,7 @@ func TestFetchCron(t *testing.T) {
 	h := makeCronHelper(t, f, tickerCh)
 	h.f.setFakeNodes("node1", "node2", "node3")
 	tickerCh <- time.Now()
-	h.assertFetch(t, "node1", "node2", "node3")
+	h.assertFetch(t, 100*time.Millisecond, "node1", "node2", "node3")
 }
 
 type cronHelper struct {
@@ -35,10 +35,25 @@ func makeCronHelper(t *testing.T, f *fakeFetcher, tickerCh chan time.Time) *cron
 	return h
 }
 
-func (h *cronHelper) assertFetch(t *testing.T, expectedNodes ...string) {
-	got := h.c.GetNodes()
-	for i, n := range expectedNodes {
-		assert.Equal(t, n, got[i].String())
+func (h *cronHelper) assertFetch(t *testing.T, timeout time.Duration, expectedNodes ...string) {
+	ticker := time.NewTicker(10 * time.Millisecond)
+	start := time.Now()
+	// loop (with timeout) looking for expected results
+	for range ticker.C {
+		if time.Since(start) > timeout {
+			assert.Fail(t, "test timed out")
+		}
+		got := h.c.GetNodes()
+		match := true
+		for i, n := range expectedNodes {
+			if n != got[i].String() {
+				match = false
+				break
+			}
+		}
+		if match {
+			break
+		}
 	}
 }
 

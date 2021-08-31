@@ -79,13 +79,23 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig) (*StoreAndHandler, error) {
+		func(stat stats.StatsReceiver) (cc.Cluster, error) {
+			f := local.MakeFetcher("apiserver", "http_addr")
+			initialNodes, err := f.Fetch()
+			if err != nil {
+				return nil, err
+			}
+			cluster := cc.NewCluster(stat, initialNodes)
+			cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
+			return cluster, nil
+		},
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, cluster cc.Cluster) (*StoreAndHandler, error) {
 			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,
 				AddrSelf:     *httpAddr,
 				Endpoint:     "/groupcache",
-				Cluster:      createCluster(stat),
+				Cluster:      cluster,
 			}
 			store, handler, err := store.MakeGroupcacheStore(fileStore, cfg, ttlc, stat)
 			if err != nil {
@@ -111,9 +121,13 @@ func main() {
 	bundlestore.RunServer(bag, schema, configText)
 }
 
-func createCluster(stat stats.StatsReceiver) cc.Cluster {
-	f := local.MakeFetcher("apiserver", "http_addr")
-	cluster := cc.NewCluster(stat)
-	cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
-	return cluster
-}
+// func createCluster(stat stats.StatsReceiver) (cc.Cluster, error) {
+// 	f := local.MakeFetcher("apiserver", "http_addr")
+// 	initialNodes, err := f.Fetch()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	cluster := cc.NewCluster(stat, initialNodes)
+// 	cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
+// 	return cluster, nil
+// }

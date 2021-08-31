@@ -35,7 +35,7 @@ type helper struct {
 
 func makeHelper(t *testing.T) *helper {
 	h := &helper{t: t}
-	h.c = NewCluster(nil)
+	h.c = NewCluster(nil, nil)
 	h.currentNodes = []Node{}
 	return h
 }

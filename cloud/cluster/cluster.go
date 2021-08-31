@@ -39,19 +39,18 @@ type cluster struct {
 	currentNodeUpdates   []NodeUpdate
 	currentNodeUpdatesMu sync.RWMutex
 
-	priorNodeUpdateTime       time.Time
-	priorFetchUpdateTime      time.Time
-	numNodesInLastFetchUpdate int
+	priorNodeUpdateTime  time.Time
+	priorFetchUpdateTime time.Time
 }
 
 // Cluster's ch channel accepts []Node and []NodeUpdate types, which then
 // get passed to its state to either SetAndDiff or UpdateAndFilter
-func NewCluster(stat stats.StatsReceiver) Cluster {
+func NewCluster(stat stats.StatsReceiver, initialNodes []Node) Cluster {
 	s := makeState([]Node{})
 	c := &cluster{
 		state:                s,
 		stat:                 stat,
-		latestFetchedNodes:   []Node{},
+		latestFetchedNodes:   initialNodes,
 		currentNodeUpdates:   []NodeUpdate{},
 		priorNodeUpdateTime:  time.Now(),
 		priorFetchUpdateTime: time.Now(),
@@ -84,8 +83,7 @@ func (c *cluster) SetLatestNodesList(nodes []Node) {
 	c.latestFetchedNodes = nodes
 
 	elapsed := time.Since(c.priorFetchUpdateTime)
-	if len(c.latestFetchedNodes) != c.numNodesInLastFetchUpdate || elapsed > 1*time.Minute {
-		c.numNodesInLastFetchUpdate = len(c.latestFetchedNodes)
+	if elapsed > 1*time.Minute {
 		log.Infof("fetch updated cluster node list to %d nodes", len(c.latestFetchedNodes))
 	}
 	// report time since last update from fetcher
@@ -122,8 +120,7 @@ func (c *cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
 func (c *cluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
 	c.currentNodeUpdatesMu.Lock()
 	defer c.currentNodeUpdatesMu.Unlock()
-	ret := make([]NodeUpdate, len(c.currentNodeUpdates))
-	copy(ret, c.currentNodeUpdates)
+	ret := c.currentNodeUpdates
 	c.currentNodeUpdates = []NodeUpdate{}
 	return ret
 }
@@ -132,7 +129,7 @@ func (c *cluster) RetrieveCurrentNodeUpdates() []NodeUpdate {
 func (c *cluster) GetNodes() []Node {
 	c.latestFetchedNodesMu.RLock()
 	defer c.latestFetchedNodesMu.RUnlock()
-	ret := make([]Node, len(c.state.nodes))
+	ret := []Node{}
 	for _, node := range c.state.nodes {
 		ret = append(ret, node)
 	}

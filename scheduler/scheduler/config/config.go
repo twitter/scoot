@@ -161,8 +161,7 @@ func (c *ClusterMemoryConfig) Create(stat stats.StatsReceiver) (cc.Cluster, erro
 	for i := 0; i < c.Count; i++ {
 		workerNodes[i] = cc.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	cluster := cc.NewCluster(stat)
-	cluster.SetLatestNodesList(workerNodes)
+	cluster := cc.NewCluster(stat, workerNodes)
 	return cluster, nil
 }
 
@@ -171,7 +170,11 @@ type ClusterLocalConfig struct{}
 
 func (c *ClusterLocalConfig) Create(stat stats.StatsReceiver) (cc.Cluster, error) {
 	f := local.MakeFetcher("workerserver", "thrift_addr")
-	cluster := cc.NewCluster(stat)
+	nodes, err := f.Fetch()
+	if err != nil {
+		return nil, err
+	}
+	cluster := cc.NewCluster(stat, nodes)
 	cc.StartFetchCron(f, time.NewTicker(time.Second).C, cluster)
 	return cluster, nil
 }
