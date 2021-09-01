@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	cc "github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/stats"
 )
 
@@ -128,8 +129,10 @@ func newNodeState(node cc.Node) *nodeState {
 	}
 }
 
-// Create a ClusterState with the initial nodes, and which updates
-// nodes added or removed when it retrieves node updates from the cluster object. ReadyFn is optional.
+// Create a ClusterState which gets node updates from the buffered nodes updates channel.
+// We use a buffered nodes updates channel to prevent cluster state from blocking the object that
+// is recognizing the node updates (typically cluster).
+// New Nodes are considered suspended till the optional ReadyFn reports the node is ready.
 // A ClusterState is returned.
 func newClusterState(nodesUpdatesCh chan []cc.NodeUpdate, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
 	cs := &clusterState{
@@ -208,11 +211,12 @@ func (c *clusterState) getNodeState(nodeId cc.NodeId) (*nodeState, bool) {
 }
 
 // update cluster state to reflect added and removed nodes
+// it will process at most DefaultClusterSize sets of updates with each call
 func (c *clusterState) updateCluster() {
 	defer c.stats.Latency(stats.SchedUpdateClusterLatency_ms).Time().Stop()
 	allUpdates := []cc.NodeUpdate{}
 LOOP:
-	for {
+	for i := 0; i < common.DefaultClusterChanSize; i++ {
 		select {
 		case updates := <-c.nodesUpdatesCh:
 			allUpdates = append(allUpdates, updates...)
@@ -225,7 +229,7 @@ LOOP:
 
 // Processes nodes being added and removed from the cluster & updates the distributor state accordingly.
 // Note, we don't expect there to be many updates after startup if the cluster is relatively stable.
-//TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
+// TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
 func (c *clusterState) update(updates []cc.NodeUpdate) {
 	// Apply updates
 	adds := 0
@@ -258,7 +262,10 @@ func (c *clusterState) update(updates []cc.NodeUpdate) {
 				}
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
-				if c.readyFn == nil {
+				if _, ok := c.offlinedNodes[update.Id]; ok {
+					// the nodes was manually offlined, leave it offlined
+					log.Infof("NodeAdded: Ignoring NodeAdded event for offlined node: %v (%#v), %s", update.Id, update.Node, c.status())
+				} else if c.readyFn == nil {
 					// We're not checking readiness, skip suspended state and add this as a healthy node.
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
@@ -301,6 +308,10 @@ func (c *clusterState) update(updates []cc.NodeUpdate) {
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
 				log.Infof("NodeRemoved: Removing node by marking as lost: %v (%s), %s", update.Id, ns, c.status())
+			} else if ns, ok := c.offlinedNodes[update.Id]; ok {
+				// the node was manually offlined, remove it from offlined list
+				delete(c.offlinedNodes, update.Id)
+				log.Infof("NodeRemoved: Removing offlined node: %v (%s), %s", update.Id, ns, c.status())
 			} else {
 				// We don't know about this node, log spurious remove.
 				log.Infof("NodeRemoved: Cannot remove unknown node: %v", update.Id)
@@ -308,9 +319,8 @@ func (c *clusterState) update(updates []cc.NodeUpdate) {
 		}
 	}
 
-	// debugging scheduler performance issues: record when we see nodes being added removed
-	// also record how many times we've checked and didn't see any changes (we're wondering if
-	// this go routine is being swapped out for long periods of time).
+	// record when we see nodes being added removed
+	// also record how many times we've checked and didn't see any changes
 	if adds > 0 || removals > 0 {
 		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, (%d cluster updates with no change)", adds, removals, c.nopUpdateCnt)
 		c.nopUpdateCnt = 0
@@ -396,14 +406,12 @@ func (c *clusterState) IsOfflined(nodeId cc.NodeId) bool {
 
 func (c *clusterState) OnlineNode(nodeId cc.NodeId) {
 	log.Infof("Onlining node %s", nodeId)
-	nodeUpdate := cc.NewAdd(cc.NewIdNode(string(nodeId)))
-	nodeUpdate.UserInitiated = true
+	nodeUpdate := cc.NewUserInitiatedAdd(cc.NewIdNode(string(nodeId)))
 	c.nodesUpdatesCh <- []cc.NodeUpdate{nodeUpdate}
 }
 
 func (c *clusterState) OfflineNode(nodeId cc.NodeId) {
 	log.Infof("Offlining node %s", nodeId)
-	nodeUpdate := cc.NewRemove(nodeId)
-	nodeUpdate.UserInitiated = true
+	nodeUpdate := cc.NewUserInitiatedRemove(nodeId)
 	c.nodesUpdatesCh <- []cc.NodeUpdate{nodeUpdate}
 }

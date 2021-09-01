@@ -57,7 +57,9 @@ func (f *fakeFetcher) Fetch() ([]Node, error) {
 	f.nodesMu.RLock()
 	defer func() {
 		f.nodesMu.RUnlock()
-		f.fetchDoneCh <- true
+		if f.fetchDoneCh != nil {
+			f.fetchDoneCh <- true
+		}
 	}()
 
 	return f.nodes, nil

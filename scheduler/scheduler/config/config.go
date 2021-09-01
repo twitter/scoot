@@ -161,7 +161,8 @@ func (c *ClusterMemoryConfig) Create() (chan []cluster.NodeUpdate, error) {
 	for i := 0; i < c.Count; i++ {
 		workerNodes[i] = cluster.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	nuc, _ := cluster.NewCluster(nil, workerNodes, nil, true)
+	fetcher := &MemoryFetcher{nodes: workerNodes}
+	nuc, _ := cluster.NewCluster(nil, fetcher, true, 10*time.Minute, common.DefaultClusterChanSize)
 	return nuc, nil
 }
 
@@ -170,7 +171,15 @@ type ClusterLocalConfig struct{}
 
 func (c *ClusterLocalConfig) Create() (chan []cluster.NodeUpdate, error) {
 	f := local.MakeFetcher("workerserver", "thrift_addr")
-	fetchedNodesCh := cluster.StartFetchCron(f, time.Second, common.DefaultClusterChanSize)
-	nuc, _ := cluster.NewCluster(nil, nil, fetchedNodesCh, true)
+	nuc, _ := cluster.NewCluster(nil, f, true, 100*time.Millisecond, common.DefaultClusterChanSize)
 	return nuc, nil
+}
+
+// MemoryFetcher is a fetcher that always returns a fixed set of nodes
+type MemoryFetcher struct {
+	nodes []cluster.Node
+}
+
+func (f *MemoryFetcher) Fetch() ([]cluster.Node, error) {
+	return f.nodes, nil
 }

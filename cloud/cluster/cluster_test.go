@@ -8,25 +8,27 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/twitter/scoot/common"
+	"github.com/twitter/scoot/common/log/hooks"
 )
 
 func TestClusterUpdates(t *testing.T) {
-	fetchedNodesCh := make(chan []Node, common.DefaultClusterChanSize)
-	wait := time.Second
+	log.AddHook(hooks.NewContextHook())
 
-	nodeUpdatesCh, _ := NewCluster(nil, nil, fetchedNodesCh, true)
+	ff := &fakeFetcher{}
+	wait := 3 * time.Second
 
-	setFetchedNodes(fetchedNodesCh, "node1")
+	nodeUpdatesCh, _ := NewCluster(nil, ff, true, 10*time.Millisecond, 10)
+
+	setFetchedNodes(ff, "node1")
 	assertNodeUpdates(t, []NodeUpdate{makeUpdate("node1", NodeAdded)}, nodeUpdatesCh, wait)
-	setFetchedNodes(fetchedNodesCh)
+	setFetchedNodes(ff)
 	assertNodeUpdates(t, []NodeUpdate{makeUpdate("node1", NodeRemoved)}, nodeUpdatesCh, wait)
-	setFetchedNodes(fetchedNodesCh, "node1", "node2")
+	setFetchedNodes(ff, "node1", "node2")
 	assertNodeUpdates(t, []NodeUpdate{makeUpdate("node1", NodeAdded), makeUpdate("node2", NodeAdded)}, nodeUpdatesCh, wait)
-	setFetchedNodes(fetchedNodesCh, "node2")
+	setFetchedNodes(ff, "node2")
 	assertNodeUpdates(t, []NodeUpdate{makeUpdate("node1", NodeRemoved)}, nodeUpdatesCh, wait)
-	setFetchedNodes(fetchedNodesCh, "node1", "node2", "node3", "node5")
-	setFetchedNodes(fetchedNodesCh, "node1", "node2", "node3", "node4")
+	setFetchedNodes(ff, "node1", "node2", "node3", "node5")
+	setFetchedNodes(ff, "node1", "node2", "node3", "node4")
 	assertNodeUpdates(t, []NodeUpdate{makeUpdate("node1", NodeAdded), makeUpdate("node3", NodeAdded), makeUpdate("node4", NodeAdded)}, nodeUpdatesCh, wait)
 }
 
@@ -34,7 +36,7 @@ func TestClusterUpdates(t *testing.T) {
 
 func assertNodeUpdates(t *testing.T, expectedUpdates []NodeUpdate, nodeUpdateCh chan []NodeUpdate, maxWait time.Duration) {
 	start := time.Now()
-	ticker := time.NewTicker(ClusterUpdateLoopFrequency)
+	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
 	var updates []NodeUpdate
 	for range ticker.C {
@@ -58,13 +60,9 @@ func assertNodeUpdates(t *testing.T, expectedUpdates []NodeUpdate, nodeUpdateCh 
 	}
 }
 
-func setFetchedNodes(fetchedNodesCh chan []Node, nodes ...string) {
-	defer log.Infof("put %v on fetchedNodesCh", nodes)
-	asNodesList := []Node{}
-	for _, n := range nodes {
-		asNodesList = append(asNodesList, NewIdNode(n))
-	}
-	fetchedNodesCh <- asNodesList
+func setFetchedNodes(fetcher *fakeFetcher, nodes ...string) {
+	fetcher.setFakeNodes(nodes...)
+	log.Infof("************ set %d fetched nodes", len(nodes))
 }
 
 func makeUpdate(node string, updateType NodeUpdateType) NodeUpdate {

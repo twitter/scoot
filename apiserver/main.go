@@ -83,12 +83,7 @@ func main() {
 		},
 		func(stat stats.StatsReceiver) (chan chan []cc.Node, error) {
 			f := local.MakeFetcher("apiserver", "http_addr")
-			initialNodes, err := f.Fetch()
-			if err != nil {
-				return nil, err
-			}
-			fetchedNodesCh := cc.StartFetchCron(f, 1*time.Second, common.DefaultClusterChanSize)
-			_, reqNodeCh := cc.NewCluster(stat, initialNodes, fetchedNodesCh, false)
+			_, reqNodeCh := cc.NewCluster(stat, f, false, 1*time.Second, common.DefaultClusterChanSize)
 			return reqNodeCh, nil
 		},
 		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, nodeReqCh chan chan []cluster.Node) (*StoreAndHandler, error) {
@@ -122,14 +117,3 @@ func main() {
 	)
 	bundlestore.RunServer(bag, schema, configText)
 }
-
-// func createCluster(stat stats.StatsReceiver) (cc.Cluster, error) {
-// 	f := local.MakeFetcher("apiserver", "http_addr")
-// 	initialNodes, err := f.Fetch()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	cluster := cc.NewCluster(stat, initialNodes)
-// 	cc.StartFetchCron(f, time.NewTicker(time.Duration(1*time.Second)).C, cluster)
-// 	return cluster, nil
-// }
