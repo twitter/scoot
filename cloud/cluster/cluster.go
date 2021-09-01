@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -13,6 +14,8 @@ import (
 )
 
 var ClusterChBufferSize = 100
+
+type NodeReqChType chan chan []Node
 
 // cluster implementation of Cluster
 type Cluster struct {
@@ -26,12 +29,13 @@ type Cluster struct {
 	fetchedNodesCh chan []Node
 
 	// nodesReqCh, used (by groupcache) to request the current list of nodes
-	NodesReqCh chan chan []Node
+	NodesReqCh NodeReqChType
 
 	// nodesUpdatesChan, the node updates that the scheduler needs to process.
 	NodesUpdatesCh chan []NodeUpdate
 
 	useNodesUpdatesCh bool
+	bufferSize        int
 
 	priorNodeUpdateTime  time.Time
 	priorFetchUpdateTime time.Time
@@ -42,20 +46,20 @@ type Cluster struct {
 // The processing loop continuously gets the latest nodes list from the fetched nodes channel and either
 // put the list of added/removed nodes on the nodes updates channel or if the nodes list is requested put the
 // current list of nodes on the nodes list channel
-func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh bool, updateFreqMs time.Duration, chBufferSize int) (chan []NodeUpdate, chan chan []Node) {
-	fetchedNodesCh := StartFetchCron(fetcher, updateFreqMs, chBufferSize)
+func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh bool, updateFreq time.Duration, chBufferSize int) (chan []NodeUpdate, NodeReqChType) {
+	fetchedNodesCh := StartFetchCron(fetcher, updateFreq, chBufferSize, stat)
 
 	s := makeState([]Node{})
 	var updatesCh chan []NodeUpdate = nil
-	var nodesReqCh chan chan []Node = nil
+	var nodesReqCh NodeReqChType = nil
 	if useNodesUpdatesCh {
 		updatesCh = make(chan []NodeUpdate, chBufferSize)
 	} else {
-		nodesReqCh = make(chan chan []Node)
+		nodesReqCh = make(NodeReqChType)
 	}
 	c := &Cluster{
 		state:                s,
-		updateFreq:           updateFreqMs,
+		updateFreq:           updateFreq,
 		stat:                 stat,
 		fetchedNodesCh:       fetchedNodesCh,
 		NodesReqCh:           nodesReqCh,
@@ -63,10 +67,21 @@ func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh boo
 		useNodesUpdatesCh:    useNodesUpdatesCh,
 		priorNodeUpdateTime:  time.Now(),
 		priorFetchUpdateTime: time.Now(),
+		bufferSize:           chBufferSize,
 	}
 	if stat == nil {
 		c.stat = stats.NilStatsReceiver()
 	}
+	// logging
+	chDesc := []string{}
+	if c.NodesUpdatesCh != nil {
+		chDesc = append(chDesc, "NodesUpdateCh")
+	}
+	if c.NodesReqCh != nil {
+		chDesc = append(chDesc, "NodesReqCh")
+	}
+	log.Infof("cluster loop starting with frequency %s, reporting on %s with channel buffer size %d", c.updateFreq, strings.Join(chDesc[:], ","), chBufferSize)
+
 	go c.loop()
 
 	return updatesCh, nodesReqCh
@@ -77,12 +92,13 @@ func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh boo
 // of nodeAdd, nodeRemove entries on the nodes updates channel.  Otherwise if a list of nodes
 // has been requested, put the most latest list of nodes on the nodes list channel
 func (c *Cluster) loop() {
+	// start processing loop
 	ticker := time.NewTicker(c.updateFreq)
 	for range ticker.C {
-		lastestNodeList := c.getLatestNodesList()
+		lastestNodeList := c.getLatestNodesList() // get latest fetched nodes
 		if lastestNodeList != nil {
 			sort.Sort(NodeSorter(lastestNodeList))
-			updates := c.state.setAndDiff(lastestNodeList)
+			updates := c.state.setAndDiff(lastestNodeList) // compute updates and update local state
 			if c.NodesUpdatesCh != nil {
 				c.addToCurrentNodeUpdates(updates)
 			}
@@ -103,8 +119,9 @@ func (c *Cluster) loop() {
 func (c *Cluster) getLatestNodesList() []Node {
 	var currentNodes []Node
 	haveFetchedNodes := false
+	i := 0
 LOOP:
-	for i := 0; i < ClusterChBufferSize; i++ {
+	for ; i < c.bufferSize; i++ {
 		select {
 		case currentNodes = <-c.fetchedNodesCh:
 			haveFetchedNodes = true
@@ -112,6 +129,7 @@ LOOP:
 			break LOOP
 		}
 	}
+
 	if !haveFetchedNodes {
 		return c.getNodes()
 	}

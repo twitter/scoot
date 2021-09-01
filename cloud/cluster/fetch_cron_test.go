@@ -17,7 +17,7 @@ func TestFetchCron(t *testing.T) {
 	fetchDoneCh := make(chan bool)
 	f := &fakeFetcher{fetchDoneCh: fetchDoneCh}
 	f.setFakeNodes("node1", "node2", "node3")
-	fetchedNodesCh := StartFetchCron(f, 10*time.Millisecond, common.DefaultClusterChanSize)
+	fetchedNodesCh := StartFetchCron(f, 10*time.Millisecond, common.DefaultClusterChanSize, nil)
 	<-fetchDoneCh
 
 	f.setFakeNodes("node1", "node2", "node4")

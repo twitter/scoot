@@ -10,7 +10,6 @@ import (
 
 	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/bazel/cas"
-	"github.com/twitter/scoot/cloud/cluster"
 	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common"
@@ -81,12 +80,12 @@ func main() {
 				sh.endpoint: sh.handler,
 			}
 		},
-		func(stat stats.StatsReceiver) (chan chan []cc.Node, error) {
+		func(stat stats.StatsReceiver) cc.NodeReqChType {
 			f := local.MakeFetcher("apiserver", "http_addr")
 			_, reqNodeCh := cc.NewCluster(stat, f, false, 1*time.Second, common.DefaultClusterChanSize)
-			return reqNodeCh, nil
+			return reqNodeCh
 		},
-		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, nodeReqCh chan chan []cluster.Node) (*StoreAndHandler, error) {
+		func(fileStore *store.FileStore, stat stats.StatsReceiver, ttlc *store.TTLConfig, nodeReqCh cc.NodeReqChType) (*StoreAndHandler, error) {
 			cfg := &store.GroupcacheConfig{
 				Name:         "apiserver",
 				Memory_bytes: *cacheSize,

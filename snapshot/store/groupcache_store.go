@@ -30,7 +30,7 @@ type GroupcacheConfig struct {
 	Memory_bytes int64
 	AddrSelf     string
 	Endpoint     string
-	NodeReqCh    chan chan []cluster.Node
+	NodeReqCh    cluster.NodeReqChType
 }
 
 // Add in-memory caching to the given store.
@@ -116,7 +116,7 @@ func toPeers(nodes []cluster.Node, stat stats.StatsReceiver) []string {
 // Loop will listen for cluster updates and create a list of peer addresses to update groupcache.
 // Cluster is expected to include the current node.
 // Also updates cache stats, every 1s for now to account for arbitrary stat latch time.
-func loop(nodesReqCh chan chan []cluster.Node, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
+func loop(nodesReqCh cluster.NodeReqChType, pool *groupcache.HTTPPool, cache *groupcache.Group, stat stats.StatsReceiver) {
 	nodesCh := make(chan []cluster.Node)
 	statsTicker := time.NewTicker(1 * time.Second)
 	for {

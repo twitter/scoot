@@ -62,7 +62,6 @@ func assertNodeUpdates(t *testing.T, expectedUpdates []NodeUpdate, nodeUpdateCh 
 
 func setFetchedNodes(fetcher *fakeFetcher, nodes ...string) {
 	fetcher.setFakeNodes(nodes...)
-	log.Infof("************ set %d fetched nodes", len(nodes))
 }
 
 func makeUpdate(node string, updateType NodeUpdateType) NodeUpdate {
