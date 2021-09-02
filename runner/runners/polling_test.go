@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -18,9 +19,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := NewChaosRunner(single)
-	var nower runner.StatusQueryNower
-	nower = chaos
-	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
+	poller := NewPollingService(chaos, chaos, 10*time.Microsecond)
 	return ex, chaos, poller
 }
 
@@ -148,4 +147,83 @@ func TestPolling_ErrorPolling(t *testing.T) {
 	// Now let it finish
 	ex.Resume()
 
+}
+
+func TestPollingWorker_Intervalse(t *testing.T) {
+	_, _, poller := setupPoller()
+
+	st, err := poller.Run(&runner.Command{Argv: []string{"complete 42"}})
+	if err != nil {
+		t.Fatal(st, err)
+	}
+	st, _, err = runner.FinalStatus(poller, st.RunID)
+	if err != nil {
+		t.Fatal(st, err)
+	}
+	if st.State != runner.COMPLETE || st.ExitCode != 42 {
+		t.Fatal(st, err)
+	}
+}
+
+func setupTestPollerIntervals() (*execers.SimExecer, runner.StatusQueryNower, runner.Service) {
+	ex := execers.NewSimExecer()
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
+	chaos := NewChaosRunner(single)
+	var nower runner.StatusQueryNower
+	nower = &instrumentedNower{ChaosRunner: *chaos}
+	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
+	return ex, nower, poller
+}
+
+type instrumentedNower struct {
+	ChaosRunner
+	queryNowFreq []time.Duration
+	lastQueryNow time.Time
+}
+
+func (in *instrumentedNower) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	if in.queryNowFreq == nil {
+		in.queryNowFreq = []time.Duration{}
+	} else {
+		in.queryNowFreq = append(in.queryNowFreq, time.Since(in.lastQueryNow))
+	}
+	in.lastQueryNow = time.Now()
+	return in.ChaosRunner.QueryNow(q)
+}
+
+// Test it doesn't return until the task is done
+func TestPollingWorker_query_interval(t *testing.T) {
+	ex, nower, poller := setupTestPollerIntervals()
+	stCh, errCh := make(chan runner.RunStatus, 1), make(chan error, 1)
+	st, err := poller.Run(&runner.Command{Argv: []string{"pause", "complete 43"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		st, _, err := runner.FinalStatus(poller, st.RunID)
+		stCh <- st
+		errCh <- err
+	}()
+
+	// Sleep for long enough to poll a few times
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	select {
+	case st := <-stCh:
+		err := <-errCh
+		t.Fatal("should still be waiting", st, err)
+	default:
+	}
+
+	ex.Resume()
+	st, err = <-stCh, <-errCh
+	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
+		t.Fatal(st, err)
+	}
+
+	inNower, ok := nower.(*instrumentedNower)
+	assert.True(t, ok)
+	assert.True(t, len(inNower.queryNowFreq) < 0)
 }
