@@ -18,7 +18,7 @@ const (
 	ClusterRunningNodes   = "runningNodes"
 	ClusterLostNodes      = "lostNodes"
 
-	ClusterNodeUpdateFreqMs = "clusterGetNodeUpdatesFreq_ms"
+	ClusterNodeUpdateFreqMs = "clusterSetNodeUpdatesFreq_ms"
 	ClusterFetchFreqMs      = "clusterFetchFreq_ms"
 	ClusterFetchDurationMs  = "clusterFetchDuration_ms"
 	ClusterNumFetchedNodes  = "clusterNumFetchedNodes"

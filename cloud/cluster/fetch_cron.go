@@ -9,13 +9,12 @@ import (
 )
 
 type fetchCron struct {
-	freq             time.Duration
-	f                Fetcher
-	fetchedNodesCh   chan []Node
-	stat             stats.StatsReceiver
-	priorNumNodes    int
-	priorFetchTime   time.Time
-	fetchErrsIgnored int64
+	freq           time.Duration
+	f              Fetcher
+	fetchedNodesCh chan []Node
+	stat           stats.StatsReceiver
+	priorNumNodes  int
+	priorFetchTime time.Time
 }
 
 // Defines the way in which a full set of Nodes in a Cluster is retrieved
@@ -56,7 +55,8 @@ func (c *fetchCron) doFetch() {
 
 	if err != nil {
 		// TODO(rcouto): Correctly handle as many errors as possible
-		c.fetchErrsIgnored++
+		c.stat.Gauge(stats.ClusterFetchedError).Update(1)
+		c.stat.Gauge(stats.ClusterNumFetchedNodes).Update(0)
 		return
 	}
 	c.fetchedNodesCh <- nodes
@@ -71,9 +71,5 @@ func (c *fetchCron) doFetch() {
 	c.stat.Gauge(stats.ClusterFetchFreqMs).Update(time.Since(c.priorFetchTime).Milliseconds())
 	c.stat.Gauge(stats.ClusterFetchDurationMs).Update(fetchDuration.Milliseconds())
 	c.stat.Gauge(stats.ClusterNumFetchedNodes).Update(int64(len(nodes)))
-	c.stat.Gauge(stats.ClusterFetchedError).Update(c.fetchErrsIgnored)
 	c.priorFetchTime = time.Now()
-	c.fetchErrsIgnored = 0
-
-	return
 }
