@@ -328,6 +328,9 @@ func (c *QueueController) loop() {
 	var updateDoneCh chan interface{}
 	updateRequested := false
 
+	var idleLatency = c.inv.stat.Latency(stats.WorkerIdleLatency_ms)
+	idleLatency.Time()
+
 	tryUpdate := func() {
 		if watchCh == nil && updateDoneCh == nil {
 			updateRequested = false
@@ -369,6 +372,7 @@ func (c *QueueController) loop() {
 		if watchCh == nil && updateDoneCh == nil && len(c.queue) > 0 {
 			cmdID := c.queue[0]
 			watchCh = c.runAndWatch(cmdID)
+			idleLatency.Stop()
 		}
 	}
 
@@ -418,6 +422,7 @@ func (c *QueueController) loop() {
 			c.runningCmd = nil
 			c.runningAbort = nil
 			c.queue = c.queue[1:]
+			idleLatency.Time()
 		}
 	}
 }
