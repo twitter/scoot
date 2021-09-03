@@ -2,6 +2,7 @@ package runners
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -19,9 +20,7 @@ func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := NewChaosRunner(single)
-	var nower runner.StatusQueryNower
-	nower = chaos
-	poller := NewPollingService(chaos, nower, 10*time.Microsecond)
+	poller := NewPollingService(chaos, chaos, 10*time.Microsecond)
 	return ex, chaos, poller
 }
 
@@ -150,26 +149,95 @@ func TestPolling_ErrorPolling(t *testing.T) {
 
 }
 
-func TestPollingWorker_PollFrequency(t *testing.T) {
-	defer teardown(t)
-	sim := execers.NewSimExecer()
+func TestPollingWorker_Intervalse(t *testing.T) {
+	_, _, poller := setupPoller()
 
-	outputCreator, err := NewHttpOutputCreator("")
+	st, err := poller.Run(&runner.Command{Argv: []string{"complete 42"}})
 	if err != nil {
-		panic(err)
+		t.Fatal(st, err)
 	}
+	st, _, err = runner.FinalStatus(poller, st.RunID)
+	if err != nil {
+		t.Fatal(st, err)
+	}
+	if st.State != runner.COMPLETE || st.ExitCode != 42 {
+		t.Fatal(st, err)
+	}
+}
 
+func setupTestPollerIntervals(period time.Duration) (*execers.SimExecer, runner.StatusQueryNower, runner.Service) {
+	ex := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
+	chaos := NewChaosRunner(single)
+	var nower runner.StatusQueryNower
+	nower = &instrumentedNower{ChaosRunner: *chaos}
+	poller := NewPollingService(chaos, nower, period)
+	return ex, nower, poller
+}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID)
-	args := []string{"pause", "complete 0"}
-	startTime := time.Now()
-	expectedTime := startTime.Add(10 * time.Microsecond)
-	firstRun := run(t, r, args)
-	assertWait(t, r, firstRun, pending(), args...)
+type instrumentedNower struct {
+	ChaosRunner
+	queryNowFreq []time.Duration
+	lastQueryNow time.Time
+}
 
-	assert.WithinDuration(t, expectedTime, time.Now(), 1*time.Millisecond)
+func (in *instrumentedNower) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
+	if in.queryNowFreq == nil {
+		in.queryNowFreq = []time.Duration{}
+	} else {
+		in.queryNowFreq = append(in.queryNowFreq, time.Since(in.lastQueryNow))
+	}
+	in.lastQueryNow = time.Now()
+	return in.ChaosRunner.QueryNow(q)
+}
 
-	sim.Resume()
+// Test poller period increases
+func TestPollingWorker_QueryIntervalIncrease(t *testing.T) {
+	_, nower, poller := setupTestPollerIntervals(10 * time.Microsecond)
+	st, err := poller.Run(&runner.Command{Argv: []string{"complete 43"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep for long enough to poll multiple times
+	time.Sleep(time.Duration(100) * time.Microsecond)
+
+	st, _, err = runner.FinalStatus(poller, st.RunID)
+	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
+		t.Fatal(st, err)
+	}
+
+	inNower, ok := nower.(*instrumentedNower)
+	assert.True(t, ok)
+	assert.True(t, len(inNower.queryNowFreq) > 0)
+
+	// Check for increasing duration (measured in microseconds)
+	assert.True(t, sort.IntsAreSorted(inNower.queryNowFreq))
+}
+
+func TestPollingWorker_QueryIntervalMax(t *testing.T) {
+	_, nower, poller := setupTestPollerIntervals(20 * time.Second)
+	st, err := poller.Run(&runner.Command{Argv: []string{"complete 43"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep for long enough to poll
+	time.Sleep(time.Duration(100) * time.Microsecond)
+
+	st, _, err = runner.FinalStatus(poller, st.RunID)
+	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
+		t.Fatal(st, err)
+	}
+
+	inNower, ok := nower.(*instrumentedNower)
+	assert.True(t, ok)
+	assert.True(t, len(inNower.queryNowFreq) > 0)
+
+	firstPeriod := inNower.queryNowFreq[0]
+
+	// Check for maximum duration (measured in microseconds)
+	assert.InDelta(t, 1000000)
 }

@@ -37,6 +37,7 @@ func (r *PollingStatusQuerier) QueryNow(q runner.Query) ([]runner.RunStatus, run
 func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	end := time.Now().Add(wait.Timeout)
 	var service runner.ServiceStatus
+	period := MinDuration(r.period, 10*time.Second)
 	for time.Now().Before(end) || wait.Timeout == 0 {
 		select {
 		case <-wait.AbortCh:
@@ -47,13 +48,21 @@ func (r *PollingStatusQuerier) Query(q runner.Query, wait runner.Wait) ([]runner
 		if err != nil || len(st) > 0 {
 			return st, service, err
 		}
-		time.Sleep(r.period)
+		time.Sleep(period)
 
-		// Exponentially increase time between polls
-		r.period *= 2
+		// Exponentially increase time between polls up to 10 sec
+		period = MinDuration(2*period, 10*time.Second)
 
 	}
 	return nil, service, nil
+}
+
+// MinDuration returns the smallest duration of two given durations
+func MinDuration(a, b time.Duration) time.Duration {
+	if a <= b {
+		return a
+	}
+	return b
 }
 
 // Status returns the current status of id from q.
