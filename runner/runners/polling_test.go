@@ -179,9 +179,15 @@ func setupTestPollerIntervals(period time.Duration) (*execers.SimExecer, runner.
 
 type instrumentedNower struct {
 	ChaosRunner
-	queryNowFreq []time.Duration
+	queryNowFreq FreqList
 	lastQueryNow time.Time
 }
+
+type FreqList []time.Duration
+
+func (f FreqList) Len() int           { return len(f) }
+func (f FreqList) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+func (f FreqList) Less(i, j int) bool { return f[i] <= f[j] }
 
 func (in *instrumentedNower) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
 	if in.queryNowFreq == nil {
@@ -213,31 +219,6 @@ func TestPollingWorker_QueryIntervalIncrease(t *testing.T) {
 	assert.True(t, ok)
 	assert.True(t, len(inNower.queryNowFreq) > 0)
 
-	// Check for increasing duration (measured in microseconds)
-	assert.True(t, sort.IntsAreSorted(inNower.queryNowFreq))
-}
-
-func TestPollingWorker_QueryIntervalMax(t *testing.T) {
-	_, nower, poller := setupTestPollerIntervals(20 * time.Second)
-	st, err := poller.Run(&runner.Command{Argv: []string{"complete 43"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Sleep for long enough to poll
-	time.Sleep(time.Duration(100) * time.Microsecond)
-
-	st, _, err = runner.FinalStatus(poller, st.RunID)
-	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
-		t.Fatal(st, err)
-	}
-
-	inNower, ok := nower.(*instrumentedNower)
-	assert.True(t, ok)
-	assert.True(t, len(inNower.queryNowFreq) > 0)
-
-	firstPeriod := inNower.queryNowFreq[0]
-
-	// Check for maximum duration (measured in microseconds)
-	assert.InDelta(t, 1000000)
+	// Check for increasing duration
+	assert.True(t, sort.IsSorted(inNower.queryNowFreq))
 }
