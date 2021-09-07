@@ -69,7 +69,6 @@ func TestPollingWorker_Wait(t *testing.T) {
 	if err != nil || st.State != runner.COMPLETE || st.ExitCode != 43 {
 		t.Fatal(st, err)
 	}
-
 }
 
 func TestPollingWorker_Timeout(t *testing.T) {

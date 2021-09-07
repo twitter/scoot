@@ -18,6 +18,12 @@ const (
 	ClusterRunningNodes   = "runningNodes"
 	ClusterLostNodes      = "lostNodes"
 
+	ClusterNodeUpdateFreqMs = "clusterSetNodeUpdatesFreq_ms"
+	ClusterFetchFreqMs      = "clusterFetchFreq_ms"
+	ClusterFetchDurationMs  = "clusterFetchDuration_ms"
+	ClusterNumFetchedNodes  = "clusterNumFetchedNodes"
+	ClusterFetchedError     = "clusterFetchError"
+
 	/************************* Bundlestore metrics **************************/
 	/*
 		Bundlestore download metrics (Reads/Gets from top-level Bundlestore/Apiserver)
@@ -494,6 +500,11 @@ const (
 		Time since the worker started
 	*/
 	WorkerUptimeGauge_ms = "workerUptimeGauge_ms"
+
+	/*
+		The amount of time a worker node was idle between tasks
+	*/
+	WorkerIdleLatency_ms = "workerIdleLatency_ms"
 
 	/****************************** Git Metrics **********************************************/
 	/*
