@@ -171,14 +171,13 @@ func setupTestPollerIntervals(period time.Duration) (*execers.SimExecer, runner.
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 	single := NewSingleRunner(ex, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)
 	chaos := NewChaosRunner(single)
-	var nower runner.StatusQueryNower
-	nower = &instrumentedNower{ChaosRunner: *chaos}
+	var nower runner.StatusQueryNower = &instrumentedNower{ChaosRunner: chaos}
 	poller := NewPollingService(chaos, nower, period)
 	return ex, nower, poller
 }
 
 type instrumentedNower struct {
-	ChaosRunner
+	*ChaosRunner
 	queryNowFreq FreqList
 	lastQueryNow time.Time
 }
