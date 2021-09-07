@@ -7,7 +7,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cloud/cluster"
+	cc "github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/stats"
 )
 
@@ -19,22 +20,22 @@ const defaultMaxFlakyDuration = 15 * time.Minute
 var nilTime = time.Time{}
 
 // Cluster will use this function to determine if newly added nodes are ready to be used.
-type ReadyFn func(cluster.Node) (ready bool, backoffDuration time.Duration)
+type ReadyFn func(cc.Node) (ready bool, backoffDuration time.Duration)
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
 // nodeGroups is for node affinity where we want to remember which node last ran with what snapshot.
 // NOTE: a node can be both running in scheduler and suspended here (distributed system eventual consistency...)
 type clusterState struct {
-	updateCh         chan []cluster.NodeUpdate
-	nodes            map[cluster.NodeId]*nodeState // All healthy nodes.
-	suspendedNodes   map[cluster.NodeId]*nodeState // All new, lost, or flaky nodes, disjoint from 'nodes'.
-	offlinedNodes    map[cluster.NodeId]*nodeState // All User initiated offline nodes. Disjoint from 'nodes' & 'suspendedNodes'
-	nodeGroups       map[string]*nodeGroup         // key is a snapshotId.
-	maxLostDuration  time.Duration                 // after which we remove a node from the cluster entirely
-	maxFlakyDuration time.Duration                 // after which we mark it not flaky and put it back in rotation.
-	readyFn          ReadyFn                       // If provided, new nodes will be suspended until this returns true.
-	numRunning       int                           // Number of running nodes. running + free + suspended ~= allNodes (may lag)
-	stats            stats.StatsReceiver           // for collecting stats about node availability
+	nodesUpdatesCh   chan []cc.NodeUpdate
+	nodes            map[cc.NodeId]*nodeState // All healthy nodes.
+	suspendedNodes   map[cc.NodeId]*nodeState // All new, lost, or flaky nodes, disjoint from 'nodes'.
+	offlinedNodes    map[cc.NodeId]*nodeState // All User initiated offline nodes. Disjoint from 'nodes' & 'suspendedNodes'
+	nodeGroups       map[string]*nodeGroup    // key is a snapshotId.
+	maxLostDuration  time.Duration            // after which we remove a node from the cluster entirely
+	maxFlakyDuration time.Duration            // after which we mark it not flaky and put it back in rotation.
+	readyFn          ReadyFn                  // If provided, new nodes will be suspended until this returns true.
+	numRunning       int                      // Number of running nodes. running + free + suspended ~= allNodes (may lag)
+	stats            stats.StatsReceiver      // for collecting stats about node availability
 	nopUpdateCnt     int
 }
 
@@ -46,17 +47,17 @@ func (c *clusterState) isOfflined(ns *nodeState) bool {
 }
 
 type nodeGroup struct {
-	idle map[cluster.NodeId]*nodeState
-	busy map[cluster.NodeId]*nodeState
+	idle map[cc.NodeId]*nodeState
+	busy map[cc.NodeId]*nodeState
 }
 
 func newNodeGroup() *nodeGroup {
-	return &nodeGroup{idle: map[cluster.NodeId]*nodeState{}, busy: map[cluster.NodeId]*nodeState{}}
+	return &nodeGroup{idle: map[cc.NodeId]*nodeState{}, busy: map[cc.NodeId]*nodeState{}}
 }
 
 // The State of A Node in the Cluster
 type nodeState struct {
-	node        cluster.Node
+	node        cc.Node
 	runningJob  string
 	runningTask string
 	snapshotId  string
@@ -115,7 +116,7 @@ func (ns *nodeState) startReadyLoop(rfn ReadyFn) {
 }
 
 // Initializes a Node State for the specified Node
-func newNodeState(node cluster.Node) *nodeState {
+func newNodeState(node cc.Node) *nodeState {
 	return &nodeState{
 		node:        node,
 		runningJob:  noJob,
@@ -128,38 +129,37 @@ func newNodeState(node cluster.Node) *nodeState {
 	}
 }
 
-// Creates a New State Distributor with the initial nodes, and which updates
-// nodes added or removed based on the supplied channel. ReadyFn is optional.
-// New cluster is returned along with a doneCh which the caller can close to exit our goroutine.
-func newClusterState(initial []cluster.Node, updateCh chan []cluster.NodeUpdate, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
-	var updates []cluster.NodeUpdate
-	for _, n := range initial {
-		updates = append(updates, cluster.NewAdd(n))
-	}
+// Create a ClusterState which gets node updates from the buffered nodes updates channel.
+// We use a buffered nodes updates channel to prevent cluster state from blocking the object that
+// is recognizing the node updates (typically cluster).
+// New Nodes are considered suspended till the optional ReadyFn reports the node is ready.
+// A ClusterState is returned.
+func newClusterState(nodesUpdatesCh chan []cc.NodeUpdate, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
 	cs := &clusterState{
-		updateCh:         updateCh,
-		nodes:            make(map[cluster.NodeId]*nodeState),
-		suspendedNodes:   map[cluster.NodeId]*nodeState{},
-		offlinedNodes:    make(map[cluster.NodeId]*nodeState),
+		nodesUpdatesCh:   nodesUpdatesCh,
+		nodes:            make(map[cc.NodeId]*nodeState),
+		suspendedNodes:   map[cc.NodeId]*nodeState{},
+		offlinedNodes:    make(map[cc.NodeId]*nodeState),
 		nodeGroups:       map[string]*nodeGroup{"": newNodeGroup()},
 		maxLostDuration:  defaultMaxLostDuration,
 		maxFlakyDuration: defaultMaxFlakyDuration,
 		readyFn:          rfn,
 		stats:            stats,
 	}
-	cs.update(updates)
+	cs.updateCluster()
 	return cs
 }
 
-// Number of free nodes that are not in a suspended state.
+// return the number of free nodes that are not in a suspended state and not running tasks.
+// Note: we assume numFree() is called from methods that have already created a (sync) lock
 func (c *clusterState) numFree() int {
 	// This can go negative due to lost nodes, set lower bound at zero.
 	return max(0, len(c.nodes)-c.numRunning)
 }
 
-// Update ClusterState to reflect that a task has been scheduled on a particular node
+// update ClusterState to reflect that a task has been scheduled on a particular node
 // SnapshotId should be the value from the task definition associated with the given taskId.
-func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snapshotId string) {
+func (c *clusterState) taskScheduled(nodeId cc.NodeId, jobId, taskId, snapshotId string) {
 	ns := c.nodes[nodeId]
 
 	delete(c.nodeGroups[ns.snapshotId].idle, nodeId)
@@ -179,10 +179,10 @@ func (c *clusterState) taskScheduled(nodeId cluster.NodeId, jobId, taskId, snaps
 	c.numRunning++
 }
 
-// Update ClusterState to reflect that a task has finished running on
+// update ClusterState to reflect that a task has finished running on
 // a particular node, whether successfully or unsuccessfully.
 // If the node isn't found then the node was already suspended and deleted, just decrement numRunning.
-func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
+func (c *clusterState) taskCompleted(nodeId cc.NodeId, flaky bool) {
 	var ns *nodeState
 	var ok bool
 	if ns, ok = c.nodes[nodeId]; !ok {
@@ -205,40 +205,42 @@ func (c *clusterState) taskCompleted(nodeId cluster.NodeId, flaky bool) {
 	c.numRunning--
 }
 
-func (c *clusterState) getNodeState(nodeId cluster.NodeId) (*nodeState, bool) {
+func (c *clusterState) getNodeState(nodeId cc.NodeId) (*nodeState, bool) {
 	ns, ok := c.nodes[nodeId]
 	return ns, ok
 }
 
 // update cluster state to reflect added and removed nodes
+// it will process at most DefaultClusterSize sets of updates with each call
 func (c *clusterState) updateCluster() {
 	defer c.stats.Latency(stats.SchedUpdateClusterLatency_ms).Time().Stop()
-	select {
-	case updates, ok := <-c.updateCh:
-		if !ok {
-			c.updateCh = nil
+	allUpdates := []cc.NodeUpdate{}
+LOOP:
+	for i := 0; i < common.DefaultClusterChanSize; i++ {
+		select {
+		case updates := <-c.nodesUpdatesCh:
+			allUpdates = append(allUpdates, updates...)
+		default:
+			break LOOP
 		}
-		c.update(updates)
-	default:
-		c.update(nil)
 	}
+	c.update(allUpdates)
 }
 
 // Processes nodes being added and removed from the cluster & updates the distributor state accordingly.
 // Note, we don't expect there to be many updates after startup if the cluster is relatively stable.
-//TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
-func (c *clusterState) update(updates []cluster.NodeUpdate) {
+// TODO(jschiller) this assumes that new nodes never have the same id as previous ones but we shouldn't rely on that.
+func (c *clusterState) update(updates []cc.NodeUpdate) {
 	// Apply updates
 	adds := 0
 	removals := 0
 	for _, update := range updates {
 		var newNode *nodeState
 		switch update.UpdateType {
-		case cluster.NodeAdded:
+		case cc.NodeAdded:
 			adds += 1
-			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
-				log.Infof("NodeAdded: Reinstating node %s", update.Id)
+				log.Infof("NodeAdded: Reinstating offlined node %s", update.Id)
 				if ns, ok := c.offlinedNodes[update.Id]; ok {
 					c.nodes[update.Id] = ns
 					delete(c.offlinedNodes, update.Id)
@@ -260,7 +262,10 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				}
 			} else if ns, ok := c.nodes[update.Id]; !ok {
 				// This is a new unrecognized node, add it to the cluster, possibly in a suspended state.
-				if c.readyFn == nil {
+				if _, ok := c.offlinedNodes[update.Id]; ok {
+					// the nodes was manually offlined, leave it offlined
+					log.Infof("NodeAdded: Ignoring NodeAdded event for offlined node: %v (%#v), %s", update.Id, update.Node, c.status())
+				} else if c.readyFn == nil {
 					// We're not checking readiness, skip suspended state and add this as a healthy node.
 					newNode = newNodeState(update.Node)
 					c.nodes[update.Id] = newNode
@@ -279,9 +284,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				log.Infof("NodeAdded: Node already added!! %v (%s)", update.Id, ns)
 			}
 
-		case cluster.NodeRemoved:
+		case cc.NodeRemoved:
 			removals += 1
-			// UserInitiated is true only when this NodeUpdate comes from a ReinstateWorker or OfflineWorker request
 			if update.UserInitiated {
 				log.Infof("NodeRemoved: Offlining node %s", update.Id)
 				if ns, ok := c.nodes[update.Id]; ok {
@@ -304,6 +308,10 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 				c.suspendedNodes[update.Id] = ns
 				delete(c.nodes, update.Id)
 				log.Infof("NodeRemoved: Removing node by marking as lost: %v (%s), %s", update.Id, ns, c.status())
+			} else if ns, ok := c.offlinedNodes[update.Id]; ok {
+				// the node was manually offlined, remove it from offlined list
+				delete(c.offlinedNodes, update.Id)
+				log.Infof("NodeRemoved: Removing offlined node: %v (%s), %s", update.Id, ns, c.status())
 			} else {
 				// We don't know about this node, log spurious remove.
 				log.Infof("NodeRemoved: Cannot remove unknown node: %v", update.Id)
@@ -311,9 +319,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 	}
 
-	// debugging scheduler performance issues: record when we see nodes being added removed
-	// also record how many times we've checked and didn't see any changes (we're wondering if
-	// this go routine is being swapped out for long periods of time).
+	// record when we see nodes being added removed
+	// also record how many times we've checked and didn't see any changes
 	if adds > 0 || removals > 0 {
 		log.Infof("Number of nodes added: %d\nNumber of nodes removed: %d, (%d cluster updates with no change)", adds, removals, c.nopUpdateCnt)
 		c.nopUpdateCnt = 0
@@ -330,10 +337,11 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 		}
 		if !ns.suspended() {
 			// This node is initialized, remove it from suspended nodes and add it to the healthy node pool.
+			// preserve its current snapshotId association
 			c.nodes[ns.node.Id()] = ns
 			delete(c.suspendedNodes, ns.node.Id())
 			log.Infof("SuspendedNode: Node now ready, adding to rotation: %v (%s), %s", ns.node.Id(), ns, c.status())
-		} else if ns.timeLost != nilTime && now.Sub(ns.timeLost) > c.maxLostDuration {
+		} else if ns.timeLost != nilTime && time.Since(ns.timeLost) > c.maxLostDuration {
 			// This node has been missing too long, delete all references to it.
 			delete(c.suspendedNodes, ns.node.Id())
 			delete(c.nodeGroups[ns.snapshotId].idle, ns.node.Id())
@@ -346,7 +354,8 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 			}
 		} else if ns.timeFlaky != nilTime && now.Sub(ns.timeFlaky) > c.maxFlakyDuration {
 			// This flaky node has been suspended long enough, try adding it back to the healthy node pool.
-			// We process this like a new node, using the startReadyLoop/readyFn if present to reapply any side-effects.
+			// We process this using the startReadyLoop/readyFn if present to reapply any side-effects,
+			// but leave it with its current snapshotId association
 			//
 			// TimeFlaky should've been the only time* value set at this point, reset it.
 			// SnapshotId must be reset since it's used in taskScheduled() and may be gone from nodeGroups.
@@ -379,4 +388,27 @@ func (c *clusterState) update(updates []cluster.NodeUpdate) {
 func (c *clusterState) status() string {
 	return fmt.Sprintf("now have %d healthy (%d free, %d running), and %d suspended",
 		len(c.nodes), c.numFree(), c.numRunning, len(c.suspendedNodes))
+}
+
+// the following functions implement (async) user initiated onlining and offlining a node
+func (c *clusterState) HasOnlineNode(nodeId cc.NodeId) bool {
+	_, ok := c.nodes[nodeId]
+	return ok
+}
+
+func (c *clusterState) IsOfflined(nodeId cc.NodeId) bool {
+	_, ok := c.offlinedNodes[nodeId]
+	return ok
+}
+
+func (c *clusterState) OnlineNode(nodeId cc.NodeId) {
+	log.Infof("Onlining node %s", nodeId)
+	nodeUpdate := cc.NewUserInitiatedAdd(cc.NewIdNode(string(nodeId)))
+	c.nodesUpdatesCh <- []cc.NodeUpdate{nodeUpdate}
+}
+
+func (c *clusterState) OfflineNode(nodeId cc.NodeId) {
+	log.Infof("Offlining node %s", nodeId)
+	nodeUpdate := cc.NewUserInitiatedRemove(nodeId)
+	c.nodesUpdatesCh <- []cc.NodeUpdate{nodeUpdate}
 }

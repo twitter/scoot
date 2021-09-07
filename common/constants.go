@@ -5,3 +5,6 @@ import (
 )
 
 const DefaultClientTimeout = time.Minute
+
+const DefaultFetchFreqMin = 3 * time.Minute
+const DefaultClusterChanSize = 100
