@@ -17,7 +17,9 @@ var ClusterChBufferSize = 100
 
 type NodeReqChType chan chan []Node
 
-// cluster implementation of Cluster
+// Cluster continuously gets the latest nodes list from the fetched nodes channel and either
+// puts the list of added/removed nodes on the nodes updates channel or, if the nodes list is requested, puts the
+// current list of nodes on the nodes list channel
 type Cluster struct {
 	state *state
 
@@ -28,14 +30,16 @@ type Cluster struct {
 	// latestFetchedNodesCh, contains the latest node list from fetcher.
 	fetchedNodesCh chan []Node
 
-	// nodesReqCh, used (by groupcache) to request the current list of nodes
-	NodesReqCh NodeReqChType
+	// nodesReqCh, the user of this cluster will use this channel to get the current list of nodes
+	nodesReqCh NodeReqChType
 
-	// nodesUpdatesChan, the node updates that the scheduler needs to process.
-	NodesUpdatesCh chan []NodeUpdate
+	// nodesUpdatesChan, the user of this cluster will use this channel to get the list of node updates
+	nodesUpdatesCh chan []NodeUpdate
 
+	// true -> cluster reports node udpates on nodesUpdatesCh, false -> cluster reports the current node list on nodesReqCh
 	useNodesUpdatesCh bool
-	bufferSize        int
+
+	bufferSize int // max iterations for pulling fetcher updates off the fetchedNodesCh when getting fetcher updates
 
 	priorNodeUpdateTime  time.Time
 	priorFetchUpdateTime time.Time
@@ -44,7 +48,7 @@ type Cluster struct {
 // NewCluster creates a Cluster object and starts its processing loop and returns either a nodes updates channel
 // (reporting node add/remove events) or nodes list channel (reporting the current list of nodes).
 // The processing loop continuously gets the latest nodes list from the fetched nodes channel and either
-// put the list of added/removed nodes on the nodes updates channel or if the nodes list is requested put the
+// puts the list of added/removed nodes on the nodes updates channel or, if the nodes list is requested, puts the
 // current list of nodes on the nodes list channel
 func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh bool, updateFreq time.Duration, chBufferSize int) (chan []NodeUpdate, NodeReqChType) {
 	fetchedNodesCh := StartFetchCron(fetcher, updateFreq, chBufferSize, stat)
@@ -62,8 +66,8 @@ func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh boo
 		updateFreq:           updateFreq,
 		stat:                 stat,
 		fetchedNodesCh:       fetchedNodesCh,
-		NodesReqCh:           nodesReqCh,
-		NodesUpdatesCh:       updatesCh,
+		nodesReqCh:           nodesReqCh,
+		nodesUpdatesCh:       updatesCh,
 		useNodesUpdatesCh:    useNodesUpdatesCh,
 		priorNodeUpdateTime:  time.Now(),
 		priorFetchUpdateTime: time.Now(),
@@ -74,13 +78,13 @@ func NewCluster(stat stats.StatsReceiver, fetcher Fetcher, useNodesUpdatesCh boo
 	}
 	// logging
 	chDesc := []string{}
-	if c.NodesUpdatesCh != nil {
+	if c.nodesUpdatesCh != nil {
 		chDesc = append(chDesc, "NodesUpdateCh")
 	}
-	if c.NodesReqCh != nil {
+	if c.nodesReqCh != nil {
 		chDesc = append(chDesc, "NodesReqCh")
 	}
-	log.Infof("cluster loop starting with frequency %s, reporting on %s with channel buffer size %d", c.updateFreq, strings.Join(chDesc[:], ","), chBufferSize)
+	log.Infof("cluster loop starting with frequency %s, reporting on %s with channel buffer size %d", c.updateFreq, strings.Join(chDesc, ","), chBufferSize)
 
 	go c.loop()
 
@@ -99,14 +103,14 @@ func (c *Cluster) loop() {
 		if lastestNodeList != nil {
 			sort.Sort(NodeSorter(lastestNodeList))
 			updates := c.state.setAndDiff(lastestNodeList) // compute updates and update local state
-			if c.NodesUpdatesCh != nil {
+			if c.nodesUpdatesCh != nil {
 				c.addToCurrentNodeUpdates(updates)
 			}
 		}
 
-		if c.NodesReqCh != nil {
+		if c.nodesReqCh != nil {
 			select {
-			case respCh := <-c.NodesReqCh:
+			case respCh := <-c.nodesReqCh:
 				respCh <- c.getNodes()
 			default:
 			}
@@ -138,7 +142,7 @@ LOOP:
 
 // addToCurrentNodeUpdates put the node updates on the nodes updates channel.
 func (c *Cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
-	c.NodesUpdatesCh <- updates
+	c.nodesUpdatesCh <- updates
 	if len(updates) > 0 {
 		log.Infof("cluster has %d new node updates", len(updates))
 		// record time since last time saw node

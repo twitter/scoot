@@ -391,9 +391,6 @@ func (c *clusterState) status() string {
 }
 
 // the following functions implement (async) user initiated onlining and offlining a node
-// since these functions modify c.nodes and c.offlinedNodes, we need mutex around
-// uses of these structures.
-
 func (c *clusterState) HasOnlineNode(nodeId cc.NodeId) bool {
 	_, ok := c.nodes[nodeId]
 	return ok

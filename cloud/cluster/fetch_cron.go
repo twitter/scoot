@@ -22,7 +22,7 @@ type Fetcher interface {
 	Fetch() ([]Node, error)
 }
 
-// Given a Fetcher implementation and a Ticker, start a ticker loop that
+// Given a Fetcher implementation and a duration, start a ticker loop that
 // fetches the current nodes and updates cluster's latestNodeList with this list
 func StartFetchCron(f Fetcher, freq time.Duration, fetchBufferSize int, stat stats.StatsReceiver) chan []Node {
 	c := &fetchCron{
