@@ -68,7 +68,7 @@ func main() {
 		MaxConnIdleMins:   *grpcIdleMins,
 	}
 
-	cluster, err := starter.GetCluster(schedulerJSONConfigs.Cluster)
+	nodesUpdatesCh, err := starter.StartCluster(schedulerJSONConfigs.Cluster)
 	if err != nil {
 		log.Fatalf("%s. Scheduler not started", err)
 	}
@@ -76,5 +76,5 @@ func main() {
 	log.Infof("Starting Cloud Scoot API Server & Scheduler on %s with %s", *thriftAddr, *configFlag)
 	starter.StartServer(*schedulerConfig, schedulerJSONConfigs.SagaLog, schedulerJSONConfigs.Workers,
 		thriftServerSocket, &statsReceiver, common.DefaultClientTimeout, httpServer, bazelGRPCConfig,
-		nil, nopDurationKeyExtractor, cluster)
+		nil, nopDurationKeyExtractor, nodesUpdatesCh)
 }

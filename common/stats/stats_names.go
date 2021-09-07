@@ -18,6 +18,12 @@ const (
 	ClusterRunningNodes   = "runningNodes"
 	ClusterLostNodes      = "lostNodes"
 
+	ClusterNodeUpdateFreqMs = "clusterSetNodeUpdatesFreq_ms"
+	ClusterFetchFreqMs      = "clusterFetchFreq_ms"
+	ClusterFetchDurationMs  = "clusterFetchDuration_ms"
+	ClusterNumFetchedNodes  = "clusterNumFetchedNodes"
+	ClusterFetchedError     = "clusterFetchError"
+
 	/************************* Bundlestore metrics **************************/
 	/*
 		Bundlestore download metrics (Reads/Gets from top-level Bundlestore/Apiserver)
