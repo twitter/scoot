@@ -11,6 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
+	"io/ioutil"
+
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/log/tags"
@@ -22,7 +24,6 @@ import (
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/scheduler/setup/worker"
 	"github.com/twitter/scoot/workerapi"
-	"io/ioutil"
 )
 
 var tmp string
@@ -228,7 +229,7 @@ func Test_cannotGetStatusFromWorkerReturnsFlakyResult(t *testing.T) {
 	err := get_testTaskRunner(s, chaos, "job1", "task1", task, true, stats.NilStatsReceiver()).run()
 
 	assert.NotNil(t, err.(*taskError).runnerErr)
-	assert.Equal(t, err.(*taskError).st.State, runner.UNKNOWN)
+	assert.Equal(t, err.(*taskError).st.State, runner.FAILED)
 	assert.Equal(t, fmt.Sprintf("%s", err.(*taskError).runnerErr), "connection error")
 }
 
