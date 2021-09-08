@@ -73,7 +73,6 @@ func (slog *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 	startMsg := saga.MakeStartSagaMessage(sagaId, job)
 	slog.sagas[sagaId] = &logData{messages: []saga.SagaMessage{startMsg}, created: time.Now()}
-
 	return nil
 }
 

@@ -2,7 +2,9 @@ package saga
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 )
@@ -343,4 +345,32 @@ func TestFatalError_CorruptedSagaLogError(t *testing.T) {
 	if !FatalErr(err) {
 		t.Error("Expected CorruptedSagaLog to be a Fatal Error")
 	}
+}
+
+func TestUpdateChannel(t *testing.T) {
+	println("Starting test")
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	sagaLogMock := NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("testSaga1", nil)
+	s1, _ := newSaga("testSaga1", nil, sagaLogMock)
+
+	for j := 0; j < 10; j++ {
+		startMsg := MakeStartTaskMessage("testSaga1", fmt.Sprintf("task%d", j), nil)
+		endMsg := MakeEndTaskMessage("testSaga1", fmt.Sprintf("task%d", j), nil)
+		batchMsgs := []SagaMessage{startMsg, endMsg}	
+		sagaLogMock.EXPECT().LogBatchMessages(batchMsgs)
+	}
+	sagaLogMock.EXPECT().LogMessage(MakeEndSagaMessage("testSaga1"))
+
+	for j := 0; j < 10; j++ {
+		go s1.StartTask(fmt.Sprintf("task%d", j), nil)
+		time.Sleep(100 * time.Millisecond)
+		go s1.EndTask(fmt.Sprintf("task%d", j), nil)
+		time.Sleep(100 * time.Millisecond)
+	}
+	// time.Sleep(30 * time.Second)
+	_ = s1.EndSaga()
+	// mockCtrl.Finish()
 }

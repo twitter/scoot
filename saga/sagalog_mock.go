@@ -45,7 +45,7 @@ func (mr *MockSagaLogMockRecorder) StartSaga(sagaId, job interface{}) *gomock.Ca
 }
 
 // LogMessage mocks base method
-func (m *MockSagaLog) LogMessage(message SagaMessage) error {
+func (m *MockSagaLog) LogMessage(message SagaMessage) error {	
 	ret := m.ctrl.Call(m, "LogMessage", message)
 	ret0, _ := ret[0].(error)
 	return ret0
