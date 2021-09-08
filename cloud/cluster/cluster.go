@@ -142,20 +142,22 @@ LOOP:
 
 // addToCurrentNodeUpdates put the node updates on the nodes updates channel.
 func (c *Cluster) addToCurrentNodeUpdates(updates []NodeUpdate) {
-	c.nodesUpdatesCh <- updates
 	if len(updates) > 0 {
+		c.nodesUpdatesCh <- updates
 		log.Infof("cluster has %d new node updates", len(updates))
-		// record time since last time saw node
-		c.stat.Gauge(stats.ClusterNodeUpdateFreqMs).Update(time.Since(c.priorNodeUpdateTime).Milliseconds())
-		c.priorNodeUpdateTime = time.Now()
 	}
+	// record frequency at which we are trying to send node updates
+	c.stat.Gauge(stats.ClusterNodeUpdateFreqMs).Update(time.Since(c.priorNodeUpdateTime).Milliseconds())
+	c.priorNodeUpdateTime = time.Now()
 }
 
 // GetNodes get (a copy of) the list of nodes last fetched by fetcher
 func (c *Cluster) getNodes() []Node {
-	ret := []Node{}
+	ret := make([]Node, len(c.state.nodes))
+	i := 0
 	for _, node := range c.state.nodes {
-		ret = append(ret, node)
+		ret[i] = node
+		i++
 	}
 	return ret
 }
