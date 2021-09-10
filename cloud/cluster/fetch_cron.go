@@ -68,6 +68,7 @@ func (c *fetchCron) doFetch() {
 		log.Infof("num fetched nodes changed from %d to %d", c.priorNumNodes, len(nodes))
 		c.priorNumNodes = len(nodes)
 	}
+	c.stat.Gauge(stats.ClusterFetchedError).Update(0)
 	c.stat.Gauge(stats.ClusterFetchFreqMs).Update(time.Since(c.priorFetchTime).Milliseconds())
 	c.stat.Gauge(stats.ClusterFetchDurationMs).Update(fetchDuration.Milliseconds())
 	c.stat.Gauge(stats.ClusterNumFetchedNodes).Update(int64(len(nodes)))
