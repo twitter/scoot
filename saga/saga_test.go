@@ -3,8 +3,8 @@ package saga
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 )
@@ -347,30 +347,48 @@ func TestFatalError_CorruptedSagaLogError(t *testing.T) {
 	}
 }
 
-func TestUpdateChannel(t *testing.T) {
-	println("Starting test")
-	mockCtrl := gomock.NewController(t)
+// Benchmarked on cpu: Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz
+// UpdateChannelBufferSize = 1:    5	  236367064 ns/op	133088257 B/op	 1883934 allocs/op
+// UpdateChannelBufferSize = 10:   6	  180108942 ns/op	100587057 B/op	 1012472 allocs/op
+// UpdateChannelBufferSize = 100:  12     88648935 ns/op	93722446 B/op	  821764 allocs/op
+func BenchmarkUpdateChannel(b *testing.B) {
+	mockCtrl := gomock.NewController(b)
 	defer mockCtrl.Finish()
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
-	sagaLogMock.EXPECT().StartSaga("testSaga1", nil)
-	s1, _ := newSaga("testSaga1", nil, sagaLogMock)
+	// Ignore message validation as messages can be grouped differently each time
+	// due to asynchronous operations
+	sagaLogMock.SetIgnoreMsgValidation(true)
 
-	for j := 0; j < 10; j++ {
-		startMsg := MakeStartTaskMessage("testSaga1", fmt.Sprintf("task%d", j), nil)
-		endMsg := MakeEndTaskMessage("testSaga1", fmt.Sprintf("task%d", j), nil)
-		batchMsgs := []SagaMessage{startMsg, endMsg}	
-		sagaLogMock.EXPECT().LogBatchMessages(batchMsgs)
-	}
-	sagaLogMock.EXPECT().LogMessage(MakeEndSagaMessage("testSaga1"))
+	sagasCount := 1000
+	updatesPerSaga := 100
+	updateChSize = 100
+	for i := 0; i < b.N; i++ {
+		var wg sync.WaitGroup
+		wg.Add(sagasCount * updatesPerSaga)
 
-	for j := 0; j < 10; j++ {
-		go s1.StartTask(fmt.Sprintf("task%d", j), nil)
-		time.Sleep(100 * time.Millisecond)
-		go s1.EndTask(fmt.Sprintf("task%d", j), nil)
-		time.Sleep(100 * time.Millisecond)
+		// start all sagas
+		sagas := []*Saga{}
+		for k := 0; k < sagasCount; k++ {
+			sagaLogMock.EXPECT().StartSaga(fmt.Sprintf("testSaga%d", k), nil)
+			s1, _ := newSaga(fmt.Sprintf("testSaga%d", k), nil, sagaLogMock)
+			sagas = append(sagas, s1)
+		}
+
+		// Start multiple tasks on multiple sagas
+		for _, saga := range sagas {
+			for j := 0; j < updatesPerSaga; j++ {
+				go func() {
+					defer wg.Done()
+					_ = saga.StartTask(fmt.Sprintf("task%d", j), nil)
+				}()
+			}
+		}
+
+		//Wait for tasks to finish before calling EndSaga
+		wg.Wait()
+		for _, saga := range sagas {
+			_ = saga.EndSaga()
+		}
 	}
-	// time.Sleep(30 * time.Second)
-	_ = s1.EndSaga()
-	// mockCtrl.Finish()
 }

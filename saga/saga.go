@@ -8,10 +8,9 @@ package saga
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
-const UpdateChannelBufferSize = 2
+var updateChSize = 100
 
 // Concurrent Object Representing a Saga
 // Methods update the state of the saga or
@@ -39,7 +38,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		return nil, err
 	}
 
-	updateCh := make(chan sagaUpdate, UpdateChannelBufferSize)
+	updateCh := make(chan sagaUpdate, updateChSize)
 
 	s := &Saga{
 		id:       sagaId,
@@ -58,7 +57,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 // Rehydrate a saga from a specified SagaState, does not write
 // to SagaLog assumes that this is a recovered saga.
 func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
-	updateCh := make(chan sagaUpdate, UpdateChannelBufferSize)
+	updateCh := make(chan sagaUpdate, updateChSize)
 	s := &Saga{
 		id:       sagaId,
 		log:      log,
@@ -202,9 +201,7 @@ func (s *Saga) updateSagaStateLoop() {
 	updates := []sagaUpdate{}
 	for update := range s.updateCh {
 		updates = append(updates, update)
-		time.Sleep(200 * time.Millisecond)
-		if len(s.updateCh) == 0 || len(updates) == UpdateChannelBufferSize {
-			println(fmt.Sprintf("processing %d updates", len(updates)))
+		if len(s.updateCh) == 0 || len(updates) == updateChSize {
 			s.updateSaga(updates)
 			updates = []sagaUpdate{}
 
@@ -212,48 +209,31 @@ func (s *Saga) updateSagaStateLoop() {
 	}
 }
 
-// updateSaga updates the saga s by applying update atomically and sending any error to the requester
+// updateSaga updates the saga s by applying updates atomically and sending any error to the requester
+// it checks if the message is a valid transition and batch logs the messages from all updates durably to the SagaLog
+// if msg is an invalid transition, it will neither log nor update internal state
+// always returns the new SagaState that should be used, either the mutated one or a copy of the original.
 func (s *Saga) updateSaga(updates []sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// updateMsgs := []SagaMessage{}
-	// for _, update := range updates {
-	// 	for _, msg := range update.msgs {
-	// 		updateMsgs = append(updateMsgs, msg)
-	// 	}
-	// }
-	// var err error
-	// s.state, err = logMessages(s.state, updates, s.log)
-	// for _, update := range updates {
-	// 	update.resultCh <- err
-	// }
-	s.logMessages(updates, s.log)
-}
 
-type sagaUpdate struct {
-	msgs     []SagaMessage
-	resultCh chan error
-}
-
-// checks the message is a valid transition and logs the specified message durably to the SagaLog
-// if msg is an invalid transition, it will neither log nor update internal state
-// always returns the new SagaState that should be used, either the mutated one or a copy of the
-// original.
-func (s *Saga) logMessages(updates []sagaUpdate, log SagaLog) {
-	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
-	// we'll need to revert to the old state.
+	// if either updateSagaState or logMessages fails, revert to old state
 	oldState := copySagaState(s.state)
-	priorState := copySagaState(s.state)
+
 	// verify that the applied message results in a valid state
 	var err error
 	var validUpdates []sagaUpdate
 	var validUpdateMsgs []SagaMessage
+	// updateSaga will mutate state if it's a valid transition, but if we then error storing,
+	// we'll need to continue from the old state.
+	priorState := copySagaState(s.state)
 	for _, update := range updates {
 		err = nil
 		for _, msg := range update.msgs {
 			err = updateSagaState(s.state, msg)
 			if err != nil {
 				update.resultCh <- err
+				// revert to prior state to continue, and don't log messages for invalid updates
 				s.state = priorState
 				break
 			}
@@ -264,19 +244,35 @@ func (s *Saga) logMessages(updates []sagaUpdate, log SagaLog) {
 			priorState = copySagaState(s.state)
 		}
 	}
-	err = nil
-	// try durably storing the message
-	if len(validUpdateMsgs) == 1 {
-		err = log.LogMessage(validUpdateMsgs[0])
-	} else {
-		err = log.LogBatchMessages(validUpdateMsgs)
-	}
-	for _, update := range validUpdates {
-		update.resultCh <- err
-	}
+
+	// batch log valid messages from all updates
+	err = logMessages(validUpdateMsgs, s.log)
 	if err != nil {
 		s.state = oldState
 	}
+	// forward result to all the update result channels
+	// all updates with encounter the same error/success while logging
+	for _, update := range validUpdates {
+		update.resultCh <- err
+	}
+
+}
+
+type sagaUpdate struct {
+	msgs     []SagaMessage
+	resultCh chan error
+}
+
+// logMessages durably stores the messages in sagalog
+// if the message(s) is invalid, returns an error and an unmodified saga state
+func logMessages(msgs []SagaMessage, log SagaLog) error {
+	var err error
+	if len(msgs) == 1 {
+		err = log.LogMessage(msgs[0])
+	} else {
+		err = log.LogBatchMessages(msgs)
+	}
+	return err
 }
 
 // Checks the error returned by updating saga state.
