@@ -378,10 +378,10 @@ func BenchmarkUpdateChannel(b *testing.B) {
 		// Start multiple tasks on multiple sagas
 		for _, saga := range sagas {
 			for j := 0; j < updatesPerSaga; j++ {
-				go func() {
+				go func(taskID int) {
 					defer wg.Done()
-					_ = saga.StartTask(fmt.Sprintf("task%d", j), nil)
-				}()
+					_ = saga.StartTask(fmt.Sprintf("task%d", taskID), nil)
+				}(j)
 			}
 		}
 
