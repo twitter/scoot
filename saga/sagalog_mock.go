@@ -101,4 +101,6 @@ func (mr *MockSagaLogMockRecorder) GetActiveSagas() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSagas", reflect.TypeOf((*MockSagaLog)(nil).GetActiveSagas))
 }
 
-func (m *MockSagaLog) SetIgnoreMsgValidation(ignoreMsgValidation bool){m.ignoreMsgValidation = ignoreMsgValidation}
+func (m *MockSagaLog) SetIgnoreMsgValidation(ignoreMsgValidation bool) {
+	m.ignoreMsgValidation = ignoreMsgValidation
+}
