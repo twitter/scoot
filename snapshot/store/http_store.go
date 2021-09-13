@@ -21,7 +21,7 @@ func MakePesterClient() *pester.Client {
 	client.Backoff = pester.ExponentialBackoff
 	client.MaxRetries = DefaultHttpTries
 	client.LogHook = func(e pester.ErrEntry) {
-		log.Infof("Retrying after failed attempt: %+v", e)
+		log.Errorf("Retrying after failed attempt: %+v", e)
 	}
 	return client
 }
