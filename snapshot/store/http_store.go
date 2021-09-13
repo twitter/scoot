@@ -162,7 +162,7 @@ func (s *httpStore) Write(name string, resource *Resource) error {
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			log.Errorf("Write response status error: %s -- %+v", uri, resp.Status)
+			log.Errorf("Write response status error: %s -- %s", uri, resp.Status)
 			return errors.New(resp.Status)
 		}
 	}
