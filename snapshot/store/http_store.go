@@ -98,7 +98,7 @@ func (s *httpStore) openForRead(name string, existCheck bool) (*Resource, error)
 		}
 		return NewResource(rc, resp.ContentLength, ttlv), nil
 	}
-	log.Infof("%s response status error: %s %v", label, uri, resp.Status)
+	log.Errorf("%s response status error: %s %v", label, uri, resp.Status)
 	if !existCheck {
 		resp.Body.Close()
 	}
@@ -116,7 +116,7 @@ func (s *httpStore) Exists(name string) (bool, error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		log.Infof("Exists error: %s %v", name, err)
+		log.Errorf("Exists error: %s %v", name, err)
 		return false, err
 	}
 	log.Infof("Exists ok: %s", name)
@@ -133,7 +133,7 @@ func (s *httpStore) Write(name string, resource *Resource) error {
 		return nil
 	}
 	if strings.Contains(name, "/") {
-		log.Infof("Write error: %s '/' not allowed", name)
+		log.Errorf("Write error: %s '/' not allowed", name)
 		return errors.New("'/' not allowed in name when writing bundles.")
 	}
 	uri := s.rootURI + name
@@ -158,11 +158,11 @@ func (s *httpStore) Write(name string, resource *Resource) error {
 
 	resp, err := post()
 	if err != nil {
-		log.Infof("Write error: %s %v", uri, err)
+		log.Errorf("Write error: %s %v", uri, err)
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			log.Infof("Write response status error: %s -- %s", uri, resp.Status)
+			log.Errorf("Write response status error: %s -- %+v", uri, resp.Status)
 			return errors.New(resp.Status)
 		}
 	}
