@@ -13,7 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/twitter/scoot/cloud/cluster"
+	cc "github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer/execers"
@@ -39,25 +40,23 @@ func (t *TestTerminator) Fatalf(format string, args ...interface{}) {
 
 // objects needed to initialize a stateful scheduler
 type schedulerDeps struct {
-	initialCl       []cluster.Node
-	clUpdates       chan []cluster.NodeUpdate
-	sc              saga.SagaCoordinator
-	rf              func(cluster.Node) runner.Service
-	config          SchedulerConfiguration
-	nodeToWorkerMap map[string]runner.Service
-	statsRegistry   stats.StatsRegistry
+	nodesUpdatesCh chan []cc.NodeUpdate
+	sc             saga.SagaCoordinator
+	rf             func(cc.Node) runner.Service
+	config         SchedulerConfiguration
+	statsRegistry  stats.StatsRegistry
 }
 
 // returns default scheduler deps populated with in memory fakes
 // The default cluster has 5 nodes
 func getDefaultSchedDeps() *schedulerDeps {
-	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+	nodeUpdateCh := make(chan []cc.NodeUpdate, common.DefaultClusterChanSize)
+	initTestCluster(nodeUpdateCh, "node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
-		rf: func(n cluster.Node) runner.Service {
+		nodesUpdatesCh: nodeUpdateCh,
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		rf: func(n cc.Node) runner.Service {
 			return worker.MakeInmemoryWorker(n)
 		},
 		config: SchedulerConfiguration{
@@ -74,8 +73,7 @@ func makeStatefulSchedulerDeps(deps *schedulerDeps) *statefulScheduler {
 	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return deps.statsRegistry }, 0)
 
 	s := NewStatefulScheduler(
-		deps.initialCl,
-		deps.clUpdates,
+		deps.nodesUpdatesCh,
 		deps.sc,
 		deps.rf,
 		deps.config,
@@ -229,7 +227,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedStarts(t
 	deps.config.MaxRetriesPerTask = 3
 
 	// create a runner factory that returns a runner that returns an error
-	deps.rf = func(cluster.Node) runner.Service {
+	deps.rf = func(cc.Node) runner.Service {
 		chaos := runners.NewChaosRunner(nil)
 
 		chaos.SetError(fmt.Errorf("starting error"))
@@ -280,7 +278,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 	deps.config.MaxRetriesPerTask = 3
 
 	// create a runner factory that returns a runner that always fails
-	deps.rf = func(cluster.Node) runner.Service {
+	deps.rf = func(cc.Node) runner.Service {
 		ex := execers.NewDoneExecer()
 		ex.ExecError = errors.New("Test - failed to exec")
 		filerMap := runner.MakeRunTypeMap()
@@ -326,9 +324,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 
 	deps := getDefaultSchedDeps()
 	// cluster with one node
-	cl := makeTestCluster("node1")
-	deps.initialCl = cl.nodes
-	deps.clUpdates = cl.ch
+	deps.nodesUpdatesCh <- []cc.NodeUpdate{cc.NewAdd(cc.NewIdNode("node1"))}
 
 	// sagalog mock to ensure all messages are logged appropriately
 	mockCtrl := gomock.NewController(&TestTerminator{})
@@ -364,9 +360,11 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 		s.step()
 	}
 
-	// verify scheduler state updated appropriately
-	if s.clusterState.nodes["node1"].runningTask != taskId {
-		t.Errorf("Expected %v to be scheduled on node1.  nodestate: %+v", taskId, s.clusterState.nodes["node1"])
+	var assignedNode *nodeState
+	for _, node := range s.clusterState.nodes {
+		if node.runningTask == taskId {
+			assignedNode = node
+		}
 	}
 
 	// advance scheduler until the task completes
@@ -375,7 +373,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	}
 
 	// verify state changed appropriately
-	if s.clusterState.nodes["node1"].runningTask != noTask {
+	if assignedNode.runningTask != noTask {
 		t.Errorf("Expected node1 to not have any running tasks")
 	}
 
@@ -453,7 +451,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 
 	// verify state changed appropriately
 	for i := 0; i < 5; i++ {
-		if s.clusterState.nodes[cluster.NodeId(fmt.Sprintf("node%d", i+1))].runningTask != noTask {
+		if s.clusterState.nodes[cc.NodeId(fmt.Sprintf("node%d", i+1))].runningTask != noTask {
 			t.Errorf("Expected nodes to not have any running tasks")
 		}
 	}
@@ -760,13 +758,13 @@ func verifyJobStatus(tag string, jobId string, expectedJobStatus domain.Status, 
 }
 
 func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
-	cl := makeTestCluster("node1", "node2", "node3", "node4", "node5")
+
+	uc := initNodeUpdateChan("node1", "node2", "node3", "node4", "node5")
 
 	return &schedulerDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
-		rf: func(n cluster.Node) runner.Service {
+		nodesUpdatesCh: uc,
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		rf: func(n cc.Node) runner.Service {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()
 			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
@@ -934,8 +932,8 @@ func Test_StatefulScheduler_TaskDurationOrdering_Durations(t *testing.T) {
 // Test creating job definitions with tasks in descending duration order
 func Test_TaskAssignments_TasksScheduledByDuration(t *testing.T) {
 	// create a test cluster with 3 nodes
-	testCluster := makeTestCluster("node1", "node2", "node3")
-	s := getDebugStatefulScheduler(testCluster)
+	uc := initNodeUpdateChan("node1", "node2", "node3")
+	s := getDebugStatefulScheduler(uc)
 	taskKeyFn := func(key string) string {
 		keyParts := strings.Split(key, " ")
 		return keyParts[len(keyParts)-1]
@@ -970,4 +968,14 @@ func Test_TaskAssignments_TasksScheduledByDuration(t *testing.T) {
 		}
 		assert.True(t, js1.Tasks[i-1].AvgDuration >= task.AvgDuration, fmt.Sprintf("tasks not in descending duration order at task %d, %v", i, task))
 	}
+}
+
+func initNodeUpdateChan(nodes ...string) chan []cc.NodeUpdate {
+	uc := make(chan []cc.NodeUpdate, common.DefaultClusterChanSize)
+	updates := []cc.NodeUpdate{}
+	for _, node := range nodes {
+		updates = append(updates, cc.NewAdd(cc.NewIdNode(node)))
+	}
+	uc <- updates
+	return uc
 }

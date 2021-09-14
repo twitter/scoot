@@ -107,6 +107,7 @@ func (r *taskRunner) run() error {
 
 	// Update taskErr's Error to indicate we got an empty status back
 	if taskErr.st.State == runner.UNKNOWN {
+		taskErr.st.State = runner.FAILED
 		taskErr.st.Error = emptyStatusError(r.JobID, r.TaskID, err)
 	}
 	if shouldDeadLetter {
