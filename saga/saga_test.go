@@ -2,8 +2,6 @@ package saga
 
 import (
 	"errors"
-	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -344,51 +342,5 @@ func TestFatalError_CorruptedSagaLogError(t *testing.T) {
 	err := NewCorruptedSagaLogError("123", "corrupted sagalog")
 	if !FatalErr(err) {
 		t.Error("Expected CorruptedSagaLog to be a Fatal Error")
-	}
-}
-
-// Benchmarked on cpu: Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz
-// UpdateChannelBufferSize = 1:    5	  236367064 ns/op	133088257 B/op	 1883934 allocs/op
-// UpdateChannelBufferSize = 10:   6	  180108942 ns/op	100587057 B/op	 1012472 allocs/op
-// UpdateChannelBufferSize = 100:  12     88648935 ns/op	93722446 B/op	  821764 allocs/op
-func BenchmarkUpdateChannel(b *testing.B) {
-	mockCtrl := gomock.NewController(b)
-	defer mockCtrl.Finish()
-
-	sagaLogMock := NewMockSagaLog(mockCtrl)
-	// Ignore message validation as messages can be grouped differently each time
-	// due to asynchronous operations
-	sagaLogMock.SetIgnoreMsgValidation(true)
-
-	sagasCount := 1000
-	updatesPerSaga := 100
-	updateChSize = 100
-	for i := 0; i < b.N; i++ {
-		var wg sync.WaitGroup
-		wg.Add(sagasCount * updatesPerSaga)
-
-		// start all sagas
-		sagas := []*Saga{}
-		for k := 0; k < sagasCount; k++ {
-			sagaLogMock.EXPECT().StartSaga(fmt.Sprintf("testSaga%d", k), nil)
-			s1, _ := newSaga(fmt.Sprintf("testSaga%d", k), nil, sagaLogMock)
-			sagas = append(sagas, s1)
-		}
-
-		// Start multiple tasks on multiple sagas
-		for _, saga := range sagas {
-			for j := 0; j < updatesPerSaga; j++ {
-				go func(taskID int) {
-					defer wg.Done()
-					_ = saga.StartTask(fmt.Sprintf("task%d", taskID), nil)
-				}(j)
-			}
-		}
-
-		//Wait for tasks to finish before calling EndSaga
-		wg.Wait()
-		for _, saga := range sagas {
-			_ = saga.EndSaga()
-		}
 	}
 }

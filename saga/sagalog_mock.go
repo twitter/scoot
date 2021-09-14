@@ -11,9 +11,8 @@ import (
 
 // MockSagaLog is a mock of SagaLog interface
 type MockSagaLog struct {
-	ctrl                *gomock.Controller
-	recorder            *MockSagaLogMockRecorder
-	ignoreMsgValidation bool //Only use for testing when messages can arrive out of order
+	ctrl     *gomock.Controller
+	recorder *MockSagaLogMockRecorder
 }
 
 // MockSagaLogMockRecorder is the mock recorder for MockSagaLog
@@ -47,9 +46,6 @@ func (mr *MockSagaLogMockRecorder) StartSaga(sagaId, job interface{}) *gomock.Ca
 
 // LogMessage mocks base method
 func (m *MockSagaLog) LogMessage(message SagaMessage) error {
-	if m.ignoreMsgValidation {
-		return nil
-	}
 	ret := m.ctrl.Call(m, "LogMessage", message)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -62,9 +58,6 @@ func (mr *MockSagaLogMockRecorder) LogMessage(message interface{}) *gomock.Call 
 
 // LogBatchMessages mocks base method
 func (m *MockSagaLog) LogBatchMessages(messages []SagaMessage) error {
-	if m.ignoreMsgValidation {
-		return nil
-	}
 	ret := m.ctrl.Call(m, "LogBatchMessages", messages)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -99,8 +92,4 @@ func (m *MockSagaLog) GetActiveSagas() ([]string, error) {
 // GetActiveSagas indicates an expected call of GetActiveSagas
 func (mr *MockSagaLogMockRecorder) GetActiveSagas() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSagas", reflect.TypeOf((*MockSagaLog)(nil).GetActiveSagas))
-}
-
-func (m *MockSagaLog) SetIgnoreMsgValidation(ignoreMsgValidation bool) {
-	m.ignoreMsgValidation = ignoreMsgValidation
 }

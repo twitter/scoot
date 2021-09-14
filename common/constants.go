@@ -5,3 +5,4 @@ import (
 )
 
 const DefaultClientTimeout = time.Minute
+const DefaultSagaUpdateChSize = 10000

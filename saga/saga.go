@@ -8,9 +8,9 @@ package saga
 import (
 	"fmt"
 	"sync"
-)
 
-var updateChSize = 100
+	"github.com/twitter/scoot/common"
+)
 
 // Concurrent Object Representing a Saga
 // Methods update the state of the saga or
@@ -38,7 +38,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		return nil, err
 	}
 
-	updateCh := make(chan sagaUpdate, updateChSize)
+	updateCh := make(chan sagaUpdate, common.DefaultSagaUpdateChSize)
 
 	s := &Saga{
 		id:       sagaId,
@@ -57,7 +57,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 // Rehydrate a saga from a specified SagaState, does not write
 // to SagaLog assumes that this is a recovered saga.
 func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
-	updateCh := make(chan sagaUpdate, updateChSize)
+	updateCh := make(chan sagaUpdate, common.DefaultSagaUpdateChSize)
 	s := &Saga{
 		id:       sagaId,
 		log:      log,
@@ -197,65 +197,68 @@ func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 // is one per saga currently executing.  This ensures all updates are applied
 // in order to a saga.  Also controls access to the SagaState so its is
 // updated in a thread safe manner
+// Processes at most SagaUpdateChSize number of updates at a time
 func (s *Saga) updateSagaStateLoop() {
 	updates := []sagaUpdate{}
 	for update := range s.updateCh {
 		updates = append(updates, update)
-		if len(s.updateCh) == 0 || len(updates) == updateChSize {
+		if len(s.updateCh) == 0 || len(updates) == common.DefaultSagaUpdateChSize {
 			s.updateSaga(updates)
 			updates = []sagaUpdate{}
-
 		}
 	}
 }
 
 // updateSaga updates the saga s by applying updates atomically and sending any error to the requester
-// it checks if the message is a valid transition and batch logs the messages from all updates durably to the SagaLog
+// it checks if the message(s) is a valid transition and batch logs the messages from all updates durably to the SagaLog
 // if msg is an invalid transition, it will neither log nor update internal state
 // always returns the new SagaState that should be used, either the mutated one or a copy of the original.
 func (s *Saga) updateSaga(updates []sagaUpdate) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// if either updateSagaState or logMessages fails, revert to old state
+	// updateSaga will mutate state if it's a valid transition, but if we then error logging,
+	// we'll need to revert to old state
 	oldState := copySagaState(s.state)
 
-	// verify that the applied message results in a valid state
 	var err error
 	var validUpdates []sagaUpdate
 	var validUpdateMsgs []SagaMessage
-	// updateSaga will mutate state if it's a valid transition, but if we then error storing,
-	// we'll need to continue from the old state.
-	priorState := copySagaState(s.state)
+
 	for _, update := range updates {
 		err = nil
-		for _, msg := range update.msgs {
-			err = updateSagaState(s.state, msg)
-			if err != nil {
-				update.resultCh <- err
-				// revert to prior state to continue, and don't log messages for invalid updates
-				s.state = priorState
-				break
-			}
+
+		// verify that the applied message(s) results in a valid state
+		if len(update.msgs) == 1 {
+			err = updateSagaState(s.state, update.msgs[0])
+		} else {
+			s.state, err = bulkUpdateSagaState(s.state, update.msgs)
 		}
-		if err == nil {
-			validUpdates = append(validUpdates, update)
-			validUpdateMsgs = append(validUpdateMsgs, update.msgs...)
-			priorState = copySagaState(s.state)
+
+		// don't log messages for invalid updates
+		if err != nil {
+			update.resultCh <- err
+			continue
 		}
+
+		validUpdates = append(validUpdates, update)
+		validUpdateMsgs = append(validUpdateMsgs, update.msgs...)
 	}
 
-	// batch log valid messages from all updates
+	// batch log valid messages(if present) from all updates
+	if len(validUpdateMsgs) == 0 {
+		return
+	}
 	err = logMessages(validUpdateMsgs, s.log)
 	if err != nil {
 		s.state = oldState
 	}
+
 	// forward result to all the update result channels
 	// all updates with encounter the same error/success while logging
 	for _, update := range validUpdates {
 		update.resultCh <- err
 	}
-
 }
 
 type sagaUpdate struct {
