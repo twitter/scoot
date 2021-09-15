@@ -3,6 +3,7 @@ package saga
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/twitter/scoot/common/stats"
@@ -378,6 +379,9 @@ func TestSagaStats(t *testing.T) {
 	if err != nil {
 		t.Error("Expected EndSaga to not return an error", err)
 	}
+
+	// Wait for some time for updateSagaStateLoop to return before checking stats to avoid data race
+	time.Sleep(1 * time.Second)
 
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
