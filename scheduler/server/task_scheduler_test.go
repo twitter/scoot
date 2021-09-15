@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/twitter/scoot/cloud/cluster"
+	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga/sagalogs"
@@ -22,8 +23,8 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	// create a test cluster with no nodes
-	testCluster := makeTestCluster()
-	s := getDebugStatefulScheduler(testCluster)
+	uc := make(chan []cc.NodeUpdate)
+	s := getDebugStatefulScheduler(uc)
 	assignments := getTaskAssignments([]*jobState{js}, s)
 
 	if len(assignments) != 0 {
@@ -33,8 +34,8 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 
 func Test_TaskAssignment_NoTasks(t *testing.T) {
 	// create a test cluster with 5 nodes
-	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	s := getDebugStatefulScheduler(testCluster)
+	uc := initNodeUpdateChan("node1", "node2", "node3", "node4", "node5")
+	s := getDebugStatefulScheduler(uc)
 	assignments := getTaskAssignments([]*jobState{}, s)
 
 	if len(assignments) != 0 {
@@ -52,16 +53,15 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	// create a test cluster with 5 nodes
-	testCluster := makeTestCluster("node1", "node2", "node3", "node4", "node5")
-	s := getDebugStatefulScheduler(testCluster)
+	uc := initNodeUpdateChan("node1", "node2", "node3", "node4", "node5")
+	s := getDebugStatefulScheduler(uc)
 	unScheduledTasks := js.getUnScheduledTasks()
 	assignments := getTaskAssignments([]*jobState{js}, s)
 
-	if len(assignments) != min(len(unScheduledTasks), len(testCluster.nodes)) {
+	if len(assignments) != min(len(unScheduledTasks), 5) {
 		t.Errorf(`Expected as many tasks as possible to be scheduled: NumScheduled %v, 
-      Number Of Available Nodes %v, Number of Unscheduled Tasks %v`,
+      5 nodes available, Number of Unscheduled Tasks %v`,
 			len(assignments),
-			len(testCluster.nodes),
 			len(unScheduledTasks))
 	}
 }
@@ -135,7 +135,7 @@ func Test_TaskAssignment_Affinity(t *testing.T) {
 	assert.True(t, ok, "didn't find '' nodeGroup")
 }
 
-func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
+func getDebugStatefulScheduler(uc chan []cc.NodeUpdate) *statefulScheduler {
 	rfn := func() stats.StatsRegistry { return stats.NewFinagleStatsRegistry() }
 	statsReceiver, _ := stats.NewCustomStatsReceiver(rfn, 0)
 	rf := func(n cluster.Node) runner.Service {
@@ -147,7 +147,7 @@ func getDebugStatefulScheduler(tc *testCluster) *statefulScheduler {
 		RecoverJobsOnStartup: false,
 		DefaultTaskTimeout:   time.Second,
 	}
-	s := NewStatefulScheduler(tc.nodes, tc.ch,
+	s := NewStatefulScheduler(uc,
 		sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		rf,
 		sc,
