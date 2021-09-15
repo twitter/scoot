@@ -205,10 +205,9 @@ func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 // updated in a thread safe manner
 // Processes at most SagaUpdateChSize number of updates at a time
 func (s *Saga) updateSagaStateLoop() {
-	var loopLatency = s.stat.Latency(stats.SagaUpdateStateLoopLatency_ms)
+	var loopLatency = s.stat.Latency(stats.SagaUpdateStateLoopLatency_ms).Time()
 	updates := []sagaUpdate{}
 
-	loopLatency.Time()
 	for update := range s.updateCh {
 		updates = append(updates, update)
 		if len(s.updateCh) == 0 || len(updates) == common.DefaultSagaUpdateChSize {
@@ -221,7 +220,6 @@ func (s *Saga) updateSagaStateLoop() {
 			loopLatency.Time()
 		}
 	}
-	loopLatency.Stop()
 }
 
 // updateSaga updates the saga s by applying updates atomically and sending any error to the requester
