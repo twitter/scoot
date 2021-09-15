@@ -489,10 +489,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			case res := <-ingestCh:
 				switch res.(type) {
 				case error:
-					return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error ingesting results: %v", res), errors.PostExecFailureExitCode),
-						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+					log.WithFields(
+						log.Fields{
+							"tag":    cmd.Tag,
+							"jobID":  cmd.JobID,
+							"taskID": cmd.TaskID,
+						}).Errorf("Error ingesting results: %v", res)
+				default:
+					snapshotID = res.(string)
 				}
-				snapshotID = res.(string)
 			}
 			rts.outputEnd = stamp()
 			rts.invokeEnd = stamp()
