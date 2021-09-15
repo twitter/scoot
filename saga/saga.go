@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/twitter/scoot/common"
+	"github.com/twitter/scoot/common/stats"
 )
 
 // Concurrent Object Representing a Saga
@@ -23,11 +24,12 @@ type Saga struct {
 	mutex    sync.RWMutex // mutex controls access to Saga.state
 	chMutex  sync.RWMutex // controls send and close of channel
 	closed   bool
+	stat     stats.StatsReceiver
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
 // returns a Saga, or an error if one occurs
-func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
+func newSaga(sagaId string, job []byte, log SagaLog, stat stats.StatsReceiver) (*Saga, error) {
 	state, err := makeSagaState(sagaId, job)
 	if err != nil {
 		return nil, err
@@ -47,6 +49,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
 		chMutex:  sync.RWMutex{},
+		stat:     stat,
 	}
 
 	go s.updateSagaStateLoop()
@@ -56,7 +59,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 
 // Rehydrate a saga from a specified SagaState, does not write
 // to SagaLog assumes that this is a recovered saga.
-func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
+func rehydrateSaga(sagaId string, state *SagaState, log SagaLog, stat stats.StatsReceiver) *Saga {
 	updateCh := make(chan sagaUpdate, common.DefaultSagaUpdateChSize)
 	s := &Saga{
 		id:       sagaId,
@@ -65,6 +68,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
 		chMutex:  sync.RWMutex{},
+		stat:     stat,
 	}
 
 	if !state.IsSagaCompleted() {
@@ -113,6 +117,7 @@ func (s *Saga) AbortSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) StartTask(taskId string, data []byte) error {
+	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeStartTaskMessage(s.id, taskId, data)})
 }
 
@@ -125,6 +130,7 @@ func (s *Saga) StartTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndTask(taskId string, results []byte) error {
+	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeEndTaskMessage(s.id, taskId, results)})
 }
 
@@ -199,14 +205,23 @@ func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 // updated in a thread safe manner
 // Processes at most SagaUpdateChSize number of updates at a time
 func (s *Saga) updateSagaStateLoop() {
+	var loopLatency = s.stat.Latency(stats.SagaUpdateStateLoopLatency_ms)
 	updates := []sagaUpdate{}
+
+	loopLatency.Time()
 	for update := range s.updateCh {
 		updates = append(updates, update)
 		if len(s.updateCh) == 0 || len(updates) == common.DefaultSagaUpdateChSize {
+			loopLatency.Stop()
+			s.stat.Gauge(stats.SagaNumUpdatesProcessed).Update(int64(len(updates)))
+
 			s.updateSaga(updates)
+
 			updates = []sagaUpdate{}
+			loopLatency.Time()
 		}
 	}
+	loopLatency.Stop()
 }
 
 // updateSaga updates the saga s by applying updates atomically and sending any error to the requester
@@ -214,6 +229,8 @@ func (s *Saga) updateSagaStateLoop() {
 // if msg is an invalid transition, it will neither log nor update internal state
 // always returns the new SagaState that should be used, either the mutated one or a copy of the original.
 func (s *Saga) updateSaga(updates []sagaUpdate) {
+	defer s.stat.Latency(stats.SagaUpdateStateLatency_ms).Time().Stop()
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

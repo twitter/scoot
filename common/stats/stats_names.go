@@ -614,4 +614,26 @@ const (
 	BzUpdateActionSuccessCounter = "bzUpdateActionSuccessCounter"
 	BzUpdateActionFailureCounter = "bzUpdateActionFailureCounter"
 	BzUpdateActionLatency_ms     = "bzUpdateActionLatency_ms"
+
+	/****************************** Saga Metrics ****************************************/
+	/*
+		The amount of time spent in looping through the buffered update channel to accumulate
+		the updates in a batch, to be processed together
+	*/
+	SagaUpdateStateLoopLatency_ms = "sagaUpdateStateLoopLatency_ms"
+
+	/*
+		The amount of time spent in (bulk) updating the saga state and storing the messages in sagalog
+	*/
+	SagaUpdateStateLatency_ms = "sagaUpdateStateLatency_ms"
+
+	/*
+		The number of updates that were processed together by the updateSagaState loop
+	*/
+	SagaNumUpdatesProcessed = "sagaNumUpdatesProcessed"
+
+	/*
+		The amount of time spent in updating the saga state and sagalog when a task starts or ends
+	*/
+	SagaStartOrEndTaskLatency_ms = "sagaStartOrEndTaskLatency_ms"
 )

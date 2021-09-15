@@ -140,7 +140,7 @@ func TestMemorySagaGC(t *testing.T) {
 */
 func BenchmarkProcessUpdatesInMemorySagaLog(b *testing.B) {
 	slog := MakeInMemorySagaLog(1*time.Hour, 1*time.Hour)
-	sc := saga.MakeSagaCoordinator(slog)
+	sc := saga.MakeSagaCoordinator(slog, nil)
 	sagasCount := 10
 	updatesPerSaga := 10000
 

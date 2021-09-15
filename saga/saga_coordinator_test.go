@@ -2,8 +2,9 @@ package saga
 
 import (
 	"errors"
-	"github.com/golang/mock/gomock"
 	"testing"
+
+	"github.com/golang/mock/gomock"
 )
 
 func TestMakeSaga(t *testing.T) {
@@ -16,7 +17,7 @@ func TestMakeSaga(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(id, job)
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	saga, err := sc.MakeSaga(id, job)
 
 	if err != nil {
@@ -37,7 +38,7 @@ func TestMakeSagaLogError(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(id, job).Return(errors.New("Failed to Log StartSaga"))
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	saga, err := sc.MakeSaga(id, job)
 
 	if err == nil {
@@ -55,7 +56,7 @@ func TestStartup_ReturnsError(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetActiveSagas().Return(nil, errors.New("test error"))
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	ids, err := sc.Startup()
 
 	if err == nil {
@@ -73,7 +74,7 @@ func TestStartup_ReturnsIds(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetActiveSagas().Return([]string{"saga1", "saga2", "saga3"}, nil)
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	ids, err := sc.Startup()
 
 	if err != nil {
@@ -112,7 +113,7 @@ func TestRecoverSagaState(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	saga, err := sc.RecoverSagaState(sagaId, ForwardRecovery)
 
 	if err != nil {
@@ -136,7 +137,7 @@ func TestRecoverSagaState_NoMessages(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, nil)
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	saga, err := sc.RecoverSagaState(sagaId, ForwardRecovery)
 
 	if err != nil {
@@ -156,7 +157,7 @@ func TestRecoverSagaState_ReturnsError(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, errors.New("test error"))
 
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 	saga, err := sc.RecoverSagaState(sagaId, RollbackRecovery)
 
 	if err == nil {

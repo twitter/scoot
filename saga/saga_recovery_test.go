@@ -15,7 +15,7 @@ func TestRecoverState_GetMessagesReturnsError(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, errors.New("test error"))
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	state, err := recoverState(sagaId, sc)
 
@@ -36,7 +36,7 @@ func TestRecoverState_GetMessagesReturnsEmptyList(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(nil, nil)
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	state, err := recoverState(sagaId, sc)
 
@@ -62,7 +62,7 @@ func TestRecoverState_MissingStartMessage(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	state, err := recoverState(sagaId, sc)
 
@@ -89,7 +89,7 @@ func TestRecoverState_UpdateSagaStateFails(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	state, err := recoverState(sagaId, sc)
 
@@ -116,7 +116,7 @@ func TestRecoverState_SuccessfulForwardRecovery(t *testing.T) {
 
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	saga, err := sc.RecoverSagaState(sagaId, ForwardRecovery)
 	state := saga.state
@@ -192,7 +192,7 @@ func TestRecoverState_SuccessfulRollbackRecovery(t *testing.T) {
 	sagaLogMock := NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages(sagaId).Return(msgs, nil)
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage(sagaId))
-	sc := MakeSagaCoordinator(sagaLogMock)
+	sc := MakeSagaCoordinator(sagaLogMock, nil)
 
 	saga, err := sc.RecoverSagaState(sagaId, RollbackRecovery)
 	state := saga.state
