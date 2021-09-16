@@ -448,8 +448,8 @@ func (l *metricLatency) Capture() Latency {
 }
 
 func (l *metricLatency) GetPrecision() time.Duration {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return l.precision
 }
 
