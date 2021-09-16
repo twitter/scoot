@@ -8,6 +8,9 @@ package saga
 import (
 	"fmt"
 	"sync"
+
+	"github.com/twitter/scoot/common"
+	"github.com/twitter/scoot/common/stats"
 )
 
 // Concurrent Object Representing a Saga
@@ -21,11 +24,12 @@ type Saga struct {
 	mutex    sync.RWMutex // mutex controls access to Saga.state
 	chMutex  sync.RWMutex // controls send and close of channel
 	closed   bool
+	stat     stats.StatsReceiver
 }
 
 // Start a New Saga.  Logs a Start Saga Message to the SagaLog
 // returns a Saga, or an error if one occurs
-func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
+func newSaga(sagaId string, job []byte, log SagaLog, stat stats.StatsReceiver) (*Saga, error) {
 	state, err := makeSagaState(sagaId, job)
 	if err != nil {
 		return nil, err
@@ -36,7 +40,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		return nil, err
 	}
 
-	updateCh := make(chan sagaUpdate, 0)
+	updateCh := make(chan sagaUpdate, common.DefaultSagaUpdateChSize)
 
 	s := &Saga{
 		id:       sagaId,
@@ -45,6 +49,7 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
 		chMutex:  sync.RWMutex{},
+		stat:     stat,
 	}
 
 	go s.updateSagaStateLoop()
@@ -54,8 +59,8 @@ func newSaga(sagaId string, job []byte, log SagaLog) (*Saga, error) {
 
 // Rehydrate a saga from a specified SagaState, does not write
 // to SagaLog assumes that this is a recovered saga.
-func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
-	updateCh := make(chan sagaUpdate, 0)
+func rehydrateSaga(sagaId string, state *SagaState, log SagaLog, stat stats.StatsReceiver) *Saga {
+	updateCh := make(chan sagaUpdate, common.DefaultSagaUpdateChSize)
 	s := &Saga{
 		id:       sagaId,
 		log:      log,
@@ -63,6 +68,7 @@ func rehydrateSaga(sagaId string, state *SagaState, log SagaLog) *Saga {
 		updateCh: updateCh,
 		mutex:    sync.RWMutex{},
 		chMutex:  sync.RWMutex{},
+		stat:     stat,
 	}
 
 	if !state.IsSagaCompleted() {
@@ -111,6 +117,7 @@ func (s *Saga) AbortSaga() error {
 // Returns an error if it fails
 //
 func (s *Saga) StartTask(taskId string, data []byte) error {
+	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeStartTaskMessage(s.id, taskId, data)})
 }
 
@@ -123,6 +130,7 @@ func (s *Saga) StartTask(taskId string, data []byte) error {
 // Returns an error if it fails
 //
 func (s *Saga) EndTask(taskId string, results []byte) error {
+	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeEndTaskMessage(s.id, taskId, results)})
 }
 
@@ -195,19 +203,77 @@ func (s *Saga) updateSagaState(msgs []SagaMessage) error {
 // is one per saga currently executing.  This ensures all updates are applied
 // in order to a saga.  Also controls access to the SagaState so its is
 // updated in a thread safe manner
+// Processes at most SagaUpdateChSize number of updates at a time
 func (s *Saga) updateSagaStateLoop() {
+	var loopLatency = s.stat.Latency(stats.SagaUpdateStateLoopLatency_ms).Time()
+	updates := []sagaUpdate{}
+
 	for update := range s.updateCh {
-		s.updateSaga(update)
+		updates = append(updates, update)
+		if len(s.updateCh) == 0 || len(updates) == common.DefaultSagaUpdateChSize {
+			loopLatency.Stop()
+			s.stat.Gauge(stats.SagaNumUpdatesProcessed).Update(int64(len(updates)))
+
+			s.updateSaga(updates)
+
+			updates = []sagaUpdate{}
+			loopLatency.Time()
+		}
 	}
 }
 
-// updateSaga updates the saga s by applying update atomically and sending any error to the requester
-func (s *Saga) updateSaga(update sagaUpdate) {
+// updateSaga updates the saga s by applying updates atomically and sending any error to the requester
+// it checks if the message(s) is a valid transition and batch logs the messages from all updates durably to the SagaLog
+// if msg is an invalid transition, it will neither log nor update internal state
+// always returns the new SagaState that should be used, either the mutated one or a copy of the original.
+func (s *Saga) updateSaga(updates []sagaUpdate) {
+	defer s.stat.Latency(stats.SagaUpdateStateLatency_ms).Time().Stop()
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	// updateSaga will mutate state if it's a valid transition, but if we then error logging,
+	// we'll need to revert to old state
+	oldState := copySagaState(s.state)
+
 	var err error
-	s.state, err = logMessages(s.state, update.msgs, s.log)
-	update.resultCh <- err
+	var validUpdates []sagaUpdate
+	var validUpdateMsgs []SagaMessage
+
+	for _, update := range updates {
+		err = nil
+
+		// verify that the applied message(s) results in a valid state
+		if len(update.msgs) == 1 {
+			err = updateSagaState(s.state, update.msgs[0])
+		} else {
+			s.state, err = bulkUpdateSagaState(s.state, update.msgs)
+		}
+
+		// don't log messages for invalid updates
+		if err != nil {
+			update.resultCh <- err
+			continue
+		}
+
+		validUpdates = append(validUpdates, update)
+		validUpdateMsgs = append(validUpdateMsgs, update.msgs...)
+	}
+
+	// batch log valid messages(if present) from all updates
+	if len(validUpdateMsgs) == 0 {
+		return
+	}
+	err = logMessages(validUpdateMsgs, s.log)
+	if err != nil {
+		s.state = oldState
+	}
+
+	// forward result to all the update result channels
+	// all updates with encounter the same error/success while logging
+	for _, update := range validUpdates {
+		update.resultCh <- err
+	}
 }
 
 type sagaUpdate struct {
@@ -215,34 +281,16 @@ type sagaUpdate struct {
 	resultCh chan error
 }
 
-// checks the message is a valid transition and logs the specified message durably to the SagaLog
-// if msg is an invalid transition, it will neither log nor update internal state
-// always returns the new SagaState that should be used, either the mutated one or a copy of the
-// original.
-func logMessages(state *SagaState, msgs []SagaMessage, log SagaLog) (*SagaState, error) {
-	// updateSagaState will mutate state if it's a valid transition, but if we then error storing,
-	// we'll need to revert to the old state.
-	oldState := copySagaState(state)
-	// verify that the applied message results in a valid state
+// logMessages durably stores the messages in sagalog
+// if the message(s) is invalid, returns an error and an unmodified saga state
+func logMessages(msgs []SagaMessage, log SagaLog) error {
 	var err error
-	for _, msg := range msgs {
-		err = updateSagaState(state, msg)
-		if err != nil {
-			return oldState, err
-		}
-	}
-
-	// try durably storing the message
 	if len(msgs) == 1 {
 		err = log.LogMessage(msgs[0])
 	} else {
 		err = log.LogBatchMessages(msgs)
 	}
-	if err != nil {
-		return oldState, err
-	}
-
-	return state, nil
+	return err
 }
 
 // Checks the error returned by updating saga state.

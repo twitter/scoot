@@ -18,13 +18,13 @@ package stats
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 	"strings"
+	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"github.com/rcrowley/go-metrics"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 // For testing.
@@ -425,27 +425,49 @@ type metricLatency struct {
 	metrics.Histogram
 	start     time.Time
 	precision time.Duration
+	mutex     sync.RWMutex
 }
-type nilLatency struct{}
 
-func (l *metricLatency) Time() Latency { l.start = Time.Now(); return l }
-func (l *metricLatency) Stop()         { l.Update(Time.Since(l.start).Nanoseconds()) }
-func (l *metricLatency) Capture() Latency {
-	return &metricLatency{l.Histogram.Snapshot(), l.start, l.precision}
+func (l *metricLatency) Time() Latency {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.start = Time.Now()
+	return l
 }
+
+func (l *metricLatency) Stop() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.Update(Time.Since(l.start).Nanoseconds())
+}
+
+func (l *metricLatency) Capture() Latency {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return &metricLatency{l.Histogram.Snapshot(), l.start, l.precision, sync.RWMutex{}}
+}
+
 func (l *metricLatency) GetPrecision() time.Duration {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return l.precision
 }
+
 func (l *metricLatency) Precision(p time.Duration) Latency {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	if p < 1 {
 		p = 1
 	}
 	l.precision = p
 	return l
 }
+
 func newLatency() Latency {
-	return &metricLatency{Histogram: metrics.NewHistogram(metrics.NewUniformSample(1000)), precision: time.Nanosecond}
+	return &metricLatency{Histogram: metrics.NewHistogram(metrics.NewUniformSample(1000)), precision: time.Nanosecond, mutex: sync.RWMutex{}}
 }
+
+type nilLatency struct{}
 
 func (l *nilLatency) Time() Latency                   { return l }
 func (l *nilLatency) Stop()                           {}

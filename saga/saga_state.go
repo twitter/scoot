@@ -245,6 +245,23 @@ func (state *SagaState) addTaskData(taskId string, msgType SagaMessageType, data
 }
 
 /*
+ * Applies the supplied messages atomically to the supplied sagaState.
+ * Returns the mutated sate if all the messages are valid,
+ * otherwise returns the original state if any of the messages are invalid along with the error
+ */
+func bulkUpdateSagaState(state *SagaState, msgs []SagaMessage) (*SagaState, error) {
+	originalState := copySagaState(state)
+	var err error
+	for _, msg := range msgs {
+		err = updateSagaState(state, msg)
+		if err != nil {
+			return originalState, err
+		}
+	}
+	return state, nil
+}
+
+/*
  * Applies the supplied message to the supplied sagaState.
  * Mutates state directly.
  *

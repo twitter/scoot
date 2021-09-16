@@ -55,7 +55,7 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	if sl, err = MakeSagaLog(sagaLogConfig); err != nil {
 		return err
 	}
-	sagaCoordinator := saga.MakeSagaCoordinator(sl)
+	sagaCoordinator := saga.MakeSagaCoordinator(sl, *statsReceiver)
 
 	var rf func(cluster.Node) runner.Service
 	if rf, err = GetWorkerRunnerServiceFn(workers, thriftTransportFactory, binaryProtocolFactory); err != nil {

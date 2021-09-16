@@ -1,6 +1,9 @@
 package saga
 
-import log "github.com/sirupsen/logrus"
+import (
+	log "github.com/sirupsen/logrus"
+	"github.com/twitter/scoot/common/stats"
+)
 
 //
 // Saga Object which provides all Saga Functionality
@@ -8,22 +11,28 @@ import log "github.com/sirupsen/logrus"
 // which returns a saga based on its implementation.
 //
 type SagaCoordinator struct {
-	log SagaLog
+	log  SagaLog
+	stat stats.StatsReceiver
 }
 
 //
 // Make a Saga which uses the specied SagaLog interface for durable storage
 //
-func MakeSagaCoordinator(log SagaLog) SagaCoordinator {
+func MakeSagaCoordinator(log SagaLog, stat stats.StatsReceiver) SagaCoordinator {
+	if stat == nil {
+		stat = stats.NilStatsReceiver()
+	}
+
 	return SagaCoordinator{
-		log: log,
+		log:  log,
+		stat: stat,
 	}
 }
 
 // Make a Saga add it to the SagaCoordinator, if a Saga Already exists
 // with the same id, it will overwrite the already existing one.
 func (s SagaCoordinator) MakeSaga(sagaId string, job []byte) (*Saga, error) {
-	return newSaga(sagaId, job, s.log)
+	return newSaga(sagaId, job, s.log, s.stat)
 }
 
 // Read the Current SagaState from the Log, intended for status queries does not check for recovery.
@@ -64,7 +73,7 @@ func (sc SagaCoordinator) RecoverSagaState(sagaId string, recoveryType SagaRecov
 	}
 
 	// now that we've recovered the saga initialize its update path
-	saga := rehydrateSaga(sagaId, state, sc.log)
+	saga := rehydrateSaga(sagaId, state, sc.log, sc.stat)
 
 	// Check if we can safely proceed forward based on recovery method
 	// RollbackRecovery must check if in a SafeState,

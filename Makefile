@@ -148,4 +148,7 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test coverage
 
-ci: clean-data fs_util install recoverytest smoketest integrationtest test coverage clean-data
+bm: clean-procs
+	go test -timeout 120s -bench=. $$(go list ./...) -run=^Bench
+
+ci: clean-data fs_util install recoverytest smoketest integrationtest test bm coverage clean-data

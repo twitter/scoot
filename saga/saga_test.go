@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/twitter/scoot/common/stats"
 )
 
 func TestEndSaga(t *testing.T) {
@@ -17,7 +18,7 @@ func TestEndSaga(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.EndSaga()
 	if err != nil {
 		t.Error("Expected EndSaga to not return an error", err)
@@ -38,7 +39,7 @@ func TestEndSagaLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndSaga Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.EndSaga()
 
 	if err == nil {
@@ -60,7 +61,7 @@ func TestAbortSaga(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.AbortSaga()
 
 	if err != nil {
@@ -82,7 +83,7 @@ func TestAbortSagaLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log AbortSaga Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.AbortSaga()
 
 	if err == nil {
@@ -104,7 +105,7 @@ func TestStartTask(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 
 	if err != nil {
@@ -126,7 +127,7 @@ func TestStartTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartTask Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 
 	if err == nil {
@@ -149,7 +150,7 @@ func TestEndTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.EndTask("task1", nil)
 
@@ -173,7 +174,7 @@ func TestEndTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndTask Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.EndTask("task1", nil)
 
@@ -198,7 +199,7 @@ func TestStartCompTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.AbortSaga()
 	err = s.StartCompensatingTask("task1", nil)
@@ -224,7 +225,7 @@ func TestStartCompTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeAbortSagaMessage("testSaga"))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log StartCompTask Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.AbortSaga()
 	err = s.StartCompensatingTask("task1", nil)
@@ -251,7 +252,7 @@ func TestEndCompTask(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.AbortSaga()
 	err = s.StartCompensatingTask("task1", nil)
@@ -279,7 +280,7 @@ func TestEndCompTaskLogError(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(MakeStartCompTaskMessage("testSaga", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(entry).Return(errors.New("Failed to Log EndCompTask Message"))
 
-	s, err := newSaga("testSaga", nil, sagaLogMock)
+	s, err := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	err = s.StartTask("task1", nil)
 	err = s.AbortSaga()
 	err = s.StartCompensatingTask("task1", nil)
@@ -304,7 +305,7 @@ func TestMessageAfterEndSagaDoesntPanic(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
 	sagaLogMock.EXPECT().LogMessage(entry)
 
-	s, _ := newSaga("testSaga", nil, sagaLogMock)
+	s, _ := newSaga("testSaga", nil, sagaLogMock, stats.NilStatsReceiver())
 	_ = s.EndSaga()
 
 	s.StartTask("task1", nil)
@@ -342,5 +343,50 @@ func TestFatalError_CorruptedSagaLogError(t *testing.T) {
 	err := NewCorruptedSagaLogError("123", "corrupted sagalog")
 	if !FatalErr(err) {
 		t.Error("Expected CorruptedSagaLog to be a Fatal Error")
+	}
+}
+
+func TestSagaStats(t *testing.T) {
+	statsReg := stats.NewFinagleStatsRegistry()
+	regFn := func() stats.StatsRegistry { return statsReg }
+	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	sagaLogMock := NewMockSagaLog(mockCtrl)
+	sagaLogMock.EXPECT().StartSaga("testSaga", nil)
+	sagaLogMock.EXPECT().LogMessage(MakeStartTaskMessage("testSaga", "task1", nil))
+	sagaLogMock.EXPECT().LogMessage(MakeEndTaskMessage("testSaga", "task1", nil))
+	sagaLogMock.EXPECT().LogMessage(MakeEndSagaMessage("testSaga"))
+
+	s, err := newSaga("testSaga", nil, sagaLogMock, stat)
+	if err != nil {
+		t.Error("Expected newSaga to not return an error", err)
+	}
+
+	err = s.StartTask("task1", nil)
+	if err != nil {
+		t.Error("Expected StartTask to not return an error", err)
+	}
+
+	err = s.EndTask("task1", nil)
+	if err != nil {
+		t.Error("Expected EndTask to not return an error", err)
+	}
+
+	err = s.EndSaga()
+	if err != nil {
+		t.Error("Expected EndSaga to not return an error", err)
+	}
+
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.SagaUpdateStateLoopLatency_ms + ".avg":  {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SagaUpdateStateLatency_ms + ".avg":      {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SagaStartOrEndTaskLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.SagaStartOrEndTaskLatency_ms + ".count": {Checker: stats.Int64EqTest, Value: 2},
+			stats.SagaNumUpdatesProcessed:                 {Checker: stats.Int64EqTest, Value: 1},
+		}) {
+		t.Error("stats check did not pass.")
 	}
 }
