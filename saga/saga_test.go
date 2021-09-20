@@ -385,7 +385,7 @@ func TestSagaStats(t *testing.T) {
 			stats.SagaUpdateStateLatency_ms + ".avg":      {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SagaStartOrEndTaskLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
 			stats.SagaStartOrEndTaskLatency_ms + ".count": {Checker: stats.Int64EqTest, Value: 2},
-			stats.SagaNumUpdatesProcessed:                 {Checker: stats.Int64EqTest, Value: 1},
+			stats.SagaNumUpdatesProcessed + ".min":        {Checker: stats.Int64EqTest, Value: 1},
 		}) {
 		t.Error("stats check did not pass.")
 	}

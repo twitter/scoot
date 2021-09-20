@@ -212,7 +212,7 @@ func (s *Saga) updateSagaStateLoop() {
 		updates = append(updates, update)
 		if len(s.updateCh) == 0 || len(updates) == common.DefaultSagaUpdateChSize {
 			loopLatency.Stop()
-			s.stat.Gauge(stats.SagaNumUpdatesProcessed).Update(int64(len(updates)))
+			s.stat.Histogram(stats.SagaNumUpdatesProcessed).Update(int64(len(updates)))
 
 			s.updateSaga(updates)
 
