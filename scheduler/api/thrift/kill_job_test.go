@@ -49,7 +49,7 @@ func makeMockSagaCoordinator(t *testing.T) saga.SagaCoordinator {
 	sm := []saga.SagaMessage{{SagaId: "1", MsgType: saga.StartSaga}, {SagaId: "1", MsgType: saga.EndSaga}}
 	sagaLogMock.EXPECT().GetMessages(gomock.Any()).Return(sm, nil)
 
-	return saga.MakeSagaCoordinator(sagaLogMock)
+	return saga.MakeSagaCoordinator(sagaLogMock, nil)
 }
 
 func makeMockScheduler(t *testing.T) *server.MockScheduler {

@@ -177,7 +177,7 @@ func runTests(t *testing.T, testsDefs []testDef, lbs *LoadBasedAlg, rebalanceExc
 		}
 
 		cluster := &clusterState{
-			updateCh:         nil,
+			nodesUpdatesCh:   nil,
 			nodes:            nil,
 			suspendedNodes:   nil,
 			offlinedNodes:    nil,
@@ -255,7 +255,7 @@ func TestEmptyRequestor(t *testing.T) {
 		tasksByClassAndStartMap)
 
 	cluster := &clusterState{
-		updateCh:         nil,
+		nodesUpdatesCh:   nil,
 		nodes:            nil,
 		suspendedNodes:   nil,
 		offlinedNodes:    nil,
@@ -318,7 +318,7 @@ func TestRandomScenario(t *testing.T) {
 	}
 
 	cluster := &clusterState{
-		updateCh:         nil,
+		nodesUpdatesCh:   nil,
 		nodes:            nil,
 		suspendedNodes:   nil,
 		offlinedNodes:    nil,

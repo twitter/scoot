@@ -31,6 +31,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/cloud/cluster"
+	cc "github.com/twitter/scoot/cloud/cluster"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
@@ -41,10 +43,9 @@ import (
 
 type externalDeps struct {
 	// external components used by scheduler
-	initialCl       []cluster.Node
-	clUpdates       chan []cluster.NodeUpdate
+	nodesUpdatesCh  chan []cc.NodeUpdate
 	sc              saga.SagaCoordinator
-	fakeRunners     func(cluster.Node) runner.Service
+	fakeRunners     func(cc.Node) runner.Service
 	nodeToWorkerMap map[string]runner.Service
 	statsRegistry   stats.StatsRegistry
 	statsReceiver   stats.StatsReceiver
@@ -52,12 +53,15 @@ type externalDeps struct {
 	statsCancelFn   func()
 }
 
-/*
-fake cluster
-*/
-type testCluster struct {
-	ch    chan []cluster.NodeUpdate
-	nodes []cluster.Node
+type fakeFetcher struct {
+	nodes []cc.Node
+}
+
+func (ff *fakeFetcher) setNodeList(nodes []cc.Node) {
+	ff.nodes = nodes
+}
+func (ff *fakeFetcher) Fetch() ([]cc.Node, error) {
+	return ff.nodes, nil
 }
 
 type timeSummary struct {
@@ -154,8 +158,7 @@ func (st *SchedulingAlgTester) RunTest() error {
 
 	config := st.getTestConfig()
 	s := server.NewStatefulScheduler(
-		st.extDeps.initialCl,
-		st.extDeps.clUpdates,
+		st.extDeps.nodesUpdatesCh,
 		st.extDeps.sc,
 		st.extDeps.fakeRunners,
 		config,
@@ -333,17 +336,21 @@ func (st *SchedulingAlgTester) makeTimeSummary(jobDef *domain.JobDefinition, job
 }
 
 func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
+	nodes := []string{}
+	for i := 0; i < clusterSize; i++ {
+		nodes = append(nodes, fmt.Sprintf("node%d", i))
+	}
+	nodeUpdateCh := make(chan []cc.NodeUpdate, common.DefaultClusterChanSize)
+	initTestCluster(nodeUpdateCh, nodes...)
 
-	cl := st.makeTestCluster(clusterSize)
 	statsReg := stats.NewFinagleStatsRegistry()
 	latchTime := time.Minute
 	st.timeout = 2 * time.Hour
 	statsRec, cancelFn := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsReg }, latchTime)
 
 	return &externalDeps{
-		initialCl: cl.nodes,
-		clUpdates: cl.ch,
-		sc:        sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		nodesUpdatesCh: nodeUpdateCh,
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		fakeRunners: func(n cluster.Node) runner.Service {
 			return makeFakeWorker(n)
 		},
@@ -415,18 +422,6 @@ func (st *SchedulingAlgTester) recordJobEndTime(jobId string, timedOut bool) err
 	return nil
 }
 
-func (st *SchedulingAlgTester) makeTestCluster(num int) *testCluster {
-	h := &testCluster{
-		ch: make(chan []cluster.NodeUpdate, 1),
-	}
-	nodes := []cluster.Node{}
-	for i := 0; i < num; i++ {
-		nodes = append(nodes, cluster.NewIdNode(fmt.Sprintf("node%d", i)))
-	}
-	h.nodes = nodes
-	return h
-}
-
 func (st *SchedulingAlgTester) getTestConfig() server.SchedulerConfiguration {
 	return server.SchedulerConfiguration{
 		MaxRetriesPerTask:    0,
@@ -484,4 +479,22 @@ func (st *SchedulingAlgTester) writeFirstLines() {
 		st.testsEnd.Format("2006-01-02 15:04 MST"), st.classLoadPercents, st.requestorToClassMap)
 	f.Write([]byte(line))
 	f1.Write([]byte(line))
+}
+
+func initNodeUpdateChan(nodes ...string) chan []cc.NodeUpdate {
+	uc := make(chan []cc.NodeUpdate, common.DefaultClusterChanSize)
+	updates := []cc.NodeUpdate{}
+	for _, node := range nodes {
+		updates = append(updates, cc.NewAdd(cc.NewIdNode(node)))
+	}
+	uc <- updates
+	return uc
+}
+
+func initTestCluster(nodesUpdateCh chan []cc.NodeUpdate, nodes ...string) {
+	nodeUpdates := []cc.NodeUpdate{}
+	for _, n := range nodes {
+		nodeUpdates = append(nodeUpdates, cc.NewAdd(cc.NewIdNode(n)))
+	}
+	nodesUpdateCh <- nodeUpdates
 }

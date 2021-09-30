@@ -9,6 +9,7 @@ import (
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
+	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/scheduler/server"
 	"github.com/twitter/scoot/worker/client"
 )
@@ -155,19 +156,30 @@ type ClusterMemoryConfig struct {
 	Count int
 }
 
-func (c *ClusterMemoryConfig) Create() (*cluster.Cluster, error) {
+func (c *ClusterMemoryConfig) Create() (chan []cluster.NodeUpdate, error) {
 	workerNodes := make([]cluster.Node, c.Count)
 	for i := 0; i < c.Count; i++ {
 		workerNodes[i] = cluster.NewIdNode(fmt.Sprintf("inmemory%d", i))
 	}
-	return cluster.NewCluster(workerNodes, nil), nil
+	fetcher := &MemoryFetcher{nodes: workerNodes}
+	nuc, _ := cluster.NewCluster(nil, fetcher, true, 10*time.Minute, common.DefaultClusterChanSize)
+	return nuc, nil
 }
 
 // Parameters for configuring a Scoot cluster that will have locally-run components.
 type ClusterLocalConfig struct{}
 
-func (c *ClusterLocalConfig) Create() (*cluster.Cluster, error) {
+func (c *ClusterLocalConfig) Create() (chan []cluster.NodeUpdate, error) {
 	f := local.MakeFetcher("workerserver", "thrift_addr")
-	updates := cluster.MakeFetchCron(f, time.NewTicker(time.Second).C)
-	return cluster.NewCluster(nil, updates), nil
+	nuc, _ := cluster.NewCluster(nil, f, true, 100*time.Millisecond, common.DefaultClusterChanSize)
+	return nuc, nil
+}
+
+// MemoryFetcher is a fetcher that always returns a fixed set of nodes
+type MemoryFetcher struct {
+	nodes []cluster.Node
+}
+
+func (f *MemoryFetcher) Fetch() ([]cluster.Node, error) {
+	return f.nodes, nil
 }

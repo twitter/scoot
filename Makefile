@@ -84,7 +84,7 @@ smoketest: clean-procs
 	# Setup a local schedule against local workers (--strategy local.local)
 	# Then run (with go run) scootcl smoketest with 10 jobs, wait 1m
 	# We build the binaries because 'go run' won't consistently pass signals to our program.
-	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 1m
+	$(FIRSTGOPATH)/bin/setup-cloud-scoot --strategy local.local run scootcl smoketest --num_jobs 10 --timeout 2m
 
 recoverytest: clean-procs
 	# Some overlap with smoketest but focuses on sagalog recovery vs worker/checkout correctness.
@@ -148,4 +148,7 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test coverage
 
-ci: clean-data fs_util install recoverytest smoketest integrationtest test coverage clean-data
+bm: clean-procs
+	go test -timeout 120s -bench=. $$(go list ./...) -run=^Bench
+
+ci: clean-data fs_util install recoverytest smoketest integrationtest test bm coverage clean-data

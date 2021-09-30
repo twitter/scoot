@@ -11,7 +11,7 @@ import (
 
 func makeMockSagaCoord(mockCtrl *gomock.Controller) (saga.SagaCoordinator, *saga.MockSagaLog) {
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	return sagaCoord, sagaLogMock
 }
 
