@@ -11,7 +11,7 @@ import (
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common"
 	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/client"
 )
 
 // How long to keep retrying a runner req

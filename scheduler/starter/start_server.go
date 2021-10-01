@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
 	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/client"
 )
 
 type servers struct {
