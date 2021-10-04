@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -10,8 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
-	"io/ioutil"
 
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/log/hooks"
@@ -23,7 +22,7 @@ import (
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
 	"github.com/twitter/scoot/scheduler/setup/worker"
-	"github.com/twitter/scoot/workerapi"
+	workerdomain "github.com/twitter/scoot/worker/domain"
 )
 
 var tmp string
@@ -70,7 +69,7 @@ func Test_runTaskAndLog_Successful(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}).MaxTimes(1)
 	endMessageMatcher := TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
@@ -96,7 +95,7 @@ func Test_runTaskAndLog_IncludeRunningStatus(t *testing.T) {
 	sagaLogMock.EXPECT().LogMessage(TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()})
 	endMessageMatcher := TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher)
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 	err := get_testTaskRunner(s, worker.MakeSimWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
@@ -115,7 +114,7 @@ func Test_runTaskAndLog_FailedToLogStartTask(t *testing.T) {
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil)).Return(errors.New("test error"))
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
@@ -138,7 +137,7 @@ func Test_runTaskAndLog_FailedToLogEndTask(t *testing.T) {
 	endMessageMatcher := TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(endMessageMatcher).Return(errors.New("test error"))
 
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	err := get_testTaskRunner(s, worker.MakeDoneWorker(), "job1", "task1", task, false, stats.NilStatsReceiver()).run()
@@ -157,7 +156,7 @@ func Test_runTaskAndLog_TaskFailsToRun(t *testing.T) {
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	chaos := runners.NewChaosRunner(nil)
@@ -188,11 +187,11 @@ func Test_runTaskAndLog_MarkFailedTaskAsFinished(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga("job1", nil)
 
 	runStatus.Error = DeadLetterTrailer // this message is added by task_runner
-	expectedProcessStatus, _ := workerapi.SerializeProcessStatus(runStatus)
+	expectedProcessStatus, _ := workerdomain.SerializeProcessStatus(runStatus)
 	sagaLogMock.EXPECT().LogMessage(saga.MakeStartTaskMessage("job1", "task1", nil))
 	sagaLogMock.EXPECT().LogMessage(saga.MakeEndTaskMessage("job1", "task1", expectedProcessStatus))
 
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	err := get_testTaskRunner(s, chaos, "job1", "task1", task, true, stats.NilStatsReceiver()).run()
@@ -223,7 +222,7 @@ func Test_cannotGetStatusFromWorkerReturnsFlakyResult(t *testing.T) {
 	msgMatcher = TaskMessageMatcher{Type: &sagaEndTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
 	sagaLogMock.EXPECT().LogMessage(msgMatcher)
 
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	err := get_testTaskRunner(s, chaos, "job1", "task1", task, true, stats.NilStatsReceiver()).run()
@@ -240,7 +239,7 @@ func Test_runTaskWithFailedStartTask(t *testing.T) {
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	// StartTask err should result in the appropriate taskError below.
@@ -269,7 +268,7 @@ func Test_runTaskWithRunRetry(t *testing.T) {
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}
@@ -309,7 +308,7 @@ func Test_runTaskWithQueryRetry(t *testing.T) {
 
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga("job1", gomock.Any())
-	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := saga.MakeSagaCoordinator(sagaLogMock, nil)
 	s, _ := sagaCoord.MakeSaga("job1", nil)
 
 	msgMatcher := TaskMessageMatcher{Type: &sagaStartTask, JobId: "job1", TaskId: "task1", Data: gomock.Any()}

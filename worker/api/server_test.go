@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	//"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/snapshot"
 	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 /*
@@ -183,7 +183,7 @@ func setupTestEnv(useErrorExec bool) (h *handler, initDoneCh chan error, statsRe
 			},
 		)
 	}
-	log.Info("workerapi/server RunServer(), config is:", configText)
+	log.Info("worker/server RunServer(), config is:", configText)
 	// Parse Config
 	mod, err := schema.Parse([]byte(configText))
 	if err != nil {

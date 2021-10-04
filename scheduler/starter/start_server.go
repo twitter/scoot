@@ -17,7 +17,7 @@ import (
 	"github.com/twitter/scoot/scheduler/api"
 	"github.com/twitter/scoot/scheduler/scheduler/config"
 	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/client"
 )
 
 type servers struct {
@@ -55,7 +55,7 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	if sl, err = MakeSagaLog(sagaLogConfig); err != nil {
 		return err
 	}
-	sagaCoordinator := saga.MakeSagaCoordinator(sl)
+	sagaCoordinator := saga.MakeSagaCoordinator(sl, *statsReceiver)
 
 	var rf func(cluster.Node) runner.Service
 	if rf, err = GetWorkerRunnerServiceFn(workers, thriftTransportFactory, binaryProtocolFactory); err != nil {

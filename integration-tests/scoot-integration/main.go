@@ -21,7 +21,7 @@ import (
 	"github.com/twitter/scoot/scheduler"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
 	"github.com/twitter/scoot/tests/testhelpers"
-	"github.com/twitter/scoot/workerapi"
+	"github.com/twitter/scoot/worker/domain"
 )
 
 func main() {
@@ -88,7 +88,7 @@ func main() {
 		}
 	}
 
-	_, err = offlineWorker(gopath, fmt.Sprintf("localhost:%d", workerapi.WorkerPorts+1))
+	_, err = offlineWorker(gopath, fmt.Sprintf("localhost:%d", domain.WorkerPorts+1))
 	if err != nil {
 		log.Error(err)
 		testhelpers.KillAndExit1(cluster1Cmds, err)
@@ -124,7 +124,7 @@ func main() {
 		}
 	}
 
-	_, err = reinstateWorker(gopath, fmt.Sprintf("localhost:%d", workerapi.WorkerPorts+1))
+	_, err = reinstateWorker(gopath, fmt.Sprintf("localhost:%d", domain.WorkerPorts+1))
 	if err != nil {
 		testhelpers.KillAndExit1(cluster1Cmds, err)
 	}

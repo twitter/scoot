@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/workerapi"
+	"github.com/twitter/scoot/worker/domain"
 )
 
 const DefaultWorkerCount int = 5
@@ -71,7 +71,7 @@ func NewLocalWorkers(workersCfg *WorkerConfig, builder Builder, cmds *Cmds) *Loc
 		workersCfg: workersCfg,
 		builder:    builder,
 		cmds:       cmds,
-		nextPort:   workerapi.WorkerPorts,
+		nextPort:   domain.WorkerPorts,
 	}
 }
 

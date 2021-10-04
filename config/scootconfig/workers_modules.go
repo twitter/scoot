@@ -10,7 +10,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/scheduler/setup/worker"
-	"github.com/twitter/scoot/workerapi/client"
+	"github.com/twitter/scoot/worker/client"
 )
 
 type ClientTimeout time.Duration

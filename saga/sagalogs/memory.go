@@ -4,9 +4,11 @@ package sagalogs
 import (
 	"errors"
 	"fmt"
-	"github.com/twitter/scoot/saga"
 	"sync"
 	"time"
+
+	"github.com/twitter/scoot/common/stats"
+	"github.com/twitter/scoot/saga"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,8 +34,8 @@ type logData struct {
 // gcExpiration: duration after which a Saga was created, it will be deleted.
 // 	A zero duration is interpretted as "never gc" (the Log will eventually consume all memory).
 // gcInterval: duration interval at which GC runs.
-func MakeInMemorySagaCoordinator(gcExpiration time.Duration, gcInterval time.Duration) saga.SagaCoordinator {
-	return saga.MakeSagaCoordinator(MakeInMemorySagaLog(gcExpiration, gcInterval))
+func MakeInMemorySagaCoordinator(gcExpiration time.Duration, gcInterval time.Duration, stat stats.StatsReceiver) saga.SagaCoordinator {
+	return saga.MakeSagaCoordinator(MakeInMemorySagaLog(gcExpiration, gcInterval), stat)
 }
 
 // Make an InMemorySagaLog with specified GC expiration and interval duration.
@@ -57,8 +59,8 @@ func MakeInMemorySagaLog(gcExpiration time.Duration, gcInterval time.Duration) s
 }
 
 // Shorthand creator function to create a non-GCing SagaLog with Coordinator
-func MakeInMemorySagaCoordinatorNoGC() saga.SagaCoordinator {
-	return saga.MakeSagaCoordinator(MakeInMemorySagaLogNoGC())
+func MakeInMemorySagaCoordinatorNoGC(stat stats.StatsReceiver) saga.SagaCoordinator {
+	return saga.MakeSagaCoordinator(MakeInMemorySagaLogNoGC(), stat)
 }
 
 // Shorthand creator function to create a non-GCing SagaLog
@@ -73,7 +75,6 @@ func (slog *inMemorySagaLog) StartSaga(sagaId string, job []byte) error {
 
 	startMsg := saga.MakeStartSagaMessage(sagaId, job)
 	slog.sagas[sagaId] = &logData{messages: []saga.SagaMessage{startMsg}, created: time.Now()}
-
 	return nil
 }
 

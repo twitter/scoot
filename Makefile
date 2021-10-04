@@ -119,9 +119,9 @@ generate:
 	go generate ./...
 
 thrift-worker-go:
-	# Create generated code in github.com/twitter/scoot/workerapi/gen-go/... from worker.thrift
-	cd workerapi && rm -rf gen-go && thrift -I ../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift worker.thrift && cd ..
-	rm -rf workerapi/gen-go/worker/worker-remote/
+	# Create generated code in github.com/twitter/scoot/worker/api/gen-go/... from worker/api/thrift/worker.thrift
+	cd worker/domain && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift ../api/thrift/worker.thrift && cd ../..
+	rm -rf worker/domain/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
@@ -148,4 +148,7 @@ bazel-proto:
 
 dev-fullbuild: dev-dependencies generate test coverage
 
-ci: clean-data fs_util install recoverytest smoketest integrationtest test coverage clean-data
+bm: clean-procs
+	go test -timeout 120s -bench=. $$(go list ./...) -run=^Bench
+
+ci: clean-data fs_util install recoverytest smoketest integrationtest test bm coverage clean-data

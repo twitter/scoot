@@ -1,6 +1,6 @@
 // Package server provides the implementation of the Scoot Worker
 // Server, which implements the Worker API and starts the actual worker.
-package server
+package api
 
 import (
 	"reflect"
@@ -14,8 +14,8 @@ import (
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
-	domain "github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 // Creates a Worker Server

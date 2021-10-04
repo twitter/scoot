@@ -1,4 +1,4 @@
-package workerapi
+package domain
 
 import (
 	"time"
@@ -9,7 +9,7 @@ import (
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/common/thrifthelpers"
 	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 //

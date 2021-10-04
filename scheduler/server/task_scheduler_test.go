@@ -19,7 +19,7 @@ func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {
 	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
-	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
+	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil).MakeSaga(job.Id, jobAsBytes)
 	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	// create a test cluster with no nodes
@@ -49,7 +49,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 	job := domain.GenJob(testhelpers.GenJobId(testhelpers.NewRand()), 10)
 	jobAsBytes, _ := job.Serialize()
 
-	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC().MakeSaga(job.Id, jobAsBytes)
+	saga, _ := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil).MakeSaga(job.Id, jobAsBytes)
 	js := newJobState(&job, "", saga, nil, nil, nopDurationKeyExtractor)
 
 	// create a test cluster with 5 nodes
@@ -67,7 +67,7 @@ func Test_TaskAssignments_TasksScheduled(t *testing.T) {
 }
 
 func Test_TaskAssignment_Affinity(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 	cs := s.clusterState
 	// put the tasks in different jobs to make sure the first assignment has 1 task from job1 and 1 from job2
@@ -148,7 +148,7 @@ func getDebugStatefulScheduler(uc chan []cc.NodeUpdate) *statefulScheduler {
 		DefaultTaskTimeout:   time.Second,
 	}
 	s := NewStatefulScheduler(uc,
-		sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		rf,
 		sc,
 		statsReceiver,

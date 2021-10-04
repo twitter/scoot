@@ -55,7 +55,7 @@ func getDefaultSchedDeps() *schedulerDeps {
 
 	return &schedulerDeps{
 		nodesUpdatesCh: nodeUpdateCh,
-		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		rf: func(n cc.Node) runner.Service {
 			return worker.MakeInmemoryWorker(n)
 		},
@@ -106,7 +106,7 @@ func Test_StatefulScheduler_Initialize(t *testing.T) {
 }
 
 func Test_StatefulScheduler_ScheduleJobSuccess(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, statsRegistry := initializeServices(sc, true)
 
 	jobDef := domain.GenJobDef(1)
@@ -144,7 +144,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 	defer mockCtrl.Finish()
 	sagaLogMock := saga.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any()).Return(errors.New("test error"))
-	sc := saga.MakeSagaCoordinator(sagaLogMock)
+	sc := saga.MakeSagaCoordinator(sagaLogMock, nil)
 
 	s, _, statsRegistry := initializeServices(sc, true)
 
@@ -174,7 +174,7 @@ func Test_StatefulScheduler_ScheduleJobFailure(t *testing.T) {
 }
 
 func Test_StatefulScheduler_AddJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, statsRegistry := initializeServices(sc, true)
 
 	jobDef := domain.GenJobDef(2)
@@ -333,7 +333,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 	sagaLogMock.EXPECT().StartSaga(gomock.Any(), gomock.Any())
 	sagaLogMock.EXPECT().GetActiveSagas().AnyTimes()
 
-	deps.sc = saga.MakeSagaCoordinator(sagaLogMock)
+	deps.sc = saga.MakeSagaCoordinator(sagaLogMock, nil)
 
 	s := makeStatefulSchedulerDeps(deps)
 
@@ -395,7 +395,7 @@ func Test_StatefulScheduler_JobRunsToCompletion(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 
 	jobId, taskIds, _ := putJobInScheduler(1, s, "pause", "", domain.P0)
@@ -421,7 +421,7 @@ func Test_StatefulScheduler_KillStartedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 	putJobInScheduler(1, s, "pause", "", domain.P0)
 
@@ -439,7 +439,7 @@ func Test_StatefulScheduler_KillNotFoundJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, true)
 	jobId, taskIds, _ := putJobInScheduler(1, s, "", "", domain.P0)
 	s.step() // get the job in the queue
@@ -481,7 +481,7 @@ func Test_StatefulScheduler_KillFinishedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, statsRegistry := initializeServices(sc, false)
 
 	// create a job with 5 pausing tasks and get them all to InProgress state
@@ -547,7 +547,7 @@ func Test_StatefulScheduler_KillNotStartedJob(t *testing.T) {
 }
 
 func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 
 	err := s.SetSchedulerStatus(-10)
@@ -557,7 +557,7 @@ func Test_StatefulScheduler_Throttle_Error(t *testing.T) {
 	}
 }
 func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(0)
@@ -571,7 +571,7 @@ func Test_StatefulScheduler_GetThrottledStatus(t *testing.T) {
 }
 
 func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(-1)
@@ -585,7 +585,7 @@ func Test_StatefulScheduler_GetNotThrottledStatus(t *testing.T) {
 }
 
 func Test_StatefulScheduler_GetSomeThrottledStatus(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 
 	s.SetSchedulerStatus(10)
@@ -642,7 +642,7 @@ func TestUpdateAvgDuration(t *testing.T) {
 // tasksInJob = 1000:  50  iterations, ~22,000,000 ns/op
 // tasksInJob = 10000: 4   iterations, ~300,000,000 ns/op
 func BenchmarkProcessKillJobsRequests(b *testing.B) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 	tasksInJob := 10000
 
@@ -763,7 +763,7 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 
 	return &schedulerDeps{
 		nodesUpdatesCh: uc,
-		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		rf: func(n cc.Node) runner.Service {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()
@@ -837,7 +837,7 @@ func validateCompletionCounts(s *statefulScheduler, t *testing.T) {
 }
 
 func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, false)
 	s.SetClassLoadPercents(map[string]int32{"fake R1": 60, "fake R2": 40})
 	s.SetRequestorToClassMap(map[string]string{"fake R1": "fake R1", "fake R2": "fake R2"})
@@ -879,7 +879,7 @@ func Test_StatefulScheduler_RequestorCountsStats(t *testing.T) {
 }
 
 func Test_StatefulScheduler_TaskDurationOrdering_Durations(t *testing.T) {
-	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sc := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 	s, _, _ := initializeServices(sc, true)
 	s.SetClassLoadPercents(map[string]int32{"fake R1": 100})
 	s.SetRequestorToClassMap(map[string]string{"fake R1": "fake R1"})

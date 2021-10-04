@@ -11,8 +11,8 @@ import (
 	s "github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {
@@ -21,7 +21,7 @@ func Test_GetJobStatus_InternalLogError(t *testing.T) {
 
 	sagaLogMock := s.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInternalLogError("test error"))
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock, nil)
 
 	status, err := GetJobStatus("job1", sagaCoord)
 	if err == nil {
@@ -45,7 +45,7 @@ func Test_GetJobStatus_InvalidRequestError(t *testing.T) {
 
 	sagaLogMock := s.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, s.NewInvalidRequestError("test error"))
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock, nil)
 
 	status, err := GetJobStatus("job1", sagaCoord)
 	if err == nil {
@@ -69,7 +69,7 @@ func Test_GetJobStatus_NoSagaMessages(t *testing.T) {
 
 	sagaLogMock := s.NewMockSagaLog(mockCtrl)
 	sagaLogMock.EXPECT().GetMessages("job1").Return(nil, nil)
-	sagaCoord := s.MakeSagaCoordinator(sagaLogMock)
+	sagaCoord := s.MakeSagaCoordinator(sagaLogMock, nil)
 
 	status, err := GetJobStatus("job1", sagaCoord)
 	if err != nil {
@@ -183,7 +183,7 @@ func validateRunResult(resultsAsByte []byte, taskId string) bool {
 }
 
 func TestRunStatusRoundTrip(t *testing.T) {
-	sagaCoord := sagalogs.MakeInMemorySagaCoordinatorNoGC()
+	sagaCoord := sagalogs.MakeInMemorySagaCoordinatorNoGC(nil)
 
 	jobID := "foo"
 	saga, err := sagaCoord.MakeSaga(jobID, nil)
@@ -206,7 +206,7 @@ func TestRunStatusRoundTrip(t *testing.T) {
 		ExitCode:  0,
 		Error:     "",
 	}
-	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+	statusAsBytes, err := domain.SerializeProcessStatus(st)
 	if err != nil {
 		t.Fatal(err)
 	}

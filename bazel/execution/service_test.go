@@ -55,7 +55,7 @@ func TestGetOperation(t *testing.T) {
 	defer mockCtrl.Finish()
 	sc := server.NewMockScheduler(mockCtrl)
 	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
-	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
+	sagaC := saga.MakeSagaCoordinator(mockSagaLog, nil)
 	mockSagaLog.EXPECT().GetMessages(gomock.Any()).Return([]saga.SagaMessage{}, nil)
 
 	s := executionServer{
@@ -99,7 +99,7 @@ func TestCancelOperation(t *testing.T) {
 	defer mockCtrl.Finish()
 	sc := server.NewMockScheduler(mockCtrl)
 	mockSagaLog := saga.NewMockSagaLog(mockCtrl)
-	sagaC := saga.MakeSagaCoordinator(mockSagaLog)
+	sagaC := saga.MakeSagaCoordinator(mockSagaLog, nil)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	sc.EXPECT().KillJob(gomock.Any()).Return(nil).Do(func(interface{}) { wg.Done() })

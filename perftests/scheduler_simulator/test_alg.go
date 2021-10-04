@@ -350,7 +350,7 @@ func (st *SchedulingAlgTester) getExternals(clusterSize int) *externalDeps {
 
 	return &externalDeps{
 		nodesUpdatesCh: nodeUpdateCh,
-		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(),
+		sc:             sagalogs.MakeInMemorySagaCoordinatorNoGC(nil),
 		fakeRunners: func(n cluster.Node) runner.Service {
 			return makeFakeWorker(n)
 		},
