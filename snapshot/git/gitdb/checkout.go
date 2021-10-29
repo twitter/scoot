@@ -71,7 +71,7 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 		// For GitCommitSnapshot's, we use dataRepo's work tree.
 		if id == db.currentSnapID {
 			// we still clean & reset repo to get a clean working state
-			if err := cleanAndResetRepo(); err != nil {
+			if err := db.cleanAndResetRepo(); err != nil {
 				return "", err
 			}
 			log.Infof("Using cached checkout for id=%s", id)
@@ -125,7 +125,7 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 // checkoutGitCommitSnapshot checks out a commit into our work tree.
 // We could use multiple work trees, except our internal git doesn't yet have work-tree support.
 func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
-	if err := cleanAndResetRepo(); err != nil {
+	if err := db.cleanAndResetRepo(); err != nil {
 		return "", err
 	}
 	// -f overrides modified files
