@@ -68,18 +68,7 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 		// For FSSnapshots, we make a "bare checkout".
 		return db.checkoutFSSnapshot(v.SHA())
 	case KindGitCommitSnapshot:
-		// For GitCommitSnapshot's, we use dataRepo's work tree.
-		if id == db.currentSnapID {
-			log.Infof("Using cached checkout for id=%s", id)
-			return db.dataRepo.Dir(), nil
-		}
-		path, err := db.checkoutGitCommitSnapshot(v.SHA())
-		if err != nil {
-			db.currentSnapID = ""
-		} else {
-			db.currentSnapID = id
-		}
-		return path, err
+		return db.checkoutGitCommitSnapshot(v.SHA())
 	default:
 		return "", fmt.Errorf("cannot checkout value kind %v; id %v", v.Kind(), v.ID())
 	}
