@@ -4,7 +4,7 @@
 # 
 # To Generate files, run from top level (github.com/twitter/scoot) repo directory:
 #     $ make thrift-worker-go
-#     We remove workerapi/gen-go/worker/worker-remote/ due to thrift being unable to
+#     We remove worker/api/gen-go/worker/worker-remote/ due to thrift being unable to
 #     distinguish between local and included package prefixes.
 #     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 

@@ -9,8 +9,8 @@ import (
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 // Parameters for configuring connections to remote workers.
@@ -25,7 +25,7 @@ type Client interface {
 	Close() error
 
 	// Worker API Interactions
-	QueryWorker() (workerapi.WorkerStatus, error)
+	QueryWorker() (domain.WorkerStatus, error)
 	runner.Controller
 	runner.StatusQueryNower
 	runner.LegacyStatusReader
@@ -53,7 +53,7 @@ func (c *simpleClient) Dial() error {
 func (c *simpleClient) dial() (*worker.WorkerClient, error) {
 	if c.workerClient == nil {
 		if c.addr == "" {
-			c.addr = workerapi.DefaultWorker_Thrift
+			c.addr = domain.DefaultWorker_Thrift
 		}
 
 		transport, protocolFactory, err := c.dialer.Dial(c.addr)
@@ -80,11 +80,11 @@ func (c *simpleClient) Run(cmd *runner.Command) (runner.RunStatus, error) {
 		return runner.RunStatus{}, err
 	}
 
-	status, err := workerClient.Run(workerapi.DomainRunCommandToThrift(cmd))
+	status, err := workerClient.Run(domain.DomainRunCommandToThrift(cmd))
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
-	return workerapi.ThriftRunStatusToDomain(status), nil
+	return domain.ThriftRunStatusToDomain(status), nil
 }
 
 // Implements Scoot Worker API
@@ -98,7 +98,7 @@ func (c *simpleClient) Abort(runID runner.RunID) (runner.RunStatus, error) {
 	if err != nil {
 		return runner.RunStatus{}, err
 	}
-	return workerapi.ThriftRunStatusToDomain(status), nil
+	return domain.ThriftRunStatusToDomain(status), nil
 }
 
 // Release local resources.
@@ -107,17 +107,17 @@ func (c *simpleClient) Release() {
 }
 
 // Implements Scoot Worker API
-func (c *simpleClient) QueryWorker() (workerapi.WorkerStatus, error) {
+func (c *simpleClient) QueryWorker() (domain.WorkerStatus, error) {
 	workerClient, err := c.dial()
 	if err != nil {
-		return workerapi.WorkerStatus{}, err
+		return domain.WorkerStatus{}, err
 	}
 
 	status, err := workerClient.QueryWorker()
 	if err != nil {
-		return workerapi.WorkerStatus{}, err
+		return domain.WorkerStatus{}, err
 	}
-	return workerapi.ThriftWorkerStatusToDomain(status), nil
+	return domain.ThriftWorkerStatusToDomain(status), nil
 }
 
 // Implements Scoot Worker API

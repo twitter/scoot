@@ -11,7 +11,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/workerapi"
+	worker "github.com/twitter/scoot/worker/domain"
 )
 
 const DeadLetterTrailer = " -> Error(s) encountered, canceling task."
@@ -341,7 +341,7 @@ func (r *taskRunner) logTaskStatus(st *runner.RunStatus, msgType saga.SagaMessag
 	var statusAsBytes []byte
 	var err error
 	if st != nil {
-		statusAsBytes, err = workerapi.SerializeProcessStatus(*st)
+		statusAsBytes, err = worker.SerializeProcessStatus(*st)
 		if err != nil {
 			r.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
 			return err

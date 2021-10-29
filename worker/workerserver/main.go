@@ -1,5 +1,8 @@
 package main
 
+//go:generate go-bindata -pkg "config" -o ./config/config.go config
+//go:generate go fmt ./config/config.go
+
 import (
 	"flag"
 	"math/rand"
@@ -26,16 +29,16 @@ import (
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/git/repo"
 	"github.com/twitter/scoot/snapshot/store"
+	"github.com/twitter/scoot/worker/api"
+	"github.com/twitter/scoot/worker/domain"
 	"github.com/twitter/scoot/worker/workerserver/config"
-	"github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/server"
 )
 
 func main() {
 	log.AddHook(hooks.NewContextHook())
 
-	thriftAddr := flag.String("thrift_addr", workerapi.DefaultWorker_Thrift, "addr to serve thrift on")
-	httpAddr := flag.String("http_addr", workerapi.DefaultWorker_HTTP, "addr to serve http on")
+	thriftAddr := flag.String("thrift_addr", domain.DefaultWorker_Thrift, "addr to serve thrift on")
+	httpAddr := flag.String("http_addr", domain.DefaultWorker_HTTP, "addr to serve http on")
 	configFlag := flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
@@ -62,7 +65,7 @@ func main() {
 	bag.InstallModule(bundlestore.Module())
 	bag.InstallModule(endpoints.Module())
 	bag.InstallModule(runners.Module())
-	bag.InstallModule(server.Module())
+	bag.InstallModule(api.Module())
 	bag.InstallModule(bazel.Module())
 	bag.PutMany(
 		func() endpoints.StatScope { return "workerserver" },
@@ -137,5 +140,5 @@ func main() {
 	)
 
 	log.Info("Serving thrift on", *thriftAddr) //It's hard to access the thriftAddr value downstream, print it here.
-	server.RunServer(bag, schema, workerConfigText)
+	api.RunServer(bag, schema, workerConfigText)
 }

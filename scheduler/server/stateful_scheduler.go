@@ -22,7 +22,7 @@ import (
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/workerapi"
+	worker "github.com/twitter/scoot/worker/domain"
 )
 
 const (
@@ -1251,7 +1251,7 @@ func (s *statefulScheduler) abortTask(jobState *jobState, task *taskState, logFi
 	} else if task.Status == domain.NotStarted {
 		st := runner.AbortStatus("", tags.LogTags{JobID: jobState.Job.Id, TaskID: task.TaskId})
 		st.Error = UserRequestedErrStr
-		statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+		statusAsBytes, err := worker.SerializeProcessStatus(st)
 		if err != nil {
 			s.stat.Counter(stats.SchedFailedTaskSerializeCounter).Inc(1) // TODO errata metric - remove if unused
 		}

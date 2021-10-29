@@ -11,8 +11,8 @@ import (
 	s "github.com/twitter/scoot/saga"
 	"github.com/twitter/scoot/saga/sagalogs"
 	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/workerapi"
-	"github.com/twitter/scoot/workerapi/gen-go/worker"
+	"github.com/twitter/scoot/worker/domain"
+	"github.com/twitter/scoot/worker/domain/gen-go/worker"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {
@@ -206,7 +206,7 @@ func TestRunStatusRoundTrip(t *testing.T) {
 		ExitCode:  0,
 		Error:     "",
 	}
-	statusAsBytes, err := workerapi.SerializeProcessStatus(st)
+	statusAsBytes, err := domain.SerializeProcessStatus(st)
 	if err != nil {
 		t.Fatal(err)
 	}
