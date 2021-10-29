@@ -150,6 +150,7 @@ func (db *DB) cleanAndResetRepo() error {
 	if _, err := db.dataRepo.Run(resetCmd...); err != nil {
 		return errors.NewError(fmt.Errorf("Unable to run git %v: %v", resetCmd, err), errors.ResetFailureExitCode)
 	}
+	return nil
 }
 
 func (db *DB) releaseCheckout(path string) error {
