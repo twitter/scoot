@@ -70,6 +70,10 @@ func (db *DB) checkout(id snap.ID) (path string, err error) {
 	case KindGitCommitSnapshot:
 		// For GitCommitSnapshot's, we use dataRepo's work tree.
 		if id == db.currentSnapID {
+			// we still clean & reset repo to get a clean working state
+			if err := cleanAndResetRepo(); err != nil {
+				return "", err
+			}
 			log.Infof("Using cached checkout for id=%s", id)
 			return db.dataRepo.Dir(), nil
 		}
@@ -121,12 +125,8 @@ func (db *DB) checkoutFSSnapshot(sha string) (path string, err error) {
 // checkoutGitCommitSnapshot checks out a commit into our work tree.
 // We could use multiple work trees, except our internal git doesn't yet have work-tree support.
 func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
-	// -d removes directories. -x ignores gitignore and removes everything.
-	// -f is force. -f the second time removes directories even if they're git repos themselves
-	cleanCmd := []string{"clean", "-f", "-f", "-d", "-x"}
-	if _, err := db.dataRepo.Run(cleanCmd...); err != nil {
-		return "", errors.NewError(fmt.Errorf("Unable to run git %v: %v", cleanCmd, err), errors.CleanFailureExitCode)
-
+	if err := cleanAndResetRepo(); err != nil {
+		return "", err
 	}
 	// -f overrides modified files
 	// -B resets or creates the named branch when checking out the given sha.
@@ -137,6 +137,19 @@ func (db *DB) checkoutGitCommitSnapshot(sha string) (path string, err error) {
 		return "", errors.NewError(fmt.Errorf("Unable to run git %v: %v", checkoutCmd, err), errors.CheckoutFailureExitCode)
 	}
 	return db.dataRepo.Dir(), nil
+}
+
+func (db *DB) cleanAndResetRepo() error {
+	// -d removes directories. -x ignores gitignore and removes everything.
+	// -f is force. -f the second time removes directories even if they're git repos themselves
+	cleanCmd := []string{"clean", "-f", "-f", "-d", "-x"}
+	if _, err := db.dataRepo.Run(cleanCmd...); err != nil {
+		return errors.NewError(fmt.Errorf("Unable to run git %v: %v", cleanCmd, err), errors.CleanFailureExitCode)
+	}
+	resetCmd := []string{"reset", "--hard", "HEAD"}
+	if _, err := db.dataRepo.Run(resetCmd...); err != nil {
+		return errors.NewError(fmt.Errorf("Unable to run git %v: %v", resetCmd, err), errors.ResetFailureExitCode)
+	}
 }
 
 func (db *DB) releaseCheckout(path string) error {

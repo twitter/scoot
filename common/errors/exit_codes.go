@@ -14,6 +14,7 @@ const (
 	ReadFileAllFailureExitCode     = 215
 	ExportGitCommitFailureExitCode = 216
 	DBInitFailureExitCode          = 217
+	ResetFailureExitCode           = 218
 
 	LogRefCreationFailureExitCode = 220
 
