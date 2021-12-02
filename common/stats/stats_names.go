@@ -430,10 +430,18 @@ const (
 
 	/*
 		the amount of worker's memory currently consumed by the current command (and its subprocesses)
-		TODO- verify with Ryan that this description is correct
-		scope is osexecer - change to worker?
 	*/
 	WorkerMemory = "memory"
+
+	/*
+		the worker memory not released when the bazel command is done
+	*/
+	WorkerBazelMemByteAccumGauge = "memoryNotReleasedAfterBazel(bytes)"
+
+	/*
+		the worker memory not released when the pants command is done
+	*/
+	WorkerPantsMemByteAccumGauge = "memoryNotReleasedAfterPants(bytes)"
 
 	/*
 		A gauge used to indicate if the worker is currently running a task or if is idling

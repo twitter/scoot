@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,6 +17,8 @@ import (
 	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
+	mem_os "github.com/twitter/scoot/common/os"
+	mem_exec "github.com/twitter/scoot/common/os/exec"
 	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
@@ -26,6 +29,9 @@ import (
 )
 
 // invoke.go: Invoker runs a Scoot command.
+
+var memNotFreedByteAlertThreshold = 1000000 // TODO should we use a value other than 1M?
+var processesForMemMonitor = []string{"bazel", "pants"}
 
 // NewInvoker creates an Invoker that will use the supplied helpers
 func NewInvoker(
@@ -39,19 +45,21 @@ func NewInvoker(
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID}
+	mem_execer := mem_exec.NewOsExec()
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID, mem_execer: mem_execer}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec       execer.Execer
+	exec       execer.Execer // execer for running tasks as killable commands
 	filerMap   runner.RunTypeMap
 	output     runner.OutputCreator
 	stat       stats.StatsReceiver
 	dirMonitor *stats.DirsMonitor
 	rID        runner.RunnerID
+	mem_execer mem_exec.OsExec
 }
 
 // Run runs cmd
@@ -100,6 +108,8 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
 
+	startMem := inv.getWorkerCurrentMem()
+
 	// Determine RunType from Command SnapshotID
 	// This invoker supports RunTypeScoot and RunTypeBazel
 	var runType runner.RunType
@@ -113,6 +123,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			errors.NewError(fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType), errors.PreProcessingFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
+
+	// monitor memory not released by the processing of the current task
+	defer inv.monitorTaskMemoryAccum(cmd, id, runType, startMem)
 
 	// Bazel requests - fetch command argv/env from CAS
 	// We can also receive a cached result here, in which case we skip invocation
@@ -594,6 +607,50 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		return failedStatus
 	}
+}
+
+// getWorkerCurrentMem get the sum of the memory consumption for all processes owned by the current user
+func (inv *Invoker) getWorkerCurrentMem() int {
+	memGetter := mem_os.NewMemory(inv.mem_execer)
+	mem, err := memGetter.GetUserCurrentMem()
+	if err != nil {
+		log.Errorf("couldn't get user memory consumption:%s", err)
+		return 0
+	}
+	return mem
+}
+
+// monitorTaskMemoryAccum - record amount of memory allocated for this task, but not released.  This assumes all of the
+// worker's memory consumption can be found via processes owned by the current user
+func (inv *Invoker) monitorTaskMemoryAccum(cmd *runner.Command, id runner.RunID, runType runner.RunType, startMem int) {
+	endMem := inv.getWorkerCurrentMem()
+	memDelta := endMem - startMem
+	// record memory not released (minimum value recorded is 0)
+	if runType == runner.RunTypeBazel {
+		inv.stat.Gauge(stats.WorkerBazelMemByteAccumGauge).Update(int64(math.Max(float64(memDelta), 0.0)))
+		inv.stat.Gauge(stats.WorkerPantsMemByteAccumGauge).Update(int64(0))
+	} else {
+		inv.stat.Gauge(stats.WorkerPantsMemByteAccumGauge).Update(int64(math.Max(float64(memDelta), 0.0)))
+		inv.stat.Gauge(stats.WorkerBazelMemByteAccumGauge).Update(int64(0))
+	}
+	// if the memory that was not released by the current task is over threshold,
+	// log the task's info and amount of memory it is still holding.  The objective is to provide information
+	// in the logs to recognize scenarios (task, snapshot) that are consuming and not releasing memory
+	if memDelta > memNotFreedByteAlertThreshold {
+		log.WithFields(
+			log.Fields{
+				"runID":      id,
+				"cmd":        cmd.String(),
+				"tag":        cmd.Tag,
+				"jobID":      cmd.JobID,
+				"taskID":     cmd.TaskID,
+				"snapshotID": cmd.SnapshotID,
+			}).Errorf("%d (bytes) memory was not released at end of command", memDelta)
+	}
+}
+
+func (inv *Invoker) setMemExecer(execer mem_exec.OsExec) {
+	inv.mem_execer = execer
 }
 
 // stage output files to single directory for snapshot ingestion

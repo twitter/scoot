@@ -1,6 +1,7 @@
 package runners
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/log/hooks"
+	mem_exec "github.com/twitter/scoot/common/os/exec"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
@@ -230,6 +232,38 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
+func TestMemAccumMonitor(t *testing.T) {
+	stat, statsReg := setupTest()
+	e := execers.NewDoneExecer()
+	tmp, _ := ioutil.TempDir("", "")
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	inv := NewInvoker(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID)
+	inv.setMemExecer(MakeUserMemoryFakeExecer(t))
+	cmd := &runner.Command{Argv: []string{}, SnapshotID: "fakeSnapshotId", Timeout: 50 * time.Millisecond}
+
+	// test accum bazel memory consumption
+	inv.monitorTaskMemoryAccum(cmd, runner.RunID("fakeRunID"), runner.RunTypeBazel, 10)
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerBazelMemByteAccumGauge: {Checker: stats.Int64EqTest, Value: 1111101},
+			stats.WorkerPantsMemByteAccumGauge: {Checker: stats.Int64EqTest, Value: 0},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+
+	// test accum pants memory consumption
+	inv.setMemExecer(MakeUserMemoryFakeExecer(t))
+	inv.monitorTaskMemoryAccum(cmd, runner.RunID("fakeRunID"), runner.RunTypeScoot, 100)
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerBazelMemByteAccumGauge: {Checker: stats.Int64EqTest, Value: 0},
+			stats.WorkerPantsMemByteAccumGauge: {Checker: stats.Int64EqTest, Value: 1111011},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+}
+
 func newRunner() (runner.Service, *execers.SimExecer) {
 	sim := execers.NewSimExecer()
 
@@ -255,4 +289,22 @@ func setupTest() (stats.StatsReceiver, stats.StatsRegistry) {
 	stat, _ := stats.NewCustomStatsReceiver(regFn, 0)
 
 	return stat, statsReg
+}
+
+func MakeUserMemoryFakeExecer(t *testing.T) *mem_exec.ValidatingExecer {
+	user := os.Getenv("USER")
+	ve := mem_exec.NewValidatingExecer(t, [][]string{{"ps", "-eo", fmt.Sprintf("user:%d,rss=", len(user)), "|", "grep", user, "|", "tr", "'\n'", "';'', '|', 'sed', ''s,;$,,'"}})
+	psOut := []byte("scoot-s+  1;scoot-s+  10;scoot-s+  100;scoot-s+  1000;scoot-s+  10000;scoot-s+  100000;scoot-s+  1000000")
+	actionMap := map[int]func(cmd mem_exec.Cmd) error{
+		0: func(cmd mem_exec.Cmd) error {
+			tCmd, ok := cmd.(*mem_exec.ValidatingCmd)
+			if !ok {
+				return fmt.Errorf("expected cmd to be *twexec.ValidatingCmd, instead it is %T.  The test is set up incorrectly", cmd)
+			}
+			tCmd.GetStdout().Write(psOut)
+			return nil
+		},
+	}
+	ve.SetFakeActions(actionMap)
+	return ve
 }
