@@ -3,11 +3,14 @@ package os
 import (
 	"bytes"
 	"fmt"
+	"os/user"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/twitter/scoot/common/log/tags"
+	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner/execer"
 
 	log "github.com/sirupsen/logrus"
@@ -26,7 +29,7 @@ func NewBoundedTestExecer(memCap execer.Memory, pg procGetter) *osExecer {
 // Tests that single process memory usage is counted
 func TestOsExecerMemUsage(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss)}}
+	pg := &testProcGetter{procs: []string{fmt.Sprintf("fakeUser 1 1 1 %d", rss)}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*bytesToKB) || err != nil {
@@ -37,7 +40,7 @@ func TestOsExecerMemUsage(t *testing.T) {
 // Tests that memory of processes spawned by a process in original process's process group are counted
 func TestParentProcGroup(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 2 2 %d", rss)}}
+	pg := &testProcGetter{procs: []string{fmt.Sprintf("fakeUser 1 1 1 %d", rss), fmt.Sprintf("fakeUser 2 1 1 %d", rss), fmt.Sprintf("fakeUser 3 2 2 %d", rss)}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
@@ -48,11 +51,33 @@ func TestParentProcGroup(t *testing.T) {
 // Tests that memory of processes within process group are counted
 func TestProcGroup(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss)}}
+	pg := &testProcGetter{procs: []string{fmt.Sprintf("fakeUser 1 1 1 %d", rss), fmt.Sprintf("fakeUser 2 1 1 %d", rss), fmt.Sprintf("fakeUser 3 1 2 %d", rss)}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
+
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem", err, mem)
+	}
+}
+
+// Tests that user memory is accumulated properly
+func TestUserMem(t *testing.T) {
+	rss := 10
+	user, _ := user.Current()
+
+	statsRegistry := stats.NewFinagleStatsRegistry()
+	statsReceiver, _ := stats.NewCustomStatsReceiver(func() stats.StatsRegistry { return statsRegistry }, 0)
+
+	pg := &testProcGetter{procs: []string{
+		fmt.Sprintf("%s 1 1 1 %d", user.Username, rss),
+		fmt.Sprintf("fakeUser  2 1 1 %d", rss),
+		fmt.Sprintf("%s 3 1 2 %d", user.Username, rss)}}
+	monMemAccum(5, statsReceiver, pg, "fake/Command", tags.LogTags{JobID: "fakeJob", TaskID: "fakeTask", Tag: "fakeTag"})
+	if !stats.StatsOk("", statsRegistry, t,
+		map[string]stats.Rule{
+			fmt.Sprintf("%s%s", stats.WorkerMemByteAccumGauge, "Command"): {Checker: stats.Int64EqTest, Value: 15},
+		}) {
+		t.Fatal("stats check did not pass.")
 	}
 }
 
@@ -60,7 +85,10 @@ func TestProcGroup(t *testing.T) {
 func TestUnrelatedProcs(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{
-		fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss), fmt.Sprintf("100 100 100 100")}}
+		fmt.Sprintf("fakeUser 1 1 1 %d", rss),
+		fmt.Sprintf("fakeUser 2 1 1 %d", rss),
+		fmt.Sprintf("fakeUser 3 1 2 %d", rss),
+		fmt.Sprintf("fakeUser 100 100 100 100")}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
@@ -72,15 +100,15 @@ func TestUnrelatedProcs(t *testing.T) {
 func TestParentProcGroupAndChildren(t *testing.T) {
 	rss := 10
 	pg := &testProcGetter{procs: []string{
-		fmt.Sprintf("0  0      0  %d", rss), fmt.Sprintf("1   0 1 %d", rss),
-		fmt.Sprintf("2 1       1 %d", rss), fmt.Sprintf("3  2    1      %d", rss),
-		fmt.Sprintf("4  3   3 %d", rss), fmt.Sprintf("5  2   3 %d", rss),
-		fmt.Sprintf("6  5   5 %d", rss), fmt.Sprintf("100    0   0  %d ", rss),
-		fmt.Sprintf("   101   100  100  %d", rss), fmt.Sprintf("  1000   1000      1001 %d   ", rss)}}
+		fmt.Sprintf("fakeUser 0  0      0  %d", rss), fmt.Sprintf("fakeUser 1   0 1 %d", rss),
+		fmt.Sprintf("fakeUser 2 1       1 %d", rss), fmt.Sprintf("fakeUser 3  2    1      %d", rss),
+		fmt.Sprintf("fakeUser 4  3   3 %d", rss), fmt.Sprintf("fakeUser 5  2   3 %d", rss),
+		fmt.Sprintf("fakeUser 6  5   5 %d", rss), fmt.Sprintf("fakeUser 100    0   0  %d ", rss),
+		fmt.Sprintf("fakeUser    101   100  100  %d", rss), fmt.Sprintf("fakeUser   1000   1000      1001 %d   ", rss)}}
 	e := NewBoundedTestExecer(execer.Memory(0), pg)
 	mem, err := e.memUsage(1)
 	if mem != execer.Memory(rss*9*bytesToKB) || err != nil {
-		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.allProcesses, pg.processGroups, pg.parentProcesses)
+		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.pm.byPID, pg.pm.byGroupPID, pg.pm.byParentPID)
 	}
 }
 
@@ -148,7 +176,7 @@ func TestAbortCatch(t *testing.T) {
 	}
 
 	proc.Abort()
-	usage, err = e.memUsage(pid)
+	usage, _ = e.memUsage(pid)
 	if usage != 0 {
 		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
@@ -165,18 +193,10 @@ func TestAbortCatch(t *testing.T) {
 
 type testProcGetter struct {
 	procs []string // pid, pgid, ppid, rss format
+	pm    processMaps
 	osProcGetter
-	allProcesses    map[int]proc
-	processGroups   map[int][]proc
-	parentProcesses map[int][]proc
 }
 
-func (pg *testProcGetter) getProcs() (
-	allProcesses map[int]proc, processGroups map[int][]proc,
-	parentProcesses map[int][]proc, err error) {
-	ap, pgs, pps, err := pg.parseProcs(pg.procs)
-	pg.allProcesses = ap
-	pg.processGroups = pgs
-	pg.parentProcesses = pps
-	return ap, pgs, pps, err
+func (pg *testProcGetter) getProcs() (processMaps, error) {
+	return pg.osProcGetter.parseProcs(pg.procs)
 }

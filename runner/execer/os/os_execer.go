@@ -8,6 +8,8 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,10 +23,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var memNotFreedMemAlertThreshold = 1000000 // TODO should we use a value other than 1M?
+
+type processMaps struct {
+	byPID       map[int]proc
+	byGroupPID  map[int][]proc
+	byParentPID map[int][]proc
+	byUser      map[string][]proc
+}
+
 // Used for mocking memCap monitoring
 type procGetter interface {
-	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
-	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
+	getProcs() (processMaps, error)
+	parseProcs([]string) (processMaps, error)
 }
 
 type WriterDelegater interface {
@@ -58,6 +69,7 @@ type osProcess struct {
 type osProcGetter struct{}
 
 type proc struct {
+	user string
 	pid  int
 	pgid int
 	ppid int
@@ -76,6 +88,14 @@ func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer 
 func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 	if len(command.Argv) == 0 {
 		return nil, errors.New("No command specified.")
+	}
+
+	var startMem int
+	var err error
+	startMem, err = getUserMemUsage(e.pg)
+	if err != nil {
+		log.Errorf("error getting starting memory usage, cannot monitor memory accumulation. %s", err)
+		startMem = -1
 	}
 
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
@@ -129,14 +149,14 @@ func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 
 	proc := &osProcess{cmd: cmd, wg: &wg, ats: AbortTimeoutSec, LogTags: command.LogTags}
 	if e.memCap > 0 {
-		go e.monitorMem(proc, command.MemCh)
+		go e.monitorMem(proc, command.MemCh, startMem)
 	}
 	return proc, nil
 }
 
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
-func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
+func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus, startMem int) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -149,7 +169,10 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 				"taskID": p.TaskID,
 			}).Error("Error finding pgid")
 	} else {
-		defer cleanupProcs(pgid)
+		defer func() {
+			cleanupProcs(pgid)
+			monMemAccum(startMem, e.stat, e.pg, p.cmd.Args[0], p.LogTags)
+		}()
 	}
 	thresholdsIdx := 0
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
@@ -248,14 +271,14 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 
 // Sums memory usage for a given process, including usage by related processes
 func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
+	pm, err := e.pg.getProcs()
 	if err != nil {
 		return 0, err
 	}
-	if _, ok := allProcesses[pid]; !ok {
+	if _, ok := pm.byPID[pid]; !ok {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
 	}
-	procGroupID := allProcesses[pid].pgid
+	procGroupID := pm.byPID[pid].pgid
 	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
 	// introduces non-deterministic flaky behavior wrt memUsage summation. We add related procs to the relatedProcesses
 	// slice iff they aren't present in relatedProcessesMap
@@ -263,9 +286,9 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	relatedProcessesMap := make(map[int]proc)
 	total := 0
 	// Seed relatedProcesses with all procs from pid's process group
-	for idx := 0; idx < len(processGroups[procGroupID]); idx += 1 {
-		p := processGroups[procGroupID][idx]
-		relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+	for idx := 0; idx < len(pm.byGroupPID[procGroupID]); idx += 1 {
+		p := pm.byGroupPID[procGroupID][idx]
+		relatedProcesses = append(relatedProcesses, pm.byPID[p.pid])
 		relatedProcessesMap[p.pid] = p
 	}
 
@@ -273,11 +296,11 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 	for i := 0; i < len(relatedProcesses); i += 1 {
 		rp := relatedProcesses[i]
 		procPid := rp.pid
-		for j := 0; j < len(parentProcesses[procPid]); j += 1 {
-			p := parentProcesses[procPid][j]
+		for j := 0; j < len(pm.byParentPID[procPid]); j += 1 {
+			p := pm.byParentPID[procPid][j]
 			// Make sure it isn't already present in map
 			if _, ok := relatedProcessesMap[p.pid]; !ok {
-				relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
+				relatedProcesses = append(relatedProcesses, pm.byPID[p.pid])
 				relatedProcessesMap[p.pid] = p
 			}
 		}
@@ -291,39 +314,39 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 }
 
 // Get a full list of processes running, including their pid, pgid, ppid, and memory usage
-func (pg *osProcGetter) getProcs() (
-	allProcesses map[int]proc, processGroups map[int][]proc,
-	parentProcesses map[int][]proc, err error) {
-	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
+func (pg *osProcGetter) getProcs() (processMaps, error) {
+	cmd := "ps -e -o user= -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
 	if err != nil {
-		return nil, nil, nil, err
+		return processMaps{}, err
 	}
 	procs := strings.Split(string(b), ";")
 	return pg.parseProcs(procs)
 }
 
 // Format processes into pgid and ppid groups for summation of memory usage
-func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, processGroups map[int][]proc,
-	parentProcesses map[int][]proc, err error) {
-	allProcesses = make(map[int]proc)
-	processGroups = make(map[int][]proc)
-	parentProcesses = make(map[int][]proc)
+func (pg *osProcGetter) parseProcs(procs []string) (processMaps, error) {
+	pm := processMaps{
+		byPID:       map[int]proc{},
+		byGroupPID:  map[int][]proc{},
+		byParentPID: map[int][]proc{},
+		byUser:      map[string][]proc{}}
 	for idx := 0; idx < len(procs); idx += 1 {
 		var p proc
-		n, err := fmt.Sscanf(procs[idx], "%d %d %d %d", &p.pid, &p.pgid, &p.ppid, &p.rss)
+		n, err := fmt.Sscanf(procs[idx], "%s %d %d %d %d", &p.user, &p.pid, &p.pgid, &p.ppid, &p.rss)
 		if err != nil {
-			return nil, nil, nil, err
+			return processMaps{}, err
 		}
-		if n != 4 {
-			return nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
+		if n != 5 {
+			return processMaps{}, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
 		}
-		allProcesses[p.pid] = p
-		processGroups[p.pgid] = append(processGroups[p.pgid], p)
-		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
+		pm.byPID[p.pid] = p
+		pm.byGroupPID[p.pgid] = append(pm.byGroupPID[p.pgid], p)
+		pm.byParentPID[p.ppid] = append(pm.byParentPID[p.ppid], p)
+		pm.byUser[p.user] = append(pm.byUser[p.user], p)
 	}
-	return allProcesses, processGroups, parentProcesses, nil
+	return pm, nil
 }
 
 // Wait for the process to finish.
@@ -577,5 +600,52 @@ func cleanupProcs(pgid int) (err error) {
 				"error": err,
 			}).Error("Error cleaning up pgid")
 	}
+
 	return err
+}
+
+// getUserCurrentMemUsage compute the memory (rss) used by all processes owned by the current user
+func getUserMemUsage(pg procGetter) (int, error) {
+	pm, err := pg.getProcs()
+	if err != nil {
+		return 0, err
+	}
+	cUser, err := user.Current()
+	if err != nil {
+		return 0, err
+	}
+
+	// compute the total user's memory usage
+	totalMem := 0
+	for _, proc := range pm.byUser[cUser.Username] {
+		totalMem += proc.rss
+	}
+	return totalMem, nil
+}
+
+// monMemAccum monitor total user memory increase from prior to starting the command
+// if the increase is over a notFreedMemory threshold, log the event with the task id information
+func monMemAccum(startMem int, stat stats.StatsReceiver, pg procGetter, cmd string, tags tags.LogTags) {
+	endMem, err := getUserMemUsage(pg)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"tag":    tags.Tag,
+			"jobID":  tags.JobID,
+			"taskID": tags.TaskID,
+		}).Errorf("error getting ending memory usage, cannot monitor memory accumulation. %s", err)
+		return
+	}
+	notFreedMem := endMem - startMem
+	baseCmd := filepath.Base(cmd)
+	if notFreedMem > 0 {
+		stat.Gauge(fmt.Sprintf("%s%s", stats.WorkerMemByteAccumGauge, baseCmd)).Update(int64(notFreedMem))
+	}
+
+	if notFreedMem > memNotFreedMemAlertThreshold {
+		log.WithFields(log.Fields{
+			"tag":    tags.Tag,
+			"jobID":  tags.JobID,
+			"taskID": tags.TaskID,
+		}).Errorf("Task did not release %d memory (bytes)", notFreedMem)
+	}
 }

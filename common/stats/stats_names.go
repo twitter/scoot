@@ -434,14 +434,9 @@ const (
 	WorkerMemory = "memory"
 
 	/*
-		the worker memory not released when the bazel command is done
+		the worker memory not released when the command is done
 	*/
-	WorkerBazelMemByteAccumGauge = "memoryNotReleasedAfterBazel(bytes)"
-
-	/*
-		the worker memory not released when the pants command is done
-	*/
-	WorkerPantsMemByteAccumGauge = "memoryNotReleasedAfterPants(bytes)"
+	WorkerMemByteAccumGauge = "memoryBytesNotReleased"
 
 	/*
 		A gauge used to indicate if the worker is currently running a task or if is idling
