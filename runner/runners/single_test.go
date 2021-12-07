@@ -112,7 +112,7 @@ func TestMemCap(t *testing.T) {
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
 	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
 	tmp, _ := ioutil.TempDir("", "")
-	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
+	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), execer.MemoryLeakThreshold(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID)

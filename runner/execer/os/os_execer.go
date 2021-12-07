@@ -23,8 +23,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var memNotFreedMemAlertThreshold = 1000000 // TODO should we use a value other than 1M?
-
 type processMaps struct {
 	byPID       map[int]proc
 	byGroupPID  map[int][]proc
@@ -50,9 +48,10 @@ type WriterDelegater interface {
 // Implements runner/execer.Execer
 type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap. Ignored if zero.
-	memCap execer.Memory
-	stat   stats.StatsReceiver
-	pg     procGetter
+	memCap           execer.Memory
+	memLeakThreshold execer.MemoryLeakThreshold
+	stat             stats.StatsReceiver
+	pg               procGetter
 }
 
 // Implements runner/execer.Process
@@ -80,8 +79,8 @@ func NewExecer() *osExecer {
 	return &osExecer{pg: &osProcGetter{}}
 }
 
-func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
+func NewBoundedExecer(memCap execer.Memory, memLeak execer.MemoryLeakThreshold, stat stats.StatsReceiver) *osExecer {
+	return &osExecer{memCap: memCap, memLeakThreshold: memLeak, stat: stat.Scope("osexecer"), pg: &osProcGetter{}}
 }
 
 // Start a command, monitor its memory, and return an &osProcess wrapper for it
@@ -90,9 +89,7 @@ func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 		return nil, errors.New("No command specified.")
 	}
 
-	var startMem int
-	var err error
-	startMem, err = getUserMemUsage(e.pg)
+	startMem, err := getUserMemUsage(e.pg)
 	if err != nil {
 		log.Errorf("error getting starting memory usage, cannot monitor memory accumulation. %s", err)
 		startMem = -1
@@ -171,7 +168,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus, sta
 	} else {
 		defer func() {
 			cleanupProcs(pgid)
-			monMemAccum(startMem, e.stat, e.pg, p.cmd.Args[0], p.LogTags)
+			monMemAccum(startMem, e.memLeakThreshold, e.stat, e.pg, p.cmd.Args[0], p.LogTags)
 		}()
 	}
 	thresholdsIdx := 0
@@ -625,7 +622,7 @@ func getUserMemUsage(pg procGetter) (int, error) {
 
 // monMemAccum monitor total user memory increase from prior to starting the command
 // if the increase is over a notFreedMemory threshold, log the event with the task id information
-func monMemAccum(startMem int, stat stats.StatsReceiver, pg procGetter, cmd string, tags tags.LogTags) {
+func monMemAccum(startMem int, memLeakThreshold execer.MemoryLeakThreshold, stat stats.StatsReceiver, pg procGetter, cmd string, tags tags.LogTags) {
 	endMem, err := getUserMemUsage(pg)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -641,7 +638,7 @@ func monMemAccum(startMem int, stat stats.StatsReceiver, pg procGetter, cmd stri
 		stat.Gauge(fmt.Sprintf("%s%s", stats.WorkerMemByteAccumGauge, baseCmd)).Update(int64(notFreedMem))
 	}
 
-	if notFreedMem > memNotFreedMemAlertThreshold {
+	if execer.MemoryLeakThreshold(notFreedMem) > memLeakThreshold {
 		log.WithFields(log.Fields{
 			"tag":    tags.Tag,
 			"jobID":  tags.JobID,

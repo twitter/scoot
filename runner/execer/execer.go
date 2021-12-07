@@ -14,6 +14,9 @@ import (
 // Memory in bytes.
 type Memory uint64
 
+// the threshold for logging task memory leaks
+type MemoryLeakThreshold uint64
+
 type Command struct {
 	Argv    []string
 	EnvVars map[string]string

@@ -139,7 +139,7 @@ func TestMemCap(t *testing.T) {
 		MemCh: memCh,
 	}
 	// Terminate nearly immediately, after memory grows to 1MB.
-	e := NewBoundedExecer(execer.Memory(1024*1024), stats.NilStatsReceiver())
+	e := NewBoundedExecer(execer.Memory(1024*1024), execer.MemoryLeakThreshold(10000000), stats.NilStatsReceiver())
 	process, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())

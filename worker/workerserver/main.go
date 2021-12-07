@@ -41,6 +41,7 @@ func main() {
 	httpAddr := flag.String("http_addr", domain.DefaultWorker_HTTP, "addr to serve http on")
 	configFlag := flag.String("config", "local.local", "Worker Server Config (either a filename like local.local or JSON text")
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
+	memLeakThresholdFlag := flag.Uint64("mem_leak_alert_threshold", 10000000, "Threshold for logging a task memory leak. Defaults to 10Mb.")
 	repoDir := flag.String("repo", "", "Abs dir path to a git repo to run against (don't use important repos yet!).")
 	storeHandle := flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
 	casAddr := flag.String("cas_addr", "", "'host:port' of a server supporting CAS API over GRPC")
@@ -85,6 +86,9 @@ func main() {
 		},
 		func() execer.Memory {
 			return execer.Memory(*memCapFlag)
+		},
+		func() execer.MemoryLeakThreshold {
+			return execer.MemoryLeakThreshold(*memLeakThresholdFlag)
 		},
 		// Use storeHandle if provided, else try Fetching, then GetScootApiAddr(), then fallback to tmp file store.
 		func() (store.Store, error) {

@@ -72,7 +72,7 @@ func TestUserMem(t *testing.T) {
 		fmt.Sprintf("%s 1 1 1 %d", user.Username, rss),
 		fmt.Sprintf("fakeUser  2 1 1 %d", rss),
 		fmt.Sprintf("%s 3 1 2 %d", user.Username, rss)}}
-	monMemAccum(5, statsReceiver, pg, "fake/Command", tags.LogTags{JobID: "fakeJob", TaskID: "fakeTask", Tag: "fakeTag"})
+	monMemAccum(5, 10000000, statsReceiver, pg, "fake/Command", tags.LogTags{JobID: "fakeJob", TaskID: "fakeTask", Tag: "fakeTag"})
 	if !stats.StatsOk("", statsRegistry, t,
 		map[string]stats.Rule{
 			fmt.Sprintf("%s%s", stats.WorkerMemByteAccumGauge, "Command"): {Checker: stats.Int64EqTest, Value: 15},
@@ -176,11 +176,6 @@ func TestAbortCatch(t *testing.T) {
 	}
 
 	proc.Abort()
-	usage, _ = e.memUsage(pid)
-	if usage != 0 {
-		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
-	}
-
 	time.Sleep(100 * time.Millisecond)
 	usage, err = e.memUsage(pid)
 	if err == nil {
