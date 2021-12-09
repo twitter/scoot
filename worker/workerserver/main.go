@@ -12,7 +12,6 @@ import (
 
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
@@ -43,7 +42,7 @@ func main() {
 	}
 	log.SetLevel(level)
 
-	stat := endpoints.MakeStatsReceiver("workerserver").Precision(time.Millisecond)
+	stat := starter.GetStatsReceiver()
 
 	store, err := getStore(*storeHandle)
 	if err != nil {

@@ -3,6 +3,7 @@ package starter
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
@@ -101,4 +102,8 @@ func StartServer(
 		errCh <- servers.thrift.Serve()
 	}()
 	log.Fatal("Error serving: ", <-errCh)
+}
+
+func GetStatsReceiver() stats.StatsReceiver {
+	return endpoints.MakeStatsReceiver("workerserver").Precision(time.Millisecond)
 }
