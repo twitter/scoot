@@ -105,7 +105,6 @@ func (s *LocalWorkersStrategy) StartupWorkers() (string, error) {
 			"-thrift_addr", "localhost:"+strconv.Itoa(thriftPort),
 			"-http_addr", "localhost:"+strconv.Itoa(httpPort),
 			"-log_level", s.workersCfg.LogLevel.String(),
-			"-repo", s.workersCfg.RepoDir,
 		); err != nil {
 			return "", err
 		}
