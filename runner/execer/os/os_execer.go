@@ -73,6 +73,7 @@ type proc struct {
 	pgid int
 	ppid int
 	rss  int
+	cmd  string
 }
 
 func NewExecer() *osExecer {
@@ -86,10 +87,10 @@ func NewBoundedExecer(memCap execer.Memory, memLeak execer.MemoryLeakThreshold, 
 // Start a command, monitor its memory, and return an &osProcess wrapper for it
 func (e *osExecer) Exec(command execer.Command) (execer.Process, error) {
 	if len(command.Argv) == 0 {
-		return nil, errors.New("No command specified.")
+		return nil, errors.New("no command specified")
 	}
 
-	startMem, err := getUserMemUsage(e.pg)
+	startMem, err := getUserMemUsage(e.pg, command.Argv[0])
 	if err != nil {
 		log.Errorf("error getting starting memory usage, cannot monitor memory accumulation. %s", err)
 		startMem = -1
@@ -312,7 +313,11 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 
 // Get a full list of processes running, including their pid, pgid, ppid, and memory usage
 func (pg *osProcGetter) getProcs() (processMaps, error) {
-	cmd := "ps -e -o user= -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
+	cUser, err := user.Current()
+	if err != nil {
+		return processMaps{}, err
+	}
+	cmd := fmt.Sprintf("ps -e -o user:%d= -o pid= -o pgid= -o ppid= -o rss= -o cmd= | tr '\n' ';' | sed 's,;$,,'", len(cUser.Username))
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
 	if err != nil {
@@ -331,12 +336,12 @@ func (pg *osProcGetter) parseProcs(procs []string) (processMaps, error) {
 		byUser:      map[string][]proc{}}
 	for idx := 0; idx < len(procs); idx += 1 {
 		var p proc
-		n, err := fmt.Sscanf(procs[idx], "%s %d %d %d %d", &p.user, &p.pid, &p.pgid, &p.ppid, &p.rss)
+		n, err := fmt.Sscanf(procs[idx], "%s %d %d %d %d %s", &p.user, &p.pid, &p.pgid, &p.ppid, &p.rss, &p.cmd)
 		if err != nil {
 			return processMaps{}, err
 		}
-		if n != 5 {
-			return processMaps{}, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
+		if n != 6 {
+			return processMaps{}, fmt.Errorf("Error parsing output, expected 6 assigments, but only received %d. %v", n, procs)
 		}
 		pm.byPID[p.pid] = p
 		pm.byGroupPID[p.pgid] = append(pm.byGroupPID[p.pgid], p)
@@ -602,19 +607,26 @@ func cleanupProcs(pgid int) (err error) {
 }
 
 // getUserCurrentMemUsage compute the memory (rss) used by all processes owned by the current user
-func getUserMemUsage(pg procGetter) (int, error) {
-	pm, err := pg.getProcs()
-	if err != nil {
-		return 0, err
-	}
+func getUserMemUsage(pg procGetter, cmd string) (int, error) {
 	cUser, err := user.Current()
 	if err != nil {
 		return 0, err
 	}
+	pm, err := pg.getProcs()
+	if err != nil {
+		return 0, err
+	}
 
+	workerserverCnt := 0
 	// compute the total user's memory usage
 	totalMem := 0
 	for _, proc := range pm.byUser[cUser.Username] {
+		if strings.HasPrefix(proc.cmd, cmd) {
+			workerserverCnt++
+			if workerserverCnt > 1 {
+				return -1, fmt.Errorf("Multiple workerservers running on the machine, not computing user memory usage")
+			}
+		}
 		totalMem += proc.rss
 	}
 	return totalMem, nil
@@ -623,7 +635,7 @@ func getUserMemUsage(pg procGetter) (int, error) {
 // monMemAccum monitor total user memory increase from prior to starting the command
 // if the increase is over a notFreedMemory threshold, log the event with the task id information
 func monMemAccum(startMem int, memLeakThreshold execer.MemoryLeakThreshold, stat stats.StatsReceiver, pg procGetter, cmd string, tags tags.LogTags) {
-	endMem, err := getUserMemUsage(pg)
+	endMem, err := getUserMemUsage(pg, cmd)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"tag":    tags.Tag,
