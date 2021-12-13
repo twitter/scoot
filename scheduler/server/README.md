@@ -14,45 +14,55 @@ each scheduler loop iteration.
 This scheduling algorithm computes the list of tasks to start and stop:
 
 _Given_
-- classes with load %s that defined the number of scoot workers we are targeting for running the class's tasks
+- a defined set of job classes with load % for each class, such that the load %s define the number of scoot workers targeted for running the class's tasks
+- a mapping of job requestors to job classes (using reg exp to match requestor values)
 - jobs with
-    - list of tasks waiting to start
-    - a requestor that maps jobs to classes
+    - list of tasks waiting to start (in descending duration order)
 -  we have the number of idle workers waiting to run a task
 
-_GetTasksToBeAssigned()_ is the top level entry to the algorithm. It
-- determines if the system needs rebalancing (as per the rebalancing thresholds - see rebalancing below)
-- if the system needs rebalancing it computes the tasks that should be stopped and the tasks that should be started
-- otherwise, it just computes the tasks that should be started
-- it returns the list of tasks that should be started and list of tasks that should be stopped
+_**Overview**_  
+The algorithm selects the list of tasks that should be started on the idle workers.  The objective of the algorithm
+is to maintain the target load %.  When a given job class does not have enough tasks to use all the workers in that class's target load %, the unused workers will be used to run other class tasks (we call this loaning a worker).
 
-## get number of tasks to start, and list of tasks to stop:
-(when not rebalancing)
-### **entitled workers**
-(entitlementTasksToStart())
+It may be the case that long running tasks running on 'loaned' workers make it impossible for the algorithm to bring the task allocations back in line with the original target load %s.  To address this, the algorithm has a 'rebalancing' feature that when turned on, will cancel the most recently started tasks for classes using loaned workers. 
 
-The class %'s define the target number of tasks from each class that should be running at any given time, given 
-the platform is fully loaded with many tasks for each class.  We call the number tasks that should be 
-running for a given class, the number of workers the class is _entitled_ to use.
-When the algorithm is computing tasks to start, it will try to produce a list of tasks such that, when the tasks 
-have been started, the running number of running tasks in each class meets the class' **_entitlements_**.
+_GetTasksToBeAssigned()_ (the top level entry to the algorithm):
+- determine if the system needs rebalancing (as per the rebalancing thresholds - see rebalancing below)
+- if the system needs rebalancing, 
+    - compute the tasks that should be stopped,
+- compute the number tasks to start for each class
+- compute the list of tasks that should be started
+- return the list of tasks that should be started and list of tasks that should be stopped
 
-The algorithm finds the classes that have waiting tasks and are under their _entitlement_, computes the unused 
-entitlement and each class's unused entitlement % wrt to all the class' unused entitlements.  It then computes the 
-number of tasks to start for each class based on the number of available workers, the normalized unused entitlement
-%s.  If a  class does not have enough tasks to meet its entitlement, there will still be available workers after 
-processing all the classes.  When this happens the algorithm repeats the entitlement computation (re-normalize 
-%s, compute tasks to start using number of available workers). Each iteration will either allocate all available 
-workers or allocate all of at least one class's waiting tasks or full entitlement. When all available workers are 
-allocated or all class's waiting tasks or entitlements have been allocated the entitlement computation is complete.    
+## Get number of tasks to start, and list of tasks to stop:
+(rebalance happens first, but it is described below since we've never turned it on)
+### **compute number of tasks to start for each class as per the load % 'entitlements'**
+(_entitlementTasksToStart()_)
+
+A class's _entitlement_ is the number of workers * the class's load % - it is the number of workers that should be
+allocated to that tasks in that class. When the algorithm is computing tasks to start, it will try to meet each
+class' _entitlement_.  
+1. For each class with tasks waiting to start, it's _unused entitlement_ is the class's
+_entitlement_ - number of that class's tasks currently running (minimum unused entitlement is 0). In addition, 
+if a class does not have tasks waiting to start, it's _unused entitlement_ is 0.
+2. Compute each class's _unused entitlement %_: the class's _unused entitlement / sum(all classes _unused entitlement_s)
+3. compute the number of tasks to start for each class: min(number tasks waiting to
+start, _unused entitlement % * number of idle (unallocated) workers)
+
+When a class's number of waiting tasks < the number to start, there will still be
+available workers after computing the number of tasks to start for each class.When this happens the algorithm
+repeats the steps listed above computing the additional number of tasks to start for each class. Each iteration
+will either allocate all available workers, all of at least one class's waiting tasks or a class's full
+_entitlement_. When all available workers are
+allocated or all class's waiting tasks or _entitlements_ have been allocated the iteration stops and the entitlement computation is complete.    
+
+It may be the case that some classes are under-utilizing their _entitlements_, but other classes have more tasks
+than their _entitlement_ waiting. When this happens the entitlement allocation will complete, but there will still
+be unallocated workers (the total number of tasks to start is still less than the number of idle workers) and 
+tasks waiting to start. When this happens the algorithm proceeds to compute the number of workers to '_loan_' to each class:
 
 ### **loaned workers**
-(workerLoanAllocation())
-
-It may be the case that some classes are under-utilizing their entitlements, but other classes have more tasks than
-their entitlement.  When this happens, the algorithm allows the 'over entitlement' classes to start more tasks than
-their entitlement.  The classes under-utilizing their entitlement are, in effect, _loaning_ workers
-to the classes with more tasks than their entitlement.
+(_workerLoanAllocation()_)
 
 The loan part of the algorithm computes the loan distribution %s as follows:
 
@@ -74,8 +84,8 @@ tasks have been allocated to a worker.
 **Note** the entitlement and loan computation does not assign a specific worker to a task, it simply computes the number of
 workers that can be used to start tasks in each class.
 
-### **re-balancing**
-(rebalanceClassTasks())
+### rebalance
+(_rebalanceClassTasks()_)
 
 Each scheduling iteration naturally brings the running task allocations back to the original class
 entitlements, but it could be the case that long running tasks holding on to loaned workers slowly cause the number of
@@ -89,11 +99,57 @@ class with waiting tasks. We call this the _delta entitlement spread_. When the 
 been over a threshold for a set period of time, the algorithm computes the list of tasks to stop and start 
 to bring the classes to their entitled number of workers.
 
+## Example
+Given:
+1000 workers  
+| job classes | load% | target workers |  
+| ----------- | ----- | -------------- |  
+| c1 | 50% | 500 |  
+| c2 | 40% | 400 |  
+| c3 | 10% | 100 |  
+
+### example 1: entitlement only computation:  
+200 idle workers  
+c1: 400 running tasks, 200 waiting tasks,  
+c2: 350 running tasks, 200 waiting tasks,  
+c3: 50 running tasks, 100 waiting tasks  
+entitlement computation:   
+c1: 500-400=100, 100/200=50%, start 100 c1 tasks  
+c2: 400-350=50, 50/200=25%, start 50 c2 tasks  
+c3: 100-50=50, 50/200=25%, start 50 c3 tasks  
+
+total tasks allocations:   
+c1: start 100 tasks, will have 500 running tasks   
+c2 start 50 tasks, will have 400 running tasks  
+c3 start 50 tasks, will have 100 running tasks  
+
+
+### example 2: entitlement with loan computation:  
+300 idle workers  
+_entitlement computation_   
+c1: 400 running tasks, 50 waiting tasks,  
+c2: 250 running tasks, 250 waiting tasks,  
+c3: 50 running tasks, 100 waiting tasks    
+iteration1 entitlement, %:  
+c1: 500-400=100, 100/300=33%, start 50 c1 tasks (entitlement was 100, but only 50 tasks waiting)  
+c2: 400-250=150, 150/300=50%, start 150 c2 tasks  
+c3: 100-150=50, 50/300=17%, start 50 c3 tasks  
+-c1 has no waiting tasks, c2 and c3 are at entitlement, but there will still be 50 idle workers and c2, c3 have waiting tasks    
+
+_loan computation_:  
+c1 does not factor into the computation since it doesn't have waiting tasks, the computation will focus on loaning workers to c2, c3  
+c2: orig 40%, loan % = 40/50 = 80% -> loan 80%*50=40 additional tasks can start  
+c3: orig 10%, loan % = 10/50 = 20% -> loan 20%*50=10 additional tasks can start  
+
+total tasks allocations:   
+c1: start 50 tasks, will have 450 running tasks   
+c2 start 190 tasks, will have 440 running tasks  
+c3 start 60 tasks, will have 110 running tasks  
+
 ## selecting tasks to start
-The (sub) algorithm for selecting tasks to start in a class uses a round robin approach pulling tasks from jobs that
-have been grouped by the number of running tasks.  It starts with jobs with the least number of running tasks, selecting
-one task from each job then moving on to the jobs with the next least number of running tasks till the target number of
-tasks have been collected.
+Selecting tasks to start in a class uses a round robin approach selecting tasks from jobs with the least number of
+running tasks.  This makes sure that all jobs in a given task are using an equitable number of the workers allocate
+to that class (one job with many tasks won't use up all the workers allocated to that class).
 
 ## exposed scheduling parameters
 Scheduler api for the algorithm:

@@ -5,6 +5,10 @@ package client
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/runner"
@@ -159,4 +163,31 @@ func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.Serv
 	}
 	st, err = runners.StatusesRO(st).QueryNow(q)
 	return st, svc, err
+}
+
+// Create a Bundlestore URI from an addr
+func APIAddrToBundlestoreURI(addr string) string {
+	return "http://" + addr + "/bundle/"
+}
+
+// Get the path of the file containing the address for scootapi to use
+func GetScootapiAddrPath() string {
+	optionalId := os.Getenv("SCOOT_ID") // Used to connect to a different set of scoot processes.
+	return path.Join(os.Getenv("HOME"), ".cloudscootaddr"+optionalId)
+}
+
+// Get the scootapi address (as host:port)
+func GetScootapiAddr() (sched string, api string, err error) {
+	data, err := ioutil.ReadFile(GetScootapiAddrPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", "", nil
+		}
+		return "", "", err
+	}
+	addrs := strings.Split(string(data), "\n")
+	if len(addrs) != 2 {
+		return "", "", errors.New("Expected both sched and api addrs, got: " + string(data))
+	}
+	return string(addrs[0]), string(addrs[1]), nil
 }
