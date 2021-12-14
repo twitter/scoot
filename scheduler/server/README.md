@@ -100,51 +100,48 @@ been over a threshold for a set period of time, the algorithm computes the list 
 to bring the classes to their entitled number of workers.
 
 ## Example
-Given:
-1000 workers  
-| job classes | load% | target workers |  
-| ----------- | ----- | -------------- |  
-| c1 | 50% | 500 |  
-| c2 | 40% | 400 |  
-| c3 | 10% | 100 |  
+### **example 1:** Test_Class_Task_Start_Cnts(), scenario 1 - takes 2 iterations to allocate all workers based on entitlement 
+totalWorkers: 1000, 710 running tasks, 290 idle workers
+| class | load % | running tasks | waiting tasks | entitlement |
+| ----- | ------ | ------------- | ------------- | ----------- |
+| c0 | 30% | 200 | 290 | 300 |
+| c1 | 25% | 300 | 230 | 250 |
+| c2 | 20% | 0 | 150 | 200 |
+| c3 | 15% | 100 | 150 | 150 |
+| c4 | 10% | 110 | 90 | 100 |
+| c5 | 0% | 0 | 328 | 0 | 0 |
 
-### example 1: entitlement only computation:  
-200 idle workers  
-c1: 400 running tasks, 200 waiting tasks,  
-c2: 350 running tasks, 200 waiting tasks,  
-c3: 50 running tasks, 100 waiting tasks  
-entitlement computation:   
-c1: 500-400=100, 100/200=50%, start 100 c1 tasks  
-c2: 400-350=50, 50/200=25%, start 50 c2 tasks  
-c3: 100-50=50, 50/200=25%, start 50 c3 tasks  
+|           | iter 1               |                  |                                  | iter 2               |                  |              | start  |      
+| :-------: | :------------------- | :--------------- | :------------------------------- | -------------------: | ---------------: | -----------: | -----: | 
+|           | 290 idle workers     |                  | 174 allocated                    | 16 idle workers      |                  | 16 allocated |        |
+| **class** | **_entitled_ tasks** | **normalized %** |                                  | **_entitled_ tasks** | **normalized %** |              |        |
+| c0        | 300-200=100          | 100/350=29%      | .29*290=84                       | 300-284=16           | 16/26=62%        | .62*16=10    |  94    |
+| c1        | 250-300-> 0          | 0%               | 0                                | 0                    | 0%               | 0            |  0     |
+| c2        | 200-0=200            | 200/350=57%      | .57*290=165 -> 150 tasks waiting | 0                    | 0%               | 0            |  150   |
+| c3        | 150-100=50           | 50/350=14%       | .14*290=40                       | 150-140=10           | 10/26=38%        | .38*16=6     |  46    |
 
-total tasks allocations:   
-c1: start 100 tasks, will have 500 running tasks   
-c2 start 50 tasks, will have 400 running tasks  
-c3 start 50 tasks, will have 100 running tasks  
+### **example 2:** Test_Class_Task_Start_Cnts(), scenario 3 - entitlement plus loan
+
+totalWorkers: 1000, 710 running tasks, 290 idle workers
+| class | load % | running tasks | waiting tasks | entitlement | loaned |
+| ----- | ------ | ------------- | ------------- | ----------- | ------ |
+| c0    | 30%    | 200           | 10            | 300         | 0      |
+| c1    | 25%    | 300           | 230           | 250         | 50     |
+| c2    | 20%    | 0             | 0             | 200         | 0      |
+| c3    | 15%    | 100           | 50            | 150         | 0      |
+| c4    | 10%    | 110           | 90            | 100         | 10     |
 
 
-### example 2: entitlement with loan computation:  
-300 idle workers  
-_entitlement computation_   
-c1: 400 running tasks, 50 waiting tasks,  
-c2: 250 running tasks, 250 waiting tasks,  
-c3: 50 running tasks, 100 waiting tasks    
-iteration1 entitlement, %:  
-c1: 500-400=100, 100/300=33%, start 50 c1 tasks (entitlement was 100, but only 50 tasks waiting)  
-c2: 400-250=150, 150/300=50%, start 150 c2 tasks  
-c3: 100-150=50, 50/300=17%, start 50 c3 tasks  
--c1 has no waiting tasks, c2 and c3 are at entitlement, but there will still be 50 idle workers and c2, c3 have waiting tasks    
+|           | entitlement          |                   |                                 | loan               |                        | start |      
+| :-------: | :------------------- | :---------------- | :------------------------------ | -----------------: | ---------------------: | -----:| 
+|           | 290 idle workers     |                   | 60 allocated                    | 230 idle+60 loaned | 230 allocated          |       |
+| **class** | **_entitled_ tasks** | **normalized %**  |                                 | **normalized %**   |                        |       |
+| c0        | 300-200=100          | 100/150=67%       | .67*290=194 -> 10 tasks waiting | 0                  | 0                      | 10    |
+| c1        | 250-300-> 0          | 0%                | 0                               | 25/35=72%          | .72*290=207, 206-50=157| 157   |
+| c2        | 0 waiting tasks      | 0%                | 0                               | 0                  | 0                      | 0     |
+| c3        | 150-100=50           | 50/150=33%        | .33*290=98-> 50 tasks waiting   | 0                  | 0                      | 50    |
+| c4        | 100-110-> 0          | 0%                | 0                               | 10/35=28%          | .29*290=83, 84-10=73   | 73    |
 
-_loan computation_:  
-c1 does not factor into the computation since it doesn't have waiting tasks, the computation will focus on loaning workers to c2, c3  
-c2: orig 40%, loan % = 40/50 = 80% -> loan 80%*50=40 additional tasks can start  
-c3: orig 10%, loan % = 10/50 = 20% -> loan 20%*50=10 additional tasks can start  
-
-total tasks allocations:   
-c1: start 50 tasks, will have 450 running tasks   
-c2 start 190 tasks, will have 440 running tasks  
-c3 start 60 tasks, will have 110 running tasks  
 
 ## selecting tasks to start
 Selecting tasks to start in a class uses a round robin approach selecting tasks from jobs with the least number of
