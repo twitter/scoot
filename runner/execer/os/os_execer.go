@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -20,13 +19,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-// Used for mocking memCap monitoring
-type procGetter interface {
-	getAndSetProcs() error
-	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
-	memUsage(int) (execer.Memory, error)
-}
 
 type WriterDelegater interface {
 	// Return an underlying Writer. Why? Because some methods type assert to
@@ -42,7 +34,7 @@ type osExecer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap
 	memCap execer.Memory
 	stat   stats.StatsReceiver
-	pg     procGetter
+	pw     processWatcher
 }
 
 // Implements runner/execer.Process
@@ -56,97 +48,6 @@ type osProcess struct {
 	tags.LogTags
 }
 
-type osProcGetter struct {
-	allProcesses    map[int]proc
-	processGroups   map[int][]proc
-	parentProcesses map[int][]proc
-}
-
-func NewOsProcGetter() *osProcGetter {
-	return &osProcGetter{}
-}
-
-// Get a full list of processes running, including their pid, pgid, ppid, and memory usage, and set osProcGetter's fields
-func (opg *osProcGetter) getAndSetProcs() error {
-	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
-	psList := exec.Command("bash", "-c", cmd)
-	b, err := psList.Output()
-	if err != nil {
-		return err
-	}
-	procs := strings.Split(string(b), ";")
-	ap, pg, pp, err := opg.parseProcs(procs)
-	if err != nil {
-		return err
-	}
-	opg.allProcesses = ap
-	opg.processGroups = pg
-	opg.parentProcesses = pp
-	return nil
-}
-
-// Format processes into pgid and ppid groups for summation of memory usage
-func (pg *osProcGetter) parseProcs(procs []string) (allProcesses map[int]proc, processGroups map[int][]proc,
-	parentProcesses map[int][]proc, err error) {
-	allProcesses = make(map[int]proc)
-	processGroups = make(map[int][]proc)
-	parentProcesses = make(map[int][]proc)
-	for idx := 0; idx < len(procs); idx += 1 {
-		var p proc
-		n, err := fmt.Sscanf(procs[idx], "%d %d %d %d", &p.pid, &p.pgid, &p.ppid, &p.rss)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		if n != 4 {
-			return nil, nil, nil, fmt.Errorf("Error parsing output, expected 4 assigments, but only received %d. %v", n, procs)
-		}
-		allProcesses[p.pid] = p
-		processGroups[p.pgid] = append(processGroups[p.pgid], p)
-		parentProcesses[p.ppid] = append(parentProcesses[p.ppid], p)
-	}
-	return allProcesses, processGroups, parentProcesses, nil
-}
-
-// Sums memory usage for a given process, including usage by related processes
-func (pg *osProcGetter) memUsage(pid int) (execer.Memory, error) {
-	if _, ok := pg.allProcesses[pid]; !ok {
-		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
-	}
-	procGroupID := pg.allProcesses[pid].pgid
-	// We have relatedProcesses & relatedProcessesMap b/c iterating over the range of a map while modifying it in place
-	// introduces non-deterministic flaky behavior wrt memUsage summation. We add related procs to the relatedProcesses
-	// slice iff they aren't present in relatedProcessesMap
-	relatedProcesses := []proc{}
-	relatedProcessesMap := make(map[int]proc)
-	total := 0
-	// Seed relatedProcesses with all procs from pid's process group
-	for idx := 0; idx < len(pg.processGroups[procGroupID]); idx += 1 {
-		p := pg.processGroups[procGroupID][idx]
-		relatedProcesses = append(relatedProcesses, pg.allProcesses[p.pid])
-		relatedProcessesMap[p.pid] = p
-	}
-
-	// Add all child procs of processes in pid's process group (and their child procs as well)
-	for i := 0; i < len(relatedProcesses); i += 1 {
-		rp := relatedProcesses[i]
-		procPid := rp.pid
-		for j := 0; j < len(pg.parentProcesses[procPid]); j += 1 {
-			p := pg.parentProcesses[procPid][j]
-			// Make sure it isn't already present in map
-			if _, ok := relatedProcessesMap[p.pid]; !ok {
-				relatedProcesses = append(relatedProcesses, pg.allProcesses[p.pid])
-				relatedProcessesMap[p.pid] = p
-			}
-		}
-	}
-
-	// Add total rss usage of all relatedProcesses
-	for _, proc := range relatedProcessesMap {
-		total += proc.rss
-	}
-	return execer.Memory(total * bytesToKB), nil
-}
-
 type proc struct {
 	pid  int
 	pgid int
@@ -156,7 +57,7 @@ type proc struct {
 
 // NewBoundedExecer returns an execer with a ProcGetter and, if non-zero values are provided, a memCap and a StatsReceiver
 func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	oe := &osExecer{pg: NewOsProcGetter()}
+	oe := &osExecer{pw: NewOsProcWatcher()}
 	if memCap != 0 {
 		oe.memCap = memCap
 	}
@@ -273,10 +174,10 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 					}).Info("Finished monitoring memory")
 				return
 			}
-			if err := e.pg.getAndSetProcs(); err != nil {
+			if err := e.pw.getAndSetProcs(); err != nil {
 				log.Error(err)
 			}
-			mem, _ := e.pg.memUsage(pid)
+			mem, _ := e.pw.memUsage(pid)
 			e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
 			// Aborting process, above memCap
 			if mem >= e.memCap {
