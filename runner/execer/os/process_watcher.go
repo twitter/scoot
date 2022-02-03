@@ -6,27 +6,34 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/twitter/scoot/runner/execer"
+	scootexecer "github.com/twitter/scoot/runner/execer"
 )
 
 // Used for mocking memCap monitoring
 type processWatcher interface {
-	getAndSetProcs() error
-	memUsage(int) (execer.Memory, error)
+	GetAndSetProcs() error
+	MemUsage(int) (scootexecer.Memory, error)
 }
 
-type osProcWatcher struct {
+type proc struct {
+	pid  int
+	pgid int
+	ppid int
+	rss  int
+}
+
+type procWatcher struct {
 	allProcesses    map[int]proc
 	processGroups   map[int][]proc
 	parentProcesses map[int][]proc
 }
 
-func NewOsProcWatcher() *osProcWatcher {
-	return &osProcWatcher{}
+func NewProcWatcher() *procWatcher {
+	return &procWatcher{}
 }
 
-// Get a full list of processes running, including their pid, pgid, ppid, and memory usage, and set osProcWatcher's fields
-func (opw *osProcWatcher) getAndSetProcs() error {
+// Get a full list of processes running, including their pid, pgid, ppid, and memory usage, and set procWatcher's fields
+func (opw *procWatcher) GetAndSetProcs() error {
 	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
@@ -45,7 +52,7 @@ func (opw *osProcWatcher) getAndSetProcs() error {
 }
 
 // Sums memory usage for a given process, including usage by related processes
-func (opw *osProcWatcher) memUsage(pid int) (execer.Memory, error) {
+func (opw *procWatcher) MemUsage(pid int) (scootexecer.Memory, error) {
 	if _, ok := opw.allProcesses[pid]; !ok {
 		return 0, fmt.Errorf("%d was not present in list of all processes", pid)
 	}
@@ -81,7 +88,7 @@ func (opw *osProcWatcher) memUsage(pid int) (execer.Memory, error) {
 	for _, proc := range relatedProcessesMap {
 		total += proc.rss
 	}
-	return execer.Memory(total * bytesToKB), nil
+	return scootexecer.Memory(total * bytesToKB), nil
 }
 
 // Format processes into pgid and ppid groups for summation of memory usage
