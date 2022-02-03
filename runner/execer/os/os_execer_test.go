@@ -103,7 +103,7 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 }
 
 func TestAbortSigterm(t *testing.T) {
-	e := NewExecer()
+	e := NewBoundedExecer(0, nil)
 	cmd := execer.Command{
 		Argv: []string{"sleep", "1000"},
 	}

@@ -20,7 +20,7 @@ func init() {
 }
 
 func TestAll(t *testing.T) {
-	exer := NewExecer()
+	e := NewBoundedExecer(0, nil)
 
 	// TODO(dbentley): factor out an assertRun method
 	cmd := execer.Command{
@@ -31,7 +31,7 @@ func TestAll(t *testing.T) {
 			TaskID: "taskID1234",
 		},
 	}
-	p, err := exer.Exec(cmd)
+	p, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf("Couldn't run true %v", err)
 	}
@@ -41,7 +41,7 @@ func TestAll(t *testing.T) {
 	}
 
 	cmd = execer.Command{Argv: []string{"false"}}
-	p, err = exer.Exec(cmd)
+	p, err = e.Exec(cmd)
 	if err != nil {
 		t.Fatalf("Couldn't run false %v", err)
 	}
@@ -53,7 +53,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	exer := NewExecer()
+	e := NewBoundedExecer(0, nil)
 
 	var stdout, stderr bytes.Buffer
 
@@ -69,7 +69,7 @@ func TestOutput(t *testing.T) {
 			TaskID: "taskID1234",
 		},
 	}
-	p, err := exer.Exec(cmd)
+	p, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf("Couldn't run true %v", err)
 	}
@@ -96,7 +96,7 @@ func TestMemUsage(t *testing.T) {
 			TaskID: "taskID1234",
 		},
 	}
-	e := NewExecer()
+	e := NewBoundedExecer(0, nil)
 	process, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())

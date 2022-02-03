@@ -36,7 +36,7 @@ func makeBzCommand(storePath string, resolver dialer.Resolver) *bzCommand {
 	return &bzCommand{
 		localStorePath: storePath,
 		casResolver:    resolver,
-		execer:         osexecer.NewExecer(),
+		execer:         osexecer.NewBoundedExecer(0, nil),
 		timeout:        fsUtilTimeoutSec * time.Second,
 	}
 }

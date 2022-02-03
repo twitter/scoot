@@ -154,13 +154,16 @@ type proc struct {
 	rss  int
 }
 
-// Doesn't do anything
-func NewExecer() *osExecer {
-	return &osExecer{pg: &osProcGetter{}}
-}
-
+// NewBoundedExecer returns an execer with a ProcGetter and, if non-zero values are provided, a memCap and a StatsReceiver
 func NewBoundedExecer(memCap execer.Memory, stat stats.StatsReceiver) *osExecer {
-	return &osExecer{memCap: memCap, stat: stat.Scope("osexecer"), pg: NewOsProcGetter()}
+	oe := &osExecer{pg: NewOsProcGetter()}
+	if memCap != 0 {
+		oe.memCap = memCap
+	}
+	if stat != nil {
+		oe.stat = stat
+	}
+	return oe
 }
 
 // Start a command, monitor its memory, and return an &osProcess wrapper for it
