@@ -25,6 +25,7 @@ import (
 type procGetter interface {
 	getProcs() (map[int]proc, map[int][]proc, map[int][]proc, error)
 	parseProcs([]string) (map[int]proc, map[int][]proc, map[int][]proc, error)
+	memUsage(int) (execer.Memory, error)
 }
 
 type WriterDelegater interface {
@@ -56,6 +57,10 @@ type osProcess struct {
 }
 
 type osProcGetter struct{}
+
+func NewOsProcGetter() *osProcGetter {
+	return &osProcGetter{}
+}
 
 type proc struct {
 	pid  int
@@ -178,7 +183,7 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 					}).Info("Finished monitoring memory")
 				return
 			}
-			mem, _ := e.memUsage(pid)
+			mem, _ := e.pg.memUsage(pid)
 			e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
 			// Aborting process, above memCap
 			if mem >= e.memCap {
@@ -247,8 +252,8 @@ func (e *osExecer) monitorMem(p *osProcess, memCh chan execer.ProcessStatus) {
 }
 
 // Sums memory usage for a given process, including usage by related processes
-func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
-	allProcesses, processGroups, parentProcesses, err := e.pg.getProcs()
+func (pg *osProcGetter) memUsage(pid int) (execer.Memory, error) {
+	allProcesses, processGroups, parentProcesses, err := pg.getProcs()
 	if err != nil {
 		return 0, err
 	}
@@ -268,6 +273,13 @@ func (e *osExecer) memUsage(pid int) (execer.Memory, error) {
 		relatedProcesses = append(relatedProcesses, allProcesses[p.pid])
 		relatedProcessesMap[p.pid] = p
 	}
+	log.Debugf("allProcesses: %v", allProcesses)
+	log.Debugf("\n\n\n")
+	log.Debugf("processGroups: %v", processGroups)
+	log.Debugf("\n\n\n")
+	log.Debugf("parentProcesses: %v", parentProcesses)
+	log.Debugf("\n\n\n")
+	log.Debugf("relatedProcessesMap: %v", relatedProcessesMap)
 
 	// Add all child procs of processes in pid's process group (and their child procs as well)
 	for i := 0; i < len(relatedProcesses); i += 1 {

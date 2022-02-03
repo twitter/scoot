@@ -108,7 +108,7 @@ func TestMemUsage(t *testing.T) {
 	sleepDuration := 500 * time.Millisecond
 	for i := 0; i < 2; i++ {
 		time.Sleep(sleepDuration)
-		if newUsage, err := e.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
+		if newUsage, err := e.pg.memUsage(process.(*osProcess).cmd.Process.Pid); err != nil {
 			t.Fatalf(err.Error())
 		} else if int(newUsage) <= prevUsage {
 			t.Fatalf("Expected growing memory, got: %d -> %d @%dms", prevUsage, newUsage, (i+1)*int(sleepDuration/time.Millisecond))
@@ -154,7 +154,7 @@ func TestMemCap(t *testing.T) {
 	defer timeout.Stop()
 	select {
 	case <-memCh:
-		if usage, err = e.memUsage(pid); err != nil {
+		if usage, err = e.pg.memUsage(pid); err != nil {
 			// We don't return this error because it just means the process was already killed
 			log.Errorf("Error finding memUsage: %s", err)
 		}
