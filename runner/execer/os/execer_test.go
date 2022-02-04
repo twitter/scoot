@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/runner/execer"
+	scootexecer "github.com/twitter/scoot/runner/execer"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,28 +19,37 @@ func init() {
 	log.SetLevel(logrusLevel)
 }
 
-func NewBoundedTestExecer(memCap execer.Memory, pg procGetter) *osExecer {
-	return &osExecer{memCap: memCap, pg: pg}
+func NewBoundedTestExecer(memCap scootexecer.Memory, pw processWatcher) *execer {
+	return &execer{memCap: memCap, pw: pw}
 }
 
 // Tests that single process memory usage is counted
-func TestOsExecerMemUsage(t *testing.T) {
+func TestExecerMemUsage(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss)}}
-	e := NewBoundedTestExecer(execer.Memory(0), pg)
-	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*bytesToKB) || err != nil {
-		t.Fatalf("%v: %v mem", err, mem)
+	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss)}}
+	err := pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mem, err := pw.MemUsage(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mem != scootexecer.Memory(rss*bytesToKB) {
+		t.Fatalf("Unexpected rss value: %v != %v", rss*bytesToKB, mem)
 	}
 }
 
 // Tests that memory of processes spawned by a process in original process's process group are counted
 func TestParentProcGroup(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 2 2 %d", rss)}}
-	e := NewBoundedTestExecer(execer.Memory(0), pg)
-	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
+	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 2 2 %d", rss)}}
+	err := pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mem, err := pw.MemUsage(1)
+	if mem != scootexecer.Memory(rss*3*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem", err, mem)
 	}
 }
@@ -48,10 +57,13 @@ func TestParentProcGroup(t *testing.T) {
 // Tests that memory of processes within process group are counted
 func TestProcGroup(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss)}}
-	e := NewBoundedTestExecer(execer.Memory(0), pg)
-	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
+	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss)}}
+	err := pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mem, err := pw.MemUsage(1)
+	if mem != scootexecer.Memory(rss*3*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem", err, mem)
 	}
 }
@@ -59,34 +71,40 @@ func TestProcGroup(t *testing.T) {
 // Tests that memory of unrelated processes are not counted
 func TestUnrelatedProcs(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{
+	pw := &testProcWatcher{procs: []string{
 		fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss), fmt.Sprintf("100 100 100 100")}}
-	e := NewBoundedTestExecer(execer.Memory(0), pg)
-	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*3*bytesToKB) || err != nil {
+	err := pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mem, err := pw.MemUsage(1)
+	if mem != scootexecer.Memory(rss*3*bytesToKB) || err != nil {
 		t.Fatalf("%v: %v mem", err, mem)
 	}
 }
 
-// Tests that processes related through original process's pgid and their children are counted
+// Tests that processes related through original process's pwid and their children are counted
 func TestParentProcGroupAndChildren(t *testing.T) {
 	rss := 10
-	pg := &testProcGetter{procs: []string{
+	pw := &testProcWatcher{procs: []string{
 		fmt.Sprintf("0  0      0  %d", rss), fmt.Sprintf("1   0 1 %d", rss),
 		fmt.Sprintf("2 1       1 %d", rss), fmt.Sprintf("3  2    1      %d", rss),
 		fmt.Sprintf("4  3   3 %d", rss), fmt.Sprintf("5  2   3 %d", rss),
 		fmt.Sprintf("6  5   5 %d", rss), fmt.Sprintf("100    0   0  %d ", rss),
 		fmt.Sprintf("   101   100  100  %d", rss), fmt.Sprintf("  1000   1000      1001 %d   ", rss)}}
-	e := NewBoundedTestExecer(execer.Memory(0), pg)
-	mem, err := e.memUsage(1)
-	if mem != execer.Memory(rss*9*bytesToKB) || err != nil {
-		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pg.allProcesses, pg.processGroups, pg.parentProcesses)
+	err := pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mem, err := pw.MemUsage(1)
+	if mem != scootexecer.Memory(rss*9*bytesToKB) || err != nil {
+		t.Fatalf("%v: %v mem\nallProcesses:\n\t%v\nprocessGroups:\n\t%v\nparentProcesses:\n\t%v", err, mem, pw.allProcesses, pw.processGroups, pw.parentProcesses)
 	}
 }
 
 func TestAbortSigterm(t *testing.T) {
-	e := NewExecer()
-	cmd := execer.Command{
+	e := NewBoundedExecer(0, nil)
+	cmd := scootexecer.Command{
 		Argv: []string{"sleep", "1000"},
 	}
 
@@ -95,7 +113,7 @@ func TestAbortSigterm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proc.(*osProcess).ats = 1
+	proc.(*process).ats = 1
 
 	res := proc.Abort()
 	// error string could be implementation dependent
@@ -110,7 +128,7 @@ func TestAbortSigterm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proc.(*osProcess).ats = 1
+	proc.(*process).ats = 1
 
 	go func() {
 		proc.Wait()
@@ -123,9 +141,9 @@ func TestAbortSigterm(t *testing.T) {
 }
 
 func TestAbortCatch(t *testing.T) {
-	e := NewBoundedTestExecer(0, &osProcGetter{})
+	e := NewBoundedTestExecer(0, &procWatcher{})
 	var stdout, stderr bytes.Buffer
-	cmd := execer.Command{
+	cmd := scootexecer.Command{
 		Argv:   []string{"sh", "./trap_script.sh"},
 		Stderr: &stderr,
 		Stdout: &stdout,
@@ -135,11 +153,15 @@ func TestAbortCatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pid := proc.(*osProcess).cmd.Process.Pid
-	proc.(*osProcess).ats = 1
+	pid := proc.(*process).cmd.Process.Pid
+	proc.(*process).ats = 1
 
 	time.Sleep(500 * time.Millisecond)
-	usage, err := e.memUsage(pid)
+	err = e.pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, err := e.pw.MemUsage(pid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,13 +170,21 @@ func TestAbortCatch(t *testing.T) {
 	}
 
 	proc.Abort()
-	usage, err = e.memUsage(pid)
+	err = e.pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, err = e.pw.MemUsage(pid)
 	if usage != 0 {
 		t.Fatalf("Expected memUsage to be 0 after Abort & Kill, was %d", usage)
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	usage, err = e.memUsage(pid)
+	err = e.pw.GetAndSetProcs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, err = e.pw.MemUsage(pid)
 	if err == nil {
 		t.Fatalf("Expected %d to not exist as a process anymore.", pid)
 	}
@@ -163,20 +193,15 @@ func TestAbortCatch(t *testing.T) {
 	}
 }
 
-type testProcGetter struct {
-	procs []string // pid, pgid, ppid, rss format
-	osProcGetter
-	allProcesses    map[int]proc
-	processGroups   map[int][]proc
-	parentProcesses map[int][]proc
+type testProcWatcher struct {
+	procs []string // pid, pwid, ppid, rss format
+	procWatcher
 }
 
-func (pg *testProcGetter) getProcs() (
-	allProcesses map[int]proc, processGroups map[int][]proc,
-	parentProcesses map[int][]proc, err error) {
-	ap, pgs, pps, err := pg.parseProcs(pg.procs)
-	pg.allProcesses = ap
-	pg.processGroups = pgs
-	pg.parentProcesses = pps
-	return ap, pgs, pps, err
+func (pw *testProcWatcher) GetAndSetProcs() error {
+	ap, pws, pps, err := parseProcs(pw.procs)
+	pw.allProcesses = ap
+	pw.processGroups = pws
+	pw.parentProcesses = pps
+	return err
 }
