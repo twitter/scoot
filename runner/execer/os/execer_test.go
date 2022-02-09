@@ -19,7 +19,7 @@ func init() {
 	log.SetLevel(logrusLevel)
 }
 
-func NewBoundedTestExecer(memCap scootexecer.Memory, pw processWatcher) *execer {
+func NewBoundedTestExecer(memCap scootexecer.Memory, pw ProcessWatcher) *execer {
 	return &execer{memCap: memCap, pw: pw}
 }
 

@@ -32,7 +32,7 @@ type execer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap
 	memCap scootexecer.Memory
 	stat   stats.StatsReceiver
-	pw     processWatcher
+	pw     ProcessWatcher
 }
 
 // NewBoundedExecer returns an execer with a ProcGetter and, if non-zero values are provided, a memCap and a StatsReceiver

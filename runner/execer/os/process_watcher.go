@@ -10,7 +10,7 @@ import (
 )
 
 // Used for mocking memCap monitoring
-type processWatcher interface {
+type ProcessWatcher interface {
 	GetAndSetProcs() error
 	MemUsage(int) (scootexecer.Memory, error)
 }
