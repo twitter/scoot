@@ -70,7 +70,7 @@ func (dc lastAccessedDirConfig) cleanDir(retentionMin uint) error {
 	args := []string{dc.GetDir(), "!", "-path", dc.GetDir(), "-amin", fmt.Sprintf("+%d", retentionMin), "-delete"}
 
 	log.Infof("Running cleanup for %s with cmd: %s %s\n", dc.GetDir(), name, args)
-	err := exec.Command(name, args...).Run()
+	_, err := exec.Command(name, args...).Output()
 	if err != nil {
 		log.Errorf("Error running cleanup command (this can commonly fail due to non-empty directories): %s\n", err)
 		if errExit, ok := err.(*exec.ExitError); ok {
