@@ -19,7 +19,7 @@ type testCase struct {
 
 func TestEntireDirConfigCleanDir(t *testing.T) {
 	testCases := []testCase{
-		{"Under Limit", 5, "test under limit content", false},
+		{"Under Limit", 1024, "test under limit content", false},
 		{"Over Limit", 0, "test over limit content", true},
 	}
 	for _, tc := range testCases {
