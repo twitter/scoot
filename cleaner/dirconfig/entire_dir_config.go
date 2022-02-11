@@ -34,15 +34,36 @@ func (dc EntireDirConfig) CleanDir() error {
 }
 
 func (dc EntireDirConfig) cleanDir() error {
+	err := dc.changeDirPermsForDeletion()
+	if err != nil {
+		return err
+	}
+
 	name := "rm"
 	args := []string{"-rf", dc.GetDir()}
 
 	log.Infof("Running cleanup for %s with cmd: %s %s\n", dc.GetDir(), name, args)
-	_, err := exec.Command(name, args...).Output()
+	_, err = exec.Command(name, args...).Output()
 	if err != nil {
 		log.Errorf("Error running cleanup command (this can commonly fail due to non-empty directories): %s\n", err)
 		if errExit, ok := err.(*exec.ExitError); ok {
 			log.Errorf("Cleanup command stderr:\n%s\n", errExit.Stderr)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (dc EntireDirConfig) changeDirPermsForDeletion() error {
+	name := "chmod"
+	args := []string{"-R", "u+rwx", dc.GetDir()}
+
+	log.Infof("Changing permissions on %s with cmd: %s %s\n", dc.GetDir(), name, args)
+	_, err := exec.Command(name, args...).Output()
+	if err != nil {
+		if errExit, ok := err.(*exec.ExitError); ok {
+			log.Errorf("Change dir permissions command stderr:\n%s\n", errExit.Stderr)
 		}
 		return err
 	}
