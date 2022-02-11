@@ -109,7 +109,7 @@ clean-go:
 	go clean ./...
 
 clean-procs:
-	killall scheduler workerserver apiserver || true
+	killall -SIGKILL scheduler workerserver apiserver || true
 
 clean: clean-data clean-go clean-procs
 
