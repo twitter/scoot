@@ -11,7 +11,7 @@ import (
 
 // Used for mocking memCap monitoring
 type ProcessWatcher interface {
-	GetAndSetProcs() error
+	GetProcs() (map[int]proc, error)
 	MemUsage(int) (scootexecer.Memory, error)
 }
 
@@ -33,22 +33,22 @@ func NewProcWatcher() *procWatcher {
 }
 
 // Get a full list of processes running, including their pid, pgid, ppid, and memory usage, and set procWatcher's fields
-func (opw *procWatcher) GetAndSetProcs() error {
+func (opw *procWatcher) GetProcs() (map[int]proc, error) {
 	cmd := "ps -e -o pid= -o pgid= -o ppid= -o rss= | tr '\n' ';' | sed 's,;$,,'"
 	psList := exec.Command("bash", "-c", cmd)
 	b, err := psList.Output()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	procs := strings.Split(string(b), ";")
 	ap, pg, pp, err := parseProcs(procs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	opw.allProcesses = ap
 	opw.processGroups = pg
 	opw.parentProcesses = pp
-	return nil
+	return opw.allProcesses, nil
 }
 
 // Sums memory usage for a given process, including usage by related processes

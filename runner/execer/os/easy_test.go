@@ -108,7 +108,7 @@ func TestMemUsage(t *testing.T) {
 	sleepDuration := 500 * time.Millisecond
 	for i := 0; i < 2; i++ {
 		time.Sleep(sleepDuration)
-		err := e.pw.GetAndSetProcs()
+		_, err := e.pw.GetProcs()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +158,7 @@ func TestMemCap(t *testing.T) {
 	defer timeout.Stop()
 	select {
 	case <-memCh:
-		err := e.pw.GetAndSetProcs()
+		_, err := e.pw.GetProcs()
 		if err != nil {
 			t.Fatal(err)
 		}

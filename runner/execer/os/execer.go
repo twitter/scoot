@@ -154,7 +154,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 					}).Info("Finished monitoring memory")
 				return
 			}
-			if err := e.pw.GetAndSetProcs(); err != nil {
+			if _, err := e.pw.GetProcs(); err != nil {
 				log.Error(err)
 			}
 			mem, _ := e.pw.MemUsage(pid)

@@ -27,7 +27,7 @@ func NewBoundedTestExecer(memCap scootexecer.Memory, pw ProcessWatcher) *execer 
 func TestExecerMemUsage(t *testing.T) {
 	rss := 10
 	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss)}}
-	err := pw.GetAndSetProcs()
+	_, err := pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestExecerMemUsage(t *testing.T) {
 func TestParentProcGroup(t *testing.T) {
 	rss := 10
 	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 2 2 %d", rss)}}
-	err := pw.GetAndSetProcs()
+	_, err := pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestParentProcGroup(t *testing.T) {
 func TestProcGroup(t *testing.T) {
 	rss := 10
 	pw := &testProcWatcher{procs: []string{fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss)}}
-	err := pw.GetAndSetProcs()
+	_, err := pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestUnrelatedProcs(t *testing.T) {
 	rss := 10
 	pw := &testProcWatcher{procs: []string{
 		fmt.Sprintf("1 1 1 %d", rss), fmt.Sprintf("2 1 1 %d", rss), fmt.Sprintf("3 1 2 %d", rss), fmt.Sprintf("100 100 100 100")}}
-	err := pw.GetAndSetProcs()
+	_, err := pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestParentProcGroupAndChildren(t *testing.T) {
 		fmt.Sprintf("4  3   3 %d", rss), fmt.Sprintf("5  2   3 %d", rss),
 		fmt.Sprintf("6  5   5 %d", rss), fmt.Sprintf("100    0   0  %d ", rss),
 		fmt.Sprintf("   101   100  100  %d", rss), fmt.Sprintf("  1000   1000      1001 %d   ", rss)}}
-	err := pw.GetAndSetProcs()
+	_, err := pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestAbortCatch(t *testing.T) {
 	proc.(*process).ats = 1
 
 	time.Sleep(500 * time.Millisecond)
-	err = e.pw.GetAndSetProcs()
+	_, err = e.pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestAbortCatch(t *testing.T) {
 	}
 
 	proc.Abort()
-	err = e.pw.GetAndSetProcs()
+	_, err = e.pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestAbortCatch(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	err = e.pw.GetAndSetProcs()
+	_, err = e.pw.GetProcs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,10 +198,10 @@ type testProcWatcher struct {
 	procWatcher
 }
 
-func (pw *testProcWatcher) GetAndSetProcs() error {
+func (pw *testProcWatcher) GetProcs() (map[int]proc, error) {
 	ap, pws, pps, err := parseProcs(pw.procs)
 	pw.allProcesses = ap
 	pw.processGroups = pws
 	pw.parentProcesses = pps
-	return err
+	return pw.allProcesses, err
 }
