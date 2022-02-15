@@ -198,7 +198,7 @@ type testProcWatcher struct {
 	procWatcher
 }
 
-func (pw *testProcWatcher) GetProcs() (map[int]proc, error) {
+func (pw *testProcWatcher) GetProcs() (map[int]ProcInfo, error) {
 	ap, pws, pps, err := parseProcs(pw.procs)
 	pw.allProcesses = ap
 	pw.processGroups = pws
