@@ -21,8 +21,6 @@ github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b h1:VKtxabqXZkF25pY9ekfRL6a582T4P37/31XEstQ5p58=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
-github.com/golang/mock v1.0.1-0.20180211072722-58cd061d0938 h1:L2npp793UcOX2cl42AqIHorMaqGbeSZ1muLlXMbNuYA=
-github.com/golang/mock v1.0.1-0.20180211072722-58cd061d0938/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/mock v1.4.0 h1:Rd1kQnQu0Hq3qvJppYSG0HtP+f5LPPUiDswTLiEegLg=
 github.com/golang/mock v1.4.0/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt3cw=
 github.com/golang/protobuf v1.3.2 h1:6nsPYzhq5kReh6QImI3k5qWzO4PEbvbIW2cwSfR/6xs=
@@ -78,8 +76,6 @@ github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795 h1:cPFP5qjFNOQU5rpHWWLYb/zSWRlI5qmqKaKQyTBZiqg=
-github.com/twitter/go-bindata v0.0.0-20180208183117-2fa2cba09795/go.mod h1:oImxtYs/VVcqQCg6taR5pyiXWMlT+WVg7tnwMyZzTn4=
 github.com/twitter/groupcache v0.0.0-20191021194929-8215cbf3be0f h1:x/asnk07H/3UZATjr3JRBTbgr1Lsnb39asCxEdIJktQ=
 github.com/twitter/groupcache v0.0.0-20191021194929-8215cbf3be0f/go.mod h1:fcAzz9dBuUo1tHcNFsXFI7dRwSAAKsjCraVFeByrhUc=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 h1:3SVOIvH7Ae1KRYyQWRjXWJEA9sS/c/pjvH++55Gr648=
