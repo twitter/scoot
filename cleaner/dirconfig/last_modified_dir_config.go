@@ -12,10 +12,10 @@ import (
 
 // Configuration for cleaning disk space of a directory
 // based on usage thresholds given as low and high watermarks in KB,
-// and retention settings for each threshold as time since last accessed in minutes.
-// if LowMarkKB <= usage < HighMarkKB, prune files last accessed prior to LowRetentionMin
-// if HighMarkKB <= usage, prune files last accessed prior to HighRetentionMin
-type lastAccessedDirConfig struct {
+// and retention settings for each threshold as time since last modified in minutes.
+// if LowMarkKB <= usage < HighMarkKB, prune files last modified prior to LowRetentionMin
+// if HighMarkKB <= usage, prune files last modified prior to HighRetentionMin
+type lastModifiedDirConfig struct {
 	Dir              string
 	LowMarkKB        uint64
 	LowRetentionMin  uint
@@ -23,12 +23,12 @@ type lastAccessedDirConfig struct {
 	HighRetentionMin uint
 }
 
-func NewLastAccessedDirConfig(dir string, lowMarkKB uint64, lowRetentionMin uint, highMarkKB uint64, highRetentionMin uint) (*lastAccessedDirConfig, error) {
+func NewLastModifiedDirConfig(dir string, lowMarkKB uint64, lowRetentionMin uint, highMarkKB uint64, highRetentionMin uint) (*lastModifiedDirConfig, error) {
 	if lowMarkKB >= highMarkKB {
 		return nil, errors.New(
 			fmt.Sprintf("Invalid DirConfig for %s: LowMarkKB %d >= HighMarkKB %d", dir, lowMarkKB, highMarkKB))
 	}
-	return &lastAccessedDirConfig{
+	return &lastModifiedDirConfig{
 		Dir:              dir,
 		LowMarkKB:        lowMarkKB,
 		LowRetentionMin:  lowRetentionMin,
@@ -37,9 +37,9 @@ func NewLastAccessedDirConfig(dir string, lowMarkKB uint64, lowRetentionMin uint
 	}, nil
 }
 
-func (dc lastAccessedDirConfig) GetDir() string { return dc.Dir }
+func (dc lastModifiedDirConfig) GetDir() string { return dc.Dir }
 
-func (dc lastAccessedDirConfig) CleanDir() error {
+func (dc lastModifiedDirConfig) CleanDir() error {
 	var usage uint64 = 0
 	var err error = nil
 
@@ -65,9 +65,9 @@ func (dc lastAccessedDirConfig) CleanDir() error {
 	return nil
 }
 
-func (dc lastAccessedDirConfig) cleanDir(retentionMin uint) error {
+func (dc lastModifiedDirConfig) cleanDir(retentionMin uint) error {
 	name := "find"
-	args := []string{dc.GetDir(), "!", "-path", dc.GetDir(), "-amin", fmt.Sprintf("+%d", retentionMin), "-delete"}
+	args := []string{dc.GetDir(), "!", "-path", dc.GetDir(), "-mmin", fmt.Sprintf("+%d", retentionMin), "-delete"}
 
 	log.Infof("Running cleanup for %s with cmd: %s %s\n", dc.GetDir(), name, args)
 	_, err := exec.Command(name, args...).Output()

@@ -13,7 +13,7 @@ import (
 
 func TestCleanupBadConfig(t *testing.T) {
 	// expect error - LowMark == HighMark
-	_, err := dirconfig.NewLastAccessedDirConfig("/this/dir/does/not/exist", 0, 0, 0, 0)
+	_, err := dirconfig.NewLastModifiedDirConfig("/this/dir/does/not/exist", 0, 0, 0, 0)
 	if err == nil {
 		t.Fatal("Expected error making new cleaner where LowMarkKB == HighMarkKB == 0")
 	}
@@ -21,7 +21,7 @@ func TestCleanupBadConfig(t *testing.T) {
 
 func TestCleanupFakeDir(t *testing.T) {
 	// expected to work without errors although Dir doesn't exist
-	dirConf, err := dirconfig.NewLastAccessedDirConfig("/this/dir/does/not/exist", 0, 0, 1, 0)
+	dirConf, err := dirconfig.NewLastModifiedDirConfig("/this/dir/does/not/exist", 0, 0, 1, 0)
 	if err != nil {
 		t.Fatalf("Failed to create DirConfig: %s", err)
 	}
@@ -42,7 +42,7 @@ func TestCleanupAtWatermarks(t *testing.T) {
 	}
 	defer os.RemoveAll(tmp)
 
-	dirConf, err := dirconfig.NewLastAccessedDirConfig(tmp, 64, 2880, 128, 1440)
+	dirConf, err := dirconfig.NewLastModifiedDirConfig(tmp, 64, 2880, 128, 1440)
 	dc, err := NewDiskCleaner([]dirconfig.DirConfig{dirConf})
 	if err != nil {
 		t.Fatalf("Failed to make new cleaner: %s", err)
