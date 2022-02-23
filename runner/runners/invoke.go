@@ -35,23 +35,27 @@ func NewInvoker(
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
+	preprocessors []func(),
+	postprocessors []func(),
 ) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID, preprocessors: preprocessors, postprocessors: postprocessors}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
 // (E.g., checking out a Snapshot, or saving the Output once it's done)
 // Unlike a full Runner, it has no idea of what else is running or has run.
 type Invoker struct {
-	exec       execer.Execer
-	filerMap   runner.RunTypeMap
-	output     runner.OutputCreator
-	stat       stats.StatsReceiver
-	dirMonitor *stats.DirsMonitor
-	rID        runner.RunnerID
+	exec           execer.Execer
+	filerMap       runner.RunTypeMap
+	output         runner.OutputCreator
+	stat           stats.StatsReceiver
+	dirMonitor     *stats.DirsMonitor
+	rID            runner.RunnerID
+	preprocessors  []func()
+	postprocessors []func()
 }
 
 // Run runs cmd
@@ -99,6 +103,16 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	var co snapshot.Checkout
 	checkoutCh := make(chan error)
+
+	// set up pre/postprocessors
+	for _, pp := range inv.preprocessors {
+		pp()
+	}
+	defer func() {
+		for _, pp := range inv.postprocessors {
+			pp()
+		}
+	}()
 
 	// Determine RunType from Command SnapshotID
 	// This invoker supports RunTypeScoot and RunTypeBazel

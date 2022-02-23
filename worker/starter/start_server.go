@@ -57,6 +57,8 @@ func StartServer(
 	dirMonitor *stats.DirsMonitor,
 	memCap uint64,
 	stat *stats.StatsReceiver,
+	preprocessors []func(),
+	postprocessors []func(),
 ) {
 	// create worker object:
 	// worker support objects
@@ -72,7 +74,7 @@ func StartServer(
 		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: gitFiler, IDC: db.InitDoneCh}
 	}
 	// the worker object
-	worker := runners.NewSingleRunner(execer, filerMap, oc, *stat, dirMonitor, rID)
+	worker := runners.NewSingleRunner(execer, filerMap, oc, *stat, dirMonitor, rID, preprocessors, postprocessors)
 
 	// add service wrappers
 	// thrift wrapper
