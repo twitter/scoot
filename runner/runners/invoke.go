@@ -120,11 +120,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		err := pp()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("Error running %s: %s", rf, err)
 		}
 	}
 	defer func() {
-		msg := "running preprocessor"
+		msg := "running postprocessor"
 		for _, pp := range inv.postprocessors {
 			v := reflect.ValueOf(pp)
 			if v.Kind() == reflect.Func {
@@ -137,7 +137,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			}
 			err := pp()
 			if err != nil {
-				log.Error(err)
+				log.Errorf("Error running %s: %s", rf, err)
 			}
 		}
 	}()
