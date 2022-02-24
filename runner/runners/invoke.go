@@ -108,10 +108,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// set up pre/postprocessors
 	for _, pp := range inv.preprocessors {
+		var rf *runtime.Func
 		msg := "running preprocessor"
 		v := reflect.ValueOf(pp)
 		if v.Kind() == reflect.Func {
-			rf := runtime.FuncForPC(v.Pointer())
+			rf = runtime.FuncForPC(v.Pointer())
 			if rf != nil {
 				log.Infof("%s %s", msg, rf)
 			} else {
@@ -120,24 +121,25 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		}
 		err := pp()
 		if err != nil {
-			log.Errorf("Error running %s: %s", rf, err)
+			log.Errorf("Error running %s: %s", rf.Name(), err)
 		}
 	}
 	defer func() {
+		var rf *runtime.Func
 		msg := "running postprocessor"
 		for _, pp := range inv.postprocessors {
 			v := reflect.ValueOf(pp)
 			if v.Kind() == reflect.Func {
-				rf := runtime.FuncForPC(v.Pointer())
+				rf = runtime.FuncForPC(v.Pointer())
 				if rf != nil {
-					log.Infof("%s %s", msg, rf)
+					log.Infof("%s %s", msg, rf.Name())
 				} else {
 					log.Infof("%s (unable to determine postprocessor name)", msg)
 				}
 			}
 			err := pp()
 			if err != nil {
-				log.Errorf("Error running %s: %s", rf, err)
+				log.Errorf("Error running %s: %s", rf.Name(), err)
 			}
 		}
 	}()
