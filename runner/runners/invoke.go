@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -108,42 +106,16 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// set up pre/postprocessors
 	for _, pp := range inv.preprocessors {
-		var funcName string
-		msg := "running preprocessor"
-		v := reflect.ValueOf(pp)
-		if v.Kind() == reflect.Func {
-			rf := runtime.FuncForPC(v.Pointer())
-			if rf != nil {
-				funcName = rf.Name()
-				log.Infof("%s %s", msg, funcName)
-			} else {
-				funcName = "<func>"
-				log.Infof("%s (unable to determine preprocessor name)", msg)
-			}
-		}
-		err := pp()
-		if err != nil {
-			log.Errorf("Error running preprocessor %s: %s", funcName, err)
+		log.Info("running preprocessor")
+		if err := pp(); err != nil {
+			log.Errorf("Error running preprocessor %s", err)
 		}
 	}
 	defer func() {
-		var funcName string
-		msg := "running postprocessor"
 		for _, pp := range inv.postprocessors {
-			v := reflect.ValueOf(pp)
-			if v.Kind() == reflect.Func {
-				rf := runtime.FuncForPC(v.Pointer())
-				if rf != nil {
-					funcName = rf.Name()
-					log.Infof("%s %s", msg, funcName)
-				} else {
-					funcName = "<func>"
-					log.Infof("%s (unable to determine postprocessor name)", msg)
-				}
-			}
-			err := pp()
-			if err != nil {
-				log.Errorf("Error running postprocessor %s: %s", funcName, err)
+			log.Infof("running postprocessor")
+			if err := pp(); err != nil {
+				log.Errorf("Error running postprocessor %s", err)
 			}
 		}
 	}()
