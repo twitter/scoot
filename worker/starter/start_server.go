@@ -57,8 +57,8 @@ func StartServer(
 	dirMonitor *stats.DirsMonitor,
 	memCap uint64,
 	stat *stats.StatsReceiver,
-	preprocessors []func(),
-	postprocessors []func(),
+	preprocessors []func() error,
+	postprocessors []func() error,
 ) {
 	// create worker object:
 	// worker support objects

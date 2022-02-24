@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -35,8 +37,8 @@ func NewInvoker(
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
-	preprocessors []func(),
-	postprocessors []func(),
+	preprocessors []func() error,
+	postprocessors []func() error,
 ) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -54,8 +56,8 @@ type Invoker struct {
 	stat           stats.StatsReceiver
 	dirMonitor     *stats.DirsMonitor
 	rID            runner.RunnerID
-	preprocessors  []func()
-	postprocessors []func()
+	preprocessors  []func() error
+	postprocessors []func() error
 }
 
 // Run runs cmd
@@ -106,11 +108,37 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	// set up pre/postprocessors
 	for _, pp := range inv.preprocessors {
-		pp()
+		msg := "running preprocessor"
+		v := reflect.ValueOf(pp)
+		if v.Kind() == reflect.Func {
+			rf := runtime.FuncForPC(v.Pointer())
+			if rf != nil {
+				log.Infof("%s %s", msg, rf)
+			} else {
+				log.Infof("%s (unable to determine preprocessor name)", msg)
+			}
+		}
+		err := pp()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	defer func() {
+		msg := "running preprocessor"
 		for _, pp := range inv.postprocessors {
-			pp()
+			v := reflect.ValueOf(pp)
+			if v.Kind() == reflect.Func {
+				rf := runtime.FuncForPC(v.Pointer())
+				if rf != nil {
+					log.Infof("%s %s", msg, rf)
+				} else {
+					log.Infof("%s (unable to determine postprocessor name)", msg)
+				}
+			}
+			err := pp()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}()
 

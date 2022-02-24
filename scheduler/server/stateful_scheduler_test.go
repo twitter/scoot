@@ -283,7 +283,7 @@ func Test_StatefulScheduler_TaskGetsMarkedCompletedAfterMaxRetriesFailedRuns(t *
 		ex.ExecError = errors.New("Test - failed to exec")
 		filerMap := runner.MakeRunTypeMap()
 		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-		return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func(){}, []func(){})
+		return runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{})
 	}
 
 	s := makeStatefulSchedulerDeps(deps)
@@ -768,7 +768,7 @@ func getDepsWithSimWorker() (*schedulerDeps, []*execers.SimExecer) {
 			ex := execers.NewSimExecer()
 			filerMap := runner.MakeRunTypeMap()
 			filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func(){}, []func(){})
+			runner := runners.NewSingleRunner(ex, filerMap, runners.NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{})
 			return runner
 		},
 		config: SchedulerConfiguration{

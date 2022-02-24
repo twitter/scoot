@@ -82,8 +82,8 @@ func NewQueueRunner(
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
-	preprocessors []func(),
-	postprocessors []func(),
+	preprocessors []func() error,
+	postprocessors []func() error,
 ) runner.Service {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -165,8 +165,8 @@ func NewSingleRunner(
 	stat stats.StatsReceiver,
 	dirMonitor *stats.DirsMonitor,
 	rID runner.RunnerID,
-	preprocessors []func(),
-	postprocessors []func(),
+	preprocessors []func() error,
+	postprocessors []func() error,
 ) runner.Service {
 	return NewQueueRunner(exec, filerMap, output, 0, stat, dirMonitor, rID, preprocessors, postprocessors)
 }

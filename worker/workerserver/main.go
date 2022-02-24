@@ -75,8 +75,8 @@ func main() {
 		stats.NopDirsMonitor,
 		*memCapFlag,
 		&stat,
-		[]func(){},
-		[]func(){},
+		[]func() error{},
+		[]func() error{},
 	)
 }
 
