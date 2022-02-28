@@ -34,43 +34,40 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	fw.cmdId = cmd.TaskID
 	if len(cmd.Argv) != 3 {
 		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
+			RunID:      runner.RunID(fw.cmdId),
+			State:      fw.state,
+			LogTags:    tags.LogTags{},
+			StdoutRef:  "",
+			StderrRef:  "",
+			SnapshotID: "",
+			ExitCode:   1,
+			Error:      "",
 		}, fmt.Errorf("expected cmd's Argv to have 3 entries: <anything>, <task duration>")
 	}
 	duration, err := strconv.Atoi(cmd.Argv[1])
 	if err != nil {
 		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
+			RunID:      runner.RunID(fw.cmdId),
+			State:      fw.state,
+			LogTags:    tags.LogTags{},
+			StdoutRef:  "",
+			StderrRef:  "",
+			SnapshotID: "",
+			ExitCode:   1,
+			Error:      "",
 		}, fmt.Errorf("didn't get a valid (int) task duration value from cmd.Argv's first param:%s", cmd.Argv[1])
 	}
 	exitCode, err := strconv.Atoi(cmd.Argv[2])
 	if err != nil {
 		return runner.RunStatus{
-			RunID:        runner.RunID(fw.cmdId),
-			State:        fw.state,
-			LogTags:      tags.LogTags{},
-			StdoutRef:    "",
-			StderrRef:    "",
-			SnapshotID:   "",
-			ExitCode:     1,
-			Error:        "",
-			ActionResult: nil,
+			RunID:      runner.RunID(fw.cmdId),
+			State:      fw.state,
+			LogTags:    tags.LogTags{},
+			StdoutRef:  "",
+			StderrRef:  "",
+			SnapshotID: "",
+			ExitCode:   1,
+			Error:      "",
 		}, fmt.Errorf("didn't get a valid (int) exit code value from cmd.Argv's first param:%s", cmd.Argv[2])
 	}
 
@@ -85,15 +82,14 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 	<-fw.doneCh // pause till done
 	fw.state = runner.COMPLETE
 	rs := runner.RunStatus{
-		RunID:        runner.RunID(fw.cmdId),
-		State:        fw.state,
-		LogTags:      tags.LogTags{},
-		StdoutRef:    "",
-		StderrRef:    "",
-		SnapshotID:   "",
-		ExitCode:     errors.ExitCode(exitCode),
-		Error:        "",
-		ActionResult: nil,
+		RunID:      runner.RunID(fw.cmdId),
+		State:      fw.state,
+		LogTags:    tags.LogTags{},
+		StdoutRef:  "",
+		StderrRef:  "",
+		SnapshotID: "",
+		ExitCode:   errors.ExitCode(exitCode),
+		Error:      "",
 	}
 	return rs, nil
 }
@@ -101,15 +97,14 @@ func (fw *FakeWorker) Run(cmd *runner.Command) (runner.RunStatus, error) {
 func (fw *FakeWorker) Abort(run runner.RunID) (runner.RunStatus, error) {
 	fw.doneCh <- true
 	rs := runner.RunStatus{
-		RunID:        runner.RunID(fw.cmdId),
-		State:        runner.ABORTED,
-		LogTags:      tags.LogTags{},
-		StdoutRef:    "",
-		StderrRef:    "",
-		SnapshotID:   "",
-		ExitCode:     0,
-		Error:        "",
-		ActionResult: nil,
+		RunID:      runner.RunID(fw.cmdId),
+		State:      runner.ABORTED,
+		LogTags:    tags.LogTags{},
+		StdoutRef:  "",
+		StderrRef:  "",
+		SnapshotID: "",
+		ExitCode:   0,
+		Error:      "",
 	}
 	return rs, nil
 }
@@ -126,15 +121,14 @@ func (fw *FakeWorker) QueryNow(q runner.Query) ([]runner.RunStatus, runner.Servi
 
 func (fw *FakeWorker) Status(run runner.RunID) (runner.RunStatus, runner.ServiceStatus, error) {
 	rs := runner.RunStatus{
-		RunID:        runner.RunID(fw.cmdId),
-		State:        fw.state,
-		LogTags:      tags.LogTags{},
-		StdoutRef:    "",
-		StderrRef:    "",
-		SnapshotID:   "",
-		ExitCode:     0,
-		Error:        "",
-		ActionResult: nil,
+		RunID:      runner.RunID(fw.cmdId),
+		State:      fw.state,
+		LogTags:    tags.LogTags{},
+		StdoutRef:  "",
+		StderrRef:  "",
+		SnapshotID: "",
+		ExitCode:   0,
+		Error:      "",
 	}
 
 	return rs, runner.ServiceStatus{Initialized: false, Error: nil}, nil

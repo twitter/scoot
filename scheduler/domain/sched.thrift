@@ -7,8 +7,6 @@
 # To Generate files, run from top level (github.com/twitter/scoot) repo directory:
 #     $ make thrift-sched-go
 
-include "bazel.thrift"
-
 struct Command {
   1: required list<string> argv
   2: optional map<string, string> envVars
@@ -19,7 +17,6 @@ struct Command {
 struct TaskDefinition {
   1: required Command command
   2: optional string taskId
-  3: optional bazel.ExecuteRequest bazelRequest
 }
 
 struct JobDefinition {

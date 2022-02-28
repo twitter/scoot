@@ -10,14 +10,8 @@ There are a few different store types that handle bundles differently. They can 
 in memory, bundles on disk, and bundles located behind an http server. Further, we can
 wrap these stores in a parent store to add additional business logic to our handling.
 
-## Bazel Content Addressable Store
-Bundlestore servers now also support the CAS API over gRPC, backed by the same underlying Store as the HTTP API.
-
 ## Bundle name conventions
 * HTTP Bundlestore server - For now names look like 'bs-<sha>.bundle'
-* GRPC Bazel CAS server - based on Digest - 'blob-<digest hash>.blob'. See bazel/README.md
-Note that the above means that although the Store backing a server can support HTTP and GRPC APIs,
-the HTTP API naming restriction prevents accessing GRPC artifacts.
 
 ## Server
 Server makes a store accessible via http and doesn't do much else at this time. Future work

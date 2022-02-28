@@ -8,8 +8,6 @@
 #     distinguish between local and included package prefixes.
 #     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 
-include "bazel.thrift"
-
 exception InvalidRequest {
   1: optional string message
 }
@@ -50,7 +48,6 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
-  11: optional bazel.ActionResult bazelResult
 }
 
 

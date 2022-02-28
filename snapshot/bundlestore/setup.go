@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/config/jsonconfig"
 	"github.com/twitter/scoot/ice"
@@ -14,11 +13,10 @@ import (
 
 type servers struct {
 	http *endpoints.TwitterServer
-	grpc bazel.GRPCServer
 }
 
-func makeServers(h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
-	return servers{http: h, grpc: g}
+func makeServers(h *endpoints.TwitterServer) servers {
+	return servers{http: h}
 }
 
 // Make a File Store based on the environment, or in temp if unset
@@ -52,18 +50,8 @@ func (m module) Install(b *ice.MagicBag) {
 func Defaults() *ice.MagicBag {
 	bag := ice.NewMagicBag()
 	bag.PutMany(
-		func(h *endpoints.TwitterServer, g bazel.GRPCServer) servers {
-			return makeServers(h, g)
-		},
-
-		func() *bazel.GRPCConfig {
-			return &bazel.GRPCConfig{
-				GRPCAddr: DefaultApiBundlestore_GRPC,
-			}
-		},
-
-		func(s *Server) bazel.GRPCServer {
-			return s.casServer
+		func(h *endpoints.TwitterServer) servers {
+			return makeServers(h)
 		},
 	)
 	return bag
@@ -90,9 +78,6 @@ func RunServer(bag *ice.MagicBag, schema jsonconfig.Schema, config []byte) {
 	errCh := make(chan error)
 	go func() {
 		errCh <- servers.http.Serve()
-	}()
-	go func() {
-		errCh <- servers.grpc.Serve()
 	}()
 	log.Fatal("Error serving:", <-errCh)
 }

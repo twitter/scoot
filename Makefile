@@ -65,11 +65,6 @@ ifneq ($(PROTOCVERSION),3.5.1)
 	exit 1
 endif
 
-# universal dep needed to run scoot
-fs_util:
-	# Fetches fs_util tool from pantsbuild binaries
-	bash scripts/get_fs_util.sh
-
 ############## tests and coverage
 
 coverage: clean-procs
@@ -95,7 +90,6 @@ recoverytest: clean-procs
 integrationtest: clean-procs
 	# Integration test with some overlap with other standalone tests, but utilizes client binaries
 	$(FIRSTGOPATH)/bin/scoot-integration &>/dev/null
-	$(FIRSTGOPATH)/bin/bazel-integration &>/dev/null
 
 ############## cleanup
 
@@ -120,29 +114,22 @@ generate:
 
 thrift-worker-go:
 	# Create generated code in github.com/twitter/scoot/worker/api/gen-go/... from worker/api/thrift/worker.thrift
-	cd worker/domain && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift ../api/thrift/worker.thrift && cd ../..
+	cd worker/domain && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift ../api/thrift/worker.thrift && cd ../..
 	rm -rf worker/domain/gen-go/worker/worker-remote/
 
 thrift-sched-go:
 	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
-	cd scheduler/domain && rm -rf gen-go && thrift -I ../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ../..
+	cd scheduler/domain && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ../..
 	rm -rf scheduler/domain/gen-go/sched/sched-remote/
 
 thrift-scoot-go:
 	# Create generated code in github.com/twitter/scoot/scheduler/api/thrift/gen-go/... from scoot.thrift
-	cd scheduler/api/thrift && rm -rf gen-go && thrift -I ../../../bazel/execution/bazelapi/ --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../../..
+	cd scheduler/api/thrift && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../../..
 	rm -rf scheduler/api/thrift/gen-go/scoot/cloud_scoot-remote/
 
-thrift-bazel-go:
-	# Create generated code in github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/... from bazel.thrift
-	cd bazel/execution/bazelapi && rm -rf gen-go && thrift --gen go:package_prefix=github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/,thrift_import=github.com/apache/thrift/lib/go/thrift bazel.thrift && cd ..
-
-thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go thrift-bazel-go
+thrift-go: thrift-sched-go thrift-scoot-go thrift-worker-go
 
 thrift: thrift-go
-
-bazel-proto:
-	# see bazel/remoteexecution/README.md
 
 ############## top-level dev-fullbuild, ci targets
 
@@ -151,4 +138,4 @@ dev-fullbuild: dev-dependencies generate test coverage
 bm: clean-procs
 	go test -timeout 120s -bench=. $$(go list ./...) -run=^Bench
 
-ci: clean-data fs_util install recoverytest smoketest integrationtest test bm coverage clean-data
+ci: clean-data install recoverytest smoketest integrationtest test bm coverage clean-data

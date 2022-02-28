@@ -16,7 +16,6 @@ import (
 	osexec "github.com/twitter/scoot/runner/execer/os"
 	"github.com/twitter/scoot/runner/runners"
 	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 )
 
@@ -50,7 +49,6 @@ func makeServers(
 func StartServer(
 	thriftAddr string,
 	httpAddr string,
-	bzFiler *bazel.BzFiler,
 	db *gitdb.DB,
 	oc runners.HttpOutputCreator,
 	rID runner.RunnerID,
@@ -66,9 +64,6 @@ func StartServer(
 	execer := execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(memory, *stat))
 
 	var filerMap runner.RunTypeMap = runner.MakeRunTypeMap()
-	if bzFiler != nil {
-		filerMap[runner.RunTypeBazel] = snapshot.FilerAndInitDoneCh{Filer: bzFiler, IDC: nil}
-	}
 	if db != nil {
 		gitFiler := snapshot.NewDBAdapter(db)
 		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: gitFiler, IDC: db.InitDoneCh}

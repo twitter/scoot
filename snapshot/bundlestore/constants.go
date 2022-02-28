@@ -9,8 +9,6 @@ const (
 
 	// Addrs
 	DefaultApiBundlestore_HTTP = "localhost:9094"
-	DefaultApiBundlestore_GRPC = "localhost:9098"
 
-	ApiBundlestorePorts     = 11100
-	ApiBundlestoreGRPCPorts = 12100
+	ApiBundlestorePorts = 11100
 )

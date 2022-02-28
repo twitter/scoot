@@ -554,12 +554,11 @@ func makeTestTasks(jobId string, numTasks int) ([]domain.TaskDefinition, []*task
 	tasksState := make([]*taskState, int(numTasks))
 	for i := 0; i < numTasks; i++ {
 		td := runner.Command{
-			Argv:           []string{""},
-			EnvVars:        nil,
-			Timeout:        0,
-			SnapshotID:     "",
-			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "fakeTag"},
-			ExecuteRequest: nil,
+			Argv:       []string{""},
+			EnvVars:    nil,
+			Timeout:    0,
+			SnapshotID: "",
+			LogTags:    tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "fakeTag"},
 		}
 		tasks[i] = domain.TaskDefinition{Command: td}
 

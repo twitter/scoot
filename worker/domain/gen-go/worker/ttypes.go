@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -15,7 +14,6 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
-var _ = bazel.GoUnusedProtection__
 var GoUnusedProtection__ int
 
 type Status int64
@@ -96,19 +94,17 @@ func (p *Status) UnmarshalText(text []byte) error {
 //  - JobId
 //  - TaskId
 //  - Tag
-//  - BazelResult_
 type RunStatus struct {
-	Status       Status               `thrift:"status,1,required" json:"status"`
-	RunId        string               `thrift:"runId,2,required" json:"runId"`
-	OutUri       *string              `thrift:"outUri,3" json:"outUri,omitempty"`
-	ErrUri       *string              `thrift:"errUri,4" json:"errUri,omitempty"`
-	Error        *string              `thrift:"error,5" json:"error,omitempty"`
-	ExitCode     *int32               `thrift:"exitCode,6" json:"exitCode,omitempty"`
-	SnapshotId   *string              `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
-	JobId        *string              `thrift:"jobId,8" json:"jobId,omitempty"`
-	TaskId       *string              `thrift:"taskId,9" json:"taskId,omitempty"`
-	Tag          *string              `thrift:"tag,10" json:"tag,omitempty"`
-	BazelResult_ *bazel.ActionResult_ `thrift:"bazelResult,11" json:"bazelResult,omitempty"`
+	Status     Status  `thrift:"status,1,required" json:"status"`
+	RunId      string  `thrift:"runId,2,required" json:"runId"`
+	OutUri     *string `thrift:"outUri,3" json:"outUri,omitempty"`
+	ErrUri     *string `thrift:"errUri,4" json:"errUri,omitempty"`
+	Error      *string `thrift:"error,5" json:"error,omitempty"`
+	ExitCode   *int32  `thrift:"exitCode,6" json:"exitCode,omitempty"`
+	SnapshotId *string `thrift:"snapshotId,7" json:"snapshotId,omitempty"`
+	JobId      *string `thrift:"jobId,8" json:"jobId,omitempty"`
+	TaskId     *string `thrift:"taskId,9" json:"taskId,omitempty"`
+	Tag        *string `thrift:"tag,10" json:"tag,omitempty"`
 }
 
 func NewRunStatus() *RunStatus {
@@ -194,15 +190,6 @@ func (p *RunStatus) GetTag() string {
 	}
 	return *p.Tag
 }
-
-var RunStatus_BazelResult__DEFAULT *bazel.ActionResult_
-
-func (p *RunStatus) GetBazelResult_() *bazel.ActionResult_ {
-	if !p.IsSetBazelResult_() {
-		return RunStatus_BazelResult__DEFAULT
-	}
-	return p.BazelResult_
-}
 func (p *RunStatus) IsSetOutUri() bool {
 	return p.OutUri != nil
 }
@@ -233,10 +220,6 @@ func (p *RunStatus) IsSetTaskId() bool {
 
 func (p *RunStatus) IsSetTag() bool {
 	return p.Tag != nil
-}
-
-func (p *RunStatus) IsSetBazelResult_() bool {
-	return p.BazelResult_ != nil
 }
 
 func (p *RunStatus) Read(iprot thrift.TProtocol) error {
@@ -296,10 +279,6 @@ func (p *RunStatus) Read(iprot thrift.TProtocol) error {
 			}
 		case 10:
 			if err := p.readField10(iprot); err != nil {
-				return err
-			}
-		case 11:
-			if err := p.readField11(iprot); err != nil {
 				return err
 			}
 		default:
@@ -414,14 +393,6 @@ func (p *RunStatus) readField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *RunStatus) readField11(iprot thrift.TProtocol) error {
-	p.BazelResult_ = &bazel.ActionResult_{}
-	if err := p.BazelResult_.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelResult_), err)
-	}
-	return nil
-}
-
 func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunStatus"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -454,9 +425,6 @@ func (p *RunStatus) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField10(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField11(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -609,21 +577,6 @@ func (p *RunStatus) writeField10(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 10:tag: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *RunStatus) writeField11(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBazelResult_() {
-		if err := oprot.WriteFieldBegin("bazelResult", thrift.STRUCT, 11); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:bazelResult: ", p), err)
-		}
-		if err := p.BazelResult_.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BazelResult_), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:bazelResult: ", p), err)
 		}
 	}
 	return err
@@ -840,16 +793,14 @@ func (p *WorkerStatus) String() string {
 //  - JobId
 //  - TaskId
 //  - Tag
-//  - BazelRequest
 type RunCommand struct {
-	Argv         []string              `thrift:"argv,1,required" json:"argv"`
-	Env          map[string]string     `thrift:"env,2" json:"env,omitempty"`
-	SnapshotId   *string               `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
-	TimeoutMs    *int32                `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
-	JobId        *string               `thrift:"jobId,5" json:"jobId,omitempty"`
-	TaskId       *string               `thrift:"taskId,6" json:"taskId,omitempty"`
-	Tag          *string               `thrift:"tag,7" json:"tag,omitempty"`
-	BazelRequest *bazel.ExecuteRequest `thrift:"bazelRequest,8" json:"bazelRequest,omitempty"`
+	Argv       []string          `thrift:"argv,1,required" json:"argv"`
+	Env        map[string]string `thrift:"env,2" json:"env,omitempty"`
+	SnapshotId *string           `thrift:"snapshotId,3" json:"snapshotId,omitempty"`
+	TimeoutMs  *int32            `thrift:"timeoutMs,4" json:"timeoutMs,omitempty"`
+	JobId      *string           `thrift:"jobId,5" json:"jobId,omitempty"`
+	TaskId     *string           `thrift:"taskId,6" json:"taskId,omitempty"`
+	Tag        *string           `thrift:"tag,7" json:"tag,omitempty"`
 }
 
 func NewRunCommand() *RunCommand {
@@ -910,15 +861,6 @@ func (p *RunCommand) GetTag() string {
 	}
 	return *p.Tag
 }
-
-var RunCommand_BazelRequest_DEFAULT *bazel.ExecuteRequest
-
-func (p *RunCommand) GetBazelRequest() *bazel.ExecuteRequest {
-	if !p.IsSetBazelRequest() {
-		return RunCommand_BazelRequest_DEFAULT
-	}
-	return p.BazelRequest
-}
 func (p *RunCommand) IsSetEnv() bool {
 	return p.Env != nil
 }
@@ -941,10 +883,6 @@ func (p *RunCommand) IsSetTaskId() bool {
 
 func (p *RunCommand) IsSetTag() bool {
 	return p.Tag != nil
-}
-
-func (p *RunCommand) IsSetBazelRequest() bool {
-	return p.BazelRequest != nil
 }
 
 func (p *RunCommand) Read(iprot thrift.TProtocol) error {
@@ -990,10 +928,6 @@ func (p *RunCommand) Read(iprot thrift.TProtocol) error {
 			}
 		case 7:
 			if err := p.readField7(iprot); err != nil {
-				return err
-			}
-		case 8:
-			if err := p.readField8(iprot); err != nil {
 				return err
 			}
 		default:
@@ -1109,14 +1043,6 @@ func (p *RunCommand) readField7(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *RunCommand) readField8(iprot thrift.TProtocol) error {
-	p.BazelRequest = &bazel.ExecuteRequest{}
-	if err := p.BazelRequest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
-	}
-	return nil
-}
-
 func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("RunCommand"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -1140,9 +1066,6 @@ func (p *RunCommand) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField7(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField8(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -1271,21 +1194,6 @@ func (p *RunCommand) writeField7(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 7:tag: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *RunCommand) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBazelRequest() {
-		if err := oprot.WriteFieldBegin("bazelRequest", thrift.STRUCT, 8); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:bazelRequest: ", p), err)
-		}
-		if err := p.BazelRequest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BazelRequest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 8:bazelRequest: ", p), err)
 		}
 	}
 	return err

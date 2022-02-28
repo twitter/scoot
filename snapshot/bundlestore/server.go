@@ -5,29 +5,25 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/cas"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/snapshot/store"
 )
 
-// Represents a Bundlestore Server that serves HTTP and gRPC Bazel CAS APIs
+// Represents a Bundlestore Server that serves HTTP
 // over an underlying Store with shared configuration and stats.
 // StoreConfig is in part as a simplified solution to 2 problems golang-related
 // problems we have with our current architecture:
 // - values of Store and StatsReceiver interfaces don't pass down cleanly
-// - encapsulating store, config and stats here prevented from being reused in cas
 // because of cyclic dependency rules
 type Server struct {
 	storeConfig *store.StoreConfig
 	httpServer  *httpServer
-	casServer   bazel.GRPCServer
 }
 
 // Make a new server that delegates to an underlying store.
 // TTL may be nil, in which case defaults are applied downstream.
 // TTL may be overridden by request headers, but we always pass this TTLKey to the store.
-func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, gc *bazel.GRPCConfig) *Server {
+func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver) *Server {
 	scopedStat := stat.Scope("bundlestoreServer")
 	go stats.StartUptimeReporting(scopedStat, stats.BundlestoreUptime_ms, stats.BundlestoreServerStartedGauge, stats.DefaultStartupGaugeSpikeLen)
 	cfg := &store.StoreConfig{Store: s, TTLCfg: ttl, Stat: scopedStat}
@@ -36,7 +32,6 @@ func MakeServer(s store.Store, ttl *store.TTLConfig, stat stats.StatsReceiver, g
 	return &Server{
 		storeConfig: cfg,
 		httpServer:  MakeHTTPServer(cfg),
-		casServer:   cas.MakeCASServer(gc, cfg, stat),
 	}
 }
 

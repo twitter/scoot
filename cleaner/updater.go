@@ -5,7 +5,7 @@ import (
 )
 
 // This Updater is just a means to call cleanup at a set frequency for a worker that
-// otherwise doesn't need Filer updates. In practice we use this for Bazel workers without git repos.
+// otherwise doesn't need Filer updates.
 
 // An Updater for snapshot Filers that invokes a cleaner.Cleaner at the update interval.
 // Implements github.com/twitter/scoot/snapshot.Updater interface
