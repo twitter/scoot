@@ -3,7 +3,6 @@ package runner
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
 )
@@ -80,8 +79,6 @@ type RunStatus struct {
 	ExitCode errors.ExitCode
 	// Only valid if State == (COMPLETE || FAILED || ABORTED)
 	Error string
-	// Only valid if task is run on a Bazel filer
-	ActionResult *bazelapi.ActionResult
 }
 
 func (p RunStatus) String() string {
@@ -101,9 +98,6 @@ func (p RunStatus) String() string {
 	}
 	if p.State == COMPLETE || p.State == FAILED || p.State == ABORTED {
 		s += fmt.Sprintf(" # Error: %s", p.Error)
-	}
-	if p.ActionResult != nil {
-		s += fmt.Sprintf(" # ActionResult: %s", p.ActionResult)
 	}
 	return s
 }

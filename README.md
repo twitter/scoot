@@ -66,11 +66,6 @@ and waits for the job to complete
 
 (./binaries/scoot-integration/main.go)
 
-Invokes a scoot bazel client (bzutil & fs_util) via CLI to run a job against a local cluster
-using the bazel API grpc endpoints
-
-(./binaries/bazel-integration/main.go)
-
 ## Scoot Thrift Code
 __Thrift Prerequisites__
 Install the Thrift tool and golang thrift repository locally using the following section.

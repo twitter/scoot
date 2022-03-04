@@ -7,8 +7,6 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/execution"
 	"github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"
@@ -23,14 +21,12 @@ import (
 type servers struct {
 	thrift thrift.TServer
 	http   *endpoints.TwitterServer
-	grpc   bazel.GRPCServer
 }
 
 func makeServers(
 	thrift thrift.TServer,
-	http *endpoints.TwitterServer,
-	grpc bazel.GRPCServer) servers {
-	return servers{thrift, http, grpc}
+	http *endpoints.TwitterServer) servers {
+	return servers{thrift, http}
 }
 
 // StartServer construct and start scheduler service (without using ice)
@@ -41,7 +37,6 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	statsReceiver *stats.StatsReceiver,
 	workerClientTimeout time.Duration,
 	endpoints *endpoints.TwitterServer,
-	bazelGRPCConfig *bazel.GRPCConfig,
 	persistor server.Persistor,
 	durationKeyExtractorFn func(string) string,
 	nodesUpdatesCh chan []cluster.NodeUpdate) error {
@@ -64,12 +59,10 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 
 	statefulScheduler := server.NewStatefulScheduler(nodesUpdatesCh, sagaCoordinator, rf, schedulerConfig, *statsReceiver, persistor, durationKeyExtractorFn)
 
-	bazelServer := execution.MakeExecutionServer(bazelGRPCConfig, statefulScheduler, *statsReceiver)
-
 	thriftHandler := api.NewHandler(statefulScheduler, sagaCoordinator, *statsReceiver)
 	thriftServer := api.MakeServer(thriftHandler, thriftServerTransport, thriftTransportFactory, binaryProtocolFactory)
 
-	servers := makeServers(thriftServer, endpoints, bazelServer)
+	servers := makeServers(thriftServer, endpoints)
 
 	errCh := make(chan error)
 	go func() {
@@ -77,9 +70,6 @@ func StartServer(schedulerConfig server.SchedulerConfiguration,
 	}()
 	go func() {
 		errCh <- servers.thrift.Serve()
-	}()
-	go func() {
-		errCh <- servers.grpc.Serve()
 	}()
 	log.Fatal("Error serving: ", <-errCh)
 

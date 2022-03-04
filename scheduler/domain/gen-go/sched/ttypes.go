@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/bazel/execution/bazelapi/gen-go/bazel"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -15,7 +14,6 @@ var _ = thrift.ZERO
 var _ = fmt.Printf
 var _ = bytes.Equal
 
-var _ = bazel.GoUnusedProtection__
 var GoUnusedProtection__ int
 
 // Attributes:
@@ -298,11 +296,9 @@ func (p *Command) String() string {
 // Attributes:
 //  - Command
 //  - TaskId
-//  - BazelRequest
 type TaskDefinition struct {
-	Command      *Command              `thrift:"command,1,required" json:"command"`
-	TaskId       *string               `thrift:"taskId,2" json:"taskId,omitempty"`
-	BazelRequest *bazel.ExecuteRequest `thrift:"bazelRequest,3" json:"bazelRequest,omitempty"`
+	Command *Command `thrift:"command,1,required" json:"command"`
+	TaskId  *string  `thrift:"taskId,2" json:"taskId,omitempty"`
 }
 
 func NewTaskDefinition() *TaskDefinition {
@@ -326,25 +322,12 @@ func (p *TaskDefinition) GetTaskId() string {
 	}
 	return *p.TaskId
 }
-
-var TaskDefinition_BazelRequest_DEFAULT *bazel.ExecuteRequest
-
-func (p *TaskDefinition) GetBazelRequest() *bazel.ExecuteRequest {
-	if !p.IsSetBazelRequest() {
-		return TaskDefinition_BazelRequest_DEFAULT
-	}
-	return p.BazelRequest
-}
 func (p *TaskDefinition) IsSetCommand() bool {
 	return p.Command != nil
 }
 
 func (p *TaskDefinition) IsSetTaskId() bool {
 	return p.TaskId != nil
-}
-
-func (p *TaskDefinition) IsSetBazelRequest() bool {
-	return p.BazelRequest != nil
 }
 
 func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
@@ -370,10 +353,6 @@ func (p *TaskDefinition) Read(iprot thrift.TProtocol) error {
 			issetCommand = true
 		case 2:
 			if err := p.readField2(iprot); err != nil {
-				return err
-			}
-		case 3:
-			if err := p.readField3(iprot); err != nil {
 				return err
 			}
 		default:
@@ -411,14 +390,6 @@ func (p *TaskDefinition) readField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *TaskDefinition) readField3(iprot thrift.TProtocol) error {
-	p.BazelRequest = &bazel.ExecuteRequest{}
-	if err := p.BazelRequest.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BazelRequest), err)
-	}
-	return nil
-}
-
 func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("TaskDefinition"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -427,9 +398,6 @@ func (p *TaskDefinition) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField2(oprot); err != nil {
-		return err
-	}
-	if err := p.writeField3(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -464,21 +432,6 @@ func (p *TaskDefinition) writeField2(oprot thrift.TProtocol) (err error) {
 		}
 		if err := oprot.WriteFieldEnd(); err != nil {
 			return thrift.PrependError(fmt.Sprintf("%T write field end error 2:taskId: ", p), err)
-		}
-	}
-	return err
-}
-
-func (p *TaskDefinition) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBazelRequest() {
-		if err := oprot.WriteFieldBegin("bazelRequest", thrift.STRUCT, 3); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:bazelRequest: ", p), err)
-		}
-		if err := p.BazelRequest.Write(oprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BazelRequest), err)
-		}
-		if err := oprot.WriteFieldEnd(); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:bazelRequest: ", p), err)
 		}
 	}
 	return err

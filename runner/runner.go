@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/log/tags"
 	"github.com/twitter/scoot/snapshot"
 )
@@ -26,7 +25,6 @@ type RunType string
 
 const (
 	RunTypeScoot RunType = "Scoot"
-	RunTypeBazel RunType = "Bazel"
 )
 
 type RunTypeMap map[RunType]snapshot.FilerAndInitDoneCh
@@ -46,19 +44,8 @@ type Command struct {
 	// Runner can optionally use this to run against a particular snapshot. Empty value is ignored.
 	SnapshotID string
 
-	// TODO(jschiller): get consensus on design and either implement or delete.
-	// Runner can optionally use this to specify content if creating a new snapshot.
-	// Keys: relative src file & dir paths in SnapshotId checkout. May contain '*' wildcard.
-	// Values: relative dest path=dir/base in new snapshot (if src has a wildcard, then dest path is treated as a parent dir).
-	//
-	// Note: nil and empty maps are different!, nil means don't filter, empty means filter everything.
-	// SnapshotPlan map[string]string
-
 	// Runner is given JobID, TaskID, and Tag to help trace tasks throughout their lifecycle
 	tags.LogTags
-
-	// Bazel ExecuteRequest data for tasks initiated from the Bazel API
-	ExecuteRequest *bazelapi.ExecuteRequest
 }
 
 func (c Command) String() string {
@@ -75,10 +62,6 @@ func (c Command) String() string {
 		for k, v := range c.EnvVars {
 			s += fmt.Sprintf("  %s=%s", k, v)
 		}
-	}
-
-	if c.ExecuteRequest != nil {
-		s += fmt.Sprintf("  ExecuteRequest=%s", c.ExecuteRequest)
 	}
 
 	return s

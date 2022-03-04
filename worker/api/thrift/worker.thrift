@@ -8,8 +8,6 @@
 #     distinguish between local and included package prefixes.
 #     We optimize for the golang library code and remove a main-package client the thrift tool generates.
 
-include "bazel.thrift"
-
 enum Status {
   UNKNOWN = 0      # Catch-all for indeterminate RunStatusStates. Also an "end state"
   PENDING = 1      # Waiting to run
@@ -32,7 +30,6 @@ struct RunStatus {
   8: optional string jobId
   9: optional string taskId
   10: optional string tag
-  11: optional bazel.ActionResult bazelResult
 }
 
 struct WorkerStatus {
@@ -49,7 +46,6 @@ struct RunCommand {
   5: optional string jobId
   6: optional string taskId
   7: optional string tag
-  8: optional bazel.ExecuteRequest bazelRequest
 }
 
 service Worker {

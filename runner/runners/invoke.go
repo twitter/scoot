@@ -11,18 +11,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/cas"
-	"github.com/twitter/scoot/bazel/execution/bazelapi"
 	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/tags"
-	scootproto "github.com/twitter/scoot/common/proto"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/execer"
 	"github.com/twitter/scoot/runner/execer/execers"
 	"github.com/twitter/scoot/snapshot"
-	bzsnapshot "github.com/twitter/scoot/snapshot/bazel"
 )
 
 // invoke.go: Invoker runs a Scoot command.
@@ -121,57 +116,15 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}()
 
 	// Determine RunType from Command SnapshotID
-	// This invoker supports RunTypeScoot and RunTypeBazel
-	var runType runner.RunType
-	if err := bazel.ValidateID(cmd.SnapshotID); err == nil {
-		runType = runner.RunTypeBazel
-	} else {
-		runType = runner.RunTypeScoot
-	}
+	// This invoker supports RunTypeScoot
+	var runType runner.RunType = runner.RunTypeScoot
 	if _, ok := inv.filerMap[runType]; !ok {
 		return runner.FailedStatus(id,
 			errors.NewError(fmt.Errorf("Invoker does not have filer for command of RunType: %s", runType), errors.PreProcessingFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	}
 
-	// Bazel requests - fetch command argv/env from CAS
-	// We can also receive a cached result here, in which case we skip invocation
 	rts.inputStart = stamp()
-	if runType == runner.RunTypeBazel {
-		cachedResult, notExist, err := preProcessBazel(inv.filerMap[runType].Filer, cmd, rts)
-		if err != nil {
-			msg := fmt.Sprintf("Error preprocessing Bazel command: %s", err)
-			failedStatus := runner.FailedStatus(id, errors.NewError(
-				e.New(msg), errors.PreProcessingFailureExitCode),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-
-			// If we encounter a cas NotFoundError, set a grpc status message in
-			// the failure run status that indicates missing data to client
-			if cas.IsNotFoundError(err) {
-				log.Info("NotFound error during Bazel preprocess - Setting grpc Status error")
-				errStatus, err := getFailedPreconditionStatus(notExist)
-				if err != nil {
-					log.Errorf("Error generating Failed Precondition status: %s", err)
-				} else {
-					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
-				}
-			}
-			return failedStatus
-		}
-		if cachedResult != nil {
-			rts.queuedTime = scootproto.GetTimeFromTimestamp(cmd.ExecuteRequest.GetExecutionMetadata().GetQueuedTimestamp())
-			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
-			actionCacheCheckTime := rts.actionCacheCheckEnd.Sub(rts.actionCacheCheckStart)
-			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecActionCacheCheckTimeHistogram_ms).Update(int64(actionCacheCheckTime / time.Millisecond))
-			inv.stat.Counter(stats.BzCachedExecCounter).Inc(1)
-			status := runner.CompleteStatus(id, "", 0,
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			status.ActionResult = cachedResult
-			return status
-		}
-	}
 
 	// if we are checking out a snapshot, start the timer outside of go routine
 	var downloadTimer stats.Latency
@@ -252,21 +205,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}
 
-			// For Checkout errors from Bazel commands that indicate non-existence, we set a GRPC
-			// Status error indicating that the InputRoot data could not be found.
-			if runType == runner.RunTypeBazel {
-				msg := fmt.Sprintf("Failed to checkout Snapshot: %s", err)
-				failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-				if _, ok := err.(*bzsnapshot.CheckoutNotExistError); ok {
-					log.Info("Checkout for Bazel command returned CheckoutNotExistError - Setting grpc Status error")
-					errStatus, err := getCheckoutMissingStatus(cmd.SnapshotID)
-					if err != nil {
-						log.Errorf("Error generating Failed Precondition status: %s", err)
-					} else {
-						failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: errStatus}
-					}
-				}
-			}
 			return failedStatus
 		}
 		// Checkout is ok, continue with run and when finished release checkout.
@@ -288,9 +226,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create stdout: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	}
 	defer stdout.Close()
@@ -300,9 +235,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create stderr: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	}
 	defer stderr.Close()
@@ -312,9 +244,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not create combined stdout/stderr: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.LogRefCreationFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	}
 	defer stdlog.Close()
@@ -322,36 +251,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	marker := "###########################################\n###########################################\n"
 	format := "%s\n\nDate: %v\nOut: %s\tErr: %s\tOutErr: %s\tCmd:\n%v\n\n%s\n\n\nSCOOT_CMD_LOG\n"
 	header := fmt.Sprintf(format, marker, time.Now(), stdout.URI(), stderr.URI(), stdlog.URI(), cmd, marker)
-	// NOTE We don't add headers for Bazel.
 	// If we wanted to allow optionally, a switch for this would come either at the Worker level
 	// (via Invoker -> QueueRunner construction), or the Command level (job requestor specifies in e.g. a PlatformProperty)
 
 	// Processing/setup post checkout before execution
 	switch runType {
-	case runner.RunTypeBazel:
-		for _, pp := range cmd.ExecuteRequest.GetCommand().GetPlatform().GetProperties() {
-			if pp.GetName() == "JDK_SYMLINK" {
-				log.Infof("JDK_SYMLINK platform property identified. Creating %s symlink", pp.GetValue())
-				parentDir, _ := filepath.Split(co.Path() + "/")
-				err = setupJDKSymlink(parentDir, pp.GetValue())
-				if err != nil {
-					msg := fmt.Sprintf("Failed setting up JDK symlink to %s: %s", pp.GetValue(), err)
-					failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostProcessingFailureExitCode),
-						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-					return failedStatus
-				}
-			}
-		}
-
-		err = createOutputPaths(cmd, co.Path())
-		if err != nil {
-			msg := fmt.Sprintf("Failed setting up output directories: %s", err)
-			failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostProcessingFailureExitCode),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-			return failedStatus
-		}
 	case runner.RunTypeScoot:
 		stdout.Write([]byte(header))
 		stderr.Write([]byte(header))
@@ -385,9 +289,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("could not exec: %s", err)
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.CouldNotExecExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	}
 
@@ -533,65 +434,6 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				status.Error = st.Error
 			}
 			return status
-		} else if runType == runner.RunTypeBazel {
-			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
-			inv.stat.Counter(stats.WorkerUploads).Inc(1)
-			defer func() {
-				uploadTimer.Stop()
-			}()
-
-			// Process Bazel uploads of std* output and other data to CAS
-			ingestCh := make(chan interface{})
-			go func() {
-				actionResult, err := postProcessBazel(inv.filerMap[runType].Filer, cmd, co.Path(), stdout, stderr, st, rts, inv.rID)
-				if err != nil {
-					ingestCh <- err
-				} else {
-					ingestCh <- actionResult
-				}
-			}()
-
-			var actionResult *bazelapi.ActionResult
-			select {
-			case <-abortCh:
-				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
-					log.Errorf("Error canceling ingest: %s", err)
-				}
-				// Cancel call above should cause ingest to exit sooner, but still wait for return to release worker
-				<-ingestCh
-				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			case res := <-ingestCh:
-				switch res.(type) {
-				case error:
-					msg := fmt.Sprintf("Error postprocessing Bazel command: %s", res)
-					failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
-						tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-					failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-					return failedStatus
-				}
-				actionResult = res.(*bazelapi.ActionResult)
-			}
-
-			queuedDuration := rts.invokeStart.Sub(rts.queuedTime)
-			actionCacheCheckTime := rts.actionCacheCheckEnd.Sub(rts.actionCacheCheckStart)
-			actionFetchTime := rts.actionFetchEnd.Sub(rts.actionFetchStart)
-			commandFetchTime := rts.commandFetchEnd.Sub(rts.commandFetchStart)
-			inputTime := rts.inputEnd.Sub(rts.inputStart)
-			execerTime := rts.execEnd.Sub(rts.execStart)
-			inv.stat.Histogram(stats.BzExecQueuedTimeHistogram_ms).Update(int64(queuedDuration / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecActionCacheCheckTimeHistogram_ms).Update(int64(actionCacheCheckTime / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecActionFetchTimeHistogram_ms).Update(int64(actionFetchTime / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecCommandFetchTimeHistogram_ms).Update(int64(commandFetchTime / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecInputFetchTimeHistogram_ms).Update(int64(inputTime / time.Millisecond))
-			inv.stat.Histogram(stats.BzExecExecerTimeHistogram_ms).Update(int64(execerTime / time.Millisecond))
-
-			status := runner.CompleteStatus(id, "", st.ExitCode,
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			status.ActionResult = actionResult
-			if st.Error != "" {
-				status.Error = st.Error
-			}
-			return status
 		} else {
 			// should never have an unknown RunType here
 			return runner.FailedStatus(id, errors.NewError(fmt.Errorf("Can't process Completed status for RunType %s", runType), errors.PostExecFailureExitCode),
@@ -601,17 +443,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		msg := fmt.Sprintf("error execing: %s", st.Error)
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	default:
 		msg := "unexpected exec state"
 		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		if runType == runner.RunTypeBazel {
-			failedStatus.ActionResult = &bazelapi.ActionResult{GRPCStatus: getInternalErrorStatus(msg)}
-		}
 		return failedStatus
 	}
 }

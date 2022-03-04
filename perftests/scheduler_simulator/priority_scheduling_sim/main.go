@@ -78,12 +78,11 @@ func makeFakeTasks() []domain.TaskDefinition {
 	for i := 0; i < cnt; i++ {
 
 		td := runner.Command{
-			Argv:           []string{"cmd", "5", "0"}, // fake cmd, sleep time, exit code
-			EnvVars:        nil,
-			Timeout:        0,
-			SnapshotID:     "",
-			LogTags:        tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "fakeTag"},
-			ExecuteRequest: nil,
+			Argv:       []string{"cmd", "5", "0"}, // fake cmd, sleep time, exit code
+			EnvVars:    nil,
+			Timeout:    0,
+			SnapshotID: "",
+			LogTags:    tags.LogTags{TaskID: fmt.Sprintf("%d", i), Tag: "fakeTag"},
 		}
 		tasks[i] = domain.TaskDefinition{Command: td}
 	}

@@ -11,12 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/cloud/cluster/local"
-	"github.com/twitter/scoot/common/dialer"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
 	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/snapshot/bazel"
 	"github.com/twitter/scoot/snapshot/git/gitdb"
 	"github.com/twitter/scoot/snapshot/store"
 	"github.com/twitter/scoot/worker/client"
@@ -31,7 +29,6 @@ func main() {
 	httpAddr := flag.String("http_addr", domain.DefaultWorker_HTTP, "addr to serve http on")
 	memCapFlag := flag.Uint64("mem_cap", 0, "Kill runs that exceed this amount of memory, in bytes. Zero means no limit.")
 	storeHandle := flag.String("bundlestore", "", "Abs file path or an http 'host:port' to store/get bundles.")
-	casAddr := flag.String("cas_addr", "", "'host:port' of a server supporting CAS API over GRPC")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	flag.Parse()
 
@@ -57,10 +54,6 @@ func main() {
 		&gitdb.BundlestoreConfig{Store: store, AllowStreamUpdate: true},
 		gitdb.AutoUploadBundlestore,
 		stat)
-	bzFiler, err := getBzFiler(*casAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
 	oc, err := runners.NewHttpOutputCreator(("http://" + *httpAddr + "/output/"))
 	if err != nil {
 		log.Fatal(err)
@@ -68,7 +61,6 @@ func main() {
 	starter.StartServer(
 		*thriftAddr,
 		*httpAddr,
-		bzFiler,
 		db,
 		oc,
 		getRunnerID(),
@@ -104,23 +96,6 @@ func getStore(storeHandle string) (store.Store, error) {
 	}
 	log.Info("No stores specified or found, creating a tmp file store")
 	return store.MakeFileStoreInTemp()
-}
-
-// Create BzFiler to handle Bazel API requests
-func getBzFiler(casAddr string) (*bazel.BzFiler, error) {
-	addr := ""
-	if casAddr != "" {
-		addr = casAddr
-	} else {
-		nodes, _ := local.MakeFetcher("apiserver", "grpc_addr").Fetch()
-		if len(nodes) > 0 {
-			r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
-			addr = string(nodes[r.Intn(len(nodes))].Id())
-			log.Info("No grpc cas servers specified, but successfully fetched apiserver addr: ", nodes, " --> ", addr)
-		}
-	}
-	resolver := dialer.NewConstantResolver(addr)
-	return bazel.MakeBzFiler(resolver)
 }
 
 func getRunnerID() runner.RunnerID {

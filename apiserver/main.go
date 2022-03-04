@@ -8,8 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/bazel"
-	"github.com/twitter/scoot/bazel/cas"
 	cc "github.com/twitter/scoot/cloud/cluster"
 	"github.com/twitter/scoot/cloud/cluster/local"
 	"github.com/twitter/scoot/common"
@@ -27,16 +25,9 @@ func main() {
 	log.AddHook(hooks.NewContextHook())
 
 	httpAddr := flag.String("http_addr", bundlestore.DefaultApiBundlestore_HTTP, "'host:port' addr to serve http on")
-	grpcAddr := flag.String("grpc_addr", bundlestore.DefaultApiBundlestore_GRPC, "Bind address for grpc server")
 	configFlag := flag.String("config", "{}", "API Server Config (either a filename like local.local or JSON text")
 	logLevelFlag := flag.String("log_level", "info", "Log everything at this level and above (error|info|debug)")
 	cacheSize := flag.Int64("cache_size", 2*1024*1024*1024, "In-memory bundle cache size in bytes")
-	casBufferSize := flag.Int64("cas_buffer_size", 2*1024*1024*1024, "In-memory size of all concurrent CAS requests")
-	grpcConns := flag.Int("max_grpc_conn", cas.MaxSimultaneousConnections, "max grpc listener connections")
-	grpcRate := flag.Int("max_grpc_rps", cas.MaxRequestsPerSecond, "max grpc incoming requests per second")
-	grpcBurst := flag.Int("max_grpc_rps_burst", cas.MaxRequestsBurst, "max grpc incoming requests burst")
-	grpcStreams := flag.Int("max_grpc_streams", cas.MaxConcurrentStreams, "max grpc streams per client")
-	grpcIdleMins := flag.Int("max_grpc_idle_mins", bazel.MaxConnIdleMins, "max grpc connection idle time")
 	flag.Parse()
 
 	level, err := log.ParseLevel(*logLevelFlag)
@@ -101,17 +92,6 @@ func main() {
 		},
 		func(sh *StoreAndHandler) store.Store {
 			return sh.store
-		},
-		func() *bazel.GRPCConfig {
-			return &bazel.GRPCConfig{
-				GRPCAddr:          *grpcAddr,
-				ListenerMaxConns:  *grpcConns,
-				RateLimitPerSec:   *grpcRate,
-				BurstLimitPerSec:  *grpcBurst,
-				ConcurrentStreams: *grpcStreams,
-				MaxConnIdleMins:   *grpcIdleMins,
-				ConcurrentReqSize: *casBufferSize,
-			}
 		},
 	)
 	bundlestore.RunServer(bag, schema, configText)
