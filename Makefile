@@ -7,7 +7,6 @@ BUILDDATE := $(shell date -u +"%B %d, %Y")
 PROJECT_URL := "https://github.com/twitter/scoot"
 FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
 THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
-PROTOCVERSION := $(shell protoc --version | cut -d ' ' -f 2 | tr -d '\n')
 GO111MODULE := on
 export GO111MODULE
 
@@ -44,7 +43,7 @@ get_latest:
 
 ############## dependencies
 
-# tool dependencies for developer workflows only (regenerating test mocks, bindata, thrift or proto code)
+# tool dependencies for developer workflows only (regenerating test mocks or thrift code)
 dev-dependencies:
 	# Install mockgen binary (it's only referenced for code gen, not imported directly.)
 	# Both the binary and a mock checkout will be placed in $GOPATH
@@ -57,11 +56,6 @@ dev-dependencies:
 	# check thrift, protoc versions
 ifneq ($(THRIFTVERSION),0.9.3)
 	echo "Wanted thrift version 0.9.3, got $(THRIFTVERSION)"
-	exit 1
-endif
-
-ifneq ($(PROTOCVERSION),3.5.1)
-	echo "Wanted protoc version 3.5.1, got $(PROTOCVERSION)"
 	exit 1
 endif
 
