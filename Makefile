@@ -49,10 +49,6 @@ dev-dependencies:
 	# Both the binary and a mock checkout will be placed in $GOPATH
 	go get github.com/golang/mock/mockgen@58cd061d09382b6011f84c1291ebe50ef2e25bab
 
-	# Install go-bindata tool which is used to generate binary version of config file
-	# this is only used by go generate
-	go get github.com/twitter/go-bindata@2fa2cba09795
-
 	# check thrift, protoc versions
 ifneq ($(THRIFTVERSION),0.9.3)
 	echo "Wanted thrift version 0.9.3, got $(THRIFTVERSION)"
