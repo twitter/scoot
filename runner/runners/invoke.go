@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"time"
 
+	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/errors"
@@ -32,11 +31,12 @@ func NewInvoker(
 	rID runner.RunnerID,
 	preprocessors []func() error,
 	postprocessors []func() error,
+	uploader LogUploader,
 ) *Invoker {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
 	}
-	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID, preprocessors: preprocessors, postprocessors: postprocessors}
+	return &Invoker{exec: exec, filerMap: filerMap, output: output, stat: stat, dirMonitor: dirMonitor, rID: rID, preprocessors: preprocessors, postprocessors: postprocessors, uploader: uploader}
 }
 
 // Invoker Runs a Scoot Command by performing the Scoot setup and gathering.
@@ -51,6 +51,7 @@ type Invoker struct {
 	rID            runner.RunnerID
 	preprocessors  []func() error
 	postprocessors []func() error
+	uploader       LogUploader
 }
 
 // Run runs cmd
@@ -368,71 +369,62 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		rts.execEnd = stamp()
 		rts.outputStart = stamp()
 		if runType == runner.RunTypeScoot {
-			tmp, err := ioutil.TempDir("", "invoke")
-			if err != nil {
-				return runner.FailedStatus(id, errors.NewError(fmt.Errorf("error staging ingestion dir: %v", err), errors.PostExecFailureExitCode),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
-			uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
-			inv.stat.Counter(stats.WorkerUploads).Inc(1)
-			defer func() {
-				os.RemoveAll(tmp)
-				uploadTimer.Stop()
-			}()
+			var stdlogUrl, stderrUrl, stdoutUrl string
+			// only upload logs to a permanent location if a log uploader is initialized
+			if inv.uploader != nil {
+				uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
+				defer func() {
+					uploadTimer.Stop()
+				}()
 
-			stdoutName := "STDOUT"
-			stderrName := "STDERR"
-			stdlogName := "STDLOG"
-			if err = stageLogFiles(tmp, stdoutName, stderrName, stdlogName, stdout, stderr, stdlog); err != nil {
-				return runner.FailedStatus(id, errors.NewError(err, errors.PostExecFailureExitCode),
-					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			}
+				// generate a unique id that's appended to the job id to create a unique identifier for logs
+				logUid, _ := uuid.NewV4()
+				stdlogName := "stdlog"
+				stderrName := "stderr"
+				stdoutName := "stdout"
 
-			ingestCh := make(chan interface{})
-			go func() {
-				snapshotID, err := inv.filerMap[runType].Filer.Ingest(tmp)
-				if err != nil {
-					ingestCh <- err
-				} else {
-					ingestCh <- snapshotID
+				var isAborted bool
+				// upload stdlog
+				logId := fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdlogName)
+				stdlogUrl, isAborted = inv.uploadLog(logId, stdlog.AsFile(), abortCh)
+				if isAborted {
+					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+
 				}
-			}()
 
-			var snapshotID string
-			select {
-			case <-abortCh:
-				if err := inv.filerMap[runType].Filer.CancelIngest(); err != nil {
-					log.Errorf("Error canceling ingest: %s", err)
+				// upload stderr
+				// TODO: remove when we transition to using only stdlog in run status
+				logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stderrName)
+				stderrUrl, isAborted = inv.uploadLog(logId, stderr.AsFile(), abortCh)
+				if isAborted {
+					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 				}
-				// Cancel call above should cause ingest to exit sooner, but still wait for return to release worker
-				<-ingestCh
-				return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			case res := <-ingestCh:
-				switch res.(type) {
-				case error:
-					log.WithFields(
-						log.Fields{
-							"tag":    cmd.Tag,
-							"jobID":  cmd.JobID,
-							"taskID": cmd.TaskID,
-						}).Errorf("Error ingesting results: %v", res)
-				default:
-					snapshotID = res.(string)
+
+				// upload stdout
+				// TODO: remove when we transition to using only stdlog in run status
+				logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdoutName)
+				stdoutUrl, isAborted = inv.uploadLog(logId, stdout.AsFile(), abortCh)
+				if isAborted {
+					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 				}
+			} else {
+				log.Infof("log uploader not initialized, skipping logs upload to storage")
 			}
-			rts.outputEnd = stamp()
-			rts.invokeEnd = stamp()
-
-			// Note: only modifying stdout/stderr refs when we're actively working with snapshotID.
-			status := runner.CompleteStatus(id, snapshotID, st.ExitCode,
+			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-			if cmd.SnapshotID != "" {
-				status.StdoutRef = snapshotID + "/" + stdoutName
-				status.StderrRef = snapshotID + "/" + stderrName
+
+			// Note: only modify stdout/stderr refs when logs are successfully uploaded to storage
+			if stderrUrl != "" {
+				status.StderrRef = stdlogUrl
+			}
+			if stdoutUrl != "" {
+				status.StdoutRef = stdoutUrl
 			}
 			if st.Error != "" {
 				status.Error = st.Error
 			}
+			rts.outputEnd = stamp()
+			rts.invokeEnd = stamp()
 			return status
 		} else {
 			// should never have an unknown RunType here
@@ -452,38 +444,33 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	}
 }
 
-// stage output files to single directory for snapshot ingestion
-func stageLogFiles(tmpDir, stdoutName, stderrName, stdlogName string, stdout, stderr, stdlog runner.Output) error {
-	outPath := stdout.AsFile()
-	errPath := stderr.AsFile()
-	logPath := stdlog.AsFile()
+func (inv *Invoker) uploadLog(logId, filepath string, abortCh chan struct{}) (string, bool) {
+	var url string
+	var err error
+	uploadCancelCh := make(chan struct{})
+	uploadCh := make(chan error)
 
-	if err := copyLogFile(tmpDir, stdoutName, outPath); err != nil {
-		return err
-	}
-	if err := copyLogFile(tmpDir, stderrName, errPath); err != nil {
-		return err
-	}
-	if err := copyLogFile(tmpDir, stdlogName, logPath); err != nil {
-		return err
-	}
-	return nil
-}
+	uploadTimer := inv.stat.Latency(stats.WorkerLogUploadLatency_ms).Time()
+	defer func() {
+		uploadTimer.Stop()
+	}()
 
-func copyLogFile(tmpDir, logName, logPath string) error {
-	var writer *os.File
-	var reader *os.File
-	defer writer.Close()
-	defer reader.Close()
-
-	if writer, err := os.Create(filepath.Join(tmpDir, logName)); err != nil {
-		return fmt.Errorf("error staging ingestion for %s: %v", logName, err)
-	} else if reader, err = os.Open(logPath); err != nil {
-		return fmt.Errorf("error staging ingestion for %s: %v", logPath, err)
-	} else if _, err := io.Copy(writer, reader); err != nil {
-		return fmt.Errorf("error staging ingestion for stdout: %v", err)
+	go func() {
+		url, err = inv.uploader.UploadLog(logId, filepath, uploadCancelCh)
+		uploadCh <- err
+	}()
+	select {
+	case abort := <-abortCh:
+		uploadCancelCh <- abort
+		return "", true
+	case err := <-uploadCh:
+		if err != nil {
+			log.Errorf("error uploading stdlog to storage: %s", err)
+			return "", false
+		}
+		inv.stat.Counter(stats.WorkerUploads).Inc(1)
+		return url, false
 	}
-	return nil
 }
 
 // Tracking timestamps for stages of an invoker run.

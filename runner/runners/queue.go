@@ -84,6 +84,7 @@ func NewQueueRunner(
 	rID runner.RunnerID,
 	preprocessors []func() error,
 	postprocessors []func() error,
+	uploader LogUploader,
 ) runner.Service {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -98,7 +99,7 @@ func NewQueueRunner(
 	}
 
 	statusManager := NewStatusManager(history)
-	inv := NewInvoker(exec, filerMap, output, stat, dirMonitor, rID, preprocessors, postprocessors)
+	inv := NewInvoker(exec, filerMap, output, stat, dirMonitor, rID, preprocessors, postprocessors, uploader)
 
 	controller := &QueueController{
 		statusManager: statusManager,
@@ -167,8 +168,9 @@ func NewSingleRunner(
 	rID runner.RunnerID,
 	preprocessors []func() error,
 	postprocessors []func() error,
+	uploader LogUploader,
 ) runner.Service {
-	return NewQueueRunner(exec, filerMap, output, 0, stat, dirMonitor, rID, preprocessors, postprocessors)
+	return NewQueueRunner(exec, filerMap, output, 0, stat, dirMonitor, rID, preprocessors, postprocessors, uploader)
 }
 
 // QueueController maintains a queue of commands to run (up to capacity).

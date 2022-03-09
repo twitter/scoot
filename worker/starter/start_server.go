@@ -2,11 +2,11 @@ package starter
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"
@@ -57,6 +57,7 @@ func StartServer(
 	stat *stats.StatsReceiver,
 	preprocessors []func() error,
 	postprocessors []func() error,
+	uploader runners.LogUploader,
 ) {
 	// create worker object:
 	// worker support objects
@@ -69,7 +70,7 @@ func StartServer(
 		filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: gitFiler, IDC: db.InitDoneCh}
 	}
 	// the worker object
-	worker := runners.NewSingleRunner(execer, filerMap, oc, *stat, dirMonitor, rID, preprocessors, postprocessors)
+	worker := runners.NewSingleRunner(execer, filerMap, oc, *stat, dirMonitor, rID, preprocessors, postprocessors, uploader)
 
 	// add service wrappers
 	// thrift wrapper
