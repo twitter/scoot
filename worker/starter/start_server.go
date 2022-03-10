@@ -2,11 +2,11 @@ package starter
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/scoot/common/endpoints"
 	"github.com/twitter/scoot/common/stats"

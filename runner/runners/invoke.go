@@ -369,7 +369,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 		rts.execEnd = stamp()
 		rts.outputStart = stamp()
 		if runType == runner.RunTypeScoot {
-			var stdlogUrl, stderrUrl, stdoutUrl string
+			var stderrUrl, stdoutUrl string
 			// only upload logs to a permanent location if a log uploader is initialized
 			if inv.uploader != nil {
 				uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
@@ -386,7 +386,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				var isAborted bool
 				// upload stdlog
 				logId := fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdlogName)
-				stdlogUrl, isAborted = inv.uploadLog(logId, stdlog.AsFile(), abortCh)
+				_, isAborted = inv.uploadLog(logId, stdlog.AsFile(), abortCh)
 				if isAborted {
 					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 
@@ -415,7 +415,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 			// Note: only modify stdout/stderr refs when logs are successfully uploaded to storage
 			if stderrUrl != "" {
-				status.StderrRef = stdlogUrl
+				status.StderrRef = stderrUrl
 			}
 			if stdoutUrl != "" {
 				status.StdoutRef = stdoutUrl
