@@ -486,22 +486,22 @@ const (
 	WorkerTimeSinceLastContactGauge_ms = "timeSinceLastContactGauge_ms"
 
 	/*
-		the number of times the worker uploaded a log to storage
+		the number of times the worker uploaded a log(stdout/stderr/stdlog) to storage
 	*/
 	WorkerUploads = "workerUploads"
 
 	/*
-		the number of times the worker log upload failed
+		the number of times the worker log(stdout/stderr/stdlog) upload failed
 	*/
-	WorkerLogUploadFailures = "WorkerLogUploadFailures"
+	WorkerLogUploadFailures = "workerLogUploadFailures"
 
 	/*
-		the number of times the worker log upload timed out
+		the number of times the worker log(stdout/stderr/stdlog) upload timed out
 	*/
 	WorkerLogUploadTimeouts = "workerLogUploadTimeouts"
 
 	/*
-		the number of times the worker log upload was retried
+		the number of times the worker log(stdout/stderr/stdlog) upload was retried
 	*/
 	WorkerLogUploadRetries = "workerLogUploadRetries"
 
@@ -512,7 +512,7 @@ const (
 	WorkerLogUploadLatency_ms = "workerLogUploadLatency_ms"
 
 	/*
-		the overall time spent uploading logs(stderr, stdout & stdlog)
+		the overall time spent uploading all three logs(stderr, stdout & stdlog)
 	*/
 	WorkerUploadLatency_ms = "workerUploadLatency_ms"
 
