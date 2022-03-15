@@ -491,6 +491,11 @@ const (
 	WorkerUploads = "workerUploads"
 
 	/*
+		the number of times the worker log upload failed
+	*/
+	WorkerLogUploadFailures = "WorkerLogUploadFailures"
+
+	/*
 		the number of times the worker log upload timed out
 	*/
 	WorkerLogUploadTimeouts = "workerLogUploadTimeouts"

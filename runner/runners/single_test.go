@@ -113,12 +113,14 @@ func TestAbortLogUpload(t *testing.T) {
 		panic(err)
 	}
 	filerMap := runner.MakeRunTypeMap()
+	logUploader := NewNoopWaitingLogUploader()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
-	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, NewWaitingLogUploader())
+	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, logUploader)
 	args := []string{"complete 0"}
 	runID := run(t, r, args)
 	assertWait(t, r, runID, running(), args...)
-	time.Sleep(10 * time.Millisecond)
+	// also wait till UploadLog() is called
+	<-logUploader.readyCh
 	r.Abort(runID)
 	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
 	st, _, err := r.Status(runID)
@@ -126,11 +128,6 @@ func TestAbortLogUpload(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStatus(t, st, aborted(), args...)
-
-	st, err = r.Abort(runner.RunID("not-a-run-id"))
-	if err == nil {
-		t.Fatal(err)
-	}
 }
 
 func TestMemCap(t *testing.T) {

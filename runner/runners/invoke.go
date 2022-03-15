@@ -372,10 +372,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			var stderrUrl, stdoutUrl string
 			// only upload logs to a permanent location if a log uploader is initialized
 			if inv.uploader != nil {
-				uploadTimer := inv.stat.Latency(stats.WorkerUploadLatency_ms).Time()
-				defer func() {
-					uploadTimer.Stop()
-				}()
+				defer inv.stat.Latency(stats.WorkerUploadLatency_ms).Time().Stop()
 
 				// generate a unique id that's appended to the job id to create a unique identifier for logs
 				logUid, _ := uuid.NewV4()
@@ -413,13 +410,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			status := runner.CompleteStatus(id, "", st.ExitCode,
 				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 
-			// Note: only modify stdout/stderr refs when logs are successfully uploaded to storage
-			if stderrUrl != "" {
-				status.StderrRef = stderrUrl
-			}
-			if stdoutUrl != "" {
-				status.StdoutRef = stdoutUrl
-			}
+			// Note: stdout/stderr refs are only modified when logs are successfully uploaded to storage
+			status.StderrRef = stderrUrl
+			status.StdoutRef = stdoutUrl
+
 			if st.Error != "" {
 				status.Error = st.Error
 			}
@@ -450,11 +444,7 @@ func (inv *Invoker) uploadLog(logId, filepath string, abortCh chan struct{}) (st
 	uploadCancelCh := make(chan struct{})
 	uploadCh := make(chan error)
 
-	uploadTimer := inv.stat.Latency(stats.WorkerLogUploadLatency_ms).Time()
-	defer func() {
-		uploadTimer.Stop()
-	}()
-
+	defer inv.stat.Latency(stats.WorkerLogUploadLatency_ms).Time().Stop()
 	go func() {
 		url, err = inv.uploader.UploadLog(logId, filepath, uploadCancelCh)
 		uploadCh <- err
@@ -465,7 +455,8 @@ func (inv *Invoker) uploadLog(logId, filepath string, abortCh chan struct{}) (st
 		return "", true
 	case err := <-uploadCh:
 		if err != nil {
-			log.Errorf("error uploading stdlog to storage: %s", err)
+			inv.stat.Counter(stats.WorkerLogUploadFailures).Inc(1)
+			log.Error(err)
 			return "", false
 		}
 		inv.stat.Counter(stats.WorkerUploads).Inc(1)
