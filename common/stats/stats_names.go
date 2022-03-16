@@ -486,13 +486,33 @@ const (
 	WorkerTimeSinceLastContactGauge_ms = "timeSinceLastContactGauge_ms"
 
 	/*
-		the number of times the worker uploaded a snapshot to bundlestore
+		the number of times the worker uploaded a log(stdout/stderr/stdlog) to storage
 	*/
 	WorkerUploads = "workerUploads"
 
 	/*
-		the amount of time spent uploading snapshots to bundlestore.  This includes time for
+		the number of times the worker log(stdout/stderr/stdlog) upload failed
+	*/
+	WorkerLogUploadFailures = "workerLogUploadFailures"
+
+	/*
+		the number of times the worker log(stdout/stderr/stdlog) upload timed out
+	*/
+	WorkerLogUploadTimeouts = "workerLogUploadTimeouts"
+
+	/*
+		the number of times the worker log(stdout/stderr/stdlog) upload was retried
+	*/
+	WorkerLogUploadRetries = "workerLogUploadRetries"
+
+	/*
+		the amount of time spent uploading the log to storage. This includes time for
 		successful as well as erroring uploads
+	*/
+	WorkerLogUploadLatency_ms = "workerLogUploadLatency_ms"
+
+	/*
+		the overall time spent uploading all three logs(stderr, stdout & stdlog)
 	*/
 	WorkerUploadLatency_ms = "workerUploadLatency_ms"
 

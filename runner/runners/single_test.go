@@ -105,6 +105,31 @@ func TestAbort(t *testing.T) {
 	}
 }
 
+func TestAbortLogUpload(t *testing.T) {
+	defer teardown(t)
+	sim := execers.NewSimExecer()
+	outputCreator, err := NewHttpOutputCreator("")
+	if err != nil {
+		panic(err)
+	}
+	filerMap := runner.MakeRunTypeMap()
+	logUploader := NewNoopWaitingLogUploader()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
+	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, logUploader)
+	args := []string{"complete 0"}
+	runID := run(t, r, args)
+	assertWait(t, r, runID, running(), args...)
+	// also wait till UploadLog() is called
+	<-logUploader.readyCh
+	r.Abort(runID)
+	// use r.Status instead of assertWait so that we make sure it's aborted immediately, not eventually
+	st, _, err := r.Status(runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(t, st, aborted(), args...)
+}
+
 func TestMemCap(t *testing.T) {
 	defer teardown(t)
 	// Command to increase memory by 1MB every .1s until we hit 50MB after 5s.
@@ -115,7 +140,7 @@ func TestMemCap(t *testing.T) {
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -145,7 +170,7 @@ func TestStats(t *testing.T) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	dirMonitor := stats.NewDirsMonitor([]stats.MonitorDir{{StatSuffix: "cwd", Directory: "./"}})
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, dirMonitor, runner.EmptyID, []func() error{}, []func() error{})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, dirMonitor, runner.EmptyID, []func() error{}, []func() error{}, NewNoopLogUploader())
 
 	// Add initial idle time to keep the avg idle time above 50ms
 	time.Sleep(50 * time.Millisecond)
@@ -172,26 +197,22 @@ func TestStats(t *testing.T) {
 	// Run and abort a command to verify abort starts the recording of idle time
 	runID := assertRun(t, r, running(), args...)
 	r.Abort(runID)
-	time.Sleep(50 * time.Millisecond)
 
-	// third run to avoid doing a stats check while the idle latency is being measured
-	// (results in data race otherwise)
-	assertRun(t, r, running(), args...)
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
-			stats.WorkerUploadLatency_ms + ".avg":   {Checker: stats.FloatGTTest, Value: 0.0},
-			stats.WorkerDownloadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
-			stats.WorkerUploads:                     {Checker: stats.Int64EqTest, Value: 1},
-			stats.WorkerDownloads:                   {Checker: stats.Int64EqTest, Value: 1},
-			stats.WorkerTaskLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 0.0},
-			stats.CommandDirUsageKb + "_cwd":        {Checker: stats.Int64EqTest, Value: 0},
-			stats.WorkerIdleLatency_ms + ".avg":     {Checker: stats.FloatGTTest, Value: 50.0},
-			stats.WorkerIdleLatency_ms + ".count":   {Checker: stats.Int64EqTest, Value: 3},
+			stats.WorkerUploadLatency_ms + ".avg":    {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerLogUploadLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerDownloadLatency_ms + ".avg":  {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.WorkerUploads:                      {Checker: stats.Int64EqTest, Value: 3},
+			stats.WorkerDownloads:                    {Checker: stats.Int64EqTest, Value: 1},
+			stats.WorkerTaskLatency_ms + ".avg":      {Checker: stats.FloatGTTest, Value: 0.0},
+			stats.CommandDirUsageKb + "_cwd":         {Checker: stats.Int64EqTest, Value: 0},
+			stats.WorkerIdleLatency_ms + ".avg":      {Checker: stats.FloatGTTest, Value: 50.0},
+			stats.WorkerIdleLatency_ms + ".count":    {Checker: stats.Int64EqTest, Value: 2},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
 }
-
 func TestTimeout(t *testing.T) {
 	defer teardown(t)
 	stat, statsReg := setupTest()
@@ -201,7 +222,7 @@ func TestTimeout(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{})
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -241,7 +262,7 @@ func newRunner() (runner.Service, *execers.SimExecer) {
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeInvalidFiler(), IDC: nil}
 
-	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{})
+	r := NewSingleRunner(sim, filerMap, outputCreator, nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
 	return r, sim
 }
 

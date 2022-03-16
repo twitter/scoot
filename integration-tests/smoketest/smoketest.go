@@ -115,10 +115,9 @@ func (r *smokeTestRunner) run(numJobs int, numTasks int, timeout time.Duration) 
 		return err
 	}
 
-	out1ID := *st.TaskData["id1"].SnapshotId
-	out2ID := *st.TaskData["id2"].SnapshotId
-
-	return r.checkSnapshots(out1ID, out2ID)
+	outUri1 := *st.TaskData["id1"].OutUri
+	outUri2 := *st.TaskData["id2"].OutUri
+	return r.checkOutputs(outUri1, outUri2)
 }
 
 func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error) {
@@ -148,25 +147,28 @@ func (r *smokeTestRunner) generateSnapshots() (id1 string, id2 string, err error
 	return id1, id2, nil
 }
 
-func (r *smokeTestRunner) checkSnapshots(id1 string, id2 string) error {
-	// Note: worker output had a header that ends with "SCOOT_CMD_LOG". Just check the end of string and ignore the rest.
-	output, err := exec.Command("scoot-snapshot-db", "read", "cat", "--id", id1, "STDOUT").Output()
+// Note: worker output had a header that ends with "SCOOT_CMD_LOG". Just check the end of string and ignore the rest.
+func (r *smokeTestRunner) checkOutputs(outUri1 string, outUri2 string) error {
+	// get the absolute path of stdout file
+	re, _ := regexp.Compile("file://.*?(/.*)")
+	outFile := re.FindStringSubmatch(outUri1)[1]
+	body, err := ioutil.ReadFile(outFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read file: %v", err)
 	}
-	text := string(output)
+	text := string(body)
 	if ok, _ := regexp.MatchString(`(?s).*first\z`, text); !ok {
-		return fmt.Errorf("expected first out snapshot %v to contain \"first\" but got %q", id1, text)
+		return fmt.Errorf("expected first output file %v to contain \"first\" but got %q", outFile, text)
 	}
 
-	output, err = exec.Command("scoot-snapshot-db", "read", "cat", "--id", id2, "STDOUT").Output()
+	outFile = re.FindStringSubmatch(outUri2)[1]
+	body, err = ioutil.ReadFile(outFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read file: %v", err)
 	}
-	text = string(output)
+	text = string(body)
 	if ok, _ := regexp.MatchString(`(?s).*second\z`, text); !ok {
-		return fmt.Errorf("expected second out snapshot %v to contain \"second\" but got %q", id2, text)
+		return fmt.Errorf("expected second output file %v to contain \"second\" but got %q", outFile, text)
 	}
-
 	return nil
 }

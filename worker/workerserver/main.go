@@ -69,6 +69,7 @@ func main() {
 		&stat,
 		[]func() error{},
 		[]func() error{},
+		nil,
 	)
 }
 
