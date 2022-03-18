@@ -135,7 +135,7 @@ func TestMemCap(t *testing.T) {
 	// Command to increase memory by 1MB every .1s until we hit 50MB after 5s.
 	// Test that limiting the memory to 10MB causes the command to abort.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
-	cmd := &runner.Command{Argv: []string{"python", "-c", str}}
+	cmd := &runner.Command{Argv: []string{"python3", "-c", str}}
 	tmp, _ := ioutil.TempDir("", "")
 	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), stats.NilStatsReceiver())
 	filerMap := runner.MakeRunTypeMap()

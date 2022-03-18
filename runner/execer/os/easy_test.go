@@ -89,7 +89,7 @@ func TestMemUsage(t *testing.T) {
 	// Creates a bash process and under that a python process. They should both contribute to MemUsage.
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
 	cmd := scootexecer.Command{
-		Argv: []string{"python", "-c", str},
+		Argv: []string{"python3", "-c", str},
 		LogTags: tags.LogTags{
 			Tag:    "tag",
 			JobID:  "jobID1234",
@@ -134,7 +134,7 @@ func TestMemCap(t *testing.T) {
 	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
 	memCh := make(chan scootexecer.ProcessStatus)
 	cmd := scootexecer.Command{
-		Argv: []string{"python", "-c", str},
+		Argv: []string{"python3", "-c", str},
 		LogTags: tags.LogTags{
 			Tag:    "tag",
 			JobID:  "jobID1234",
