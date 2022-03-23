@@ -306,7 +306,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 
 	processCh := make(chan execer.ProcessStatus, 1)
 	go func() { processCh <- p.Wait() }()
-	var st execer.ProcessStatus
+	var runStatus runner.RunStatus
 
 	// Wait for process to complete (or cancel if we're told to)
 	select {
@@ -329,9 +329,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"jobID":  cmd.JobID,
 				"taskID": cmd.TaskID,
 			}).Info("Run timedout")
-		return runner.TimeoutStatus(id,
+		runStatus = runner.TimeoutStatus(id,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-	case st = <-memCh:
+	case st := <-memCh:
 		stdout.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
 		stderr.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
 		stdlog.Write([]byte(fmt.Sprintf("\n\n%s\n\nFAILED\n\n%v", marker, st.Error)))
@@ -345,7 +345,9 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"status":   st,
 				"checkout": co.Path(),
 			}).Infof("Cmd exceeded MemoryCap, aborting %v", cmd.String())
-	case st = <-processCh:
+		runStatus = getPostExecRunStatus(st, id, cmd)
+		runStatus.Error = st.Error
+	case st := <-processCh:
 		// Process has completed
 		log.WithFields(
 			log.Fields{
@@ -357,6 +359,10 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"status":   st,
 				"checkout": co.Path(),
 			}).Info("Run done")
+		runStatus = getPostExecRunStatus(st, id, cmd)
+		if runStatus.State == runner.FAILED {
+			return runStatus
+		}
 	}
 
 	// record command's disk usage for the monitored directories
@@ -364,78 +370,54 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 	inv.dirMonitor.RecordSizeStats(inv.stat)
 
 	// the command is no longer running, post process the results
-	switch st.State {
-	case execer.COMPLETE:
-		rts.execEnd = stamp()
-		rts.outputStart = stamp()
-		if runType == runner.RunTypeScoot {
-			var stderrUrl, stdoutUrl string
-			// only upload logs to a permanent location if a log uploader is initialized
-			if inv.uploader != nil {
-				defer inv.stat.Latency(stats.WorkerUploadLatency_ms).Time().Stop()
+	rts.execEnd = stamp()
+	rts.outputStart = stamp()
+	var stderrUrl, stdoutUrl string
+	// only upload logs to a permanent location if a log uploader is initialized
+	if inv.uploader != nil {
+		defer inv.stat.Latency(stats.WorkerUploadLatency_ms).Time().Stop()
 
-				// generate a unique id that's appended to the job id to create a unique identifier for logs
-				logUid, _ := uuid.NewV4()
-				stdlogName := "stdlog"
-				stderrName := "stderr"
-				stdoutName := "stdout"
+		// generate a unique id that's appended to the job id to create a unique identifier for logs
+		logUid, _ := uuid.NewV4()
+		stdlogName := "stdlog"
+		stderrName := "stderr"
+		stdoutName := "stdout"
 
-				var isAborted bool
-				// upload stdlog
-				logId := fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdlogName)
-				_, isAborted = inv.uploadLog(logId, stdlog.AsFile(), abortCh)
-				if isAborted {
-					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		// upload stdlog
+		logId := fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdlogName)
+		_, isAborted := inv.uploadLog(logId, stdlog.AsFile(), abortCh)
+		if isAborted {
+			return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 
-				}
-
-				// upload stderr
-				// TODO: remove when we transition to using only stdlog in run status
-				logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stderrName)
-				stderrUrl, isAborted = inv.uploadLog(logId, stderr.AsFile(), abortCh)
-				if isAborted {
-					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-				}
-
-				// upload stdout
-				// TODO: remove when we transition to using only stdlog in run status
-				logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdoutName)
-				stdoutUrl, isAborted = inv.uploadLog(logId, stdout.AsFile(), abortCh)
-				if isAborted {
-					return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-				}
-			} else {
-				log.Infof("log uploader not initialized, skipping logs upload to storage")
-			}
-			status := runner.CompleteStatus(id, "", st.ExitCode,
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-
-			// Note: stdout/stderr refs are only modified when logs are successfully uploaded to storage
-			status.StderrRef = stderrUrl
-			status.StdoutRef = stdoutUrl
-
-			if st.Error != "" {
-				status.Error = st.Error
-			}
-			rts.outputEnd = stamp()
-			rts.invokeEnd = stamp()
-			return status
-		} else {
-			// should never have an unknown RunType here
-			return runner.FailedStatus(id, errors.NewError(fmt.Errorf("Can't process Completed status for RunType %s", runType), errors.PostExecFailureExitCode),
-				tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 		}
-	case execer.FAILED:
-		msg := fmt.Sprintf("error execing: %s", st.Error)
-		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
-			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		return failedStatus
-	default:
-		msg := "unexpected exec state"
-		failedStatus := runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
-			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
-		return failedStatus
+
+		// upload stderr
+		// TODO: remove when we transition to using only stdlog in run status
+		logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stderrName)
+		stderrUrl, isAborted = inv.uploadLog(logId, stderr.AsFile(), abortCh)
+		if isAborted {
+			return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+
+		// upload stdout
+		// TODO: remove when we transition to using only stdlog in run status
+		logId = fmt.Sprintf("%s_%s/%s", cmd.JobID, logUid, stdoutName)
+		stdoutUrl, isAborted = inv.uploadLog(logId, stdout.AsFile(), abortCh)
+		if isAborted {
+			return runner.AbortStatus(id, tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		}
+		// Note: stdout/stderr refs are only modified when logs are successfully uploaded to storage
+		runStatus.StderrRef = stderrUrl
+		runStatus.StdoutRef = stdoutUrl
+	} else {
+		log.Infof("log uploader not initialized, skipping logs upload to storage")
+		// Return local std stream refs if log uploader is not initialized
+		runStatus.StderrRef = stderr.URI()
+		runStatus.StdoutRef = stdout.URI()
 	}
+	rts.outputEnd = stamp()
+	rts.invokeEnd = stamp()
+	return runStatus
 }
 
 func (inv *Invoker) uploadLog(logId, filepath string, abortCh chan struct{}) (string, bool) {
@@ -462,6 +444,26 @@ func (inv *Invoker) uploadLog(logId, filepath string, abortCh chan struct{}) (st
 		inv.stat.Counter(stats.WorkerUploads).Inc(1)
 		return url, false
 	}
+}
+
+func getPostExecRunStatus(st execer.ProcessStatus, id runner.RunID, cmd *runner.Command) (runStatus runner.RunStatus) {
+	switch st.State {
+	case execer.COMPLETE:
+		runStatus = runner.CompleteStatus(id, "", st.ExitCode,
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+		if st.Error != "" {
+			runStatus.Error = st.Error
+		}
+	case execer.FAILED:
+		msg := fmt.Sprintf("error execing: %s", st.Error)
+		runStatus = runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	default:
+		msg := "unexpected exec state"
+		runStatus = runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
+			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
+	}
+	return runStatus
 }
 
 // Tracking timestamps for stages of an invoker run.

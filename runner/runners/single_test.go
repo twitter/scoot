@@ -222,7 +222,7 @@ func TestTimeout(t *testing.T) {
 	e := execers.NewSimExecer()
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, NewNoopLogUploader())
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -239,13 +239,14 @@ func TestTimeout(t *testing.T) {
 	if status[0].State != runner.TIMEDOUT {
 		t.Fatalf("expected timedout state, got %s", status[0].State.String())
 	}
+	if status[0].StderrRef != "fake_blob_url" {
+		t.Fatalf("expected fake_blob_url as stderr ref, got %s", status[0].StderrRef)
+	}
 
-	// Run to avoid doing a stats check while the idle latency is being measured
-	// (results in data race otherwise)
-	assertRun(t, r, running(), args...)
 	if !stats.StatsOk("", statsReg, t,
 		map[string]stats.Rule{
 			stats.WorkerTaskLatency_ms + ".avg": {Checker: stats.FloatGTTest, Value: (50.0)},
+			stats.WorkerUploads:                 {Checker: stats.Int64EqTest, Value: (3)},
 		}) {
 		t.Fatal("stats check did not pass.")
 	}
