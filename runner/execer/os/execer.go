@@ -133,7 +133,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 	}
 	thresholdsIdx := 0
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
-	memTicker := time.NewTicker(250 * time.Millisecond)
+	memTicker := time.NewTicker(500 * time.Millisecond)
 	defer memTicker.Stop()
 	log.WithFields(
 		log.Fields{
@@ -165,10 +165,16 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			// if not nil, use the provided function to get memory utilization,
 			// otherwise get the memory usage of the current process and its subprocesses
 			if e.getMemUtilization != nil {
-				memory, _ := e.getMemUtilization()
+				var memory int64
+				memory, err = e.getMemUtilization()
 				mem = scootexecer.Memory(memory)
 			} else {
-				mem, _ = e.pw.MemUsage(pid)
+				mem, err = e.pw.MemUsage(pid)
+			}
+			if err != nil{
+				log.Debugf("Error getting memory utilization: %s", err)
+				e.stat.Gauge(stats.WorkerMemory).Update(-1)
+				continue
 			}
 			e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
 			// Abort process if calculated memory utilization is above memCap
