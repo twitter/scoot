@@ -20,7 +20,7 @@ func init() {
 }
 
 func TestAll(t *testing.T) {
-	e := NewBoundedExecer(0, nil)
+	e := NewBoundedExecer(0, nil, nil)
 
 	// TODO(dbentley): factor out an assertRun method
 	cmd := scootexecer.Command{
@@ -53,7 +53,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestOutput(t *testing.T) {
-	e := NewBoundedExecer(0, nil)
+	e := NewBoundedExecer(0, nil, nil)
 
 	var stdout, stderr bytes.Buffer
 
@@ -96,7 +96,7 @@ func TestMemUsage(t *testing.T) {
 			TaskID: "taskID1234",
 		},
 	}
-	e := NewBoundedExecer(0, nil)
+	e := NewBoundedExecer(0, nil, nil)
 	p, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -143,7 +143,7 @@ func TestMemCap(t *testing.T) {
 		MemCh: memCh,
 	}
 	// Terminate nearly immediately, after memory grows to 1MB.
-	e := NewBoundedExecer(scootexecer.Memory(1024*1024), stats.NilStatsReceiver())
+	e := NewBoundedExecer(scootexecer.Memory(1024*1024), nil, stats.NilStatsReceiver())
 	p, err := e.Exec(cmd)
 	if err != nil {
 		t.Fatalf(err.Error())
