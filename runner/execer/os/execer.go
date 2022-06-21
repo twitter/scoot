@@ -171,7 +171,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			} else {
 				mem, err = e.pw.MemUsage(pid)
 			}
-			if err != nil{
+			if err != nil {
 				log.Debugf("Error getting memory utilization: %s", err)
 				e.stat.Gauge(stats.WorkerMemory).Update(-1)
 				continue
