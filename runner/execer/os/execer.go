@@ -31,7 +31,7 @@ type WriterDelegater interface {
 type execer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap
 	memCap            scootexecer.Memory
-	getMemUtilization func() (int64, error)
+	getMemUtilization func(int) (scootexecer.Memory, error)
 	stat              stats.StatsReceiver
 	pw                ProcessWatcher
 }
@@ -45,8 +45,18 @@ func NewBoundedExecer(memCap scootexecer.Memory, getMemUtilization func() (int64
 	if stat != nil {
 		oe.stat = stat
 	}
+	// if not nil, use the provided function to get memory utilization,
+	// otherwise get the memory usage of the current process and its subprocesses
 	if getMemUtilization != nil {
-		oe.getMemUtilization = getMemUtilization
+		oe.getMemUtilization = func(int) (scootexecer.Memory, error) {
+			mem, err := getMemUtilization()
+			if err != nil {
+				return 0, err
+			}
+			return scootexecer.Memory(mem), err
+		}
+	} else {
+		oe.getMemUtilization = oe.pw.MemUsage
 	}
 	return oe
 }
@@ -162,15 +172,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 				log.Error(err)
 			}
 			var mem scootexecer.Memory
-			// if not nil, use the provided function to get memory utilization,
-			// otherwise get the memory usage of the current process and its subprocesses
-			if e.getMemUtilization != nil {
-				var memory int64
-				memory, err = e.getMemUtilization()
-				mem = scootexecer.Memory(memory)
-			} else {
-				mem, err = e.pw.MemUsage(pid)
-			}
+			mem, err := e.getMemUtilization(pid)
 			if err != nil {
 				log.Debugf("Error getting memory utilization: %s", err)
 				e.stat.Gauge(stats.WorkerMemory).Update(-1)
