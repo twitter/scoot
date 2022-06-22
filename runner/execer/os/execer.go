@@ -217,7 +217,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 						"tag":         p.Tag,
 						"jobID":       p.JobID,
 						"taskID":      p.TaskID,
-					}).Infof("Memory utilization increased to %d, pid: %d", int(memUsagePct*100), pid)
+					}).Infof("Memory utilization increased to %d%%, pid: %d", int(memUsagePct*100), pid)
 
 				// Trace output with timeout since it seems CombinedOutput() sometimes fails to return.
 				if log.IsLevelEnabled(log.TraceLevel) {
@@ -232,7 +232,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 							"tag":    p.Tag,
 							"jobID":  p.JobID,
 							"taskID": p.TaskID,
-						}).Tracef("ps after increased memory utilization for pid %d", pid)
+						}).Debugf("ps after increased memory utilization for pid %d", pid)
 					cancel()
 				}
 
