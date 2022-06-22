@@ -57,12 +57,13 @@ func StartServer(
 	stat *stats.StatsReceiver,
 	preprocessors []func() error,
 	postprocessors []func() error,
+	memUtilizationFunc func() (int64, error),
 	uploader runners.LogUploader,
 ) {
 	// create worker object:
 	// worker support objects
 	memory := execer.Memory(memCap)
-	execer := execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(memory, *stat))
+	execer := execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(memory, memUtilizationFunc, *stat))
 
 	var filerMap runner.RunTypeMap = runner.MakeRunTypeMap()
 	if db != nil {

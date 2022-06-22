@@ -30,19 +30,33 @@ type WriterDelegater interface {
 // Implements runner/execer.Execer
 type execer struct {
 	// Best effort monitoring of command to kill it if resident memory usage exceeds this cap
-	memCap scootexecer.Memory
-	stat   stats.StatsReceiver
-	pw     ProcessWatcher
+	memCap            scootexecer.Memory
+	getMemUtilization func(int) (scootexecer.Memory, error)
+	stat              stats.StatsReceiver
+	pw                ProcessWatcher
 }
 
-// NewBoundedExecer returns an execer with a ProcGetter and, if non-zero values are provided, a memCap and a StatsReceiver
-func NewBoundedExecer(memCap scootexecer.Memory, stat stats.StatsReceiver) *execer {
+// NewBoundedExecer returns an execer with a ProcGetter and, if non-zero values are provided, a memCap, overriding memory utilization function, and a StatsReceiver
+func NewBoundedExecer(memCap scootexecer.Memory, getMemUtilization func() (int64, error), stat stats.StatsReceiver) *execer {
 	oe := &execer{pw: NewProcWatcher()}
 	if memCap != 0 {
 		oe.memCap = memCap
 	}
 	if stat != nil {
 		oe.stat = stat
+	}
+	// if not nil, use the provided function to get memory utilization,
+	// otherwise get the memory usage of the current process and its subprocesses
+	if getMemUtilization != nil {
+		oe.getMemUtilization = func(int) (scootexecer.Memory, error) {
+			mem, err := getMemUtilization()
+			if err != nil {
+				return 0, err
+			}
+			return scootexecer.Memory(mem), err
+		}
+	} else {
+		oe.getMemUtilization = oe.pw.MemUsage
 	}
 	return oe
 }
@@ -129,7 +143,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 	}
 	thresholdsIdx := 0
 	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
-	memTicker := time.NewTicker(250 * time.Millisecond)
+	memTicker := time.NewTicker(500 * time.Millisecond)
 	defer memTicker.Stop()
 	log.WithFields(
 		log.Fields{
@@ -157,11 +171,17 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			if _, err := e.pw.GetProcs(); err != nil {
 				log.Error(err)
 			}
-			mem, _ := e.pw.MemUsage(pid)
+			var mem scootexecer.Memory
+			mem, err := e.getMemUtilization(pid)
+			if err != nil {
+				log.Debugf("Error getting memory utilization: %s", err)
+				e.stat.Gauge(stats.WorkerMemory).Update(-1)
+				continue
+			}
 			e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
-			// Aborting process, above memCap
+			// Abort process if calculated memory utilization is above memCap
 			if mem >= e.memCap {
-				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
+				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting process %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
 				log.WithFields(
 					log.Fields{
 						"mem":    mem,
@@ -197,7 +217,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 						"tag":         p.Tag,
 						"jobID":       p.JobID,
 						"taskID":      p.TaskID,
-					}).Infof("Increased mem_cap utilization for pid %d to %d", pid, int(memUsagePct*100))
+					}).Infof("Memory utilization increased to %d%%, pid: %d", int(memUsagePct*100), pid)
 
 				// Trace output with timeout since it seems CombinedOutput() sometimes fails to return.
 				if log.IsLevelEnabled(log.TraceLevel) {
@@ -212,7 +232,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 							"tag":    p.Tag,
 							"jobID":  p.JobID,
 							"taskID": p.TaskID,
-						}).Tracef("ps after increasing mem_cap utilization for pid %d", pid)
+						}).Debugf("ps after increased memory utilization for pid %d", pid)
 					cancel()
 				}
 

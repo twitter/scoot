@@ -23,8 +23,8 @@ type module struct{}
 // Install installs functions for creating a new Runner.
 func (m module) Install(b *ice.MagicBag) {
 	b.PutMany(
-		func(m execer.Memory, s stats.StatsReceiver) execer.Execer {
-			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, s))
+		func(m execer.Memory, getMemFunc func() (int64, error), s stats.StatsReceiver) execer.Execer {
+			return execers.MakeSimExecerInterceptor(execers.NewSimExecer(), osexec.NewBoundedExecer(m, getMemFunc, s))
 		},
 		func() runner.RunnerID {
 			// suitable local testing purposes, but a production implementation would supply a unique ID

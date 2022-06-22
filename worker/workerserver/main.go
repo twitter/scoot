@@ -70,6 +70,7 @@ func main() {
 		[]func() error{},
 		[]func() error{},
 		nil,
+		nil,
 	)
 }
 
