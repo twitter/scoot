@@ -171,9 +171,9 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			if _, err := e.pw.GetProcs(); err != nil {
 				log.Error(err)
 			}
-			var mem scootexecer.Memory
 			mem, err := e.getMemUtilization(pid)
 			if err != nil {
+				p.mutex.Unlock()
 				log.Debugf("Error getting memory utilization: %s", err)
 				e.stat.Gauge(stats.WorkerMemory).Update(-1)
 				continue
@@ -219,8 +219,8 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 						"taskID":      p.TaskID,
 					}).Infof("Memory utilization increased to %d%%, pid: %d", int(memUsagePct*100), pid)
 
-				// Trace output with timeout since it seems CombinedOutput() sometimes fails to return.
-				if log.IsLevelEnabled(log.TraceLevel) {
+				// Debug log output with timeout since it seems CombinedOutput() sometimes fails to return.
+				if log.IsLevelEnabled(log.DebugLevel) {
 					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 					ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
 					log.WithFields(
