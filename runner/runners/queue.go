@@ -36,6 +36,7 @@ func init() {
 const QueueFullMsg = "No resources available. Please try later."
 const QueueInitingMsg = "Queue is still initializing. Please try later."
 const QueueInvalidMsg = "Failed initialization, queue permanently broken."
+const WorkerUnhealthyMsg = "Worker is unhealthy."
 
 type result struct {
 	st  runner.RunStatus
@@ -144,12 +145,12 @@ func NewQueueRunner(
 				stat.Counter(stats.WorkerDownloadInitFailure).Inc(1)
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: initErr})
 			} else {
-				statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+				statusManager.UpdateService(runner.ServiceStatus{Initialized: true, IsHealthy: true})
 				controller.startUpdateTickers()
 			}
 		}()
 	} else {
-		statusManager.UpdateService(runner.ServiceStatus{Initialized: true})
+		statusManager.UpdateService(runner.ServiceStatus{Initialized: true, IsHealthy: true})
 		controller.startUpdateTickers()
 	}
 
@@ -244,7 +245,7 @@ func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error)
 	_, svcStatus, _ := c.statusManager.StatusAll()
 	log.WithFields(
 		log.Fields{
-			"ready":          svcStatus.Initialized,
+			"ready":          svcStatus.Initialized && svcStatus.IsHealthy,
 			"err":            svcStatus.Error,
 			"availableSlots": c.capacity - len(c.queue),
 			"totalSlots":     c.capacity,
@@ -260,6 +261,13 @@ func (c *QueueController) enqueue(cmd *runner.Command) (runner.RunStatus, error)
 			errStr = svcStatus.Error.Error()
 		}
 		return runner.RunStatus{Error: errStr}, fmt.Errorf(QueueInitingMsg)
+	}
+	if !svcStatus.IsHealthy {
+		errStr := WorkerUnhealthyMsg
+		if svcStatus.Error != nil {
+			errStr = svcStatus.Error.Error()
+		}
+		return runner.RunStatus{Error: errStr}, fmt.Errorf(WorkerUnhealthyMsg)
 	}
 	if len(c.queue) >= c.capacity {
 		return runner.RunStatus{}, fmt.Errorf(QueueFullMsg)
@@ -375,7 +383,7 @@ func (c *QueueController) loop() {
 	}
 
 	tryRun := func() {
-		if watchCh == nil && updateDoneCh == nil && len(c.queue) > 0 {
+		if watchCh == nil && updateDoneCh == nil && len(c.queue) > 0 && (c.statusManager.svcStatus.IsHealthy) {
 			cmdID := c.queue[0]
 			watchCh = c.runAndWatch(cmdID)
 			idleLatency.Stop()
@@ -466,11 +474,7 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 				}).Info("Queue received status update")
 			c.statusManager.Update(st)
 			if st.State.IsDone() {
-				if c.killForPersistenError(st.ExitCode) {
-					// not incrementing the worker kill stat, since we kill the worker immediately, before the increment
-					// can be reported
-					log.Fatalf("Errors (%d) occurred multiple times in a row recorded. Killing worker.", st.ExitCode)
-				}
+				c.checkAndUpdateServiceHealth(st.ExitCode)
 				c.lastExitCode = errors.ExitCode(st.ExitCode)
 				watchCh <- st
 				return
@@ -481,10 +485,40 @@ func (c *QueueController) runAndWatch(cmdID cmdAndID) chan runner.RunStatus {
 }
 
 /*
-killForPersistentError returns true when one of the critical errors has occurred 2 times in a row.
+checkAndUpdateServiceHealth updates service status to unhealthy if critical or persistent errors occurred
 */
-func (c *QueueController) killForPersistenError(exitCode errors.ExitCode) bool {
+func (c *QueueController) checkAndUpdateServiceHealth(exitCode errors.ExitCode) {
+	var svcStatusErr error
+	markUnhealthy := false
+	if c.isCriticalError(exitCode) {
+		svcStatusErr = fmt.Errorf("critical error (%d) occurred. Marking worker unhealthy", exitCode)
+		markUnhealthy = true
+	}
+	if c.isPersistentError(exitCode) {
+		svcStatusErr = fmt.Errorf("errors (%d) occurred multiple times in a row. Marking worker unhealthy", exitCode)
+		markUnhealthy = true
+	}
+	if markUnhealthy {
+		svcStatus := c.statusManager.svcStatus
+		svcStatus.IsHealthy = false
+		svcStatus.Error = svcStatusErr
+		c.statusManager.UpdateService(svcStatus)
+		c.inv.stat.Gauge(stats.WorkerUnhealthy).Update(1)
+	}
+}
+
+/*
+isPersistentError returns true when one of the critical errors has occurred 2 times in a row.
+*/
+func (c *QueueController) isPersistentError(exitCode errors.ExitCode) bool {
 	return exitCode == c.lastExitCode &&
 		(exitCode == errors.CleanFailureExitCode ||
 			exitCode == errors.CheckoutFailureExitCode)
+}
+
+/*
+isCriticalError returns true when one of the critical errors has occurred.
+*/
+func (c *QueueController) isCriticalError(exitCode errors.ExitCode) bool {
+	return exitCode == errors.HighInitialMemoryUtilizationExitCode
 }

@@ -27,11 +27,19 @@ type WorkerStatusHTTPHandler struct {
 
 func (h *WorkerStatusHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, svcStatus, err := h.svc.QueryNow(runner.Query{})
-	if err == nil && svcStatus.Initialized {
+	if err == nil {
+		if !svcStatus.Initialized {
+			fmt.Fprintf(w, "not initialized")
+			return
+		}
+		if !svcStatus.IsHealthy{
+			fmt.Fprintf(w, "failed")
+			return
+		}
 		fmt.Fprintf(w, "ok")
 		return
 	}
-	fmt.Fprintf(w, "not initialized")
+	fmt.Fprintf(w, err.Error())
 }
 
 type servers struct {

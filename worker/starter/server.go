@@ -128,6 +128,7 @@ func (h *handler) QueryWorker() (*worker.WorkerStatus, error) {
 		ws.Error = err.Error()
 	}
 	ws.Initialized = svc.Initialized
+	ws.IsHealthy = svc.IsHealthy
 
 	for _, status := range st {
 		if status.State.IsDone() {

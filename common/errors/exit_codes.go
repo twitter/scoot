@@ -20,6 +20,7 @@ const (
 	PostProcessingFailureExitCode = 230
 
 	CouldNotExecExitCode = 240
+	HighInitialMemoryUtilizationExitCode = 241
 
 	PostExecFailureExitCode = 250
 )

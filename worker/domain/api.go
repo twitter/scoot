@@ -19,6 +19,7 @@ import (
 type WorkerStatus struct {
 	Runs        []runner.RunStatus
 	Initialized bool
+	IsHealthy   bool
 	Error       string
 }
 
@@ -27,7 +28,7 @@ func ThriftWorkerStatusToDomain(thrift *worker.WorkerStatus) WorkerStatus {
 	for _, r := range thrift.Runs {
 		runs = append(runs, ThriftRunStatusToDomain(r))
 	}
-	return WorkerStatus{runs, thrift.Initialized, thrift.Error}
+	return WorkerStatus{runs, thrift.Initialized, thrift.IsHealthy, thrift.Error}
 }
 
 func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
@@ -36,6 +37,7 @@ func DomainWorkerStatusToThrift(domain WorkerStatus) *worker.WorkerStatus {
 	for _, r := range domain.Runs {
 		thrift.Runs = append(thrift.Runs, DomainRunStatusToThrift(r))
 		thrift.Initialized = domain.Initialized
+		thrift.IsHealthy = domain.IsHealthy
 		thrift.Error = domain.Error
 	}
 	return thrift

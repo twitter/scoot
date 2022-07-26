@@ -2,7 +2,6 @@ package os
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -12,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/stats"
 	scootexecer "github.com/twitter/scoot/runner/execer"
 
@@ -64,7 +64,7 @@ func NewBoundedExecer(memCap scootexecer.Memory, getMemUtilization func() (int64
 // Start a command, monitor its memory, and return an &process wrapper for it
 func (e *execer) Exec(command scootexecer.Command) (scootexecer.Process, error) {
 	if len(command.Argv) == 0 {
-		return nil, errors.New("No command specified.")
+		return nil, fmt.Errorf("No command specified.")
 	}
 
 	cmd := exec.Command(command.Argv[0], command.Argv[1:]...)
@@ -197,11 +197,29 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 					Error:    msg,
 					ExitCode: 1,
 				}
+				// check whether memory consumption is above threshold immediately on process start
+				// mostly indicates that memory utilization was already above cap when the process started
+				if thresholdsIdx == 0 {
+					msg += " Critical error detected. Initial memory utilization of worker is higher than threshold."
+					e.stat.Counter(stats.WorkerHighInitialMemoryUtilization).Inc(1)
+					p.result = &scootexecer.ProcessStatus{
+						State:    scootexecer.FAILED,
+						Error:    msg,
+						ExitCode: errors.HighInitialMemoryUtilizationExitCode,
+					}
+				}
 				if memCh != nil {
 					memCh <- *p.result
 				}
 				p.mutex.Unlock()
 				p.MemCapKill()
+				// record memory after killing process
+				mem, err = e.getMemUtilization(pid)
+				if err != nil {
+					log.Debugf("Error getting memory utilization after killing process: %s", err)
+					e.stat.Gauge(stats.WorkerMemory).Update(-1)
+				}
+				e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
 				return
 			}
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.

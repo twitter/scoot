@@ -592,11 +592,13 @@ func (p *RunStatus) String() string {
 // Attributes:
 //  - Runs
 //  - Initialized
+//  - IsHealthy
 //  - Error
 type WorkerStatus struct {
 	Runs        []*RunStatus `thrift:"runs,1,required" json:"runs"`
 	Initialized bool         `thrift:"initialized,2,required" json:"initialized"`
-	Error       string       `thrift:"error,3,required" json:"error"`
+	IsHealthy   bool         `thrift:"isHealthy,3,required" json:"isHealthy"`
+	Error       string       `thrift:"error,4,required" json:"error"`
 }
 
 func NewWorkerStatus() *WorkerStatus {
@@ -611,6 +613,10 @@ func (p *WorkerStatus) GetInitialized() bool {
 	return p.Initialized
 }
 
+func (p *WorkerStatus) GetIsHealthy() bool {
+	return p.IsHealthy
+}
+
 func (p *WorkerStatus) GetError() string {
 	return p.Error
 }
@@ -621,6 +627,7 @@ func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 
 	var issetRuns bool = false
 	var issetInitialized bool = false
+	var issetIsHealthy bool = false
 	var issetError bool = false
 
 	for {
@@ -646,6 +653,11 @@ func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 			if err := p.readField3(iprot); err != nil {
 				return err
 			}
+			issetIsHealthy = true
+		case 4:
+			if err := p.readField4(iprot); err != nil {
+				return err
+			}
 			issetError = true
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
@@ -664,6 +676,9 @@ func (p *WorkerStatus) Read(iprot thrift.TProtocol) error {
 	}
 	if !issetInitialized {
 		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Initialized is not set"))
+	}
+	if !issetIsHealthy {
+		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field IsHealthy is not set"))
 	}
 	if !issetError {
 		return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Error is not set"))
@@ -701,8 +716,17 @@ func (p *WorkerStatus) readField2(iprot thrift.TProtocol) error {
 }
 
 func (p *WorkerStatus) readField3(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
+	if v, err := iprot.ReadBool(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.IsHealthy = v
+	}
+	return nil
+}
+
+func (p *WorkerStatus) readField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
 	} else {
 		p.Error = v
 	}
@@ -720,6 +744,9 @@ func (p *WorkerStatus) Write(oprot thrift.TProtocol) error {
 		return err
 	}
 	if err := p.writeField3(oprot); err != nil {
+		return err
+	}
+	if err := p.writeField4(oprot); err != nil {
 		return err
 	}
 	if err := oprot.WriteFieldStop(); err != nil {
@@ -766,14 +793,27 @@ func (p *WorkerStatus) writeField2(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *WorkerStatus) writeField3(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("error", thrift.STRING, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:error: ", p), err)
+	if err := oprot.WriteFieldBegin("isHealthy", thrift.BOOL, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:isHealthy: ", p), err)
 	}
-	if err := oprot.WriteString(string(p.Error)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.error (3) field write error: ", p), err)
+	if err := oprot.WriteBool(bool(p.IsHealthy)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.isHealthy (3) field write error: ", p), err)
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:error: ", p), err)
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:isHealthy: ", p), err)
+	}
+	return err
+}
+
+func (p *WorkerStatus) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("error", thrift.STRING, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:error: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Error)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.error (4) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:error: ", p), err)
 	}
 	return err
 }

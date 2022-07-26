@@ -35,7 +35,8 @@ struct RunStatus {
 struct WorkerStatus {
   1: required list<RunStatus> runs  # All runs
   2: required bool initialized      # True if the worker has finished with any long-running init tasks.
-  3: required string error          # Set when a general worker error unrelated to a specific run has occurred.
+  3: required bool isHealthy        # True if the worker is in a healthy state to accept new tasks.
+  4: required string error          # Set when a general worker error unrelated to a specific run has occurred.
 }
 
 struct RunCommand {

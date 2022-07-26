@@ -345,6 +345,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"status":   st,
 				"checkout": co.Path(),
 			}).Infof("Cmd exceeded MemoryCap, aborting %v", cmd.String())
+		inv.stat.Counter(stats.WorkerMemoryCapExceeded).Inc(1)
 		runStatus = getPostExecRunStatus(st, id, cmd)
 		runStatus.Error = st.Error
 	case st := <-processCh:
@@ -455,8 +456,13 @@ func getPostExecRunStatus(st execer.ProcessStatus, id runner.RunID, cmd *runner.
 			runStatus.Error = st.Error
 		}
 	case execer.FAILED:
+		// use the exit code from process status if present, otherwise use default exit code
+		ec := errors.ExitCode(errors.PostExecFailureExitCode)
+		if int(st.ExitCode) != 0 {
+			ec = st.ExitCode
+		}
 		msg := fmt.Sprintf("error execing: %s", st.Error)
-		runStatus = runner.FailedStatus(id, errors.NewError(e.New(msg), errors.PostExecFailureExitCode),
+		runStatus = runner.FailedStatus(id, errors.NewError(e.New(msg), ec),
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	default:
 		msg := "unexpected exec state"
