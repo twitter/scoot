@@ -134,7 +134,7 @@ func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, runner.Service
 	if ws.Error != "" {
 		svcErr = errors.New(ws.Error)
 	}
-	svc := runner.ServiceStatus{Initialized: ws.Initialized, IsHealthy: ws.IsHealthy,  Error: svcErr}
+	svc := runner.ServiceStatus{Initialized: ws.Initialized, IsHealthy: ws.IsHealthy, Error: svcErr}
 	for _, p := range ws.Runs {
 		if p.RunID == id {
 			return p, svc, nil
