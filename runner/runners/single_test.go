@@ -139,7 +139,7 @@ func TestMemCap(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"python3", "-c", str}}
 	tmp, _ := ioutil.TempDir("", "")
 	stat, statsReg := setupTest()
-	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), nil, stat)
+	e := os_execer.NewBoundedExecer(execer.Memory(15*1024*1024), nil, stat)
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
