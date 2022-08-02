@@ -141,10 +141,6 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 	} else {
 		defer cleanupProcs(pgid)
 	}
-	thresholdsIdx := 0
-	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
-	memTicker := time.NewTicker(500 * time.Millisecond)
-	defer memTicker.Stop()
 	log.WithFields(
 		log.Fields{
 			"pid":    pid,
@@ -152,6 +148,35 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			"jobID":  p.JobID,
 			"taskID": p.TaskID,
 		}).Info("Monitoring memory")
+	if _, err := e.pw.GetProcs(); err != nil {
+		log.Error(err)
+	}
+
+	// check whether memory consumption is above threshold immediately on process start
+	// mostly indicates that memory utilization was already above cap when the process started
+	mem, err := e.getMemUtilization(pid)
+	if err != nil {
+		log.Debugf("Error getting memory utilization: %s", err)
+		e.stat.Gauge(stats.WorkerMemory).Update(-1)
+	} else if mem >= e.memCap {
+		msg := fmt.Sprintf("Critical error detected. Initial memory utilization of worker is higher than threshold, aborting process %d: %d > %d (%v)",
+			pid, mem, e.memCap, p.cmd.Args)
+		e.stat.Counter(stats.WorkerHighInitialMemoryUtilization).Inc(1)
+		p.mutex.Lock()
+		p.result = &scootexecer.ProcessStatus{
+			State:    scootexecer.FAILED,
+			Error:    msg,
+			ExitCode: errors.HighInitialMemoryUtilizationExitCode,
+		}
+		p.mutex.Unlock()
+		e.memCapKill(p, mem, memCh)
+		return
+	}
+
+	thresholdsIdx := 0
+	reportThresholds := []float64{0, .25, .5, .75, .85, .9, .93, .95, .96, .97, .98, .99, 1}
+	memTicker := time.NewTicker(500 * time.Millisecond)
+	defer memTicker.Stop()
 	for {
 		select {
 		case <-memTicker.C:
@@ -182,44 +207,13 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			// Abort process if calculated memory utilization is above memCap
 			if mem >= e.memCap {
 				msg := fmt.Sprintf("Cmd exceeded MemoryCap, aborting process %d: %d > %d (%v)", pid, mem, e.memCap, p.cmd.Args)
-				log.WithFields(
-					log.Fields{
-						"mem":    mem,
-						"memCap": e.memCap,
-						"args":   p.cmd.Args,
-						"pid":    pid,
-						"tag":    p.Tag,
-						"jobID":  p.JobID,
-						"taskID": p.TaskID,
-					}).Info(msg)
 				p.result = &scootexecer.ProcessStatus{
 					State:    scootexecer.COMPLETE,
 					Error:    msg,
 					ExitCode: 1,
 				}
-				// check whether memory consumption is above threshold immediately on process start
-				// mostly indicates that memory utilization was already above cap when the process started
-				if thresholdsIdx == 0 {
-					msg += " Critical error detected. Initial memory utilization of worker is higher than threshold."
-					e.stat.Counter(stats.WorkerHighInitialMemoryUtilization).Inc(1)
-					p.result = &scootexecer.ProcessStatus{
-						State:    scootexecer.FAILED,
-						Error:    msg,
-						ExitCode: errors.HighInitialMemoryUtilizationExitCode,
-					}
-				}
-				if memCh != nil {
-					memCh <- *p.result
-				}
 				p.mutex.Unlock()
-				p.MemCapKill()
-				// record memory after killing process
-				mem, err = e.getMemUtilization(pid)
-				if err != nil {
-					log.Debugf("Error getting memory utilization after killing process: %s", err)
-					e.stat.Gauge(stats.WorkerMemory).Update(-1)
-				}
-				e.stat.Gauge(stats.WorkerMemory).Update(int64(mem))
+				e.memCapKill(p, mem, memCh)
 				return
 			}
 			// Report on larger changes when utilization is low, and smaller changes as utilization reaches 100%.
@@ -236,30 +230,58 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 						"jobID":       p.JobID,
 						"taskID":      p.TaskID,
 					}).Infof("Memory utilization increased to %d%%, pid: %d", int(memUsagePct*100), pid)
-
-				// Debug log output with timeout since it seems CombinedOutput() sometimes fails to return.
-				if log.IsLevelEnabled(log.DebugLevel) {
-					ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-					ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
-					log.WithFields(
-						log.Fields{
-							"pid":    pid,
-							"ps":     string(ps),
-							"err":    err,
-							"errCtx": ctx.Err(),
-							"tag":    p.Tag,
-							"jobID":  p.JobID,
-							"taskID": p.TaskID,
-						}).Debugf("ps after increased memory utilization for pid %d", pid)
-					cancel()
-				}
-
+				debugProcesses(p)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
 			}
 			p.mutex.Unlock()
 		}
+	}
+}
+
+// memCapKill kills the process, handles cleanup and returns the process status to the invoker
+func (e *execer) memCapKill(p *process, mem scootexecer.Memory, memCh chan scootexecer.ProcessStatus) {
+	log.WithFields(
+		log.Fields{
+			"mem":    mem,
+			"memCap": e.memCap,
+			"args":   p.cmd.Args,
+			"pid":    p.cmd.Process.Pid,
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+		}).Info(p.result.Error)
+	if memCh != nil {
+		memCh <- *p.result
+	}
+	p.MemCapKill()
+	// record memory after killing process
+	postKillMem, err := e.getMemUtilization(p.cmd.Process.Pid)
+	if err != nil {
+		log.Debugf("Error getting memory utilization after killing process: %s", err)
+		e.stat.Gauge(stats.WorkerMemory).Update(-1)
+	}
+	e.stat.Gauge(stats.WorkerMemory).Update(int64(postKillMem))
+}
+
+// debugProcesses logs a snapshot of the current processes at debug level.
+func debugProcesses(p *process) {
+	// Debug log output with timeout since it seems CombinedOutput() sometimes fails to return.
+	if log.IsLevelEnabled(log.DebugLevel) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"ps":     string(ps),
+				"err":    err,
+				"errCtx": ctx.Err(),
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Debugf("ps after increased memory utilization for pid %d", p.cmd.Process.Pid)
+		cancel()
 	}
 }
 

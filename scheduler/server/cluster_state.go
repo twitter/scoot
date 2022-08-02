@@ -19,7 +19,8 @@ const defaultMaxFlakyDuration = 15 * time.Minute
 
 var nilTime = time.Time{}
 
-// Cluster will use this function to determine if newly added nodes are ready to be used.
+// Cluster will use this function to determine if newly added nodes are ready to be used and also to
+// determine if the node became unhealthy after running some task and is not ready to be used.
 type ReadyFn func(cc.Node) (ready bool, backoffDuration time.Duration)
 
 // clusterState maintains a cluster of nodes and information about what task is running on each node.
@@ -33,7 +34,7 @@ type clusterState struct {
 	nodeGroups       map[string]*nodeGroup    // key is a snapshotId.
 	maxLostDuration  time.Duration            // after which we remove a node from the cluster entirely
 	maxFlakyDuration time.Duration            // after which we mark it not flaky and put it back in rotation.
-	readyFn          ReadyFn                  // If provided, new nodes will be suspended until this returns true.
+	readyFn          ReadyFn                  // If provided, new or unhealthy nodes will be suspended until this returns true.
 	numRunning       int                      // Number of running nodes. running + free + suspended ~= allNodes (may lag)
 	stats            stats.StatsReceiver      // for collecting stats about node availability
 	nopUpdateCnt     int
@@ -133,6 +134,7 @@ func newNodeState(node cc.Node) *nodeState {
 // We use a buffered nodes updates channel to prevent cluster state from blocking the object that
 // is recognizing the node updates (typically cluster).
 // New Nodes are considered suspended till the optional ReadyFn reports the node is ready.
+// ReadyFn is also used to communicate if the node becomes unhealthy after a task completion
 // A ClusterState is returned.
 func newClusterState(nodesUpdatesCh chan []cc.NodeUpdate, rfn ReadyFn, stats stats.StatsReceiver) *clusterState {
 	cs := &clusterState{
@@ -190,6 +192,15 @@ func (c *clusterState) taskCompleted(nodeId cc.NodeId, flaky bool) {
 		ns, ok = c.suspendedNodes[nodeId]
 	}
 	if ok {
+		// check if node is ready after the last run, unhealthy nodes will not be ready
+		// mark them as lost because we do not yet have a way to recover unhealthy nodes
+		if c.readyFn != nil {
+			if ready, _ := c.readyFn(ns.node); !ready && !ns.suspended() {
+				delete(c.nodes, nodeId)
+				c.suspendedNodes[nodeId] = ns
+				ns.timeLost = time.Now()
+			}
+		}
 		if flaky && !ns.suspended() {
 			delete(c.nodes, nodeId)
 			c.suspendedNodes[nodeId] = ns

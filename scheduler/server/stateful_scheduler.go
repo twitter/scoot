@@ -230,13 +230,13 @@ func NewStatefulScheduler(
 	nodeReadyFn := func(node cc.Node) (bool, time.Duration) {
 		run := rf(node)
 		st, svc, err := run.StatusAll()
-		if err != nil || !svc.Initialized {
+		if err != nil || !svc.Initialized || !svc.IsHealthy {
 			if svc.Error != nil {
 				log.WithFields(
 					log.Fields{
 						"node": node,
 						"err":  svc.Error,
-					}).Info("received service err during init of new node")
+					}).Info("received service err")
 				return false, 0
 			}
 			return false, config.ReadyFnBackoff

@@ -344,7 +344,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"taskID":   cmd.TaskID,
 				"status":   st,
 				"checkout": co.Path(),
-			}).Infof("Cmd exceeded MemoryCap, aborting %v", cmd.String())
+			}).Infof(st.Error)
 		inv.stat.Counter(stats.WorkerMemoryCapExceeded).Inc(1)
 		runStatus = getPostExecRunStatus(st, id, cmd)
 		runStatus.Error = st.Error

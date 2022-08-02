@@ -33,7 +33,7 @@ func (h *WorkerStatusHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 			return
 		}
 		if !svcStatus.IsHealthy {
-			fmt.Fprintf(w, "failed")
+			fmt.Fprintf(w, "not healthy")
 			return
 		}
 		fmt.Fprintf(w, "ok")

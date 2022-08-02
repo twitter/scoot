@@ -250,6 +250,69 @@ func Test_ClusterState_TaskCompleted(t *testing.T) {
 
 }
 
+// verify that available and suspended maps are populated correctly when a node becomes
+// unhealthy after task completion
+func Test_ClusterState_NodeUnhealthy(t *testing.T) {
+	readyCh := make(chan interface{})
+	readyFn := func(node cluster.Node) (bool, time.Duration) {
+		return true, time.Duration(0)
+	}
+
+	setReady := func(node string) {
+		close(readyCh)
+	}
+
+	//setup cluster with 1 node and mark it as reaady
+	cs, _, statsRegistry := setupTestClusterState(readyFn, "node1")
+	setReady("node1")
+	time.Sleep(2 * time.Millisecond)
+	cs.updateCluster()
+
+	// verify that node is added and ready.
+	if len(cs.nodes) != 1 || len(cs.suspendedNodes) != 0 {
+		t.Fatalf("Expected empty nodes and suspendedNodes, got: %s, %s",
+			spew.Sdump(cs.nodes), spew.Sdump(cs.suspendedNodes))
+	}
+	if !stats.StatsOk("1st stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterFreeNodes:      {Checker: stats.Int64EqTest, Value: 1},
+			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 0},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+
+	// schedule a task on the node
+	cs.taskScheduled("node1", "job1", "task1", "snapA")
+
+	// set ready function to return false to mock unhealthy worker behavior
+	cs.readyFn = func(node cluster.Node) (bool, time.Duration) {
+		return false, time.Duration(0)
+	}
+
+	// task finished
+	cs.taskCompleted("node1", false)
+	if _, ok := cs.nodes["node1"]; ok {
+		t.Fatalf("Unhealthy node was not moved out of cs.nodes")
+	} else if _, ok := cs.suspendedNodes["node1"]; !ok {
+		t.Fatalf("Unhealthy node was not moved into cs.suspendedNodes")
+	} else if cs.suspendedNodes["node1"].timeLost == nilTime {
+		t.Fatalf("Unhealthy nodes should record the time they were marked lost")
+	}
+
+	// verify stats
+	time.Sleep(2 * time.Millisecond)
+	cs.updateCluster()
+	if !stats.StatsOk("1st stats check:", statsRegistry, t,
+		map[string]stats.Rule{
+			stats.ClusterAvailableNodes: {Checker: stats.Int64EqTest, Value: 0},
+			stats.ClusterFreeNodes:      {Checker: stats.Int64EqTest, Value: 0},
+			stats.ClusterLostNodes:      {Checker: stats.Int64EqTest, Value: 1},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+}
+
 // verify that idle and busy maps are populated correctly and that flaky/lost/init'd status are as well.
 func Test_ClusterState_NodeGroups(t *testing.T) {
 	// use a map of ready channels, one channel for each node

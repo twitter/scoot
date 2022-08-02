@@ -178,7 +178,7 @@ func TestHighInitialMem(t *testing.T) {
 	cmd := &runner.Command{Argv: []string{"python3", "-c", str}}
 	tmp, _ := ioutil.TempDir("", "")
 	stat, statsReg := setupTest()
-	e := os_execer.NewBoundedExecer(execer.Memory(1*1024*1024), nil, stat)
+	e := os_execer.NewBoundedExecer(execer.Memory(1024*1024), nil, stat)
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
 	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
@@ -190,12 +190,13 @@ func TestHighInitialMem(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-
-	if runs, svcStatus, err := r.Query(query, runner.Wait{Timeout: 20 * time.Second}); err != nil {
+	time.Sleep(10 * time.Millisecond)
+	if runs, svcStatus, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 {
 		t.Fatalf("Expected a single FAILED run, got %v", len(runs))
-	} else if runs[0].ExitCode != errors.HighInitialMemoryUtilizationExitCode || !strings.Contains(runs[0].Error, "Cmd exceeded MemoryCap, aborting") {
+	} else if runs[0].ExitCode != errors.HighInitialMemoryUtilizationExitCode ||
+		!strings.Contains(runs[0].Error, "Critical error detected. Initial memory utilization of worker is higher than threshold, aborting") {
 		status, _, err := r.StatusAll()
 		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
 	} else if svcStatus.IsHealthy {
