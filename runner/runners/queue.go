@@ -146,11 +146,13 @@ func NewQueueRunner(
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: false, Error: initErr})
 			} else {
 				statusManager.UpdateService(runner.ServiceStatus{Initialized: true, IsHealthy: true})
+				stat.Gauge(stats.WorkerUnhealthy).Update(0)
 				controller.startUpdateTickers()
 			}
 		}()
 	} else {
 		statusManager.UpdateService(runner.ServiceStatus{Initialized: true, IsHealthy: true})
+		stat.Gauge(stats.WorkerUnhealthy).Update(0)
 		controller.startUpdateTickers()
 	}
 
