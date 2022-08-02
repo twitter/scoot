@@ -160,6 +160,6 @@ type ServiceStatus struct {
 }
 
 func (s ServiceStatus) String() string {
-	return fmt.Sprintf("--- Service Status ---\n\tInitialized: %t\n\tIsHealthy: %t\n",
+	return fmt.Sprintf("--- Service Status ---\n\tInitialized : %t\n\tIsHealthy : %t\n",
 		s.Initialized, s.IsHealthy)
 }
