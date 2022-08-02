@@ -190,7 +190,7 @@ func TestHighInitialMem(t *testing.T) {
 		AllRuns: true,
 		States:  runner.MaskForState(runner.FAILED),
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	if runs, svcStatus, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
 		t.Fatalf(err.Error())
 	} else if len(runs) != 1 {
