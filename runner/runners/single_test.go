@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/twitter/scoot/common/errors"
 	"github.com/twitter/scoot/common/log/hooks"
 	"github.com/twitter/scoot/common/stats"
 	"github.com/twitter/scoot/runner"
@@ -132,15 +133,16 @@ func TestAbortLogUpload(t *testing.T) {
 
 func TestMemCap(t *testing.T) {
 	defer teardown(t)
-	// Command to increase memory by 1MB every .1s until we hit 50MB after 5s.
+	// Command to increase memory by 1MB every .2s until we hit 25MB after 5s.
 	// Test that limiting the memory to 10MB causes the command to abort.
-	str := `import time; exec("x=[]\nfor i in range(50):\n x.append(' ' * 1024*1024)\n time.sleep(.1)")`
+	str := `import time; exec("x=[]\nfor i in range(25):\n x.append(' ' * 1024*1024)\n time.sleep(.2)")`
 	cmd := &runner.Command{Argv: []string{"python3", "-c", str}}
 	tmp, _ := ioutil.TempDir("", "")
-	e := os_execer.NewBoundedExecer(execer.Memory(10*1024*1024), nil, stats.NilStatsReceiver())
+	stat, statsReg := setupTest()
+	e := os_execer.NewBoundedExecer(execer.Memory(15*1024*1024), nil, stat)
 	filerMap := runner.MakeRunTypeMap()
 	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
-	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), nil, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
 	if _, err := r.Run(cmd); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -157,6 +159,58 @@ func TestMemCap(t *testing.T) {
 	} else if runs[0].ExitCode != 1 || !strings.Contains(runs[0].Error, "Cmd exceeded MemoryCap, aborting") {
 		status, _, err := r.StatusAll()
 		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
+	}
+
+	// verify metrics
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerMemoryCapExceeded: {Checker: stats.Int64EqTest, Value: 1},
+		}) {
+		t.Fatal("stats check did not pass.")
+	}
+}
+
+func TestHighInitialMem(t *testing.T) {
+	defer teardown(t)
+	// Command to increase memory to 10MB as soon as process starts, as an attempt to mock behavior
+	// where memory consumption is detected to be above memory cap as soon as memory monitoring starts
+	str := `import time; exec("x=[]\nfor i in range(1):\n x.append(' ' * 10*1024*1024)\n time.sleep(.5)")`
+	cmd := &runner.Command{Argv: []string{"python3", "-c", str}}
+	tmp, _ := ioutil.TempDir("", "")
+	stat, statsReg := setupTest()
+	e := os_execer.NewBoundedExecer(execer.Memory(1024*1024), nil, stat)
+	filerMap := runner.MakeRunTypeMap()
+	filerMap[runner.RunTypeScoot] = snapshot.FilerAndInitDoneCh{Filer: snapshots.MakeNoopFiler(tmp), IDC: nil}
+	r := NewSingleRunner(e, filerMap, NewNullOutputCreator(), stat, stats.NopDirsMonitor, runner.EmptyID, []func() error{}, []func() error{}, nil)
+	if _, err := r.Run(cmd); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	query := runner.Query{
+		AllRuns: true,
+		States:  runner.MaskForState(runner.FAILED),
+	}
+	time.Sleep(500 * time.Millisecond)
+	if runs, svcStatus, err := r.Query(query, runner.Wait{Timeout: 5 * time.Second}); err != nil {
+		t.Fatalf(err.Error())
+	} else if len(runs) != 1 {
+		t.Fatalf("Expected a single FAILED run, got %v", len(runs))
+	} else if runs[0].ExitCode != errors.HighInitialMemoryUtilizationExitCode ||
+		!strings.Contains(runs[0].Error, "Critical error detected. Initial memory utilization of worker is higher than threshold, aborting") {
+		status, _, err := r.StatusAll()
+		t.Fatalf("Expected result with error message mentioning MemoryCap & an exit code of 1, got: %v -- status %v err %v -- exitCode %v", runs, status, err, runs[0].ExitCode)
+	} else if svcStatus.IsHealthy {
+		t.Fatalf("Expected service status IsHealthy to be false, got %v", svcStatus.IsHealthy)
+	}
+
+	// verify metrics
+	if !stats.StatsOk("", statsReg, t,
+		map[string]stats.Rule{
+			stats.WorkerUnhealthy:                    {Checker: stats.Int64EqTest, Value: 1},
+			stats.WorkerHighInitialMemoryUtilization: {Checker: stats.Int64EqTest, Value: 1},
+			stats.WorkerMemoryCapExceeded:            {Checker: stats.Int64EqTest, Value: 1},
+		}) {
+		t.Fatal("stats check did not pass.")
 	}
 }
 

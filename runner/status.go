@@ -155,9 +155,11 @@ func CompleteStatus(runID RunID, snapshotID string, exitCode errors.ExitCode, ta
 // This is for overall runner status, just 'initialized' status and error for now.
 type ServiceStatus struct {
 	Initialized bool
+	IsHealthy   bool
 	Error       error
 }
 
 func (s ServiceStatus) String() string {
-	return fmt.Sprintf("--- Service Status ---\n\tInitialized:%t\n", s.Initialized)
+	return fmt.Sprintf("--- Service Status ---\n\tInitialized : %t\n\tIsHealthy : %t\n",
+		s.Initialized, s.IsHealthy)
 }

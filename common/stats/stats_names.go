@@ -436,6 +436,16 @@ const (
 	WorkerMemory = "memory"
 
 	/*
+		record high memory utilization on task start
+	*/
+	WorkerHighInitialMemoryUtilization = "highInitialMemoryUtilization"
+
+	/*
+		record when worker memory consumption exceed soft memory cap
+	*/
+	WorkerMemoryCapExceeded = "memoryCapExceeded"
+
+	/*
 		A gauge used to indicate if the worker is currently running a task or if is idling
 	*/
 	WorkerRunningTask = "runningTask"
@@ -471,9 +481,9 @@ const (
 	WorkerServerStartedGauge = "workerStartGauge"
 
 	/*
-		record when a worker service kills itself
+		record when a worker service becomes unhealthy
 	*/
-	WorkerServerKillGauge = "workerKillGauge"
+	WorkerUnhealthy = "workerUnhealthy"
 
 	/*
 		The time it takes to run the task (including snapshot handling)

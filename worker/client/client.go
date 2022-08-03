@@ -134,7 +134,7 @@ func (c *simpleClient) Status(id runner.RunID) (runner.RunStatus, runner.Service
 	if ws.Error != "" {
 		svcErr = errors.New(ws.Error)
 	}
-	svc := runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}
+	svc := runner.ServiceStatus{Initialized: ws.Initialized, IsHealthy: ws.IsHealthy, Error: svcErr}
 	for _, p := range ws.Runs {
 		if p.RunID == id {
 			return p, svc, nil
@@ -153,7 +153,7 @@ func (c *simpleClient) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, er
 	if ws.Error != "" {
 		svcErr = errors.New(ws.Error)
 	}
-	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized, Error: svcErr}, nil
+	return ws.Runs, runner.ServiceStatus{Initialized: ws.Initialized, IsHealthy: ws.IsHealthy, Error: svcErr}, nil
 }
 
 func (c *simpleClient) QueryNow(q runner.Query) ([]runner.RunStatus, runner.ServiceStatus, error) {
