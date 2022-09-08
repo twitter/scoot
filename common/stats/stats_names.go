@@ -496,6 +496,11 @@ const (
 	WorkerTimeSinceLastContactGauge_ms = "timeSinceLastContactGauge_ms"
 
 	/*
+		the number of times the worker timed out running a command
+	*/
+	WorkerTimeouts = "workerTimeouts"
+
+	/*
 		the number of times the worker uploaded a log(stdout/stderr/stdlog) to storage
 	*/
 	WorkerUploads = "workerUploads"
