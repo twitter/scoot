@@ -1,11 +1,16 @@
 package os
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
+	"time"
 
 	"os/exec"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	scootexecer "github.com/twitter/scoot/runner/execer"
 )
 
@@ -13,6 +18,7 @@ import (
 type ProcessWatcher interface {
 	GetProcs() (map[int]ProcInfo, error)
 	MemUsage(int) (scootexecer.Memory, error)
+	LogProcs(*process, log.Level, io.Writer)
 }
 
 type ProcInfo struct {
@@ -93,6 +99,36 @@ func (opw *procWatcher) MemUsage(pid int) (scootexecer.Memory, error) {
 		total += proc.rss
 	}
 	return scootexecer.Memory(total * bytesToKB), nil
+}
+
+// LogProcs logs the process snapshot of the current process along with other running processes for the user in the worker log,
+// at the specified level. Also writes to the writer, if provided
+func (opw *procWatcher) LogProcs(p *process, level log.Level, w io.Writer) {
+	if !log.IsLevelEnabled(level) {
+		return
+	}
+
+	// log output with timeout since it seems CombinedOutput() sometimes fails to return.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args", "--sort=-rss").CombinedOutput()
+
+	log.WithFields(
+		log.Fields{
+			"pid":    p.cmd.Process.Pid,
+			"ps":     string(ps),
+			"err":    err,
+			"errCtx": ctx.Err(),
+			"tag":    p.Tag,
+			"jobID":  p.JobID,
+			"taskID": p.TaskID,
+		}).Log(level, fmt.Sprintf("ps after increased memory utilization for pid %d", p.cmd.Process.Pid))
+
+	if w != nil{
+		w.Write([]byte(fmt.Sprintf("\nps after increased memory utilization for pid %d:\n\n", p.cmd.Process.Pid)))
+		w.Write(ps)
+	}
+
+	cancel()
 }
 
 // Format processes into pgid and ppid groups for summation of memory usage

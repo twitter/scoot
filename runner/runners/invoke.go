@@ -328,7 +328,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"tag":    cmd.Tag,
 				"jobID":  cmd.JobID,
 				"taskID": cmd.TaskID,
-			}).Info("Run timedout")
+			}).Error("Run timedout")
 		runStatus = runner.TimeoutStatus(id,
 			tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 	case st := <-memCh:
@@ -344,7 +344,7 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 				"taskID":   cmd.TaskID,
 				"status":   st,
 				"checkout": co.Path(),
-			}).Infof(st.Error)
+			}).Errorf(st.Error)
 		inv.stat.Counter(stats.WorkerMemoryCapExceeded).Inc(1)
 		runStatus = getPostExecRunStatus(st, id, cmd)
 		runStatus.Error = st.Error

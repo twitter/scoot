@@ -1,7 +1,6 @@
 package os
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"math"
@@ -118,7 +117,7 @@ func (e *execer) Exec(command scootexecer.Command) (scootexecer.Process, error) 
 
 	proc := &process{cmd: cmd, wg: &wg, ats: AbortTimeoutSec, LogTags: command.LogTags}
 	if e.memCap > 0 {
-		go e.monitorMem(proc, command.MemCh)
+		go e.monitorMem(proc, command.MemCh, command.Stderr)
 	}
 
 	return proc, nil
@@ -126,7 +125,7 @@ func (e *execer) Exec(command scootexecer.Command) (scootexecer.Process, error) 
 
 // Periodically check to make sure memory constraints are respected,
 // and clean up after ourselves when the process has completed
-func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
+func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus, stderr io.Writer) {
 	pid := p.cmd.Process.Pid
 	pgid, err := syscall.Getpgid(pid)
 	if err != nil {
@@ -168,6 +167,8 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 			Error:    msg,
 			ExitCode: errors.HighInitialMemoryUtilizationExitCode,
 		}
+		// log the process snapshot in worker log, as well as task stderr log
+		e.pw.LogProcs(p, log.ErrorLevel, stderr)
 		p.mutex.Unlock()
 		e.memCapKill(p, mem, memCh)
 		return
@@ -212,6 +213,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 					Error:    msg,
 					ExitCode: 1,
 				}
+				e.pw.LogProcs(p, log.ErrorLevel, stderr)
 				p.mutex.Unlock()
 				e.memCapKill(p, mem, memCh)
 				return
@@ -230,7 +232,7 @@ func (e *execer) monitorMem(p *process, memCh chan scootexecer.ProcessStatus) {
 						"jobID":       p.JobID,
 						"taskID":      p.TaskID,
 					}).Infof("Memory utilization increased to %d%%, pid: %d", int(memUsagePct*100), pid)
-				debugProcesses(p)
+				e.pw.LogProcs(p, log.DebugLevel, nil)
 				for memUsagePct > reportThresholds[thresholdsIdx] {
 					thresholdsIdx++
 				}
@@ -263,26 +265,6 @@ func (e *execer) memCapKill(p *process, mem scootexecer.Memory, memCh chan scoot
 		e.stat.Gauge(stats.WorkerMemory).Update(-1)
 	}
 	e.stat.Gauge(stats.WorkerMemory).Update(int64(postKillMem))
-}
-
-// debugProcesses logs a snapshot of the current processes at debug level.
-func debugProcesses(p *process) {
-	// Debug log output with timeout since it seems CombinedOutput() sometimes fails to return.
-	if log.IsLevelEnabled(log.DebugLevel) {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		ps, err := exec.CommandContext(ctx, "ps", "-u", os.Getenv("USER"), "-opid,sess,ppid,pgid,rss,args").CombinedOutput()
-		log.WithFields(
-			log.Fields{
-				"pid":    p.cmd.Process.Pid,
-				"ps":     string(ps),
-				"err":    err,
-				"errCtx": ctx.Err(),
-				"tag":    p.Tag,
-				"jobID":  p.JobID,
-				"taskID": p.TaskID,
-			}).Debugf("ps after increased memory utilization for pid %d", p.cmd.Process.Pid)
-		cancel()
-	}
 }
 
 // Kill process along with all child processes, assuming no child processes called setpgid
