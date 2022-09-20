@@ -123,7 +123,7 @@ func (opw *procWatcher) LogProcs(p *process, level log.Level, w io.Writer) {
 			"taskID": p.TaskID,
 		}).Log(level, fmt.Sprintf("ps after increased memory utilization for pid %d", p.cmd.Process.Pid))
 
-	if w != nil{
+	if w != nil {
 		w.Write([]byte(fmt.Sprintf("\nps after increased memory utilization for pid %d:\n\n", p.cmd.Process.Pid)))
 		w.Write(ps)
 	}
