@@ -228,13 +228,7 @@ func (p *process) Abort() scootexecer.ProcessStatus {
 
 // Kill process for exceeding MemCap
 func (p *process) MemCapKill() {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if p.result == nil {
-		p.result = &scootexecer.ProcessStatus{}
-	}
-	p.result.State = scootexecer.FAILED
-	p.result.ExitCode = -1
+	p.Abort()
 	p.KillAndWait("Killed for memory usage over MemCap")
 }
 
