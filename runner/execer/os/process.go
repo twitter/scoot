@@ -228,8 +228,33 @@ func (p *process) Abort() scootexecer.ProcessStatus {
 
 // Kill process for exceeding MemCap
 func (p *process) MemCapKill() {
-	p.Abort()
-	p.KillAndWait("Killed for memory usage over MemCap")
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	if p.result == nil {
+		p.result = &scootexecer.ProcessStatus{}
+	}
+	p.result.State = scootexecer.FAILED
+	p.result.ExitCode = -1
+
+	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		msg := fmt.Sprintf("Killed for memory usage over memCap. Error aborting command via SIGTERM: %s.", err)
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Errorf(msg)
+		p.KillAndWait(msg)
+	} else {
+		log.WithFields(
+			log.Fields{
+				"pid":    p.cmd.Process.Pid,
+				"tag":    p.Tag,
+				"jobID":  p.JobID,
+				"taskID": p.TaskID,
+			}).Info("Killing process via SIGTERM for memory usage over memCap")
+	}
 }
 
 // Kills process via SIGKILL and all processes of its pgid
