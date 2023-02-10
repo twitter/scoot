@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "api",
+    srcs = [
+        "doc.go",
+        "server.go",
+    ],
+    importpath = "github.com/twitter/scoot/scheduler/api",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/stats",
+        "//saga",
+        "//scheduler/api/thrift",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//scheduler/server",
+        "@com_github_apache_thrift//lib/go/thrift:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "api_test",
+    srcs = ["server_test.go"],
+    embed = [":api"],
+    deps = [
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//scheduler/domain",
+    ],
+)

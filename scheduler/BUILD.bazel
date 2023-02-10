@@ -1,0 +1,8 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "scheduler",
+    srcs = ["addrs.go"],
+    importpath = "github.com/twitter/scoot/scheduler",
+    visibility = ["//visibility:public"],
+)

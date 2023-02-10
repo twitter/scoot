@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "client",
+    srcs = [
+        "client.go",
+        "thrift_client.go",
+    ],
+    importpath = "github.com/twitter/scoot/worker/client",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/cluster",
+        "//common/dialer",
+        "//runner",
+        "//runner/runners",
+        "//worker/domain",
+        "//worker/domain/gen-go/worker",
+        "@com_github_apache_thrift//lib/go/thrift:go_default_library",
+    ],
+)

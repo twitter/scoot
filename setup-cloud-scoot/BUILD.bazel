@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "setup-cloud-scoot_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/twitter/scoot/setup-cloud-scoot",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//common/log/hooks",
+        "//scheduler/setup",
+        "@com_github_sirupsen_logrus//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "setup-cloud-scoot",
+    embed = [":setup-cloud-scoot_lib"],
+    visibility = ["//visibility:public"],
+)

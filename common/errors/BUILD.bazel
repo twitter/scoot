@@ -1,0 +1,11 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "errors",
+    srcs = [
+        "errors.go",
+        "exit_codes.go",
+    ],
+    importpath = "github.com/twitter/scoot/common/errors",
+    visibility = ["//visibility:public"],
+)

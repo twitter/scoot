@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "execers",
+    srcs = [
+        "done.go",
+        "error.go",
+        "intercept.go",
+        "sim.go",
+    ],
+    importpath = "github.com/twitter/scoot/runner/execer/execers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//runner/execer",
+    ],
+)
+
+go_test(
+    name = "execers_test",
+    srcs = [
+        "intercept_test.go",
+        "sim_test.go",
+    ],
+    embed = [":execers"],
+    deps = [
+        "//common/errors",
+        "//runner/execer",
+    ],
+)

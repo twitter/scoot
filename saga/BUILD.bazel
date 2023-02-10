@@ -1,0 +1,47 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "saga",
+    srcs = [
+        "saga.go",
+        "saga_coordinator.go",
+        "saga_generators.go",
+        "saga_message.go",
+        "saga_recovery.go",
+        "saga_state.go",
+        "sagalog.go",
+        "sagalog_mock.go",
+    ],
+    importpath = "github.com/twitter/scoot/saga",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common",
+        "//common/stats",
+        "//common/thrifthelpers",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "@com_github_golang_mock//gomock:go_default_library",
+        "@com_github_leanovate_gopter//:go_default_library",
+        "@com_github_leanovate_gopter//gen:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "saga_test",
+    srcs = [
+        "saga_coordinator_test.go",
+        "saga_recovery_test.go",
+        "saga_state_prop_test.go",
+        "saga_state_test.go",
+        "saga_test.go",
+    ],
+    embed = [":saga"],
+    deps = [
+        "//common/stats",
+        "@com_github_golang_mock//gomock:go_default_library",
+        "@com_github_leanovate_gopter//:go_default_library",
+        "@com_github_leanovate_gopter//gen:go_default_library",
+        "@com_github_leanovate_gopter//prop:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+    ],
+)
