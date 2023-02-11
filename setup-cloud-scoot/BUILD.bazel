@@ -13,7 +13,7 @@ go_library(
 )
 
 go_binary(
-    name = "setup-cloud-scoot",
+    name = "main",
     embed = [":setup-cloud-scoot_lib"],
     visibility = ["//visibility:public"],
 )
