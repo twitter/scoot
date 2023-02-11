@@ -17,4 +17,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/twitter/groupcache v0.0.0-20191021194929-8215cbf3be0f
 	golang.org/x/net v0.6.0
+
+
+	github.com/golang/protobuf v1.5.2 // indirect
 )
