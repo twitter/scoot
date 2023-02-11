@@ -13,6 +13,6 @@ go_library(
         "//runner/runners",
         "//scheduler/setup/worker",
         "//worker/client",
-        "@com_github_apache_thrift//lib/go/thrift:go_default_library",
+        "@com_github_apache_thrift//lib/go/thrift",
     ],
 )

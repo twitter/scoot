@@ -9,5 +9,5 @@ go_library(
     ],
     importpath = "github.com/twitter/scoot/worker/domain/gen-go/worker",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_apache_thrift//lib/go/thrift:go_default_library"],
+    deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )

@@ -15,6 +15,6 @@ go_library(
         "//runner/runners",
         "//worker/domain",
         "//worker/domain/gen-go/worker",
-        "@com_github_apache_thrift//lib/go/thrift:go_default_library",
+        "@com_github_apache_thrift//lib/go/thrift",
     ],
 )

@@ -5,5 +5,5 @@ go_library(
     srcs = ["thrift_serializer.go"],
     importpath = "github.com/twitter/scoot/common/thrifthelpers",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_apache_thrift//lib/go/thrift:go_default_library"],
+    deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )

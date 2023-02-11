@@ -8,5 +8,5 @@ go_library(
     ],
     importpath = "github.com/twitter/scoot/scheduler/domain/gen-go/sched",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_apache_thrift//lib/go/thrift:go_default_library"],
+    deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )
