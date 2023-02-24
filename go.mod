@@ -16,5 +16,5 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/twitter/groupcache v0.0.0-20191021194929-8215cbf3be0f
-	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
+	golang.org/x/net v0.7.0
 )
