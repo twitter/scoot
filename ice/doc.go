@@ -11,14 +11,14 @@ and then you pull out a fully-formed desk. The bag did the assembly! Magic!
 ice works not with Noric flat pack furniture but with Go.
 Our object graph is composed of Go values (the nodes) and Providers (the edges).
 
-Lifecycle
+# Lifecycle
 
-1) Create an Empty Bag
-2) Insert Provider Functions
-  a) or a Module, which can insert many Provider at once
-3) Extract Values
+ 1. Create an Empty Bag
+ 2. Insert Provider Functions
+    a) or a Module, which can insert many Provider at once
+ 3. Extract Values
 
-Terms
+# Terms
 
 Key: what ice knows how to create. Currently a Go type, but this may be extended.
 
@@ -30,7 +30,7 @@ Extract: Use the bindings in a Magic Bag to create and wire together complex str
 
 Module: utility to install multiple Providers at once
 
-Notes
+# Notes
 
 ice uses reflection heavily.
 

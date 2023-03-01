@@ -7,13 +7,15 @@ task.  Its output is a comparison of the shadow job duration to the original pro
 job duration and intermediate stats on tasks running and waiting.
 
 Input parameters (provided to the SchedulingAlgTester constructor):
- - test start time: the actual time the jobs being shadowed started
- - test end time: the actual time the jobs being shadowed ended
- - job definitions: a set of 'shadow' job definitions where each job 'shadows' a real job.  The 'shadow' job definitions
+  - test start time: the actual time the jobs being shadowed started
+  - test end time: the actual time the jobs being shadowed ended
+  - job definitions: a set of 'shadow' job definitions where each job 'shadows' a real job.  The 'shadow' job definitions
+
 are a map of job definitions where the map index is the number of seconds (in the overall simulation) to delay before starting
 this job
-   . each task's Command.Argv[1] entry is the number of milliseconds the worker should wait before returning success/failure
-   . each task's Command.Argv[2] entry is the task's exit code
+
+	. each task's Command.Argv[1] entry is the number of milliseconds the worker should wait before returning success/failure
+	. each task's Command.Argv[2] entry is the task's exit code
 */
 package scheduler_simulator
 

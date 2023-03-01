@@ -17,10 +17,10 @@ var _ = bytes.Equal
 var GoUnusedProtection__ int
 
 // Attributes:
-//  - Argv
-//  - EnvVars
-//  - Timeout
-//  - SnapshotId
+//   - Argv
+//   - EnvVars
+//   - Timeout
+//   - SnapshotId
 type Command struct {
 	Argv       []string          `thrift:"argv,1,required" json:"argv"`
 	EnvVars    map[string]string `thrift:"envVars,2" json:"envVars,omitempty"`
@@ -294,8 +294,8 @@ func (p *Command) String() string {
 }
 
 // Attributes:
-//  - Command
-//  - TaskId
+//   - Command
+//   - TaskId
 type TaskDefinition struct {
 	Command *Command `thrift:"command,1,required" json:"command"`
 	TaskId  *string  `thrift:"taskId,2" json:"taskId,omitempty"`
@@ -445,12 +445,12 @@ func (p *TaskDefinition) String() string {
 }
 
 // Attributes:
-//  - JobType
-//  - Tasks
-//  - Priority
-//  - Tag
-//  - Basis
-//  - Requestor
+//   - JobType
+//   - Tasks
+//   - Priority
+//   - Tag
+//   - Basis
+//   - Requestor
 type JobDefinition struct {
 	JobType   *string           `thrift:"jobType,1" json:"jobType,omitempty"`
 	Tasks     []*TaskDefinition `thrift:"tasks,2" json:"tasks,omitempty"`
@@ -793,8 +793,8 @@ func (p *JobDefinition) String() string {
 }
 
 // Attributes:
-//  - ID
-//  - JobDefinition
+//   - ID
+//   - JobDefinition
 type Job struct {
 	ID            string         `thrift:"id,1,required" json:"id"`
 	JobDefinition *JobDefinition `thrift:"jobDefinition,2,required" json:"jobDefinition"`

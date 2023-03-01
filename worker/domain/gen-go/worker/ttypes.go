@@ -84,16 +84,16 @@ func (p *Status) UnmarshalText(text []byte) error {
 }
 
 // Attributes:
-//  - Status
-//  - RunId
-//  - OutUri
-//  - ErrUri
-//  - Error
-//  - ExitCode
-//  - SnapshotId
-//  - JobId
-//  - TaskId
-//  - Tag
+//   - Status
+//   - RunId
+//   - OutUri
+//   - ErrUri
+//   - Error
+//   - ExitCode
+//   - SnapshotId
+//   - JobId
+//   - TaskId
+//   - Tag
 type RunStatus struct {
 	Status     Status  `thrift:"status,1,required" json:"status"`
 	RunId      string  `thrift:"runId,2,required" json:"runId"`
@@ -590,10 +590,10 @@ func (p *RunStatus) String() string {
 }
 
 // Attributes:
-//  - Runs
-//  - Initialized
-//  - IsHealthy
-//  - Error
+//   - Runs
+//   - Initialized
+//   - IsHealthy
+//   - Error
 type WorkerStatus struct {
 	Runs        []*RunStatus `thrift:"runs,1,required" json:"runs"`
 	Initialized bool         `thrift:"initialized,2,required" json:"initialized"`
@@ -826,13 +826,13 @@ func (p *WorkerStatus) String() string {
 }
 
 // Attributes:
-//  - Argv
-//  - Env
-//  - SnapshotId
-//  - TimeoutMs
-//  - JobId
-//  - TaskId
-//  - Tag
+//   - Argv
+//   - Env
+//   - SnapshotId
+//   - TimeoutMs
+//   - JobId
+//   - TaskId
+//   - Tag
 type RunCommand struct {
 	Argv       []string          `thrift:"argv,1,required" json:"argv"`
 	Env        map[string]string `thrift:"env,2" json:"env,omitempty"`

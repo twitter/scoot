@@ -24,15 +24,25 @@ type SimExecer struct {
 // each arg in command.argv is simulated in order.
 // valid args are:
 // complete <exitcode int>
-//   complete with exitcode
+//
+//	complete with exitcode
+//
 // pause
-//   pause until SimExecer.Resume() is called
+//
+//	pause until SimExecer.Resume() is called
+//
 // sleep <millis int>
-//   sleep for millis milliseconds
+//
+//	sleep for millis milliseconds
+//
 // stdout <message>
-//   put <message> in stdout in the response
+//
+//	put <message> in stdout in the response
+//
 // stderr <message>
-//   put <message> in stderr in the response
+//
+//	put <message> in stderr in the response
+//
 // NB: SimExecer is often hid behind an InterceptExecer, so you should pass
 // argv[0] as "#! sim execer" (Cf. intercept.go)
 func (e *SimExecer) Exec(command execer.Command) (execer.Process, error) {

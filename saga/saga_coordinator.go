@@ -5,19 +5,15 @@ import (
 	"github.com/twitter/scoot/common/stats"
 )
 
-//
 // Saga Object which provides all Saga Functionality
 // Implementations of SagaLog should provide a factory method
 // which returns a saga based on its implementation.
-//
 type SagaCoordinator struct {
 	log  SagaLog
 	stat stats.StatsReceiver
 }
 
-//
 // Make a Saga which uses the specied SagaLog interface for durable storage
-//
 func MakeSagaCoordinator(log SagaLog, stat stats.StatsReceiver) SagaCoordinator {
 	if stat == nil {
 		stat = stats.NilStatsReceiver()
@@ -41,10 +37,8 @@ func (s SagaCoordinator) GetSagaState(sagaId string) (*SagaState, error) {
 	return recoverState(sagaId, s)
 }
 
-//
 // Should be called at Saga Creation time.
 // Returns a Slice of In Progress SagaIds
-//
 func (s SagaCoordinator) Startup() ([]string, error) {
 	ids, err := s.log.GetActiveSagas()
 	if err != nil {
@@ -54,13 +48,11 @@ func (s SagaCoordinator) Startup() ([]string, error) {
 	return ids, nil
 }
 
-//
 // Recovers SagaState by reading all logged messages from the log.
 // Utilizes the specified recoveryType to determine if Saga needs to be
 // Aborted or can proceed safely.
 //
 // Returns the current SagaState.  If no Saga exists for the requested id, nil is returned
-//
 func (sc SagaCoordinator) RecoverSagaState(sagaId string, recoveryType SagaRecoveryType) (*Saga, error) {
 	state, err := recoverState(sagaId, sc)
 

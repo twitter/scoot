@@ -7,7 +7,9 @@ jobs:
   validate-changes:
     strategy:
       matrix:
-        go-version: [1.15.11]
+        # need to be consistent with bazel's go version
+        # if we want to use vanilla go commands
+        go-version: [1.19.5]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
 

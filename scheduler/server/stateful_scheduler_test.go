@@ -28,7 +28,7 @@ import (
 	"github.com/twitter/scoot/tests/testhelpers"
 )
 
-//Mocks sometimes hang without useful output, this allows early exit with err msg.
+// Mocks sometimes hang without useful output, this allows early exit with err msg.
 type TestTerminator struct{}
 
 func (t *TestTerminator) Errorf(format string, args ...interface{}) {
