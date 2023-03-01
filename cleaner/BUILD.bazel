@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cleaner",
+    srcs = [
+        "cleanup.go",
+        "updater.go",
+    ],
+    importpath = "github.com/twitter/scoot/cleaner",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cleaner/dirconfig",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "cleaner_test",
+    srcs = ["cleanup_test.go"],
+    embed = [":cleaner"],
+    deps = ["//cleaner/dirconfig"],
+)

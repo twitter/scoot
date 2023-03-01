@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "scoot-integration_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/twitter/scoot/integration-tests/scoot-integration",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//common",
+        "//common/log/hooks",
+        "//scheduler",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//tests/testhelpers",
+        "//worker/domain",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_binary(
+    name = "scoot-integration",
+    embed = [":scoot-integration_lib"],
+    visibility = ["//visibility:public"],
+)

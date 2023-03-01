@@ -5,7 +5,8 @@ import (
 	"github.com/twitter/scoot/scheduler/server"
 )
 
-/**
+/*
+*
 Get the scheduler status: how many tasks is it currently handling and
 it's current throttle value (-1 implies it is not throttled)
 */

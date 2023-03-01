@@ -1,0 +1,36 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "os",
+    srcs = [
+        "constants.go",
+        "execer.go",
+        "process.go",
+        "process_watcher.go",
+    ],
+    importpath = "github.com/twitter/scoot/runner/execer/os",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//common/log/tags",
+        "//common/stats",
+        "//runner/execer",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "os_test",
+    srcs = [
+        "easy_test.go",
+        "execer_test.go",
+    ],
+    embed = [":os"],
+    deps = [
+        "//common/log/hooks",
+        "//common/log/tags",
+        "//common/stats",
+        "//runner/execer",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mocks",
+    srcs = ["runner.go"],
+    importpath = "github.com/twitter/scoot/runner/mocks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//runner",
+        "@com_github_golang_mock//gomock",
+    ],
+)

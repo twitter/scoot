@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "snapshot",
+    srcs = [
+        "db.go",
+        "doc.go",
+        "filer.go",
+        "snapshots.go",
+    ],
+    importpath = "github.com/twitter/scoot/snapshot",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//snapshot/git/repo",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

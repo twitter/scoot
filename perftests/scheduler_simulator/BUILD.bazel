@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "scheduler_simulator",
+    srcs = [
+        "fake_worker_cli.go",
+        "test_alg.go",
+    ],
+    importpath = "github.com/twitter/scoot/perftests/scheduler_simulator",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/cluster",
+        "//common",
+        "//common/errors",
+        "//common/log/tags",
+        "//common/stats",
+        "//runner",
+        "//saga",
+        "//saga/sagalogs",
+        "//scheduler/domain",
+        "//scheduler/server",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

@@ -10,37 +10,37 @@ package async
 // writes to two of three replicas. We want to write to all replicas in parallel
 // and return as soon as two writes succeed. We return an error if < 2 writes succeed
 //
-// func storeValue(num int) error {
-//   successfulWrites := 0
-//   returnedWrites := 0
+//	func storeValue(num int) error {
+//	  successfulWrites := 0
+//	  returnedWrites := 0
 //
-//   runner := NewAsyncRunner()
+//	  runner := NewAsyncRunner()
 //
-//   writeCb := func(err error) {
-//     if err != nil {
-//       successfulWrites++
-//     }
-//     returnedWrites++
-//   }
+//	  writeCb := func(err error) {
+//	    if err != nil {
+//	      successfulWrites++
+//	    }
+//	    returnedWrites++
+//	  }
 //
-//   runner.RunAsync(func() error { return write(num, "replicatOne") }, writeCb)
-//   runner.RunAsync(func() error { return write(num, "replicatTwo") }, writeCb)
-//   runner.RunAsync(func() error { return write(num, "replicaThree") }, writeCb)
+//	  runner.RunAsync(func() error { return write(num, "replicatOne") }, writeCb)
+//	  runner.RunAsync(func() error { return write(num, "replicatTwo") }, writeCb)
+//	  runner.RunAsync(func() error { return write(num, "replicaThree") }, writeCb)
 //
-//   for successfulWrites < 2 && returnedWrites < 3 {
-//     runner.ProcessMessages()
-//   }
+//	  for successfulWrites < 2 && returnedWrites < 3 {
+//	    runner.ProcessMessages()
+//	  }
 //
-//   if successfulWrites >= 2 {
-//     return nil
-//   } else {
-//     return errors.New("Could Not Durably Store Value")
-//   }
-// }
-//  // a function which makes a call to a durable register
-//  // which is accessed via the network
-//  func write (num int, address string) error { ... }
+//	  if successfulWrites >= 2 {
+//	    return nil
+//	  } else {
+//	    return errors.New("Could Not Durably Store Value")
+//	  }
+//	}
 //
+//	// a function which makes a call to a durable register
+//	// which is accessed via the network
+//	func write (num int, address string) error { ... }
 type Runner struct {
 	bx *Mailbox
 }

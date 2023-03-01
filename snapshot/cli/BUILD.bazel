@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cli",
+    srcs = ["cli.go"],
+    importpath = "github.com/twitter/scoot/snapshot/cli",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//snapshot",
+        "//snapshot/git/gitdb",
+        "//snapshot/git/repo",
+        "//snapshot/store",
+        "@com_github_sirupsen_logrus//:logrus",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "bundlestore",
+    srcs = [
+        "constants.go",
+        "http_server.go",
+        "server.go",
+        "setup.go",
+    ],
+    importpath = "github.com/twitter/scoot/snapshot/bundlestore",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/endpoints",
+        "//common/stats",
+        "//config/jsonconfig",
+        "//ice",
+        "//snapshot/store",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "bundlestore_test",
+    srcs = ["server_test.go"],
+    embed = [":bundlestore"],
+    deps = ["//snapshot/store"],
+)

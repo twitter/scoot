@@ -14,47 +14,47 @@ package async
 // writes to two of three replicas. We want to write to all replicas in parallel
 // and return as soon as two writes succeed. We return an error if < 2 writes succeed
 //
-//  func storeValue(num int) error {
-//    successfulWrites := 0
-//    returnedWrites := 0
-//    mailbox := NewAsyncMailbox()
+//	func storeValue(num int) error {
+//	  successfulWrites := 0
+//	  returnedWrites := 0
+//	  mailbox := NewAsyncMailbox()
 //
-//    writeCallback := func (err error) {
-//      if err != nil {
-//        successfulWrites++
-//      }
-//      returnedWrites++
-//    }
+//	  writeCallback := func (err error) {
+//	    if err != nil {
+//	      successfulWrites++
+//	    }
+//	    returnedWrites++
+//	  }
 //
-//    // Send to Replica One
-//    go func(rsp *AsyncError){
-//      rsp.SetValue(write(num, "replicaOne"))
-//    }(mailbox.NewAsyncError(writeCallback))
+//	  // Send to Replica One
+//	  go func(rsp *AsyncError){
+//	    rsp.SetValue(write(num, "replicaOne"))
+//	  }(mailbox.NewAsyncError(writeCallback))
 //
-//    // Send to Replica Two
-//    go func(rsp *AsyncError){
-//      rsp.SetValue(write(num, "replicaTwo"))
-//    }(mailbox.NewAsyncError(writeCallback))
+//	  // Send to Replica Two
+//	  go func(rsp *AsyncError){
+//	    rsp.SetValue(write(num, "replicaTwo"))
+//	  }(mailbox.NewAsyncError(writeCallback))
 //
-//    // Send to Replica Three
-//    go func(rsp *AsyncError){
-//      rsp.SetValue(write(num, "replicaThree"))
-//    }(mailbox.NewAsyncError(writeCallback))
+//	  // Send to Replica Three
+//	  go func(rsp *AsyncError){
+//	    rsp.SetValue(write(num, "replicaThree"))
+//	  }(mailbox.NewAsyncError(writeCallback))
 //
-//    // Value is Considered Durably Stored if at least two write calls succeeded
-//    for sucessfullWrites < 2 && returnedWrites < 3 {
-//       mailbox.ProcessMessages()
-//    }
+//	  // Value is Considered Durably Stored if at least two write calls succeeded
+//	  for sucessfullWrites < 2 && returnedWrites < 3 {
+//	     mailbox.ProcessMessages()
+//	  }
 //
-//    if successfulWrites >= 2 {
-//      return nil
-//    } else {
-//      return errors.New("Could Not Durably Store Value")
-//    }
+//	  if successfulWrites >= 2 {
+//	    return nil
+//	  } else {
+//	    return errors.New("Could Not Durably Store Value")
+//	  }
 //
-//  // a function which makes a call to a durable register
-//  // which is accessed via the network
-//  func write (num int, address string) error { ... }
+//	// a function which makes a call to a durable register
+//	// which is accessed via the network
+//	func write (num int, address string) error { ... }
 //
 // A Mailbox is not a concurrent structure and should only
 // ever be accessed from a single go routine.  This ensures that the callbacks

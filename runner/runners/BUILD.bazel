@@ -1,0 +1,59 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "runners",
+    srcs = [
+        "chaos.go",
+        "invoke.go",
+        "local_output.go",
+        "log_uploader.go",
+        "null_output.go",
+        "polling.go",
+        "queue.go",
+        "service.go",
+        "setup.go",
+        "status_manager.go",
+        "statuses_ro.go",
+    ],
+    importpath = "github.com/twitter/scoot/runner/runners",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//common/log/hooks",
+        "//common/log/tags",
+        "//common/stats",
+        "//ice",
+        "//runner",
+        "//runner/execer",
+        "//runner/execer/execers",
+        "//runner/execer/os",
+        "//snapshot",
+        "@com_github_nu7hatch_gouuid//:gouuid",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "runners_test",
+    srcs = [
+        "local_output_test.go",
+        "polling_test.go",
+        "queue_test.go",
+        "service_test.go",
+        "single_test.go",
+    ],
+    embed = [":runners"],
+    deps = [
+        "//common/errors",
+        "//common/log/hooks",
+        "//common/log/tags",
+        "//common/stats",
+        "//runner",
+        "//runner/execer",
+        "//runner/execer/execers",
+        "//runner/execer/os",
+        "//snapshot",
+        "//snapshot/snapshots",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

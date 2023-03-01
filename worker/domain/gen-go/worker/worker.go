@@ -124,7 +124,7 @@ func (p *WorkerClient) recvQueryWorker() (value *WorkerStatus, err error) {
 }
 
 // Parameters:
-//  - Cmd
+//   - Cmd
 func (p *WorkerClient) Run(cmd *RunCommand) (r *RunStatus, err error) {
 	if err = p.sendRun(cmd); err != nil {
 		return
@@ -201,7 +201,7 @@ func (p *WorkerClient) recvRun() (value *RunStatus, err error) {
 }
 
 // Parameters:
-//  - RunId
+//   - RunId
 func (p *WorkerClient) Abort(runId string) (r *RunStatus, err error) {
 	if err = p.sendAbort(runId); err != nil {
 		return
@@ -523,7 +523,7 @@ func (p *WorkerQueryWorkerArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type WorkerQueryWorkerResult struct {
 	Success *WorkerStatus `thrift:"success,0" json:"success,omitempty"`
 }
@@ -624,7 +624,7 @@ func (p *WorkerQueryWorkerResult) String() string {
 }
 
 // Attributes:
-//  - Cmd
+//   - Cmd
 type WorkerRunArgs struct {
 	Cmd *RunCommand `thrift:"cmd,1" json:"cmd"`
 }
@@ -723,7 +723,7 @@ func (p *WorkerRunArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type WorkerRunResult struct {
 	Success *RunStatus `thrift:"success,0" json:"success,omitempty"`
 }
@@ -824,7 +824,7 @@ func (p *WorkerRunResult) String() string {
 }
 
 // Attributes:
-//  - RunId
+//   - RunId
 type WorkerAbortArgs struct {
 	RunId string `thrift:"runId,1" json:"runId"`
 }
@@ -915,7 +915,7 @@ func (p *WorkerAbortArgs) String() string {
 }
 
 // Attributes:
-//  - Success
+//   - Success
 type WorkerAbortResult struct {
 	Success *RunStatus `thrift:"success,0" json:"success,omitempty"`
 }

@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "scootconfig",
+    srcs = ["workers_modules.go"],
+    importpath = "github.com/twitter/scoot/config/scootconfig",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/cluster",
+        "//common/dialer",
+        "//ice",
+        "//runner",
+        "//runner/runners",
+        "//scheduler/setup/worker",
+        "//worker/client",
+        "@com_github_apache_thrift//lib/go/thrift",
+    ],
+)

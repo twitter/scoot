@@ -181,8 +181,10 @@ func (c *ingestGitCommitCommand) run(db snapshot.DB, _ *cobra.Command, _ []strin
 // This is a workaround for creating arbitrary git bundles and keeping them in a Bundlestore.
 // We need this for now because generic bundles do not fit well with the existing
 // Snapshot, ID, Stream schemas.
-// Example usage: scoot-snapshot-db create publish_git_bundle \
-//	--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
+//
+//	Example usage: scoot-snapshot-db create publish_git_bundle \
+//		--basis="<rev>" --ref="master" --ttl="336h" --bundlestore_url="http://localhost:9094/bundle"
+//
 // Stdout: "http://localhost:9094/bundle/bs-<rev>-master.bundle"
 type createGitBundleCommand struct {
 	basis      string        // Git bundle basis commit

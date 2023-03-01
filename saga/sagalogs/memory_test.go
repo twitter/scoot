@@ -123,20 +123,20 @@ func TestMemorySagaGC(t *testing.T) {
 }
 
 /*
-	Set different saga update channel size using DefaultSagaUpdateChSize
-	Benchmarked on cpu: Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz
+Set different saga update channel size using DefaultSagaUpdateChSize
+Benchmarked on cpu: Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz
 
-	For sagasCount = 10, updatesPerSaga = 10000 and following DefaultSagaUpdateChSize values
-	* DefaultSagaUpdateChSize=1:     1 iteration(s)	124623537403 ns/op
-	* DefaultSagaUpdateChSize=10:	 1 iteration(s)  12299526501 ns/op
-	* DefaultSagaUpdateChSize=100:	 1 iteration(s)	  1864785416 ns/op
-	* DefaultSagaUpdateChSize=1000:	 3 iteration(s)	   451137271 ns/op
-	* DefaultSagaUpdateChSize=10000: 7 iteration(s)	   176294414 ns/op
+For sagasCount = 10, updatesPerSaga = 10000 and following DefaultSagaUpdateChSize values
+* DefaultSagaUpdateChSize=1:     1 iteration(s)	124623537403 ns/op
+* DefaultSagaUpdateChSize=10:	 1 iteration(s)  12299526501 ns/op
+* DefaultSagaUpdateChSize=100:	 1 iteration(s)	  1864785416 ns/op
+* DefaultSagaUpdateChSize=1000:	 3 iteration(s)	   451137271 ns/op
+* DefaultSagaUpdateChSize=10000: 7 iteration(s)	   176294414 ns/op
 
-	For sagasCount = 1000, updatesPerSaga = 100 and following DefaultSagaUpdateChSize values
-	* DefaultSagaUpdateChSize=1:     1 iteration(s)	1770828443 ns/op
-	* DefaultSagaUpdateChSize=10:	 3 iteration(s)  392772272 ns/op
-	* DefaultSagaUpdateChSize=100:	 6 iteration(s)	 180072440 ns/op
+For sagasCount = 1000, updatesPerSaga = 100 and following DefaultSagaUpdateChSize values
+* DefaultSagaUpdateChSize=1:     1 iteration(s)	1770828443 ns/op
+* DefaultSagaUpdateChSize=10:	 3 iteration(s)  392772272 ns/op
+* DefaultSagaUpdateChSize=100:	 6 iteration(s)	 180072440 ns/op
 */
 func BenchmarkProcessUpdatesInMemorySagaLog(b *testing.B) {
 	slog := MakeInMemorySagaLog(1*time.Hour, 1*time.Hour)

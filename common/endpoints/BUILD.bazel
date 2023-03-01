@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "endpoints",
+    srcs = [
+        "endpoints.go",
+        "setup.go",
+    ],
+    importpath = "github.com/twitter/scoot/common/endpoints",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/stats",
+        "//config/jsonconfig",
+        "//ice",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

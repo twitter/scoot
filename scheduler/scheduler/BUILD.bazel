@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "scheduler_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/twitter/scoot/scheduler/scheduler",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//common",
+        "//common/endpoints",
+        "//common/log/hooks",
+        "//scheduler",
+        "//scheduler/scheduler/config",
+        "//scheduler/starter",
+        "@com_github_apache_thrift//lib/go/thrift",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_binary(
+    name = "scheduler",
+    embed = [":scheduler_lib"],
+    visibility = ["//visibility:public"],
+)

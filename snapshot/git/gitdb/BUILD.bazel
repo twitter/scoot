@@ -1,0 +1,42 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "gitdb",
+    srcs = [
+        "backends.go",
+        "bundlestore.go",
+        "checkout.go",
+        "constants.go",
+        "create.go",
+        "db.go",
+        "git_tags.go",
+        "local_data.go",
+        "setup.go",
+        "stream.go",
+    ],
+    importpath = "github.com/twitter/scoot/snapshot/git/gitdb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//common/stats",
+        "//ice",
+        "//snapshot",
+        "//snapshot/git/repo",
+        "//snapshot/store",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "gitdb_test",
+    srcs = ["db_test.go"],
+    embed = [":gitdb"],
+    deps = [
+        "//common/log/hooks",
+        "//common/stats",
+        "//snapshot",
+        "//snapshot/git/repo",
+        "//snapshot/store",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

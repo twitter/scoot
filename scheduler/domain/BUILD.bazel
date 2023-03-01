@@ -1,0 +1,37 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "domain",
+    srcs = [
+        "definitions.go",
+        "generators.go",
+    ],
+    importpath = "github.com/twitter/scoot/scheduler/domain",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/log/tags",
+        "//common/thrifthelpers",
+        "//runner",
+        "//scheduler/domain/gen-go/sched",
+        "//tests/testhelpers",
+        "@com_github_leanovate_gopter//:gopter",
+    ],
+)
+
+go_test(
+    name = "domain_test",
+    srcs = [
+        "definitions_property_test.go",
+        "definitions_test.go",
+        "job_def_serializer_property_test.go",
+        "job_def_serializer_test.go",
+    ],
+    embed = [":domain"],
+    deps = [
+        "//common/thrifthelpers",
+        "//scheduler/domain/gen-go/sched",
+        "@com_github_leanovate_gopter//:gopter",
+        "@com_github_leanovate_gopter//prop",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

@@ -1,0 +1,59 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "thrift",
+    srcs = [
+        "doc.go",
+        "errors.go",
+        "get_scheduler_status.go",
+        "get_status.go",
+        "kill_job.go",
+        "load_based_alg_settings.go",
+        "offline_worker.go",
+        "reinstate_worker.go",
+        "run_job.go",
+        "set_scheduler_status.go",
+    ],
+    importpath = "github.com/twitter/scoot/scheduler/api/thrift",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/stats",
+        "//common/thrifthelpers",
+        "//saga",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//scheduler/domain",
+        "//scheduler/server",
+        "//worker/domain/gen-go/worker",
+    ],
+)
+
+go_test(
+    name = "thrift_test",
+    srcs = [
+        "get_scheduler_status_test.go",
+        "get_status_property_test.go",
+        "get_status_test.go",
+        "kill_job_test.go",
+        "run_job_test.go",
+        "set_scheduler_status_test.go",
+        "translate_prop_test.go",
+    ],
+    embed = [":thrift"],
+    deps = [
+        "//common/stats",
+        "//common/thrifthelpers",
+        "//runner",
+        "//saga",
+        "//saga/sagalogs",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//scheduler/server",
+        "//tests/testhelpers",
+        "//worker/domain",
+        "//worker/domain/gen-go/worker",
+        "@com_github_golang_mock//gomock",
+        "@com_github_leanovate_gopter//:gopter",
+        "@com_github_leanovate_gopter//gen",
+        "@com_github_leanovate_gopter//prop",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)

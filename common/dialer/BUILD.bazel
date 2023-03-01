@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "dialer",
+    srcs = [
+        "dialer.go",
+        "resolver.go",
+    ],
+    importpath = "github.com/twitter/scoot/common/dialer",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_apache_thrift//lib/go/thrift",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "dialer_test",
+    srcs = ["resolver_test.go"],
+    embed = [":dialer"],
+)

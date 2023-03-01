@@ -20,7 +20,8 @@ const RebalanceRequestedErrStr = "RebalanceRequested"
 // Returns a list of taskAssigments of task to free node.
 // Also returns a modified copy of clusterState.nodeGroups for the caller to apply (so this remains a pure fn).
 // Note: pure fn because it's confusing to have getTaskAssignments() modify clusterState based on the proposed
-//       scheduling and also require that the caller apply final modifications to clusterState as a second step)
+//
+//	scheduling and also require that the caller apply final modifications to clusterState as a second step)
 //
 // Does best effort scheduling which tries to assign tasks to nodes already primed for similar tasks.
 // Not all tasks are guaranteed to be scheduled.

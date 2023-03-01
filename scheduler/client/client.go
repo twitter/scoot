@@ -36,7 +36,7 @@ func NewCloudScootClient(config CloudScootClientConfig) *CloudScootClient {
 }
 
 // RunJob API. Schedules a Job to run asynchronously via CloudExecScoot based on
-//the specified job. If successful the jobId is returned if not an error.
+// the specified job. If successful the jobId is returned if not an error.
 func (c *CloudScootClient) RunJob(jobDef *scoot.JobDefinition) (r *scoot.JobId, err error) {
 	err = c.checkForClient()
 	if err != nil {

@@ -13,7 +13,6 @@
 // - Pretty printing of instrument output.
 //
 // Original license: github.com/rcrowley/go-metrics/blob/master/LICENSE
-//
 package stats
 
 import (
@@ -48,11 +47,11 @@ type MarshalerPretty interface {
 	MarshalJSONPretty() ([]byte, error)
 }
 
-//
 // Similar to the go-metrics registry but with most methods removed.
 //
 // Note: the default StatsRegistry (from rcrowley) doesn't support the Latency metric,
-//       only finagleStatsRegistry has logic to check for and marshal latency.
+//
+//	only finagleStatsRegistry has logic to check for and marshal latency.
 type StatsRegistry interface {
 	// Gets an existing metric or registers the given one.
 	// The interface can be the metric to register if not found in registry,
@@ -66,7 +65,6 @@ type StatsRegistry interface {
 	Each(func(string, interface{}))
 }
 
-//
 // A registry wrapper for metrics that will be collected about the runtime
 // performance of an application.
 //
@@ -77,7 +75,6 @@ type StatsRegistry interface {
 // because sometimes counters are dynamically generated (i.e. with error
 // names), and it is better to strip the path elements than to, for example,
 // panic.
-//
 type StatsReceiver interface {
 	// Return a stats receiver that will automatically namespace elements with
 	// the given scope args.
@@ -126,7 +123,6 @@ type StatsReceiver interface {
 	Render(pretty bool) []byte
 }
 
-//
 // DefaultStats is a small wrapper around a go-metrics like registry.
 // Uses defaultStatsRegistry and sets latched duration to zero.
 // Note: a <=0 latch means that the stats are reset on every call to Render().
@@ -321,9 +317,7 @@ func (s *defaultStatsReceiver) scopedName(scope ...string) string {
 	return strings.Join(s.scoped(scope...), "/")
 }
 
-//
 // NilStats ignores all stats operations.
-//
 func NilStatsReceiver(scope ...string) StatsReceiver {
 	return &nilStatsReceiver{}
 }
@@ -351,7 +345,6 @@ func (s *nilStatsReceiver) Remove(name ...string)            {}
 func (s *nilStatsReceiver) Render(pretty bool) []byte        { return []byte{} }
 func (s *nilStatsReceiver) RenderNoClear(pretty bool) []byte { return []byte{} }
 
-//
 // Minimally mirror go-metrics instruments.
 //
 // Counter
@@ -476,9 +469,7 @@ func (l *nilLatency) GetPrecision() time.Duration     { return 0 }
 func (l *nilLatency) Precision(time.Duration) Latency { return l }
 func newNilLatency() Latency                          { return &nilLatency{} }
 
-//
 // Twitter/Finagle style metrics
-//
 type finagleStatsRegistry struct {
 	metrics.Registry
 }

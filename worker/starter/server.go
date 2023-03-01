@@ -54,7 +54,7 @@ func NewHandler(stat stats.StatsReceiver, run runner.Service) worker.Worker {
 }
 
 // Periodically output stats
-//TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
+// TODO: runner should eventually be extended to support stats, multiple runs, etc. (replacing loop here).
 func (h *handler) stats() {
 	var startTime time.Time = time.Now()
 	var initTime time.Duration

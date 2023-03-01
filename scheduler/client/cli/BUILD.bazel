@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cli",
+    srcs = [
+        "cli.go",
+        "doc.go",
+        "get_scheduler_status.go",
+        "get_status.go",
+        "kill_job.go",
+        "offline_worker.go",
+        "reinstate_worker.go",
+        "run_job.go",
+        "sched_alg_params.go",
+        "set_scheduler_status.go",
+        "watch_job.go",
+    ],
+    importpath = "github.com/twitter/scoot/scheduler/client/cli",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/client",
+        "//common/dialer",
+        "//common/log/helpers",
+        "//integration-tests/smoketest",
+        "//scheduler/api/thrift/gen-go/scoot",
+        "//scheduler/client",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_sirupsen_logrus//:logrus",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

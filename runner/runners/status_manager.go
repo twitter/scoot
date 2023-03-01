@@ -73,8 +73,9 @@ func (s *StatusManager) UpdateService(svcStatus runner.ServiceStatus) error {
 
 // Update writes a new status for a run.
 // It enforces several rules:
-//   cannot change a status once it is Done
-//   cannot erase Stdout/Stderr Refs
+//
+//	cannot change a status once it is Done
+//	cannot erase Stdout/Stderr Refs
 func (s *StatusManager) Update(newStatus runner.RunStatus) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -173,9 +174,10 @@ func (s *StatusManager) StatusAll() ([]runner.RunStatus, runner.ServiceStatus, e
 // queryAndListen performs a query, returning the current results and optionally a channel for
 // listening for future results
 // returns:
-//   the current results
-//   a channel that will hold the next result (if current is empty and err is nil)
-//   error
+//
+//	the current results
+//	a channel that will hold the next result (if current is empty and err is nil)
+//	error
 func (s *StatusManager) queryAndListen(q runner.Query, listen bool) (
 	current []runner.RunStatus, listenerCh chan runner.RunStatus, err error) {
 	s.mu.Lock()

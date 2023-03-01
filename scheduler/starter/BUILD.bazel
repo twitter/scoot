@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "starter",
+    srcs = [
+        "modules.go",
+        "start_server.go",
+    ],
+    importpath = "github.com/twitter/scoot/scheduler/starter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/cluster",
+        "//common",
+        "//common/dialer",
+        "//common/endpoints",
+        "//common/stats",
+        "//runner",
+        "//runner/runners",
+        "//saga",
+        "//saga/sagalogs",
+        "//scheduler/api",
+        "//scheduler/scheduler/config",
+        "//scheduler/server",
+        "//worker/client",
+        "@com_github_apache_thrift//lib/go/thrift",
+        "@com_github_sirupsen_logrus//:logrus",
+        "@org_golang_x_net//proxy",
+    ],
+)

@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "domain",
+    srcs = [
+        "addrs.go",
+        "api.go",
+    ],
+    importpath = "github.com/twitter/scoot/worker/domain",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//common/log/helpers",
+        "//common/log/tags",
+        "//common/thrifthelpers",
+        "//runner",
+        "//worker/domain/gen-go/worker",
+    ],
+)
+
+go_test(
+    name = "domain_test",
+    srcs = ["api_test.go"],
+    embed = [":domain"],
+    deps = [
+        "//common/errors",
+        "//common/log/tags",
+        "//runner",
+        "//worker/domain/gen-go/worker",
+    ],
+)

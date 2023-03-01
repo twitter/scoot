@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "store",
+    srcs = [
+        "fake_store.go",
+        "file_store.go",
+        "groupcache_store.go",
+        "http_store.go",
+        "noop_store.go",
+        "store.go",
+    ],
+    importpath = "github.com/twitter/scoot/snapshot/store",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/cluster",
+        "//common/stats",
+        "@com_github_sethgrid_pester//:pester",
+        "@com_github_sirupsen_logrus//:logrus",
+        "@com_github_twitter_groupcache//:groupcache",
+    ],
+)

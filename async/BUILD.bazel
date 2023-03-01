@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "async",
+    srcs = [
+        "async_error.go",
+        "mailbox.go",
+        "runner.go",
+    ],
+    importpath = "github.com/twitter/scoot/async",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "async_test",
+    srcs = [
+        "async_error_test.go",
+        "mailbox_test.go",
+        "runner_test.go",
+    ],
+    embed = [":async"],
+    deps = ["@com_github_sirupsen_logrus//:logrus"],
+)

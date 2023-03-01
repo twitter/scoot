@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ice",
+    srcs = [
+        "doc.go",
+        "eval.go",
+        "magic_bag.go",
+    ],
+    importpath = "github.com/twitter/scoot/ice",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_sirupsen_logrus//:logrus"],
+)
+
+go_test(
+    name = "ice_test",
+    srcs = [
+        "eval_test.go",
+        "types_test.go",
+    ],
+    embed = [":ice"],
+)

@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sagalogs",
+    srcs = [
+        "file.go",
+        "memory.go",
+    ],
+    importpath = "github.com/twitter/scoot/saga/sagalogs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/stats",
+        "//saga",
+        "@com_github_sirupsen_logrus//:logrus",
+    ],
+)
+
+go_test(
+    name = "sagalogs_test",
+    srcs = [
+        "file_test.go",
+        "memory_test.go",
+    ],
+    embed = [":sagalogs"],
+    deps = ["//saga"],
+)

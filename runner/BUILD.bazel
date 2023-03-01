@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "runner",
+    srcs = [
+        "controller.go",
+        "output.go",
+        "queries.go",
+        "runner.go",
+        "status.go",
+        "status_rw.go",
+    ],
+    importpath = "github.com/twitter/scoot/runner",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common/errors",
+        "//common/log/tags",
+        "//snapshot",
+    ],
+)
+
+go_test(
+    name = "runner_test",
+    srcs = ["status_test.go"],
+    embed = [":runner"],
+    deps = ["//common/log/tags"],
+)
