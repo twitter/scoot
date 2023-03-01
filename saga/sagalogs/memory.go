@@ -32,7 +32,9 @@ type logData struct {
 // Implements GC of whole sagas based on time expiration regardless of Saga state.
 // GC should be set at a duration that realistically will not purge active Sagas.
 // gcExpiration: duration after which a Saga was created, it will be deleted.
-// 	A zero duration is interpretted as "never gc" (the Log will eventually consume all memory).
+//
+//	A zero duration is interpretted as "never gc" (the Log will eventually consume all memory).
+//
 // gcInterval: duration interval at which GC runs.
 func MakeInMemorySagaCoordinator(gcExpiration time.Duration, gcInterval time.Duration, stat stats.StatsReceiver) saga.SagaCoordinator {
 	return saga.MakeSagaCoordinator(MakeInMemorySagaLog(gcExpiration, gcInterval), stat)

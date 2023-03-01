@@ -6,7 +6,8 @@ import (
 	"github.com/twitter/scoot/scheduler/server"
 )
 
-/**
+/*
+*
 Kill the job identified by jobId.  Update the saga for the job to indicate
 that it was killed.  Return a job status indicating that the job was successfully
 killed or one of the following errors

@@ -183,7 +183,7 @@ func (p *Status) UnmarshalText(text []byte) error {
 }
 
 // Attributes:
-//  - Message
+//   - Message
 type InvalidRequest struct {
 	Message *string `thrift:"message,1" json:"message,omitempty"`
 }
@@ -289,7 +289,7 @@ func (p *InvalidRequest) Error() string {
 }
 
 // Attributes:
-//  - RetryAfterMs
+//   - RetryAfterMs
 type CanNotScheduleNow struct {
 	RetryAfterMs *int64 `thrift:"retryAfterMs,1" json:"retryAfterMs,omitempty"`
 }
@@ -395,7 +395,7 @@ func (p *CanNotScheduleNow) Error() string {
 }
 
 // Attributes:
-//  - RetryAfterMs
+//   - RetryAfterMs
 type ScootServerError struct {
 	RetryAfterMs *int64 `thrift:"retryAfterMs,1" json:"retryAfterMs,omitempty"`
 }
@@ -501,16 +501,16 @@ func (p *ScootServerError) Error() string {
 }
 
 // Attributes:
-//  - Status
-//  - RunId
-//  - OutUri
-//  - ErrUri
-//  - Error
-//  - ExitCode
-//  - SnapshotId
-//  - JobId
-//  - TaskId
-//  - Tag
+//   - Status
+//   - RunId
+//   - OutUri
+//   - ErrUri
+//   - Error
+//   - ExitCode
+//   - SnapshotId
+//   - JobId
+//   - TaskId
+//   - Tag
 type RunStatus struct {
 	Status     RunStatusState `thrift:"status,1,required" json:"status"`
 	RunId      string         `thrift:"runId,2,required" json:"runId"`
@@ -1007,8 +1007,8 @@ func (p *RunStatus) String() string {
 }
 
 // Attributes:
-//  - Argv
-//  - EnvVars
+//   - Argv
+//   - EnvVars
 type Command struct {
 	Argv    []string          `thrift:"argv,1" json:"argv"`
 	EnvVars map[string]string `thrift:"envVars,2" json:"envVars,omitempty"`
@@ -1192,10 +1192,10 @@ func (p *Command) String() string {
 }
 
 // Attributes:
-//  - Command
-//  - SnapshotId
-//  - TaskId
-//  - TimeoutMs
+//   - Command
+//   - SnapshotId
+//   - TaskId
+//   - TimeoutMs
 type TaskDefinition struct {
 	Command    *Command `thrift:"command,1,required" json:"command"`
 	SnapshotId *string  `thrift:"snapshotId,2" json:"snapshotId,omitempty"`
@@ -1435,14 +1435,14 @@ func (p *TaskDefinition) String() string {
 }
 
 // Attributes:
-//  - Tasks
-//  - DEPRECATEDJobType
-//  - DefaultTaskTimeoutMs
-//  - Priority
-//  - Tag
-//  - Basis
-//  - Requestor
-//  - JobType
+//   - Tasks
+//   - DEPRECATEDJobType
+//   - DefaultTaskTimeoutMs
+//   - Priority
+//   - Tag
+//   - Basis
+//   - Requestor
+//   - JobType
 type JobDefinition struct {
 	Tasks                []*TaskDefinition `thrift:"tasks,1,required" json:"tasks"`
 	DEPRECATEDJobType    *JobType          `thrift:"DEPRECATED_jobType,2" json:"DEPRECATED_jobType,omitempty"`
@@ -1874,7 +1874,7 @@ func (p *JobDefinition) String() string {
 }
 
 // Attributes:
-//  - ID
+//   - ID
 type JobId struct {
 	ID string `thrift:"id,1,required" json:"id"`
 }
@@ -1971,10 +1971,10 @@ func (p *JobId) String() string {
 }
 
 // Attributes:
-//  - ID
-//  - Status
-//  - TaskStatus
-//  - TaskData
+//   - ID
+//   - Status
+//   - TaskStatus
+//   - TaskData
 type JobStatus struct {
 	ID         string                `thrift:"id,1,required" json:"id"`
 	Status     Status                `thrift:"status,2,required" json:"status"`
@@ -2254,8 +2254,8 @@ func (p *JobStatus) String() string {
 }
 
 // Attributes:
-//  - ID
-//  - Requestor
+//   - ID
+//   - Requestor
 type OfflineWorkerReq struct {
 	ID        string `thrift:"id,1,required" json:"id"`
 	Requestor string `thrift:"requestor,2,required" json:"requestor"`
@@ -2391,8 +2391,8 @@ func (p *OfflineWorkerReq) String() string {
 }
 
 // Attributes:
-//  - ID
-//  - Requestor
+//   - ID
+//   - Requestor
 type ReinstateWorkerReq struct {
 	ID        string `thrift:"id,1,required" json:"id"`
 	Requestor string `thrift:"requestor,2,required" json:"requestor"`
@@ -2528,8 +2528,8 @@ func (p *ReinstateWorkerReq) String() string {
 }
 
 // Attributes:
-//  - CurrentTasks
-//  - MaxTasks
+//   - CurrentTasks
+//   - MaxTasks
 type SchedulerStatus struct {
 	CurrentTasks int32 `thrift:"currentTasks,1,required" json:"currentTasks"`
 	MaxTasks     int32 `thrift:"maxTasks,2,required" json:"maxTasks"`

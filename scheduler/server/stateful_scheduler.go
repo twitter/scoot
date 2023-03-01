@@ -97,25 +97,42 @@ func nopDurationKeyExtractor(key string) string {
 
 // SchedulerConfiguration variables read at initialization
 // MaxRetriesPerTask - the number of times to retry a failing task before
-//     marking it as completed.
+//
+//	marking it as completed.
+//
 // DebugMode - if true, starts the scheduler up but does not start
-//     the update loop.  Instead the loop must be advanced manually
-//     by calling step()
+//
+//	the update loop.  Instead the loop must be advanced manually
+//	by calling step()
+//
 // RecoverJobsOnStartup - if true, the scheduler recovers active sagas,
-//     from the sagalog, and restarts them.
+//
+//	from the sagalog, and restarts them.
+//
 // DefaultTaskTimeout -
-//     default timeout for tasks.
+//
+//	default timeout for tasks.
+//
 // TaskTimeoutOverhead
-//     How long to wait for a response after the task has timed out.
+//
+//	How long to wait for a response after the task has timed out.
+//
 // RunnerRetryTimeout -
-//     how long to keep retrying a runner req.
+//
+//	how long to keep retrying a runner req.
+//
 // RunnerRetryInterval -
-//     how long to sleep between runner req retries.
+//
+//	how long to sleep between runner req retries.
+//
 // ReadyFnBackoff -
-//     how long to wait between runner status queries to determine [init] status.
+//
+//	how long to wait between runner status queries to determine [init] status.
+//
 // TaskThrottle -
-//	   requestors will try not to schedule jobs that make the scheduler exceed
-//     the TaskThrottle.  Note: Sickle may exceed it with retries.
+//
+//		   requestors will try not to schedule jobs that make the scheduler exceed
+//	    the TaskThrottle.  Note: Sickle may exceed it with retries.
 type SchedulerConfiguration struct {
 	MaxRetriesPerTask    int
 	DebugMode            bool
@@ -374,8 +391,8 @@ type requestorCounts struct {
 }
 
 /*
-	validate the job request. If the job passes validation, the job's tasks are queued for processing as
-	per the task scheduling algorithm and an id for the job is returned, otherwise the error message is returned.
+validate the job request. If the job passes validation, the job's tasks are queued for processing as
+per the task scheduling algorithm and an id for the job is returned, otherwise the error message is returned.
 */
 func (s *statefulScheduler) ScheduleJob(jobDef domain.JobDefinition) (string, error) {
 	/*
@@ -540,16 +557,16 @@ func (s *statefulScheduler) step() {
 	s.updateStats()
 }
 
-//update the stats monitoring values:
-//number of job requests running or waiting to start
-//number of jobs waiting to start
-//number of tasks currently running
-//total number of waiting or running tasks
+// update the stats monitoring values:
+// number of job requests running or waiting to start
+// number of jobs waiting to start
+// number of tasks currently running
+// total number of waiting or running tasks
 //
-//for each unique requestor count:
-//. number of tasks running
-//. number of tasks waiting
-//. number of jobs running or waiting to start
+// for each unique requestor count:
+// . number of tasks running
+// . number of tasks waiting
+// . number of jobs running or waiting to start
 func (s *statefulScheduler) updateStats() {
 	remainingTasks := 0
 	waitingTasks := 0
@@ -1126,8 +1143,8 @@ func (s *statefulScheduler) scheduleTasks() {
 	}
 }
 
-//Put the kill request on channel that is processed by the main
-//scheduler loop, and wait for the response
+// Put the kill request on channel that is processed by the main
+// scheduler loop, and wait for the response
 func (s *statefulScheduler) KillJob(jobID string) error {
 	log.WithFields(
 		log.Fields{

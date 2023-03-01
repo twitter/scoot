@@ -103,7 +103,6 @@ func (s *Saga) EndSaga() error {
 // and compensating transactions should be applied.
 //
 // Returns an error if it fails
-//
 func (s *Saga) AbortSaga() error {
 	return s.updateSagaState([]SagaMessage{MakeAbortSagaMessage(s.id)})
 }
@@ -115,7 +114,6 @@ func (s *Saga) AbortSaga() error {
 // the data passed changes the last written StartTask message will win
 //
 // Returns an error if it fails
-//
 func (s *Saga) StartTask(taskId string, data []byte) error {
 	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeStartTaskMessage(s.id, taskId, data)})
@@ -128,7 +126,6 @@ func (s *Saga) StartTask(taskId string, data []byte) error {
 // the data passed changes the last written EndTask message will win
 //
 // Returns an error if it fails
-//
 func (s *Saga) EndTask(taskId string, results []byte) error {
 	defer s.stat.Latency(stats.SagaStartOrEndTaskLatency_ms).Time().Stop()
 	return s.updateSagaState([]SagaMessage{MakeEndTaskMessage(s.id, taskId, results)})
@@ -142,7 +139,6 @@ func (s *Saga) EndTask(taskId string, results []byte) error {
 // the data passed changes the last written StartCompTask message will win
 //
 // Returns an error if it fails
-//
 func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
 	return s.updateSagaState([]SagaMessage{MakeStartCompTaskMessage(s.id, taskId, data)})
 }
@@ -154,7 +150,6 @@ func (s *Saga) StartCompensatingTask(taskId string, data []byte) error {
 // the data passed changes the last written EndCompTask message will win
 //
 // Returns an error if it fails
-//
 func (s *Saga) EndCompensatingTask(taskId string, results []byte) error {
 	return s.updateSagaState([]SagaMessage{MakeEndCompTaskMessage(s.id, taskId, results)})
 }

@@ -380,7 +380,6 @@ func createUnexpectedScanEndMsg(scanner *bufio.Scanner) string {
 	return errMsg
 }
 
-//
 // Returns a list of all in progress sagaIds.
 // This MUST include all not completed sagaIds.
 // It may also included completed sagas
@@ -388,7 +387,6 @@ func createUnexpectedScanEndMsg(scanner *bufio.Scanner) string {
 //
 // This is a very dumb implementation currently just returns
 // a list of all sagas.  This can be improved with an index
-//
 func (log *fileSagaLog) GetActiveSagas() ([]string, error) {
 	files, err := ioutil.ReadDir(log.dirName)
 	if err != nil {

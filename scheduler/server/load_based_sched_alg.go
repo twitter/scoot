@@ -84,7 +84,6 @@ type LoadBasedAlgConfig struct {
 // be started to use up unused workers due to other classes not using their entitlement.
 //
 // See README.md for more details
-//
 type LoadBasedAlg struct {
 	config     *LoadBasedAlgConfig
 	jobClasses map[string]*jobClass

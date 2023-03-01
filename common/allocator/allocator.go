@@ -20,6 +20,7 @@ type AbstractAllocator struct {
 
 // NewAbstractAllocator returns a new *AbstractAllocator initialized with a set capacity.
 // Returns an error if capacity is < 0. Typical usage of this allocator:
+//
 //	a := NewAbstractAllocator(1024)
 //	r, err := a.Alloc(64)
 //	// handle err

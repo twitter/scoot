@@ -79,7 +79,7 @@ func NewCloudScootClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, op
 }
 
 // Parameters:
-//  - Job
+//   - Job
 func (p *CloudScootClient) RunJob(job *JobDefinition) (r *JobId, err error) {
 	if err = p.sendRunJob(job); err != nil {
 		return
@@ -163,7 +163,7 @@ func (p *CloudScootClient) recvRunJob() (value *JobId, err error) {
 }
 
 // Parameters:
-//  - JobId
+//   - JobId
 func (p *CloudScootClient) GetStatus(jobId string) (r *JobStatus, err error) {
 	if err = p.sendGetStatus(jobId); err != nil {
 		return
@@ -247,7 +247,7 @@ func (p *CloudScootClient) recvGetStatus() (value *JobStatus, err error) {
 }
 
 // Parameters:
-//  - JobId
+//   - JobId
 func (p *CloudScootClient) KillJob(jobId string) (r *JobStatus, err error) {
 	if err = p.sendKillJob(jobId); err != nil {
 		return
@@ -331,7 +331,7 @@ func (p *CloudScootClient) recvKillJob() (value *JobStatus, err error) {
 }
 
 // Parameters:
-//  - Req
+//   - Req
 func (p *CloudScootClient) OfflineWorker(req *OfflineWorkerReq) (err error) {
 	if err = p.sendOfflineWorker(req); err != nil {
 		return
@@ -414,7 +414,7 @@ func (p *CloudScootClient) recvOfflineWorker() (err error) {
 }
 
 // Parameters:
-//  - Req
+//   - Req
 func (p *CloudScootClient) ReinstateWorker(req *ReinstateWorkerReq) (err error) {
 	if err = p.sendReinstateWorker(req); err != nil {
 		return
@@ -574,7 +574,7 @@ func (p *CloudScootClient) recvGetSchedulerStatus() (value *SchedulerStatus, err
 }
 
 // Parameters:
-//  - MaxTasks
+//   - MaxTasks
 func (p *CloudScootClient) SetSchedulerStatus(maxTasks int32) (err error) {
 	if err = p.sendSetSchedulerStatus(maxTasks); err != nil {
 		return
@@ -734,7 +734,7 @@ func (p *CloudScootClient) recvGetClassLoadPercents() (value map[string]int32, e
 }
 
 // Parameters:
-//  - LoadPercents
+//   - LoadPercents
 func (p *CloudScootClient) SetClassLoadPercents(loadPercents map[string]int32) (err error) {
 	if err = p.sendSetClassLoadPercents(loadPercents); err != nil {
 		return
@@ -894,7 +894,7 @@ func (p *CloudScootClient) recvGetRequestorToClassMap() (value map[string]string
 }
 
 // Parameters:
-//  - RequestorToClassMap
+//   - RequestorToClassMap
 func (p *CloudScootClient) SetRequestorToClassMap(requestorToClassMap map[string]string) (err error) {
 	if err = p.sendSetRequestorToClassMap(requestorToClassMap); err != nil {
 		return
@@ -1054,7 +1054,7 @@ func (p *CloudScootClient) recvGetRebalanceMinimumDuration() (value int32, err e
 }
 
 // Parameters:
-//  - DurationMin
+//   - DurationMin
 func (p *CloudScootClient) SetRebalanceMinimumDuration(durationMin int32) (err error) {
 	if err = p.sendSetRebalanceMinimumDuration(durationMin); err != nil {
 		return
@@ -1214,7 +1214,7 @@ func (p *CloudScootClient) recvGetRebalanceThreshold() (value int32, err error) 
 }
 
 // Parameters:
-//  - Threshold
+//   - Threshold
 func (p *CloudScootClient) SetRebalanceThreshold(threshold int32) (err error) {
 	if err = p.sendSetRebalanceThreshold(threshold); err != nil {
 		return
@@ -2151,7 +2151,7 @@ func (p *cloudScootProcessorSetRebalanceThreshold) Process(seqId int32, iprot, o
 // HELPER FUNCTIONS AND STRUCTURES
 
 // Attributes:
-//  - Job
+//   - Job
 type CloudScootRunJobArgs struct {
 	Job *JobDefinition `thrift:"job,1" json:"job"`
 }
@@ -2250,9 +2250,9 @@ func (p *CloudScootRunJobArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
-//  - Cnsn
+//   - Success
+//   - Ir
+//   - Cnsn
 type CloudScootRunJobResult struct {
 	Success *JobId             `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest    `thrift:"ir,1" json:"ir,omitempty"`
@@ -2441,7 +2441,7 @@ func (p *CloudScootRunJobResult) String() string {
 }
 
 // Attributes:
-//  - JobId
+//   - JobId
 type CloudScootGetStatusArgs struct {
 	JobId string `thrift:"jobId,1" json:"jobId"`
 }
@@ -2532,9 +2532,9 @@ func (p *CloudScootGetStatusArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
-//  - Err
+//   - Success
+//   - Ir
+//   - Err
 type CloudScootGetStatusResult struct {
 	Success *JobStatus        `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
@@ -2723,7 +2723,7 @@ func (p *CloudScootGetStatusResult) String() string {
 }
 
 // Attributes:
-//  - JobId
+//   - JobId
 type CloudScootKillJobArgs struct {
 	JobId string `thrift:"jobId,1" json:"jobId"`
 }
@@ -2814,9 +2814,9 @@ func (p *CloudScootKillJobArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
-//  - Err
+//   - Success
+//   - Ir
+//   - Err
 type CloudScootKillJobResult struct {
 	Success *JobStatus        `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
@@ -3005,7 +3005,7 @@ func (p *CloudScootKillJobResult) String() string {
 }
 
 // Attributes:
-//  - Req
+//   - Req
 type CloudScootOfflineWorkerArgs struct {
 	Req *OfflineWorkerReq `thrift:"req,1" json:"req"`
 }
@@ -3104,8 +3104,8 @@ func (p *CloudScootOfflineWorkerArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootOfflineWorkerResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -3250,7 +3250,7 @@ func (p *CloudScootOfflineWorkerResult) String() string {
 }
 
 // Attributes:
-//  - Req
+//   - Req
 type CloudScootReinstateWorkerArgs struct {
 	Req *ReinstateWorkerReq `thrift:"req,1" json:"req"`
 }
@@ -3349,8 +3349,8 @@ func (p *CloudScootReinstateWorkerArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootReinstateWorkerResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -3548,8 +3548,8 @@ func (p *CloudScootGetSchedulerStatusArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Err
+//   - Success
+//   - Err
 type CloudScootGetSchedulerStatusResult struct {
 	Success *SchedulerStatus  `thrift:"success,0" json:"success,omitempty"`
 	Err     *ScootServerError `thrift:"err,1" json:"err,omitempty"`
@@ -3694,7 +3694,7 @@ func (p *CloudScootGetSchedulerStatusResult) String() string {
 }
 
 // Attributes:
-//  - MaxTasks
+//   - MaxTasks
 type CloudScootSetSchedulerStatusArgs struct {
 	MaxTasks int32 `thrift:"maxTasks,1" json:"maxTasks"`
 }
@@ -3785,8 +3785,8 @@ func (p *CloudScootSetSchedulerStatusArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootSetSchedulerStatusResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -3984,8 +3984,8 @@ func (p *CloudScootGetClassLoadPercentsArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
+//   - Success
+//   - Ir
 type CloudScootGetClassLoadPercentsResult struct {
 	Success map[string]int32 `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest  `thrift:"ir,1" json:"ir,omitempty"`
@@ -4158,7 +4158,7 @@ func (p *CloudScootGetClassLoadPercentsResult) String() string {
 }
 
 // Attributes:
-//  - LoadPercents
+//   - LoadPercents
 type CloudScootSetClassLoadPercentsArgs struct {
 	LoadPercents map[string]int32 `thrift:"loadPercents,1" json:"loadPercents"`
 }
@@ -4279,8 +4279,8 @@ func (p *CloudScootSetClassLoadPercentsArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootSetClassLoadPercentsResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -4478,8 +4478,8 @@ func (p *CloudScootGetRequestorToClassMapArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
+//   - Success
+//   - Ir
 type CloudScootGetRequestorToClassMapResult struct {
 	Success map[string]string `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
@@ -4652,7 +4652,7 @@ func (p *CloudScootGetRequestorToClassMapResult) String() string {
 }
 
 // Attributes:
-//  - RequestorToClassMap
+//   - RequestorToClassMap
 type CloudScootSetRequestorToClassMapArgs struct {
 	RequestorToClassMap map[string]string `thrift:"requestorToClassMap,1" json:"requestorToClassMap"`
 }
@@ -4773,8 +4773,8 @@ func (p *CloudScootSetRequestorToClassMapArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootSetRequestorToClassMapResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -4972,8 +4972,8 @@ func (p *CloudScootGetRebalanceMinimumDurationArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
+//   - Success
+//   - Ir
 type CloudScootGetRebalanceMinimumDurationResult struct {
 	Success *int32          `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest `thrift:"ir,1" json:"ir,omitempty"`
@@ -5119,7 +5119,7 @@ func (p *CloudScootGetRebalanceMinimumDurationResult) String() string {
 }
 
 // Attributes:
-//  - DurationMin
+//   - DurationMin
 type CloudScootSetRebalanceMinimumDurationArgs struct {
 	DurationMin int32 `thrift:"durationMin,1" json:"durationMin"`
 }
@@ -5210,8 +5210,8 @@ func (p *CloudScootSetRebalanceMinimumDurationArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootSetRebalanceMinimumDurationResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
@@ -5409,8 +5409,8 @@ func (p *CloudScootGetRebalanceThresholdArgs) String() string {
 }
 
 // Attributes:
-//  - Success
-//  - Ir
+//   - Success
+//   - Ir
 type CloudScootGetRebalanceThresholdResult struct {
 	Success *int32          `thrift:"success,0" json:"success,omitempty"`
 	Ir      *InvalidRequest `thrift:"ir,1" json:"ir,omitempty"`
@@ -5556,7 +5556,7 @@ func (p *CloudScootGetRebalanceThresholdResult) String() string {
 }
 
 // Attributes:
-//  - Threshold
+//   - Threshold
 type CloudScootSetRebalanceThresholdArgs struct {
 	Threshold int32 `thrift:"threshold,1" json:"threshold"`
 }
@@ -5647,8 +5647,8 @@ func (p *CloudScootSetRebalanceThresholdArgs) String() string {
 }
 
 // Attributes:
-//  - Ir
-//  - Err
+//   - Ir
+//   - Err
 type CloudScootSetRebalanceThresholdResult struct {
 	Ir  *InvalidRequest   `thrift:"ir,1" json:"ir,omitempty"`
 	Err *ScootServerError `thrift:"err,2" json:"err,omitempty"`
