@@ -21,9 +21,13 @@ jobs:
       - name: Cache go modules
         uses: actions/cache@v2
         with:
-          path: ~/go/pkg/mod
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/bazel
           key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
           restore-keys: ${{ runner.os }}-go-
+      - name: Bazel test
+        run: bash scripts/test_bazel.sh
       - name: Check fmt
         run: bash scripts/check_gofmt.sh
       - name: Vet
