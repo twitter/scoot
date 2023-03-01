@@ -8,6 +8,14 @@ Scoot is a distributed task runner.
 The core concept of Scoot is the Snapshot, which represents an immutable filesystem state.
 Scoot allows for execution of commands against input Snapshots to create new output Snapshots.
 
+### Build with Bazel
+
+Currently one can use either the vanilla go toolchain or the bazel build system to run the binaries or tests.
+
+```
+bazel test ...
+```
+
 ### Scoot Components
 
 ###### Scheduler
@@ -38,6 +46,10 @@ Setup a scheduler and worker nodes locally:
 
 ```sh
 go run ./setup-cloud-scoot/main.go --strategy local.local
+```
+or
+```
+bazel build setup-cloud-scoot:main && bazel-bin/setup-cloud-scoot/main_/main --strategy local.local
 ```
 
 Run a series of randomly generated tests against the local scheduler and workers:
