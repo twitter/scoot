@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/setup"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/setup"
 )
 
 // Spins up a new Local Test Cluster in a separate

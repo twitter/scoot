@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/scheduler"
+	"github.com/wisechengyi/scoot/scheduler"
 )
 
 // SchedulerStrategy will startup a Scheduler (or setup a connection to one)

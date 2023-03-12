@@ -8,17 +8,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/cloud/cluster/local"
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/endpoints"
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/snapshot/bundlestore"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/snapshots"
-	"github.com/twitter/scoot/snapshot/store"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/cloud/cluster/local"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/endpoints"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/config/jsonconfig"
+	"github.com/wisechengyi/scoot/snapshot/bundlestore"
+	"github.com/wisechengyi/scoot/snapshot/git/gitdb"
+	"github.com/wisechengyi/scoot/snapshot/snapshots"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 func main() {

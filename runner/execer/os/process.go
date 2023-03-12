@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	scooterror "github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/log/tags"
-	scootexecer "github.com/twitter/scoot/runner/execer"
+	scooterror "github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	scootexecer "github.com/wisechengyi/scoot/runner/execer"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/twitter/scoot/runner"
-	osexecer "github.com/twitter/scoot/runner/execer/os"
+	"github.com/wisechengyi/scoot/runner"
+	osexecer "github.com/wisechengyi/scoot/runner/execer/os"
 )
 
 // local_output.go: output that's stored locally

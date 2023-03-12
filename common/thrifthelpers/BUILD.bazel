@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "thrifthelpers",
     srcs = ["thrift_serializer.go"],
-    importpath = "github.com/twitter/scoot/common/thrifthelpers",
+    importpath = "github.com/wisechengyi/scoot/common/thrifthelpers",
     visibility = ["//visibility:public"],
     deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )

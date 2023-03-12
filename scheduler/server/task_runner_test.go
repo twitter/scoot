@@ -12,17 +12,17 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	runnermock "github.com/twitter/scoot/runner/mocks"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/setup/worker"
-	workerdomain "github.com/twitter/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	runnermock "github.com/wisechengyi/scoot/runner/mocks"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/scheduler/setup/worker"
+	workerdomain "github.com/wisechengyi/scoot/worker/domain"
 )
 
 var tmp string

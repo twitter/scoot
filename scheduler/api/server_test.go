@@ -7,11 +7,11 @@ import (
 
 	//"github.com/golang/mock/gomock"
 
-	//"github.com/twitter/scoot/common/stats"
-	//"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scheduler/domain"
-	//"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	//"github.com/wisechengyi/scoot/common/stats"
+	//"github.com/wisechengyi/scoot/saga/sagalogs"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	//"github.com/wisechengyi/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 // TODO DISABLED TEST - time.Sleep based tests have data races and need to be refactored

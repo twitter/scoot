@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
+
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scheduler/setup"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/scheduler/setup"
 )
 
 // Sets up a local swarm that serves scootapi, then waits or runs

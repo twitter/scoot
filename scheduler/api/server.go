@@ -9,11 +9,11 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/saga"
-	schedthrift "github.com/twitter/scoot/scheduler/api/thrift"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/saga"
+	schedthrift "github.com/wisechengyi/scoot/scheduler/api/thrift"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 // Creates and returns a new server Handler, which combines the scheduler,

@@ -3,7 +3,7 @@ package thrift
 import (
 	"time"
 
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 // GetClassLoadPercents get the target load pcts for the classes

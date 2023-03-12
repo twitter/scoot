@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 // Make an invalid Filer

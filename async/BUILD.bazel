@@ -7,7 +7,7 @@ go_library(
         "mailbox.go",
         "runner.go",
     ],
-    importpath = "github.com/twitter/scoot/async",
+    importpath = "github.com/wisechengyi/scoot/async",
     visibility = ["//visibility:public"],
 )
 

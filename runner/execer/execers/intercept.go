@@ -1,7 +1,7 @@
 package execers
 
 import (
-	"github.com/twitter/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/runner/execer"
 )
 
 // InterceptExecer is a Composite Execer. For each command c, if

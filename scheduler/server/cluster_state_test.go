@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/twitter/scoot/cloud/cluster"
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 // ensures nodes can be added and removed

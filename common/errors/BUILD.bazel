@@ -6,6 +6,6 @@ go_library(
         "errors.go",
         "exit_codes.go",
     ],
-    importpath = "github.com/twitter/scoot/common/errors",
+    importpath = "github.com/wisechengyi/scoot/common/errors",
     visibility = ["//visibility:public"],
 )

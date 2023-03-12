@@ -8,15 +8,15 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/endpoints"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/execer"
-	"github.com/twitter/scoot/runner/execer/execers"
-	osexec "github.com/twitter/scoot/runner/execer/os"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
+	"github.com/wisechengyi/scoot/common/endpoints"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/runner/execer/execers"
+	osexec "github.com/wisechengyi/scoot/runner/execer/os"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/gitdb"
 )
 
 // WorkerStatusHTTPHandler implements http.Handler to return status for aurora health check endpoints

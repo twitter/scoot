@@ -8,7 +8,7 @@ import (
 // otherwise doesn't need Filer updates.
 
 // An Updater for snapshot Filers that invokes a cleaner.Cleaner at the update interval.
-// Implements github.com/twitter/scoot/snapshot.Updater interface
+// Implements github.com/wisechengyi/scoot/snapshot.Updater interface
 type CleaningUpdater struct {
 	interval time.Duration
 	cleaner  Cleaner

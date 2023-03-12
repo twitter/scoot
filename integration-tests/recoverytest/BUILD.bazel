@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "recoverytest_lib",
     srcs = ["main.go"],
-    importpath = "github.com/twitter/scoot/integration-tests/recoverytest",
+    importpath = "github.com/wisechengyi/scoot/integration-tests/recoverytest",
     visibility = ["//visibility:private"],
     deps = [
         "//common/log/hooks",

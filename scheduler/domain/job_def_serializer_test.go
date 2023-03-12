@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/thrifthelpers"
-	schedthrift "github.com/twitter/scoot/scheduler/domain/gen-go/sched"
+	"github.com/wisechengyi/scoot/common/thrifthelpers"
+	schedthrift "github.com/wisechengyi/scoot/scheduler/domain/gen-go/sched"
 )
 
 func Test_FixedJob(t *testing.T) {

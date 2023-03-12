@@ -6,12 +6,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
-	worker "github.com/twitter/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	worker "github.com/wisechengyi/scoot/worker/domain"
 )
 
 const DeadLetterTrailer = " -> Error(s) encountered, canceling task."

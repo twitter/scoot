@@ -3,8 +3,8 @@ package runner
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/log/tags"
 )
 
 type RunID string

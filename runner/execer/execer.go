@@ -3,8 +3,8 @@ package execer
 import (
 	"io"
 
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/log/tags"
 )
 
 // Execer lets you run one Unix command. It differs from Runner in that it does not

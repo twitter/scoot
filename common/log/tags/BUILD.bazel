@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "tags",
     srcs = ["log_tags.go"],
-    importpath = "github.com/twitter/scoot/common/log/tags",
+    importpath = "github.com/wisechengyi/scoot/common/log/tags",
     visibility = ["//visibility:public"],
 )

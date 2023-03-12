@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "perftests",
     srcs = ["doc.go"],
-    importpath = "github.com/twitter/scoot/perftests",
+    importpath = "github.com/wisechengyi/scoot/perftests",
     visibility = ["//visibility:public"],
 )

@@ -6,7 +6,7 @@ package setup
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/wisechengyi/scoot/scheduler/client"
 )
 
 type Strategies struct {

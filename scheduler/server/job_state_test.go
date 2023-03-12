@@ -3,9 +3,9 @@ package server
 import (
 	"testing"
 
-	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/wisechengyi/scoot/saga/sagalogs"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/tests/testhelpers"
 )
 
 func Test_GetUnscheduledTasks_ReturnsAllUnscheduledTasks(t *testing.T) {

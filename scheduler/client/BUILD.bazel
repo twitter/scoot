@@ -6,7 +6,7 @@ go_library(
         "client.go",
         "locate.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/client",
+    importpath = "github.com/wisechengyi/scoot/scheduler/client",
     visibility = ["//visibility:public"],
     deps = [
         "//common/dialer",

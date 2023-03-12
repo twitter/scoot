@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "helpers",
     srcs = ["helpers.go"],
-    importpath = "github.com/twitter/scoot/common/log/helpers",
+    importpath = "github.com/wisechengyi/scoot/common/log/helpers",
     visibility = ["//visibility:public"],
     deps = [
         "//scheduler/api/thrift/gen-go/scoot",

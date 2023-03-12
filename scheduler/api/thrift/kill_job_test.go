@@ -6,9 +6,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 var mockCtrl *gomock.Controller

@@ -1,10 +1,10 @@
 package snapshots
 
 import (
-	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/ice"
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/gitdb"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 // Module returns a module to allow serving Snapshots as an http.Handler

@@ -10,13 +10,13 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/execer"
-	"github.com/twitter/scoot/runner/execer/execers"
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/runner/execer/execers"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 // invoke.go: Invoker runs a Scoot command.
@@ -197,11 +197,11 @@ func (inv *Invoker) run(cmd *runner.Command, id runner.RunID, abortCh chan struc
 			codeErr, ok := err.(*errors.ExitCodeError)
 			switch ok {
 			case true:
-				// err is of type github.com/twitter/scoot/common/errors.Error
+				// err is of type github.com/wisechengyi/scoot/common/errors.Error
 				failedStatus = runner.FailedStatus(id, codeErr,
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			default:
-				// err is not of type github.com/twitter/scoot/common/errors.Error
+				// err is not of type github.com/wisechengyi/scoot/common/errors.Error
 				failedStatus = runner.FailedStatus(id, errors.NewError(err, errors.GenericCheckoutFailureExitCode),
 					tags.LogTags{JobID: cmd.JobID, TaskID: cmd.TaskID, Tag: cmd.Tag})
 			}

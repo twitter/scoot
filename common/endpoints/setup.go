@@ -1,13 +1,14 @@
 package endpoints
 
 import (
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/ice"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/config/jsonconfig"
+	"github.com/wisechengyi/scoot/ice"
 )
 
 // Module returns a module that supports serving HTTP

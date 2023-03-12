@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/twitter/scoot/cloud/cluster"
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/setup/worker"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/saga/sagalogs"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/scheduler/setup/worker"
+	"github.com/wisechengyi/scoot/tests/testhelpers"
 )
 
 func Test_TaskAssignment_NoNodesAvailable(t *testing.T) {

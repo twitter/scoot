@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 func (db *DB) ingestDirWithRepo(repo *repo.Repository, index, dir string) (snapshot, error) {

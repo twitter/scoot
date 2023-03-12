@@ -14,15 +14,15 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/async"
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
-	worker "github.com/twitter/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/async"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	worker "github.com/wisechengyi/scoot/worker/domain"
 )
 
 const (

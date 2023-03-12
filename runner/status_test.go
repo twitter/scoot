@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/log/tags"
 )
 
 func TestCommandStringSimple(t *testing.T) {

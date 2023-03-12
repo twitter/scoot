@@ -1,7 +1,7 @@
 package runners
 
 import (
-	"github.com/twitter/scoot/runner"
+	"github.com/wisechengyi/scoot/runner"
 )
 
 // Creates a new OutputCreator that will not save anything

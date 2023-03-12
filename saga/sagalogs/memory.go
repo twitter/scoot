@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/saga"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/saga"
 
 	log "github.com/sirupsen/logrus"
 )

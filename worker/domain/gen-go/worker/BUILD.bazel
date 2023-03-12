@@ -7,7 +7,7 @@ go_library(
         "ttypes.go",
         "worker.go",
     ],
-    importpath = "github.com/twitter/scoot/worker/domain/gen-go/worker",
+    importpath = "github.com/wisechengyi/scoot/worker/domain/gen-go/worker",
     visibility = ["//visibility:public"],
     deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 const localIDText = "local"

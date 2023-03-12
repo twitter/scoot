@@ -1,8 +1,8 @@
 package thrift
 
 import (
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 /*

@@ -3,8 +3,8 @@ package client
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/wisechengyi/scoot/common/dialer"
+	"github.com/wisechengyi/scoot/scheduler/client"
 )
 
 // Client interface that includes CLI handling

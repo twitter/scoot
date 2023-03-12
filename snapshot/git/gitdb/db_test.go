@@ -12,11 +12,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/stats"
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/stats"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 var fixture *dbFixture

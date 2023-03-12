@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 // Implements snapshots.Updater

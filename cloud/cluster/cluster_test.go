@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/log/hooks"
 )
 
 func TestClusterUpdates(t *testing.T) {

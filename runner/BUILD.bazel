@@ -10,7 +10,7 @@ go_library(
         "status.go",
         "status_rw.go",
     ],
-    importpath = "github.com/twitter/scoot/runner",
+    importpath = "github.com/wisechengyi/scoot/runner",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",

@@ -6,7 +6,7 @@ go_library(
         "file.go",
         "memory.go",
     ],
-    importpath = "github.com/twitter/scoot/saga/sagalogs",
+    importpath = "github.com/wisechengyi/scoot/saga/sagalogs",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

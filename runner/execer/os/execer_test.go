@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/common/log/hooks"
-	scootexecer "github.com/twitter/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	scootexecer "github.com/wisechengyi/scoot/runner/execer"
 
 	log "github.com/sirupsen/logrus"
 )

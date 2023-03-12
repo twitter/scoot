@@ -5,7 +5,7 @@ package cleaner
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cleaner/dirconfig"
+	"github.com/wisechengyi/scoot/cleaner/dirconfig"
 )
 
 // A Cleaner provides cleanup functionality

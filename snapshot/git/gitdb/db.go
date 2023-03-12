@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/stats"
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/stats"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/store"
 
 	log "github.com/sirupsen/logrus"
 )

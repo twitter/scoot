@@ -6,7 +6,7 @@ go_library(
         "cleanup.go",
         "updater.go",
     ],
-    importpath = "github.com/twitter/scoot/cleaner",
+    importpath = "github.com/wisechengyi/scoot/cleaner",
     visibility = ["//visibility:public"],
     deps = [
         "//cleaner/dirconfig",

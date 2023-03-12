@@ -6,7 +6,7 @@ go_library(
         "modules.go",
         "start_server.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/starter",
+    importpath = "github.com/wisechengyi/scoot/scheduler/starter",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "scoot-snapshot-db_lib",
     srcs = ["main.go"],
-    importpath = "github.com/twitter/scoot/binaries/scoot-snapshot-db",
+    importpath = "github.com/wisechengyi/scoot/binaries/scoot-snapshot-db",
     visibility = ["//visibility:private"],
     deps = [
         "//common/dialer",

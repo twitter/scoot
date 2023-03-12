@@ -12,10 +12,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/errors"
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/common/errors"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 // BundlestoreConfig defines how to talk to Bundlestore

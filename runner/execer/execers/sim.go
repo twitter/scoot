@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/runner/execer"
 )
 
 func NewSimExecer() *SimExecer {

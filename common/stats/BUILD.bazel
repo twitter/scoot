@@ -9,7 +9,7 @@ go_library(
         "stats_time.go",
         "verify_stats.go",
     ],
-    importpath = "github.com/twitter/scoot/common/stats",
+    importpath = "github.com/wisechengyi/scoot/common/stats",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_rcrowley_go_metrics//:go-metrics",

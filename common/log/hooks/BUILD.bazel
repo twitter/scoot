@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "hooks",
     srcs = ["context_hook.go"],
-    importpath = "github.com/twitter/scoot/common/log/hooks",
+    importpath = "github.com/wisechengyi/scoot/common/log/hooks",
     visibility = ["//visibility:public"],
     deps = ["@com_github_sirupsen_logrus//:logrus"],
 )

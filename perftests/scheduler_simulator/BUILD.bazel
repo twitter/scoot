@@ -6,7 +6,7 @@ go_library(
         "fake_worker_cli.go",
         "test_alg.go",
     ],
-    importpath = "github.com/twitter/scoot/perftests/scheduler_simulator",
+    importpath = "github.com/wisechengyi/scoot/perftests/scheduler_simulator",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

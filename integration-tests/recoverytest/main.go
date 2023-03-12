@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scheduler"
-	"github.com/twitter/scoot/tests/testhelpers"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/scheduler"
+	"github.com/wisechengyi/scoot/tests/testhelpers"
 )
 
 func main() {

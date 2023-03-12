@@ -7,8 +7,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 type taskStateByTaskID map[string]*taskState

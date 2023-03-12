@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 // backend allows getting a snapshot for an ID, which can then be used to download the ID

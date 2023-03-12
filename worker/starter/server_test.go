@@ -3,9 +3,9 @@ package starter
 import (
 	"time"
 
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 /*

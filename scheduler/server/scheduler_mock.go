@@ -6,9 +6,9 @@ package server
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	stats "github.com/twitter/scoot/common/stats"
-	saga "github.com/twitter/scoot/saga"
-	domain "github.com/twitter/scoot/scheduler/domain"
+	stats "github.com/wisechengyi/scoot/common/stats"
+	saga "github.com/wisechengyi/scoot/saga"
+	domain "github.com/wisechengyi/scoot/scheduler/domain"
 	reflect "reflect"
 	time "time"
 )

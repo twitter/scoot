@@ -6,11 +6,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	commoncli "github.com/twitter/scoot/common/client"
-	"github.com/twitter/scoot/common/dialer"
-	smoketest "github.com/twitter/scoot/integration-tests/smoketest"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/client"
+	commoncli "github.com/wisechengyi/scoot/common/client"
+	"github.com/wisechengyi/scoot/common/dialer"
+	smoketest "github.com/wisechengyi/scoot/integration-tests/smoketest"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/client"
 )
 
 // SchedCLIClient includes fields required for CLI client handling

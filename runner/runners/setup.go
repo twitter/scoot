@@ -5,12 +5,12 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/execer"
-	"github.com/twitter/scoot/runner/execer/execers"
-	osexec "github.com/twitter/scoot/runner/execer/os"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/ice"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/runner/execer/execers"
+	osexec "github.com/wisechengyi/scoot/runner/execer/os"
 )
 
 // Module returns a module that creates a new Runner.

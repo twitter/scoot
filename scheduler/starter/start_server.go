@@ -7,15 +7,15 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/endpoints"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/api"
-	"github.com/twitter/scoot/scheduler/scheduler/config"
-	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/worker/client"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/endpoints"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/api"
+	"github.com/wisechengyi/scoot/scheduler/scheduler/config"
+	"github.com/wisechengyi/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/worker/client"
 )
 
 type servers struct {

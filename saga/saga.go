@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 // Concurrent Object Representing a Saga

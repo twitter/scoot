@@ -6,7 +6,7 @@ go_library(
         "endpoints.go",
         "setup.go",
     ],
-    importpath = "github.com/twitter/scoot/common/endpoints",
+    importpath = "github.com/wisechengyi/scoot/common/endpoints",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

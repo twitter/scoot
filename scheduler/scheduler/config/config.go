@@ -7,11 +7,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/cloud/cluster/local"
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/scheduler/server"
-	"github.com/twitter/scoot/worker/client"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/cloud/cluster/local"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/worker/client"
 )
 
 // How long to keep retrying a runner req

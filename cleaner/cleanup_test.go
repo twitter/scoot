@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/cleaner/dirconfig"
+	"github.com/wisechengyi/scoot/cleaner/dirconfig"
 )
 
 func TestCleanupBadConfig(t *testing.T) {

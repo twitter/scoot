@@ -6,13 +6,13 @@ import (
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/thrifthelpers"
-	"github.com/twitter/scoot/runner"
-	s "github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/worker/domain"
-	"github.com/twitter/scoot/worker/domain/gen-go/worker"
+	"github.com/wisechengyi/scoot/common/thrifthelpers"
+	"github.com/wisechengyi/scoot/runner"
+	s "github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/saga/sagalogs"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/worker/domain/gen-go/worker"
 )
 
 func Test_GetJobStatus_InternalLogError(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	scootexecer "github.com/twitter/scoot/runner/execer"
+	scootexecer "github.com/wisechengyi/scoot/runner/execer"
 )
 
 // Used for mocking memCap monitoring

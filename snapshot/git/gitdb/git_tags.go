@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 // TagsConfig specifies how GitDB should store Snapshots as tags in another git repo
@@ -15,7 +15,7 @@ type TagsConfig struct {
 	// e.g. sss for Source (repo)'s Scoot Snapshots
 	Name string
 
-	// Remote to fetch from and push to (e.g. https://github.com/twitter/scoot)
+	// Remote to fetch from and push to (e.g. https://github.com/wisechengyi/scoot)
 	Remote string
 
 	// Prefix for tag names (e.g. reserved_scoot)

@@ -32,15 +32,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/saga/sagalogs"
-	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/saga/sagalogs"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 type externalDeps struct {

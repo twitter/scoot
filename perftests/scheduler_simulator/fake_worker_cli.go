@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/errors"
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/runner"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/errors"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/runner"
 )
 
 /*

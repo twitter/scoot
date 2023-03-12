@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "setup-cloud-scoot_lib",
     srcs = ["main.go"],
-    importpath = "github.com/twitter/scoot/setup-cloud-scoot",
+    importpath = "github.com/wisechengyi/scoot/setup-cloud-scoot",
     visibility = ["//visibility:private"],
     deps = [
         "//common/log/hooks",

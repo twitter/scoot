@@ -1,7 +1,7 @@
 package runners
 
 import (
-	"github.com/twitter/scoot/runner"
+	"github.com/wisechengyi/scoot/runner"
 )
 
 // StatusesRO is an adapter that lets you query a slice of RunStatus

@@ -1,8 +1,8 @@
 # Worker server Thrift API interface definition
 
-# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+# See github.com/wisechengyi/scoot/README.md for local Thrift prerequisites
 # 
-# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+# To Generate files, run from top level (github.com/wisechengyi/scoot) repo directory:
 #     $ make thrift-worker-go
 #     We remove worker/api/gen-go/worker/worker-remote/ due to thrift being unable to
 #     distinguish between local and included package prefixes.

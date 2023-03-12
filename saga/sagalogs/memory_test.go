@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/saga"
+	"github.com/wisechengyi/scoot/saga"
 )
 
 func TestMemorySagaParams(t *testing.T) {

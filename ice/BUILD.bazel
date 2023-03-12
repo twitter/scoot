@@ -7,7 +7,7 @@ go_library(
         "eval.go",
         "magic_bag.go",
     ],
-    importpath = "github.com/twitter/scoot/ice",
+    importpath = "github.com/wisechengyi/scoot/ice",
     visibility = ["//visibility:public"],
     deps = ["@com_github_sirupsen_logrus//:logrus"],
 )

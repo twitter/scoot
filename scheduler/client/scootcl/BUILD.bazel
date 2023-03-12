@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "scootcl_lib",
     srcs = ["main.go"],
-    importpath = "github.com/twitter/scoot/scheduler/client/scootcl",
+    importpath = "github.com/wisechengyi/scoot/scheduler/client/scootcl",
     visibility = ["//visibility:private"],
     deps = [
         "//common",

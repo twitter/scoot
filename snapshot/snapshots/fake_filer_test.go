@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 func assertFileContains(path, contents, msg string, t *testing.T) {

@@ -8,7 +8,7 @@ go_library(
         "intercept.go",
         "sim.go",
     ],
-    importpath = "github.com/twitter/scoot/runner/execer/execers",
+    importpath = "github.com/wisechengyi/scoot/runner/execer/execers",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",

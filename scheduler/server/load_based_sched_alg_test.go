@@ -10,11 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 type classState struct {

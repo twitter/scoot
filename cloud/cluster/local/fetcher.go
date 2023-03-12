@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/cloud/cluster"
 )
 
 // Proletariat person's dynamic localhost cluster nodes.

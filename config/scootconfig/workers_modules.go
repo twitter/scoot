@@ -4,13 +4,13 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/scheduler/setup/worker"
-	"github.com/twitter/scoot/worker/client"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/dialer"
+	"github.com/wisechengyi/scoot/ice"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/scheduler/setup/worker"
+	"github.com/wisechengyi/scoot/worker/client"
 )
 
 type ClientTimeout time.Duration

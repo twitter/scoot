@@ -6,7 +6,7 @@ go_library(
         "dialer.go",
         "resolver.go",
     ],
-    importpath = "github.com/twitter/scoot/common/dialer",
+    importpath = "github.com/wisechengyi/scoot/common/dialer",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_apache_thrift//lib/go/thrift",

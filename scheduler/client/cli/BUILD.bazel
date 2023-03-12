@@ -15,7 +15,7 @@ go_library(
         "set_scheduler_status.go",
         "watch_job.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/client/cli",
+    importpath = "github.com/wisechengyi/scoot/scheduler/client/cli",
     visibility = ["//visibility:public"],
     deps = [
         "//common/client",

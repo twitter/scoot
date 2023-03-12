@@ -7,9 +7,9 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 
-	cc "github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/stats"
+	cc "github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 const noJob = ""

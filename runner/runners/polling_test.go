@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/execer/execers"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/snapshots"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/execer/execers"
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/snapshots"
 )
 
 func setupPoller() (*execers.SimExecer, *ChaosRunner, runner.Service) {

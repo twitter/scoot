@@ -3,8 +3,8 @@ package domain
 import (
 	"testing"
 
-	"github.com/twitter/scoot/common/thrifthelpers"
-	schedthrift "github.com/twitter/scoot/scheduler/domain/gen-go/sched"
+	"github.com/wisechengyi/scoot/common/thrifthelpers"
+	schedthrift "github.com/wisechengyi/scoot/scheduler/domain/gen-go/sched"
 )
 
 func Test_DeserializeJob_BadData(t *testing.T) {

@@ -8,7 +8,7 @@ go_library(
         "node.go",
         "state.go",
     ],
-    importpath = "github.com/twitter/scoot/cloud/cluster",
+    importpath = "github.com/wisechengyi/scoot/cloud/cluster",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

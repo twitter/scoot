@@ -11,7 +11,7 @@ go_library(
         "setup.go",
         "workers.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/setup",
+    importpath = "github.com/wisechengyi/scoot/scheduler/setup",
     visibility = ["//visibility:public"],
     deps = [
         "//scheduler",

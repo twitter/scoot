@@ -3,7 +3,7 @@ package execers
 import (
 	"testing"
 
-	"github.com/twitter/scoot/runner/execer"
+	"github.com/wisechengyi/scoot/runner/execer"
 )
 
 func TestInterceptor(t *testing.T) {

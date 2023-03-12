@@ -6,10 +6,10 @@ import (
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 
-	s "github.com/twitter/scoot/saga"
+	s "github.com/wisechengyi/scoot/saga"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 func Test_ConvertSagaStateToJobStatus(t *testing.T) {

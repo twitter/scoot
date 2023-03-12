@@ -3,9 +3,9 @@ package thrift
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/domain"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 func ReinstateWorker(req *scoot.ReinstateWorkerReq, scheduler server.Scheduler) error {

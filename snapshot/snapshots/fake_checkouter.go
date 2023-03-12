@@ -3,7 +3,7 @@ package snapshots
 import (
 	"io/ioutil"
 
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 // Create a Checkouter that essentially does nothing, based on a static path

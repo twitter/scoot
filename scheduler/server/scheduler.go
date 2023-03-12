@@ -6,9 +6,9 @@ package server
 import (
 	"time"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 type Scheduler interface {

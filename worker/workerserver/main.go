@@ -10,16 +10,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/cloud/cluster/local"
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/store"
-	"github.com/twitter/scoot/worker/client"
-	"github.com/twitter/scoot/worker/domain"
-	"github.com/twitter/scoot/worker/starter"
+	"github.com/wisechengyi/scoot/cloud/cluster/local"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/snapshot/git/gitdb"
+	"github.com/wisechengyi/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/worker/client"
+	"github.com/wisechengyi/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/worker/starter"
 )
 
 func main() {

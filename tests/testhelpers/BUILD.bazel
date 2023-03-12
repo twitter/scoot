@@ -8,7 +8,7 @@ go_library(
         "jobHelpers.go",
         "utils.go",
     ],
-    importpath = "github.com/twitter/scoot/tests/testhelpers",
+    importpath = "github.com/wisechengyi/scoot/tests/testhelpers",
     visibility = ["//visibility:public"],
     deps = [
         "//common/dialer",

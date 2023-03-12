@@ -14,7 +14,7 @@ go_library(
         "run_job.go",
         "set_scheduler_status.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/api/thrift",
+    importpath = "github.com/wisechengyi/scoot/scheduler/api/thrift",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "scootconfig",
     srcs = ["workers_modules.go"],
-    importpath = "github.com/twitter/scoot/config/scootconfig",
+    importpath = "github.com/wisechengyi/scoot/config/scootconfig",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

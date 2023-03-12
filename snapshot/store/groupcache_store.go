@@ -10,8 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/twitter/groupcache"
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 // Called periodically in a goroutine. Must include the current instance among the fetched nodes.

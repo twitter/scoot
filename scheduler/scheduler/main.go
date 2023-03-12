@@ -7,12 +7,12 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common"
-	"github.com/twitter/scoot/common/endpoints"
-	"github.com/twitter/scoot/common/log/hooks"
-	"github.com/twitter/scoot/scheduler"
-	"github.com/twitter/scoot/scheduler/scheduler/config"
-	"github.com/twitter/scoot/scheduler/starter"
+	"github.com/wisechengyi/scoot/common"
+	"github.com/wisechengyi/scoot/common/endpoints"
+	"github.com/wisechengyi/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/scheduler"
+	"github.com/wisechengyi/scoot/scheduler/scheduler/config"
+	"github.com/wisechengyi/scoot/scheduler/starter"
 )
 
 func nopDurationKeyExtractor(id string) string {

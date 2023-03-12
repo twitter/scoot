@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/twitter/scoot/ice"
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/ice"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 type module struct{}

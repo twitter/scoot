@@ -5,10 +5,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/endpoints"
-	"github.com/twitter/scoot/config/jsonconfig"
-	"github.com/twitter/scoot/ice"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/common/endpoints"
+	"github.com/wisechengyi/scoot/config/jsonconfig"
+	"github.com/wisechengyi/scoot/ice"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 type servers struct {

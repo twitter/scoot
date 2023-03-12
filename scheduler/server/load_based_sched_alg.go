@@ -10,8 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 const (

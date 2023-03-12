@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/twitter/scoot/common"
+	"github.com/wisechengyi/scoot/common"
 )
 
 // TestFetchCron verify that cron fetcher can put multiple node lists on the channel

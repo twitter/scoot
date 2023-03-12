@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "local",
     srcs = ["fetcher.go"],
-    importpath = "github.com/twitter/scoot/cloud/cluster/local",
+    importpath = "github.com/wisechengyi/scoot/cloud/cluster/local",
     visibility = ["//visibility:public"],
     deps = ["//cloud/cluster"],
 )

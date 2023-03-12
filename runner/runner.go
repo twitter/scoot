@@ -4,15 +4,15 @@
 // implementations.
 package runner
 
-//go:generate mockgen -package=mocks -destination=mocks/runner.go github.com/twitter/scoot/runner Service
+//go:generate mockgen -package=mocks -destination=mocks/runner.go github.com/wisechengyi/scoot/runner Service
 //Note: using reflection syntax due to Service's nested interfaces. Unlike our other mocks, this requires its own package?
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 const NoRunnersMsg = "No runners available."

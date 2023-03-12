@@ -7,7 +7,7 @@ go_library(
         "entire_dir_config.go",
         "last_modified_dir_config.go",
     ],
-    importpath = "github.com/twitter/scoot/cleaner/dirconfig",
+    importpath = "github.com/wisechengyi/scoot/cleaner/dirconfig",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

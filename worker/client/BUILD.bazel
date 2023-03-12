@@ -6,7 +6,7 @@ go_library(
         "client.go",
         "thrift_client.go",
     ],
-    importpath = "github.com/twitter/scoot/worker/client",
+    importpath = "github.com/wisechengyi/scoot/worker/client",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

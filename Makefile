@@ -4,7 +4,7 @@ DESC := distributed build tools
 GOVERSION := $(shell go version)
 BUILDTIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDDATE := $(shell date -u +"%B %d, %Y")
-PROJECT_URL := "https://github.com/twitter/scoot"
+PROJECT_URL := "https://github.com/wisechengyi/scoot"
 FIRSTGOPATH := $(shell echo $${GOPATH%%:*})
 THRIFTVERSION := $(shell thrift -version | cut -d ' ' -f 3 | tr -d '\n')
 GO111MODULE := on
@@ -103,17 +103,17 @@ generate:
 	go generate ./...
 
 thrift-worker-go:
-	# Create generated code in github.com/twitter/scoot/worker/api/gen-go/... from worker/api/thrift/worker.thrift
+	# Create generated code in github.com/wisechengyi/scoot/worker/api/gen-go/... from worker/api/thrift/worker.thrift
 	cd worker/domain && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift ../api/thrift/worker.thrift && cd ../..
 	rm -rf worker/domain/gen-go/worker/worker-remote/
 
 thrift-sched-go:
-	# Create generated code in github.com/twitter/scoot/sched/gen-go/... from sched.thrift
+	# Create generated code in github.com/wisechengyi/scoot/sched/gen-go/... from sched.thrift
 	cd scheduler/domain && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift sched.thrift && cd ../..
 	rm -rf scheduler/domain/gen-go/sched/sched-remote/
 
 thrift-scoot-go:
-	# Create generated code in github.com/twitter/scoot/scheduler/api/thrift/gen-go/... from scoot.thrift
+	# Create generated code in github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/... from scoot.thrift
 	cd scheduler/api/thrift && rm -rf gen-go && thrift --gen go:thrift_import=github.com/apache/thrift/lib/go/thrift scoot.thrift && cd ../../..
 	rm -rf scheduler/api/thrift/gen-go/scoot/cloud_scoot-remote/
 

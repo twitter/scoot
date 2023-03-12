@@ -6,7 +6,7 @@ go_library(
         "definitions.go",
         "generators.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/domain",
+    importpath = "github.com/wisechengyi/scoot/scheduler/domain",
     visibility = ["//visibility:public"],
     deps = [
         "//common/log/tags",

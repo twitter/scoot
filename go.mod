@@ -1,4 +1,4 @@
-module github.com/twitter/scoot
+module github.com/wisechengyi/scoot
 
 go 1.19
 

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 func Test_SetSchedulerStatus(t *testing.T) {

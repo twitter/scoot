@@ -6,8 +6,8 @@ package client
 import (
 	"fmt"
 
-	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/common/dialer"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 // A struct that supports establishing and maintaining a

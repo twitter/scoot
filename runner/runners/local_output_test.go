@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/twitter/scoot/common/log/hooks"
+	"github.com/wisechengyi/scoot/common/log/hooks"
 
 	log "github.com/sirupsen/logrus"
 )

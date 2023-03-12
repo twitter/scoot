@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/twitter/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/cloud/cluster"
 )
 
 func TestFetcher(t *testing.T) {

@@ -6,7 +6,7 @@ go_library(
         "server.go",
         "start_server.go",
     ],
-    importpath = "github.com/twitter/scoot/worker/starter",
+    importpath = "github.com/wisechengyi/scoot/worker/starter",
     visibility = ["//visibility:public"],
     deps = [
         "//common/endpoints",

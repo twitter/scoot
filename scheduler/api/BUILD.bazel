@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "server.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/api",
+    importpath = "github.com/wisechengyi/scoot/scheduler/api",
     visibility = ["//visibility:public"],
     deps = [
         "//common/stats",

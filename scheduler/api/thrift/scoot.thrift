@@ -1,8 +1,8 @@
 # Scoot main server/client API interface definition
 
-# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+# See github.com/wisechengyi/scoot/README.md for local Thrift prerequisites
 #
-# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+# To Generate files, run from top level (github.com/wisechengyi/scoot) repo directory:
 #     $ make thrift-scoot-go
 #     We remove gen-go/scoot/cloud_scoot-remote/ due to thrift being unable to
 #     distinguish between local and included package prefixes.

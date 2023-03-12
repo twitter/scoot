@@ -2,12 +2,13 @@ package saga
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/thrifthelpers"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"math"
+	"github.com/wisechengyi/scoot/common/thrifthelpers"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 //

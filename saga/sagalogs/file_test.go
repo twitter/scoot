@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/twitter/scoot/saga"
+	"github.com/wisechengyi/scoot/saga"
 )
 
 func getDirName() string {

@@ -3,13 +3,13 @@ package worker
 import (
 	"time"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/execer/execers"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/snapshots"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/execer/execers"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/snapshots"
 )
 
 // Makes a worker suitable for using as an in-memory worker.

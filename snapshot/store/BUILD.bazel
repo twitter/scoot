@@ -10,7 +10,7 @@ go_library(
         "noop_store.go",
         "store.go",
     ],
-    importpath = "github.com/twitter/scoot/snapshot/store",
+    importpath = "github.com/wisechengyi/scoot/snapshot/store",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

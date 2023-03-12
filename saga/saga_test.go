@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 func TestEndSaga(t *testing.T) {

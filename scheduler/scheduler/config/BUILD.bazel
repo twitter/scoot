@@ -6,7 +6,7 @@ go_library(
         "config.go",
         "configs.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/scheduler/config",
+    importpath = "github.com/wisechengyi/scoot/scheduler/scheduler/config",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

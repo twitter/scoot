@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "mocks",
     srcs = ["runner.go"],
-    importpath = "github.com/twitter/scoot/runner/mocks",
+    importpath = "github.com/wisechengyi/scoot/runner/mocks",
     visibility = ["//visibility:public"],
     deps = [
         "//runner",

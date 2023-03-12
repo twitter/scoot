@@ -12,7 +12,7 @@ go_library(
         "sagalog.go",
         "sagalog_mock.go",
     ],
-    importpath = "github.com/twitter/scoot/saga",
+    importpath = "github.com/wisechengyi/scoot/saga",
     visibility = ["//visibility:public"],
     deps = [
         "//common",

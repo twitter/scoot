@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/scheduler/domain"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 // verify that jobs are distributed evenly

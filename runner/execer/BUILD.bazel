@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "execer",
     srcs = ["execer.go"],
-    importpath = "github.com/twitter/scoot/runner/execer",
+    importpath = "github.com/wisechengyi/scoot/runner/execer",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",

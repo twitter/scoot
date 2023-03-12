@@ -5,10 +5,10 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 
-	"github.com/twitter/scoot/cloud/cluster"
-	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/cloud/cluster"
+	"github.com/wisechengyi/scoot/common/dialer"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/runners"
 )
 
 const defaultPollingPeriod = time.Duration(250) * time.Millisecond

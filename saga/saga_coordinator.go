@@ -2,7 +2,7 @@ package saga
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 // Saga Object which provides all Saga Functionality

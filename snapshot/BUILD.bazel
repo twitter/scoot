@@ -8,7 +8,7 @@ go_library(
         "filer.go",
         "snapshots.go",
     ],
-    importpath = "github.com/twitter/scoot/snapshot",
+    importpath = "github.com/wisechengyi/scoot/snapshot",
     visibility = ["//visibility:public"],
     deps = [
         "//snapshot/git/repo",

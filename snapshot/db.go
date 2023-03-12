@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 // ID identifies a Snapshot in DB. (Cf. doc.go for explanation of Snapshot) Opaque to the client.

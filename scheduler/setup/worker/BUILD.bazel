@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "worker",
     srcs = ["makers.go"],
-    importpath = "github.com/twitter/scoot/scheduler/setup/worker",
+    importpath = "github.com/wisechengyi/scoot/scheduler/setup/worker",
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/cluster",

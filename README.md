@@ -1,7 +1,7 @@
 # Scoot
-[![GoDoc](https://godoc.org/github.com/twitter/scoot?status.svg)](https://godoc.org/github.com/twitter/scoot)
-[![Build Status](https://github.com/twitter/scoot/workflows/ci/badge.svg)](https://github.com/twitter/scoot/actions)
-[![GoReportCard](https://goreportcard.com/badge/github.com/twitter/scoot)](https://goreportcard.com/report/github.com/twitter/scoot)
+[![GoDoc](https://godoc.org/github.com/wisechengyi/scoot?status.svg)](https://godoc.org/github.com/wisechengyi/scoot)
+[![Build Status](https://github.com/wisechengyi/scoot/workflows/ci/badge.svg)](https://github.com/wisechengyi/scoot/actions)
+[![GoReportCard](https://goreportcard.com/badge/github.com/wisechengyi/scoot)](https://goreportcard.com/report/github.com/wisechengyi/scoot)
 [![codecov.io](https://codecov.io/github/twitter/scoot/coverage.svg?branch=master)](https://codecov.io/gh/twitter/scoot?branch=master)
 
 Scoot is a distributed task runner.

@@ -46,11 +46,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/gitdb"
-	"github.com/twitter/scoot/snapshot/git/repo"
-	"github.com/twitter/scoot/snapshot/store"
 	"io/ioutil"
+
+	"github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/gitdb"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 type DBInjector interface {

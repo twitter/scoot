@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/twitter/scoot/common/stats"
+	"github.com/wisechengyi/scoot/common/stats"
 )
 
 var DefaultTTL time.Duration = time.Hour * 24 * 180 //180 days. If zero, no ttl will be applied by default.

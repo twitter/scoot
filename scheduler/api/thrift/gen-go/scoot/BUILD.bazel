@@ -7,7 +7,7 @@ go_library(
         "constants.go",
         "ttypes.go",
     ],
-    importpath = "github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot",
+    importpath = "github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot",
     visibility = ["//visibility:public"],
     deps = ["@com_github_apache_thrift//lib/go/thrift"],
 )

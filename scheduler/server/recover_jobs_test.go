@@ -2,11 +2,12 @@ package server
 
 import (
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/twitter/scoot/saga"
-	"github.com/twitter/scoot/scheduler/domain"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/wisechengyi/scoot/saga"
+	"github.com/wisechengyi/scoot/scheduler/domain"
 )
 
 func makeMockSagaCoord(mockCtrl *gomock.Controller) (saga.SagaCoordinator, *saga.MockSagaLog) {

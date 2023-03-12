@@ -10,12 +10,12 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/log/helpers"
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/runner"
-	"github.com/twitter/scoot/runner/runners"
-	"github.com/twitter/scoot/worker/domain"
-	"github.com/twitter/scoot/worker/domain/gen-go/worker"
+	"github.com/wisechengyi/scoot/common/log/helpers"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/runner"
+	"github.com/wisechengyi/scoot/runner/runners"
+	"github.com/wisechengyi/scoot/worker/domain"
+	"github.com/wisechengyi/scoot/worker/domain/gen-go/worker"
 )
 
 // Creates a Worker Server

@@ -3,7 +3,7 @@ package helpers
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
 )
 
 func CopyStringToPointer(s string) *string {

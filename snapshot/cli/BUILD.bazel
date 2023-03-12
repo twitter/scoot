@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "cli",
     srcs = ["cli.go"],
-    importpath = "github.com/twitter/scoot/snapshot/cli",
+    importpath = "github.com/wisechengyi/scoot/snapshot/cli",
     visibility = ["//visibility:public"],
     deps = [
         "//snapshot",

@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/snapshot/bundlestore"
+	"github.com/wisechengyi/scoot/snapshot/bundlestore"
 )
 
 const DefaultApiServerCount int = 3

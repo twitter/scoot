@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/twitter/scoot/common/log/tags"
-	"github.com/twitter/scoot/common/thrifthelpers"
-	"github.com/twitter/scoot/runner"
-	schedthrift "github.com/twitter/scoot/scheduler/domain/gen-go/sched"
+	"github.com/wisechengyi/scoot/common/log/tags"
+	"github.com/wisechengyi/scoot/common/thrifthelpers"
+	"github.com/wisechengyi/scoot/runner"
+	schedthrift "github.com/wisechengyi/scoot/scheduler/domain/gen-go/sched"
 )
 
 // Job is the job Scoot can schedule

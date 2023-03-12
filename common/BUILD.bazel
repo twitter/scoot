@@ -6,6 +6,6 @@ go_library(
         "common.go",
         "constants.go",
     ],
-    importpath = "github.com/twitter/scoot/common",
+    importpath = "github.com/wisechengyi/scoot/common",
     visibility = ["//visibility:public"],
 )

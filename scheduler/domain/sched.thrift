@@ -2,9 +2,9 @@
 # We use this structure rather than the scoot API's JobDefinition (in scoot.thrift)
 # so that we can add data to the log and not impact the client API.
 
-# See github.com/twitter/scoot/README.md for local Thrift prerequisites
+# See github.com/wisechengyi/scoot/README.md for local Thrift prerequisites
 #
-# To Generate files, run from top level (github.com/twitter/scoot) repo directory:
+# To Generate files, run from top level (github.com/wisechengyi/scoot) repo directory:
 #     $ make thrift-sched-go
 
 struct Command {

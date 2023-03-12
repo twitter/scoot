@@ -8,7 +8,7 @@ go_library(
         "server.go",
         "setup.go",
     ],
-    importpath = "github.com/twitter/scoot/snapshot/bundlestore",
+    importpath = "github.com/wisechengyi/scoot/snapshot/bundlestore",
     visibility = ["//visibility:public"],
     deps = [
         "//common/endpoints",

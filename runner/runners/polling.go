@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/twitter/scoot/runner"
+	"github.com/wisechengyi/scoot/runner"
 )
 
 // polling.go: turns a StatusQueryNower into a StatusQuerier by polling

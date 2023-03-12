@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/twitter/scoot/common/stats"
-	snap "github.com/twitter/scoot/snapshot"
-	"github.com/twitter/scoot/snapshot/git/repo"
+	"github.com/wisechengyi/scoot/common/stats"
+	snap "github.com/wisechengyi/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot/git/repo"
 )
 
 // A Stream is a sequence of GitCommitSnapshots that updates.
@@ -19,7 +19,7 @@ type StreamConfig struct {
 	//      the full id might look like "stream-gc-sm:<branch>-<sha>" for a given branch and sha
 	Name string
 
-	// Remote to fetch from (e.g. https://github.com/twitter/scoot)
+	// Remote to fetch from (e.g. https://github.com/wisechengyi/scoot)
 	Remote string
 
 	// Name of ref to follow in data repo (e.g. refs/remotes/upstream/master)

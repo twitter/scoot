@@ -8,7 +8,7 @@ go_library(
         "process.go",
         "process_watcher.go",
     ],
-    importpath = "github.com/twitter/scoot/runner/execer/os",
+    importpath = "github.com/wisechengyi/scoot/runner/execer/os",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",

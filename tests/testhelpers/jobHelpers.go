@@ -9,9 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/twitter/scoot/common/dialer"
-	"github.com/twitter/scoot/scheduler/api/thrift/gen-go/scoot"
-	"github.com/twitter/scoot/scheduler/client"
+	"github.com/wisechengyi/scoot/common/dialer"
+	"github.com/wisechengyi/scoot/scheduler/api/thrift/gen-go/scoot"
+	"github.com/wisechengyi/scoot/scheduler/client"
 )
 
 // Creates a CloudScootClient that talks to the specified address

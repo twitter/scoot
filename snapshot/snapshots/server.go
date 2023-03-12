@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/twitter/scoot/snapshot"
+	"github.com/wisechengyi/scoot/snapshot"
 )
 
 // ViewServer allows viewing files in a Snapshot

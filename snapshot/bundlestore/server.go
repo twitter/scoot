@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/twitter/scoot/common/stats"
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/common/stats"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 // Represents a Bundlestore Server that serves HTTP

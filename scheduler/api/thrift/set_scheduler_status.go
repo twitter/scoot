@@ -1,7 +1,7 @@
 package thrift
 
 import (
-	"github.com/twitter/scoot/scheduler/server"
+	"github.com/wisechengyi/scoot/scheduler/server"
 )
 
 /*

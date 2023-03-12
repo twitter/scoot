@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "smoketest",
     srcs = ["smoketest.go"],
-    importpath = "github.com/twitter/scoot/integration-tests/smoketest",
+    importpath = "github.com/wisechengyi/scoot/integration-tests/smoketest",
     visibility = ["//visibility:public"],
     deps = [
         "//common/client",

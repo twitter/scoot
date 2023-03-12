@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "priority_scheduling_sim_lib",
     srcs = ["main.go"],
-    importpath = "github.com/twitter/scoot/perftests/scheduler_simulator/priority_scheduling_sim",
+    importpath = "github.com/wisechengyi/scoot/perftests/scheduler_simulator/priority_scheduling_sim",
     visibility = ["//visibility:private"],
     deps = [
         "//common/log/tags",

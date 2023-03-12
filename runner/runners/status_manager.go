@@ -7,7 +7,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/twitter/scoot/runner"
+	"github.com/wisechengyi/scoot/runner"
 )
 
 const UnknownRunIDMsg = "unknown run id %v"

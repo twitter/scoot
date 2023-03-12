@@ -15,7 +15,7 @@ go_library(
         "status_manager.go",
         "statuses_ro.go",
     ],
-    importpath = "github.com/twitter/scoot/runner/runners",
+    importpath = "github.com/wisechengyi/scoot/runner/runners",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",

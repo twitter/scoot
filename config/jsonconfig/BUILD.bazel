@@ -6,7 +6,7 @@ go_library(
         "config.go",
         "doc.go",
     ],
-    importpath = "github.com/twitter/scoot/config/jsonconfig",
+    importpath = "github.com/wisechengyi/scoot/config/jsonconfig",
     visibility = ["//visibility:public"],
     deps = [
         "//ice",

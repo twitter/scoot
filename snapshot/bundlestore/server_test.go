@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/twitter/scoot/snapshot/store"
+	"github.com/wisechengyi/scoot/snapshot/store"
 )
 
 //TODO: an end-end test that uses a real store and real bundles.

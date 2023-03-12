@@ -14,7 +14,7 @@ go_library(
         "setup.go",
         "stream.go",
     ],
-    importpath = "github.com/twitter/scoot/snapshot/git/gitdb",
+    importpath = "github.com/wisechengyi/scoot/snapshot/git/gitdb",
     visibility = ["//visibility:public"],
     deps = [
         "//common/errors",
