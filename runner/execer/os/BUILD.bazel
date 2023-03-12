@@ -25,6 +25,9 @@ go_test(
         "easy_test.go",
         "execer_test.go",
     ],
+    data = [
+        ":resources",
+    ],
     embed = [":os"],
     deps = [
         "//common/log/hooks",
@@ -33,14 +36,11 @@ go_test(
         "//runner/execer",
         "@com_github_sirupsen_logrus//:logrus",
     ],
-    data = [
-        ":resources",
-    ]
 )
 
 filegroup(
     name = "resources",
     srcs = [
-        "trap_script.sh"
-    ]
+        "trap_script.sh",
+    ],
 )
