@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const gitCommandTimeout = 10 * time.Minute
+const gitCommandTimeout = 15 * time.Minute
 const gitCleanupTimeout = 5 * time.Minute
 const gitIndexLock = ".git/index.lock"
 
