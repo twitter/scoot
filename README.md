@@ -52,19 +52,19 @@ Scoot has a few  tests that exercise varying levels of common usages and workflo
 Invokes a scoot client directly to run jobs against a local cluster and waits for the 
 scheduled jobs to complete.
 
-(./scheduler/client/cli/smoketest.go)
+(./integration-tests/smoketest/smoketest.go)
 
 ### Recoverytest
 Invokes a scoot client directly to run jobs against a local cluster, kills the cluster, 
 attempts to spin up a new one, and waits for the originally scheduled jobs to complete.
 
-(./binaries/recoverytest/main.go)
+(./integration-tests/recoverytest/main.go)
 
 ### Integration
 Invokes a scoot and scoot-snapshot-db client via CLI to run a job against a local cluster 
 and waits for the job to complete
 
-(./binaries/scoot-integration/main.go)
+(./integration-tests/scoot-integration/main.go)
 
 ## Scoot Thrift Code
 __Thrift Prerequisites__
